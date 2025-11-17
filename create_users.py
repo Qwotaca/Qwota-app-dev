@@ -2,15 +2,19 @@
 """
 Script pour créer tous les utilisateurs de Qwota
 À exécuter une seule fois sur Render via: python create_users.py
+
+Options:
+  --delete-all : Supprime tous les utilisateurs avant de créer
 """
 
 import sys
 import os
+import sqlite3
 
 # Ajouter le répertoire parent au path
 sys.path.insert(0, os.path.dirname(__file__))
 
-from database import create_user
+from database import create_user, get_database_path
 
 # Liste de tous les utilisateurs à créer
 USERS = [
@@ -36,7 +40,32 @@ USERS = [
     {"username": "support", "password": "support123", "role": "admin"},
 ]
 
+def delete_all_users():
+    """Supprime tous les utilisateurs de la base de données"""
+    db_path = get_database_path()
+    print(f"[DELETE_USERS] Suppression de tous les utilisateurs de {db_path}...")
+
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.execute('SELECT COUNT(*) FROM users')
+        count = cursor.fetchone()[0]
+        conn.execute('DELETE FROM users')
+        conn.commit()
+        conn.close()
+        print(f"[DELETE_USERS] ✓ {count} utilisateur(s) supprimé(s)")
+        return True
+    except Exception as e:
+        print(f"[DELETE_USERS] ✗ Erreur: {e}")
+        return False
+
 def main():
+    # Vérifier si l'option --delete-all est présente
+    if '--delete-all' in sys.argv:
+        if not delete_all_users():
+            print("[CREATE_USERS] Abandon suite à l'erreur de suppression")
+            return
+        print()
+
     print(f"[CREATE_USERS] Création de {len(USERS)} utilisateurs...")
 
     created = 0

@@ -22,7 +22,7 @@ from database import (
     send_support_message, get_user_messages,
     get_all_support_conversations, mark_messages_as_read,
     get_unread_messages_count, delete_conversation, mark_conversation_resolved,
-    get_resolved_today_count, create_user
+    get_resolved_today_count
 )
 
 # Backend QE imports
@@ -167,58 +167,6 @@ async def startup_event():
     print("[STARTUP] Initialisation du système de gamification...")
     gamification.init_gamification_tables()
     print("[STARTUP] Système de gamification initialisé")
-
-    # Créer les utilisateurs de test si la base est vide (premier démarrage)
-    users = list_all_users()
-    if len(users) <= 1:  # Seulement support existe
-        print("[STARTUP] Création des utilisateurs de test...")
-        test_users = [
-            ("admin", "Admin@2024", "direction"),
-            ("mathis", "Mathis@2024", "entrepreneur"),
-            ("fboucher", "Fboucher@2024", "entrepreneur"),
-            ("coach01", "Coach@2024", "coach"),
-            ("direction", "Direction@2024", "direction"),
-        ]
-        for username, password, role in test_users:
-            try:
-                if create_user(username, password, role):
-                    print(f"[STARTUP] ✓ Utilisateur '{username}' créé")
-            except Exception as e:
-                print(f"[STARTUP] ✗ Erreur création '{username}': {e}")
-        print("[STARTUP] Utilisateurs de test créés")
-
-
-# ============================================
-# ENDPOINT ADMIN - UPLOAD DATABASE
-# ============================================
-
-@app.post("/api/admin/upload-database")
-async def upload_database(file: UploadFile = File(...), admin_key: str = Body(...)):
-    """Upload database file - USE ONLY ONCE for migration!"""
-    # Clé de sécurité simple
-    if admin_key != "QwotaMigration2024!":
-        raise HTTPException(status_code=403, detail="Invalid admin key")
-
-    try:
-        from database import DB_PATH
-
-        # Lire le contenu du fichier uploadé
-        content = await file.read()
-
-        # Sauvegarder dans le bon emplacement
-        with open(DB_PATH, "wb") as f:
-            f.write(content)
-
-        print(f"[ADMIN] Base de données uploadée avec succès: {DB_PATH}")
-
-        return {
-            "success": True,
-            "message": f"Database uploaded to {DB_PATH}",
-            "size": len(content)
-        }
-    except Exception as e:
-        print(f"[ERROR] Erreur upload database: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/onboarding", include_in_schema=False)

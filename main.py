@@ -444,7 +444,7 @@ def centrale_index():
 
 @app.get("/centralevue")
 def centralevue_index():
-    return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Entrepreneurs", "General", "La centrale", "centralevue.html"))
+    return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Entrepreneurs", "General", "La Centrale", "Centralevue.html"))
 
 @app.get("/gamification")
 def gamification_page():

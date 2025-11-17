@@ -2358,7 +2358,7 @@ def gmail_callback(code: str = Query(...), state: str = Query(...)):
         if (window.opener && !window.opener.closed) {
           // Si c'est un popup, envoyer le message et fermer
           try {
-            window.opener.postMessage({type: "gmail_connected"}, "*");
+            window.opener.postMessage("gmail_connected", "*");
           } catch(e) {
             console.log("Impossible d'envoyer le message au parent:", e);
           }

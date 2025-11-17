@@ -631,7 +631,6 @@ def enregistrer_pdf_calculateur(utilisateur: str, pdf_data: dict, lien_pdf: str)
         print(f"[enregistrer_pdf_calculateur] Erreur: {e}")
 
 def get_valid_gmail_token(username: str) -> str:
-    base_cloud = f"{base_cloud}" if sys.platform != 'win32' else os.path.join(os.path.dirname(__file__), 'data')
     chemin = os.path.join(base_cloud, "emails", f"{username}.json")
     if not os.path.exists(chemin):
         raise HTTPException(status_code=401, detail="Aucun token Gmail trouvé")
@@ -711,9 +710,6 @@ def get_all_entrepreneurs():
     """Retourne tous les utilisateurs avec le rôle entrepreneur ou beta avec leurs stats dashboard"""
     print("[DEBUG] [CLASSEMENT] Chargement des entrepreneurs...", flush=True)
     entrepreneurs = []
-
-    # Déterminer le chemin de base
-    base_cloud = f"{base_cloud}" if sys.platform != 'win32' else os.path.join(os.path.dirname(__file__), 'data')
 
     # Récupérer tous les utilisateurs de la base de données
     all_users = list_all_users()
@@ -861,9 +857,6 @@ def calculate_dashboard_stats(username: str) -> dict:
         "metriques": {"contrat_moyen": 0, "taux_marketing": 0, "taux_vente": 0, "prod_horaire": 0}
     }
 
-    # Déterminer le chemin de base
-    base_cloud = f"{base_cloud}" if sys.platform != 'win32' else os.path.join(os.path.dirname(__file__), 'data')
-
     try:
         # 1. STATUS SOUMISSIONS
         signees_path = os.path.join(base_cloud, "soumissions_signees", username, "soumissions.json")
@@ -985,9 +978,6 @@ def update_dashboard_stats(username: str):
 def check_onboarding_status(username: str):
     """Vérifie si l'utilisateur a complété l'onboarding"""
     try:
-        # Déterminer le chemin de base
-        base_cloud = f"{base_cloud}" if sys.platform != 'win32' else os.path.join(os.path.dirname(__file__), 'data')
-
         # Vérifier si le fichier user_info.json existe
         info_file = os.path.join(base_cloud, "signatures", username, "user_info.json")
 
@@ -3123,7 +3113,6 @@ def envoyer_email_soumission_signee(email_client, clientNom, clientPrenom, lien_
 
 
 def envoyer_email_soumission_signee_entrepreneur(username, lien_pdf, clientPrenom, clientNom):
-    base_cloud = f"{base_cloud}" if sys.platform != 'win32' else os.path.join(os.path.dirname(__file__), 'data')
     chemin = os.path.join(base_cloud, "emails", f"{username}.json")
     if not os.path.exists(chemin):
         print("Aucun Gmail connecté pour", username)
@@ -3569,7 +3558,6 @@ async def cloturer_travail(payload: dict = Body(...)):
 
 
 def envoyer_email_demande_satisfaction(username: str, travail: dict, url_avis: str):
-    base_cloud = f"{base_cloud}" if sys.platform != 'win32' else os.path.join(os.path.dirname(__file__), 'data')
     chemin = os.path.join(base_cloud, "emails", f"{username}.json")
     if not os.path.exists(chemin):
         print("Aucun Gmail connecté pour", username)

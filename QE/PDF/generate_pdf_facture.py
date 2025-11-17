@@ -13,8 +13,9 @@ if sys.platform == 'win32':
     # Windows - chemin relatif depuis la racine du projet
     base_cloud = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data')
 else:
-    # Unix/Linux (Production sur Render) - chemin absolu
-    base_cloud = "/mnt/cloud"
+    # Unix/Linux (Production sur Render)
+    # Utiliser la variable d'environnement STORAGE_PATH si définie, sinon /mnt/cloud
+    base_cloud = os.getenv("STORAGE_PATH", "/mnt/cloud")
 
 BASE_DIR = os.getcwd()
 FACTURE_NUM_FILE = os.path.join(BASE_DIR, "factures", "used_nums.json")

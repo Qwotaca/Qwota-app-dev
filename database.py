@@ -20,7 +20,8 @@ def get_database_path():
         data_dir = os.path.join(base_dir, 'data')
     else:
         # En production (Render)
-        data_dir = '/mnt/cloud'
+        # Utiliser la variable d'environnement STORAGE_PATH si définie, sinon /mnt/cloud
+        data_dir = os.getenv("STORAGE_PATH", '/mnt/cloud')
 
     os.makedirs(data_dir, exist_ok=True)
     return os.path.join(data_dir, 'qwota.db')

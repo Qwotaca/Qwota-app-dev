@@ -50,8 +50,10 @@ if sys.platform == 'win32':
     # Windows - remonter à la racine du projet (3 niveaux depuis QE/Backend/rpo.py)
     RPO_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'rpo')
 else:
-    # Unix/Linux
-    RPO_DATA_DIR = "/mnt/cloud/rpo"
+    # Unix/Linux (Production sur Render)
+    # Utiliser la variable d'environnement STORAGE_PATH si définie, sinon /mnt/cloud
+    base_cloud = os.getenv("STORAGE_PATH", "/mnt/cloud")
+    RPO_DATA_DIR = os.path.join(base_cloud, "rpo")
 
 os.makedirs(RPO_DATA_DIR, exist_ok=True)
 
@@ -410,8 +412,9 @@ def sync_soumissions_to_rpo(username: str) -> bool:
             # Windows - remonter à la racine du projet (3 niveaux depuis QE/Backend/rpo.py)
             base_cloud = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data')
         else:
-            # Unix/Linux
-            base_cloud = "/mnt/cloud"
+            # Unix/Linux (Production sur Render)
+            # Utiliser la variable d'environnement STORAGE_PATH si définie, sinon /mnt/cloud
+            base_cloud = os.getenv("STORAGE_PATH", "/mnt/cloud")
 
         # 1. Lire soumissions_completes (Estimation réel)
         soumissions_completes_path = os.path.join(base_cloud, "soumissions_completes", username, "soumissions.json")

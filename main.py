@@ -89,8 +89,9 @@ if sys.platform == 'win32':
     # Windows - chemin relatif
     base_cloud = os.path.join(os.path.dirname(__file__), 'data')
 else:
-    # Unix/Linux (Production sur Render) - chemin absolu
-    base_cloud = "/mnt/cloud"
+    # Unix/Linux (Production sur Render)
+    # Utiliser la variable d'environnement STORAGE_PATH si définie, sinon /mnt/cloud
+    base_cloud = os.getenv("STORAGE_PATH", "/mnt/cloud")
 
 os.makedirs(os.path.join(base_cloud, "tokens"), exist_ok=True)
 os.makedirs(os.path.join(base_cloud, "soumissions_completes"), exist_ok=True)

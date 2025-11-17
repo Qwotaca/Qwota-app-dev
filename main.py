@@ -188,6 +188,39 @@ async def startup_event():
         print("[STARTUP] Utilisateurs de test créés")
 
 
+# ============================================
+# ENDPOINT ADMIN - UPLOAD DATABASE
+# ============================================
+
+@app.post("/api/admin/upload-database")
+async def upload_database(file: UploadFile = File(...), admin_key: str = Body(...)):
+    """Upload database file - USE ONLY ONCE for migration!"""
+    # Clé de sécurité simple
+    if admin_key != "QwotaMigration2024!":
+        raise HTTPException(status_code=403, detail="Invalid admin key")
+
+    try:
+        from database import DB_PATH
+
+        # Lire le contenu du fichier uploadé
+        content = await file.read()
+
+        # Sauvegarder dans le bon emplacement
+        with open(DB_PATH, "wb") as f:
+            f.write(content)
+
+        print(f"[ADMIN] Base de données uploadée avec succès: {DB_PATH}")
+
+        return {
+            "success": True,
+            "message": f"Database uploaded to {DB_PATH}",
+            "size": len(content)
+        }
+    except Exception as e:
+        print(f"[ERROR] Erreur upload database: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/onboarding", include_in_schema=False)
 def onboarding_file():
     return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Common", "onboarding.html"))

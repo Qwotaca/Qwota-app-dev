@@ -163,15 +163,44 @@ app.mount("/frontend", StaticFiles(directory="QE/Frontend"), name="frontend")
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialise les tables de gamification au démarrage"""
-    # Copier la base de données depuis data/ vers /mnt/cloud si nécessaire (premier démarrage)
-    if sys.platform != 'win32':  # En production
-        from database import DB_PATH
-        source_db = os.path.join(os.path.dirname(__file__), 'data', 'qwota.db')
-        if os.path.exists(source_db) and not os.path.exists(DB_PATH):
-            print(f"[STARTUP] Copie de la base de données: {source_db} -> {DB_PATH}")
-            shutil.copy2(source_db, DB_PATH)
-            print("[STARTUP] Base de données copiée avec succès")
+    """Initialise les dossiers nécessaires et les tables de gamification au démarrage"""
+
+    # Créer tous les dossiers nécessaires
+    print("[STARTUP] Création des dossiers de données...")
+    required_dirs = [
+        os.path.join(base_cloud, 'accounts'),
+        os.path.join(base_cloud, 'blacklist'),
+        os.path.join(base_cloud, 'clients_perdus'),
+        os.path.join(base_cloud, 'emails'),
+        os.path.join(base_cloud, 'employes'),
+        os.path.join(base_cloud, 'equipe'),
+        os.path.join(base_cloud, 'ficheremployer'),
+        os.path.join(base_cloud, 'ficherformations'),
+        os.path.join(base_cloud, 'ficherlegal'),
+        os.path.join(base_cloud, 'fichermarketing'),
+        os.path.join(base_cloud, 'ficherprocessus'),
+        os.path.join(base_cloud, 'gqp'),
+        os.path.join(base_cloud, 'projets'),
+        os.path.join(base_cloud, 'prospects'),
+        os.path.join(base_cloud, 'reviews'),
+        os.path.join(base_cloud, 'rpo'),
+        os.path.join(base_cloud, 'signatures'),
+        os.path.join(base_cloud, 'soumissions_completes'),
+        os.path.join(base_cloud, 'soumissions_signees'),
+        os.path.join(base_cloud, 'stats'),
+        os.path.join(base_cloud, 'support_attachments'),
+        os.path.join(base_cloud, 'templates'),
+        os.path.join(base_cloud, 'total_signees'),
+        os.path.join(base_cloud, 'travaux_a_completer'),
+        os.path.join(base_cloud, 'ventes_acceptees'),
+        os.path.join(base_cloud, 'ventes_attente'),
+        os.path.join(base_cloud, 'ventes_produit'),
+    ]
+
+    for directory in required_dirs:
+        os.makedirs(directory, exist_ok=True)
+
+    print(f"[STARTUP] {len(required_dirs)} dossiers créés/vérifiés")
 
     print("[STARTUP] Initialisation du système de gamification...")
     gamification.init_gamification_tables()

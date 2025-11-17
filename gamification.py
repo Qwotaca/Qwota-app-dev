@@ -9,6 +9,9 @@ from typing import Dict, List, Optional, Tuple
 import os
 import sys
 
+# Base directory du projet
+BASE_DIR = os.path.dirname(__file__)
+
 # Configuration du chemin de la base de données (même logique que database.py)
 def get_database_path():
     """Retourne le chemin de la base de données selon l'environnement"""

@@ -7,10 +7,24 @@ import sqlite3
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 import os
+import sys
 
-# Configuration du chemin de la base de données
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "data", "qwota.db")
+# Configuration du chemin de la base de données (même logique que database.py)
+def get_database_path():
+    """Retourne le chemin de la base de données selon l'environnement"""
+    if sys.platform == 'win32':
+        # En développement Windows
+        base_dir = os.path.dirname(__file__)
+        data_dir = os.path.join(base_dir, 'data')
+    else:
+        # En production (Render)
+        # Utiliser la variable d'environnement STORAGE_PATH si définie, sinon /mnt/cloud
+        data_dir = os.getenv("STORAGE_PATH", '/mnt/cloud')
+
+    os.makedirs(data_dir, exist_ok=True)
+    return os.path.join(data_dir, 'qwota.db')
+
+DB_PATH = get_database_path()
 
 
 # ============================================

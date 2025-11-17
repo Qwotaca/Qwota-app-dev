@@ -164,6 +164,15 @@ app.mount("/frontend", StaticFiles(directory="QE/Frontend"), name="frontend")
 @app.on_event("startup")
 async def startup_event():
     """Initialise les tables de gamification au démarrage"""
+    # Copier la base de données depuis data/ vers /mnt/cloud si nécessaire (premier démarrage)
+    if sys.platform != 'win32':  # En production
+        from database import DB_PATH
+        source_db = os.path.join(os.path.dirname(__file__), 'data', 'qwota.db')
+        if os.path.exists(source_db) and not os.path.exists(DB_PATH):
+            print(f"[STARTUP] Copie de la base de données: {source_db} -> {DB_PATH}")
+            shutil.copy2(source_db, DB_PATH)
+            print("[STARTUP] Base de données copiée avec succès")
+
     print("[STARTUP] Initialisation du système de gamification...")
     gamification.init_gamification_tables()
     print("[STARTUP] Système de gamification initialisé")

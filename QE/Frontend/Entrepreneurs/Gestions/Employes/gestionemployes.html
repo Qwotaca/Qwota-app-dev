@@ -1,0 +1,3177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestion des employés</title>
+  
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#60a5fa">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#60a5fa">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Script Service Worker -->
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          console.log('SW registered: ', registration);
+        })
+        .catch((registrationError) => {
+          console.log('SW registration failed: ', registrationError);
+        });
+    });
+  }
+  </script>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="/base.css">
+  <link rel="icon" href="/favicon" type="image/x-icon">
+
+  <!-- Empêcher base.css d'affecter les popups -->
+  <!-- Styles spécifiques à Gestion Employés -->
+  <link rel="stylesheet" href="/gestionemployes.css">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
+
+  <!-- Variables globales définies dans common.js -->
+  <script>
+    // Ces variables sont maintenant gérées par common.js
+    // username, userRole, canEditParameters sont disponibles globalement
+    
+    // Variables globales du calendrier - DÉCLARÉES TÔT
+    let currentMonth = new Date().getMonth();
+    let currentYear = new Date().getFullYear();
+    let activeCalendarId = null;
+    
+    window.monthNames = [
+      'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    ];
+
+    // FONCTIONS CALENDRIER GLOBALES - DÉFINIES TÔT
+    window.toggleCalendar = function(inputId) {
+      console.log('🗓️ toggleCalendar appelé avec:', inputId);
+      const calendar = document.getElementById(`calendar-${inputId}`);
+      
+      if (!calendar) {
+        console.error('[ERROR] Calendrier non trouvé:', `calendar-${inputId}`);
+        return;
+      }
+      
+      // Fermer autres calendriers
+      document.querySelectorAll('.custom-calendar').forEach(cal => {
+        if (cal.id !== `calendar-${inputId}`) {
+          cal.classList.add('hidden');
+        }
+      });
+      
+      // Toggle ce calendrier
+      const isHidden = calendar.classList.contains('hidden');
+      if (isHidden) {
+        calendar.classList.remove('hidden');
+        activeCalendarId = inputId;
+        // Attendre que le calendrier soit visible avant de le rendre
+        setTimeout(() => {
+          if (window.renderCalendar) window.renderCalendar(inputId);
+        }, 50);
+        console.log('[OK] Calendrier ouvert');
+      } else {
+        calendar.classList.add('hidden');
+        console.log('🚪 Calendrier fermé');
+      }
+    };
+
+    window.changeMonth = function(inputId, direction) {
+      currentMonth += direction;
+      if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+      } else if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+      }
+      if (window.renderCalendar) window.renderCalendar(inputId);
+    };
+  </script>
+  <!-- Styles spécifiques à Gestion Employés -->
+
+<!-- Styles spécifiques à Gestion Employés -->
+
+<!-- Styles spécifiques à Gestion Employés -->
+</head>
+<body class="min-h-screen" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: var(--text-light); margin: 0; padding: 0;">
+
+<!-- Contenu principal -->
+<div class="main-content w-full" style="width: 100%; padding: 2rem;">
+
+  <!-- Bouton Retour -->
+  <div id="back-button-container">
+    <button id="back-to-gestions-btn" onclick="goBackToGestions()" class="back-button">
+      <i class="fas fa-arrow-left"></i>
+    </button>
+  </div>
+
+  <!-- Titre principal - EXACT COPY from newgqp -->
+  <div class="mb-10">
+    <div class="relative">
+      <h1 class="text-4xl font-bold mb-3" style="color: var(--text-light); overflow: hidden; text-overflow: ellipsis;">
+        Gestion des employés
+      </h1>
+      <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+      <div class="flex items-center justify-between">
+        <p class="text-xl font-medium" style="color: var(--text-gray);">Gérez vos employés : nouveaux, actifs et inactifs</p>
+        <div class="text-sm flex items-center" style="color: var(--text-gray);">
+          <i class="fas fa-calendar-alt mr-2"></i>
+          <span id="currentDate">Aujourd'hui</span>
+        </div>
+        </div>
+      </div>
+    </div>
+
+  <!-- Gestion des employés -->
+  <div class="status-cards-grid grid grid-cols-1 gap-6 mb-8">
+    <div class="box">
+      <div class="box-header">
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
+          <div class="box-header-icon" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);">
+            <i class="fas fa-user-plus"></i>
+          </div>
+          <h2 class="box-header-title">Nouveaux employés</h2>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <span id="compteur-nouveaux" class="px-3 py-1 text-xs font-medium rounded-full" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue); border: 1px solid var(--primary-blue);">0 nouveau</span>
+          <button class="btn-primary px-6 py-2" onclick="ouvrirModalAjouterEmploye()">
+            <span><i class="fas fa-plus mr-2"></i>Ajouter</span>
+          </button>
+        </div>
+      </div>
+      <div class="box-body">
+        
+        <div class="border" style="border-color: var(--border-dark); border-radius: 12px; overflow: hidden;">
+          <div class="overflow-x-auto" style="min-height: 300px;">
+          <table class="min-w-full dark-table nouveaux-employes">
+            <thead>
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky-col-header ">Nom complet</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ">Courriel</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ">Poste</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider ">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="nouveaux-employes-body" style="background: #172033; border: 1px solid var(--border-dark);" divide-y divide-gray-200">
+              <!-- Les données seront chargées dynamiquement -->
+            </tbody>
+          </table>
+          </div>
+        </div>
+
+        <!-- Vue Mobile: Cards pour Nouveaux employés -->
+        <div class="employes-mobile-cards">
+          <div id="nouveaux-employes-mobile-list">
+            <!-- Les cards seront injectées ici dynamiquement -->
+            <div class="employes-empty-mobile">
+              <i class="fas fa-user-plus"></i>
+              <p>Aucun nouvel employé</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Fermeture box Nouveaux employés -->
+
+    <!-- Table 2: Employés actifs -->
+    <div class="box">
+      <div class="box-header">
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
+          <div class="box-header-icon" style="background: linear-gradient(135deg, #34d399 0%, #10b981 100%);">
+            <i class="fas fa-user-check"></i>
+          </div>
+          <h2 class="box-header-title">Employés actifs</h2>
+        </div>
+        <span id="compteur-actifs" class="px-3 py-1 text-xs font-medium rounded-full" style="background: rgba(52, 211, 153, 0.2); color: var(--primary-green); border: 1px solid var(--primary-green);">0 actif</span>
+      </div>
+      <div class="box-body">
+        
+        <div class="border" style="border-color: var(--border-dark); border-radius: 12px; overflow: hidden;">
+          <div class="overflow-x-auto" style="min-height: 300px;">
+          <table class="min-w-full dark-table employes-actifs">
+            <thead>
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky-col-header ">Nom complet</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ">Courriel</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ">Poste</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider ">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="employes-actifs-body" style="background: #172033; border: 1px solid var(--border-dark);" divide-y divide-gray-200">
+              <!-- Les données seront chargées dynamiquement -->
+            </tbody>
+          </table>
+          </div>
+        </div>
+
+        <!-- Vue Mobile: Cards pour Employés actifs -->
+        <div class="employes-mobile-cards">
+          <div id="employes-actifs-mobile-list">
+            <!-- Les cards seront injectées ici dynamiquement -->
+            <div class="employes-empty-mobile">
+              <i class="fas fa-user-check"></i>
+              <p>Aucun employé actif</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Fermeture box Employés actifs -->
+
+    <!-- Table 3: Employés terminés -->
+    <div class="box">
+      <div class="box-header">
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
+          <div class="box-header-icon" style="background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);">
+            <i class="fas fa-user-times"></i>
+          </div>
+          <h2 class="box-header-title">Employés inactifs</h2>
+        </div>
+        <span id="compteur-termines" class="px-3 py-1 text-xs font-medium rounded-full" style="background: rgba(248, 113, 113, 0.2); color: var(--primary-red); border: 1px solid var(--primary-red);">0 terminé</span>
+      </div>
+      <div class="box-body">
+        
+        <div class="border" style="border-color: var(--border-dark); border-radius: 12px; overflow: hidden;">
+          <div class="overflow-x-auto" style="min-height: 300px;">
+          <table class="min-w-full dark-table employes-termines">
+            <thead>
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky-col-header ">Nom complet</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ">Courriel</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ">Poste</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider ">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="employes-termines-body" style="background: #172033; border: 1px solid var(--border-dark);" divide-y divide-gray-200">
+              <!-- Les données seront chargées dynamiquement -->
+            </tbody>
+          </table>
+          </div>
+        </div>
+
+        <!-- Vue Mobile: Cards pour Employés inactifs -->
+        <div class="employes-mobile-cards">
+          <div id="employes-termines-mobile-list">
+            <!-- Les cards seront injectées ici dynamiquement -->
+            <div class="employes-empty-mobile">
+              <i class="fas fa-user-times"></i>
+              <p>Aucun employé inactif</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Fermeture box Employés inactifs -->
+  </div>
+  <!-- Fermeture de status-cards-grid -->
+  </section>
+  
+<!-- Modal Confirmation Refus -->
+<div id="modalConfirmationRefus" class="modal-overlay modal-overlay-large">
+  <div class="status-card p-6 max-w-md w-full mx-4" style="--card-color: #ef4444;">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-xl font-bold" style="color: var(--text-light);">
+        <i class="fas fa-user-times mr-2" style="color: #ef4444;"></i>
+        Confirmer refus
+      </h3>
+      <button onclick="fermerModalRefus()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(239, 68, 68, 0.2) !important; color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3) !important'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2) !important'">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="p-6">
+    <div class="absolute top-4 right-4" style="display: none;">
+      <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+        <i class="fas fa-exclamation-triangle text-red-600 text-sm"></i>
+      </div>
+    </div>
+    
+    <div class="mb-6 text-center">
+      <p class="text-sm" style="color: #9ca3af;">
+        Êtes-vous sûr de vouloir refuser la candidature de :
+      </p>
+      <p class="font-semibold mt-2" style="color: var(--text-light); overflow: hidden; text-overflow: ellipsis;" id="nomEmployeRefus"></p>
+      <p class="text-xs text-gray-500 mt-2">
+        Cette action ne peut pas être annulée.
+      </p>
+    </div>
+    
+    <div class="modal-buttons-clean">
+      <button type="button" onclick="confirmerRefus()" class="btn-primary" style="background-color: #ef4444 !important; border-color: #ef4444 !important;">
+        <i class="fas fa-trash mr-2"></i>Refuser
+      </button>
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Modifier Employé Actif -->
+<div id="modalModifierEmploye" class="modal-overlay modal-overlay-large">
+  <div class="status-card max-w-3xl w-11/12 mx-4" style="--card-color: #10b981;">
+    <div class="flex items-center justify-between py-4 px-8 border-b" style="border-color: var(--border-dark);">
+      <h3 class="text-xl font-bold flex items-center" style="color: var(--text-light);">
+        <i class="fas fa-user-edit mr-2" style="color: #10b981;"></i>
+        Modifier employé
+      </h3>
+      <button onclick="fermerModalModifier()" class="w-10 h-10 rounded-full flex items-center justify-center transition-colors" 
+              style="background: rgba(16, 185, 129, 0.2) !important; color: #10b981;" 
+              onmouseover="this.style.background='rgba(16, 185, 129, 0.3) !important'" 
+              onmouseout="this.style.background='rgba(16, 185, 129, 0.2) !important'">
+        <i class="fas fa-times text-lg"></i>
+      </button>
+    </div>
+    
+    <form id="formModifierEmploye" class="space-y-4 p-4">
+      <!-- Layout principal : 2 colonnes côte à côte -->
+      <div class="grid grid-cols-2 gap-4">
+        
+        <!-- COLONNE GAUCHE : Informations personnelles -->
+        <div class="rounded-lg p-4">
+          <h4 class="text-base font-semibold mb-3 flex items-center" style="color: var(--text-light);">
+            <i class="fas fa-user mr-2" style="color: #10b981;"></i>
+            Informations personnelles
+          </h4>
+          <div class="space-y-3">
+          
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-id-card mr-2 text-xs" style="color: #10b981;"></i>
+                Nom complet
+              </label>
+              <input type="text" id="modifierNomComplet" class="w-full p-2 text-sm rounded-lg" 
+                     style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-hashtag mr-2 text-xs" style="color: #10b981;"></i>
+                NAS (sans tirets)
+              </label>
+              <input type="text" id="modifierNas" class="w-full p-2 text-sm rounded-lg" maxlength="9"
+                     style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"
+                     placeholder="123456789">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-venus-mars mr-2 text-xs" style="color: #10b981;"></i>
+                Genre
+              </label>
+              <select id="modifierGenre" class="modal-select w-full text-sm rounded-lg" 
+                      style="background: #0f172a; border: 2px solid var(--border-dark); color: #f1f5f9; height: 48px; padding: 12px 16px;">
+                <option value="" style="color: #f1f5f9;">Sélectionner...</option>
+                <option value="homme" style="color: #f1f5f9;">Homme</option>
+                <option value="femme" style="color: #f1f5f9;">Femme</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-home mr-2 text-xs" style="color: #10b981;"></i>
+                Adresse domicile
+              </label>
+              <input type="text" id="modifierAdresse" class="w-full p-2 text-sm rounded-lg"
+                     style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"
+                     placeholder="123 Rue Example"
+                     autocomplete="chrome-off"
+                     autocorrect="off"
+                     autocapitalize="off"
+                     spellcheck="false">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-city mr-2 text-xs" style="color: #10b981;"></i>
+                Ville
+              </label>
+              <input type="text" id="modifierVille" class="w-full p-2 text-sm rounded-lg"
+                     style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"
+                     placeholder="Montréal">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-map-pin mr-2 text-xs" style="color: #10b981;"></i>
+                Code postal
+              </label>
+              <input type="text" id="modifierCodePostal" class="w-full p-2 text-sm rounded-lg" maxlength="7" 
+                     style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"
+                     placeholder="H1A 1A1">
+            </div>
+          </div>
+        </div>
+
+        <!-- COLONNE DROITE : Informations professionnelles -->
+        <div class="rounded-lg p-4">
+          <h4 class="text-base font-semibold mb-3 flex items-center" style="color: var(--text-light);">
+            <i class="fas fa-briefcase mr-2" style="color: #10b981;"></i>
+            Informations professionnelles
+          </h4>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-phone mr-2 text-xs" style="color: #10b981;"></i>
+                Téléphone
+              </label>
+              <input type="tel" id="modifierTelephone" class="w-full p-2 text-sm rounded-lg"
+                     style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"
+                     placeholder="(514) 123-4567">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-envelope mr-2 text-xs" style="color: #10b981;"></i>
+                Courriel
+              </label>
+              <input type="email" id="modifierCourriel" class="w-full p-2 text-sm rounded-lg"
+                     style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" readonly>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-calendar mr-2 text-xs" style="color: #10b981;"></i>
+                Date première journée
+              </label>
+              <div class="relative">
+                <input type="text" id="modifierDatePremiere" class="w-full text-sm rounded-lg cursor-pointer"
+                       style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light); height: 48px; padding: 12px 16px;"
+                       placeholder="2025-01-15" readonly onclick="toggleCalendar('modifierDatePremiere')">
+                <i class="fas fa-calendar-alt absolute top-1/2 transform -translate-y-1/2 text-xs cursor-pointer" 
+                   style="color: #10b981; right: 9px;" onclick="toggleCalendar('modifierDatePremiere')"></i>
+                <div id="calendar-modifierDatePremiere" class="custom-calendar absolute top-full left-0 mt-1 rounded-lg shadow-lg z-50 hidden p-4"
+                     style="background: #172033; border: 2px solid var(--border-dark); width: 280px;">
+                  <!-- En-tête du calendrier -->
+                  <div class="flex items-center justify-between mb-4">
+                    <button type="button" class="calendar-nav-btn" onclick="changeMonth('modifierDatePremiere', -1)">
+                      <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <div class="calendar-header text-center font-semibold" style="color: var(--text-light);">
+                      <span id="calendar-month-year-modifierDatePremiere">Janvier 2025</span>
+                    </div>
+                    <button type="button" class="calendar-nav-btn" onclick="changeMonth('modifierDatePremiere', 1)">
+                      <i class="fas fa-chevron-right"></i>
+                    </button>
+                  </div>
+                  <!-- Jours de la semaine -->
+                  <div class="grid grid-cols-7 gap-1 mb-2">
+                    <div class="text-center text-xs font-semibold py-1" style="color: var(--text-gray);">Dim</div>
+                    <div class="text-center text-xs font-semibold py-1" style="color: var(--text-gray);">Lun</div>
+                    <div class="text-center text-xs font-semibold py-1" style="color: var(--text-gray);">Mar</div>
+                    <div class="text-center text-xs font-semibold py-1" style="color: var(--text-gray);">Mer</div>
+                    <div class="text-center text-xs font-semibold py-1" style="color: var(--text-gray);">Jeu</div>
+                    <div class="text-center text-xs font-semibold py-1" style="color: var(--text-gray);">Ven</div>
+                    <div class="text-center text-xs font-semibold py-1" style="color: var(--text-gray);">Sam</div>
+                  </div>
+                  <!-- Grille des jours -->
+                  <div id="calendar-days-modifierDatePremiere" class="grid grid-cols-7 gap-1"></div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-hard-hat mr-2 text-xs" style="color: #10b981;"></i>
+                Poste + Service
+              </label>
+              <input type="text" id="modifierPosteService" class="w-full p-2 text-sm rounded-lg"
+                     style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"
+                     placeholder="Technicien - Service 123">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-dollar-sign mr-2 text-xs" style="color: #10b981;"></i>
+                Taux horaire (CAD)
+              </label>
+              <input type="text" id="modifierTauxHoraire" class="w-full text-sm rounded-lg taux-horaire-input" 
+                     style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light); height: 48px; padding: 12px 16px;"
+                     placeholder="25,00 $" 
+                     oninput="formatTauxHoraire(this)"
+                     onkeypress="return isNumberKey(event)"
+                     onblur="formatTauxHoraireComplet(this)">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Boutons d'action -->
+      <div class="flex justify-end gap-4 pt-4 border-t" style="border-color: var(--border-dark);">
+        <button type="button" onclick="fermerModalModifier()" 
+                class="btn-secondary">
+          <span><i class="fas fa-times mr-2"></i>Annuler</span>
+        </button>
+        <button type="submit" 
+                class="btn-primary"
+                style="background-color: #60a5fa !important; border-color: #60a5fa !important; color: white !important; transition: transform 0.2s ease;"
+                onmouseover="this.style.transform='scale(1.05)'"
+                onmouseout="this.style.transform='scale(1)'">
+          <span><i class="fas fa-save mr-2"></i>Sauvegarder</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Confirmation Terminer Employé -->
+<div id="modalConfirmationTerminer" class="modal-overlay modal-overlay-large">
+  <div class="status-card p-6 max-w-md w-full mx-4" style="--card-color: #f59e0b;">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-xl font-bold" style="color: var(--text-light);">
+        <i class="fas fa-user-clock mr-2" style="color: #f59e0b;"></i>
+        Rendre inactif
+      </h3>
+      <button onclick="fermerModalTerminer()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(245, 158, 11, 0.2) !important; color: #f59e0b;" onmouseover="this.style.background='rgba(245, 158, 11, 0.3) !important'" onmouseout="this.style.background='rgba(245, 158, 11, 0.2) !important'">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="p-6">
+    <div class="absolute top-4 right-4" style="display: none;">
+      <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+        <i class="fas fa-user-clock text-orange-600 text-sm"></i>
+      </div>
+    </div>
+    
+    <div class="mb-6 text-center">
+      <p class="text-sm" style="color: #9ca3af;">
+        Êtes-vous sûr de vouloir terminer l'emploi de :
+      </p>
+      <p class="font-semibold mt-2" style="color: var(--text-light); overflow: hidden; text-overflow: ellipsis;" id="nomEmployeTerminer"></p>
+      <p class="text-xs text-gray-500 mt-2">
+        L'employé sera déplacé vers la liste des employés inactifs.
+      </p>
+    </div>
+    
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-white mb-1">Motif de fin d'emploi</label>
+      <select id="motifTerminer" class="modal-select w-full p-2 border border-gray-300 rounded-lg" required>
+        <option value="">Sélectionner un motif...</option>
+        <option value="Manque de travail">Manque de travail</option>
+        <option value="Fin de saison">Fin de saison</option>
+        <option value="Congédié : dans les 3 premiers mois : Manque compétence">Congédié : dans les 3 premiers mois : Manque compétence</option>
+        <option value="Départ volontaire">Départ volontaire</option>
+        <option value="Départ volontaire : retour aux études">Départ volontaire : retour aux études</option>
+        <option value="Départ volontaire : Vers un autre emploi">Départ volontaire : Vers un autre emploi</option>
+        <option value="Congédié dans les 3 premiers mois : Manquement disciplinaire">Congédié dans les 3 premiers mois : Manquement disciplinaire</option>
+      </select>
+    </div>
+    
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-white mb-1">Justificatif</label>
+      <textarea id="justificatifTerminer" class="w-full text-sm rounded-lg resize-none" 
+                style="background: #0f172a; border: 2px solid var(--border-dark); color: #f1f5f9; padding: 12px 16px; min-height: 80px;"
+                placeholder="Précisez les détails du motif de fin d'emploi..." rows="3"></textarea>
+    </div>
+    
+    <div class="modal-buttons-clean">
+      <button type="button" onclick="confirmerTerminer()" class="btn-primary" style="background-color: #f59e0b !important; border-color: #f59e0b !important;">
+        <i class="fas fa-user-times mr-2"></i>Rendre inactif
+      </button>
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Détails Employé -->
+<div id="modalDetailsEmploye" class="modal-overlay modal-overlay-large">
+  <div class="status-card p-6 max-w-4xl w-11/12 mx-4" style="--card-color: #8b5cf6;">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-xl font-bold" style="color: var(--text-light);">
+        <i class="fas fa-info-circle mr-2" style="color: #8b5cf6;"></i>
+        Détails employé
+      </h3>
+      <button onclick="fermerModalDetails()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(139, 92, 246, 0.2) !important; color: #8b5cf6;" onmouseover="this.style.background='rgba(139, 92, 246, 0.3) !important'" onmouseout="this.style.background='rgba(139, 92, 246, 0.2) !important'">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="p-6">
+    
+    <div class="space-y-4">
+      <!-- Layout principal : 2 colonnes côte à côte comme dans activer/modifier -->
+      <div class="grid grid-cols-2 gap-4">
+        
+        <!-- COLONNE GAUCHE : Informations personnelles -->
+        <div class="rounded-lg p-4">
+          <h4 class="text-base font-semibold mb-3 flex items-center" style="color: var(--text-light);">
+            <i class="fas fa-user mr-2" style="color: #8b5cf6;"></i>
+            Informations personnelles
+          </h4>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium mb-1 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-id-card mr-2 text-xs" style="color: #8b5cf6;"></i>
+                Nom complet
+              </label>
+              <p id="detailsNom" class="text-sm font-semibold p-2 rounded-lg" 
+                 style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"></p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-hashtag mr-2 text-xs" style="color: #8b5cf6;"></i>
+                NAS
+              </label>
+              <p id="detailsNas" class="text-sm p-2 rounded-lg"
+                 style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"></p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-venus-mars mr-2 text-xs" style="color: #8b5cf6;"></i>
+                Genre
+              </label>
+              <p id="detailsGenre" class="text-sm p-2 rounded-lg"
+                 style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"></p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-home mr-2 text-xs" style="color: #8b5cf6;"></i>
+                Adresse domicile
+              </label>
+              <p id="detailsAdresse" class="text-sm p-2 rounded-lg"
+                 style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"></p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-city mr-2 text-xs" style="color: #8b5cf6;"></i>
+                Ville
+              </label>
+              <p id="detailsVille" class="text-sm p-2 rounded-lg"
+                 style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"></p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-map-pin mr-2 text-xs" style="color: #8b5cf6;"></i>
+                Code postal
+              </label>
+              <p id="detailsCodePostal" class="text-sm p-2 rounded-lg"
+                 style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"></p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- COLONNE DROITE : Informations professionnelles -->
+        <div class="rounded-lg p-4">
+          <h4 class="text-base font-semibold mb-3 flex items-center" style="color: var(--text-light);">
+            <i class="fas fa-briefcase mr-2" style="color: #8b5cf6;"></i>
+            Informations professionnelles
+          </h4>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium mb-1 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-phone mr-2 text-xs" style="color: #8b5cf6;"></i>
+                Téléphone
+              </label>
+              <p id="detailsTelephone" class="text-sm p-2 rounded-lg"
+                 style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"></p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-envelope mr-2 text-xs" style="color: #8b5cf6;"></i>
+                Courriel
+              </label>
+              <p id="detailsCourriel" class="text-sm p-2 rounded-lg"
+                 style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"></p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-calendar mr-2 text-xs" style="color: #8b5cf6;"></i>
+                Date première journée
+              </label>
+              <p id="detailsDateDebut" class="text-sm p-2 rounded-lg"
+                 style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"></p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-hard-hat mr-2 text-xs" style="color: #8b5cf6;"></i>
+                Poste + Service
+              </label>
+              <p id="detailsPoste" class="text-sm p-2 rounded-lg"
+                 style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"></p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-dollar-sign mr-2 text-xs" style="color: #8b5cf6;"></i>
+                Taux horaire (CAD)
+              </label>
+              <p id="detailsTauxHoraire" class="text-sm p-2 rounded-lg"
+                 style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    </div>
+  </div>
+</div>
+
+<!-- Modal Détails Employé Terminé Simple -->
+<div id="modalDetailsEmployeTermine" class="modal-overlay modal-overlay-large">
+  <div class="status-card p-6 max-w-md w-full mx-4" style="--card-color: #8b5cf6;">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-xl font-bold" style="color: var(--text-light);">
+        <i class="fas fa-info-circle mr-2" style="color: #8b5cf6;"></i>
+        Détails employé terminé
+      </h3>
+      <button onclick="fermerModalDetailsTermine()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(139, 92, 246, 0.2) !important; color: #8b5cf6;" onmouseover="this.style.background='rgba(139, 92, 246, 0.3) !important'" onmouseout="this.style.background='rgba(139, 92, 246, 0.2) !important'">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="p-6">
+      <div class="mb-6 text-center">
+        <p class="text-sm" style="color: #9ca3af;">
+          Employé terminé :
+        </p>
+        <p class="font-semibold mt-2" style="color: var(--text-light); overflow: hidden; text-overflow: ellipsis;" id="nomEmployeTermineDetails"></p>
+        <p class="text-xs text-gray-500 mt-2" id="dateTermineDetails">
+          Terminé le :
+        </p>
+      </div>
+      
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-white mb-1">Motif de fin d'emploi</label>
+        <p id="motifTermineDetails" class="w-full text-sm rounded-lg p-3"
+           style="background: #0f172a; border: 2px solid var(--border-dark); color: #f1f5f9;"></p>
+      </div>
+      
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-white mb-1">Justificatif</label>
+        <textarea id="justificatifTermineDetails" class="w-full text-sm rounded-lg resize-none" readonly
+                  style="background: #0f172a; border: 2px solid var(--border-dark); color: #f1f5f9; padding: 12px 16px; min-height: 80px;"
+                  rows="3"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Confirmation Réactiver -->
+<div id="modalConfirmationReactiver" class="modal-overlay modal-overlay-large">
+  <div class="status-card p-6 max-w-md w-full mx-4" style="--card-color: #059669;">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-xl font-bold" style="color: var(--text-light);">
+        <i class="fas fa-user-check mr-2" style="color: #059669;"></i>
+        Réactiver employé
+      </h3>
+      <button onclick="fermerModalReactiver()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(5, 150, 105, 0.2) !important; color: #059669;" onmouseover="this.style.background='rgba(5, 150, 105, 0.3) !important'" onmouseout="this.style.background='rgba(5, 150, 105, 0.2) !important'">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="p-6">
+    <div class="absolute top-4 right-4" style="display: none;">
+      <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+        <i class="fas fa-user-check text-green-600 text-sm"></i>
+      </div>
+    </div>
+    
+    <div class="mb-6 text-center">
+      <p class="text-sm" style="color: #9ca3af;">
+        Êtes-vous sûr de vouloir réactiver :
+      </p>
+      <p class="font-semibold mt-2" style="color: var(--text-light); overflow: hidden; text-overflow: ellipsis;" id="nomEmployeReactiver"></p>
+      <p class="text-xs text-gray-500 mt-2">
+        L'employé sera déplacé vers la liste des employés actifs.
+      </p>
+    </div>
+    
+    <div class="modal-buttons-clean">
+      <button type="button" onclick="confirmerReactivation()" class="btn-primary" style="background-color: #10b981 !important; border-color: #10b981 !important;">
+        <i class="fas fa-user-check mr-2"></i>Réactiver
+      </button>
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ajouter Nouveau Employé -->
+<div id="modalAjouterEmploye" class="modal-overlay modal-overlay-large">
+  <div class="status-card p-6 max-w-lg w-full mx-4" style="--card-color: #10b981;">
+    <div class="modal-header-blue">
+      <h3><i class="fas fa-user-plus mr-2" style="color: #10b981;"></i>Ajouter employé</h3>
+      <button onclick="fermerModalAjouter()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(16, 185, 129, 0.2) !important; color: #10b981;" onmouseover="this.style.background='rgba(16, 185, 129, 0.3) !important'" onmouseout="this.style.background='rgba(16, 185, 129, 0.2) !important'">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="p-6">
+    
+    <form id="formAjouterEmploye" autocomplete="off">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-white mb-1">Nom complet *</label>
+          <input type="text" id="nouveauNomComplet" class="w-full p-2 rounded-lg" style="background: var(--bg-dark); border: 1px solid var(--border-dark); color: var(--text-light);" placeholder="Nom complet" autocomplete="off" required>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-white mb-1">Genre *</label>
+          <select id="nouveauGenre" class="modal-select w-full p-2 border border-gray-300 rounded-lg" autocomplete="off" required>
+            <option value="">Sélectionner...</option>
+            <option value="Homme">Homme</option>
+            <option value="Femme">Femme</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-white mb-1">Courriel *</label>
+          <input type="email" id="nouveauCourriel" class="w-full p-2 rounded-lg" style="background: var(--bg-dark); border: 1px solid var(--border-dark); color: var(--text-light);" placeholder="jean.dupont@email.com" autocomplete="off" required>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-white mb-1">Téléphone *</label>
+          <input type="tel" id="nouveauTelephone" class="w-full p-2 rounded-lg" style="background: var(--bg-dark); border: 1px solid var(--border-dark); color: var(--text-light);" placeholder="514-555-0123" autocomplete="off" required>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-white mb-1">Poste *</label>
+          <input type="text" id="nouveauPoste" class="w-full p-2 rounded-lg" style="background: var(--bg-dark); border: 1px solid var(--border-dark); color: var(--text-light);" placeholder="Peintre" autocomplete="off" required>
+        </div>
+      </div>
+      
+      <div class="modal-buttons-clean pt-6 border-t mt-6">
+        <button type="button" onclick="fermerModalAjouter()" class="btn-secondary">
+          <i class="fas fa-times mr-2"></i>Annuler
+        </button>
+        <button type="submit" class="btn-primary">
+          <i class="fas fa-plus mr-2"></i>Ajouter
+        </button>
+      </div>
+    </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal pour activer un employé - REPOSITIONNÉ ET STYLÉ -->
+<div id="modalActivation" class="modal-overlay modal-overlay-large">
+  <div class="status-card max-w-3xl w-11/12 mx-4" style="--card-color: #10b981;">
+    <div class="flex items-center justify-between py-4 px-8 border-b" style="border-color: var(--border-dark);">
+      <h3 class="text-xl font-bold flex items-center" style="color: var(--text-light);">
+        <i class="fas fa-user-check mr-2" style="color: #10b981;"></i>
+        Activer employé
+      </h3>
+      <button onclick="fermerModal()" class="w-10 h-10 rounded-full flex items-center justify-center transition-colors" 
+              style="background: rgba(16, 185, 129, 0.2) !important; color: #10b981;" 
+              onmouseover="this.style.background='rgba(16, 185, 129, 0.3) !important'" 
+              onmouseout="this.style.background='rgba(16, 185, 129, 0.2) !important'">
+        <i class="fas fa-times text-lg"></i>
+      </button>
+    </div>
+    
+    <form id="formActivation" class="space-y-4 p-4">
+      <!-- Layout principal : 2 colonnes côte à côte -->
+      <div class="grid grid-cols-2 gap-4">
+        
+        <!-- COLONNE GAUCHE : Informations personnelles -->
+        <div class="rounded-lg p-4">
+          <h4 class="text-base font-semibold mb-3 flex items-center" style="color: var(--text-light);">
+            <i class="fas fa-user mr-2" style="color: #10b981;"></i>
+            Informations personnelles
+          </h4>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-id-card mr-2 text-xs" style="color: #10b981;"></i>
+                Nom complet
+              </label>
+              <input type="text" id="nomComplet" class="w-full p-2 text-sm rounded-lg" 
+                     style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" readonly>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-hashtag mr-2 text-xs" style="color: #10b981;"></i>
+                NAS (sans tirets)
+              </label>
+              <input type="text" id="nas" class="w-full p-2 text-sm rounded-lg" maxlength="9"
+                     style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"
+                     placeholder="123456789">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-venus-mars mr-2 text-xs" style="color: #10b981;"></i>
+                Genre
+              </label>
+              <select id="genre" class="modal-select w-full text-sm rounded-lg" 
+                      style="background: #0f172a; border: 2px solid var(--border-dark); color: #f1f5f9; height: 48px; padding: 12px 16px;">
+                <option value="" style="color: #f1f5f9;">Sélectionner...</option>
+                <option value="homme" style="color: #f1f5f9;">Homme</option>
+                <option value="femme" style="color: #f1f5f9;">Femme</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-home mr-2 text-xs" style="color: #10b981;"></i>
+                Adresse domicile
+              </label>
+              <input type="text" id="adresse" class="w-full p-2 text-sm rounded-lg"
+                     style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"
+                     placeholder="123 Rue Example"
+                     autocomplete="new-password"
+                     autocorrect="off"
+                     autocapitalize="off"
+                     spellcheck="false"
+                     readonly
+                     onfocus="this.removeAttribute('readonly');">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-city mr-2 text-xs" style="color: #10b981;"></i>
+                Ville
+              </label>
+              <input type="text" id="ville" class="w-full p-2 text-sm rounded-lg"
+                     style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"
+                     placeholder="Montréal">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-map-pin mr-2 text-xs" style="color: #10b981;"></i>
+                Code postal
+              </label>
+              <input type="text" id="codePostal" class="w-full p-2 text-sm rounded-lg" maxlength="7" 
+                     style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"
+                     placeholder="H1A 1A1">
+            </div>
+          </div>
+        </div>
+
+        <!-- COLONNE DROITE : Informations professionnelles -->
+        <div class="rounded-lg p-4">
+          <h4 class="text-base font-semibold mb-3 flex items-center" style="color: var(--text-light);">
+            <i class="fas fa-briefcase mr-2" style="color: #10b981;"></i>
+            Informations professionnelles
+          </h4>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-phone mr-2 text-xs" style="color: #10b981;"></i>
+                Téléphone
+              </label>
+              <input type="tel" id="telephone" class="w-full p-2 text-sm rounded-lg"
+                     style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"
+                     placeholder="(514) 123-4567">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-envelope mr-2 text-xs" style="color: #10b981;"></i>
+                Courriel
+              </label>
+              <input type="email" id="courriel" class="w-full p-2 text-sm rounded-lg"
+                     style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" readonly>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-calendar mr-2 text-xs" style="color: #10b981;"></i>
+                Date première journée
+              </label>
+              <div class="relative">
+                <input type="text" id="datePremiere" class="w-full text-sm rounded-lg cursor-pointer"
+                       style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light); height: 48px; padding: 12px 16px;"
+                       placeholder="2025-01-15" readonly onclick="toggleCalendar('datePremiere')">
+                <i class="fas fa-calendar-alt absolute top-1/2 transform -translate-y-1/2 text-xs cursor-pointer" 
+                   style="color: #10b981; right: 9px;" onclick="toggleCalendar('datePremiere')"></i>
+                <div id="calendar-datePremiere" class="custom-calendar absolute top-full left-0 mt-1 rounded-lg shadow-lg z-50 hidden p-4"
+                     style="background: #172033; border: 2px solid var(--border-dark); width: 280px;">
+                  <!-- En-tête du calendrier -->
+                  <div class="flex items-center justify-between mb-4">
+                    <button type="button" class="calendar-nav-btn" onclick="changeMonth('datePremiere', -1)">
+                      <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <div class="calendar-header text-center font-semibold" style="color: var(--text-light);">
+                      <span id="calendar-month-year-datePremiere">Janvier 2025</span>
+                    </div>
+                    <button type="button" class="calendar-nav-btn" onclick="changeMonth('datePremiere', 1)">
+                      <i class="fas fa-chevron-right"></i>
+                    </button>
+                  </div>
+                  <!-- Jours de la semaine -->
+                  <div class="grid grid-cols-7 gap-1 mb-2">
+                    <div class="text-center text-xs font-semibold py-1" style="color: var(--text-gray);">Dim</div>
+                    <div class="text-center text-xs font-semibold py-1" style="color: var(--text-gray);">Lun</div>
+                    <div class="text-center text-xs font-semibold py-1" style="color: var(--text-gray);">Mar</div>
+                    <div class="text-center text-xs font-semibold py-1" style="color: var(--text-gray);">Mer</div>
+                    <div class="text-center text-xs font-semibold py-1" style="color: var(--text-gray);">Jeu</div>
+                    <div class="text-center text-xs font-semibold py-1" style="color: var(--text-gray);">Ven</div>
+                    <div class="text-center text-xs font-semibold py-1" style="color: var(--text-gray);">Sam</div>
+                  </div>
+                  <!-- Grille des jours -->
+                  <div id="calendar-days-datePremiere" class="grid grid-cols-7 gap-1"></div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-hard-hat mr-2 text-xs" style="color: #10b981;"></i>
+                Poste + Service
+              </label>
+              <input type="text" id="posteService" class="w-full p-2 text-sm rounded-lg"
+                     style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"
+                     placeholder="Technicien - Service 123">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2 flex items-center" style="color: var(--text-light);">
+                <i class="fas fa-dollar-sign mr-2 text-xs" style="color: #10b981;"></i>
+                Taux horaire (CAD)
+              </label>
+              <input type="text" id="tauxHoraire" class="w-full text-sm rounded-lg taux-horaire-input" 
+                     style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light); height: 48px; padding: 12px 16px;"
+                     placeholder="25,00 $" 
+                     oninput="formatTauxHoraire(this)"
+                     onkeypress="return isNumberKey(event)"
+                     onblur="formatTauxHoraireComplet(this)">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Boutons d'action -->
+      <div class="flex justify-end gap-4 pt-4 border-t" style="border-color: var(--border-dark);">
+        <button type="button" onclick="fermerModal()" 
+                class="btn-secondary">
+          <span><i class="fas fa-times mr-2"></i>Annuler</span>
+        </button>
+        <button type="submit" 
+                class="btn-primary"
+                style="background-color: #60a5fa !important; border-color: #60a5fa !important; color: white !important; transition: transform 0.2s ease;"
+                onmouseover="this.style.transform='scale(1.05)'"
+                onmouseout="this.style.transform='scale(1)'">
+          <span><i class="fas fa-check mr-2"></i>Activer employé</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+
+
+
+<!-- Styles spécifiques à Gestion Employés -->
+
+
+  <!-- Script pour gestion menu actif -->
+  <script>
+    // Fonction pour activer le menu basé sur la page actuelle
+    function activateCurrentPageMenu() {
+      const currentPath = window.location.pathname;
+      console.log('🌐 Page actuelle détectée:', currentPath);
+      
+      const allMenuLinks = document.querySelectorAll('#sidebar a');
+      allMenuLinks.forEach(link => {
+        link.classList.remove('menu-active');
+        link.removeAttribute('data-menu-state');
+      });
+      
+      const pageMap = {
+        '/dashboard': '/dashboard',
+        '/centralevue': '/centralevue', 
+        '/calcul': '/calcul',
+        '/soumissions': '/soumissions',
+        '/gqp': '/gqp',
+        '/travaux': '/travaux',
+        '/facture': '/facture',
+        '/gestionemployes': '/gestionemployes',
+        '/rpo': '/RPO',
+        '/newrpo': '/RPO',
+        '/RPO': '/RPO',
+        '/avis': '/avis',
+        '/centrale': '/centrale',
+        '/dashboardcoach': '/dashboardcoach'
+      };
+      
+      const targetPath = pageMap[currentPath];
+      let targetLink = null;
+      
+      if (targetPath) {
+        targetLink = document.querySelector(`#sidebar a[data-path="${targetPath}"]`);
+        console.log('[TARGET] Page détectée - activation du menu pour:', targetPath);
+      }
+      
+      if (targetLink) {
+        targetLink.classList.add('menu-active');
+        targetLink.setAttribute('data-menu-state', 'active');
+        console.log('[OK] Menu activé pour:', targetLink.textContent.trim());
+      } else {
+        console.log('[WARN] Aucun menu trouvé pour la page:', currentPath);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      activateCurrentPageMenu();
+      setTimeout(activateCurrentPageMenu, 150);
+      setTimeout(activateCurrentPageMenu, 300);
+    });
+  </script>
+
+  <script>
+    // Fonction iconaccount comme dans les autres fichiers
+    const btn = document.getElementById("account-menu-button");
+    const dropdown = document.getElementById("account-dropdown");
+    const usernameDisplay = document.getElementById("account-username");
+
+    if (btn && dropdown) {
+      btn.addEventListener("click", () => {
+          dropdown.classList.toggle("hidden");
+      });
+
+      window.addEventListener("click", (e) => {
+          if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+              dropdown.classList.add("hidden");
+          }
+      });
+    }
+
+    if (window.username && usernameDisplay) {
+        usernameDisplay.textContent = "Chargement...";
+    }
+    
+    function ouvrirModalAjouterEmploye() {
+      document.getElementById('modalAjouterEmploye').classList.add('show');
+      // Empêcher le scroll en arrière-plan
+      document.body.style.overflow = 'hidden';
+      // Initialiser les selects personnalisés après ouverture
+      setTimeout(() => {
+        initCustomSelects();
+      }, 50);
+    }
+    
+    function fermerModalAjouter() {
+      document.getElementById('modalAjouterEmploye').classList.remove('show');
+      document.getElementById('formAjouterEmploye').reset();
+      // Réactiver le scroll en arrière-plan
+      document.body.style.overflow = 'auto';
+    }
+    
+    
+    function activerEmploye(employeId) {
+      // Ouvrir le modal et stocker l'ID
+      const modal = document.getElementById('modalActivation');
+      modal.style.display = 'flex';
+      modal.classList.add('show');
+      modal.dataset.employeId = employeId;
+      // Empêcher le scroll en arrière-plan
+      document.body.style.overflow = 'hidden';
+
+      // Initialiser les selects personnalisés et l'autocomplete après ouverture du modal
+      setTimeout(() => {
+        initCustomSelects();
+        preRemplirActivation(employeId);
+
+        // Initialiser Google Places autocomplete si l'API est chargée
+        if (googleMapsLoaded && typeof google !== 'undefined' && google.maps && google.maps.places) {
+          setupAddressAutocomplete('adresse', 'ville', 'codePostal');
+        }
+      }, 100);
+    }
+    
+    async function preRemplirActivation(employeId) {
+      try {
+        const username = window.username || 'user';
+        const response = await fetch(`/api/employes/${username}/nouveaux`);
+        const data = await response.json();
+        
+        const employe = data.employes.find(e => e.id === employeId);
+        if (employe) {
+          console.log('Données employé pour activation:', employe);
+          document.getElementById('nomComplet').value = employe.nom;
+          document.getElementById('telephone').value = employe.telephone;
+          document.getElementById('courriel').value = employe.courriel;
+          document.getElementById('posteService').value = employe.poste;
+          console.log('Genre:', employe.genre, 'Poste:', employe.poste);
+          
+          // Gérer le genre (dropdown custom) - même logique que pour modifier
+          setTimeout(() => {
+            const genreSelect = document.getElementById('genre');
+            let genreValue = employe.genre || employe.sexe || '';
+            
+            // Normaliser la valeur pour correspondre aux options (en minuscule)
+            if (genreValue) {
+              genreValue = genreValue.toLowerCase();
+            }
+            
+            console.log('Genre trouvé dans les données activation:', genreValue, 'Données complètes:', employe);
+            
+            if (genreSelect && genreValue) {
+              // D'abord, sélectionner l'option dans le select natif
+              genreSelect.value = genreValue;
+              console.log('Genre sélectionné dans le select natif activation:', genreValue);
+              
+              // Chercher le wrapper custom select créé par initCustomSelects
+              console.log('Recherche du wrapper pour genreSelect activation:', genreSelect);
+              
+              // Chercher dans plusieurs endroits possibles
+              const customSelectWrapper = genreSelect.closest('.custom-select') || 
+                                         genreSelect.closest('.custom-select-wrapper') ||
+                                         genreSelect.parentElement.querySelector('.custom-select') ||
+                                         document.querySelector('#genre').parentElement.querySelector('.custom-select');
+              
+              console.log('Wrapper trouvé activation:', customSelectWrapper);
+              
+              if (customSelectWrapper) {
+                // Chercher le bouton et le texte sélectionné avec plus de flexibilité
+                const customButton = customSelectWrapper.querySelector('.custom-select-button') ||
+                                   customSelectWrapper.querySelector('button') ||
+                                   customSelectWrapper.querySelector('.selected-text')?.parentElement;
+                
+                const selectedText = customSelectWrapper.querySelector('.selected-text') || 
+                                   customButton?.querySelector('.selected-text') ||
+                                   customButton?.querySelector('span') ||
+                                   customButton;
+                
+                console.log('Éléments trouvés activation:', { customButton, selectedText });
+                
+                if (selectedText && selectedText.textContent !== undefined) {
+                  // Convertir la valeur normalisée en format d'affichage
+                  const displayValue = genreValue.charAt(0).toUpperCase() + genreValue.slice(1);
+                  selectedText.textContent = displayValue;
+                  console.log('Custom select activation mis à jour avec:', displayValue);
+                } else {
+                  console.log('Texte sélectionné non manipulable, tentative d\'événement change');
+                  const event = new Event('change', { bubbles: true });
+                  genreSelect.dispatchEvent(event);
+                }
+                
+                // Marquer l'option comme sélectionnée dans les options custom
+                const options = customSelectWrapper.querySelectorAll('.custom-select-option');
+                console.log('Options custom trouvées activation:', options.length);
+                options.forEach(option => {
+                  option.classList.remove('selected');
+                  const optionValue = option.textContent.trim().toLowerCase();
+                  if (optionValue === genreValue) {
+                    option.classList.add('selected');
+                    console.log('Option marquée comme sélectionnée activation:', option.textContent.trim());
+                  }
+                });
+              } else {
+                console.log('[ERROR] Wrapper custom select non trouvé activation - initCustomSelects() peut ne pas avoir été appelé ou pas fonctionner');
+                console.log('Parent du select activation:', genreSelect.parentElement);
+                console.log('Classes du parent activation:', genreSelect.parentElement.className);
+              }
+            } else {
+              console.log('Genre vide ou select non trouvé activation:', { genreSelect, genreValue });
+            }
+          }, 400);
+        }
+      } catch (error) {
+        console.error('Erreur lors du pré-remplissage:', error);
+      }
+    }
+    
+    function fermerModal() {
+      document.getElementById('modalActivation').classList.remove('show');
+      // Réinitialiser le formulaire
+      document.getElementById('formActivation').reset();
+      // Réactiver le scroll en arrière-plan
+      document.body.style.overflow = 'auto';
+      
+      // Réinitialiser l'affichage du fichier
+      const fileNameDisplay = document.getElementById('fileName');
+      if (fileNameDisplay) {
+        fileNameDisplay.textContent = 'Aucun fichier sélectionné';
+        fileNameDisplay.classList.remove('text-green-600');
+        fileNameDisplay.classList.add('text-gray-600');
+      }
+    }
+    
+    // Gérer la soumission du formulaire
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('formActivation').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Validation des champs requis
+        const champsRequis = ['nas', 'genre', 'adresse', 'ville', 'codePostal', 'datePremiere', 'posteService', 'tauxHoraire'];
+        let valide = true;
+        
+        champsRequis.forEach(champ => {
+          const element = document.getElementById(champ);
+          if (!element.value.trim()) {
+            element.style.borderColor = '#ef4444'; // Rouge pour les erreurs
+            valide = false;
+          } else {
+            element.style.borderColor = '#d1d5db'; // Gris normal
+          }
+        });
+        
+        if (valide) {
+          // Activer via l'API
+          activerEmployeAPI();
+        } else {
+          // Message plus discret pour les erreurs de validation
+          console.log('Veuillez remplir tous les champs obligatoires.');
+        }
+      });
+      
+      // Fermer le modal en cliquant à l'extérieur
+      document.getElementById('modalActivation').addEventListener('click', function(e) {
+        if (e.target === this) {
+          fermerModal();
+        }
+      });
+      
+      // Gérer la soumission du formulaire d'ajout
+      document.getElementById('formAjouterEmploye').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Validation des champs requis
+        const champsRequis = ['nouveauNomComplet', 'nouveauGenre', 'nouveauCourriel', 'nouveauTelephone', 'nouveauPoste'];
+        let valide = true;
+        
+        champsRequis.forEach(champ => {
+          const element = document.getElementById(champ);
+          if (!element.value.trim()) {
+            element.style.borderColor = '#ef4444';
+            valide = false;
+          } else {
+            element.style.borderColor = '#d1d5db';
+          }
+        });
+        
+        if (valide) {
+          // Envoyer les données au serveur
+          ajouterNouvelEmployeAPI();
+        } else {
+          console.log('Veuillez remplir tous les champs obligatoires.');
+        }
+      });
+      
+      // Fermer le modal d'ajout en cliquant à l'extérieur
+      document.getElementById('modalAjouterEmploye').addEventListener('click', function(e) {
+        if (e.target === this) {
+          fermerModalAjouter();
+        }
+      });
+      
+      // Fermer le modal de confirmation refus en cliquant à l'extérieur
+      document.getElementById('modalConfirmationRefus').addEventListener('click', function(e) {
+        if (e.target === this) {
+          fermerModalRefus();
+        }
+      });
+      
+      // Gérer l'affichage du nom de fichier pour le spécimen chèque
+      const specimenInput = document.getElementById('specimenCheque');
+      const fileNameDisplay = document.getElementById('fileName');
+      
+      if (specimenInput && fileNameDisplay) {
+        specimenInput.addEventListener('change', function(e) {
+          if (e.target.files.length > 0) {
+            fileNameDisplay.textContent = e.target.files[0].name;
+            fileNameDisplay.classList.remove('text-gray-600');
+            fileNameDisplay.classList.add('text-green-600');
+          } else {
+            fileNameDisplay.textContent = 'Aucun fichier sélectionné';
+            fileNameDisplay.classList.remove('text-green-600');
+            fileNameDisplay.classList.add('text-gray-600');
+          }
+        });
+      }
+      
+      // Gérer l'affichage du nom de fichier pour la modification
+      const modifierSpecimenInput = document.getElementById('modifierSpecimenCheque');
+      const modifierFileNameDisplay = document.getElementById('modifierFileName');
+      
+      if (modifierSpecimenInput && modifierFileNameDisplay) {
+        modifierSpecimenInput.addEventListener('change', function(e) {
+          if (e.target.files.length > 0) {
+            modifierFileNameDisplay.textContent = e.target.files[0].name;
+            modifierFileNameDisplay.classList.remove('text-gray-600');
+            modifierFileNameDisplay.classList.add('text-green-600');
+          } else {
+            modifierFileNameDisplay.textContent = 'Aucun nouveau fichier sélectionné';
+            modifierFileNameDisplay.classList.remove('text-green-600');
+            modifierFileNameDisplay.classList.add('text-gray-600');
+          }
+        });
+      }
+      
+      // Gérer la soumission du formulaire de modification
+      document.getElementById('formModifierEmploye').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Validation des champs requis
+        const champsRequis = ['modifierNomComplet', 'modifierNas', 'modifierGenre', 'modifierAdresse', 'modifierVille', 'modifierCodePostal', 'modifierTelephone', 'modifierCourriel', 'modifierDatePremiere', 'modifierPosteService', 'modifierTauxHoraire'];
+        let valide = true;
+        
+        champsRequis.forEach(champ => {
+          const element = document.getElementById(champ);
+          if (!element.value.trim()) {
+            element.style.borderColor = '#ef4444';
+            valide = false;
+          } else {
+            element.style.borderColor = '#d1d5db';
+          }
+        });
+        
+        if (valide) {
+          // Préparer les données modifiées pour l'API
+          const tauxHoraireValue = document.getElementById('modifierTauxHoraire').value;
+          // Nettoyer le taux horaire : remplacer "," par "." puis retirer "$" et espaces
+          const tauxHoraireClean = parseFloat(tauxHoraireValue.replace(',', '.').replace(/[\$\s]/g, '')) || 0;
+          
+          const employeModifie = {
+            nom: document.getElementById('modifierNomComplet').value,
+            nas: document.getElementById('modifierNas').value,
+            genre: document.getElementById('modifierGenre').value,
+            adresse: document.getElementById('modifierAdresse').value,
+            ville: document.getElementById('modifierVille').value,
+            codePostal: document.getElementById('modifierCodePostal').value,
+            telephone: document.getElementById('modifierTelephone').value,
+            courriel: document.getElementById('modifierCourriel').value,
+            datePremiere: document.getElementById('modifierDatePremiere').value,
+            posteService: document.getElementById('modifierPosteService').value,
+            tauxHoraire: tauxHoraireClean
+          };
+          
+          console.log('Données préparées pour l\'API:', employeModifie);
+          
+          // Appeler l'API pour sauvegarder les modifications
+          const modal = document.getElementById('modalModifierEmploye');
+          sauvegarderModificationEmploye(modal.dataset.employeId, employeModifie);
+          
+          console.log('Employé modifié avec succès !');
+          fermerModalModifier();
+        } else {
+          console.log('Veuillez remplir tous les champs obligatoires.');
+        }
+      });
+      
+      // Fermer le modal de modification en cliquant à l'extérieur
+      document.getElementById('modalModifierEmploye').addEventListener('click', function(e) {
+        if (e.target === this) {
+          fermerModalModifier();
+        }
+      });
+      
+      // Fermer le modal de terminer en cliquant à l'extérieur
+      document.getElementById('modalConfirmationTerminer').addEventListener('click', function(e) {
+        if (e.target === this) {
+          fermerModalTerminer();
+        }
+      });
+      
+      // Fermer le modal de détails en cliquant à l'extérieur
+      document.getElementById('modalDetailsEmploye').addEventListener('click', function(e) {
+        if (e.target === this) {
+          fermerModalDetails();
+        }
+      });
+      
+      // Fermer le modal de réactivation en cliquant à l'extérieur
+      document.getElementById('modalConfirmationReactiver').addEventListener('click', function(e) {
+        if (e.target === this) {
+          fermerModalReactiver();
+        }
+      });
+      
+    });
+    
+    function ajouterEmployeATable(employe) {
+      const tableBody = document.querySelector('.nouveaux-employes tbody');
+      if (!tableBody) return;
+      
+      const nouvelleRow = document.createElement('tr');
+      nouvelleRow.classList.add('hover:bg-gray-50');
+      
+      nouvelleRow.innerHTML = `
+        <td class="px-6 py-4  text-sm font-medium " style="color: var(--text-light); overflow: hidden; text-overflow: ellipsis;" sticky-col">${employe.nom}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.genre}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.courriel}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.telephone}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.poste}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.dateCandidature}</td>
+        <td class="px-6 py-4 ">
+          <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 " style="color: var(--text-light); overflow: hidden; text-overflow: ellipsis;"">${employe.statut}</span>
+        </td>
+        <td class="px-6 py-4  text-sm font-medium space-x-2">
+          <button class="btn-primary" onclick="activerEmploye('${employe.id}')">
+            <i class="fas fa-check"></i> Activer
+          </button>
+          <button class="btn-primary" onclick="supprimerEmploye(this)">
+            <i class="fas fa-times"></i> Refuser
+          </button>
+        </td>
+      `;
+      
+      tableBody.appendChild(nouvelleRow);
+    }
+    
+    function supprimerEmploye(button) {
+      const employeRow = button.closest('tr');
+      const nomEmploye = employeRow.querySelector('.sticky-col').textContent.trim();
+      
+      // Afficher le modal de confirmation personnalisé
+      document.getElementById('modalConfirmationRefus').classList.add('show');
+      document.getElementById('nomEmployeRefus').textContent = nomEmploye;
+      // Empêcher le scroll en arrière-plan
+      document.body.style.overflow = 'hidden';
+      
+      // Stocker la référence de la ligne pour suppression
+      document.getElementById('modalConfirmationRefus').dataset.employeRow = employeRow;
+    }
+    
+    function confirmerRefus() {
+      const modal = document.getElementById('modalConfirmationRefus');
+      const employeRow = modal.dataset.employeRow;
+      
+      // Supprimer la ligne
+      if (employeRow && employeRow.remove) {
+        employeRow.remove();
+      }
+      
+      // Fermer le modal
+      fermerModalRefus();
+    }
+    
+    function fermerModalRefus() {
+      document.getElementById('modalConfirmationRefus').classList.remove('show');
+      delete document.getElementById('modalConfirmationRefus').dataset.employeRow;
+      // Réactiver le scroll en arrière-plan
+      document.body.style.overflow = 'auto';
+    }
+    
+    function modifierEmploye(employeId) {
+      // Ouvrir le modal et stocker l'ID
+      document.getElementById('modalModifierEmploye').classList.add('show');
+      document.getElementById('modalModifierEmploye').dataset.employeId = employeId;
+      // Empêcher le scroll en arrière-plan
+      document.body.style.overflow = 'hidden';
+
+      // Initialiser les selects personnalisés et l'autocomplete après ouverture du modal
+      setTimeout(() => {
+        initCustomSelects();
+        preRemplirModification(employeId);
+
+        // Initialiser Google Places autocomplete si l'API est chargée
+        if (googleMapsLoaded && typeof google !== 'undefined' && google.maps && google.maps.places) {
+          setupAddressAutocomplete('modifierAdresse', 'modifierVille', 'modifierCodePostal');
+        }
+      }, 100);
+    }
+    
+    async function preRemplirModification(employeId) {
+      try {
+        const username = window.username || 'user';
+        const response = await fetch(`/api/employes/${username}/actifs`);
+        const data = await response.json();
+        
+        const employe = data.employes.find(e => e.id === employeId);
+        if (employe) {
+          console.log('Données employé pour modification:', employe);
+          console.log('Propriétés genre disponibles:', {
+            genre: employe.genre,
+            sexe: employe.sexe,
+            gender: employe.gender
+          });
+          
+          // Remplir tous les champs qui existent
+          const fields = [
+            { id: 'modifierNomComplet', value: employe.nom },
+            { id: 'modifierNas', value: employe.nas },
+            { id: 'modifierAdresse', value: employe.adresse },
+            { id: 'modifierVille', value: employe.ville },
+            { id: 'modifierCodePostal', value: employe.codePostal },
+            { id: 'modifierTelephone', value: employe.telephone },
+            { id: 'modifierCourriel', value: employe.courriel },
+            { id: 'modifierDatePremiere', value: employe.datePremiere },
+            { id: 'modifierPosteService', value: employe.posteService },
+            { id: 'modifierTauxHoraire', value: employe.tauxHoraire }
+          ];
+          
+          fields.forEach(field => {
+            const element = document.getElementById(field.id);
+            if (element && field.value) {
+              element.value = field.value;
+              console.log(`Rempli ${field.id}: ${field.value}`);
+            }
+          });
+          
+          // Gérer le genre (dropdown custom) - chercher dans plusieurs propriétés possibles
+          setTimeout(() => {
+            const genreSelect = document.getElementById('modifierGenre');
+            let genreValue = employe.genre || employe.sexe || '';
+            
+            // Normaliser la valeur pour correspondre aux options (en minuscule)
+            if (genreValue) {
+              genreValue = genreValue.toLowerCase();
+            }
+            
+            console.log('Genre trouvé dans les données:', genreValue, 'Données complètes:', employe);
+            
+            if (genreSelect && genreValue) {
+              // D'abord, sélectionner l'option dans le select natif
+              genreSelect.value = genreValue;
+              console.log('Genre sélectionné dans le select natif:', genreValue);
+              
+              // Chercher le wrapper custom select créé par initCustomSelects
+              console.log('Recherche du wrapper pour genreSelect:', genreSelect);
+              
+              // Chercher dans plusieurs endroits possibles
+              const customSelectWrapper = genreSelect.closest('.custom-select') || 
+                                         genreSelect.closest('.custom-select-wrapper') ||
+                                         genreSelect.parentElement.querySelector('.custom-select') ||
+                                         document.querySelector('#modifierGenre').parentElement.querySelector('.custom-select');
+              
+              console.log('Wrapper trouvé:', customSelectWrapper);
+              
+              if (customSelectWrapper) {
+                // Chercher le bouton et le texte sélectionné avec plus de flexibilité
+                const customButton = customSelectWrapper.querySelector('.custom-select-button') ||
+                                   customSelectWrapper.querySelector('button') ||
+                                   customSelectWrapper.querySelector('.selected-text')?.parentElement;
+                
+                const selectedText = customSelectWrapper.querySelector('.selected-text') || 
+                                   customButton?.querySelector('.selected-text') ||
+                                   customButton?.querySelector('span') ||
+                                   customButton;
+                
+                console.log('Éléments trouvés:', { customButton, selectedText });
+                
+                if (selectedText && selectedText.textContent !== undefined) {
+                  // Convertir la valeur normalisée en format d'affichage
+                  const displayValue = genreValue.charAt(0).toUpperCase() + genreValue.slice(1);
+                  selectedText.textContent = displayValue;
+                  console.log('Custom select mis à jour avec:', displayValue);
+                } else {
+                  console.log('Texte sélectionné non manipulable, tentative d\'événement change');
+                  const event = new Event('change', { bubbles: true });
+                  genreSelect.dispatchEvent(event);
+                }
+                
+                // Marquer l'option comme sélectionnée dans les options custom
+                const options = customSelectWrapper.querySelectorAll('.custom-select-option');
+                console.log('Options custom trouvées:', options.length);
+                options.forEach(option => {
+                  option.classList.remove('selected');
+                  const optionValue = option.textContent.trim().toLowerCase();
+                  if (optionValue === genreValue) {
+                    option.classList.add('selected');
+                    console.log('Option marquée comme sélectionnée:', option.textContent.trim());
+                  }
+                });
+              } else {
+                console.log('[ERROR] Wrapper custom select non trouvé - initCustomSelects() peut ne pas avoir été appelé ou pas fonctionner');
+                console.log('Parent du select:', genreSelect.parentElement);
+                console.log('Classes du parent:', genreSelect.parentElement.className);
+              }
+            } else {
+              console.log('Genre vide ou select non trouvé:', { genreSelect, genreValue });
+            }
+          }, 400);
+        }
+      } catch (error) {
+        console.error('Erreur lors du pré-remplissage de modification:', error);
+      }
+    }
+    
+    function fermerModalModifier() {
+      document.getElementById('modalModifierEmploye').classList.remove('show');
+      document.getElementById('formModifierEmploye').reset();
+      // Réactiver le scroll en arrière-plan
+      document.body.style.overflow = 'auto';
+      
+      // Réinitialiser l'affichage du fichier
+      const fileNameDisplay = document.getElementById('modifierFileName');
+      if (fileNameDisplay) {
+        fileNameDisplay.textContent = 'Aucun nouveau fichier sélectionné';
+        fileNameDisplay.classList.remove('text-green-600');
+        fileNameDisplay.classList.add('text-gray-600');
+      }
+    }
+    
+    function terminerEmploye(employeId) {
+      // Récupérer les infos de l'employé pour afficher son nom
+      preRemplirTerminer(employeId);
+    }
+    
+    async function preRemplirTerminer(employeId) {
+      try {
+        const username = window.username || 'user';
+        const response = await fetch(`/api/employes/${username}/actifs`);
+        const data = await response.json();
+        
+        const employe = data.employes.find(e => e.id === employeId);
+        if (employe) {
+          // Afficher le modal de confirmation
+          document.getElementById('modalConfirmationTerminer').classList.add('show');
+          document.getElementById('modalConfirmationTerminer').dataset.employeId = employeId;
+          document.getElementById('nomEmployeTerminer').textContent = employe.nom;
+          // Empêcher le scroll en arrière-plan
+          document.body.style.overflow = 'hidden';
+          
+          // Initialiser les selects personnalisés
+          setTimeout(() => {
+            initCustomSelects();
+          }, 50);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement de l\'employé à terminer:', error);
+      }
+    }
+    
+    async function confirmerTerminer() {
+      const modal = document.getElementById('modalConfirmationTerminer');
+      const employeId = modal.dataset.employeId;
+      const motif = document.getElementById('motifTerminer').value;
+      const justificatif = document.getElementById('justificatifTerminer').value;
+      
+      if (!motif) {
+        console.log('Veuillez sélectionner un motif de fin d\'emploi.');
+        return;
+      }
+      
+      try {
+        const username = window.username || 'user';
+        const response = await fetch(`/api/employes/${username}/terminer/${employeId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            motif: motif,
+            justificatif: justificatif 
+          })
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log('Succès:', result.message);
+          fermerModalTerminer();
+          chargerEmployes(); // Recharger toutes les données
+        } else {
+          const error = await response.json();
+          console.error('Erreur:', error.detail);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la terminaison:', error);
+      }
+    }
+    
+    function fermerModalTerminer() {
+      document.getElementById('modalConfirmationTerminer').classList.remove('show');
+      document.getElementById('motifTerminer').value = '';
+      document.getElementById('justificatifTerminer').value = '';
+      delete document.getElementById('modalConfirmationTerminer').dataset.employeRow;
+      delete document.getElementById('modalConfirmationTerminer').dataset.employeNom;
+      // Réactiver le scroll en arrière-plan
+      document.body.style.overflow = 'auto';
+    }
+    
+    function ajouterEmployeTermineATable(employe) {
+      const tableBody = document.querySelector('.employes-termines tbody');
+      if (!tableBody) return;
+      
+      const nouvelleRow = document.createElement('tr');
+      nouvelleRow.classList.add('hover:bg-gray-50');
+      
+      nouvelleRow.innerHTML = `
+        <td class="px-6 py-4  text-sm font-medium " style="color: var(--text-light); overflow: hidden; text-overflow: ellipsis;" sticky-col">${employe.nom}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.courriel}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.posteService.split(' - ')[0]}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.datePremiere}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.dateTermine}</td>
+        <td class="px-6 py-4 ">
+          <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 " style="color: var(--text-light); overflow: hidden; text-overflow: ellipsis;"">${employe.motifTermine}</span>
+        </td>
+        <td class="px-6 py-4  text-sm font-medium space-x-2">
+          <button class="btn-primary" onclick="voirDetailsEmploye('${employe.id}')">
+            <i class="fas fa-eye"></i> Voir détails
+          </button>
+          <button class="btn-primary" onclick="reactiverEmploye('${employe.id}')">
+            <i class="fas fa-undo"></i> Réactiver
+          </button>
+        </td>
+      `;
+      
+      tableBody.appendChild(nouvelleRow);
+    }
+    
+    async function voirDetailsEmploye(employeId) {
+      try {
+        const username = window.username || 'user';
+        const response = await fetch(`/api/employes/${username}/termines`);
+        const data = await response.json();
+        
+        const employe = data.employes.find(e => e.id === employeId);
+        if (employe) {
+          console.log('Données employé terminé pour détails:', employe);
+          
+          // Utiliser le modal simple pour employés inactifs
+          const modal = document.getElementById('modalDetailsEmployeTermine');
+          modal.classList.add('show');
+          document.getElementById('nomEmployeTermineDetails').textContent = employe.nom;
+          // Empêcher le scroll en arrière-plan
+          document.body.style.overflow = 'hidden';
+          document.getElementById('dateTermineDetails').textContent = 'Terminé le : ' + (employe.dateTermine || 'Date inconnue');
+          document.getElementById('motifTermineDetails').textContent = employe.motifTermine || 'Non spécifié';
+          
+          // Afficher le justificatif sauvegardé
+          const justificatifTexte = employe.justificatif || '';
+          document.getElementById('justificatifTermineDetails').value = justificatifTexte || 'Aucun justificatif fourni';
+        } else {
+          console.error('Employé terminé non trouvé avec ID:', employeId);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des détails employé terminé:', error);
+      }
+    }
+    
+    function fermerModalDetails() {
+      document.getElementById('modalDetailsEmploye').classList.remove('show');
+      // Réactiver le scroll en arrière-plan
+      document.body.style.overflow = 'auto';
+    }
+    
+    function fermerModalDetailsTermine() {
+      document.getElementById('modalDetailsEmployeTermine').classList.remove('show');
+      // Réactiver le scroll en arrière-plan
+      document.body.style.overflow = 'auto';
+    }
+    
+    // Fonction pour sauvegarder les modifications d'un employé via l'API
+    async function sauvegarderModificationEmploye(employeId, employeData) {
+      try {
+        const username = window.username || 'user';
+        const response = await fetch(`/api/employes/${username}/modifier/${employeId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(employeData)
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log('Modification sauvegardée:', result.message);
+          // Recharger les données pour s'assurer que tout est synchronisé
+          chargerEmployes();
+        } else {
+          const error = await response.json();
+          console.error('Erreur lors de la sauvegarde:', error);
+          console.error('Status:', response.status);
+          console.error('Response complète:', error);
+          showNotification(`Erreur lors de la sauvegarde: ${error.detail || JSON.stringify(error)}`, 'error');
+        }
+      } catch (error) {
+        console.error('Erreur réseau lors de la sauvegarde:', error);
+        showNotification('Erreur de connexion lors de la sauvegarde', 'error');
+      }
+    }
+
+    async function voirInfoEmploye(employeId) {
+      try {
+        const username = window.username || 'user';
+        const response = await fetch(`/api/employes/${username}/actifs`);
+        const data = await response.json();
+        
+        const employe = data.employes.find(e => e.id === employeId);
+        if (employe) {
+          console.log('Données employé actif pour info:', employe);
+          // Afficher les détails dans le modal
+          const modal = document.getElementById('modalDetailsEmploye');
+          modal.classList.add('show');
+          // Empêcher le scroll en arrière-plan
+          document.body.style.overflow = 'hidden';
+          
+          // Informations personnelles
+          document.getElementById('detailsNom').textContent = employe.nom || '';
+          document.getElementById('detailsNas').textContent = employe.nas || '';
+          document.getElementById('detailsGenre').textContent = employe.genre || '';
+          document.getElementById('detailsAdresse').textContent = employe.adresse || '';
+          document.getElementById('detailsVille').textContent = employe.ville || '';
+          document.getElementById('detailsCodePostal').textContent = employe.codePostal || '';
+          
+          // Informations professionnelles
+          document.getElementById('detailsTelephone').textContent = employe.telephone || '';
+          document.getElementById('detailsCourriel').textContent = employe.courriel || '';
+          document.getElementById('detailsDateDebut').textContent = employe.datePremiere || '';
+          document.getElementById('detailsPoste').textContent = employe.posteService || '';
+          // Formatter le taux horaire avec la même logique que le formatage automatique
+          const tauxHoraire = employe.tauxHoraire || '';
+          let tauxHoraireFormate = '';
+          if (tauxHoraire) {
+            // Convertir en nombre puis formatter avec 2 décimales et le symbole $
+            const numero = parseFloat(tauxHoraire);
+            tauxHoraireFormate = numero.toFixed(2).replace('.', ',') + ' $';
+          }
+          document.getElementById('detailsTauxHoraire').textContent = tauxHoraireFormate;
+        } else {
+          console.error('Employé actif non trouvé avec ID:', employeId);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des détails employé actif:', error);
+      }
+    }
+    
+    function reactiverEmploye(employeId) {
+      // Récupérer les infos de l'employé pour afficher son nom
+      preRemplirReactivation(employeId);
+    }
+    
+    async function preRemplirReactivation(employeId) {
+      try {
+        const username = window.username || 'user';
+        const response = await fetch(`/api/employes/${username}/termines`);
+        const data = await response.json();
+        
+        const employe = data.employes.find(e => e.id === employeId);
+        if (employe) {
+          // Afficher le modal de confirmation
+          document.getElementById('modalConfirmationReactiver').classList.add('show');
+          document.getElementById('modalConfirmationReactiver').dataset.employeId = employeId;
+          document.getElementById('nomEmployeReactiver').textContent = employe.nom;
+          // Empêcher le scroll en arrière-plan
+          document.body.style.overflow = 'hidden';
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement de l\'employé à réactiver:', error);
+      }
+    }
+    
+    async function confirmerReactivation() {
+      const modal = document.getElementById('modalConfirmationReactiver');
+      const employeId = modal.dataset.employeId;
+      
+      try {
+        const username = window.username || 'user';
+        const response = await fetch(`/api/employes/${username}/reactiver/${employeId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log('Succès:', result.message);
+          fermerModalReactiver();
+          chargerEmployes(); // Recharger toutes les données
+        } else {
+          const error = await response.json();
+          console.error('Erreur:', error.detail);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la réactivation:', error);
+      }
+    }
+    
+    function fermerModalReactiver() {
+      document.getElementById('modalConfirmationReactiver').classList.remove('show');
+      delete document.getElementById('modalConfirmationReactiver').dataset.employeNom;
+      // Réactiver le scroll en arrière-plan
+      document.body.style.overflow = 'auto';
+    }
+    
+    // Fonction pour créer des menus déroulants personnalisés
+    function createCustomSelect(selectElement) {
+      console.log('🏗️ createCustomSelect() pour:', selectElement.id, selectElement);
+      
+      // Créer le conteneur personnalisé
+      const customSelect = document.createElement('div');
+      customSelect.className = 'custom-select';
+      customSelect.setAttribute('data-target', selectElement.id);
+
+      // Créer le bouton principal
+      const button = document.createElement('div');
+      button.className = 'custom-select-button';
+      button.setAttribute('tabindex', '0');
+
+      // Texte du bouton
+      const textSpan = document.createElement('span');
+      textSpan.className = 'custom-select-text';
+      const selectedOption = selectElement.options[selectElement.selectedIndex];
+      textSpan.textContent = selectedOption.textContent;
+
+      // Flèche
+      const arrowSpan = document.createElement('span');
+      arrowSpan.className = 'custom-select-arrow';
+      arrowSpan.textContent = '▼';
+
+      // Assembler le bouton
+      button.appendChild(textSpan);
+      button.appendChild(arrowSpan);
+
+      // Créer le dropdown
+      const dropdown = document.createElement('div');
+      dropdown.className = 'custom-select-dropdown';
+
+      // Créer les options
+      Array.from(selectElement.options).forEach((option, index) => {
+        const optionDiv = document.createElement('div');
+        optionDiv.className = 'custom-select-option';
+        optionDiv.textContent = option.textContent;
+        optionDiv.setAttribute('data-value', option.value);
+        
+        if (index === selectElement.selectedIndex) {
+          optionDiv.classList.add('selected');
+        }
+        
+        dropdown.appendChild(optionDiv);
+      });
+
+      // Assembler le tout
+      customSelect.appendChild(button);
+      customSelect.appendChild(dropdown);
+
+      // Insérer après le select original et masquer le select natif
+      selectElement.parentNode.insertBefore(customSelect, selectElement.nextSibling);
+      selectElement.style.display = 'none';
+      
+      console.log('[OK] Custom select créé pour:', selectElement.id, customSelect);
+      
+      return customSelect;
+    }
+    
+    function initCustomSelects() {
+      console.log('🔄 initCustomSelects() appelé');
+      
+      // Nettoyer les anciens événements et créer de nouveaux selects
+      document.querySelectorAll('.custom-select').forEach(el => el.remove());
+      
+      const modalSelects = document.querySelectorAll('.modal-select');
+      console.log('[DEBUG] Selects .modal-select trouvés:', modalSelects.length);
+      
+      modalSelects.forEach((selectElement, index) => {
+        console.log(`[TARGET] Création custom select ${index + 1}:`, selectElement.id, selectElement);
+        createCustomSelect(selectElement);
+      });
+      
+      // Gérer les interactions avec délégation d'événements
+      setTimeout(() => {
+        document.querySelectorAll('.custom-select').forEach(customSelect => {
+          const button = customSelect.querySelector('.custom-select-button');
+          const dropdown = customSelect.querySelector('.custom-select-dropdown');
+          const textElement = customSelect.querySelector('.custom-select-text');
+          const targetId = customSelect.getAttribute('data-target');
+          const originalSelect = document.getElementById(targetId);
+          
+          // Supprimer les anciens événements
+          button.replaceWith(button.cloneNode(true));
+          dropdown.replaceWith(dropdown.cloneNode(true));
+          
+          // Ré-obtenir les éléments après clonage
+          const newButton = customSelect.querySelector('.custom-select-button');
+          const newDropdown = customSelect.querySelector('.custom-select-dropdown');
+          const newTextElement = customSelect.querySelector('.custom-select-text');
+          
+          newButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Fermer tous les autres dropdowns
+            document.querySelectorAll('.custom-select').forEach(select => {
+              if (select !== customSelect) {
+                select.classList.remove('open');
+              }
+            });
+            
+            // Toggler ce dropdown
+            customSelect.classList.toggle('open');
+          });
+          
+          newDropdown.addEventListener('click', function(e) {
+            if (e.target.classList.contains('custom-select-option')) {
+              const value = e.target.getAttribute('data-value');
+              const text = e.target.textContent;
+              
+              // Mettre à jour le texte affiché
+              newTextElement.textContent = text;
+              
+              // Mettre à jour le select original
+              if (originalSelect) {
+                originalSelect.value = value;
+                
+                // Déclencher l'événement change
+                const changeEvent = new Event('change', { bubbles: true });
+                originalSelect.dispatchEvent(changeEvent);
+              }
+              
+              // Mettre à jour les classes selected
+              newDropdown.querySelectorAll('.custom-select-option').forEach(opt => {
+                opt.classList.remove('selected');
+              });
+              e.target.classList.add('selected');
+              
+              // Fermer le dropdown
+              customSelect.classList.remove('open');
+            }
+          });
+        });
+        
+        // Fermer les dropdowns en cliquant à l'extérieur (un seul événement global)
+        document.removeEventListener('click', closeDropdownsHandler);
+        document.addEventListener('click', closeDropdownsHandler);
+      }, 10);
+    }
+    
+    function closeDropdownsHandler(e) {
+      if (!e.target.closest('.custom-select')) {
+        document.querySelectorAll('.custom-select').forEach(select => {
+          select.classList.remove('open');
+        });
+      }
+    }
+    
+    function ajouterEmployeActifATable(employe) {
+      const tableBody = document.querySelector('.employes-actifs tbody');
+      if (!tableBody) return;
+      
+      const nouvelleRow = document.createElement('tr');
+      nouvelleRow.classList.add('hover:bg-gray-50');
+      
+      const specimenLink = employe.specimenCheque !== 'Non fourni' ? 
+        `<a href="#" class="text-gray-600 hover:" style="color: var(--text-light); overflow: hidden; text-overflow: ellipsis;""><i class="fas fa-file-pdf"></i> Voir PDF</a>` :
+        `<span class="text-gray-400">${employe.specimenCheque}</span>`;
+      
+      nouvelleRow.innerHTML = `
+        <td class="px-6 py-4  text-sm font-medium " style="color: var(--text-light); overflow: hidden; text-overflow: ellipsis;" sticky-col">${employe.nom}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.nas}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.genre}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.adresse}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.appartement}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.ville}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.codePostal}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.telephone}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.courriel}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.datePremiere}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.posteService}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${employe.tauxHoraire}</td>
+        <td class="px-6 py-4  text-sm text-gray-500">${specimenLink}</td>
+        <td class="px-6 py-4  text-sm font-medium space-x-2">
+          <button class="btn-primary">
+            <i class="fas fa-edit"></i> Modifier
+          </button>
+          <button class="btn-primary">
+            <i class="fas fa-user-times"></i> Rendre inactif
+          </button>
+        </td>
+      `;
+      
+      tableBody.appendChild(nouvelleRow);
+    }
+    
+    function mettreAJourCompteurActifs() {
+      const tableBody = document.querySelector('.employes-actifs tbody');
+      const compteur = tableBody ? tableBody.getElementsByTagName('tr').length : 0;
+      const spanCompteur = document.getElementById('compteur-actifs');
+      if (spanCompteur) {
+        spanCompteur.textContent = `${compteur} employé${compteur > 1 ? 's' : ''}`;
+      }
+    }
+    
+    // Calendrier personnalisé
+    class CustomCalendar {
+      constructor(inputId, calendarId) {
+        this.inputElement = document.getElementById(inputId);
+        this.calendarElement = document.getElementById(calendarId);
+        this.currentDate = new Date();
+        this.selectedDate = new Date();
+        
+        // Définir la date d'aujourd'hui par défaut
+        this.inputElement.value = this.formatDate(this.selectedDate);
+        
+        this.monthNames = [
+          'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+          'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+        ];
+        
+        this.dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+        
+        this.init();
+      }
+      
+      init() {
+        this.inputElement.addEventListener('click', () => {
+          this.toggleCalendar();
+        });
+        
+        document.addEventListener('click', (e) => {
+          if (!e.target.closest('.custom-date-container')) {
+            this.hideCalendar();
+          }
+        });
+        
+        this.renderCalendar();
+      }
+      
+      toggleCalendar() {
+        if (this.calendarElement.classList.contains('hidden')) {
+          this.showCalendar();
+        } else {
+          this.hideCalendar();
+        }
+      }
+      
+      showCalendar() {
+        this.calendarElement.classList.remove('hidden');
+        this.renderCalendar();
+      }
+      
+      hideCalendar() {
+        this.calendarElement.classList.add('hidden');
+      }
+      
+      renderCalendar() {
+        const year = this.currentDate.getFullYear();
+        const month = this.currentDate.getMonth();
+        
+        this.calendarElement.innerHTML = `
+          <div class="calendar-header">
+            <button type="button" class="calendar-nav-btn">‹</button>
+            <div class="calendar-month-year">${this.monthNames[month]} ${year}</div>
+            <button type="button" class="calendar-nav-btn">›</button>
+          </div>
+          <div class="calendar-grid">
+            ${this.renderDayHeaders()}
+            ${this.renderDays()}
+          </div>
+        `;
+        
+        this.calendarElement.calendar = this;
+        
+        // Ajouter les event listeners pour les boutons de navigation
+        const prevBtn = this.calendarElement.querySelector('.calendar-nav-btn:first-child');
+        const nextBtn = this.calendarElement.querySelector('.calendar-nav-btn:last-child');
+        
+        prevBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.previousMonth();
+        });
+        
+        nextBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.nextMonth();
+        });
+      }
+      
+      renderDayHeaders() {
+        return this.dayNames.map(day => 
+          `<div class="calendar-day-header">${day}</div>`
+        ).join('');
+      }
+      
+      renderDays() {
+        const year = this.currentDate.getFullYear();
+        const month = this.currentDate.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startingDay = firstDay.getDay();
+        
+        let daysHTML = '';
+        
+        // Jours du mois précédent
+        const prevMonth = new Date(year, month - 1, 0);
+        for (let i = startingDay - 1; i >= 0; i--) {
+          const day = prevMonth.getDate() - i;
+          daysHTML += `<div class="calendar-day other-month">${day}</div>`;
+        }
+        
+        // Jours du mois actuel
+        const today = new Date();
+        for (let day = 1; day <= daysInMonth; day++) {
+          const date = new Date(year, month, day);
+          let classes = 'calendar-day';
+          
+          if (this.selectedDate && this.isSameDay(date, this.selectedDate)) {
+            classes += ' selected';
+          } else if (this.isSameDay(date, today)) {
+            classes += ' today';
+          }
+          
+          daysHTML += `<div class="${classes}" onclick="this.closest('.custom-calendar').calendar.selectDate(${year}, ${month}, ${day})">${day}</div>`;
+        }
+        
+        // Jours du mois suivant pour compléter la grille
+        const totalCells = Math.ceil((startingDay + daysInMonth) / 7) * 7;
+        const remainingCells = totalCells - (startingDay + daysInMonth);
+        for (let day = 1; day <= remainingCells; day++) {
+          daysHTML += `<div class="calendar-day other-month">${day}</div>`;
+        }
+        
+        return daysHTML;
+      }
+      
+      selectDate(year, month, day) {
+        this.selectedDate = new Date(year, month, day);
+        const formattedDate = this.formatDate(this.selectedDate);
+        this.inputElement.value = formattedDate;
+        this.hideCalendar();
+        
+        // Déclencher l'événement change
+        const changeEvent = new Event('change', { bubbles: true });
+        this.inputElement.dispatchEvent(changeEvent);
+      }
+      
+      formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${day}/${month}/${year}`;
+      }
+      
+      isSameDay(date1, date2) {
+        return date1.getFullYear() === date2.getFullYear() &&
+               date1.getMonth() === date2.getMonth() &&
+               date1.getDate() === date2.getDate();
+      }
+      
+      previousMonth() {
+        this.currentDate.setMonth(this.currentDate.getMonth() - 1);
+        this.renderCalendar();
+      }
+      
+      nextMonth() {
+        this.currentDate.setMonth(this.currentDate.getMonth() + 1);
+        this.renderCalendar();
+      }
+    }
+    
+    function logout() {
+      fetch('/logout', { method: 'POST' })
+        .then(() => window.location.href = '/login')
+        .catch(err => console.error('Erreur logout:', err));
+    }
+
+    // Initialiser les calendriers personnalisés
+    document.addEventListener('DOMContentLoaded', function() {
+      // Account dropdown toggle - NOUVEAU HEADER
+      const btn = document.getElementById("account-dropdown-toggle");
+      const dropdown = document.getElementById("account-dropdown");
+      
+      if (btn && dropdown) {
+        btn.addEventListener("click", () => {
+          dropdown.classList.toggle("hidden");
+        });
+
+        // Fermer le dropdown si on clique ailleurs
+        document.addEventListener("click", (e) => {
+          if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add("hidden");
+          }
+        });
+      }
+
+      // Afficher le username dans le header
+      if (window.username) {
+        const displayEl = document.getElementById('account-display');
+        const usernameEl = document.getElementById('account-username');
+        if (displayEl) displayEl.textContent = window.username;
+        if (usernameEl) usernameEl.textContent = window.username;
+      }
+
+      // Modal d'activation fermé par défaut
+      
+      // Modal refuser fermé par défaut
+      
+      // Modal info fermé par défaut
+
+      // Afficher la date actuelle - EXACT COPY from newgqp
+      function afficherDateActuelle() {
+        const maintenant = new Date();
+        const options = {
+          weekday: 'long',
+          year: 'numeric', 
+          month: 'long',
+          day: 'numeric'
+        };
+        const dateFormatee = maintenant.toLocaleDateString('fr-FR', options);
+        const dateElement = document.getElementById('currentDate');
+        if (dateElement) {
+          dateElement.textContent = dateFormatee.charAt(0).toUpperCase() + dateFormatee.slice(1);
+        }
+      }
+      
+      // Appeler la fonction d'affichage de la date
+      afficherDateActuelle();
+
+      // new CustomCalendar('datePremiere', 'calendar-datePremiere'); // Désactivé - utilise notre système
+      // new CustomCalendar('modifierDatePremiere', 'calendar-modifierDatePremiere'); // Désactivé
+      
+      // Charger les employés au démarrage
+      chargerEmployes();
+    });
+    
+    // Fonctions pour interagir avec l'API
+    async function chargerEmployes() {
+      try {
+        const username = window.username || 'user'; // Utiliser le username global
+        
+        // Charger tous les types d'employés
+        const [nouveaux, actifs, termines] = await Promise.all([
+          fetch(`/api/employes/${username}/nouveaux`).then(r => r.json()),
+          fetch(`/api/employes/${username}/actifs`).then(r => r.json()),
+          fetch(`/api/employes/${username}/termines`).then(r => r.json())
+        ]);
+        
+        // Afficher les employés dans les tables
+        afficherEmployesNouveaux(nouveaux.employes || []);
+        afficherEmployesActifs(actifs.employes || []);
+        afficherEmployesTermines(termines.employes || []);
+        
+      } catch (error) {
+        console.error('Erreur lors du chargement des employés:', error);
+      }
+    }
+    
+    function afficherEmployesNouveaux(employes) {
+      const tableBody = document.querySelector('.nouveaux-employes-body');
+      const mobileList = document.getElementById('nouveaux-employes-mobile-list');
+      const compteur = document.getElementById('compteur-nouveaux');
+
+      tableBody.innerHTML = '';
+      if (mobileList) mobileList.innerHTML = '';
+
+      // Mettre à jour le compteur avec pluriel approprié
+      const count = employes.length;
+      let texteCompteur;
+      if (count === 0) {
+        texteCompteur = '0 nouveau';
+      } else if (count === 1) {
+        texteCompteur = '1 nouveau';
+      } else {
+        texteCompteur = `${count} nouveaux`;
+      }
+      compteur.textContent = texteCompteur;
+
+      if (employes.length === 0) {
+        // Afficher état vide pour mobile
+        if (mobileList) {
+          mobileList.innerHTML = `
+            <div class="employes-empty-mobile">
+              <i class="fas fa-user-plus"></i>
+              <p>Aucun nouvel employé</p>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      employes.forEach(employe => {
+        const nomComplet = `${employe.prenom || ''} ${employe.nom || ''}`.trim();
+
+        // Vue Desktop: Table row
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="px-6 py-4 sticky-col" style="color: var(--text-light); overflow: hidden; text-overflow: ellipsis;">${nomComplet}</td>
+          <td class="px-6 py-4" style="color: var(--text-light); max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${employe.courriel || ''}</td>
+          <td class="px-6 py-4" style="color: var(--text-light); overflow: hidden; text-overflow: ellipsis;">${employe.posteService || employe.poste || ''}</td>
+          <td class="px-6 py-4 text-center">
+            <button class="btn-primary mr-2" onclick="activerEmploye('${employe.id}')">Activer</button>
+            <button class="btn-secondary" onclick="refuserEmploye('${employe.id}')">Refuser</button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+
+        // Vue Mobile: Card
+        if (mobileList) {
+          const card = document.createElement('div');
+          card.className = 'employe-mobile-card';
+          card.innerHTML = `
+            <div class="employe-card-header">
+              <div style="flex: 1;">
+                <div class="employe-card-nom">${nomComplet}</div>
+                <div class="employe-card-info">
+                  <i class="fas fa-envelope"></i>
+                  <span>${employe.courriel || '-'}</span>
+                </div>
+                <div class="employe-card-info">
+                  <span class="employe-card-poste">${employe.posteService || employe.poste || '-'}</span>
+                </div>
+              </div>
+            </div>
+            <div class="employe-card-actions">
+              <button onclick="activerEmploye('${employe.id}')" class="employe-action-btn activate-btn">
+                <i class="fas fa-check"></i>
+                <span>Activer</span>
+              </button>
+              <button onclick="refuserEmploye('${employe.id}')" class="employe-action-btn delete-btn">
+                <i class="fas fa-times"></i>
+                <span>Refuser</span>
+              </button>
+            </div>
+          `;
+          mobileList.appendChild(card);
+        }
+      });
+    }
+    
+    function afficherEmployesActifs(employes) {
+      const tableBody = document.querySelector('.employes-actifs-body');
+      const mobileList = document.getElementById('employes-actifs-mobile-list');
+      const compteur = document.getElementById('compteur-actifs');
+
+      tableBody.innerHTML = '';
+      if (mobileList) mobileList.innerHTML = '';
+
+      // Mettre à jour le compteur avec pluriel approprié
+      const count = employes.length;
+      let texteCompteur;
+      if (count === 0) {
+        texteCompteur = '0 actif';
+      } else if (count === 1) {
+        texteCompteur = '1 actif';
+      } else {
+        texteCompteur = `${count} actifs`;
+      }
+      compteur.textContent = texteCompteur;
+
+      if (employes.length === 0) {
+        // Afficher état vide pour mobile
+        if (mobileList) {
+          mobileList.innerHTML = `
+            <div class="employes-empty-mobile">
+              <i class="fas fa-user-check"></i>
+              <p>Aucun employé actif</p>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      employes.forEach(employe => {
+        const nomComplet = `${employe.prenom || ''} ${employe.nom || ''}`.trim();
+
+        // Vue Desktop: Table row
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="px-6 py-4 sticky-col" style="color: var(--text-light); overflow: hidden; text-overflow: ellipsis;">${nomComplet}</td>
+          <td class="px-6 py-4" style="color: var(--text-light); max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${employe.courriel || ''}</td>
+          <td class="px-6 py-4" style="color: var(--text-light); overflow: hidden; text-overflow: ellipsis;">${employe.posteService || employe.poste || ''}</td>
+          <td class="px-6 py-4 text-center">
+            <button class="btn-secondary mr-2" onclick="voirInfoEmploye('${employe.id}')">Info</button>
+            <button class="btn-secondary mr-2" onclick="modifierEmploye('${employe.id}')">Modifier</button>
+            <button class="btn-primary" onclick="terminerEmploye('${employe.id}')">Rendre inactif</button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+
+        // Vue Mobile: Card
+        if (mobileList) {
+          const card = document.createElement('div');
+          card.className = 'employe-mobile-card';
+          card.innerHTML = `
+            <div class="employe-card-header">
+              <div style="flex: 1;">
+                <div class="employe-card-nom">${nomComplet}</div>
+                <div class="employe-card-info">
+                  <i class="fas fa-envelope"></i>
+                  <span>${employe.courriel || '-'}</span>
+                </div>
+                <div class="employe-card-info">
+                  <span class="employe-card-poste">${employe.posteService || employe.poste || '-'}</span>
+                </div>
+              </div>
+            </div>
+            <div class="employe-card-actions">
+              <button onclick="voirInfoEmploye('${employe.id}')" class="employe-action-btn edit-btn">
+                <i class="fas fa-info-circle"></i>
+                <span>Info</span>
+              </button>
+              <button onclick="modifierEmploye('${employe.id}')" class="employe-action-btn edit-btn">
+                <i class="fas fa-edit"></i>
+                <span>Modifier</span>
+              </button>
+              <button onclick="terminerEmploye('${employe.id}')" class="employe-action-btn terminate-btn">
+                <i class="fas fa-user-times"></i>
+                <span>Inactif</span>
+              </button>
+            </div>
+          `;
+          mobileList.appendChild(card);
+        }
+      });
+    }
+    
+    function afficherEmployesTermines(employes) {
+      const tableBody = document.querySelector('.employes-termines-body');
+      const mobileList = document.getElementById('employes-termines-mobile-list');
+      const compteur = document.getElementById('compteur-termines');
+
+      tableBody.innerHTML = '';
+      if (mobileList) mobileList.innerHTML = '';
+
+      // Mettre à jour le compteur avec pluriel approprié
+      const count = employes.length;
+      let texteCompteur;
+      if (count === 0) {
+        texteCompteur = '0 inactif';
+      } else if (count === 1) {
+        texteCompteur = '1 inactif';
+      } else {
+        texteCompteur = `${count} inactifs`;
+      }
+      compteur.textContent = texteCompteur;
+
+      if (employes.length === 0) {
+        // Afficher état vide pour mobile
+        if (mobileList) {
+          mobileList.innerHTML = `
+            <div class="employes-empty-mobile">
+              <i class="fas fa-user-times"></i>
+              <p>Aucun employé inactif</p>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      employes.forEach(employe => {
+        const nomComplet = `${employe.prenom || ''} ${employe.nom || ''}`.trim();
+
+        // Vue Desktop: Table row
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="px-6 py-4 sticky-col" style="color: var(--text-light); overflow: hidden; text-overflow: ellipsis;">${nomComplet}</td>
+          <td class="px-6 py-4" style="color: var(--text-light); max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${employe.courriel || ''}</td>
+          <td class="px-6 py-4" style="color: var(--text-light); overflow: hidden; text-overflow: ellipsis;">${employe.posteService || employe.poste || ''}</td>
+          <td class="px-6 py-4 text-center">
+            <button class="btn-secondary mr-2" onclick="voirDetailsEmploye('${employe.id}')">Détails</button>
+            <button class="btn-primary" onclick="reactiverEmploye('${employe.id}')">Réactiver</button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+
+        // Vue Mobile: Card
+        if (mobileList) {
+          const card = document.createElement('div');
+          card.className = 'employe-mobile-card';
+          card.innerHTML = `
+            <div class="employe-card-header">
+              <div style="flex: 1;">
+                <div class="employe-card-nom">${nomComplet}</div>
+                <div class="employe-card-info">
+                  <i class="fas fa-envelope"></i>
+                  <span>${employe.courriel || '-'}</span>
+                </div>
+                <div class="employe-card-info">
+                  <span class="employe-card-poste">${employe.posteService || employe.poste || '-'}</span>
+                </div>
+              </div>
+            </div>
+            <div class="employe-card-actions">
+              <button onclick="voirDetailsEmploye('${employe.id}')" class="employe-action-btn edit-btn">
+                <i class="fas fa-info-circle"></i>
+                <span>Détails</span>
+              </button>
+              <button onclick="reactiverEmploye('${employe.id}')" class="employe-action-btn reactivate-btn">
+                <i class="fas fa-user-check"></i>
+                <span>Réactiver</span>
+              </button>
+            </div>
+          `;
+          mobileList.appendChild(card);
+        }
+      });
+    }
+    
+    // Fonctions API pour les actions
+    async function ajouterNouvelEmployeAPI() {
+      try {
+        const nouvelEmploye = {
+          nom: document.getElementById('nouveauNomComplet').value,
+          genre: document.getElementById('nouveauGenre').value,
+          courriel: document.getElementById('nouveauCourriel').value,
+          telephone: document.getElementById('nouveauTelephone').value,
+          poste: document.getElementById('nouveauPoste').value,
+        };
+        
+        const username = window.username || 'user';
+        const response = await fetch(`/api/employes/${username}/nouveaux`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(nouvelEmploye)
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log(result.message);
+          fermerModalAjouter();
+          chargerEmployes();
+        } else {
+          const error = await response.json();
+          console.error('Erreur: ' + error.detail);
+        }
+      } catch (error) {
+        console.error('Erreur:', error);
+        console.error('Erreur lors de l\'ajout de l\'employé');
+      }
+    }
+    
+    async function refuserEmploye(employeId) {
+      try {
+        // Stocker l'ID pour la confirmation
+        document.getElementById('modalConfirmationRefus').dataset.employeId = employeId;
+        document.getElementById('modalConfirmationRefus').classList.add('show');
+        // Empêcher le scroll en arrière-plan
+        document.body.style.overflow = 'hidden';
+      } catch (error) {
+        console.error('Erreur:', error);
+        console.error('Erreur lors du refus');
+      }
+    }
+    
+    // Modifier la fonction confirmerRefus
+    async function confirmerRefus() {
+      try {
+        const employeId = document.getElementById('modalConfirmationRefus').dataset.employeId;
+        const username = window.username || 'user';
+        
+        const response = await fetch(`/api/employes/${username}/nouveaux/${employeId}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log(result.message);
+          fermerModalRefus();
+          chargerEmployes();
+        } else {
+          const error = await response.json();
+          console.error('Erreur: ' + error.detail);
+        }
+      } catch (error) {
+        console.error('Erreur:', error);
+      }
+    }
+    
+    // Fonction pour activer un employé via l'API
+    async function activerEmployeAPI() {
+      try {
+        const employeId = document.getElementById('modalActivation').dataset.employeId;
+        const username = window.username || 'user';
+        
+        // Créer l'objet avec les données du formulaire
+        const employeData = {
+          nom: document.getElementById('nomComplet').value,
+          nas: document.getElementById('nas').value,
+          genre: document.getElementById('genre').value,
+          adresse: document.getElementById('adresse').value,
+          ville: document.getElementById('ville').value,
+          codePostal: document.getElementById('codePostal').value,
+          telephone: document.getElementById('telephone').value,
+          courriel: document.getElementById('courriel').value,
+          datePremiere: document.getElementById('datePremiere').value,
+          posteService: document.getElementById('posteService').value,
+          tauxHoraire: parseFloat(document.getElementById('tauxHoraire').value)
+        };
+        
+        const response = await fetch(`/api/employes/${username}/activer/${employeId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(employeData)
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log('Succès:', result.message);
+          fermerModal();
+          chargerEmployes(); // Recharger toutes les données
+        } else {
+          const error = await response.json();
+          console.error('Erreur:', error.detail);
+        }
+      } catch (error) {
+        console.error('Erreur:', error);
+      }
+    }
+  </script>
+
+  <script>
+    // Fonctions pour le taux horaire
+    function isNumberKey(evt) {
+      var charCode = (evt.which) ? evt.which : evt.keyCode;
+      // Permettre les chiffres, le point décimal et les touches de contrôle
+      if (charCode > 31 && (charCode < 48 || charCode > 57) && charCode !== 46)
+        return false;
+      return true;
+    }
+
+    function formatTauxHoraire(input) {
+      let value = input.value;
+      // Retirer tout sauf les chiffres et le point/virgule décimal
+      value = value.replace(/[^0-9.,]/g, '');
+      
+      // Remplacer les virgules par des points pour les calculs
+      value = value.replace(/,/g, '.');
+      
+      // S'assurer qu'il n'y a qu'un seul point décimal
+      const parts = value.split('.');
+      if (parts.length > 2) {
+        value = parts[0] + '.' + parts.slice(1).join('');
+      }
+      
+      // Limiter à 2 décimales pendant la saisie
+      if (parts[1] && parts[1].length > 2) {
+        value = parts[0] + '.' + parts[1].substring(0, 2);
+      }
+      
+      input.value = value;
+    }
+
+    function formatTauxHoraireComplet(input) {
+      let value = input.value.replace(/[^0-9.,]/g, '').replace(/,/g, '.');
+      
+      if (value === '') {
+        input.value = '';
+        return;
+      }
+      
+      // Convertir en nombre et formater
+      const number = parseFloat(value);
+      if (!isNaN(number)) {
+        // Formater avec 2 décimales, virgule comme séparateur décimal
+        const formatted = number.toFixed(2).replace('.', ',');
+        input.value = formatted + ' $';
+      }
+    }
+
+
+    // Custom Select pour le dropdown - fonction simplifiée
+    function toggleCustomSelect(selectId) {
+      const wrapper = document.querySelector(`#${selectId}`).closest('.custom-select');
+      const options = wrapper.querySelector('.custom-options');
+      const chevron = wrapper.querySelector('.fa-chevron-down');
+      
+      // Fermer tous les autres dropdowns
+      document.querySelectorAll('.custom-select').forEach(select => {
+        if (select !== wrapper) {
+          const otherOptions = select.querySelector('.custom-options');
+          const otherChevron = select.querySelector('.fa-chevron-down');
+          if (otherOptions) otherOptions.classList.add('hidden');
+          if (otherChevron) otherChevron.style.transform = 'rotate(0deg)';
+        }
+      });
+      
+      // Toggle ce dropdown
+      const isHidden = options.classList.contains('hidden');
+      if (isHidden) {
+        options.classList.remove('hidden');
+        chevron.style.transform = 'rotate(180deg)';
+      } else {
+        options.classList.add('hidden');
+        chevron.style.transform = 'rotate(0deg)';
+      }
+    }
+    
+    // Gérer les clics sur les options
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('option')) {
+        const wrapper = e.target.closest('.custom-select');
+        const select = wrapper.querySelector('select');
+        const display = wrapper.querySelector('.selected-text');
+        const value = e.target.getAttribute('data-value');
+        const text = e.target.textContent.trim();
+        
+        // Mettre à jour le select caché et l'affichage
+        select.value = value;
+        display.textContent = text;
+        
+        // Fermer le dropdown
+        wrapper.querySelector('.custom-options').classList.add('hidden');
+        wrapper.querySelector('.fa-chevron-down').style.transform = 'rotate(0deg)';
+      }
+      
+      // Fermer les dropdowns en cliquant ailleurs
+      if (!e.target.closest('.custom-select')) {
+        document.querySelectorAll('.custom-options').forEach(opt => {
+          opt.classList.add('hidden');
+        });
+        document.querySelectorAll('.fa-chevron-down').forEach(chevron => {
+          chevron.style.transform = 'rotate(0deg)';
+        });
+      }
+    });
+
+    // Variables déjà définies plus haut dans le header
+
+    // Générer le calendrier - FONCTION GLOBALE
+    window.renderCalendar = function(inputId) {
+      console.log('🎨 renderCalendar appelé pour:', inputId);
+      
+      // Vérifier d'abord si le calendrier lui-même existe
+      const calendar = document.getElementById(`calendar-${inputId}`);
+      console.log('[DATE] Calendrier principal:', calendar ? 'TROUVÉ' : 'NON TROUVÉ');
+      
+      if (calendar) {
+        console.log('[BAN] Contenu HTML du calendrier:', calendar.innerHTML.substring(0, 200) + '...');
+      }
+      
+      // Utiliser notre structure avec les bons IDs
+      const monthYearSpan = document.getElementById(`calendar-month-year-${inputId}`);
+      const daysContainer = document.getElementById(`calendar-days-${inputId}`);
+      
+      console.log('[DEBUG] Éléments calendrier trouvés:', {
+        monthYearSpan: monthYearSpan ? 'OK' : 'NON TROUVÉ',
+        daysContainer: daysContainer ? 'OK' : 'NON TROUVÉ'
+      });
+      
+      if (!monthYearSpan || !daysContainer) {
+        console.error('[ERROR] Éléments calendrier manquants - structure inconnue');
+        console.log('[FIX] Structure HTML réelle:', calendar.innerHTML);
+        return;
+      }
+      
+      monthYearSpan.textContent = `${window.monthNames[currentMonth]} ${currentYear}`;
+      
+      // Calculer le premier jour du mois et le nombre de jours
+      const firstDay = new Date(currentYear, currentMonth, 1);
+      const lastDay = new Date(currentYear, currentMonth + 1, 0);
+      const daysInMonth = lastDay.getDate();
+      const startDate = firstDay.getDay();
+      
+      // Vider le conteneur
+      daysContainer.innerHTML = '';
+      
+      // Jours du mois précédent
+      const prevMonth = new Date(currentYear, currentMonth - 1, 0);
+      for (let i = startDate - 1; i >= 0; i--) {
+        const day = prevMonth.getDate() - i;
+        const dayDiv = createDayElement(day, true, currentMonth - 1, currentYear);
+        daysContainer.appendChild(dayDiv);
+      }
+      
+      // Jours du mois actuel
+      const today = new Date();
+      for (let day = 1; day <= daysInMonth; day++) {
+        const isToday = today.getDate() === day && 
+                       today.getMonth() === currentMonth && 
+                       today.getFullYear() === currentYear;
+        const dayDiv = createDayElement(day, false, currentMonth, currentYear, isToday);
+        daysContainer.appendChild(dayDiv);
+      }
+      
+      // Jours du mois suivant pour compléter la grille
+      const totalCells = daysContainer.children.length;
+      const remainingCells = 42 - totalCells; // Grille 6x7
+      for (let day = 1; day <= remainingCells && remainingCells < 14; day++) {
+        const dayDiv = createDayElement(day, true, currentMonth + 1, currentYear);
+        daysContainer.appendChild(dayDiv);
+      }
+    };
+
+    // Créer un élément jour - FONCTION GLOBALE
+    window.createDayElement = function(day, isOtherMonth, month, year, isToday = false) {
+      const dayDiv = document.createElement('div');
+      dayDiv.classList.add('calendar-day');
+      if (isOtherMonth) dayDiv.classList.add('other-month');
+      if (isToday) dayDiv.classList.add('today');
+      
+      dayDiv.textContent = day;
+      dayDiv.onclick = () => window.selectDate(day, month, year, isOtherMonth);
+      
+      return dayDiv;
+    };
+
+    // Sélectionner une date - FONCTION GLOBALE
+    window.selectDate = function(day, month, year, isOtherMonth) {
+      if (isOtherMonth) {
+        currentMonth = month;
+        currentYear = year;
+        if (currentMonth < 0) {
+          currentMonth = 11;
+          currentYear--;
+        } else if (currentMonth > 11) {
+          currentMonth = 0;
+          currentYear++;
+        }
+        renderCalendar(activeCalendarId);
+        return;
+      }
+      
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const input = document.getElementById(activeCalendarId);
+      input.value = dateStr;
+      
+      // Fermer le calendrier
+      document.getElementById(`calendar-${activeCalendarId}`).classList.add('hidden');
+    };
+
+    // Fermer calendriers en cliquant ailleurs
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.relative') || !e.target.closest('.custom-calendar')) {
+        document.querySelectorAll('.custom-calendar').forEach(cal => {
+          if (!e.target.closest(`#${cal.id}`) && !e.target.closest(`[onclick*="toggleCalendar"]`)) {
+            cal.classList.add('hidden');
+          }
+        });
+      }
+    });
+
+    // Initialiser le calendrier une fois le DOM chargé
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialiser les variables du calendrier
+      const today = new Date();
+      currentMonth = today.getMonth();
+      currentYear = today.getFullYear();
+
+      console.log('Calendrier initialisé:', { currentMonth, currentYear });
+    });
+
+    // Fonction de formatage de téléphone réutilisable (format: 000-000-0000)
+    function setupPhoneFormatting(inputId) {
+      const phoneInput = document.getElementById(inputId);
+      if (!phoneInput) return;
+
+      phoneInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, ''); // Garder seulement les chiffres
+        let formattedValue = '';
+
+        if (value.length > 0) {
+          formattedValue = value.substring(0, 3);
+        }
+        if (value.length >= 4) {
+          formattedValue += '-' + value.substring(3, 6);
+        }
+        if (value.length >= 7) {
+          formattedValue += '-' + value.substring(6, 10);
+        }
+
+        e.target.value = formattedValue;
+      });
+
+      phoneInput.addEventListener('keydown', function(e) {
+        // Si l'utilisateur appuie sur Backspace ou Delete
+        if (e.key === 'Backspace' || e.key === 'Delete') {
+          const cursorPos = e.target.selectionStart;
+          const value = e.target.value;
+
+          // Si le curseur est juste après un tiret, effacer le tiret + le chiffre avant
+          if (e.key === 'Backspace' && cursorPos > 0 && value[cursorPos - 1] === '-') {
+            e.preventDefault();
+            const newValue = value.substring(0, cursorPos - 2) + value.substring(cursorPos);
+            e.target.value = newValue;
+            // Re-formater
+            const event = new Event('input', { bubbles: true });
+            e.target.dispatchEvent(event);
+            // Repositionner le curseur
+            setTimeout(() => {
+              e.target.setSelectionRange(cursorPos - 2, cursorPos - 2);
+            }, 0);
+          }
+        }
+      });
+    }
+
+    // Initialiser le formatage de téléphone pour tous les champs concernés
+    document.addEventListener('DOMContentLoaded', function() {
+      setupPhoneFormatting('modifierTelephone');  // Modal de modification d'employé
+      setupPhoneFormatting('nouveauTelephone');   // Modal d'ajout de candidat
+      setupPhoneFormatting('telephone');          // Modal d'activation d'employé
+    });
+
+    // Variable pour stocker les instances d'autocomplete
+    let autocompleteInstances = {};
+    let googleMapsLoaded = false;
+
+    // Fonction pour initialiser Google Places Autocomplete sur un champ d'adresse
+    function setupAddressAutocomplete(addressInputId, cityInputId, postalCodeInputId) {
+      if (!googleMapsLoaded) return null;
+
+      const addressInput = document.getElementById(addressInputId);
+      if (!addressInput) return null;
+
+      // Si déjà initialisé, retourner l'instance existante
+      if (autocompleteInstances[addressInputId]) {
+        return autocompleteInstances[addressInputId];
+      }
+
+      try {
+        const autocomplete = new google.maps.places.Autocomplete(addressInput, {
+          types: ['address'],
+          componentRestrictions: { country: 'ca' }
+        });
+
+        // Forcer les attributs anti-autocomplete
+        addressInput.setAttribute('autocomplete', 'off');
+        addressInput.setAttribute('autocorrect', 'off');
+        addressInput.setAttribute('autocapitalize', 'off');
+        addressInput.setAttribute('spellcheck', 'false');
+
+        autocomplete.addListener('place_changed', () => {
+          const place = autocomplete.getPlace();
+
+          if (!place.geometry) return;
+
+          const components = place.address_components;
+          let streetNumber = '';
+          let route = '';
+          let city = '';
+          let postalCode = '';
+
+          components.forEach(component => {
+            const types = component.types;
+
+            if (types.includes('street_number')) {
+              streetNumber = component.long_name;
+            }
+            if (types.includes('route')) {
+              route = component.long_name;
+            }
+            if (types.includes('locality')) {
+              city = component.long_name;
+            }
+            if (types.includes('postal_code')) {
+              postalCode = component.long_name;
+            }
+          });
+
+          // Remplir seulement numéro civique + rue dans le champ adresse
+          addressInput.value = `${streetNumber} ${route}`.trim();
+
+          // Remplir ville si le champ existe
+          if (cityInputId) {
+            const cityInput = document.getElementById(cityInputId);
+            if (cityInput) cityInput.value = city;
+          }
+
+          // Remplir code postal si le champ existe
+          if (postalCodeInputId) {
+            const postalInput = document.getElementById(postalCodeInputId);
+            if (postalInput) postalInput.value = postalCode;
+          }
+        });
+
+        // Sauvegarder l'instance
+        autocompleteInstances[addressInputId] = autocomplete;
+        return autocomplete;
+      } catch (error) {
+        console.error('Erreur création autocomplete:', error);
+        return null;
+      }
+    }
+
+    // Fonction callback appelée par Google Maps API
+    window.initGestionEmployesAutocomplete = function() {
+      googleMapsLoaded = true;
+    };
+  </script>
+
+  <!-- Google Places API -->
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAZDi-RMHDdA4l-4sv_5H8GhsUAYXV4DVE&libraries=places&callback=initGestionEmployesAutocomplete&language=fr&region=CA"
+    async
+    defer
+  ></script>
+
+  <!-- Script commun de gestion des permissions et interface -->
+  <script src="/common.js"></script>
+
+  <!-- Navigation mobile -->
+  <script>
+    // Fonction pour retourner à la page gestions
+    function goBackToGestions() {
+      window.history.back();
+    }
+  </script>
+</body>
+</html>

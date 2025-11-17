@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>La Centrale - Admin</title>
+
+  <!-- PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#1f2937">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Feuille de style principale -->
+  <link rel="stylesheet" href="/base.css">
+
+  <!-- Feuille de style centraleadmin -->
+  <link rel="stylesheet" href="/centraleadmin.css">
+</head>
+
+<body class="min-h-screen centrale-admin">
+
+  <!-- Main Content -->
+  <div class="w-full" style="padding: 2rem;">
+
+    <!-- Header -->
+    <div class="mb-10">
+      <div class="relative">
+        <h1 class="text-4xl font-bold mb-3">
+          La Centrale
+        </h1>
+        <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        <div class="flex items-center justify-between mt-6">
+          <p class="text-xl font-medium">Centre de ressources et documentation</p>
+          <button id="add-section-btn" class="btn-primary">
+            <i class="fas fa-plus mr-2"></i>Ajouter une section
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sections dynamiques -->
+    <div id="sections-container" class="space-y-8">
+      <div class="empty-state" style="padding: 4rem 2rem; text-align: center;">
+        <i class="fas fa-folder-open" style="font-size: 3rem; color: var(--text-gray); margin-bottom: 1rem;"></i>
+        <p style="color: var(--text-secondary); font-size: 1.125rem;">Aucune section créée</p>
+        <p style="color: var(--text-gray); font-size: 0.875rem; margin-top: 0.5rem;">Cliquez sur "Ajouter une section" pour commencer</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Choisir une icône -->
+  <div id="sectionModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 700px;">
+      <h3 class="modal-title">
+        <i class="fas fa-icons mr-2"></i>
+        <span>Choisir une icône</span>
+      </h3>
+
+      <div class="modal-body">
+        <div class="icon-grid" id="iconGrid">
+          <!-- Les icônes seront générées ici -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="sectionCancel" class="btn-secondary">Annuler</button>
+        <button id="sectionSave" class="btn-primary">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Ajouter une colonne -->
+  <div id="columnModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+      <h3 class="modal-title">
+        <i class="fas fa-columns mr-2"></i>
+        Ajouter une colonne
+      </h3>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Choisissez le type de colonne</label>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-top: 0.5rem;">
+            <div class="column-type-card" data-type="fichier">
+              <i class="fas fa-file-upload" style="font-size: 1.5rem; color: var(--primary-blue); margin-bottom: 0.5rem;"></i>
+              <span style="font-weight: 600;">Fichier</span>
+              <span style="font-size: 0.75rem; color: var(--text-gray);">Upload de fichiers (max 3)</span>
+            </div>
+            <div class="column-type-card" data-type="numero">
+              <i class="fas fa-hashtag" style="font-size: 1.5rem; color: var(--primary-blue); margin-bottom: 0.5rem;"></i>
+              <span style="font-weight: 600;">Numéro</span>
+              <span style="font-size: 0.75rem; color: var(--text-gray);">Champ numérique</span>
+            </div>
+            <div class="column-type-card" data-type="texte">
+              <i class="fas fa-font" style="font-size: 1.5rem; color: var(--primary-blue); margin-bottom: 0.5rem;"></i>
+              <span style="font-weight: 600;">Texte</span>
+              <span style="font-size: 0.75rem; color: var(--text-gray);">Champ texte libre</span>
+            </div>
+            <div class="column-type-card" data-type="lien">
+              <i class="fas fa-link" style="font-size: 1.5rem; color: var(--primary-blue); margin-bottom: 0.5rem;"></i>
+              <span style="font-weight: 600;">Lien</span>
+              <span style="font-size: 0.75rem; color: var(--text-gray);">Lien externe cliquable</span>
+            </div>
+          </div>
+          <p style="font-size: 0.875rem; color: var(--text-gray); margin-top: 1rem; text-align: center;">
+            <i class="fas fa-info-circle mr-2"></i>Vous pourrez modifier le nom de la colonne après sa création
+          </p>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="columnCancel" class="btn-secondary">Annuler</button>
+        <button id="columnSave" class="btn-primary">Ajouter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Modifier Lien -->
+  <div id="linkModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content">
+      <h3 class="modal-title">
+        <i class="fas fa-link mr-2"></i>
+        Modifier le lien
+      </h3>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Texte d'affichage</label>
+          <input type="text" id="linkText" placeholder="Ex: Voir la présentation" class="input-field">
+        </div>
+
+        <div class="form-group">
+          <label>URL</label>
+          <input type="url" id="linkUrl" placeholder="https://exemple.com" class="input-field">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="linkCancel" class="btn-secondary">Annuler</button>
+        <button id="linkSave" class="btn-primary">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal viewer -->
+  <div id="viewerOverlay" class="viewer-overlay" style="display: none;"></div>
+  <div id="viewerModal" class="viewer-modal" style="display: none;">
+    <button id="closeViewer" class="viewer-close">
+      <i class="fas fa-times"></i>
+    </button>
+    <div id="viewerContent" class="viewer-content"></div>
+  </div>
+
+  <!-- Modal de confirmation personnalisé -->
+  <div id="confirmModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 450px;">
+      <h3 class="modal-title" id="confirmTitle">
+        <i class="fas fa-exclamation-triangle mr-2" style="color: #f59e0b;"></i>
+        <span>Confirmation</span>
+      </h3>
+
+      <div class="modal-body">
+        <p id="confirmMessage" style="color: var(--text-primary); font-size: 1rem; line-height: 1.6;"></p>
+      </div>
+
+      <div class="modal-footer">
+        <button id="confirmCancel" class="btn-secondary">Annuler</button>
+        <button id="confirmOk" class="btn-primary" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal d'alerte personnalisé -->
+  <div id="alertModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 450px;">
+      <h3 class="modal-title" id="alertTitle">
+        <i class="fas fa-info-circle mr-2" style="color: var(--primary-blue);"></i>
+        <span>Information</span>
+      </h3>
+
+      <div class="modal-body">
+        <p id="alertMessage" style="color: var(--text-primary); font-size: 1rem; line-height: 1.6;"></p>
+      </div>
+
+      <div class="modal-footer">
+        <button id="alertOk" class="btn-primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/centraleadmin.js"></script>
+</body>
+</html>

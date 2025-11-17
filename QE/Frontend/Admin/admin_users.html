@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin - Gestion des Utilisateurs</title>
+
+  <!-- PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Feuille de style principale -->
+  <link rel="stylesheet" href="/base.css">
+
+  <!-- Feuille de style admin users -->
+  <link rel="stylesheet" href="/admin_users.css">
+</head>
+
+<body class="min-h-screen">
+
+  <!-- Main Content -->
+  <div class="w-full" style="padding: 2rem;">
+
+    <!-- Header -->
+    <div class="mb-10">
+      <div class="relative">
+        <h1 class="text-4xl font-bold mb-3">
+          Gestion des Utilisateurs
+        </h1>
+        <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        <div class="flex items-center justify-between mt-6">
+          <p class="text-xl font-medium">Créer, modifier et gérer tous les comptes utilisateurs</p>
+          <button onclick="openCreateModal()" class="btn-primary">
+            <i class="fas fa-user-plus mr-2"></i>Nouvel Utilisateur
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="stat-card">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm" style="color: var(--text-muted);">Total</p>
+            <p id="stat-total" class="text-3xl font-bold mt-1">0</p>
+          </div>
+          <div class="stat-icon stat-icon-blue">
+            <i class="fas fa-users text-white text-xl"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm" style="color: var(--text-muted);">Entrepreneurs</p>
+            <p id="stat-entrepreneurs" class="text-3xl font-bold mt-1">0</p>
+          </div>
+          <div class="stat-icon stat-icon-blue">
+            <i class="fas fa-briefcase text-white text-xl"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm" style="color: var(--text-muted);">Coaches</p>
+            <p id="stat-coaches" class="text-3xl font-bold mt-1">0</p>
+          </div>
+          <div class="stat-icon stat-icon-purple">
+            <i class="fas fa-chalkboard-teacher text-white text-xl"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtres et Recherche -->
+    <div class="flex flex-col md:flex-row gap-4 mb-6">
+      <div class="flex-1">
+        <input
+          type="text"
+          id="search-input"
+          placeholder="Rechercher un utilisateur..."
+          onkeyup="filterUsers()"
+          class="input-field"
+        >
+      </div>
+
+      <div class="relative" style="min-width: 200px;">
+        <div id="role-filter-dropdown" class="modern-dropdown">
+          <span id="role-filter-selected-text" style="color: var(--text-light);">Tous les rôles</span>
+          <i class="fas fa-chevron-down" style="color: var(--text-gray);"></i>
+        </div>
+        <div id="role-filter-menu" class="modern-dropdown-menu">
+          <div class="dropdown-option selected" data-value="all">Tous les rôles</div>
+          <div class="dropdown-option" data-value="entrepreneur">Entrepreneurs</div>
+          <div class="dropdown-option" data-value="coach">Coaches</div>
+          <div class="dropdown-option" data-value="direction">Direction</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Liste des utilisateurs -->
+    <div id="users-container" class="grid grid-cols-1 gap-4">
+      <!-- Les utilisateurs seront chargés ici via JavaScript -->
+    </div>
+
+  </div>
+
+  <!-- Modal Créer/Modifier Utilisateur -->
+  <div id="user-modal" class="modal">
+    <div class="modal-content">
+      <div class="flex justify-between items-center mb-6">
+        <h2 id="modal-title" class="modal-title">
+          <i class="fas fa-user-plus mr-2"></i>
+          Nouvel Utilisateur
+        </h2>
+        <button onclick="closeModal()" class="text-2xl" style="color: var(--text-muted);">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <form id="user-form" onsubmit="saveUser(event)">
+        <input type="hidden" id="user-id" value="">
+
+        <div class="mb-4">
+          <label class="form-label">
+            <i class="fas fa-user mr-2"></i>Username
+          </label>
+          <input
+            type="text"
+            id="username"
+            required
+            class="input-field"
+            placeholder="Ex: jdupont"
+          >
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label">
+            <i class="fas fa-lock mr-2"></i>Mot de passe
+          </label>
+          <input
+            type="password"
+            id="password"
+            required
+            class="input-field"
+            placeholder="Minimum 6 caractères"
+            minlength="6"
+          >
+          <p class="text-xs mt-1" style="color: var(--text-muted);">
+            Laissez vide pour ne pas modifier le mot de passe (en mode édition)
+          </p>
+        </div>
+
+        <div class="mb-6">
+          <label class="form-label">
+            <i class="fas fa-user-tag mr-2"></i>Rôle
+          </label>
+          <div class="relative">
+            <div id="role-dropdown" class="modern-dropdown">
+              <span id="role-selected-text" style="color: var(--text-gray);">Sélectionner un rôle</span>
+              <i class="fas fa-chevron-down" style="color: var(--text-gray);"></i>
+            </div>
+            <div id="role-menu" class="modern-dropdown-menu">
+              <div class="dropdown-option" data-value="entrepreneur">Entrepreneur</div>
+              <div class="dropdown-option" data-value="coach">Coach</div>
+              <div class="dropdown-option" data-value="direction">Direction</div>
+            </div>
+          </div>
+          <input type="hidden" id="role" name="role" required>
+        </div>
+
+        <div class="flex gap-3">
+          <button type="button" onclick="closeModal()" class="btn-secondary flex-1">
+            Annuler
+          </button>
+          <button type="submit" class="btn-primary flex-1">
+            <i class="fas fa-save mr-2"></i>
+            Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Confirmation Suppression -->
+  <div id="delete-modal" class="modal">
+    <div class="modal-content">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="modal-title">
+          <i class="fas fa-exclamation-triangle mr-2" style="color: #ef4444;"></i>
+          Confirmer la suppression
+        </h2>
+        <button onclick="closeDeleteModal()" class="text-2xl" style="color: var(--text-muted);">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <p class="mb-6" style="color: var(--text-muted);">
+        Êtes-vous sûr de vouloir désactiver l'utilisateur <strong id="delete-username" style="color: var(--text-light);"></strong> ?
+        <br><br>
+        L'utilisateur ne pourra plus se connecter mais ses données seront conservées.
+      </p>
+
+      <div class="flex gap-3">
+        <button onclick="closeDeleteModal()" class="btn-secondary flex-1">
+          Annuler
+        </button>
+        <button onclick="confirmDelete()" class="btn-primary btn-delete flex-1">
+          <i class="fas fa-trash mr-2"></i>
+          Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Variables globales
+    let allUsers = [];
+    let currentDeleteId = null;
+    let currentRoleFilter = 'all';
+
+    // Charger les utilisateurs au démarrage
+    document.addEventListener('DOMContentLoaded', function() {
+      loadUsers();
+      initDropdown();
+      initRoleDropdown();
+    });
+
+    // Initialiser le dropdown de filtre
+    function initDropdown() {
+      const dropdown = document.getElementById('role-filter-dropdown');
+      const menu = document.getElementById('role-filter-menu');
+      const selectedText = document.getElementById('role-filter-selected-text');
+
+      // Toggle menu
+      dropdown.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.classList.toggle('show');
+      });
+
+      // Fermer au clic extérieur
+      document.addEventListener('click', function() {
+        menu.classList.remove('show');
+      });
+
+      // Gérer la sélection
+      menu.querySelectorAll('.dropdown-option').forEach(option => {
+        option.addEventListener('click', function(e) {
+          e.stopPropagation();
+
+          // Retirer selected de toutes les options
+          menu.querySelectorAll('.dropdown-option').forEach(opt => {
+            opt.classList.remove('selected');
+          });
+
+          // Ajouter selected à l'option cliquée
+          this.classList.add('selected');
+
+          // Mettre à jour le texte
+          selectedText.textContent = this.textContent;
+
+          // Mettre à jour le filtre
+          currentRoleFilter = this.getAttribute('data-value');
+
+          // Fermer le menu
+          menu.classList.remove('show');
+
+          // Filtrer les utilisateurs
+          filterUsers();
+        });
+      });
+    }
+
+    // Initialiser le dropdown de rôle dans le modal
+    function initRoleDropdown() {
+      const dropdown = document.getElementById('role-dropdown');
+      const menu = document.getElementById('role-menu');
+      const selectedText = document.getElementById('role-selected-text');
+      const hiddenInput = document.getElementById('role');
+
+      // Toggle menu
+      dropdown.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.classList.toggle('show');
+      });
+
+      // Fermer au clic extérieur
+      document.addEventListener('click', function() {
+        menu.classList.remove('show');
+      });
+
+      // Gérer la sélection
+      menu.querySelectorAll('.dropdown-option').forEach(option => {
+        option.addEventListener('click', function(e) {
+          e.stopPropagation();
+
+          // Retirer selected de toutes les options
+          menu.querySelectorAll('.dropdown-option').forEach(opt => {
+            opt.classList.remove('selected');
+          });
+
+          // Ajouter selected à l'option cliquée
+          this.classList.add('selected');
+
+          // Mettre à jour le texte
+          selectedText.textContent = this.textContent;
+          selectedText.style.color = 'var(--text-light)';
+
+          // Mettre à jour l'input caché
+          hiddenInput.value = this.getAttribute('data-value');
+
+          // Fermer le menu
+          menu.classList.remove('show');
+        });
+      });
+    }
+
+    // Charger tous les utilisateurs
+    async function loadUsers() {
+      try {
+        console.log('Chargement des utilisateurs...');
+        const response = await fetch('/admin/users');
+
+        console.log('Response status:', response.status);
+
+        if (!response.ok) {
+          throw new Error('Erreur de chargement');
+        }
+
+        const data = await response.json();
+        console.log('Données reçues:', data);
+
+        // Les données sont directement un tableau, pas un objet avec une propriété users
+        let users = Array.isArray(data) ? data : (data.users || []);
+
+        // Filtrer pour exclure les utilisateurs avec le rôle "support"
+        allUsers = users.filter(u => u.role !== 'support');
+        console.log('Nombre d\'utilisateurs (sans support):', allUsers.length);
+
+        updateStatistics();
+        renderUsers();
+
+      } catch (error) {
+        console.error('Erreur:', error);
+        showToast('Erreur de chargement des utilisateurs', 'error');
+
+        // Afficher un message dans le conteneur
+        const container = document.getElementById('users-container');
+        container.innerHTML = `
+          <div class="text-center py-12" style="color: var(--text-muted);">
+            <i class="fas fa-exclamation-triangle text-5xl mb-4"></i>
+            <p>Erreur de chargement des utilisateurs</p>
+            <p class="text-sm mt-2">${error.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    // Mettre à jour les statistiques
+    function updateStatistics() {
+      const stats = {
+        total: allUsers.length,
+        entrepreneur: allUsers.filter(u => u.role === 'entrepreneur').length,
+        coach: allUsers.filter(u => u.role === 'coach').length
+      };
+
+      document.getElementById('stat-total').textContent = stats.total;
+      document.getElementById('stat-entrepreneurs').textContent = stats.entrepreneur;
+      document.getElementById('stat-coaches').textContent = stats.coach;
+    }
+
+    // Afficher les utilisateurs
+    function renderUsers() {
+      const container = document.getElementById('users-container');
+      const searchTerm = document.getElementById('search-input').value.toLowerCase();
+
+      // Filtrer les utilisateurs
+      const filteredUsers = allUsers.filter(user => {
+        const matchesSearch = user.username.toLowerCase().includes(searchTerm);
+        const matchesRole = currentRoleFilter === 'all' || user.role === currentRoleFilter;
+        return matchesSearch && matchesRole;
+      });
+
+      if (filteredUsers.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12" style="color: var(--text-muted);">
+            <i class="fas fa-users text-5xl mb-4"></i>
+            <p>Aucun utilisateur trouvé</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Afficher les utilisateurs
+      container.innerHTML = filteredUsers.map(user => `
+        <div class="user-card p-6 rounded-lg" style="background: var(--bg-darker); border: 1px solid var(--border-dark);">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-user text-white text-xl"></i>
+              </div>
+
+              <div>
+                <h3 class="text-lg font-bold" style="color: var(--text-light);">${user.username}</h3>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="role-badge role-${user.role}">${getRoleLabel(user.role)}</span>
+                  ${user.last_login ? `<span style="color: var(--text-muted); font-size: 0.75rem;">
+                    <i class="fas fa-clock mr-1"></i>Dernier login: ${formatDate(user.last_login)}
+                  </span>` : ''}
+                </div>
+              </div>
+            </div>
+
+            <div class="flex gap-2">
+              <button onclick="editUser(${user.id})" class="btn-secondary px-4 py-2">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button onclick="openDeleteModal(${user.id}, '${user.username}')" class="btn-secondary px-4 py-2" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Filtrer les utilisateurs
+    function filterUsers() {
+      renderUsers();
+    }
+
+    // Ouvrir modal création
+    function openCreateModal() {
+      document.getElementById('modal-title').innerHTML = '<i class="fas fa-user-plus mr-2"></i>Nouvel Utilisateur';
+      document.getElementById('user-form').reset();
+      document.getElementById('user-id').value = '';
+      document.getElementById('password').required = true;
+
+      // Réinitialiser le dropdown de rôle
+      document.getElementById('role').value = '';
+      document.getElementById('role-selected-text').textContent = 'Sélectionner un rôle';
+      document.getElementById('role-selected-text').style.color = 'var(--text-gray)';
+      document.querySelectorAll('#role-menu .dropdown-option').forEach(opt => {
+        opt.classList.remove('selected');
+      });
+
+      document.getElementById('user-modal').classList.add('active');
+    }
+
+    // Éditer un utilisateur
+    function editUser(id) {
+      const user = allUsers.find(u => u.id === id);
+      if (!user) return;
+
+      document.getElementById('modal-title').innerHTML = '<i class="fas fa-user-edit mr-2"></i>Modifier Utilisateur';
+      document.getElementById('user-id').value = user.id;
+      document.getElementById('username').value = user.username;
+      document.getElementById('password').value = '';
+      document.getElementById('password').required = false;
+
+      // Mettre à jour le dropdown de rôle
+      document.getElementById('role').value = user.role;
+      const roleText = getRoleLabel(user.role);
+      document.getElementById('role-selected-text').textContent = roleText;
+      document.getElementById('role-selected-text').style.color = 'var(--text-light)';
+
+      // Sélectionner l'option correspondante
+      document.querySelectorAll('#role-menu .dropdown-option').forEach(opt => {
+        opt.classList.remove('selected');
+        if (opt.getAttribute('data-value') === user.role) {
+          opt.classList.add('selected');
+        }
+      });
+
+      document.getElementById('user-modal').classList.add('active');
+    }
+
+    // Fermer modal
+    function closeModal() {
+      document.getElementById('user-modal').classList.remove('active');
+    }
+
+    // Sauvegarder utilisateur
+    async function saveUser(event) {
+      event.preventDefault();
+
+      const userId = document.getElementById('user-id').value;
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const role = document.getElementById('role').value;
+
+      const isEdit = userId !== '';
+
+      try {
+        const url = isEdit ? '/api/admin/users/update' : '/api/admin/users/create';
+
+        const body = isEdit
+          ? { id: parseInt(userId), username, role, ...(password && { password }) }
+          : { username, password, role };
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || 'Erreur lors de la sauvegarde');
+        }
+
+        showToast(isEdit ? 'Utilisateur modifié avec succès' : 'Utilisateur créé avec succès', 'success');
+        closeModal();
+        loadUsers();
+
+      } catch (error) {
+        console.error('Erreur:', error);
+        showToast(error.message, 'error');
+      }
+    }
+
+    // Ouvrir modal suppression
+    function openDeleteModal(id, username) {
+      currentDeleteId = id;
+      document.getElementById('delete-username').textContent = username;
+      document.getElementById('delete-modal').classList.add('active');
+    }
+
+    // Fermer modal suppression
+    function closeDeleteModal() {
+      document.getElementById('delete-modal').classList.remove('active');
+      currentDeleteId = null;
+    }
+
+    // Confirmer suppression
+    async function confirmDelete() {
+      if (!currentDeleteId) return;
+
+      try {
+        const response = await fetch('/api/admin/users/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: currentDeleteId })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || 'Erreur lors de la suppression');
+        }
+
+        showToast('Utilisateur supprimé avec succès', 'success');
+        closeDeleteModal();
+        loadUsers();
+
+      } catch (error) {
+        console.error('Erreur:', error);
+        showToast(error.message, 'error');
+      }
+    }
+
+    // Utilitaires
+    function getRoleLabel(role) {
+      const labels = {
+        'entrepreneur': 'Entrepreneur',
+        'coach': 'Coach',
+        'direction': 'Direction',
+        'beta': 'Beta'
+      };
+      return labels[role] || role;
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return 'Jamais';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    function showToast(message, type = 'info') {
+      // Utiliser le système de toast du parent si disponible
+      if (window.parent && typeof window.parent.showToast === 'function' && window.parent !== window) {
+        window.parent.showToast(message, type);
+      } else {
+        // Sinon afficher un simple alert
+        console.log(`[${type.toUpperCase()}] ${message}`);
+        alert(message);
+      }
+    }
+  </script>
+</body>
+</html>

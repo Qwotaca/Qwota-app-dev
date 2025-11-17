@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Donnez votre avis</title>
+  
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#5271ff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#5271ff">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Script Service Worker -->
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          console.log('SW registered: ', registration);
+        })
+        .catch((registrationError) => {
+          console.log('SW registration failed: ', registrationError);
+        });
+    });
+  }
+  </script>
+  
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fa;
+      display: flex;
+      height: 90vh;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+      padding: 1rem;
+    }
+    .logo {
+      height: 80px;
+      margin-bottom: 1rem;
+      object-fit: contain;
+    }
+    .container {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      position: relative;
+    }
+    h1 {
+      margin-bottom: 1.5rem;
+      color: #333;
+      font-weight: 700;
+    }
+    .stars {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 1.5rem;
+      cursor: pointer;
+    }
+    .star {
+      font-size: 2.5rem;
+      color: #ccc;
+      transition: color 0.3s;
+      user-select: none;
+    }
+    .star.filled {
+      color: #f7b500;
+    }
+    textarea {
+      width: 100%;
+      height: 80px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 0.5rem;
+      font-size: 1rem;
+      resize: vertical;
+      margin-bottom: 1.5rem;
+      font-family: Arial, sans-serif;
+    }
+    button {
+      border-radius: 24px !important;
+      font-weight: 700 !important;
+      background-color: #414141 !important;
+      color: white !important;
+      padding: 0.8rem 2rem !important;
+      font-size: 1rem;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      user-select: none;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      display: inline-block;
+    }
+    button:hover {
+      background-color: #333333 !important;
+      transform: scale(1.05);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+    button:active {
+      background-color: #1c1c1c !important;
+    }
+    .message {
+      margin-top: 1rem;
+      color: green;
+      font-weight: bold;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <img src="https://i.ibb.co/N6M9W7td/Design-sans-titre-46.png" alt="Logo Qwota" class="logo" />
+  <div class="container">
+    <h1>Évaluez votre expérience</h1>
+    <div class="stars" role="radiogroup" aria-label="Note de 1 à 5 étoiles">
+      <span class="star" data-value="1" role="radio" aria-checked="false" tabindex="0">&#9733;</span>
+      <span class="star" data-value="2" role="radio" aria-checked="false" tabindex="-1">&#9733;</span>
+      <span class="star" data-value="3" role="radio" aria-checked="false" tabindex="-1">&#9733;</span>
+      <span class="star" data-value="4" role="radio" aria-checked="false" tabindex="-1">&#9733;</span>
+      <span class="star" data-value="5" role="radio" aria-checked="false" tabindex="-1">&#9733;</span>
+    </div>
+    <textarea id="comment" placeholder="Laissez un commentaire (optionnel)"></textarea>
+    <button id="submitBtn">Envoyer</button>
+    <div class="message" id="message">Merci pour votre avis !</div>
+  </div>
+
+  <script>
+    const stars = document.querySelectorAll('.star');
+    const message = document.getElementById('message');
+    const commentField = document.getElementById('comment');
+    const submitBtn = document.getElementById('submitBtn');
+    let rating = 0;
+
+    // Récupérer les paramètres depuis l'URL
+    const params = new URLSearchParams(window.location.search);
+    const username = params.get('username');
+    const nom = params.get('nom') || "";
+    const prenom = params.get('prenom') || "";
+
+    function setRating(value) {
+      rating = value;
+      stars.forEach(star => {
+        star.classList.toggle('filled', Number(star.dataset.value) <= rating);
+        star.setAttribute('aria-checked', Number(star.dataset.value) === rating);
+        star.tabIndex = Number(star.dataset.value) === rating ? 0 : -1;
+      });
+    }
+
+    stars.forEach(star => {
+      star.addEventListener('click', () => {
+        setRating(star.dataset.value);
+      });
+      star.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setRating(star.dataset.value);
+        }
+      });
+    });
+
+    submitBtn.addEventListener('click', async () => {
+      if (rating === 0) {
+        alert('Veuillez sélectionner une note.');
+        return;
+      }
+
+      if (!username) {
+        alert("Nom d'utilisateur manquant dans l'URL");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Envoi en cours...';
+
+      const data = {
+        username: username,
+        rating: rating,
+        comment: commentField.value.trim(),
+        nom: nom,
+        prenom: prenom
+      };
+
+      try {
+        const response = await fetch('/api/submit-review', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error('Erreur serveur');
+        message.style.display = 'block';
+        commentField.value = '';
+        setRating(0);
+      } catch (err) {
+        alert('Erreur lors de l’envoi de l’avis. Veuillez réessayer plus tard.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
+    });
+  </script>
+</body>
+</html>

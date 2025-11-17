@@ -1,0 +1,3177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ventes</title>
+  
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#5271ff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#5271ff">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Script Service Worker -->
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      // Ne pas enregistrer le SW sur localhost (mode dev)
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log('[DEV] Service Worker désactivé sur localhost');
+        // Désenregistrer le SW s'il existe déjà
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+            console.log('[DEV] Service Worker désenregistré');
+          }
+        });
+        return;
+      }
+
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          console.log('SW registered: ', registration);
+        })
+        .catch((registrationError) => {
+          console.log('SW registration failed: ', registrationError);
+        });
+    });
+  }
+  </script>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <!-- Variables globales définies dans common.js -->
+  <script>
+    // Ces variables sont maintenant gérées par common.js
+    // username, userRole, canEditParameters sont disponibles globalement
+  </script>
+
+  <!-- CSS uniquement pour le menu latéral -->
+  <link rel="stylesheet" href="/base.css" />
+
+  <!-- Styles centraleadmin pour les sections/tableaux -->
+  <link rel="stylesheet" href="/centraleadmin.css" />
+
+  <!-- Styles spécifiques à Ventes -->
+  <link rel="stylesheet" href="/Ventes.css">
+</head>
+<body class="min-h-screen" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: var(--text-light); overflow-x: hidden; margin: 0; padding: 0;">
+
+  <!-- Mobile overlay for sidebar -->
+  <div class="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+  <!-- Section en développement (CACHÉE) -->
+  <div class="main-content w-full hidden" style="width: 100%; padding: 2rem;">
+    <div class="flex items-center justify-center" style="min-height: 60vh;">
+      <div class="status-card p-12 text-center max-w-2xl" style="--card-color: var(--primary-blue); background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(51, 65, 85, 0.95) 100%);">
+        <div class="mb-6">
+          <i class="fas fa-tools text-6xl mb-4" style="color: var(--primary-blue);"></i>
+        </div>
+        <h2 class="text-3xl font-bold mb-4" style="color: var(--text-light);">
+          Section Ventes en Développement
+        </h2>
+        <p class="text-lg mb-6" style="color: var(--text-gray);">
+          Cette fonctionnalité est actuellement en cours de développement et sera bientôt disponible.
+        </p>
+        <div class="inline-flex items-center px-6 py-3 rounded-full text-sm font-medium" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);">
+          <i class="fas fa-clock mr-2"></i>
+          Disponible prochainement
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenu principal (VISIBLE) -->
+  <div class="main-content w-full" style="width: 100%; padding: 2rem;">
+    <div class="md:hidden h-4"></div>
+    <div class="w-full">
+    
+      <!-- Header -->
+      <div class="mb-10 mt-5 md:mt-0">
+        <div class="relative">
+          <h1 class="text-4xl font-bold mb-3">
+            Gestion des Ventes
+          </h1>
+          <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+          <div class="mt-6" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <p class="text-xl font-medium" style="color: var(--text-gray); flex: 1;">
+              Gérez vos clients et suivez l'état de vos projets
+            </p>
+          </div>
+        </div>
+      </div>
+
+    <!-- Sections Container -->
+    <div id="sections-container" style="display: flex; flex-direction: column; gap: 2rem;">
+
+      <!-- Section 1: Clients potentiels -->
+      <div class="box">
+        <div class="box-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);">
+              <i class="fas fa-user-plus"></i>
+            </div>
+            <h2 class="box-header-title" style="margin: 0;">Clients potentiels</h2>
+          </div>
+        </div>
+        <div class="box-body">
+          <div class="table-container">
+            <table class="modern-table" style="table-layout: fixed; width: 100%;">
+              <thead>
+                <tr>
+                  <th style="width: 20%; padding: 1rem;">Nom</th>
+                  <th style="width: 15%; padding: 1rem;">Téléphone</th>
+                  <th style="width: 35%; padding: 1rem;">Adresse</th>
+                  <th style="width: 15%; padding: 1rem;">Prix</th>
+                  <th style="width: 15%; padding: 1rem;">Paiement</th>
+                </tr>
+              </thead>
+              <tbody id="potentiel-tbody">
+                <tr>
+                  <td colspan="5" class="empty-state">Aucun client potentiel</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: En attente -->
+      <div class="box">
+        <div class="box-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+              <i class="fas fa-clock"></i>
+            </div>
+            <h2 class="box-header-title" style="margin: 0;">En attente</h2>
+          </div>
+        </div>
+        <div class="box-body">
+          <div class="table-container">
+            <table class="modern-table" style="table-layout: fixed; width: 100%;">
+              <thead>
+                <tr>
+                  <th style="width: 20%; padding: 1rem;">Nom</th>
+                  <th style="width: 15%; padding: 1rem;">Téléphone</th>
+                  <th style="width: 35%; padding: 1rem;">Adresse</th>
+                  <th style="width: 15%; padding: 1rem;">Prix</th>
+                  <th style="width: 15%; padding: 1rem;">Paiement</th>
+                </tr>
+              </thead>
+              <tbody id="attente-tbody">
+                <tr>
+                  <td colspan="5" class="empty-state">Aucun client en attente</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Acceptés -->
+      <div class="box">
+        <div class="box-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+              <i class="fas fa-check"></i>
+            </div>
+            <h2 class="box-header-title" style="margin: 0;">Acceptés</h2>
+          </div>
+        </div>
+        <div class="box-body">
+          <div class="table-container">
+            <table class="modern-table" style="table-layout: fixed; width: 100%;">
+              <thead>
+                <tr>
+                  <th style="width: 20%; padding: 1rem;">Nom</th>
+                  <th style="width: 15%; padding: 1rem;">Téléphone</th>
+                  <th style="width: 35%; padding: 1rem;">Adresse</th>
+                  <th style="width: 15%; padding: 1rem;">Prix</th>
+                  <th style="width: 15%; padding: 1rem;">Paiement</th>
+                </tr>
+              </thead>
+              <tbody id="accepte-tbody">
+                <tr>
+                  <td colspan="5" class="empty-state">Aucun client accepté</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 4: Produits -->
+      <div class="box">
+        <div class="box-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+              <i class="fas fa-box"></i>
+            </div>
+            <h2 class="box-header-title" style="margin: 0;">Produits</h2>
+          </div>
+        </div>
+        <div class="box-body">
+          <div class="table-container">
+            <table class="modern-table" style="table-layout: fixed; width: 100%;">
+              <thead>
+                <tr>
+                  <th style="width: 20%; padding: 1rem;">Nom</th>
+                  <th style="width: 15%; padding: 1rem;">Téléphone</th>
+                  <th style="width: 35%; padding: 1rem;">Adresse</th>
+                  <th style="width: 15%; padding: 1rem;">Prix</th>
+                  <th style="width: 15%; padding: 1rem;">Paiement</th>
+                </tr>
+              </thead>
+              <tbody id="produit-tbody">
+                <tr>
+                  <td colspan="5" class="empty-state">Aucun produit</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Clients perdus -->
+      <div id="clients-perdus-modal" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none;" onclick="if(event.target === this) document.getElementById('clients-perdus-modal').style.display='none';">
+        <div class="status-card p-6 max-w-4xl w-full mx-4" style="max-height: 90vh; overflow-y: auto;">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold" style="color: var(--text-light);">
+              <i class="fas fa-user-times mr-2" style="color: #ef4444;"></i>
+              Clients perdus
+            </h3>
+            <button onclick="document.getElementById('clients-perdus-modal').style.display='none'; event.stopPropagation();" type="button" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; cursor: pointer; border: none;">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <div class="table-container">
+            <table class="modern-table" style="table-layout: fixed; width: 100%;">
+              <thead>
+                <tr>
+                  <th style="width: 25%; padding: 1rem;">Nom</th>
+                  <th style="width: 20%; padding: 1rem;">Téléphone</th>
+                  <th style="width: 40%; padding: 1rem;">Adresse</th>
+                  <th style="width: 15%; padding: 1rem;">Prix</th>
+                </tr>
+              </thead>
+              <tbody id="perdus-modal-tbody">
+                <tr>
+                  <td colspan="4" class="empty-state">Chargement...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    </div>
+  </div>
+
+  <!-- Modal informations client -->
+  <div id="clientInfoModal" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none;">
+    <div id="clientInfoCard" class="status-card p-6 max-w-lg w-full mx-4" style="max-height: 90vh; overflow-y: auto;">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i id="clientInfoIcon" class="fas fa-user mr-2"></i>
+          Informations client
+        </h3>
+        <button id="clientInfoCloseBtn" onclick="closeClientInfo()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div id="clientInfoContent" class="space-y-4">
+        <!-- Le contenu sera inséré ici par JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal confirmation clôture -->
+  <div id="confirmationModal" class="flex" style="display:none;">
+    <div class="modal-content">
+      <p class="text-lg font-semibold">Confirmer que le projet est terminé ?</p>
+      <div class="modal-buttons">
+        <button id="modalConfirm" type="button" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-800">Oui</button>
+        <button id="modalCancel" type="button" class="px-4 py-2 bg-white text-gray-600 border border-gray-300 rounded hover:bg-gray-50">Non</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal confirmation retour -->
+  <div id="retourModal" class="flex" style="display:none;">
+    <div class="modal-content">
+      <p class="text-lg font-semibold">Êtes-vous sûr de retourner en arrière ?</p>
+      <p class="text-sm text-gray-600 mt-2">Le courriel d'avis a déjà été envoyé au client.</p>
+      <div class="modal-buttons">
+        <button id="retourConfirm" type="button" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-800">Oui</button>
+        <button id="retourCancel" type="button" class="px-4 py-2 bg-white text-gray-600 border border-gray-300 rounded hover:bg-gray-50">Non</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Ajouter un prospect -->
+  <div id="ajouterProspectModal" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none;">
+    <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i class="fas fa-user-plus mr-2" style="color: var(--primary-blue);"></i>
+          Ajouter un client potentiel
+        </h3>
+        <button onclick="fermerModalProspect()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);" onmouseover="this.style.background='rgba(96, 165, 250, 0.3)'" onmouseout="this.style.background='rgba(96, 165, 250, 0.2)'">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <form id="prospectForm" class="space-y-4" autocomplete="off">
+        <!-- Prénom -->
+        <div>
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Prénom *</label>
+          <input type="text" id="prospectPrenom" name="prospect-first-name" required autocomplete="new-password" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly');"
+                 class="w-full p-2 text-sm rounded-lg" 
+                 style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"
+                 placeholder="Ex: Jean">
+        </div>
+        
+        <!-- Nom -->
+        <div>
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Nom *</label>
+          <input type="text" id="prospectNom" name="prospect-last-name" required autocomplete="new-password" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly');"
+                 class="w-full p-2 text-sm rounded-lg" 
+                 style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"
+                 placeholder="Ex: Dupont">
+        </div>
+        
+        <!-- Téléphone -->
+        <div>
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Téléphone *</label>
+          <input type="tel" id="prospectTelephone" name="telephone" required autocomplete="off" autocapitalize="off" spellcheck="false"
+                 class="w-full p-2 text-sm rounded-lg"
+                 style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"
+                 placeholder="Ex: 450-123-4567" maxlength="12">
+        </div>
+        
+        <!-- Adresse -->
+        <div>
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Adresse *</label>
+          <input type="text" id="prospectAdresse" name="prospect-address-field-unique-12345" required autocomplete="new-password" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly');" data-form-type="other" placeholder="Ex: 123 Rue de la Paix, Montréal, QC"
+                    class="w-full p-2 text-sm rounded-lg"
+                    style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);">
+        </div>
+        
+        <!-- Boutons -->
+        <div class="flex space-x-3 pt-4">
+          <button type="button" onclick="fermerModalProspect()" 
+                  class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
+            Annuler
+          </button>
+          <button type="submit" 
+                  class="btn-primary px-4 py-2 rounded-lg relative overflow-hidden">
+            <span>Ajouter</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal confirmation Marquer comme perdu -->
+  <div id="confirmPerduModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
+    <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+      <div class="mb-6">
+        <h3 class="text-xl font-bold mb-2" style="color: var(--text-light);">
+          <i class="fas fa-exclamation-triangle mr-2" style="color: #ef4444;"></i>
+          Confirmer la perte du client
+        </h3>
+        <p style="color: var(--text-gray);">Êtes-vous sûr de vouloir marquer ce client comme perdu ?</p>
+      </div>
+
+      <div class="flex space-x-3">
+        <button onclick="confirmMarquerPerdu()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: #ef4444; color: white;">
+          Oui
+        </button>
+        <button onclick="closeConfirmPerduModal()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: rgba(148, 163, 184, 0.2); color: var(--text-light);">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal confirmation Production terminée -->
+  <div id="confirmProductionModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
+    <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+      <div class="mb-6">
+        <h3 class="text-xl font-bold mb-2" style="color: var(--text-light);">
+          <i class="fas fa-check-circle mr-2" style="color: #10b981;"></i>
+          Confirmer la production terminée
+        </h3>
+        <p style="color: var(--text-gray);">Êtes-vous sûr que la production est terminée pour ce client ?</p>
+      </div>
+
+      <div class="flex space-x-3">
+        <button onclick="confirmTerminerProduction()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: #10b981; color: white;">
+          Oui
+        </button>
+        <button onclick="closeConfirmProductionModal()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: rgba(148, 163, 184, 0.2); color: var(--text-light);">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal confirmation suppression prospect -->
+  <div id="confirmDeleteProspectModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
+    <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+      <div class="mb-6">
+        <h3 class="text-xl font-bold mb-2" style="color: var(--text-light);">
+          <i class="fas fa-exclamation-triangle mr-2" style="color: #ef4444;"></i>
+          Confirmer la suppression
+        </h3>
+        <p style="color: var(--text-gray);">Êtes-vous sûr de vouloir supprimer ce client potentiel ?</p>
+      </div>
+
+      <div class="flex space-x-3">
+        <button onclick="confirmDeleteProspect()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: #ef4444; color: white;">
+          Oui
+        </button>
+        <button onclick="closeConfirmDeleteProspectModal()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: rgba(148, 163, 184, 0.2); color: var(--text-light);">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal confirmation suppression client perdu -->
+  <div id="confirmDeletePerduModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
+    <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+      <div class="mb-6">
+        <h3 class="text-xl font-bold mb-2" style="color: var(--text-light);">
+          <i class="fas fa-exclamation-triangle mr-2" style="color: #ef4444;"></i>
+          Confirmer la suppression
+        </h3>
+        <p id="confirmDeletePerduText" style="color: var(--text-gray);"></p>
+      </div>
+
+      <div class="flex space-x-3">
+        <button onclick="confirmDeleteClientPerdu()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: #ef4444; color: white;">
+          Oui
+        </button>
+        <button onclick="closeConfirmDeletePerduModal()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: rgba(148, 163, 184, 0.2); color: var(--text-light);">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Attendre que common.js soit initialisé au lieu de rediriger
+  function checkUsername() {
+    if (!window.username) {
+      // Réessayer dans 100ms si common.js n'est pas encore prêt
+      setTimeout(checkUsername, 100);
+      return;
+    }
+    // Username disponible, continuer avec l'initialisation de la page
+    console.log('Username disponible:', window.username);
+  }
+  
+  // Lancer la vérification avec un délai initial
+  setTimeout(checkUsername, 200);
+
+  function formaterPrix(valeur) {
+    if (!valeur) return "-";
+    let nombre = Number(valeur.toString().replace(/\s/g, '').replace(',', '.'));
+    if (isNaN(nombre)) return valeur;
+    return nombre.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " $";
+  }
+
+  window.addEventListener("load", () => {
+    // Dropdown compte géré par l'event listener DOMContentLoaded plus bas
+    
+    if (window.username && window.usernameDisplay) {
+      window.usernameDisplay.textContent = "Compte: " + window.username;
+    }
+
+    // Variables pour gérer l'ID du travail à clôturer
+    let eventIdToClose = null;
+
+    // Code legacy supprimé - nous utilisons maintenant le système de cartes
+    // Recherches supprimées - système de cartes utilisé maintenant
+  });
+
+  // Anciennes fonctions supprimées - utiliser les nouvelles à partir de la ligne 1829
+</script>
+
+
+  <!-- Script pour toggle clients perdus -->
+  <script>
+    // Variable pour stocker l'état du modal
+    let perdusModalOpen = false;
+
+    function toggleClientsPerdus() {
+      const modal = document.getElementById('clients-perdus-modal');
+      if (!modal) return;
+
+      perdusModalOpen = true;
+      modal.style.display = 'flex';
+      chargerClientsPerdus();
+    }
+
+    function closeClientsPerdusModal() {
+      const modal = document.getElementById('clients-perdus-modal');
+      if (!modal) return;
+
+      perdusModalOpen = false;
+      modal.style.display = 'none';
+    }
+
+    async function chargerClientsPerdus() {
+      try {
+        const response = await fetch(`${window.location.origin}/clients-perdus/${window.username}`);
+        const clientsPerdus = await response.json();
+
+        const tbody = document.getElementById('perdus-modal-tbody');
+        if (!tbody) return;
+
+        if (!clientsPerdus || clientsPerdus.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Aucun client perdu</td></tr>';
+        } else {
+          tbody.innerHTML = clientsPerdus.map(client => `
+            <tr>
+              <td style="padding: 1rem;">${client.prenom || ''} ${client.nom || ''}</td>
+              <td style="padding: 1rem;">${client.telephone || ''}</td>
+              <td style="padding: 1rem;">${client.adresse || ''}</td>
+              <td style="padding: 1rem;">${client.prix || ''}</td>
+            </tr>
+          `).join('');
+        }
+      } catch (error) {
+        console.error('Erreur chargement clients perdus:', error);
+      }
+    }
+  </script>
+
+  <!-- Script pour gestion menu actif -->
+  <script>
+    // Fonction pour activer le menu basé sur la page actuelle
+    function activateCurrentPageMenu() {
+      const currentPath = window.location.pathname;
+      console.log('🌐 Page actuelle détectée:', currentPath);
+      
+      const allMenuLinks = document.querySelectorAll('#sidebar a');
+      allMenuLinks.forEach(link => {
+        link.classList.remove('menu-active');
+        link.removeAttribute('data-menu-state');
+      });
+      
+      const pageMap = {
+        '/dashboard': '/dashboard',
+        '/centralevue': '/centralevue', 
+        '/calcul': '/calcul',
+        '/soumissions': '/soumissions',
+        '/gqp': '/gqp',
+        '/travaux': '/travaux',
+        '/facture': '/facture',
+        '/avis': '/avis',
+        '/centrale': '/centrale',
+        '/dashboardcoach': '/dashboardcoach'
+      };
+      
+      const targetPath = pageMap[currentPath];
+      let targetLink = null;
+      
+      if (targetPath) {
+        targetLink = document.querySelector(`#sidebar a[data-path="${targetPath}"]`);
+        console.log('[TARGET] Page détectée - activation du menu pour:', targetPath);
+      }
+      
+      if (targetLink) {
+        targetLink.classList.add('menu-active');
+        targetLink.setAttribute('data-menu-state', 'active');
+        console.log('[OK] Menu activé pour:', targetLink.textContent.trim());
+      } else {
+        console.log('[WARN] Aucun menu trouvé pour la page:', currentPath);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      activateCurrentPageMenu();
+      setTimeout(activateCurrentPageMenu, 150);
+      setTimeout(activateCurrentPageMenu, 300);
+    });
+
+    // Menu mobile functions - EXACT COPY from newgqp
+    function setupMobileMenu() {
+      const mobileToggle = document.getElementById('mobile-menu-toggle');
+      const mobileAccountBtn = document.getElementById('mobile-account-menu-button');
+      const mobileAccountDropdown = document.getElementById('mobile-account-dropdown');
+      
+      if (mobileToggle) {
+        mobileToggle.addEventListener('click', toggleMobileMenu);
+      }
+      
+      if (mobileAccountBtn && mobileAccountDropdown) {
+        mobileAccountBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          mobileAccountDropdown.classList.toggle('hidden');
+        });
+      }
+    }
+
+    function toggleMobileMenu() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.querySelector('.mobile-overlay');
+      
+      sidebar.classList.toggle('mobile-open');
+      overlay.classList.toggle('active');
+    }
+
+    window.closeMobileMenu = function() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.querySelector('.mobile-overlay');
+
+      if (sidebar) {
+        sidebar.classList.remove('mobile-open');
+      }
+      if (overlay) {
+        overlay.classList.remove('active');
+      }
+    }
+
+    // Account dropdown functionality - EXACT COPY from newgqp
+    document.addEventListener('DOMContentLoaded', function() {
+      const btn = document.getElementById("account-dropdown-toggle");
+      const dropdown = document.getElementById("account-dropdown");
+
+      console.log('[DEBUG] Bouton account trouvé:', btn);
+      console.log('[DEBUG] Dropdown trouvé:', dropdown);
+
+      if (btn && dropdown) {
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('👆 Click sur account button');
+          
+          if (dropdown.classList.contains("hidden")) {
+            dropdown.classList.remove("hidden");
+            dropdown.style.display = 'block';
+            dropdown.style.visibility = 'visible';
+            console.log('[UNLOCK] Dropdown ouvert');
+          } else {
+            dropdown.classList.add("hidden");
+            dropdown.style.display = 'none';
+            console.log('[LOCK] Dropdown fermé');
+          }
+        });
+
+        document.addEventListener("click", (e) => {
+          if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add("hidden");
+          }
+        });
+      }
+
+      // Setup mobile menu
+      setupMobileMenu();
+    });
+  </script>
+
+  <!-- Script commun de gestion des permissions et interface -->
+  <script src="/common.js"></script>
+
+  <script>
+  // Fonction logout - EXACT COPY from newgqp
+  window.logout = function() {
+    localStorage.removeItem("qwotaCredentials");
+    localStorage.removeItem("rememberMe");
+    window.location.href = "/login";
+  }
+
+  // Fonction pour mettre à jour la date - EXACT COPY de newgqp.html
+  function updateCurrentDate() {
+    const currentDateElement = document.getElementById('currentDate');
+    if (!currentDateElement) return; // Élément n'existe pas, sortir sans erreur
+
+    const now = new Date();
+    const isMobile = window.innerWidth <= 768;
+
+    let options, dateString;
+
+    if (isMobile) {
+      // Mobile: just the day of the week
+      options = { weekday: 'long' };
+      dateString = now.toLocaleDateString('fr-FR', options);
+    } else {
+      // Desktop: full date
+      options = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      };
+      dateString = now.toLocaleDateString('fr-FR', options);
+    }
+
+    currentDateElement.textContent = dateString;
+  }
+
+  // Stockage des données clients réelles
+  if (typeof window.clientsData === 'undefined') {
+    window.clientsData = {};
+  }
+  let clientsData = window.clientsData;
+
+  // Variables globales pour les données
+  let soumissionsAttente = [];
+  let soumissionsSignees = [];
+  let travauxACompleter = [];
+  let travauxCompletes = [];
+  let projetsCalcul = []; // Liste des projets de calcul
+
+  // Fonction pour charger les projets de calcul
+  async function chargerProjetsCalcul() {
+    try {
+      const username = localStorage.getItem('username') || 'default';
+      const response = await fetch(`/api/projets/${username}`);
+      if (response.ok) {
+        projetsCalcul = await response.json();
+        console.log('[DATA] Projets calcul chargés:', projetsCalcul.length);
+      } else {
+        projetsCalcul = [];
+      }
+    } catch (error) {
+      console.error('[ERROR] Erreur chargement projets calcul:', error);
+      projetsCalcul = [];
+    }
+  }
+
+  // Fonction pour vérifier si un client a un projet
+  function clientAProjet(nomClient) {
+    return projetsCalcul.some(p => p.client && p.client.trim().toLowerCase() === nomClient.trim().toLowerCase());
+  }
+
+  // Chargement des données réelles depuis les nouvelles routes
+  async function chargerSoumissionsAttente() {
+    try {
+      console.log('🔄 Appel API /ventes/attente/' + window.username);
+      const res = await fetch(`${window.location.origin}/ventes/attente/${window.username}`);
+      console.log('📡 Réponse reçue:', res.status, res.ok);
+      if (!res.ok) throw new Error("Erreau réseau ventes en attente");
+      soumissionsAttente = await res.json();
+      console.log('[BAN] Ventes en attente chargées:', soumissionsAttente.length, soumissionsAttente);
+      afficherSoumissionsAttente();
+      const attenteCount = document.getElementById('attente-count');
+      if (attenteCount) attenteCount.textContent = soumissionsAttente.length;
+    } catch (e) {
+      console.error("[ERROR] Erreur lors du chargement des ventes en attente:", e);
+      soumissionsAttente = [];
+      afficherSoumissionsAttente();
+    }
+  }
+
+  async function chargerSoumissionsSignees() {
+    try {
+      const res = await fetch(`${window.location.origin}/ventes/acceptees/${window.username}`);
+      if (!res.ok) throw new Error("Erreur réseau ventes acceptées");
+      soumissionsSignees = await res.json();
+
+      console.log('[BAN] Ventes acceptées chargées:', soumissionsSignees.length);
+      soumissionsSignees.forEach((client, i) => {
+        const clientNom = `${client.prenom || client.clientPrenom || ''} ${client.nom || client.clientNom || ''}`.trim();
+        console.log(`[DEBUG] Client ${i+1}: ${clientNom} | GQP: ${client.lien_gqp ? 'OUI' : 'NON'}`);
+      });
+
+      afficherSoumissionsSignees();
+      const accepterCount = document.getElementById('accepter-count');
+      if (accepterCount) {
+        accepterCount.textContent = soumissionsSignees.length;
+      }
+    } catch (e) {
+      console.error("Erreur lors du chargement des ventes acceptées:", e);
+      soumissionsSignees = [];
+      afficherSoumissionsSignees();
+    }
+  }
+
+  async function chargerTravaux() {
+    // Note: Cette colonne "Compléter" n'est plus utilisée dans le nouveau système
+    // Les ventes vont directement de "Accepter" à "Produit"
+    travauxACompleter = [];
+    afficherTravauxACompleter();
+    const countElement = document.getElementById('completer-count');
+    if (countElement) {
+      countElement.textContent = 0;
+    }
+  }
+
+  async function chargerTravauxCompletes() {
+    try {
+      const res = await fetch(`${window.location.origin}/ventes/produit/${window.username}`);
+      if (!res.ok) throw new Error("Erreur réseau ventes produit");
+      travauxCompletes = await res.json();
+
+      console.log('[BAN] Ventes produit chargées:', travauxCompletes.length);
+      travauxCompletes.forEach((client, i) => {
+        const clientNom = `${client.prenom || client.clientPrenom || ''} ${client.nom || client.clientNom || ''}`.trim();
+        console.log(`[DEBUG] Client ${i+1}: ${clientNom} | GQP: ${client.lien_gqp ? 'OUI' : 'NON'}`);
+      });
+
+      afficherTravauxCompletes();
+      const countElement = document.getElementById('produit-count');
+      if (countElement) {
+        countElement.textContent = travauxCompletes.length;
+      }
+    } catch (e) {
+      console.error("Erreur lors du chargement des ventes produit:", e);
+      travauxCompletes = [];
+      afficherTravauxCompletes();
+    }
+  }
+
+  // Fonctions d'affichage des données
+  function afficherSoumissionsAttente() {
+    const tbody = document.getElementById('attente-tbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    if (soumissionsAttente.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="empty-state">Aucun client en attente</td>
+        </tr>
+      `;
+      return;
+    }
+
+    soumissionsAttente.forEach((client, index) => {
+      const clientId = `attente-${index}`;
+      const nomComplet = `${client.prenom || client.clientPrenom || ''} ${client.nom || client.clientNom || ''}`.trim();
+      const prix = client.prix ? parseFloat(client.prix).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' $' : '-';
+
+      clientsData[clientId] = {
+        nom: nomComplet,
+        telephone: client.telephone || client.phone || '-',
+        prix: prix,
+        adresse: client.adresse || '-',
+        documents: {
+          soumission: client.pdfUrl || client.pdf_url || "Non disponible",
+          calcul: client.lien_calcul || "Non disponible"
+        },
+        dateSubmission: client.date_soumission || client.created_at || client.date || '-',
+        hasProjetCalcul: clientAProjet(nomComplet)
+      };
+      const paiementStatut = client.statut_paiement || 'En attente';
+
+      const rowHtml = `
+        <tr style="cursor: pointer;" onclick="showClientInfo('${clientId}')" onmouseover="this.style.background='rgba(245, 158, 11, 0.1)'" onmouseout="this.style.background=''">
+          <td style="padding: 1rem;">${nomComplet}</td>
+          <td style="padding: 1rem;">${client.telephone || '-'}</td>
+          <td style="padding: 1rem;">${client.adresse || '-'}</td>
+          <td style="padding: 1rem;">${prix}</td>
+          <td style="padding: 0.5rem;">-</td>
+        </tr>
+      `;
+      tbody.innerHTML += rowHtml;
+    });
+  }
+
+  function afficherSoumissionsSignees() {
+    const tbody = document.getElementById('accepte-tbody');
+    if (!tbody) {
+      console.warn('[WARN] tbody #accepte-tbody introuvable');
+      return;
+    }
+    tbody.innerHTML = '';
+
+    if (soumissionsSignees.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="empty-state">Aucun client accepté</td>
+        </tr>
+      `;
+      return;
+    }
+
+    soumissionsSignees.forEach((client, index) => {
+      const clientId = `accepter-${index}`;
+      const nomComplet = `${client.prenom || client.clientPrenom || ''} ${client.nom || client.clientNom || ''}`.trim();
+      const prix = client.prix ? parseFloat(client.prix).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' $' : '-';
+
+      clientsData[clientId] = {
+        nom: nomComplet,
+        telephone: client.telephone || client.phone || '-',
+        prix: prix,
+        adresse: client.adresse || '-',
+        documents: {
+          soumissionSignee: client.pdfUrl || client.pdf_url || "Non disponible",
+          gqp: client.lien_gqp || "Non disponible",
+          calcul: client.lien_calcul || "Non disponible"
+        },
+        dateSubmission: client.date_soumission || client.created_at || client.date || '-',
+        hasProjetCalcul: clientAProjet(nomComplet)
+      };
+      const paiementStatut = client.statut_paiement || 'En attente';
+
+      const rowHtml = `
+        <tr style="cursor: pointer;" onclick="showClientInfo('${clientId}')" onmouseover="this.style.background='rgba(16, 185, 129, 0.1)'" onmouseout="this.style.background=''">
+          <td style="padding: 1rem;">${nomComplet}</td>
+          <td style="padding: 1rem;">${client.telephone || '-'}</td>
+          <td style="padding: 1rem;">${client.adresse || '-'}</td>
+          <td style="padding: 1rem;">${prix}</td>
+          <td style="padding: 0.5rem;">
+            <div style="position: relative;">
+              <div class="modern-dropdown" id="dropdown-${clientId}" onclick="event.stopPropagation(); togglePaiementDropdown('${clientId}')">
+                <span id="dropdown-text-${clientId}">${paiementStatut}</span>
+                <i class="fas fa-chevron-down"></i>
+              </div>
+              <div class="modern-dropdown-menu" id="dropdown-menu-${clientId}">
+                <div class="dropdown-option" onclick="event.stopPropagation(); selectPaiementStatut('${clientId}', 'En attente')">En attente</div>
+                <div class="dropdown-option" onclick="event.stopPropagation(); selectPaiementStatut('${clientId}', 'Dépôt reçu')">Dépôt reçu</div>
+                <div class="dropdown-option" onclick="event.stopPropagation(); selectPaiementStatut('${clientId}', 'Paiement final reçu')">Paiement final reçu</div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+      tbody.innerHTML += rowHtml;
+    });
+  }
+
+  function afficherTravauxACompleter() {
+    const container = document.querySelector('#completer-box .space-y-4');
+    if (!container) {
+      console.warn('[WARN] Container #completer-box introuvable - colonne supprimée');
+      return;
+    }
+    container.innerHTML = '';
+    
+    if (travauxACompleter.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-8" style="color: var(--text-gray);">
+          <i class="fas fa-paint-brush text-2xl mb-2" style="color: rgba(249, 115, 22, 0.3);"></i>
+          <p class="text-sm">Aucun travaux à compléter</p>
+        </div>
+      `;
+      return;
+    }
+    
+    travauxACompleter.forEach((client, index) => {
+      const clientId = `completer-${index}`;
+      const nomComplet = `${client.prenom || client.clientPrenom || ''} ${client.nom || client.clientNom || ''}`.trim();
+      const prix = client.prix ? parseFloat(client.prix).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' $' : '-';
+
+      clientsData[clientId] = {
+        nom: nomComplet,
+        telephone: client.telephone || client.phone || '-',
+        prix: prix,
+        adresse: client.adresse || '-',
+        documents: {
+          soumissionSignee: client.pdfUrl || client.pdf_url || client.lien_pdf || "Non disponible",
+          gqp: client.lien_gqp || "Non disponible",
+          calcul: client.lien_calcul || "Non disponible"
+        },
+        dateSubmission: client.date_soumission || client.created_at || client.date || '-',
+        hasProjetCalcul: clientAProjet(nomComplet)
+      };
+
+      const prixAffichage = client.prix ? parseFloat(client.prix).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00';
+      const ville = client.adresse && client.adresse.includes(',') ? client.adresse.split(',')[1].trim() : (client.adresse || '');
+
+      const cardHtml = `
+        <div class="relative p-4 rounded-lg border transition-all cursor-pointer" style="background: rgba(249, 115, 22, 0.05); border: 1px solid rgba(249, 115, 22, 0.2);" onclick="showClientInfo('${clientId}')" onmouseover="this.style.background='rgba(249, 115, 22, 0.15)'; this.style.borderColor='rgba(249, 115, 22, 0.4)'" onmouseout="this.style.background='rgba(249, 115, 22, 0.05)'; this.style.borderColor='rgba(249, 115, 22, 0.2)'">
+          <div class="flex-1">
+            <h4 class="font-bold mb-2" style="color: var(--text-light);">
+              <i class="fas fa-paint-brush mr-2" style="color: #f97316;"></i>
+              ${clientsData[clientId].nom}
+            </h4>
+            <div class="space-y-1 text-sm">
+              <div class="flex items-center" style="color: var(--text-gray);">
+                <i class="fas fa-phone w-4 mr-1"></i>
+                <span>${client.telephone || 'N/A'}</span>
+              </div>
+              ${ville ? `
+              <div class="flex items-center" style="color: var(--text-gray);">
+                <i class="fas fa-map-marker-alt w-4 mr-1"></i>
+                <span>${ville}</span>
+              </div>
+              ` : ''}
+              <div class="flex items-center" style="color: var(--text-gray);">
+                <i class="fas fa-dollar-sign w-4 mr-1"></i>
+                <span>${prixAffichage} $</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      container.innerHTML += cardHtml;
+    });
+  }
+
+  function afficherTravauxCompletes() {
+    const tbody = document.getElementById('produit-tbody');
+    if (!tbody) {
+      console.warn('[WARN] tbody #produit-tbody introuvable');
+      return;
+    }
+    tbody.innerHTML = '';
+
+    if (travauxCompletes.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="empty-state">Aucun produit</td>
+        </tr>
+      `;
+      return;
+    }
+
+    travauxCompletes.forEach((client, index) => {
+      const clientId = `completes-${index}`;
+      const nomComplet = `${client.prenom || client.clientPrenom || ''} ${client.nom || client.clientNom || ''}`.trim();
+      const prix = client.prix ? parseFloat(client.prix).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' $' : '-';
+
+      clientsData[clientId] = {
+        nom: nomComplet,
+        telephone: client.telephone || client.phone || '-',
+        prix: prix,
+        adresse: client.adresse || '-',
+        documents: {
+          soumissionSignee: client.pdfUrl || client.pdf_url || client.lien_pdf || "Non disponible",
+          gqp: client.lien_gqp || "Non disponible",
+          calcul: client.lien_calcul || "Non disponible"
+        },
+        dateSubmission: client.date_soumission || client.created_at || client.date || '-',
+        hasProjetCalcul: clientAProjet(nomComplet)
+      };
+      const paiementStatut = client.statut_paiement || 'En attente';
+
+      const rowHtml = `
+        <tr style="cursor: pointer;" onclick="showClientInfo('${clientId}')" onmouseover="this.style.background='rgba(139, 92, 246, 0.1)'" onmouseout="this.style.background=''">
+          <td style="padding: 1rem;">${nomComplet}</td>
+          <td style="padding: 1rem;">${client.telephone || '-'}</td>
+          <td style="padding: 1rem;">${client.adresse || '-'}</td>
+          <td style="padding: 1rem;">${prix}</td>
+          <td style="padding: 0.5rem;">
+            <div style="position: relative;">
+              <div class="modern-dropdown" id="dropdown-${clientId}" onclick="event.stopPropagation(); togglePaiementDropdown('${clientId}')">
+                <span id="dropdown-text-${clientId}">${paiementStatut}</span>
+                <i class="fas fa-chevron-down"></i>
+              </div>
+              <div class="modern-dropdown-menu" id="dropdown-menu-${clientId}">
+                <div class="dropdown-option" onclick="event.stopPropagation(); selectPaiementStatut('${clientId}', 'En attente')">En attente</div>
+                <div class="dropdown-option" onclick="event.stopPropagation(); selectPaiementStatut('${clientId}', 'Dépôt reçu')">Dépôt reçu</div>
+                <div class="dropdown-option" onclick="event.stopPropagation(); selectPaiementStatut('${clientId}', 'Paiement final reçu')">Paiement final reçu</div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+      tbody.innerHTML += rowHtml;
+    });
+  }
+
+  // Fonction pour toggle le dropdown de paiement
+  window.togglePaiementDropdown = function(clientId) {
+    console.log('[DROPDOWN] Toggle pour:', clientId);
+    const dropdown = document.getElementById(`dropdown-${clientId}`);
+    const menu = document.getElementById(`dropdown-menu-${clientId}`);
+
+    console.log('[DROPDOWN] Dropdown trouvé:', dropdown);
+    console.log('[DROPDOWN] Menu trouvé:', menu);
+
+    if (!dropdown || !menu) {
+      console.error('[DROPDOWN] Éléments non trouvés!');
+      return;
+    }
+
+    // Fermer tous les autres dropdowns
+    document.querySelectorAll('.modern-dropdown-menu').forEach(m => {
+      if (m.id !== `dropdown-menu-${clientId}`) {
+        m.classList.remove('show');
+        const otherId = m.id.replace('dropdown-menu-', '');
+        const otherDropdown = document.getElementById(`dropdown-${otherId}`);
+        if (otherDropdown) otherDropdown.classList.remove('active');
+      }
+    });
+
+    // Vérifier si on ouvre ou ferme
+    const isOpening = !menu.classList.contains('show');
+
+    // Si on ouvre, calculer la position avec fixed AVANT d'afficher
+    if (isOpening) {
+      const rect = dropdown.getBoundingClientRect();
+      menu.style.position = 'fixed';
+      menu.style.top = `${rect.bottom + 4}px`;
+      menu.style.left = `${rect.left}px`;
+      menu.style.width = `${rect.width}px`;
+    }
+
+    // Toggle le menu actuel avec la classe 'show'
+    menu.classList.toggle('show');
+    dropdown.classList.toggle('active');
+
+    console.log('[DROPDOWN] Classes menu:', menu.className);
+    console.log('[DROPDOWN] Classes dropdown:', dropdown.className);
+  };
+
+  // Fonction pour sélectionner un statut de paiement
+  window.selectPaiementStatut = async function(clientId, nouveauStatut) {
+    try {
+      console.log(`[UPDATE] Mise à jour statut paiement pour ${clientId}: ${nouveauStatut}`);
+
+      // Mettre à jour l'affichage
+      const dropdownText = document.getElementById(`dropdown-text-${clientId}`);
+      const menu = document.getElementById(`dropdown-menu-${clientId}`);
+      const dropdown = document.getElementById(`dropdown-${clientId}`);
+
+      if (dropdownText) dropdownText.textContent = nouveauStatut;
+      if (menu) menu.classList.remove('show');
+      if (dropdown) dropdown.classList.remove('active');
+
+      // Récupérer les informations du client
+      const client = clientsData[clientId];
+      if (!client) {
+        console.error('Client non trouvé:', clientId);
+        return;
+      }
+
+      // Déterminer le type de client et son index
+      let type = '';
+      let index = 0;
+      if (clientId.startsWith('attente-')) {
+        type = 'attente';
+        index = parseInt(clientId.replace('attente-', ''));
+      } else if (clientId.startsWith('accepter-')) {
+        type = 'accepter';
+        index = parseInt(clientId.replace('accepter-', ''));
+      } else if (clientId.startsWith('completes-')) {
+        type = 'produit';
+        index = parseInt(clientId.replace('completes-', ''));
+      }
+
+      // Appeler l'API pour sauvegarder le statut
+      const apiUrl = `${window.location.origin}/api/update-paiement-status`;
+      console.log(`[DEBUG] Appel API: ${apiUrl}`);
+      console.log(`[DEBUG] Données:`, { username: window.username, client_nom: client.nom, statut: nouveauStatut, type: type });
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: window.username,
+          client_nom: client.nom,
+          statut: nouveauStatut,
+          type: type
+        })
+      });
+
+      console.log(`[DEBUG] Réponse HTTP:`, response.status, response.statusText);
+
+      if (response.ok) {
+        console.log('✅ Statut de paiement mis à jour avec succès');
+        // Mettre à jour localement
+        if (type === 'attente' && soumissionsAttente[index]) {
+          soumissionsAttente[index].statut_paiement = nouveauStatut;
+        } else if (type === 'accepter' && soumissionsSignees[index]) {
+          soumissionsSignees[index].statut_paiement = nouveauStatut;
+        } else if (type === 'produit' && travauxCompletes[index]) {
+          travauxCompletes[index].statut_paiement = nouveauStatut;
+        }
+      } else {
+        console.error('❌ Erreur lors de la mise à jour du statut');
+      }
+    } catch (error) {
+      console.error('Erreur selectPaiementStatut:', error);
+    }
+  };
+
+  window.showClientInfo = function(clientId) {
+    // S'assurer que les modals existent (pour app-shell)
+    ensureModalsExist();
+
+    // Attendre que le DOM soit complètement chargé dans app-shell
+    setTimeout(() => {
+      const client = clientsData[clientId];
+      const modal = document.getElementById('clientInfoModal');
+      const content = document.getElementById('clientInfoContent');
+
+      if (!modal || !content) {
+        console.error('Modal ou content clientInfo non trouvé');
+        return;
+      }
+
+      // Déterminer la couleur selon le type de client
+      let iconColor = '#f59e0b'; // Orange par défaut (attente)
+      let iconColorRgba = 'rgba(245, 158, 11, 0.2)';
+      let iconColorRgbaHover = 'rgba(245, 158, 11, 0.3)';
+
+      if (clientId.startsWith('accepter-')) {
+        iconColor = '#10b981'; // Vert (accepter)
+        iconColorRgba = 'rgba(16, 185, 129, 0.2)';
+        iconColorRgbaHover = 'rgba(16, 185, 129, 0.3)';
+      } else if (clientId.startsWith('completer-')) {
+        iconColor = '#f97316'; // Orange foncé (compléter)
+        iconColorRgba = 'rgba(249, 115, 22, 0.2)';
+        iconColorRgbaHover = 'rgba(249, 115, 22, 0.3)';
+      } else if (clientId.startsWith('completes-')) {
+        iconColor = '#8b5cf6'; // Violet (produit)
+        iconColorRgba = 'rgba(139, 92, 246, 0.2)';
+        iconColorRgbaHover = 'rgba(139, 92, 246, 0.3)';
+      }
+
+      // Mettre à jour les couleurs du modal
+      const clientInfoCard = document.getElementById('clientInfoCard');
+      const clientInfoIcon = document.getElementById('clientInfoIcon');
+      const clientInfoCloseBtn = document.getElementById('clientInfoCloseBtn');
+
+      if (clientInfoCard) clientInfoCard.style.setProperty('--card-color', iconColor);
+      if (clientInfoIcon) clientInfoIcon.style.color = iconColor;
+      if (clientInfoCloseBtn) {
+        clientInfoCloseBtn.style.background = iconColorRgba;
+        clientInfoCloseBtn.style.color = iconColor;
+        clientInfoCloseBtn.onmouseover = function() { this.style.background = iconColorRgbaHover; };
+        clientInfoCloseBtn.onmouseout = function() { this.style.background = iconColorRgba; };
+      }
+
+      // Bloquer le scroll de la page
+      document.body.style.overflow = 'hidden';
+
+      content.innerHTML = `
+      <div class="space-y-3">
+        <div class="flex items-start space-x-3">
+          <div class="w-6 flex justify-center">
+            <i class="fas fa-user text-lg mt-1" style="color: ${iconColor};"></i>
+          </div>
+          <div>
+            <div class="font-medium" style="color: var(--text-light);">Nom complet</div>
+            <div class="text-sm" style="color: var(--text-gray);">${client.nom}</div>
+          </div>
+        </div>
+
+        <div class="flex items-start space-x-3">
+          <div class="w-6 flex justify-center">
+            <i class="fas fa-phone text-lg mt-1" style="color: ${iconColor};"></i>
+          </div>
+          <div>
+            <div class="font-medium" style="color: var(--text-light);">Téléphone</div>
+            <div class="text-sm" style="color: var(--text-gray);">${client.telephone}</div>
+          </div>
+        </div>
+
+        <div class="flex items-start space-x-3">
+          <div class="w-6 flex justify-center">
+            <i class="fas fa-dollar-sign text-lg mt-1" style="color: ${iconColor};"></i>
+          </div>
+          <div>
+            <div class="font-medium" style="color: var(--text-light);">Prix estimé</div>
+            <div class="text-sm" style="color: var(--text-gray);">${client.prix}</div>
+          </div>
+        </div>
+
+        <div class="flex items-start space-x-3">
+          <div class="w-6 flex justify-center">
+            <i class="fas fa-map-marker-alt text-lg mt-1" style="color: ${iconColor};"></i>
+          </div>
+          <div>
+            <div class="font-medium" style="color: var(--text-light);">Adresse</div>
+            <div class="text-sm" style="color: var(--text-gray);">${client.adresse}</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Documents en boutons en bas -->
+      <div class="border-t pt-4 mt-6" style="border-color: var(--border-dark);">
+        <div class="text-center mb-4">
+          <h4 class="font-medium" style="color: var(--text-light);">Documents disponibles</h4>
+        </div>
+        <!-- Section Soumission (ou Soumission signée pour acceptés) -->
+        <div class="mb-4 p-3 rounded-lg" style="background: rgba(59, 130, 246, 0.08) !important; border: 1px solid rgba(59, 130, 246, 0.2);">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i class="fas fa-file-alt" style="color: #3b82f6;"></i>
+              <span class="font-medium" style="color: var(--text-light);">${(clientId.startsWith('accepter-') || clientId.startsWith('completes-')) ? 'Soumission signée' : 'Soumission'}</span>
+            </div>
+            <div class="flex items-center space-x-4">
+              ${((clientId.startsWith('accepter-') || clientId.startsWith('completes-')) ? client.documents.soumissionSignee : client.documents.soumission) ?
+                `<img src="https://i.ibb.co/gLL06wzW/TES-MUTE-TH-O-7.png" onclick="window.open('${(clientId.startsWith('accepter-') || clientId.startsWith('completes-')) ? client.documents.soumissionSignee : client.documents.soumission}', '_blank')" style="width: 18px; height: 18px; cursor: pointer; transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
+                ${!(clientId.startsWith('accepter-') || clientId.startsWith('completes-') || clientId.startsWith('attente-')) ? `<button onclick="modifierDocument('${(clientId.startsWith('accepter-') || clientId.startsWith('completes-')) ? 'soumissionSignee' : 'soumission'}', '${clientId}')" class="btn-primary px-3 py-1 text-sm flex items-center space-x-1">
+                  <i class="fas fa-edit"></i>
+                  <span>Modifier</span>
+                </button>` : ''}` :
+                `<span class="text-sm" style="color: var(--text-gray);">Non disponible</span>`
+              }
+            </div>
+          </div>
+        </div>
+
+        ${(clientId.startsWith('accepter-') || clientId.startsWith('completes-')) ? `
+        <!-- Section GQP (pour acceptés et produits) -->
+        <div class="mb-4 p-3 rounded-lg" style="background: rgba(168, 85, 247, 0.08) !important; border: 1px solid rgba(168, 85, 247, 0.2);">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i class="fas fa-clipboard-list" style="color: #a855f7;"></i>
+              <span class="font-medium" style="color: var(--text-light);">GQP de travaux</span>
+            </div>
+            <div class="flex items-center space-x-4">
+              ${client.documents.gqp && client.documents.gqp !== 'Non disponible' ?
+                `<img src="https://i.ibb.co/gLL06wzW/TES-MUTE-TH-O-7.png" onclick="window.open('${client.documents.gqp}', '_blank')" style="width: 18px; height: 18px; cursor: pointer; transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
+                ${!(clientId.startsWith('accepter-') || clientId.startsWith('completes-')) ? `<button onclick="modifierDocument('gqp', '${clientId}')" class="btn-primary px-3 py-1 text-sm flex items-center space-x-1">
+                  <i class="fas fa-edit"></i>
+                  <span>Modifier</span>
+                </button>` : ''}` :
+                `<span class="text-sm" style="color: var(--text-gray);">Non disponible</span>`
+              }
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        ${(clientId.startsWith('attente-') || clientId.startsWith('accepter-') || clientId.startsWith('completer-') || clientId.startsWith('completes-')) ? `
+        <!-- Section Calcul (pour en attente, accepter, compléter et produit) -->
+        <div class="mb-4 p-3 rounded-lg" style="background: rgba(16, 185, 129, 0.08) !important; border: 1px solid rgba(16, 185, 129, 0.2);">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i class="fas fa-calculator" style="color: #10b981;"></i>
+              <span class="font-medium" style="color: var(--text-light);">Calcul</span>
+            </div>
+            <div class="flex items-center space-x-4">
+              ${client.hasProjetCalcul ?
+                `<img src="https://i.ibb.co/gLL06wzW/TES-MUTE-TH-O-7.png" onclick="ouvrirProjetCalcul('${client.nom.replace(/'/g, "\\'")}')" style="width: 18px; height: 18px; cursor: pointer; transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">` :
+                `<span class="text-sm" style="color: var(--text-gray);">Non disponible</span>`
+              }
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        ${clientId.startsWith('attente-') ? `
+        <!-- Bouton Marquer comme perdu pour clients en attente -->
+        <div class="border-t pt-4 mt-4 flex justify-center" style="border-color: var(--border-dark);">
+          <button onclick="marquerCommePerdu('${clientId}')" class="btn-primary px-4 py-2 rounded-lg flex items-center space-x-2 relative overflow-hidden" style="background: linear-gradient(135deg, #ef4444, #dc2626) !important;">
+            <i class="fas fa-times-circle"></i>
+            <span>Marquer comme perdu</span>
+          </button>
+        </div>
+        ` : ''}
+
+        ${clientId.startsWith('accepter-') ? `
+        <!-- Bouton Production terminée pour clients acceptés uniquement -->
+        <div class="border-t pt-4 mt-4 flex justify-center" style="border-color: var(--border-dark);">
+          <button onclick="terminerProduction('${clientId}')" class="btn-primary px-6 py-3 rounded-lg flex items-center justify-center space-x-2" style="background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: 600; min-width: 200px;">
+            <i class="fas fa-check-circle"></i>
+            <span>Production terminée</span>
+          </button>
+        </div>
+        ` : ''}
+      </div>
+      </div>
+      `;
+
+      modal.style.display = 'flex';
+    }, 50);
+  }
+
+  window.closeClientInfo = function() {
+    const modal = document.getElementById('clientInfoModal');
+    if (modal) {
+      modal.style.display = 'none';
+      // Réactiver le scroll de la page
+      document.body.style.overflow = '';
+    }
+  }
+
+  // Fonction pour ouvrir le projet de calcul du client
+  window.ouvrirProjetCalcul = function(clientNom) {
+    console.log('[DATA] Ouverture du projet calcul pour:', clientNom);
+    // Rediriger vers calcul avec le nom du client en paramètre
+    window.location.href = `/calcul?client=${encodeURIComponent(clientNom)}`;
+  }
+
+  // Variables globales pour stocker l'ID du client à marquer comme perdu
+  let clientIdToMarkPerdu = null;
+
+  // Fonction pour marquer un client comme perdu (ouvre le modal)
+  window.marquerCommePerdu = function(clientId) {
+    clientIdToMarkPerdu = clientId;
+    document.getElementById('confirmPerduModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  // Fermer le modal de confirmation perdu
+  window.closeConfirmPerduModal = function() {
+    document.getElementById('confirmPerduModal').style.display = 'none';
+    document.body.style.overflow = '';
+    clientIdToMarkPerdu = null;
+  }
+
+  // Confirmer le marquage comme perdu
+  window.confirmMarquerPerdu = async function() {
+    if (!clientIdToMarkPerdu) return;
+
+    try {
+      const clientId = clientIdToMarkPerdu;
+      console.log(`[ERROR] Marquer comme perdu: ${clientId}`);
+
+      // Extraire l'index depuis l'ID (format: "attente-0", "attente-1", etc.)
+      const index = parseInt(clientId.split('-')[1]);
+      const client = soumissionsAttente[index];
+
+      if (!client) {
+        throw new Error('Client introuvable');
+      }
+
+      const clientNom = `${client.prenom || client.clientPrenom || ''} ${client.nom || client.clientNom || ''}`.trim();
+
+      // Appeler le backend pour marquer comme perdu
+      const response = await fetch(`${window.location.origin}/marquer-comme-perdu`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: window.username,
+          id: client.id,
+          prenom: client.prenom || client.clientPrenom,
+          nom: client.nom || client.clientNom,
+          telephone: client.telephone || client.phone,
+          prix: client.prix,
+          adresse: client.adresse,
+          pdfUrl: client.pdfUrl || client.pdf_url,
+          date_soumission: client.date_soumission || client.created_at || client.date
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors du marquage comme perdu');
+      }
+
+      console.log(`[OK] Client ${clientNom} marqué comme perdu`);
+
+      // Fermer les modals
+      closeConfirmPerduModal();
+      closeClientInfo();
+
+      // Recharger les données
+      await chargerSoumissionsAttente();
+
+    } catch (error) {
+      console.error('[ERROR] Erreur:', error);
+      closeConfirmPerduModal();
+      alert('Erreur lors du marquage comme perdu');
+    }
+  }
+
+  // Fonction pour afficher tous les clients perdus dans un popup
+  window.voirClientsPerdus = async function() {
+    try {
+      console.log('[BAN] Chargement des clients perdus...');
+
+      // Charger depuis le backend
+      const response = await fetch(`${window.location.origin}/clients-perdus/${window.username}`);
+      let clientsPerdus = await response.json();
+
+      // Vérifier que c'est bien un tableau
+      if (!Array.isArray(clientsPerdus)) {
+        console.warn('[WARN] clientsPerdus n\'est pas un tableau:', clientsPerdus);
+        clientsPerdus = [];
+      }
+
+      console.log(`[OK] ${clientsPerdus.length} clients perdus chargés`);
+
+      // Créer le popup modal (même style que showProspectInfo)
+      const modal = document.createElement('div');
+      modal.id = 'clientsPerdusModal';
+      modal.className = 'fixed inset-0 flex items-center justify-center z-50';
+      modal.style.background = 'rgba(0, 0, 0, 0.7)';
+      modal.style.backdropFilter = 'blur(5px)';
+
+      let contentHTML = '';
+
+      if (clientsPerdus.length === 0) {
+        contentHTML = `
+          <div class="text-center py-8">
+            <i class="fas fa-check-circle text-5xl mb-3" style="color: #10b981;"></i>
+            <p class="text-lg" style="color: var(--text-gray);">Aucun client perdu</p>
+          </div>
+        `;
+      } else {
+        contentHTML = '<div class="space-y-3">';
+
+        clientsPerdus.forEach((client, index) => {
+          const clientNom = `${client.prenom || ''} ${client.nom || ''}`.trim() || 'Client sans nom';
+          const datePerdu = client.date_perdu ? new Date(client.date_perdu).toLocaleDateString('fr-CA') : 'Date inconnue';
+          const dateSoumission = client.date_soumission ? new Date(client.date_soumission).toLocaleDateString('fr-CA') : '';
+          const prix = client.prix || '0';
+
+          contentHTML += `
+            <div class="p-4 rounded-lg border transition-all relative" style="background: rgba(148, 163, 184, 0.05); border: 1px solid rgba(148, 163, 184, 0.2);">
+              <!-- Bouton Supprimer en haut à droite -->
+              <button onclick="supprimerClientPerdu(${index})" class="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-all" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
+                <i class="fas fa-trash"></i>
+              </button>
+
+              <div class="flex flex-col">
+                <div class="pr-10">
+                  <div class="flex items-center space-x-2 mb-2">
+                    <h4 class="font-bold" style="color: var(--text-light);">
+                      <i class="fas fa-user-times mr-2" style="color: var(--text-gray);"></i>
+                      ${clientNom}
+                    </h4>
+                    <span class="px-2 py-0.5 rounded-full text-xs" style="background: rgba(148, 163, 184, 0.2); color: var(--text-gray);">
+                      ${datePerdu}
+                    </span>
+                  </div>
+                  <div class="space-y-1 text-sm mb-3">
+                    <div class="flex items-center" style="color: var(--text-gray);">
+                      <i class="fas fa-phone w-4 mr-1"></i>
+                      <span>${client.telephone || 'N/A'}</span>
+                    </div>
+                    ${client.adresse ? `
+                    <div class="flex items-center" style="color: var(--text-gray);">
+                      <i class="fas fa-map-marker-alt w-4 mr-1"></i>
+                      <span>${client.adresse}</span>
+                    </div>
+                    ` : ''}
+                    <div class="flex items-center" style="color: var(--text-gray);">
+                      <i class="fas fa-dollar-sign w-4 mr-1"></i>
+                      <span>${prix} $</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Boutons en bas à droite -->
+                <div class="flex justify-end items-center space-x-2">
+                  <button onclick="recupererClient(${index})" class="px-3 py-1.5 rounded-lg text-sm transition-all" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; font-weight: 600;">
+                    <i class="fas fa-redo mr-1"></i>Récupérer
+                  </button>
+                  <a href="${client.pdfUrl || client.pdf_url || '#'}" target="_blank" class="flex items-center justify-center" style="width: 32px; height: 32px;">
+                    <img src="https://img.icons8.com/color/48/000000/pdf.png" alt="PDF" style="width: 28px; height: 28px;">
+                  </a>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+
+        contentHTML += '</div>';
+      }
+
+      modal.innerHTML = `
+        <div class="p-6 max-w-3xl w-full mx-4 rounded-xl max-h-[80vh] flex flex-col" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold" style="color: var(--text-light);">
+              <i class="fas fa-times-circle mr-2" style="color: #ef4444;"></i>
+              Clients perdus (<span id="clientsPerdusCount">${clientsPerdus.length}</span>)
+            </h3>
+            <button onclick="closeClientsPerdusModal()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <!-- Champ de recherche -->
+          <div class="mb-4">
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-search" style="color: var(--text-gray);"></i>
+              </div>
+              <input type="text" id="searchClientsPerdus" placeholder="Rechercher dans Perdus"
+                     class="block w-full pl-10 pr-3 py-3 rounded-lg text-sm transition-all"
+                     style="background: var(--bg-card); border: 1px solid var(--border-dark); color: var(--text-light);"
+                     autocomplete="off"
+                     oninput="filterClientsPerdus()" />
+            </div>
+          </div>
+
+          <!-- Contenu avec scroll discret -->
+          <div id="clientsPerdusContent" class="overflow-y-auto" style="height: calc(80vh - 140px); min-height: 500px; scrollbar-width: thin; scrollbar-color: rgba(148, 163, 184, 0.3) transparent;">
+            ${contentHTML}
+          </div>
+        </div>
+
+        <!-- Styles spécifiques à Ventes -->
+      `;
+
+      // Supprimer l'ancien modal s'il existe
+      let existingModal = document.getElementById('clientsPerdusModal');
+      if (existingModal) {
+        existingModal.remove();
+      }
+
+      document.body.appendChild(modal);
+
+      // Bloquer le scroll de la page
+      document.body.style.overflow = 'hidden';
+
+      // Stocker les clients pour le filtrage
+      window.clientsPerdusData = clientsPerdus;
+
+      // Fermer au clic sur le fond
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          closeClientsPerdusModal();
+        }
+      });
+
+    } catch (error) {
+      console.error('[ERROR] Erreur:', error);
+      alert('Erreur lors du chargement des clients perdus');
+    }
+  }
+
+  // Fonction de filtrage des clients perdus
+  window.filterClientsPerdus = function() {
+    const searchInput = document.getElementById('searchClientsPerdus');
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    const container = document.getElementById('clientsPerdusContent');
+    const countElement = document.getElementById('clientsPerdusCount');
+
+    if (!window.clientsPerdusData) return;
+
+    // Filtrer les clients et garder leur index original
+    const filteredClientsWithIndex = window.clientsPerdusData
+      .map((client, originalIndex) => ({ client, originalIndex }))
+      .filter(({ client }) => {
+        const clientNom = `${client.prenom || ''} ${client.nom || ''}`.toLowerCase();
+        const telephone = (client.telephone || '').toLowerCase();
+        const adresse = (client.adresse || '').toLowerCase();
+        const prix = (client.prix || '').toString();
+
+        return clientNom.includes(searchTerm) ||
+               telephone.includes(searchTerm) ||
+               adresse.includes(searchTerm) ||
+               prix.includes(searchTerm);
+      });
+
+    // Mettre à jour le compteur
+    countElement.textContent = filteredClientsWithIndex.length;
+
+    // Régénérer le contenu
+    let contentHTML = '';
+
+    if (filteredClientsWithIndex.length === 0) {
+      contentHTML = `
+        <div class="text-center py-8">
+          <i class="fas fa-search text-5xl mb-3" style="color: var(--text-gray); opacity: 0.3;"></i>
+          <p class="text-lg" style="color: var(--text-gray);">Aucun résultat trouvé</p>
+        </div>
+      `;
+    } else {
+      contentHTML = '<div class="space-y-3">';
+
+      filteredClientsWithIndex.forEach(({ client, originalIndex }) => {
+        const clientNom = `${client.prenom || ''} ${client.nom || ''}`.trim() || 'Client sans nom';
+        const datePerdu = client.date_perdu ? new Date(client.date_perdu).toLocaleDateString('fr-CA') : 'Date inconnue';
+        const prix = client.prix || '0';
+
+        contentHTML += `
+          <div class="p-4 rounded-lg border transition-all relative" style="background: rgba(148, 163, 184, 0.05); border: 1px solid rgba(148, 163, 184, 0.2);">
+            <!-- Bouton Supprimer en haut à droite -->
+            <button onclick="supprimerClientPerdu(${originalIndex})" class="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-all" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
+              <i class="fas fa-trash"></i>
+            </button>
+
+            <div class="flex flex-col">
+              <div class="pr-10">
+                <div class="flex items-center space-x-2 mb-2">
+                  <h4 class="font-bold" style="color: var(--text-light);">
+                    <i class="fas fa-user-times mr-2" style="color: var(--text-gray);"></i>
+                    ${clientNom}
+                  </h4>
+                  <span class="px-2 py-0.5 rounded-full text-xs" style="background: rgba(148, 163, 184, 0.2); color: var(--text-gray);">
+                    ${datePerdu}
+                  </span>
+                </div>
+                <div class="space-y-1 text-sm mb-3">
+                  <div class="flex items-center" style="color: var(--text-gray);">
+                    <i class="fas fa-phone w-4 mr-1"></i>
+                    <span>${client.telephone || 'N/A'}</span>
+                  </div>
+                  ${client.adresse ? `
+                  <div class="flex items-center" style="color: var(--text-gray);">
+                    <i class="fas fa-map-marker-alt w-4 mr-1"></i>
+                    <span>${client.adresse}</span>
+                  </div>
+                  ` : ''}
+                  <div class="flex items-center" style="color: var(--text-gray);">
+                    <i class="fas fa-dollar-sign w-4 mr-1"></i>
+                    <span>${prix} $</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Boutons en bas à droite -->
+              <div class="flex justify-end items-center space-x-2">
+                <button onclick="recupererClient(${originalIndex})" class="px-3 py-1.5 rounded-lg text-sm transition-all" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; font-weight: 600;">
+                  <i class="fas fa-redo mr-1"></i>Récupérer
+                </button>
+                <a href="${client.pdfUrl || client.pdf_url || '#'}" target="_blank" class="flex items-center justify-center" style="width: 32px; height: 32px;">
+                  <img src="https://img.icons8.com/color/48/000000/pdf.png" alt="PDF" style="width: 28px; height: 28px;">
+                </a>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      contentHTML += '</div>';
+    }
+
+    container.innerHTML = contentHTML;
+  }
+
+  // Fonction pour récupérer un client perdu
+  window.recupererClient = function(index) {
+    if (!window.clientsPerdusData || !window.clientsPerdusData[index]) {
+      console.error('Client introuvable');
+      return;
+    }
+
+    const client = window.clientsPerdusData[index];
+    console.log('🔄 Récupération du client:', client);
+
+    // Stocker les données dans sessionStorage pour pré-remplir le formulaire
+    sessionStorage.setItem('submissionData', JSON.stringify({
+      prenom: client.prenom || '',
+      nom: client.nom || '',
+      telephone: client.telephone || '',
+      adresse: client.adresse || '',
+      courriel: client.courriel || '',
+      prix: client.prix || '',
+      clientOriginalId: `${client.prenom}_${client.nom}_${client.telephone}` // Pour identifier et retirer de perdus
+    }));
+
+    // Fermer le modal
+    closeClientsPerdusModal();
+
+    // Rediriger vers soumissions
+    window.location.href = '/soumissions';
+  }
+
+  // Variables globales pour stocker l'index du client perdu à supprimer
+  let clientPerduIndexToDelete = null;
+
+  // Fonction pour supprimer définitivement un client perdu (ouvre le modal)
+  window.supprimerClientPerdu = function(index) {
+    if (!window.clientsPerdusData || !window.clientsPerdusData[index]) {
+      console.error('Client introuvable');
+      return;
+    }
+
+    const client = window.clientsPerdusData[index];
+    const clientNom = `${client.prenom || ''} ${client.nom || ''}`.trim() || 'Client';
+
+    clientPerduIndexToDelete = index;
+    document.getElementById('confirmDeletePerduText').textContent = `Êtes-vous sûr de vouloir supprimer définitivement ${clientNom} des clients perdus ?`;
+    document.getElementById('confirmDeletePerduModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  // Fermer le modal de confirmation suppression client perdu
+  window.closeConfirmDeletePerduModal = function() {
+    document.getElementById('confirmDeletePerduModal').style.display = 'none';
+    document.body.style.overflow = '';
+    clientPerduIndexToDelete = null;
+  }
+
+  // Confirmer la suppression du client perdu
+  window.confirmDeleteClientPerdu = async function() {
+    if (clientPerduIndexToDelete === null) return;
+
+    try {
+      const client = window.clientsPerdusData[clientPerduIndexToDelete];
+      if (!client) {
+        throw new Error('Client introuvable');
+      }
+
+      const clientNom = `${client.prenom || ''} ${client.nom || ''}`.trim() || 'Client';
+      console.log('[DELETE] Suppression du client perdu:', client);
+
+      // Appeler le backend pour supprimer le client perdu
+      const response = await fetch(`${window.location.origin}/supprimer-client-perdu`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: window.username,
+          id: client.id,
+          prenom: client.prenom,
+          nom: client.nom,
+          telephone: client.telephone
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la suppression du client perdu');
+      }
+
+      console.log(`[OK] Client ${clientNom} supprimé définitivement`);
+
+      // Fermer le modal
+      closeConfirmDeletePerduModal();
+
+      // Recharger la liste des clients perdus
+      voirClientsPerdus();
+
+    } catch (error) {
+      console.error('[ERROR] Erreur:', error);
+      closeConfirmDeletePerduModal();
+      alert('Erreur lors de la suppression du client perdu');
+    }
+  }
+
+  // Fonction pour fermer le modal des clients perdus
+  window.closeClientsPerdusModal = function() {
+    const modal = document.getElementById('clientsPerdusModal');
+    if (modal) {
+      modal.remove();
+      // Réactiver le scroll
+      document.body.style.overflow = '';
+    }
+  }
+
+  // Variables globales pour stocker l'ID du client pour production terminée
+  let clientIdToCompleteProduction = null;
+
+  // Fonction pour terminer la production (ouvre le modal)
+  window.terminerProduction = function(clientId) {
+    clientIdToCompleteProduction = clientId;
+    document.getElementById('confirmProductionModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  // Fermer le modal de confirmation production
+  window.closeConfirmProductionModal = function() {
+    document.getElementById('confirmProductionModal').style.display = 'none';
+    document.body.style.overflow = '';
+    clientIdToCompleteProduction = null;
+  }
+
+  // Confirmer la production terminée
+  window.confirmTerminerProduction = async function() {
+    if (!clientIdToCompleteProduction) return;
+
+    try {
+      const clientId = clientIdToCompleteProduction;
+      console.log(`[PROD] Début de terminer production pour client ID: ${clientId}`);
+
+      // Extraire l'index depuis l'ID (format: "accepter-0", "accepter-1", etc.)
+      const index = parseInt(clientId.split('-')[1]);
+      const clientAccepte = soumissionsSignees[index];
+
+      if (!clientAccepte) {
+        console.error(`[ERROR] Client non trouvé à l'index ${index}`);
+        alert('Erreur: Client non trouvé');
+        closeConfirmProductionModal();
+        return;
+      }
+
+      console.log(`[BAN] Client trouvé:`, clientAccepte);
+
+      // Appeler la nouvelle API pour terminer la production
+      const response = await fetch(`${window.location.origin}/ventes/production-terminee`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: window.username,
+          id: clientAccepte.id
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[ERROR] Erreur API production terminée:', errorText);
+        throw new Error(`Erreur API: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('[OK] Production terminée:', result);
+
+      // Fermer les modals
+      closeConfirmProductionModal();
+      closeClientInfo();
+
+      // Recharger les données pour mettre à jour l'affichage
+      await chargerSoumissionsSignees();  // Recharger acceptés (minus un)
+      await chargerTravauxCompletes();    // Recharger produits (plus un)
+
+    } catch (error) {
+      console.error('[ERROR] Erreur lors de la production terminée:', error);
+      closeConfirmProductionModal();
+      alert(`[ERROR] Erreur: ${error.message}`);
+    }
+  }
+
+  function openDocument(documentUrl) {
+    // Ouvrir le vrai document PDF dans un popup/modal
+    console.log('Ouverture du document:', documentUrl);
+
+    if (documentUrl && documentUrl !== 'Non disponible') {
+      // Créer un modal pour afficher le PDF
+      showPDFModal(documentUrl);
+    } else {
+      alert('Document non disponible');
+    }
+  }
+
+  window.modifierDocument = function(typeDocument, clientId) {
+    // Fonction vide pour l'instant - à implémenter plus tard
+    console.log(`Modification du document ${typeDocument} pour le client ${clientId}`);
+    alert(`Fonction de modification du ${typeDocument} à implémenter`);
+    // TODO: Implémenter la logique de modification
+  }
+
+  // Fonction pour afficher le PDF dans un modal (similaire à facture.html)
+  function showPDFModal(pdfUrl) {
+    // Créer le modal s'il n'existe pas
+    let modal = document.getElementById('pdfModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'pdfModal';
+      modal.innerHTML = `
+        <div class="pdf-overlay">
+          <div class="pdf-container">
+            <div class="pdf-header">
+              <span>Document PDF</span>
+              <button onclick="closePDFModal()" class="close-btn">×</button>
+            </div>
+            <iframe id="pdfFrame" src="" width="100%" height="600px"></iframe>
+          </div>
+        </div>
+      `;
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+      `;
+      document.body.appendChild(modal);
+    }
+
+    // Afficher le modal avec le PDF
+    document.getElementById('pdfFrame').src = pdfUrl;
+    modal.style.display = 'flex';
+    // Bloquer le scroll de la page
+    document.body.style.overflow = 'hidden';
+  }
+
+  window.closePDFModal = function() {
+    const modal = document.getElementById('pdfModal');
+    if (modal) {
+      modal.style.display = 'none';
+      const pdfFrame = document.getElementById('pdfFrame');
+      if (pdfFrame) {
+        pdfFrame.src = '';
+      }
+      // Réactiver le scroll de la page
+      document.body.style.overflow = '';
+    }
+  }
+
+  // Event listener déplacé dans DOMContentLoaded
+
+  // Fonction d'initialisation - chargement des données au démarrage
+  async function initialiserDonnees() {
+    // Attendre que common.js soit chargé et que username soit disponible
+    if (!window.username || window.username === 'demo') {
+      console.log('[WAIT] Attente du chargement de window.username...', window.username);
+      setTimeout(initialiserDonnees, 100);
+      return;
+    }
+
+    console.log('📥 Chargement des ventes pour:', window.username);
+
+    // Charger d'abord les projets de calcul
+    await chargerProjetsCalcul();
+
+    // Charger toutes les données en parallèle
+    await Promise.all([
+      chargerSoumissionsAttente(),
+      chargerSoumissionsSignees(),
+      chargerTravaux(),
+      chargerTravauxCompletes()
+    ]);
+
+    console.log('[OK] Données chargées:', {
+      attente: soumissionsAttente.length,
+      signees: soumissionsSignees.length,
+      completer: travauxACompleter.length,
+      completes: travauxCompletes.length,
+      projets: projetsCalcul.length
+    });
+  }
+
+  // Fonctions de recherche pour chaque colonne
+  function setupSearchListeners() {
+    // Recherche Potentiel
+    const searchAttente = document.getElementById('searchAttente');
+    if (searchAttente) {
+      searchAttente.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        filtrerProspects(searchTerm);
+      });
+    }
+
+    // Recherche En attente
+    const searchSignee2 = document.getElementById('searchSignee2');
+    if (searchSignee2) {
+      searchSignee2.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        filtrerSoumissionsAttente(searchTerm);
+      });
+    }
+
+    // Recherche Accepter
+    const searchTravaux = document.getElementById('searchTravaux');
+    if (searchTravaux) {
+      searchTravaux.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        filtrerSoumissionsSignees(searchTerm);
+      });
+    }
+
+    // Recherche Compléter
+    const searchCompletes = document.getElementById('searchCompletes');
+    if (searchCompletes) {
+      searchCompletes.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        filtrerTravauxACompleter(searchTerm);
+      });
+    }
+  }
+
+  function filtrerProspects(searchTerm) {
+    const container = document.getElementById('clientPotentielContainer');
+    if (!container) return;
+
+    const filteredProspects = prospectsPotentiels.filter(p => {
+      const nom = `${p.prenom} ${p.nom}`.toLowerCase();
+      const telephone = (p.telephone || '').toLowerCase();
+      const adresse = (p.adresse || '').toLowerCase();
+      return nom.includes(searchTerm) || telephone.includes(searchTerm) || adresse.includes(searchTerm);
+    });
+
+    container.innerHTML = '';
+    if (filteredProspects.length === 0) {
+      container.innerHTML = `<div class="text-center py-8" style="color: var(--text-gray);"><p class="text-sm">Aucun résultat</p></div>`;
+      return;
+    }
+
+    filteredProspects.forEach(prospect => ajouterProspectAColonne(prospect));
+    const potentielCount = document.getElementById('potentiel-count');
+    if (potentielCount) potentielCount.textContent = filteredProspects.length;
+  }
+
+  function filtrerSoumissionsAttente(searchTerm) {
+    const container = document.querySelector('#attente-box .space-y-4');
+    if (!container) return;
+
+    const filtered = soumissionsAttente.filter((client, index) => {
+      const nom = `${client.prenom} ${client.nom}`.toLowerCase();
+      const telephone = (client.telephone || '').toLowerCase();
+      const adresse = (client.adresse || '').toLowerCase();
+      const prix = (client.prix || '').toString().toLowerCase();
+      return nom.includes(searchTerm) || telephone.includes(searchTerm) || adresse.includes(searchTerm) || prix.includes(searchTerm);
+    });
+
+    container.innerHTML = '';
+    if (filtered.length === 0) {
+      container.innerHTML = `<div class="text-center py-8" style="color: var(--text-gray);"><p class="text-sm">Aucun résultat</p></div>`;
+      const attenteCount = document.getElementById('attente-count');
+      if (attenteCount) attenteCount.textContent = 0;
+      return;
+    }
+
+    filtered.forEach((client, index) => {
+      const originalIndex = soumissionsAttente.indexOf(client);
+      const clientId = `attente-${originalIndex}`;
+      const prix = client.prix ? parseFloat(client.prix).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00';
+      const ville = client.adresse && client.adresse.includes(',') ? client.adresse.split(',')[1].trim() : (client.adresse || '');
+
+      const cardHtml = `
+        <div class="relative p-4 rounded-lg border transition-all cursor-pointer" style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2);" onclick="showClientInfo('${clientId}')" onmouseover="this.style.background='rgba(245, 158, 11, 0.15)'; this.style.borderColor='rgba(245, 158, 11, 0.4)'" onmouseout="this.style.background='rgba(245, 158, 11, 0.05)'; this.style.borderColor='rgba(245, 158, 11, 0.2)'">
+          <div class="flex-1">
+            <h4 class="font-bold mb-2" style="color: var(--text-light);">
+              <i class="fas fa-clock mr-2" style="color: #f59e0b;"></i>
+              ${client.prenom} ${client.nom}
+            </h4>
+            <div class="space-y-1 text-sm">
+              <div class="flex items-center" style="color: var(--text-gray);">
+                <i class="fas fa-phone w-4 mr-1"></i>
+                <span>${client.telephone || 'N/A'}</span>
+              </div>
+              ${ville ? `
+              <div class="flex items-center" style="color: var(--text-gray);">
+                <i class="fas fa-map-marker-alt w-4 mr-1"></i>
+                <span>${ville}</span>
+              </div>
+              ` : ''}
+              <div class="flex items-center" style="color: var(--text-gray);">
+                <i class="fas fa-dollar-sign w-4 mr-1"></i>
+                <span>${prix} $</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      container.innerHTML += cardHtml;
+    });
+    const attenteCount = document.getElementById('attente-count');
+    if (attenteCount) attenteCount.textContent = filtered.length;
+  }
+
+  function filtrerSoumissionsSignees(searchTerm) {
+    const container = document.querySelector('#accepter-box .space-y-4');
+    if (!container) return;
+
+    const filtered = soumissionsSignees.filter(client => {
+      const nom = `${client.prenom} ${client.nom}`.toLowerCase();
+      const telephone = (client.telephone || '').toLowerCase();
+      const adresse = (client.adresse || '').toLowerCase();
+      const prix = (client.prix || '').toString().toLowerCase();
+      return nom.includes(searchTerm) || telephone.includes(searchTerm) || adresse.includes(searchTerm) || prix.includes(searchTerm);
+    });
+
+    container.innerHTML = '';
+    if (filtered.length === 0) {
+      container.innerHTML = `<div class="text-center py-8" style="color: var(--text-gray);"><p class="text-sm">Aucun résultat</p></div>`;
+      const accepterCount = document.getElementById('accepter-count');
+      if (accepterCount) accepterCount.textContent = 0;
+      return;
+    }
+
+    filtered.forEach(client => {
+      const originalIndex = soumissionsSignees.indexOf(client);
+      const clientId = `accepter-${originalIndex}`;
+      const prix = client.prix ? parseFloat(client.prix).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00';
+      const ville = client.adresse && client.adresse.includes(',') ? client.adresse.split(',')[1].trim() : (client.adresse || '');
+
+      const cardHtml = `
+        <div class="relative p-4 rounded-lg border transition-all cursor-pointer" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2);" onclick="showClientInfo('${clientId}')" onmouseover="this.style.background='rgba(16, 185, 129, 0.15)'; this.style.borderColor='rgba(16, 185, 129, 0.4)'" onmouseout="this.style.background='rgba(16, 185, 129, 0.05)'; this.style.borderColor='rgba(16, 185, 129, 0.2)'">
+          <div class="flex-1">
+            <h4 class="font-bold mb-2" style="color: var(--text-light);">
+              <i class="fas fa-check mr-2" style="color: #10b981;"></i>
+              ${client.prenom} ${client.nom}
+            </h4>
+            <div class="space-y-1 text-sm">
+              <div class="flex items-center" style="color: var(--text-gray);">
+                <i class="fas fa-phone w-4 mr-1"></i>
+                <span>${client.telephone || 'N/A'}</span>
+              </div>
+              ${ville ? `
+              <div class="flex items-center" style="color: var(--text-gray);">
+                <i class="fas fa-map-marker-alt w-4 mr-1"></i>
+                <span>${ville}</span>
+              </div>
+              ` : ''}
+              <div class="flex items-center" style="color: var(--text-gray);">
+                <i class="fas fa-dollar-sign w-4 mr-1"></i>
+                <span>${prix} $</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      container.innerHTML += cardHtml;
+    });
+    const accepterCount = document.getElementById('accepter-count');
+    if (accepterCount) accepterCount.textContent = filtered.length;
+  }
+
+  function filtrerTravauxACompleter(searchTerm) {
+    const container = document.querySelector('#completer-box .space-y-4');
+    if (!container) return;
+
+    const filtered = travauxACompleter.filter(client => {
+      const nom = `${client.prenom} ${client.nom}`.toLowerCase();
+      const telephone = (client.telephone || '').toLowerCase();
+      const adresse = (client.adresse || '').toLowerCase();
+      const prix = (client.prix || '').toString().toLowerCase();
+      return nom.includes(searchTerm) || telephone.includes(searchTerm) || adresse.includes(searchTerm) || prix.includes(searchTerm);
+    });
+
+    container.innerHTML = '';
+    if (filtered.length === 0) {
+      container.innerHTML = `<div class="text-center py-8" style="color: var(--text-gray);"><p class="text-sm">Aucun résultat</p></div>`;
+      const completerCount = document.getElementById('completer-count');
+      if (completerCount) completerCount.textContent = 0;
+      return;
+    }
+
+    filtered.forEach(client => {
+      const originalIndex = travauxACompleter.indexOf(client);
+      const clientId = `completer-${originalIndex}`;
+      const prix = client.prix ? parseFloat(client.prix).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00';
+      const ville = client.adresse && client.adresse.includes(',') ? client.adresse.split(',')[1].trim() : (client.adresse || '');
+
+      const cardHtml = `
+        <div class="relative p-4 rounded-lg border transition-all cursor-pointer" style="background: rgba(249, 115, 22, 0.05); border: 1px solid rgba(249, 115, 22, 0.2);" onclick="showClientInfo('${clientId}')" onmouseover="this.style.background='rgba(249, 115, 22, 0.15)'; this.style.borderColor='rgba(249, 115, 22, 0.4)'" onmouseout="this.style.background='rgba(249, 115, 22, 0.05)'; this.style.borderColor='rgba(249, 115, 22, 0.2)'">
+          <div class="flex-1">
+            <h4 class="font-bold mb-2" style="color: var(--text-light);">
+              <i class="fas fa-paint-brush mr-2" style="color: #f97316;"></i>
+              ${client.prenom} ${client.nom}
+            </h4>
+            <div class="space-y-1 text-sm">
+              <div class="flex items-center" style="color: var(--text-gray);">
+                <i class="fas fa-phone w-4 mr-1"></i>
+                <span>${client.telephone || 'N/A'}</span>
+              </div>
+              ${ville ? `
+              <div class="flex items-center" style="color: var(--text-gray);">
+                <i class="fas fa-map-marker-alt w-4 mr-1"></i>
+                <span>${ville}</span>
+              </div>
+              ` : ''}
+              <div class="flex items-center" style="color: var(--text-gray);">
+                <i class="fas fa-dollar-sign w-4 mr-1"></i>
+                <span>${prix} $</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      container.innerHTML += cardHtml;
+    });
+    const completerCount = document.getElementById('completer-count');
+    if (completerCount) completerCount.textContent = filtered.length;
+  }
+
+  // Fonction pour s'assurer que les modals existent dans le DOM (pour app-shell)
+  function ensureModalsExist() {
+    // Créer clientInfoModal s'il n'existe pas
+    if (!document.getElementById('clientInfoModal')) {
+      const clientModal = document.createElement('div');
+      clientModal.id = 'clientInfoModal';
+      clientModal.className = 'fixed inset-0 flex items-center justify-center z-50';
+      clientModal.style.cssText = 'background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none;';
+      clientModal.innerHTML = `
+        <div class="status-card p-6 max-w-lg w-full mx-4" style="--card-color: #f59e0b; max-height: 90vh; overflow-y: auto;">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold" style="color: var(--text-light);">
+              <i class="fas fa-user mr-2" style="color: #f59e0b;"></i>
+              Informations client
+            </h3>
+            <button onclick="closeClientInfo()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;" onmouseover="this.style.background='rgba(245, 158, 11, 0.3)'" onmouseout="this.style.background='rgba(245, 158, 11, 0.2)'">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div id="clientInfoContent" class="space-y-4"></div>
+        </div>
+      `;
+      clientModal.addEventListener('click', function(e) {
+        if (e.target === this) closeClientInfo();
+      });
+      document.body.appendChild(clientModal);
+      console.log('[OK] clientInfoModal créé dynamiquement');
+    }
+
+    // Créer ajouterProspectModal s'il n'existe pas
+    if (!document.getElementById('ajouterProspectModal')) {
+      const prospectModal = document.createElement('div');
+      prospectModal.id = 'ajouterProspectModal';
+      prospectModal.className = 'fixed inset-0 flex items-center justify-center z-50';
+      prospectModal.style.cssText = 'background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none;';
+      prospectModal.innerHTML = `
+        <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-bold" style="color: var(--text-light);">
+              <i class="fas fa-user-plus mr-2" style="color: var(--primary-blue);"></i>
+              Ajouter un prospect
+            </h3>
+            <button onclick="fermerModalProspect()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);" onmouseover="this.style.background='rgba(96, 165, 250, 0.3)'" onmouseout="this.style.background='rgba(96, 165, 250, 0.2)'">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <form id="prospectForm" class="space-y-4" autocomplete="off">
+            <div>
+              <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Prénom *</label>
+              <input type="text" id="prospectPrenom" name="prospect-first-name" required autocomplete="new-password" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly');" class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="Ex: Jean">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Nom *</label>
+              <input type="text" id="prospectNom" name="prospect-last-name" required autocomplete="new-password" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly');" class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="Ex: Dupont">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Téléphone *</label>
+              <input type="tel" id="prospectTelephone" name="telephone" required autocomplete="off" autocapitalize="off" spellcheck="false" class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="Ex: 450-123-4567" maxlength="12">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Adresse *</label>
+              <input type="text" id="prospectAdresse" name="prospect-address-field-unique-12345" required autocomplete="new-password" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly');" data-form-type="other" placeholder="Ex: 123 Rue de la Paix, Montréal, QC" class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);">
+            </div>
+            <button type="submit" class="btn-primary w-full py-2 rounded-lg font-medium transition-colors">
+              <i class="fas fa-user-plus mr-2"></i>
+              Ajouter le prospect
+            </button>
+          </form>
+        </div>
+      `;
+      prospectModal.addEventListener('click', function(e) {
+        if (e.target === this) fermerModalProspect();
+      });
+      document.body.appendChild(prospectModal);
+
+      // Ajouter l'event listener pour le formulaire
+      const form = prospectModal.querySelector('#prospectForm');
+      if (form) {
+        form.addEventListener('submit', async function(e) {
+          e.preventDefault();
+          await soumettreProspect();
+        });
+      }
+
+      // Ajouter le formatage automatique du téléphone
+      const phoneInput = prospectModal.querySelector('#prospectTelephone');
+      if (phoneInput) {
+        phoneInput.addEventListener('input', function(e) {
+          let value = e.target.value.replace(/\D/g, ''); // Enlever tout sauf les chiffres
+
+          if (value.length > 10) {
+            value = value.substring(0, 10);
+          }
+
+          let formattedValue = '';
+          if (value.length > 0) {
+            formattedValue = value.substring(0, 3);
+          }
+          if (value.length >= 4) {
+            formattedValue += '-' + value.substring(3, 6);
+          }
+          if (value.length >= 7) {
+            formattedValue += '-' + value.substring(6, 10);
+          }
+
+          e.target.value = formattedValue;
+        });
+      }
+
+      // Initialiser Google Places Autocomplete pour le champ adresse
+      setTimeout(() => {
+        if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+          const input = document.getElementById('prospectAdresse');
+          if (input) {
+            input.setAttribute('autocomplete', 'new-password');
+            input.setAttribute('autocorrect', 'off');
+            input.setAttribute('autocapitalize', 'off');
+            input.setAttribute('spellcheck', 'false');
+
+            const autocomplete = new google.maps.places.Autocomplete(input, {
+              types: ['address'],
+              componentRestrictions: { country: 'ca' }
+            });
+
+            // Reset flag when user types manually
+            input.addEventListener('input', () => {
+              window.googleProspectAddressSelected = false;
+              input.setAttribute('autocomplete', 'new-password');
+            });
+
+            // Supprimer l'autocomplete navigateur sur focus
+            input.addEventListener('focus', () => {
+              input.setAttribute('autocomplete', 'new-password');
+              input.removeAttribute('readonly');
+            });
+
+            autocomplete.addListener('place_changed', () => {
+              const place = autocomplete.getPlace();
+              if (!place.geometry) {
+                console.log("Adresse invalide");
+                window.googleProspectAddressSelected = false;
+                return;
+              }
+
+              // Marquer qu'une adresse Google a été sélectionnée
+              window.googleProspectAddressSelected = true;
+
+              const components = place.address_components;
+              let streetNumber = '';
+              let route = '';
+              let city = '';
+              let province = '';
+              let postalCode = '';
+
+              components.forEach(component => {
+                const types = component.types;
+                if (types.includes('street_number')) {
+                  streetNumber = component.long_name;
+                }
+                if (types.includes('route')) {
+                  route = component.long_name;
+                }
+                if (types.includes('locality')) {
+                  city = component.long_name;
+                }
+                if (types.includes('administrative_area_level_1')) {
+                  province = component.short_name;
+                }
+                if (types.includes('postal_code')) {
+                  postalCode = component.long_name;
+                }
+              });
+
+              const fullAddress = `${streetNumber} ${route}, ${city}, ${province} ${postalCode}`;
+              input.value = fullAddress.trim();
+            });
+
+            console.log('[OK] Google Places Autocomplete initialisé pour le modal dynamique');
+          }
+        }
+      }, 100);
+
+      console.log('[OK] ajouterProspectModal créé dynamiquement');
+    }
+  }
+
+  // Fonction pour ouvrir le modal prospect
+  window.ajouterProspect = function() {
+    console.log("🆕 Ouvrir modal prospect");
+    // S'assurer que les modals existent (pour app-shell)
+    ensureModalsExist();
+
+    // Attendre que le DOM soit complètement chargé dans app-shell
+    setTimeout(() => {
+      const modal = document.getElementById('ajouterProspectModal');
+      if (modal) {
+        modal.style.display = 'flex';
+        // Bloquer le scroll de la page
+        document.body.style.overflow = 'hidden';
+      } else {
+        console.error('Modal ajouterProspectModal non trouvé dans le DOM');
+      }
+    }, 50);
+  }
+
+  window.ouvrirModalProspect = function() {
+    window.ajouterProspect(); // Alias pour compatibilité
+  }
+
+  // Fonction pour fermer le modal prospect
+  window.fermerModalProspect = function() {
+    const modal = document.getElementById('ajouterProspectModal');
+    if (modal) {
+      modal.style.display = 'none';
+      // Réactiver le scroll
+      document.body.style.overflow = '';
+      // Réinitialiser le formulaire
+      const form = document.getElementById('prospectForm');
+      if (form) {
+        form.reset();
+      }
+      // Réinitialiser le flag Google
+      window.googleProspectAddressSelected = false;
+    }
+  }
+
+  // Event listener déplacé dans DOMContentLoaded
+
+  async function soumettreProspect() {
+    const prenom = document.getElementById('prospectPrenom').value.trim();
+    const nom = document.getElementById('prospectNom').value.trim();
+    const telephone = document.getElementById('prospectTelephone').value.trim();
+    const adresse = document.getElementById('prospectAdresse').value.trim();
+
+    if (!prenom || !nom || !telephone || !adresse) {
+      alert('Veuillez remplir tous les champs obligatoires (Prénom, Nom, Téléphone, Adresse)');
+      return;
+    }
+
+    // Validation de l'adresse Google - OBLIGATOIRE
+    if (!window.googleProspectAddressSelected) {
+      alert('Veuillez sélectionner une adresse valide dans les suggestions Google.');
+      return;
+    }
+    
+    // Créer l'objet prospect
+    const prospect = {
+      prenom: prenom,
+      nom: nom,
+      telephone: telephone,
+      adresse: adresse,
+      dateAjout: new Date().toISOString().split('T')[0]
+    };
+    
+    console.log('💾 Nouveau prospect:', prospect);
+    
+    try {
+      // Envoyer le prospect au backend
+      const response = await fetch(`${window.location.origin}/ajouter-prospect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: window.username,
+          prenom: prenom,
+          nom: nom,
+          telephone: telephone,
+          adresse: adresse
+        })
+      });
+
+      const result = await response.json();
+      
+      console.log('[DEBUG] Réponse du serveur:', result);
+      console.log('[DEBUG] Response status:', response.status);
+      console.log('[DEBUG] Response ok:', response.ok);
+      
+      if (response.ok && result.success) {
+        // Ajouter le prospect à la colonne Client potentiel
+        ajouterProspectAColonne(result.prospect);
+        
+        // Confirmation et fermeture
+        console.log(`Prospect ${prenom} ${nom} ajouté avec succès !`);
+        fermerModalProspect();
+        
+        // Recharger les données pour refléter les changements
+        chargerProspects();
+      } else {
+        console.error('[ERROR] Erreur backend:', result);
+        throw new Error(result.message || result.detail || 'Erreur lors de l\'ajout du prospect');
+      }
+      
+    } catch (error) {
+      console.error('[ERROR] Erreur lors de l\'ajout du prospect:', error);
+      alert('Erreur lors de l\'ajout du prospect. Veuillez réessayer.');
+    }
+  }
+
+  // Fonction pour ajouter un prospect à la colonne Client potentiel
+  // Stocker les prospects pour la fonction showProspectInfo
+  let prospectsData = {};
+
+  // 🧪 DONNÉES DE TEST PROSPECTS
+  let prospectsPotentiels = [];
+
+  function ajouterProspectAColonne(prospect) {
+    const clientPotentielContainer = document.getElementById('clientPotentielContainer');
+    if (!clientPotentielContainer) return;
+
+    // Stocker le prospect dans l'objet global
+    prospectsData[prospect.id] = prospect;
+
+    const ville = prospect.adresse && prospect.adresse.includes(',') ? prospect.adresse.split(',')[1].trim() : (prospect.adresse || '');
+
+    const cardHtml = `
+      <div class="relative p-4 rounded-lg border transition-all cursor-pointer" style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2);" onclick="showProspectInfo('${prospect.id}')" onmouseover="this.style.background='rgba(59, 130, 246, 0.15)'; this.style.borderColor='rgba(59, 130, 246, 0.4)'" onmouseout="this.style.background='rgba(59, 130, 246, 0.05)'; this.style.borderColor='rgba(59, 130, 246, 0.2)'">
+        <div class="flex-1">
+          <h4 class="font-bold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-user-plus mr-2" style="color: #3b82f6;"></i>
+            ${prospect.prenom} ${prospect.nom}
+          </h4>
+          <div class="space-y-1 text-sm">
+            <div class="flex items-center" style="color: var(--text-gray);">
+              <i class="fas fa-phone w-4 mr-1"></i>
+              <span>${prospect.telephone || 'N/A'}</span>
+            </div>
+            ${ville ? `
+            <div class="flex items-center" style="color: var(--text-gray);">
+              <i class="fas fa-map-marker-alt w-4 mr-1"></i>
+              <span>${ville}</span>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+
+    clientPotentielContainer.innerHTML += cardHtml;
+  }
+
+  window.showProspectInfo = function(prospectId) {
+    const prospect = prospectsData[prospectId];
+    if (!prospect) return;
+    
+    // Créer le modal de détails du prospect
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 flex items-center justify-center z-50';
+    modal.style.background = 'rgba(0, 0, 0, 0.7)';
+    modal.style.backdropFilter = 'blur(5px)';
+    
+    modal.innerHTML = `
+      <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-xl font-bold" style="color: var(--text-light);">
+            <i class="fas fa-user mr-2" style="color: var(--primary-blue);"></i>
+            Détails du prospect
+          </h3>
+          <div class="flex items-center space-x-2">
+            <button onclick="supprimerProspect('${prospect.id}')" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
+              <i class="fas fa-trash"></i>
+            </button>
+            <button onclick="document.body.style.overflow = ''; this.closest('.fixed').remove()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);" onmouseover="this.style.background='rgba(96, 165, 250, 0.3)'" onmouseout="this.style.background='rgba(96, 165, 250, 0.2)'">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+        
+        <div class="space-y-4">
+          <div>
+            <div class="font-medium" style="color: var(--text-light);">Nom complet</div>
+            <div class="text-sm" style="color: var(--text-gray);">${prospect.prenom} ${prospect.nom}</div>
+          </div>
+          
+          <div>
+            <div class="font-medium" style="color: var(--text-light);">Téléphone</div>
+            <div class="text-sm" style="color: var(--text-gray);">${prospect.telephone}</div>
+          </div>
+          
+          ${prospect.adresse ? `
+          <div>
+            <div class="font-medium" style="color: var(--text-light);">Adresse</div>
+            <div class="text-sm" style="color: var(--text-gray);">${prospect.adresse}</div>
+          </div>
+          ` : ''}
+        </div>
+        
+        <div class="flex space-x-3 pt-6 mt-6" style="border-top: 1px solid var(--border-dark);">
+          <button onclick="commencerEstimation('${prospect.id}')" class="btn-primary px-4 py-2 rounded-lg flex items-center justify-center space-x-2">
+            <i class="fas fa-calculator"></i>
+            <span>Commencer l'estimation</span>
+          </button>
+          <button onclick="document.body.style.overflow = ''; this.closest('.fixed').remove()" class="btn-secondary px-4 py-2 rounded-lg">
+            Fermer
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+
+    // Bloquer le scroll de la page
+    document.body.style.overflow = 'hidden';
+
+    // Restaurer le scroll quand le modal se ferme
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.style.overflow = '';
+        modal.remove();
+      }
+    });
+  }
+
+  window.commencerEstimation = function(prospectId) {
+    console.log("[LAUNCH] Début commencerEstimation, prospectId:", prospectId);
+    console.log("[DATA] prospectsData disponible:", prospectsData);
+    
+    const prospect = prospectsData[prospectId];
+    if (!prospect) {
+      console.error("[ERROR] Prospect introuvable pour ID:", prospectId);
+      return;
+    }
+    
+    console.log("[OK] Prospect trouvé:", prospect);
+    
+    // Stocker les données du prospect dans submissionData (même système que calcul utilise)
+    const submissionData = {
+      prenom: prospect.prenom,
+      nom: prospect.nom,
+      telephone: prospect.telephone,
+      adresse: prospect.adresse || '',
+      fromProspect: true // Flag pour bypasser validation d'adresse dans calcul et creer_soumission
+      // Pas de courriel car il n'y en a pas dans calcul non plus
+    };
+    
+    console.log("💾 Données à stocker:", submissionData);
+    sessionStorage.setItem('submissionData', JSON.stringify(submissionData));
+    
+    // Vérifier que les données ont bien été stockées
+    const verification = sessionStorage.getItem('submissionData');
+    console.log("[DEBUG] Vérification stockage:", verification);
+    
+    console.log("🔄 Redirection vers /calcul...");
+    
+    // Rediriger vers la page calcul
+    window.location.href = '/calcul';
+  }
+
+  // Variables globales pour stocker l'ID du prospect à supprimer
+  let prospectIdToDelete = null;
+
+  // Fonction pour supprimer un prospect (ouvre le modal)
+  window.supprimerProspect = function(prospectId) {
+    prospectIdToDelete = prospectId;
+    document.getElementById('confirmDeleteProspectModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  // Fermer le modal de confirmation suppression prospect
+  window.closeConfirmDeleteProspectModal = function() {
+    document.getElementById('confirmDeleteProspectModal').style.display = 'none';
+    document.body.style.overflow = '';
+    prospectIdToDelete = null;
+  }
+
+  // Confirmer la suppression du prospect
+  window.confirmDeleteProspect = async function() {
+    if (!prospectIdToDelete) return;
+
+    try {
+      const prospect = prospectsData[prospectIdToDelete];
+      if (!prospect) {
+        throw new Error('Prospect introuvable');
+      }
+
+      console.log('[DELETE] Suppression du prospect:', prospect);
+
+      // Appeler le backend pour supprimer le prospect
+      const response = await fetch(`${window.location.origin}/supprimer-prospect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: window.username,
+          id: prospect.id,
+          prenom: prospect.prenom,
+          nom: prospect.nom,
+          telephone: prospect.telephone
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la suppression du prospect');
+      }
+
+      console.log(`[OK] Prospect ${prospect.prenom} ${prospect.nom} supprimé`);
+
+      // Fermer les modals
+      closeConfirmDeleteProspectModal();
+
+      // Fermer aussi le modal de détails du prospect s'il est ouvert
+      const detailsModal = document.querySelector('.fixed.inset-0.z-50');
+      if (detailsModal) {
+        detailsModal.remove();
+      }
+
+      document.body.style.overflow = '';
+
+      // Recharger la liste des prospects
+      await chargerProspects();
+
+    } catch (error) {
+      console.error('[ERROR] Erreur:', error);
+      closeConfirmDeleteProspectModal();
+      alert('Erreur lors de la suppression du prospect');
+    }
+  }
+
+  // Fonction pour charger tous les prospects depuis le backend
+  async function chargerProspects() {
+    try {
+      const response = await fetch(`${window.location.origin}/prospects/${window.username}`);
+      const prospects = await response.json();
+
+      // Vérifier que prospects est bien un tableau
+      if (!Array.isArray(prospects)) {
+        console.warn('[WARN] Prospects n\'est pas un tableau:', prospects);
+        return;
+      }
+
+      // Vider le container des clients potentiels
+      const clientPotentielContainer = document.getElementById('clientPotentielContainer');
+      if (clientPotentielContainer) {
+        clientPotentielContainer.innerHTML = '';
+
+        // Filtrer les prospects potentiels
+        prospectsPotentiels = prospects.filter(p => p.statut === 'client_potentiel');
+
+        // Vérifier s'il y a des prospects potentiels
+        if (prospectsPotentiels.length === 0) {
+          // Afficher le message vide
+          clientPotentielContainer.innerHTML = `
+            <div class="text-center py-8" style="color: var(--text-gray);">
+              <i class="fas fa-user-plus text-2xl mb-2" style="color: rgba(96, 165, 250, 0.3);"></i>
+              <p class="text-sm">Aucun client potentiel</p>
+            </div>
+          `;
+        } else {
+          // Ajouter chaque prospect à la colonne
+          prospectsPotentiels.forEach(prospect => {
+            // Stocker le prospect dans l'objet global
+            prospectsData[prospect.id] = prospect;
+            ajouterProspectAColonne(prospect);
+          });
+        }
+
+        // Mettre à jour le compteur
+        const countElement = document.getElementById('potentiel-count');
+        if (countElement) {
+          countElement.textContent = prospectsPotentiels.length;
+        }
+      }
+    } catch (error) {
+      console.error('[ERROR] Erreur lors du chargement des prospects:', error);
+      prospectsPotentiels = [];
+    }
+  }
+
+  // Démarrer le chargement dès que le DOM est prêt
+  document.addEventListener('DOMContentLoaded', function() {
+    updateCurrentDate(); // Mettre à jour la date
+    setTimeout(initialiserDonnees, 200); // Charger les données avec délai (comme dashboard)
+    setTimeout(chargerProspects, 200); // Charger les prospects avec délai (comme dashboard)
+    setTimeout(setupSearchListeners, 300); // Configurer les recherches après le chargement
+
+    // Ajouter le bouton Clients perdus s'il n'existe pas déjà
+    setTimeout(() => {
+      if (!document.getElementById('btn-clients-perdus')) {
+        const headerText = document.querySelector('.text-xl.font-medium');
+        if (headerText && headerText.parentElement) {
+          const btn = document.createElement('button');
+          btn.id = 'btn-clients-perdus';
+          btn.onclick = toggleClientsPerdus;
+          btn.style.cssText = `
+            background: rgba(100, 116, 139, 0.08);
+            color: rgba(148, 163, 184, 0.9);
+            border: 1px solid rgba(100, 116, 139, 0.15);
+            padding: 0.4rem 0.9rem;
+            border-radius: 9999px;
+            font-weight: 400;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            transition: all 0.2s;
+            white-space: nowrap;
+            margin-left: 1rem;
+          `;
+          btn.onmouseover = function() {
+            this.style.background = 'rgba(100, 116, 139, 0.12)';
+            this.style.borderColor = 'rgba(100, 116, 139, 0.25)';
+            this.style.color = 'rgba(148, 163, 184, 1)';
+          };
+          btn.onmouseout = function() {
+            this.style.background = 'rgba(100, 116, 139, 0.08)';
+            this.style.borderColor = 'rgba(100, 116, 139, 0.15)';
+            this.style.color = 'rgba(148, 163, 184, 0.9)';
+          };
+          btn.innerHTML = '<i class="fas fa-user-times" style="font-size: 0.75rem;"></i> Clients perdus';
+          headerText.parentElement.style.display = 'flex';
+          headerText.parentElement.style.justifyContent = 'space-between';
+          headerText.parentElement.style.alignItems = 'center';
+          headerText.parentElement.appendChild(btn);
+        }
+      }
+    }, 100)
+
+    // Fermer les dropdowns de paiement au clic extérieur
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.modern-dropdown')) {
+        document.querySelectorAll('.modern-dropdown-menu').forEach(menu => {
+          menu.classList.remove('show');
+        });
+        document.querySelectorAll('.modern-dropdown').forEach(dropdown => {
+          dropdown.classList.remove('active');
+        });
+      }
+    });
+
+    // Fermer les dropdowns lors du scroll
+    window.addEventListener('scroll', function() {
+      document.querySelectorAll('.modern-dropdown-menu.show').forEach(menu => {
+        menu.classList.remove('show');
+      });
+      document.querySelectorAll('.modern-dropdown.active').forEach(dropdown => {
+        dropdown.classList.remove('active');
+      });
+    }, true);
+
+    // Rafraîchir automatiquement les données toutes les 5 secondes pour voir les signatures en temps réel
+    setInterval(async () => {
+      // Ne pas rafraîchir si un dropdown est ouvert
+      const dropdownOuvert = document.querySelector('.modern-dropdown-menu.show');
+      if (dropdownOuvert) {
+        console.log('⏸️ Rafraîchissement suspendu (dropdown ouvert)');
+        return;
+      }
+
+      try {
+        await Promise.all([
+          chargerSoumissionsAttente(),
+          chargerSoumissionsSignees(),
+          chargerTravauxCompletes()
+        ]);
+        console.log('🔄 Données rafraîchies automatiquement');
+      } catch (error) {
+        console.error('[ERROR] Erreur lors du rafraîchissement automatique:', error);
+      }
+    }, 5000); // Toutes les 5 secondes
+
+    // Event listeners pour les modals (comme dashboard)
+    const clientInfoModal = document.getElementById('clientInfoModal');
+    if (clientInfoModal) {
+      clientInfoModal.addEventListener('click', function(e) {
+        if (e.target === this) {
+          closeClientInfo();
+        }
+      });
+    }
+
+    const prospectForm = document.getElementById('prospectForm');
+    if (prospectForm) {
+      prospectForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        await soumettreProspect();
+      });
+    }
+
+    const ajouterProspectModal = document.getElementById('ajouterProspectModal');
+    if (ajouterProspectModal) {
+      ajouterProspectModal.addEventListener('click', function(e) {
+        if (e.target === this) {
+          fermerModalProspect();
+        }
+      });
+    }
+
+    // Ajouter le formatage automatique du téléphone pour le modal statique
+    const phoneInputStatic = document.getElementById('prospectTelephone');
+    if (phoneInputStatic) {
+      phoneInputStatic.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, ''); // Enlever tout sauf les chiffres
+
+        if (value.length > 10) {
+          value = value.substring(0, 10);
+        }
+
+        let formattedValue = '';
+        if (value.length > 0) {
+          formattedValue = value.substring(0, 3);
+        }
+        if (value.length >= 4) {
+          formattedValue += '-' + value.substring(3, 6);
+        }
+        if (value.length >= 7) {
+          formattedValue += '-' + value.substring(6, 10);
+        }
+
+        e.target.value = formattedValue;
+      });
+    }
+
+    // Mobile search field management based on visible status card
+    if (window.innerWidth <= 768) {
+      const cardsContainer = document.querySelector('.status-cards-container');
+      const searchWrappers = document.querySelectorAll('.search-field-wrapper');
+
+      if (cardsContainer && searchWrappers.length > 0) {
+        // Function to show appropriate search field based on scroll position
+        function updateActiveSearchField() {
+          const scrollLeft = cardsContainer.scrollLeft;
+          const cardWidth = cardsContainer.clientWidth;
+          const activeIndex = Math.round(scrollLeft / cardWidth);
+
+          // Hide all search fields
+          searchWrappers.forEach(wrapper => wrapper.classList.remove('active'));
+
+          // Show the active search field
+          if (searchWrappers[activeIndex]) {
+            searchWrappers[activeIndex].classList.add('active');
+          }
+        }
+
+        // Initialize with first search field active
+        if (searchWrappers[0]) {
+          searchWrappers[0].classList.add('active');
+        }
+
+        // Update active search field when cards are swiped
+        cardsContainer.addEventListener('scroll', updateActiveSearchField);
+      }
+    }
+  });
+
+  </script>
+
+<!-- Styles pour Google Places Autocomplete -->
+<!-- Styles spécifiques à Ventes -->
+
+<!-- Google Places API et Autocomplétion Adresse -->
+<script>
+  // Variable globale pour tracker si une adresse Google a été sélectionnée
+  window.googleProspectAddressSelected = false;
+
+  window.initProspectAutocomplete = function() {
+    const input = document.getElementById('prospectAdresse');
+    if (!input) return;
+
+    // Forcer la désactivation de l'autocomplete navigateur
+    input.setAttribute('autocomplete', 'new-password');
+    input.setAttribute('autocorrect', 'off');
+    input.setAttribute('autocapitalize', 'off');
+    input.setAttribute('spellcheck', 'false');
+
+    const autocomplete = new google.maps.places.Autocomplete(input, {
+      types: ['address'],
+      componentRestrictions: { country: 'ca' }
+    });
+
+    // Reset flag when user types manually
+    input.addEventListener('input', () => {
+      window.googleProspectAddressSelected = false;
+      // Réappliquer les attributs anti-autocomplete
+      input.setAttribute('autocomplete', 'new-password');
+    });
+
+    // Supprimer l'autocomplete navigateur sur focus
+    input.addEventListener('focus', () => {
+      input.setAttribute('autocomplete', 'new-password');
+      input.removeAttribute('readonly');
+    });
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (!place.geometry) {
+        console.log("Adresse invalide");
+        window.googleProspectAddressSelected = false;
+        return;
+      }
+
+      // Marquer qu'une adresse Google a été sélectionnée
+      window.googleProspectAddressSelected = true;
+
+      const components = place.address_components;
+      let streetNumber = '';
+      let route = '';
+      let city = '';
+      let province = '';
+      let postalCode = '';
+
+      components.forEach(component => {
+        const types = component.types;
+
+        if (types.includes('street_number')) {
+          streetNumber = component.long_name;
+        }
+        if (types.includes('route')) {
+          route = component.long_name;
+        }
+        if (types.includes('locality')) {
+          city = component.long_name;
+        }
+        if (types.includes('administrative_area_level_1')) {
+          province = component.short_name;
+        }
+        if (types.includes('postal_code')) {
+          postalCode = component.long_name;
+        }
+      });
+
+      const fullAddress = `${streetNumber} ${route}, ${city}, ${province} ${postalCode}`;
+      input.value = fullAddress.trim();
+    });
+  };
+</script>
+
+  <!-- Modaux pour gestion sections -->
+  <div id="sectionModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 700px;">
+      <h3 class="modal-title">
+        <i class="fas fa-icons mr-2"></i>
+        Choisir une icône
+      </h3>
+      <div class="modal-body">
+        <div id="iconGrid" class="icon-grid"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="sectionCancel" class="btn-secondary">Annuler</button>
+        <button id="sectionSave" class="btn-primary">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="columnModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+      <h3 class="modal-title">
+        <i class="fas fa-columns mr-2"></i>
+        Ajouter une colonne
+      </h3>
+      <div class="modal-body">
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Sélectionnez le type de colonne :</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="column-type-card" data-type="texte">
+            <i class="fas fa-font" style="font-size: 2rem; color: var(--primary-blue); margin-bottom: 0.75rem;"></i>
+            <h4 style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">Texte</h4>
+            <p style="font-size: 0.75rem; color: var(--text-secondary);">Champ texte</p>
+          </div>
+          <div class="column-type-card" data-type="numero">
+            <i class="fas fa-hashtag" style="font-size: 2rem; color: var(--primary-blue); margin-bottom: 0.75rem;"></i>
+            <h4 style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">Numéro</h4>
+            <p style="font-size: 0.75rem; color: var(--text-secondary);">Montant/Numéro</p>
+          </div>
+          <div class="column-type-card" data-type="date">
+            <i class="fas fa-calendar" style="font-size: 2rem; color: var(--primary-blue); margin-bottom: 0.75rem;"></i>
+            <h4 style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">Date</h4>
+            <p style="font-size: 0.75rem; color: var(--text-secondary);">Date projet</p>
+          </div>
+          <div class="column-type-card" data-type="statut">
+            <i class="fas fa-tag" style="font-size: 2rem; color: var(--primary-blue); margin-bottom: 0.75rem;"></i>
+            <h4 style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">Statut</h4>
+            <p style="font-size: 0.75rem; color: var(--text-secondary);">État projet</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="columnCancel" class="btn-secondary">Annuler</button>
+        <button id="columnSave" class="btn-primary">Ajouter</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="confirmModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 450px;">
+      <h3 class="modal-title" id="confirmTitle">
+        <i class="fas fa-exclamation-triangle mr-2" style="color: #f59e0b;"></i>
+        Confirmation
+      </h3>
+      <div class="modal-body">
+        <p id="confirmMessage" style="color: var(--text-secondary);"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="confirmCancel" class="btn-secondary">Annuler</button>
+        <button id="confirmOk" class="btn-primary" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="alertModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 450px;">
+      <h3 class="modal-title" id="alertTitle">
+        <i class="fas fa-info-circle mr-2"></i>
+        Information
+      </h3>
+      <div class="modal-body">
+        <p id="alertMessage" style="color: var(--text-secondary);"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="alertOk" class="btn-primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript sections management -->
+  <!-- <script src="/Ventes_sections.js"></script> -->
+
+<script
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAZDi-RMHDdA4l-4sv_5H8GhsUAYXV4DVE&libraries=places&callback=initProspectAutocomplete&language=fr&region=CA"
+  async
+  defer
+></script>
+</body>
+</html>

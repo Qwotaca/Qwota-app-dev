@@ -1,0 +1,2930 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#1f2937">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Feuille de style principale - Thème Dark Organisé -->
+  <link rel="stylesheet" href="/base.css">
+  
+  <!-- Styles specifiques a la page Dashboard User -->
+  <link rel="stylesheet" href="/dashboard_user.css">
+</head>
+<body class="min-h-screen" style="margin: 0; padding: 0;">
+  
+  <!-- Contenu principal -->
+  <div class="main-content w-full" style="width: 100%; padding: 2rem;">
+    <div class="w-full">
+
+    <!-- Header -->
+    <div class="mb-10 mt-5 md:mt-0">
+      <div class="relative">
+        <h1 class="text-4xl font-bold mb-3">
+          Tableau de Bord
+        </h1>
+<span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        <div class="flex items-center justify-between">
+          <p class="text-xl font-medium">
+            <span>Vue d'ensemble de votre activité commerciale</span>
+          </p>
+          <div class="text-sm flex items-center date-display-container">
+            <i class="fas fa-calendar-alt mr-2"></i>
+            <span id="currentDate">Aujourd'hui</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Status Cards -->
+    <div class="status-cards-grid grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      
+      <!-- Gauche: Status Soumissions avec lignes de couleur -->
+      <div class="status-card p-6">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <h3 class="text-lg font-semibold mb-1">Status Soumissions</h3>
+            <p class="text-sm">État des propositions</p>
+          </div>
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center">
+            <i class="fas fa-file-signature text-lg" style="color: #60a5fa;"></i>
+          </div>
+        </div>
+        
+        <div class="space-y-3" id="soumissions-status-container">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium">Signées</span>
+            <span id="soumissionsSignees" class="text-lg font-bold text-green-600 animated-number">0</span>
+          </div>
+          <div id="status-line-signees" class="status-line bg-green-500"></div>
+          
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium">En attente</span>
+            <span id="soumissionsEnAttente" class="text-lg font-bold text-orange-600 animated-number">0</span>
+          </div>
+          <div id="status-line-attente" class="status-line bg-orange-500"></div>
+          
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium">Perdus</span>
+            <span id="soumissionsPerdus" class="text-lg font-bold text-red-600 animated-number">0</span>
+          </div>
+          <div id="status-line-perdus" class="status-line bg-red-500"></div>
+        </div>
+      </div>
+
+      <!-- Centre: Objectif de l'année -->
+      <div class="status-card p-6">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <h3 class="text-lg font-semibold mb-1">Chiffre d'affaires</h3>
+            <p class="text-sm">Suivi des objectifs</p>
+          </div>
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center">
+            <i class="fas fa-dollar-sign text-lg"></i>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex-1 text-center">
+            <div class="relative inline-block">
+              <svg class="w-20 h-20 progress-ring" viewBox="0 0 84 84">
+                <circle cx="42" cy="42" r="40" stroke="#475569" stroke-width="4" fill="none"/>
+                <circle id="progress-circle" cx="42" cy="42" r="40" stroke="#10b981" stroke-width="4" fill="none" class="progress-ring-circle"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span id="progressPercent" class="text-lg font-bold text-green-600">0%</span>
+                <span id="objectifMontant" class="text-xs mt-0.5" style="color: var(--text-gray); opacity: 0.7;">0 $</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-center">
+          <div id="travauxEnCours" class="text-2xl font-bold text-green-600 animated-number mb-1">0 $</div>
+          <div class="text-xs text-gray-500 uppercase">Chiffre d'affaire</div>
+        </div>
+      </div>
+
+      <!-- Droite: Satisfaction client -->
+      <div class="status-card satisfaction-card p-6">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <h3 class="text-lg font-semibold mb-1">Satisfaction client</h3>
+            <p class="text-sm">Retour des clients</p>
+          </div>
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center">
+            <i class="fas fa-smile text-lg"></i>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <div class="rounded-lg p-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium">Satisfaction client</span>
+              <span class="text-lg font-bold animated-number">
+                <i class="fas fa-star" style="color: #eab308 !important;"></i> <span id="etoilesMoyennes" class="text-yellow-500">0.0</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="rounded-lg p-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium">Nombre d'avis reçus</span>
+              <span id="nombreAvis" class="text-lg font-bold text-blue-600 animated-number">0</span>
+            </div>
+          </div>
+
+          <div class="rounded-lg p-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium">Plaintes actuelles</span>
+
+              <div class="flex items-center gap-3">
+                <!-- Badge chrono urgent -->
+                <button id="plainteIcon" onclick="ouvrirPlaintePopup()"
+                        class="hidden relative cursor-pointer"
+                        style="background: #f87171;
+                               border-radius: 8px;
+                               padding: 4px 10px;
+                               box-shadow: 0 2px 8px rgba(248, 113, 113, 0.4);
+                               border: 1px solid rgba(248, 113, 113, 0.3);
+                               transition: all 0.3s ease;">
+                  <!-- Point jaune pulsant -->
+                  <div class="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-ping"></div>
+                  <div class="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"></div>
+
+                  <div class="flex items-center gap-1.5">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 10px; color: white !important;"></i>
+                    <span id="plainteTimer" class="text-[10px] font-bold text-white leading-none">0j 0h 0m 0s</span>
+                  </div>
+                </button>
+
+                <!-- Compteur plaintes -->
+                <span id="plaintesActuel" class="text-lg font-bold text-red-600 animated-number">1</span>
+                <span id="plaintesZero" class="hidden text-lg font-bold text-green-600 animated-number">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Metrics Grid -->
+    <div class="metrics-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+
+      <div class="metric-card p-6">
+        <div class="flex flex-col md:flex-row items-center md:justify-between mb-2">
+          <div class="metric-icon w-12 h-12 rounded-xl flex items-center justify-center text-white mb-3 md:mb-0">
+            <i class="fas fa-file-contract text-lg"></i>
+          </div>
+          <div class="text-center md:text-right">
+            <div id="contratMoyen" class="text-2xl font-bold animated-number">0 $</div>
+            <div class="text-xs uppercase font-semibold tracking-wider">Contrat moyen</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="metric-card p-6">
+        <div class="flex flex-col md:flex-row items-center md:justify-between mb-2">
+          <div class="metric-icon w-12 h-12 rounded-xl flex items-center justify-center text-white mb-3 md:mb-0">
+            <i class="fas fa-bullhorn text-lg"></i>
+          </div>
+          <div class="text-center md:text-right">
+            <div id="tauxMarketing" class="text-2xl font-bold animated-number">0%</div>
+            <div class="text-xs uppercase font-semibold tracking-wider">Taux marketing</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="metric-card p-6">
+        <div class="flex flex-col md:flex-row items-center md:justify-between mb-2">
+          <div class="metric-icon w-12 h-12 rounded-xl flex items-center justify-center text-white mb-3 md:mb-0">
+            <i class="fas fa-percentage text-lg"></i>
+          </div>
+          <div class="text-center md:text-right">
+            <div id="tv" class="text-2xl font-bold animated-number">0%</div>
+            <div class="text-xs uppercase font-semibold tracking-wider">Taux de vente</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="metric-card p-6">
+        <div class="flex flex-col md:flex-row items-center md:justify-between mb-2">
+          <div class="metric-icon w-12 h-12 rounded-xl flex items-center justify-center text-white mb-3 md:mb-0">
+            <i class="fas fa-clock text-lg"></i>
+          </div>
+          <div class="text-center md:text-right">
+            <div id="prodHoraire" class="text-2xl font-bold animated-number">0 $/h</div>
+            <div class="text-xs uppercase font-semibold tracking-wider">Prod horaire</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Classement Section -->
+    <div class="chart-container p-8 mb-8">
+      <!-- Titre -->
+      <h2 class="text-2xl font-bold mb-2">Classement</h2>
+
+      <!-- Sous-titre -->
+      <p class="mb-4" style="color: var(--text-gray);">Comparaison des entrepreneurs</p>
+
+      <!-- Filtres et tri -->
+      <div class="flex items-center justify-end mb-4 classement-filters-row">
+        <!-- Filtres par groupe (cachés pour l'instant) -->
+        <div class="flex gap-2 items-center" style="display: none;">
+          <span class="text-sm" style="color: var(--text-gray);">Groupes:</span>
+          <button class="classement-group-btn active" data-group="tous" style="padding: 6px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; transition: all 0.2s; color: var(--text-light);">
+            Tous les entrepreneurs
+          </button>
+          <button class="classement-group-btn" data-group="recrues" style="padding: 6px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; transition: all 0.2s; color: var(--text-light);">
+            Entrepreneurs recrues
+          </button>
+          <button class="classement-group-btn" data-group="seniors" style="padding: 6px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; transition: all 0.2s; color: var(--text-light);">
+            Entrepreneurs seniors
+          </button>
+        </div>
+
+        <!-- Trier par -->
+        <div class="flex gap-2 items-center">
+          <span class="text-sm" style="color: var(--text-gray);">Trier par:</span>
+          <div class="relative">
+            <div id="classement-sort-dropdown" class="modern-dropdown">
+              <span id="classement-sort-selected-text" style="color: var(--text-light);">CA Actuel</span>
+              <i class="fas fa-chevron-down" style="color: var(--text-gray);"></i>
+            </div>
+            <div id="classement-sort-dropdown-menu" class="modern-dropdown-menu">
+              <div class="dropdown-option selected" data-value="ca">CA Actuel</div>
+              <div class="dropdown-option" data-value="signees">Contrat signé</div>
+              <div class="dropdown-option" data-value="etoiles">Satisfaction</div>
+              <div class="dropdown-option" data-value="contrat">Contrat moyen</div>
+              <div class="dropdown-option" data-value="marketing">Taux marketing</div>
+              <div class="dropdown-option" data-value="vente">Taux de vente</div>
+              <div class="dropdown-option" data-value="prod">Prod/h</div>
+              <div class="dropdown-option" data-value="pap">H de PÀP</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ligne séparatrice -->
+      <div class="mb-6" style="border-bottom: 1px solid var(--border-dark);"></div>
+
+      <!-- Version Mobile - Cartes -->
+      <div class="classement-mobile-container" style="display: none;">
+        <div id="classementMobileCards">
+          <!-- Les cartes seront chargées ici dynamiquement -->
+          <div class="text-center py-8" style="color: var(--text-gray);">
+            <i class="fas fa-spinner fa-spin mr-2"></i>Chargement des données...
+          </div>
+        </div>
+      </div>
+
+      <!-- Version Desktop - Tableau -->
+      <div class="classement-table-container overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b" style="border-color: var(--border-dark);">
+              <th class="text-center py-4 px-4 text-sm font-semibold" style="color: var(--text-light);">Rang</th>
+              <th class="text-left py-4 px-4 text-sm font-semibold" style="color: var(--text-light);">Entrepreneur</th>
+              <th class="text-right py-4 px-4 text-sm font-semibold" style="color: var(--text-light);">CA Actuel</th>
+              <th class="text-right py-4 px-4 text-sm font-semibold" style="color: var(--text-light);">Contrat signé</th>
+              <th class="text-right py-4 px-4 text-sm font-semibold" style="color: var(--text-light);">Contrat moy.</th>
+              <th class="text-right py-4 px-4 text-sm font-semibold" style="color: var(--text-light);">Taux mktg</th>
+              <th class="text-right py-4 px-4 text-sm font-semibold" style="color: var(--text-light);">Taux de vente</th>
+              <th class="text-right py-4 px-4 text-sm font-semibold" style="color: var(--text-light);">Prod/h</th>
+              <th class="text-right py-4 px-4 text-sm font-semibold" style="color: var(--text-light);">H de PÀP</th>
+              <th class="text-right py-4 px-4 text-sm font-semibold" style="color: var(--text-light);">Satisfaction</th>
+            </tr>
+          </thead>
+          <tbody id="classementTableBody">
+            <!-- Les entrepreneurs seront chargés ici dynamiquement -->
+            <tr>
+              <td colspan="11" class="text-center py-8" style="color: var(--text-gray);">
+                <i class="fas fa-spinner fa-spin mr-2"></i>Chargement des données...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal Stats Entrepreneur (Mobile uniquement) -->
+  <div id="entrepreneurStatsModal" class="entrepreneur-stats-modal" onclick="closeEntrepreneurStats(event)">
+    <div class="entrepreneur-stats-content" onclick="event.stopPropagation()">
+      <button class="entrepreneur-stats-close" onclick="closeEntrepreneurStats()">
+        <i class="fas fa-times"></i>
+      </button>
+      <div class="entrepreneur-stats-header">
+        <div id="statsEntrepreneurPhoto"></div>
+        <div style="flex: 1;">
+          <div class="entrepreneur-stats-name" id="statsEntrepreneurName">-</div>
+          <div class="entrepreneur-stats-rang" id="statsEntrepreneurRang">-</div>
+        </div>
+      </div>
+      <div class="entrepreneur-stats-grid" id="statsEntrepreneurGrid">
+        <!-- Les stats seront chargées ici dynamiquement -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de statistiques complet (User Stats Modal) -->
+  <div id="user-stats-modal" class="stats-modal">
+    <div class="stats-modal-content">
+      <!-- Header du modal -->
+      <div class="stats-modal-header">
+        <h2><i class="fas fa-chart-line"></i> Statistiques de Progression</h2>
+        <button class="stats-modal-close" onclick="closeUserStatsModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <!-- Contenu du modal -->
+      <div class="stats-modal-body">
+        <!-- SECTION 1: PROFIL COMPLET (Photo + Nom + Grade + Progression) -->
+        <div class="stats-section">
+          <div class="stats-unified-card">
+            <!-- Photo et Info avec XP -->
+            <div class="stats-profile-header">
+              <div class="stats-profile-photo-banner">
+                <div class="stats-profile-photo-wrapper">
+                  <div class="stats-profile-photo-container">
+                    <img id="user-stats-profile-photo" src="" alt="Photo de profil" class="stats-profile-photo">
+                  </div>
+                  <div class="stats-photo-level-banner">
+                    <span>Niv. <span id="user-stats-photo-level-text">1</span></span>
+                  </div>
+                </div>
+              </div>
+              <div class="stats-profile-info">
+                <div class="stats-name-xp-row">
+                  <div style="display: flex; align-items: baseline; gap: 1rem;">
+                    <h3 id="user-stats-username">Username</h3>
+                    <div class="stats-grade-name-display" id="user-stats-grade-name-display">Démarrage</div>
+                  </div>
+                  <div class="stats-xp-text-inline">
+                    <span id="user-stats-xp-current">0</span> / <span id="user-stats-xp-next">100</span> XP
+                    <span class="stats-xp-percentage" id="user-stats-xp-percentage">(0%)</span>
+                  </div>
+                </div>
+
+                <!-- Barre XP sous le nom -->
+                <div class="stats-xp-bar">
+                  <div class="stats-xp-fill" id="user-stats-xp-fill" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Vers Prochain Grade -->
+            <div class="stats-next-grade-section">
+              <h4 class="stats-subsection-title">Vers Prochain Grade</h4>
+              <div class="stats-next-grade-content">
+                <div class="stats-grade-badge-left">
+                  <img id="user-stats-current-grade-badge" src="" alt="Grade actuel">
+                </div>
+                <div class="stats-next-grade-info">
+                  <div class="stats-next-grade-levels">
+                    <span id="user-stats-current-level-text">Niv 1</span>
+                    <span id="user-stats-next-level-text">Niv 2</span>
+                  </div>
+                  <div class="stats-next-grade-bar">
+                    <div class="stats-next-grade-fill" id="user-stats-next-grade-fill" style="width: 0%"></div>
+                  </div>
+                </div>
+                <div class="stats-grade-badge-right">
+                  <img id="user-stats-next-grade-badge" src="" alt="Prochain grade">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 2: MES BADGES -->
+        <div class="stats-section">
+          <div class="badges-header">
+            <h3 class="stats-section-title"><i class="fas fa-medal"></i> Badges</h3>
+            <button class="badges-expand-btn" id="user-badges-expand-btn" onclick="toggleUserBadgesSection()">
+              <span id="user-badges-expand-text">Voir tous</span>
+              <i class="fas fa-chevron-down" id="user-badges-expand-icon"></i>
+            </button>
+          </div>
+
+          <!-- Top 5 badges (visible par défaut) -->
+          <div class="badges-top-container" id="user-badges-top-container">
+            <div class="top-badges-title">
+              <i class="fas fa-trophy"></i>
+              <span>5 Meilleurs Badges</span>
+            </div>
+            <div class="badges-horizontal-scroll" id="user-stats-badges-top">
+              <!-- Les 5 meilleurs badges seront chargés ici -->
+              <div class="no-badges-message">Chargement des badges...</div>
+            </div>
+          </div>
+
+          <!-- Tous les badges par rareté (caché par défaut avec animation) -->
+          <div class="badges-grid" id="user-stats-badges-grid">
+            <!-- Les badges seront chargés ici par JavaScript -->
+          </div>
+        </div>
+
+        <!-- SECTION 3: STATISTIQUES COMPLÈTES -->
+        <div class="stats-section">
+          <h3 class="stats-section-title"><i class="fas fa-chart-bar"></i> Toutes les Statistiques</h3>
+
+          <!-- Toutes les stats -->
+          <div class="stats-tables-grid">
+            <table class="stats-table">
+              <tbody>
+                <tr>
+                  <td class="stat-label">XP Total</td>
+                  <td class="stat-value" id="user-stats-total-xp">0</td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="stats-table">
+              <tbody>
+                <tr>
+                  <td class="stat-label">Badges</td>
+                  <td class="stat-value" id="user-stats-badges">0</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="stats-tables-grid">
+            <table class="stats-table">
+              <tbody>
+                <tr>
+                  <td class="stat-label">CA Actuel</td>
+                  <td class="stat-value" id="user-stats-ca-actuel">0 $</td>
+                </tr>
+                <tr>
+                  <td class="stat-label">Contrats signés</td>
+                  <td class="stat-value" id="user-stats-contrats-signes">0</td>
+                </tr>
+                <tr>
+                  <td class="stat-label">Satisfaction</td>
+                  <td class="stat-value" id="user-stats-satisfaction">0</td>
+                </tr>
+                <tr>
+                  <td class="stat-label">Contrat moyen</td>
+                  <td class="stat-value" id="user-stats-contrat-moyen">0 $</td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="stats-table">
+              <tbody>
+                <tr>
+                  <td class="stat-label">Taux marketing</td>
+                  <td class="stat-value" id="user-stats-taux-marketing">0%</td>
+                </tr>
+                <tr>
+                  <td class="stat-label">Taux de vente</td>
+                  <td class="stat-value" id="user-stats-taux-vente">0%</td>
+                </tr>
+                <tr>
+                  <td class="stat-label">Productivité/h</td>
+                  <td class="stat-value" id="user-stats-prod-horaire">0 $/h</td>
+                </tr>
+                <tr>
+                  <td class="stat-label">H de PÀP</td>
+                  <td class="stat-value" id="user-stats-heures-pap">0 h</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup Plainte -->
+  <div id="plaintePopup" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onclick="fermerPlaintePopup()">
+    <div class="bg-gray-800 rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl" onclick="event.stopPropagation()" style="border: 2px solid var(--border-dark); max-height: 85vh;">
+
+      <!-- Vue: Liste des plaintes -->
+      <div id="plaintesListe">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-bold flex items-center gap-2" style="color: var(--text-light);">
+            <i class="fas fa-exclamation-triangle" style="color: #f87171;"></i>
+            <span>Mes plaintes (<span id="plaintesCount">0</span>)</span>
+          </h3>
+          <button onclick="fermerPlaintePopup()" class="text-gray-400 hover:text-red-500 transition-colors">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+
+        <div class="space-y-2">
+          <!-- Plainte 1 -->
+          <div onclick="ouvrirDetailsPlainte(1)" class="bg-gray-900 rounded-lg p-4 cursor-pointer border border-transparent hover:border-red-500 transition-all">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <div class="text-base font-bold truncate" style="color: var(--text-light);">Jean Dupont</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="bg-red-900 bg-opacity-30 px-2 py-1 rounded">
+                  <div class="text-xs text-red-400 font-semibold whitespace-nowrap">
+                    <i class="fas fa-clock mr-1"></i>2j 5h 12m 45s
+                  </div>
+                </div>
+                <i class="fas fa-chevron-right text-gray-500 text-sm"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Plainte 2 -->
+          <div onclick="ouvrirDetailsPlainte(2)" class="bg-gray-900 rounded-lg p-4 cursor-pointer border border-transparent hover:border-red-500 transition-all">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <div class="text-base font-bold truncate" style="color: var(--text-light);">Marie Tremblay</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="bg-red-900 bg-opacity-30 px-2 py-1 rounded">
+                  <div class="text-xs text-red-400 font-semibold whitespace-nowrap">
+                    <i class="fas fa-clock mr-1"></i>0j 3h 25m 10s
+                  </div>
+                </div>
+                <i class="fas fa-chevron-right text-gray-500 text-sm"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 flex justify-end">
+          <button onclick="fermerPlaintePopup()" class="px-6 py-2 rounded-lg font-semibold transition-colors" style="background: var(--bg-card); color: var(--text-light);">
+            Fermer
+          </button>
+        </div>
+      </div>
+
+      <!-- Vue: Détails d'une plainte -->
+      <div id="plainteDetails" class="hidden">
+        <!-- Le contenu sera inséré dynamiquement -->
+      </div>
+
+    </div>
+  </div>
+
+<script>
+  // Variables globales
+  let revenueChart;
+  let lastSelectedShortcut = null; // Pour tracker le dernier raccourci sélectionné
+  
+  // Fonction globale pour obtenir le type de données sélectionné
+  function getSelectedChartType() {
+    // Essayer d'abord le dropdown PC, puis mobile
+    let selectedOption = document.querySelector('#chart-type-dropdown-menu .agenda-dropdown-option.selected');
+    if (!selectedOption) {
+      selectedOption = document.querySelector('#mobile-chart-type-dropdown-menu .agenda-dropdown-option.selected');
+    }
+    return selectedOption ? selectedOption.getAttribute('data-value') : 'montant-signe';
+  }
+
+  // Fonctions pour mémoriser la période sélectionnée
+  function savePeriodSelection(type, value = null) {
+    const selection = { type, value };
+    localStorage.setItem(`dashboard-period-${username}`, JSON.stringify(selection));
+  }
+
+  function getSavedPeriodSelection() {
+    const saved = localStorage.getItem(`dashboard-period-${username}`);
+    return saved ? JSON.parse(saved) : null;
+  }
+
+  function restoreActiveShortcut() {
+    const saved = getSavedPeriodSelection();
+    if (!saved || saved.type !== 'shortcut') return;
+
+    // Retirer toutes les classes actives
+    document.querySelectorAll('.dashboard-shortcut-btn').forEach(btn => {
+      btn.classList.remove('active');
+    });
+
+    // Activer le bon bouton
+    if (saved.value === 'thisYear') {
+      const yearBtn = document.getElementById('thisYear');
+      if (yearBtn) yearBtn.classList.add('active');
+    } else {
+      const targetBtn = document.querySelector(`[data-days="${saved.value}"]`);
+      if (targetBtn) targetBtn.classList.add('active');
+    }
+  }
+
+  // Initialisation du graphique moderne
+  function initChart() {
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    
+    revenueChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Revenus',
+          data: [],
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          pointHoverRadius: 8,
+          pointHoverBackgroundColor: '#3b82f6',
+          pointHoverBorderColor: '#ffffff',
+          pointHoverBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        interaction: {
+          intersect: false,
+          mode: 'index'
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: '#1e293b',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            cornerRadius: 8,
+            displayColors: false,
+            callbacks: {
+              title: function(context) {
+                // Utiliser les dates complètes stockées dans le graphique
+                const chart = context[0].chart;
+                if (chart.allDatesForTooltips && chart.allDatesForTooltips[context[0].dataIndex]) {
+                  return chart.allDatesForTooltips[context[0].dataIndex];
+                }
+                return context[0].label;
+              },
+              label: function(context) {
+                const selectedType = getSelectedChartType();
+                
+                let labelPrefix = 'Revenus';
+                let formatOptions = {};
+                
+                if (selectedType === 'soumissions') {
+                  labelPrefix = 'Soumissions';
+                  formatOptions = { minimumFractionDigits: 0, maximumFractionDigits: 0 };
+                } else if (selectedType === 'montant-signe') {
+                  labelPrefix = 'Montant signé';
+                  formatOptions = { style: 'currency', currency: 'CAD' };
+                } else if (selectedType === 'montant-produit') {
+                  labelPrefix = 'Montant produit';
+                  formatOptions = { style: 'currency', currency: 'CAD' };
+                } else {
+                  formatOptions = { style: 'currency', currency: 'CAD' };
+                }
+                
+                return labelPrefix + ': ' + context.parsed.y.toLocaleString('fr-FR', formatOptions);
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: {
+              display: false
+            },
+            border: {
+              display: false
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: '#475569'
+            },
+            border: {
+              display: false
+            },
+            ticks: {
+              callback: function(value) {
+                const selectedType = getSelectedChartType();
+                
+                if (selectedType === 'soumissions') {
+                  return value.toLocaleString('fr-FR', { 
+                    minimumFractionDigits: 0, 
+                    maximumFractionDigits: 0 
+                  });
+                } else {
+                  return value.toLocaleString('fr-FR', {
+                    style: 'currency',
+                    currency: 'CAD',
+                    minimumFractionDigits: 0
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // Charger les données initiales du graphique
+    updateChartData();
+  }
+
+  // Animation des nombres
+  function animateNumber(elementId, targetValue, isPercentage = false, isCurrency = false, isDecimal = false) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+
+    const startValue = 0;
+    const duration = 1000;
+    const startTime = Date.now();
+
+    function updateNumber() {
+      const currentTime = Date.now();
+      const progress = Math.min((currentTime - startTime) / duration, 1);
+
+      // Easing function
+      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+      const currentValue = startValue + (targetValue - startValue) * easeOutQuart;
+
+      let displayValue;
+      if (isCurrency) {
+        // Format manuel pour éviter "CA" dans l'affichage
+        const parts = currentValue.toFixed(2).split('.');
+        const partieEntiere = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+        const partieDecimale = parts[1];
+        displayValue = `${partieEntiere},${partieDecimale} $`;
+      } else if (isPercentage) {
+        displayValue = currentValue.toFixed(1) + '%';
+      } else if (isDecimal) {
+        displayValue = currentValue.toFixed(1);
+      } else {
+        displayValue = Math.round(currentValue).toLocaleString('fr-FR');
+      }
+
+      element.textContent = displayValue;
+
+      if (progress < 1) {
+        requestAnimationFrame(updateNumber);
+      }
+    }
+
+    updateNumber();
+  }
+
+  // Mise à jour du progress ring
+  function formatMontantCourt(montant) {
+    if (montant >= 1000000) {
+      return (montant / 1000000).toFixed(1) + 'M $';
+    } else if (montant >= 1000) {
+      return Math.round(montant / 1000) + 'k $';
+    } else {
+      return montant.toString() + ' $';
+    }
+  }
+
+  function updateProgressRing(percentage, objectifMontant = 0) {
+    const circle = document.getElementById('progress-circle');
+    const circumference = 2 * Math.PI * 40; // r = 40
+    const offset = circumference - (percentage / 100) * circumference;
+    circle.style.strokeDashoffset = offset;
+
+    document.getElementById('progressPercent').textContent = percentage.toFixed(0) + '%';
+    document.getElementById('objectifMontant').textContent = formatMontantCourt(objectifMontant);
+  }
+
+  // Fonction pour mettre à jour les lignes de progression
+  function updateStatusLines(signees, attente, perdus) {
+    const total = signees + attente + perdus;
+
+    // Calculer les pourcentages avec minimum 5%
+    let signeesPercent, attentePercent, perdusPercent;
+
+    if (total === 0) {
+      // Si tout est à 0, minimum 5% pour chaque
+      signeesPercent = 5;
+      attentePercent = 5;
+      perdusPercent = 5;
+    } else {
+      // Calculer normalement mais avec minimum 5%
+      signeesPercent = Math.max((signees / total) * 100, 5);
+      attentePercent = Math.max((attente / total) * 100, 5);
+      perdusPercent = Math.max((perdus / total) * 100, 5);
+    }
+
+    // Mettre à jour directement les lignes existantes
+    const signeesLine = document.getElementById('status-line-signees');
+    const attenteLine = document.getElementById('status-line-attente');
+    const perdusLine = document.getElementById('status-line-perdus');
+
+    if (signeesLine) {
+      signeesLine.style.width = signeesPercent + '%';
+      console.log('Ligne signées:', signeesPercent + '%');
+    }
+    if (attenteLine) {
+      attenteLine.style.width = attentePercent + '%';
+      console.log('Ligne attente:', attentePercent + '%');
+    }
+    if (perdusLine) {
+      perdusLine.style.width = perdusPercent + '%';
+      console.log('Ligne perdus:', perdusPercent + '%');
+    }
+  }
+  
+  // Fonction pour charger le taux de satisfaction
+  async function loadTauxSatisfaction() {
+    try {
+      const response = await fetch(`/api/taux-satisfaction/${username}`);
+      if (response.ok) {
+        const data = await response.json();
+        const tauxSatisfaction = data.taux_satisfaction || 0;
+        const moyenneEtoiles = data.moyenne_etoiles || 0;
+        const nombreAvis = data.nombre_avis || 0;
+
+        animateNumber('tauxSatisfaction', tauxSatisfaction, true);
+        animateNumber('etoilesMoyennes', moyenneEtoiles, false, false, true); // isDecimal = true
+        animateNumber('nombreAvis', nombreAvis, false);
+      } else {
+        console.log('Aucune donnée de satisfaction trouvée');
+        animateNumber('tauxSatisfaction', 0, true);
+        animateNumber('etoilesMoyennes', 0, false, false, true); // isDecimal = true
+        animateNumber('nombreAvis', 0, false);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement du taux de satisfaction:', error);
+      animateNumber('tauxSatisfaction', 0, true);
+      animateNumber('etoilesMoyennes', 0, false, false, true); // isDecimal = true
+      animateNumber('nombreAvis', 0, false);
+    }
+  }
+
+  // Chargement des données réelles
+  async function loadDashboardData() {
+    if (!username) {
+      console.error('Username non défini');
+      return;
+    }
+    
+    try {
+      // Charger toutes les données en parallèle
+      const [soumissionsRes, soumissionsSigneesRes, ventesAttenteRes, clientsPerdusRes, ventesProduitRes, travauxEnCoursRes, chiffreAffairesRes, panierMoyenRes, montantSigneRes, montantNonProduitRes, rpoRes] = await Promise.all([
+        fetch(`/api/soumissions/count/${username}`),
+        fetch(`/api/soumissions/signees/total/${username}`),
+        fetch(`/api/ventes/attente/count/${username}`),
+        fetch(`/api/clients-perdus/count/${username}`),
+        fetch(`/api/ventes/produit/count/${username}`),
+        fetch(`/api/travaux-en-cours/count/${username}`),
+        fetch(`/api/chiffre-affaires/${username}`),
+        fetch(`/api/panier-moyen/${username}`),
+        fetch(`/api/chiffre-affaires-signes/${username}`),
+        fetch(`/api/montant-non-produit/${username}`),
+        fetch(`/api/rpo/${username}`)
+      ]);
+
+      // Extraire les données
+      const soumissionsData = await soumissionsRes.json();
+      const soumissionsSigneesData = await soumissionsSigneesRes.json();
+      const ventesAttenteData = await ventesAttenteRes.json();
+      const clientsPerdusData = await clientsPerdusRes.json();
+      const ventesProduitData = await ventesProduitRes.json();
+      const travauxEnCoursData = await travauxEnCoursRes.json();
+      const chiffreAffairesData = await chiffreAffairesRes.json();
+      const panierMoyenData = await panierMoyenRes.json();
+      const montantSigneData = await montantSigneRes.json();
+      const montantNonProduitData = await montantNonProduitRes.json();
+      const rpoData = rpoRes.ok ? await rpoRes.json() : null;
+
+      // Status soumissions
+      const totalSoumissions = soumissionsData.count || 0;
+      const soumissionsSignees = soumissionsSigneesData.count || 0;
+      const soumissionsEnAttente = ventesAttenteData.count || 0;
+      const soumissionsPerdus = clientsPerdusData.count || 0;
+
+      // Taux de vente: signées / (attente + perdus + signées) * 100
+      const totalPotentiel = soumissionsEnAttente + soumissionsPerdus + soumissionsSignees;
+      const tauxVente = totalPotentiel > 0 ? (soumissionsSignees / totalPotentiel) * 100 : 0;
+
+      animateNumber('soumissionsSignees', soumissionsSignees);
+      animateNumber('soumissionsEnAttente', soumissionsEnAttente);
+      animateNumber('soumissionsPerdus', soumissionsPerdus);
+      animateNumber('tv', tauxVente, true);
+
+      // Mettre à jour les lignes de progression
+      updateStatusLines(soumissionsSignees, soumissionsEnAttente, soumissionsPerdus);
+      
+      // Finances - extraire les montants numériques des chaînes formatées
+      const chiffreAffairesStr = chiffreAffairesData.total || '0,00 $';
+      const montantSigneStr = montantSigneData.total || '0,00 $';
+      const montantNonProduitStr = montantNonProduitData.total || '0,00 $';
+      const panierMoyenStr = panierMoyenData.panier_moyen || '0,00 $';
+
+      // Convertir les strings formatées en nombres
+      const chiffreAffairesNum = parseFloat(chiffreAffairesStr.replace(/[^0-9,]/g, '').replace(',', '.')) || 0;
+      const montantSigneNum = parseFloat(montantSigneStr.replace(/[^0-9,]/g, '').replace(',', '.')) || 0;
+      const montantNonProduitNum = parseFloat(montantNonProduitStr.replace(/[^0-9,]/g, '').replace(',', '.')) || 0;
+      const panierMoyenNum = parseFloat(panierMoyenStr.replace(/[^0-9,]/g, '').replace(',', '.')) || 0;
+
+      // Récupérer l'Objectif CA, le Taux Marketing, Prod Horaire et H de PÀP depuis les données RPO
+      console.log('[DEBUG] rpoData complet:', rpoData);
+      console.log('[DEBUG] rpoData.annual:', rpoData?.annual);
+      const objectifCA = rpoData?.annual?.objectif_ca || 0;
+      const tauxMarketing = rpoData?.annual?.mktg_reel || 0;
+      const prodHoraire = rpoData?.annual?.prod_horaire || 0;
+
+      // Calculer H de PÀP depuis les données hebdomadaires (comme dans rpo.html)
+      let heuresPAP = 0;
+      if (rpoData?.weekly) {
+        console.log('[DEBUG DASHBOARD] rpoData.weekly présent');
+        // Inclure Octobre 2025 (index -2) + 12 mois 2026 (index 0-11)
+        const allMonths = [-2, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+
+        allMonths.forEach(monthIndex => {
+          const monthKey = String(monthIndex);
+          const monthWeeklyData = rpoData.weekly[monthKey];
+
+          if (monthWeeklyData) {
+            let monthTotal = 0;
+            // Additionner toutes les semaines du mois
+            Object.keys(monthWeeklyData).forEach(weekNumber => {
+              const weekData = monthWeeklyData[weekNumber];
+              const hMarketing = weekData.h_marketing;
+
+              // Ignorer les valeurs "-" et les valeurs vides
+              if (hMarketing !== '-' && hMarketing !== '' && hMarketing !== null && hMarketing !== undefined) {
+                const val = parseFloat(hMarketing);
+                if (!isNaN(val)) {
+                  monthTotal += val;
+                }
+              }
+            });
+            if (monthTotal > 0) {
+              console.log(`[DEBUG DASHBOARD] Mois ${monthKey}: ${monthTotal.toFixed(1)}h`);
+            }
+            heuresPAP += monthTotal;
+          }
+        });
+        console.log('[DEBUG DASHBOARD] heuresPAP total calculé depuis weekly:', heuresPAP);
+      } else {
+        // Fallback: essayer hr_pap_reel si pas de données hebdomadaires
+        heuresPAP = rpoData?.annual?.hr_pap_reel || 0;
+        console.log('[DEBUG DASHBOARD] Pas de weekly, utilise hr_pap_reel:', heuresPAP);
+      }
+
+      // Calculer le pourcentage de progression: (Montant Signé / Objectif CA) * 100
+      const progressionPct = objectifCA > 0 ? (montantSigneNum / objectifCA) * 100 : 0;
+
+      // Chiffre d'affaires - Actuel = montant signé
+      animateNumber('travauxEnCours', montantSigneNum, false, true); // Actuel
+      updateProgressRing(progressionPct, objectifCA); // Progression et objectif synchronisés
+
+      // Afficher les nouvelles métriques financières
+      animateNumber('montantSigne', montantSigneNum, false, true);
+      animateNumber('montantProduit', chiffreAffairesNum, false, true);
+      animateNumber('montantNonProduit', montantNonProduitNum, false, true);
+
+      // Contrat moyen = Actuel (montant signé) / Signées (nombre de soumissions signées)
+      const contratMoyenNum = soumissionsSignees > 0 ? montantSigneNum / soumissionsSignees : 0;
+      animateNumber('contratMoyen', contratMoyenNum, false, true);
+
+      // Taux de marketing calculé depuis RPO annuel (Estimations / H Marketing * 100)
+      animateNumber('tauxMarketing', tauxMarketing, true);
+
+      // Stocker le taux marketing réel et les heures PÀP pour le classement
+      window.tauxMarketingReel = tauxMarketing;
+      window.heuresPAPReel = heuresPAP;
+      console.log('[DEBUG] window.heuresPAPReel stocké:', window.heuresPAPReel);
+
+      // Prod Horaire depuis RPO (moyenne des semaines mai-septembre)
+      const prodHoraireElement = document.getElementById('prodHoraire');
+      if (prodHoraireElement) {
+        const formatted = Math.round(prodHoraire).toLocaleString('fr-CA');
+        prodHoraireElement.textContent = `${formatted} $/h`;
+      }
+
+      // Métriques additionnelles
+      animateNumber('totalSoumissions', totalSoumissions);
+      animateNumber('panierMoyen', panierMoyenNum, false, true);
+      // Charger le taux de satisfaction depuis l'API
+      loadTauxSatisfaction();
+      animateNumber('tauxClosingMetric', tauxVente, true);
+
+      // Charger le graphique avec les vraies données
+      setTimeout(updateChartData, 500);
+
+      console.log('[OK] Données du dashboard chargées avec succès');
+      console.log(`[DATA] Soumissions: ${totalSoumissions} total, ${soumissionsSignees} signées, ${soumissionsEnAttente} en attente, ${soumissionsPerdus} perdus`);
+      console.log(`[STATS] Taux de vente: ${tauxVente.toFixed(2)}%`);
+      console.log(`🔨 Ventes produit: ${ventesProduitData.count || 0} complétées`);
+      console.log(`[MONEY] Finances: Signé ${montantSigneStr}, Produit ${chiffreAffairesStr}, Non produit ${montantNonProduitStr}`);
+
+    } catch (error) {
+      console.error('[ERROR] Erreur lors du chargement des données:', error);
+      // Afficher des valeurs par défaut en cas d'erreur
+      animateNumber('soumissionsSignees', 0);
+      animateNumber('soumissionsEnAttente', 0);
+      animateNumber('soumissionsPerdus', 0);
+      animateNumber('tv', 0, true);
+      animateNumber('travauxEnCours', 0, false, true);
+      updateProgressRing(0, 0);
+      animateNumber('montantSigne', 0, false, true);
+      animateNumber('montantProduit', 0, false, true);
+      animateNumber('montantNonProduit', 0, false, true);
+      animateNumber('contratMoyen', 0, false, true);
+    }
+  }
+
+  // Scripts existants
+  function toggleMobileMenu() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.querySelector('.mobile-overlay');
+    
+    sidebar.classList.toggle('mobile-open');
+    overlay.classList.toggle('active');
+  }
+  
+  function closeMobileMenu() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.querySelector('.mobile-overlay');
+    
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('active');
+  }
+
+  function logout() {
+    localStorage.removeItem("qwotaCredentials");
+    localStorage.removeItem("rememberMe");
+    window.location.href = "/login";
+  }
+
+  // Menu compte utilisateur
+  const btn = document.getElementById("account-dropdown-toggle");
+  const dropdown = document.getElementById("account-dropdown");
+
+  if (btn && dropdown) {
+    btn.addEventListener("click", () => {
+      dropdown.classList.toggle("hidden");
+    });
+
+    window.addEventListener("click", (e) => {
+      if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.add("hidden");
+      }
+    });
+  }
+
+  // Fonction pour mettre à jour le graphique avec les données réelles
+  async function updateChartData() {
+    if (!username || !revenueChart) return;
+    
+    try {
+      // Obtenir la période sélectionnée (période personnalisée par défaut)
+      const activePeriod = document.querySelector('.period-button.active');
+      const period = activePeriod ? activePeriod.dataset.period : 'custom';
+      
+      let start, end;
+      
+      if (period === 'custom') {
+        // Utiliser les dates personnalisées du modal
+        const startInput = document.getElementById('modalStartDate');
+        const endInput = document.getElementById('modalEndDate');
+        
+        if (!startInput || !startInput.value || !endInput || !endInput.value) {
+          console.warn('Dates personnalisées manquantes, utilisation des 30 derniers jours');
+          // Valeurs par défaut: 30 derniers jours
+          end = new Date();
+          start = new Date();
+          start.setDate(end.getDate() - 30);
+        } else {
+          start = parseDisplayDate(startInput.value);
+          end = parseDisplayDate(endInput.value);
+          
+          // Vérifier que la date de fin est après la date de début
+          if (!start || !end || end <= start) {
+            console.warn('Dates invalides, utilisation des 30 derniers jours');
+            end = new Date();
+            start = new Date();
+            start.setDate(end.getDate() - 30);
+          }
+        }
+      } else {
+        // Autres périodes (ne devrait plus arriver avec la nouvelle interface)
+        end = new Date();
+        start = new Date();
+        start.setDate(end.getDate() - parseInt(period));
+      }
+      
+      const startStr = start.toISOString().split('T')[0];
+      const endStr = end.toISOString().split('T')[0];
+      
+      // Obtenir le type de données sélectionné du dropdown personnalisé
+      const selectedType = getSelectedChartType();
+      
+      // Charger les données selon le type sélectionné
+      const response = await fetch(`/api/graph-data/${username}?start=${startStr}&end=${endStr}&type=${selectedType}`);
+      if (!response.ok) throw new Error('Erreur chargement données graphique');
+      
+      const data = await response.json();
+      
+      // Mettre à jour le graphique
+      revenueChart.data.labels = data.dates || [];
+      revenueChart.data.datasets[0].data = data.data || [];
+      
+      // Stocker les dates complètes pour les tooltips
+      revenueChart.allDatesForTooltips = data.all_dates || data.dates || [];
+      
+      // Configurer stepSize et suggestedMax selon le type sélectionné
+      if (selectedType === 'soumissions') {
+        revenueChart.options.scales.y.ticks.stepSize = 1;
+        revenueChart.options.scales.y.suggestedMax = 5;
+      } else {
+        // Pour montants (signé et produit) : minimum 5000
+        delete revenueChart.options.scales.y.ticks.stepSize;
+        revenueChart.options.scales.y.suggestedMax = 5000;
+      }
+      
+      revenueChart.update();
+      
+    } catch (error) {
+      console.error('Erreur mise à jour graphique:', error);
+      // Données de fallback
+      revenueChart.data.labels = ['Aucune donnée'];
+      revenueChart.data.datasets[0].data = [0];
+      revenueChart.update();
+    }
+  }
+
+  // Fonction pour initialiser les dates par défaut (30 derniers jours)
+  function initializeDefaultDates() {
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+    // S'assurer que les éléments existent avant de les modifier
+    const startInput = document.getElementById('modalStartDate');
+    const endInput = document.getElementById('modalEndDate');
+    
+    if (startInput) startInput.value = thirtyDaysAgo.toISOString().split('T')[0];
+    if (endInput) endInput.value = today.toISOString().split('T')[0];
+    
+    // Sauvegarder par défaut si aucune sélection n'existe
+    if (!getSavedPeriodSelection()) {
+      savePeriodSelection('shortcut', '30');
+    }
+    
+    console.log('[DATE] Dates par défaut initialisées: 30 derniers jours');
+  }
+
+  // Gestion des boutons de période
+  function setupPeriodButtons() {
+    // Initialiser les dates par défaut dès le chargement (30 derniers jours)
+    initializeDefaultDates();
+    
+    // Gérer le dropdown de type de données personnalisé
+    const chartTypeDropdown = document.getElementById('chart-type-dropdown');
+    const chartTypeDropdownMenu = document.getElementById('chart-type-dropdown-menu');
+    const chartTypeSelectedText = document.getElementById('chart-type-selected-text');
+    
+    if (chartTypeDropdown && chartTypeDropdownMenu) {
+      // Toggle du dropdown
+      chartTypeDropdown.addEventListener('click', function() {
+        chartTypeDropdownMenu.classList.toggle('show');
+        chartTypeDropdown.classList.toggle('active');
+      });
+      
+      // Fermer le dropdown si on clique ailleurs
+      document.addEventListener('click', function(event) {
+        if (!chartTypeDropdown.contains(event.target)) {
+          chartTypeDropdownMenu.classList.remove('show');
+          chartTypeDropdown.classList.remove('active');
+        }
+      });
+      
+      // Gérer la sélection d'une option
+      chartTypeDropdownMenu.querySelectorAll('.agenda-dropdown-option').forEach(option => {
+        option.addEventListener('click', function() {
+          const value = this.getAttribute('data-value');
+          const text = this.textContent;
+          
+          // Mettre à jour l'affichage
+          chartTypeSelectedText.textContent = text;
+
+          // Synchroniser avec le dropdown mobile
+          const mobileSelectedText = document.getElementById('mobile-chart-type-selected-text');
+          if (mobileSelectedText) {
+            mobileSelectedText.textContent = text;
+          }
+
+          // Mettre à jour les classes selected
+          chartTypeDropdownMenu.querySelectorAll('.agenda-dropdown-option').forEach(opt => {
+            opt.classList.remove('selected');
+          });
+          this.classList.add('selected');
+
+          // Synchroniser les classes selected avec le dropdown mobile
+          const mobileDropdownMenu = document.getElementById('mobile-chart-type-dropdown-menu');
+          if (mobileDropdownMenu) {
+            mobileDropdownMenu.querySelectorAll('.agenda-dropdown-option').forEach(opt => {
+              opt.classList.remove('selected');
+              if (opt.getAttribute('data-value') === value) {
+                opt.classList.add('selected');
+              }
+            });
+          }
+          
+          // Fermer le dropdown
+          chartTypeDropdownMenu.classList.remove('show');
+          chartTypeDropdown.classList.remove('active');
+          
+          console.log(`[STATS] Changement type de données: ${value}`);
+          
+          // Mettre à jour la configuration de l'axe Y selon le type
+          if (revenueChart) {
+            if (value === 'soumissions') {
+              revenueChart.options.scales.y.ticks.stepSize = 1;
+              revenueChart.options.scales.y.suggestedMax = 5;
+            } else {
+              // Pour montants (signé et produit) : minimum 5000
+              delete revenueChart.options.scales.y.ticks.stepSize;
+              revenueChart.options.scales.y.suggestedMax = 5000;
+            }
+            revenueChart.update(); // Mettre à jour la configuration (tooltips, axes)
+          }
+          setTimeout(updateChartData, 100);
+        });
+      });
+    }
+
+    // Gérer le dropdown mobile de type de données
+    const mobileChartTypeDropdown = document.getElementById('mobile-chart-type-dropdown');
+    const mobileChartTypeDropdownMenu = document.getElementById('mobile-chart-type-dropdown-menu');
+    const mobileChartTypeSelectedText = document.getElementById('mobile-chart-type-selected-text');
+
+    if (mobileChartTypeDropdown && mobileChartTypeDropdownMenu) {
+      // Toggle du dropdown mobile
+      mobileChartTypeDropdown.addEventListener('click', function() {
+        mobileChartTypeDropdownMenu.classList.toggle('show');
+        mobileChartTypeDropdown.classList.toggle('active');
+      });
+
+      // Fermer le dropdown mobile si on clique ailleurs
+      document.addEventListener('click', function(event) {
+        if (!mobileChartTypeDropdown.contains(event.target)) {
+          mobileChartTypeDropdownMenu.classList.remove('show');
+          mobileChartTypeDropdown.classList.remove('active');
+        }
+      });
+
+      // Gérer la sélection d'une option mobile
+      mobileChartTypeDropdownMenu.querySelectorAll('.agenda-dropdown-option').forEach(option => {
+        option.addEventListener('click', function() {
+          const value = this.getAttribute('data-value');
+          const text = this.textContent;
+
+          // Mettre à jour l'affichage mobile
+          mobileChartTypeSelectedText.textContent = text;
+
+          // Synchroniser avec le dropdown PC
+          const pcSelectedText = document.getElementById('chart-type-selected-text');
+          if (pcSelectedText) {
+            pcSelectedText.textContent = text;
+          }
+
+          // Mettre à jour les classes selected sur mobile
+          mobileChartTypeDropdownMenu.querySelectorAll('.agenda-dropdown-option').forEach(opt => {
+            opt.classList.remove('selected');
+          });
+          this.classList.add('selected');
+
+          // Synchroniser les classes selected avec le dropdown PC
+          const pcDropdownMenu = document.getElementById('chart-type-dropdown-menu');
+          if (pcDropdownMenu) {
+            pcDropdownMenu.querySelectorAll('.agenda-dropdown-option').forEach(opt => {
+              opt.classList.remove('selected');
+              if (opt.getAttribute('data-value') === value) {
+                opt.classList.add('selected');
+              }
+            });
+          }
+
+          // Fermer le dropdown mobile
+          mobileChartTypeDropdownMenu.classList.remove('show');
+          mobileChartTypeDropdown.classList.remove('active');
+
+          console.log(`[STATS] Changement type de données mobile: ${value}`);
+
+          // Mettre à jour la configuration de l'axe Y selon le type
+          if (revenueChart) {
+            if (value === 'soumissions') {
+              revenueChart.options.scales.y.ticks.stepSize = 1;
+              revenueChart.options.scales.y.suggestedMax = 5;
+            } else {
+              // Pour montants (signé et produit) : minimum 5000
+              delete revenueChart.options.scales.y.ticks.stepSize;
+              revenueChart.options.scales.y.suggestedMax = 5000;
+            }
+            revenueChart.update(); // Mettre à jour la configuration (tooltips, axes)
+          }
+          setTimeout(updateChartData, 100);
+        });
+      });
+    }
+
+    const buttons = document.querySelectorAll('.period-button');
+    const modal = document.getElementById('customDateModal');
+    const closeModal = document.getElementById('closeModal');
+    const cancelModal = document.getElementById('cancelModal');
+    const applyCustomDates = document.getElementById('applyCustomDates');
+    const modalOverlay = modal.querySelector('.dashboard-modal-overlay');
+    
+    buttons.forEach(button => {
+      button.addEventListener('click', function() {
+        const period = this.getAttribute('data-period');
+        console.log(`[DATA] Sélection période: ${period}`);
+        
+        if (period === 'custom') {
+          // Ouvrir le modal pour les dates personnalisées
+          openDateModal();
+        }
+      });
+    });
+    
+    // Fonction pour ouvrir le modal
+    function openDateModal() {
+      modal.classList.remove('hidden');
+      // Pas de overflow hidden pour ce popup
+      
+      // Restaurer la dernière sélection ou initialiser par défaut
+      const saved = getSavedPeriodSelection();
+      const today = new Date();
+      
+      if (saved && saved.type === 'custom') {
+        // Restaurer les dates personnalisées
+        document.getElementById('modalStartDate').value = saved.value.start;
+        document.getElementById('modalEndDate').value = saved.value.end;
+        // Aucun raccourci actif pour les dates personnalisées
+        document.querySelectorAll('.dashboard-shortcut-btn').forEach(b => b.classList.remove('active'));
+        lastSelectedShortcut = null; // Pas de raccourci pour les dates custom
+      } else {
+        // Par défaut ou raccourci sauvegardé : 30 derniers jours
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        
+        document.getElementById('modalStartDate').value = thirtyDaysAgo.toLocaleDateString('fr-FR');
+        document.getElementById('modalEndDate').value = today.toLocaleDateString('fr-FR');
+        
+        // Restaurer le raccourci actif ou 30 jours par défaut
+        restoreActiveShortcut();
+        if (!document.querySelector('.dashboard-shortcut-btn.active')) {
+          document.querySelector('.dashboard-shortcut-btn[data-days="30"]')?.classList.add('active');
+          lastSelectedShortcut = { type: 'days', value: '30' }; // Par défaut
+        } else {
+          // Récupérer le raccourci actuellement actif
+          const activeBtn = document.querySelector('.dashboard-shortcut-btn.active');
+          if (activeBtn) {
+            if (activeBtn.id === 'thisYear') {
+              lastSelectedShortcut = { type: 'thisYear', value: 'thisYear' };
+            } else {
+              const days = activeBtn.getAttribute('data-days');
+              lastSelectedShortcut = { type: 'days', value: days };
+            }
+          }
+        }
+      }
+      
+      // Ajouter des listeners pour retirer la classe active si l'utilisateur modifie manuellement les dates
+      const startInput = document.getElementById('modalStartDate');
+      const endInput = document.getElementById('modalEndDate');
+      
+      const removeActiveFromShortcuts = () => {
+        document.querySelectorAll('.dashboard-shortcut-btn').forEach(b => b.classList.remove('active'));
+        lastSelectedShortcut = null; // Reset car l'utilisateur modifie manuellement
+      };
+      
+      startInput.addEventListener('input', removeActiveFromShortcuts);
+      endInput.addEventListener('input', removeActiveFromShortcuts);
+      
+      // Ajouter des listeners pour ouvrir les calendriers en cliquant sur les inputs
+      startInput.addEventListener('click', () => toggleCalendar('start'));
+      endInput.addEventListener('click', () => toggleCalendar('end'));
+    }
+    
+    // Fonction pour fermer le modal
+    function closeDateModal() {
+      modal.classList.add('hidden');
+      // Pas de overflow à remettre
+    }
+    
+    // Event listeners pour fermer le modal
+    closeModal.addEventListener('click', closeDateModal);
+    cancelModal.addEventListener('click', closeDateModal);
+    modalOverlay.addEventListener('click', closeDateModal);
+    
+    // Fermer avec Escape
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+        closeDateModal();
+      }
+    });
+    
+    // Gestion des raccourcis rapides
+    document.querySelectorAll('.dashboard-shortcut-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const days = this.getAttribute('data-days');
+        const today = new Date();
+        const startDate = new Date(today);
+        
+        if (this.id === 'thisYear') {
+          // Cette année (du 1er janvier à aujourd'hui)
+          startDate.setMonth(0, 1); // 1er janvier
+        } else {
+          // X derniers jours
+          startDate.setDate(today.getDate() - parseInt(days));
+        }
+        
+        document.getElementById('modalStartDate').value = startDate.toLocaleDateString('fr-FR');
+        document.getElementById('modalEndDate').value = today.toLocaleDateString('fr-FR');
+        
+        // Gérer la classe active pour les raccourcis
+        document.querySelectorAll('.dashboard-shortcut-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        
+        // Mémoriser le raccourci sélectionné
+        if (this.id === 'thisYear') {
+          lastSelectedShortcut = { type: 'thisYear', value: 'thisYear' };
+        } else {
+          lastSelectedShortcut = { type: 'days', value: days };
+        }
+      });
+    });
+    
+    // Appliquer les dates personnalisées
+    applyCustomDates.addEventListener('click', function() {
+      const startInput = document.getElementById('modalStartDate');
+      const endInput = document.getElementById('modalEndDate');
+      
+      if (!startInput.value || !endInput.value) {
+        alert('Veuillez sélectionner une date de début et une date de fin');
+        return;
+      }
+      
+      const startDate = parseDisplayDate(startInput.value);
+      const endDate = parseDisplayDate(endInput.value);
+      
+      if (!startDate || !endDate || endDate <= startDate) {
+        alert('La date de fin doit être postérieure à la date de début');
+        return;
+      }
+      
+      // Activer le bouton personnalisé
+      buttons.forEach(btn => btn.classList.remove('active'));
+      document.getElementById('customPeriodBtn').classList.add('active');
+      
+      console.log(`[DATA] Application des dates: ${startInput.value} à ${endInput.value}`);
+      
+      // Sauvegarder selon le type (raccourci ou personnalisé)
+      if (lastSelectedShortcut) {
+        // C'était un raccourci, sauvegarder comme raccourci
+        savePeriodSelection('shortcut', lastSelectedShortcut.value);
+        console.log(`[DATA] Sauvegarde raccourci: ${lastSelectedShortcut.value}`);
+      } else {
+        // Dates modifiées manuellement, sauvegarder comme personnalisé
+        savePeriodSelection('custom', { start: startInput.value, end: endInput.value });
+        console.log(`[DATA] Sauvegarde dates personnalisées`);
+      }
+      
+      // Fermer le modal
+      closeDateModal();
+      
+      // Mettre à jour le graphique
+      updateChartData();
+    });
+  }
+
+  // Mise à jour du graphique selon la période
+  function updateChartForPeriod(days) {
+    // Simuler différentes données selon la période
+    let labels, data;
+    
+    if (days == '7') {
+      labels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+      data = [5000, 8000, 6000, 12000, 9000, 15000, 11000];
+    } else if (days == '30') {
+      labels = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
+      data = [25000, 32000, 28000, 45000];
+    } else {
+      labels = ['Mois 1', 'Mois 2', 'Mois 3'];
+      data = [95000, 120000, 140000];
+    }
+    
+    revenueChart.data.labels = labels;
+    revenueChart.data.datasets[0].data = data;
+    revenueChart.update('active');
+  }
+
+  // Affichage de la date actuelle
+  function updateCurrentDate() {
+    const now = new Date();
+    const isMobile = window.innerWidth <= 768;
+
+    if (isMobile) {
+      // Mobile : afficher seulement le jour de la semaine
+      const options = { weekday: 'long' };
+      const dateString = now.toLocaleDateString('fr-FR', options);
+      document.getElementById('currentDate').textContent = dateString;
+    } else {
+      // PC : afficher la date complète
+      const options = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      };
+      const dateString = now.toLocaleDateString('fr-FR', options);
+      document.getElementById('currentDate').textContent = dateString;
+    }
+  }
+
+  // Mettre à jour la date lors du redimensionnement
+  window.addEventListener('resize', updateCurrentDate);
+
+  // Initialisation
+  document.addEventListener('DOMContentLoaded', function() {
+    // Mobile menu
+    const menuLinks = document.querySelectorAll('#sidebar a');
+    menuLinks.forEach(link => {
+      link.addEventListener('click', closeMobileMenu);
+    });
+    
+    // Mobile account menu
+    const mobileAccountBtn = document.getElementById('mobile-account-menu-button');
+    const mobileAccountDropdown = document.getElementById('mobile-account-dropdown');
+    
+    if (mobileAccountBtn && mobileAccountDropdown) {
+      mobileAccountBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        mobileAccountDropdown.classList.toggle('hidden');
+      });
+      
+      document.addEventListener('click', function() {
+        mobileAccountDropdown.classList.add('hidden');
+      });
+      
+      mobileAccountDropdown.addEventListener('click', function(e) {
+        e.stopPropagation();
+      });
+    }
+
+    // ================================================================
+    // CLASSEMENT - FONCTIONS
+    // ================================================================
+
+    function setupClassementDropdown() {
+      const dropdown = document.getElementById('classement-sort-dropdown');
+      const menu = document.getElementById('classement-sort-dropdown-menu');
+      const selectedText = document.getElementById('classement-sort-selected-text');
+
+      if (!dropdown || !menu) return;
+
+      // S'assurer que le dropdown est fermé au chargement
+      menu.classList.remove('show');
+
+      // Ajouter les listeners une seule fois
+      if (dropdown.dataset.listenerAttached) return;
+      dropdown.dataset.listenerAttached = "true";
+
+      // Toggle dropdown
+      dropdown.addEventListener('click', function(e) {
+        e.stopPropagation();
+        menu.classList.toggle('show');
+      });
+
+      // Fermer dropdown au clic extérieur
+      document.addEventListener('click', function() {
+        menu.classList.remove('show');
+      });
+
+      // Gérer la sélection
+      menu.querySelectorAll('.dropdown-option').forEach(option => {
+        option.addEventListener('click', function(e) {
+          e.stopPropagation();
+
+          // Retirer selected de toutes les options
+          menu.querySelectorAll('.dropdown-option').forEach(opt => {
+            opt.classList.remove('selected');
+          });
+
+          // Ajouter selected à l'option cliquée
+          this.classList.add('selected');
+
+          // Mettre à jour le texte
+          selectedText.textContent = this.textContent;
+
+          // Fermer le menu
+          menu.classList.remove('show');
+
+          // Trier le tableau
+          const sortBy = this.getAttribute('data-value');
+          sortClassement(sortBy);
+        });
+      });
+    }
+
+    function setupClassementGroupDropdown() {
+      const buttons = document.querySelectorAll('.classement-group-btn');
+
+      buttons.forEach(btn => {
+        // Ajouter les listeners une seule fois
+        if (btn.dataset.listenerAttached) return;
+        btn.dataset.listenerAttached = "true";
+
+        btn.addEventListener('click', function() {
+          // Retirer active de tous les boutons
+          buttons.forEach(b => b.classList.remove('active'));
+
+          // Ajouter active au bouton cliqué
+          this.classList.add('active');
+
+          // Filtrer le classement (pour l'instant, affiche tous)
+          const groupValue = this.getAttribute('data-group');
+          filterClassementByGroup(groupValue);
+        });
+      });
+    }
+
+    let classementData = [];
+    let currentGroupFilter = 'tous';
+
+    function sortClassement(sortBy) {
+      const sortedData = [...classementData].sort((a, b) => {
+        switch(sortBy) {
+          case 'ca': return (b.ca_actuel || 0) - (a.ca_actuel || 0);
+          case 'signees': return (b.soumissions_signees || 0) - (a.soumissions_signees || 0);
+          case 'etoiles': return (b.etoiles || 0) - (a.etoiles || 0);
+          case 'contrat': return (b.contrat_moyen || 0) - (a.contrat_moyen || 0);
+          case 'marketing': return (b.taux_marketing || 0) - (a.taux_marketing || 0);
+          case 'vente': return (b.taux_vente || 0) - (a.taux_vente || 0);
+          case 'prod': return (b.prod_horaire || 0) - (a.prod_horaire || 0);
+          case 'pap': return (b.heures_pap || 0) - (a.heures_pap || 0);
+          default: return 0;
+        }
+      });
+
+      renderClassement(sortedData);
+    }
+
+    async function renderClassement(data) {
+      const tbody = document.getElementById('classementTableBody');
+      const mobileCards = document.getElementById('classementMobileCards');
+
+      if (!tbody || !mobileCards) return;
+
+      if (data.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="11" class="text-center py-8" style="color: var(--text-gray);">
+              Aucun entrepreneur trouvé
+            </td>
+          </tr>
+        `;
+        mobileCards.innerHTML = `
+          <div class="text-center py-8" style="color: var(--text-gray);">
+            Aucun entrepreneur trouvé
+          </div>
+        `;
+        return;
+      }
+
+      // Récupérer les photos de profil et grades pour tous les entrepreneurs
+      const photoGradePromises = data.map(async (entrepreneur) => {
+        const loginUsername = entrepreneur.login_username || entrepreneur.username;
+
+        try {
+          // Récupérer la photo
+          const photoResponse = await fetch(`/api/get-profile-photo/${loginUsername}`);
+          let photoUrl = null;
+          if (photoResponse.ok) {
+            const photoResult = await photoResponse.json();
+            photoUrl = photoResult.photoUrl || null;
+          }
+
+          // Récupérer le grade de gamification
+          let grade = 'Démarrage'; // Défaut
+          try {
+            const gradeResponse = await fetch(`/api/gamification/profile/${loginUsername}`);
+            if (gradeResponse.ok) {
+              const gradeData = await gradeResponse.json();
+              const profile = gradeData.status === 'success' && gradeData.profile ? gradeData.profile : gradeData;
+              grade = profile.category || 'Démarrage';
+            }
+          } catch (err) {
+            console.log(`Grade par défaut pour ${entrepreneur.username}`);
+          }
+
+          return {
+            username: entrepreneur.username,
+            photoUrl: photoUrl,
+            grade: grade
+          };
+        } catch (error) {
+          console.error(`[ERROR] Erreur chargement données pour ${entrepreneur.username}:`, error);
+          return {
+            username: entrepreneur.username,
+            photoUrl: null,
+            grade: 'Démarrage'
+          };
+        }
+      });
+
+      const photosGrades = await Promise.all(photoGradePromises);
+      const photoMap = {};
+      const gradeMap = {};
+      photosGrades.forEach(p => {
+        photoMap[p.username] = p.photoUrl;
+        gradeMap[p.username] = p.grade;
+        console.log(`📸 ${p.username}: photo=${p.photoUrl ? 'oui' : 'non'}, grade=${p.grade}`);
+      });
+      console.log('🗺️ Photo map final:', photoMap);
+      console.log('🎖️ Grade map final:', gradeMap);
+
+      // Stocker les données avec photos pour le modal mobile
+      currentClassementData = data.map(e => ({
+        ...e,
+        photoUrl: photoMap[e.username] || null
+      }));
+
+      tbody.innerHTML = data.map((entrepreneur, index) => {
+        // Médailles pour les 3 premières positions
+        let rangDisplay = '';
+        if (index === 0) {
+          rangDisplay = '<i class="fas fa-medal text-2xl" style="color: #fbbf24;"></i>'; // Or
+        } else if (index === 1) {
+          rangDisplay = '<i class="fas fa-medal text-2xl" style="color: #94a3b8;"></i>'; // Argent
+        } else if (index === 2) {
+          rangDisplay = '<i class="fas fa-medal text-2xl" style="color: #cd7f32;"></i>'; // Bronze
+        } else {
+          rangDisplay = `<span class="font-bold" style="color: var(--text-light);">${index + 1}</span>`;
+        }
+
+        // Photo de profil avec contour de grade
+        const photoUrl = photoMap[entrepreneur.username];
+        const grade = gradeMap[entrepreneur.username] || 'Démarrage';
+        const gradeClass = 'grade-' + grade.toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/\s+/g, '-');
+
+        const profilePhotoHTML = photoUrl
+          ? `<div class="profile-photo-small ${gradeClass}"><img src="${photoUrl}" alt="Photo de profil"></div>`
+          : `<div class="profile-photo-small ${gradeClass}"><div style="width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #2586fd 0%, #b2c5fbc7 100%); display: flex; align-items: center; justify-content: center;"><i class="fas fa-user" style="color: white; font-size: 14px;"></i></div></div>`;
+
+        return `
+          <tr class="border-b hover:bg-opacity-5 hover:bg-blue-500 transition-colors" style="border-color: var(--border-dark); cursor: pointer;" onclick="openUserStatsModal('${entrepreneur.login_username || entrepreneur.username}')">
+            <td class="py-4 px-4 text-center">
+              ${rangDisplay}
+            </td>
+            <td class="py-4 px-4">
+              <div style="display: flex; align-items: center; gap: 18px;">
+                ${profilePhotoHTML}
+                <span class="font-semibold" style="color: var(--text-light);">${entrepreneur.username}</span>
+              </div>
+            </td>
+            <td class="py-4 px-4 text-right font-bold text-green-600">${entrepreneur.ca_actuel.toLocaleString()} $</td>
+            <td class="py-4 px-4 text-right font-bold" style="color: var(--text-light);">${entrepreneur.soumissions_signees || 0}</td>
+            <td class="py-4 px-4 text-right" style="color: var(--text-light);">${entrepreneur.contrat_moyen.toLocaleString()} $</td>
+            <td class="py-4 px-4 text-right" style="color: var(--text-light);">${Math.round(entrepreneur.taux_marketing * 10) / 10}%</td>
+            <td class="py-4 px-4 text-right" style="color: var(--text-light);">${Math.round(entrepreneur.taux_vente * 10) / 10}%</td>
+            <td class="py-4 px-4 text-right" style="color: var(--text-light);">${(entrepreneur.prod_horaire || 0).toLocaleString()} $/h</td>
+            <td class="py-4 px-4 text-right" style="color: var(--text-light);">${(entrepreneur.heures_pap || 0).toFixed(1)} h</td>
+            <td class="py-4 px-4 text-right">
+              <span class="text-yellow-500">
+                <i class="fas fa-star"></i> ${entrepreneur.etoiles.toFixed(1)}
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // Générer les cartes mobiles (version simplifiée: rang + entrepreneur seulement)
+      console.log('[MOBILE] Génération des cartes mobiles pour', data.length, 'entrepreneurs');
+      mobileCards.innerHTML = data.map((entrepreneur, index) => {
+        // Médailles pour les 3 premières positions
+        let rangDisplay = '';
+        if (index === 0) {
+          rangDisplay = '<i class="fas fa-medal text-lg" style="color: #fbbf24;"></i>'; // Or
+        } else if (index === 1) {
+          rangDisplay = '<i class="fas fa-medal text-lg" style="color: #94a3b8;"></i>'; // Argent
+        } else if (index === 2) {
+          rangDisplay = '<i class="fas fa-medal text-lg" style="color: #cd7f32;"></i>'; // Bronze
+        } else {
+          rangDisplay = `<span class="font-bold text-base" style="color: var(--text-light);">${index + 1}</span>`;
+        }
+
+        // Photo de profil avec contour de grade (mobile)
+        const photoUrl = photoMap[entrepreneur.username];
+        const grade = gradeMap[entrepreneur.username] || 'Démarrage';
+        const gradeClass = 'grade-' + grade.toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/\s+/g, '-');
+
+        const profilePhotoHTML = photoUrl
+          ? `<img src="${photoUrl}" alt="Photo de profil" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border-dark);">`
+          : `<div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #2586fd 0%, #b2c5fbc7 100%); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-dark);"><i class="fas fa-user" style="color: white; font-size: 14px;"></i></div>`;
+
+        return `
+          <div class="classement-card" onclick="openUserStatsModal('${entrepreneur.username}')" style="cursor: pointer;">
+            <div class="classement-card-rang">
+              ${rangDisplay}
+            </div>
+            <div class="classement-card-photo">
+              ${profilePhotoHTML}
+            </div>
+            <div class="classement-card-info">
+              <div class="classement-card-name">${entrepreneur.username}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Variables globales pour le modal
+    let currentClassementData = [];
+
+    // Fonction pour afficher les stats d'un entrepreneur dans le modal (mobile)
+    window.showEntrepreneurStats = function(index) {
+      if (window.innerWidth > 768) return; // Seulement sur mobile
+
+      const entrepreneur = currentClassementData[index];
+      if (!entrepreneur) return;
+
+      const modal = document.getElementById('entrepreneurStatsModal');
+      const photoContainer = document.getElementById('statsEntrepreneurPhoto');
+      const nameElement = document.getElementById('statsEntrepreneurName');
+      const rangElement = document.getElementById('statsEntrepreneurRang');
+      const gridElement = document.getElementById('statsEntrepreneurGrid');
+
+      // Médaille ou rang
+      let rangDisplay = '';
+      if (index === 0) {
+        rangDisplay = '<i class="fas fa-medal" style="color: #fbbf24; font-size: 20px;"></i> 1er';
+      } else if (index === 1) {
+        rangDisplay = '<i class="fas fa-medal" style="color: #94a3b8; font-size: 20px;"></i> 2ème';
+      } else if (index === 2) {
+        rangDisplay = '<i class="fas fa-medal" style="color: #cd7f32; font-size: 20px;"></i> 3ème';
+      } else {
+        rangDisplay = `${index + 1}${index === 3 ? 'ème' : index > 10 ? 'ème' : 'ème'}`;
+      }
+
+      // Photo de profil
+      const photoUrl = entrepreneur.photoUrl; // Devra être récupéré depuis le cache
+      photoContainer.innerHTML = photoUrl
+        ? `<img src="${photoUrl}" alt="Photo" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-dark);">`
+        : `<div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #2586fd 0%, #b2c5fbc7 100%); display: flex; align-items: center; justify-content: center; border: 2px solid var(--border-dark);"><i class="fas fa-user" style="color: white; font-size: 20px;"></i></div>`;
+
+      // Nom et rang
+      nameElement.textContent = entrepreneur.username;
+      rangElement.innerHTML = rangDisplay + ' au classement';
+
+      // Stats
+      gridElement.innerHTML = `
+        <div class="entrepreneur-stat-row">
+          <span class="entrepreneur-stat-label">
+            <i class="fas fa-dollar-sign" style="color: #10b981;"></i>
+            CA Actuel
+          </span>
+          <span class="entrepreneur-stat-value" style="color: #10b981;">${entrepreneur.ca_actuel.toLocaleString()} $</span>
+        </div>
+        <div class="entrepreneur-stat-row">
+          <span class="entrepreneur-stat-label">
+            <i class="fas fa-file-signature" style="color: #3b82f6;"></i>
+            Contrats signés
+          </span>
+          <span class="entrepreneur-stat-value">${entrepreneur.soumissions_signees || 0}</span>
+        </div>
+        <div class="entrepreneur-stat-row">
+          <span class="entrepreneur-stat-label">
+            <i class="fas fa-star" style="color: #fbbf24;"></i>
+            Satisfaction
+          </span>
+          <span class="entrepreneur-stat-value">${entrepreneur.etoiles.toFixed(1)}</span>
+        </div>
+        <div class="entrepreneur-stat-row">
+          <span class="entrepreneur-stat-label">
+            <i class="fas fa-handshake" style="color: #8b5cf6;"></i>
+            Contrat moyen
+          </span>
+          <span class="entrepreneur-stat-value">${entrepreneur.contrat_moyen.toLocaleString()} $</span>
+        </div>
+        <div class="entrepreneur-stat-row">
+          <span class="entrepreneur-stat-label">
+            <i class="fas fa-bullhorn" style="color: #ec4899;"></i>
+            Taux marketing
+          </span>
+          <span class="entrepreneur-stat-value">${Math.round(entrepreneur.taux_marketing * 10) / 10}%</span>
+        </div>
+        <div class="entrepreneur-stat-row">
+          <span class="entrepreneur-stat-label">
+            <i class="fas fa-chart-line" style="color: #06b6d4;"></i>
+            Taux de vente
+          </span>
+          <span class="entrepreneur-stat-value">${Math.round(entrepreneur.taux_vente * 10) / 10}%</span>
+        </div>
+        <div class="entrepreneur-stat-row">
+          <span class="entrepreneur-stat-label">
+            <i class="fas fa-clock" style="color: #f59e0b;"></i>
+            Productivité/h
+          </span>
+          <span class="entrepreneur-stat-value">${(entrepreneur.prod_horaire || 0).toLocaleString()} $/h</span>
+        </div>
+        <div class="entrepreneur-stat-row">
+          <span class="entrepreneur-stat-label">
+            <i class="fas fa-business-time" style="color: #6366f1;"></i>
+            H de PÀP
+          </span>
+          <span class="entrepreneur-stat-value">${(entrepreneur.heures_pap || 0).toFixed(1)} h</span>
+        </div>
+      `;
+
+      // Afficher le modal et bloquer le scroll du body
+      modal.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+
+    // Fonction pour fermer le modal
+    window.closeEntrepreneurStats = function(event) {
+      if (event && event.target !== event.currentTarget) return;
+      const modal = document.getElementById('entrepreneurStatsModal');
+      modal.classList.remove('show');
+      // Réactiver le scroll du body
+      document.body.style.overflow = '';
+    }
+
+    // ================================================================
+    // FONCTIONS DU MODAL DE STATISTIQUES UTILISATEUR
+    // ================================================================
+
+    // Fonction pour ouvrir le modal de stats d'un utilisateur
+    async function openUserStatsModal(username) {
+      // UTILISER LE MODAL D'APPPC.HTML (même modal que les statistiques du menu)
+      if (parent && parent.openStatsModal) {
+        // Appeler la fonction du parent (apppc.html)
+        await parent.openStatsModal(username);
+      } else if (window.openStatsModal) {
+        // Si pas dans une iframe, utiliser la fonction locale
+        await window.openStatsModal(username);
+      } else {
+        console.error('openStatsModal non disponible');
+        alert('Erreur: modal de statistiques non disponible');
+      }
+    }
+
+    // Fonction pour fermer le modal de stats
+    function closeUserStatsModal() {
+      const modal = document.getElementById('user-stats-modal');
+      if (modal) {
+        modal.classList.remove('active');
+      }
+      // Réactiver le scroll
+      document.body.style.overflow = '';
+    }
+
+    // Toggle badges section (expand/collapse)
+    function toggleUserBadgesSection() {
+      const badgesGrid = document.getElementById('user-stats-badges-grid');
+      const expandBtn = document.getElementById('user-badges-expand-btn');
+      const expandText = document.getElementById('user-badges-expand-text');
+      const expandIcon = document.getElementById('user-badges-expand-icon');
+
+      if (badgesGrid.classList.contains('show')) {
+        // Collapse: cacher les sections par rareté (top 5 reste visible)
+        badgesGrid.classList.remove('show');
+        expandBtn.classList.remove('expanded');
+        expandText.textContent = 'Voir tous';
+        expandIcon.classList.remove('fa-chevron-up');
+        expandIcon.classList.add('fa-chevron-down');
+      } else {
+        // Expand: montrer toutes les sections par rareté (top 5 reste visible)
+        badgesGrid.classList.add('show');
+        expandBtn.classList.add('expanded');
+        expandText.textContent = 'Réduire';
+        expandIcon.classList.remove('fa-chevron-down');
+        expandIcon.classList.add('fa-chevron-up');
+      }
+    }
+
+    // Fonction pour peupler le modal avec les données
+    async function populateUserStatsModal(profile, username) {
+      console.log('Peuplement du modal avec:', { profile, username });
+
+      const gradeImageMap = {
+        'Démarrage': 'https://i.ibb.co/v6PRQ6RX/2.png',
+        'Apprenti': 'https://i.ibb.co/CpT20JQK/3.png',
+        'Pilier': 'https://i.ibb.co/ksw5bZnH/4.png',
+        'Expert': 'https://i.ibb.co/HfDN4YV2/5.png',
+        'Maître': 'https://i.ibb.co/YTbb1Bpw/6.png',
+        'Héros': 'https://i.ibb.co/q322mLQd/8.png',
+        'Prestige': 'https://i.ibb.co/k2fNLV6S/9.png'
+      };
+
+      const gradeLevels = [
+        { name: 'Démarrage', minLevel: 1, maxLevel: 1 },
+        { name: 'Apprenti', minLevel: 2, maxLevel: 10 },
+        { name: 'Pilier', minLevel: 11, maxLevel: 30 },
+        { name: 'Expert', minLevel: 31, maxLevel: 50 },
+        { name: 'Maître', minLevel: 51, maxLevel: 75 },
+        { name: 'Héros', minLevel: 76, maxLevel: 90 },
+        { name: 'Prestige', minLevel: 91, maxLevel: 100 }
+      ];
+
+      // Profil
+      document.getElementById('user-stats-username').textContent = username || 'Utilisateur';
+
+      // Photo de profil
+      try {
+        const photoResponse = await fetch(`/api/get-profile-photo/${username}`);
+        const photoData = await photoResponse.json();
+        const statsPhoto = document.getElementById('user-stats-profile-photo');
+        if (photoData.success && photoData.photoUrl) {
+          statsPhoto.src = photoData.photoUrl;
+        } else {
+          const initial = username.charAt(0).toUpperCase();
+          statsPhoto.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+        }
+      } catch (error) {
+        console.error('Erreur photo:', error);
+      }
+
+      // Nom du grade dans la section du haut
+      document.getElementById('user-stats-grade-name-display').textContent = profile.category || 'Démarrage';
+
+      // Niveau sur le badge photo
+      document.getElementById('user-stats-photo-level-text').textContent = profile.level || 1;
+
+      // Appliquer le contour de grade à la photo de profil
+      const photoContainer = document.querySelector('#user-stats-modal .stats-profile-photo-container');
+      if (photoContainer && profile.category) {
+        // Convertir le nom du grade en classe CSS
+        // Démarrage → grade-demarrage, Maître → grade-maitre, etc.
+        const gradeClass = 'grade-' + profile.category.toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Enlever accents
+          .replace(/\s+/g, '-'); // Remplacer espaces par tirets
+
+        // Retirer toutes les classes de grade précédentes
+        photoContainer.className = photoContainer.className.replace(/grade-\S+/g, '').trim();
+
+        // Ajouter la nouvelle classe de grade
+        photoContainer.classList.add(gradeClass);
+        console.log(`Contour de grade appliqué: ${gradeClass}`);
+      }
+
+      // XP
+      document.getElementById('user-stats-xp-current').textContent = profile.xp_progress || 0;
+      document.getElementById('user-stats-xp-next').textContent = profile.xp_for_next_level || 100;
+      document.getElementById('user-stats-xp-fill').style.width = `${profile.progress_percentage || 0}%`;
+      document.getElementById('user-stats-xp-percentage').textContent = `${Math.round(profile.progress_percentage || 0)}%`;
+
+      // Progression vers prochain grade
+      const currentLevel = profile.level || 1;
+      const currentGradeIndex = gradeLevels.findIndex(g => currentLevel >= g.minLevel && currentLevel <= g.maxLevel);
+      const currentGrade = gradeLevels[currentGradeIndex >= 0 ? currentGradeIndex : 0];
+
+      if (currentGrade) {
+        document.getElementById('user-stats-current-grade-badge').src = gradeImageMap[currentGrade.name];
+
+        if (currentGrade.name === 'Prestige') {
+          document.getElementById('user-stats-current-level-text').textContent = `Niv ${currentLevel}`;
+          document.getElementById('user-stats-next-level-text').innerHTML = '<span style="color: var(--primary-gold);">Max</span>';
+          document.getElementById('user-stats-next-grade-fill').style.width = '100%';
+          document.getElementById('user-stats-next-grade-badge').src = gradeImageMap['Prestige'];
+        } else {
+          const nextGrade = gradeLevels[currentGradeIndex + 1];
+          const nextGradeLevel = nextGrade.minLevel;
+
+          document.getElementById('user-stats-next-grade-badge').src = gradeImageMap[nextGrade.name];
+          document.getElementById('user-stats-current-level-text').textContent = `Niv ${currentLevel}`;
+          document.getElementById('user-stats-next-level-text').textContent = `Niv ${nextGradeLevel}`;
+
+          const levelsInCurrentGrade = currentGrade.maxLevel - currentGrade.minLevel + 1;
+          const levelProgress = currentLevel - currentGrade.minLevel;
+          const progressPercentage = (levelProgress / levelsInCurrentGrade) * 100;
+          document.getElementById('user-stats-next-grade-fill').style.width = `${progressPercentage}%`;
+        }
+      }
+
+      // Stats principales
+      document.getElementById('user-stats-total-xp').textContent = profile.total_xp || 0;
+      document.getElementById('user-stats-badges').textContent = profile.badges_count || 0;
+
+      // Stats Business - Fetch from /api/entrepreneurs
+      try {
+        const entrepreneurResponse = await fetch('/api/entrepreneurs');
+        if (entrepreneurResponse.ok) {
+          const entrepreneurs = await entrepreneurResponse.json();
+          const currentEntrepreneur = entrepreneurs.find(e => e.username === username);
+
+          if (currentEntrepreneur) {
+            // CA Actuel
+            document.getElementById('user-stats-ca-actuel').textContent = `${(currentEntrepreneur.ca_actuel || 0).toLocaleString()} $`;
+
+            // Contrats signés
+            document.getElementById('user-stats-contrats-signes').textContent = currentEntrepreneur.soumissions_signees || 0;
+
+            // Satisfaction
+            document.getElementById('user-stats-satisfaction').textContent = (currentEntrepreneur.etoiles || 0).toFixed(1);
+
+            // Contrat moyen
+            document.getElementById('user-stats-contrat-moyen').textContent = `${(currentEntrepreneur.contrat_moyen || 0).toLocaleString()} $`;
+
+            // Taux marketing
+            document.getElementById('user-stats-taux-marketing').textContent = `${Math.round((currentEntrepreneur.taux_marketing || 0) * 10) / 10}%`;
+
+            // Taux de vente
+            document.getElementById('user-stats-taux-vente').textContent = `${Math.round((currentEntrepreneur.taux_vente || 0) * 10) / 10}%`;
+
+            // Productivité horaire
+            document.getElementById('user-stats-prod-horaire').textContent = `${(currentEntrepreneur.prod_horaire || 0).toLocaleString()} $/h`;
+
+            // Heures de PÀP
+            document.getElementById('user-stats-heures-pap').textContent = `${(currentEntrepreneur.heures_pap || 0).toFixed(1)} h`;
+          } else {
+            // Utilisateur non trouvé, mettre des valeurs par défaut
+            document.getElementById('user-stats-ca-actuel').textContent = '0 $';
+            document.getElementById('user-stats-contrats-signes').textContent = '0';
+            document.getElementById('user-stats-satisfaction').textContent = '0.0';
+            document.getElementById('user-stats-contrat-moyen').textContent = '0 $';
+            document.getElementById('user-stats-taux-marketing').textContent = '0%';
+            document.getElementById('user-stats-taux-vente').textContent = '0%';
+            document.getElementById('user-stats-prod-horaire').textContent = '0 $/h';
+            document.getElementById('user-stats-heures-pap').textContent = '0.0 h';
+          }
+        }
+      } catch (error) {
+        console.error('Erreur chargement stats business:', error);
+      }
+
+      // Charger les badges obtenus
+      try {
+        console.log(`Chargement des badges pour ${username}...`);
+        const badgesResponse = await fetch(`/api/gamification/badges/user/${username}`);
+        console.log('Réponse badges status:', badgesResponse.status);
+
+        if (badgesResponse.ok) {
+          const badgesData = await badgesResponse.json();
+          console.log('Données badges brutes:', badgesData);
+          const badgesGrid = document.getElementById('user-stats-badges-grid');
+
+          let badges = [];
+
+          // Format attendu: {status: 'success', badges: [...]}
+          if (badgesData.badges && Array.isArray(badgesData.badges)) {
+            badges = badgesData.badges;
+          } else if (Array.isArray(badgesData)) {
+            badges = badgesData;
+          }
+
+          console.log(`${badges.length} badges trouvés pour ${username}`);
+
+          if (badges.length > 0) {
+            // Fonction helper pour créer un badge item
+            const createBadgeItem = (badge, showRarity = false) => {
+              const badgeItem = document.createElement('div');
+              badgeItem.className = 'badge-item';
+
+              const imageUrl = badge.image_url || badge.icon_url || '';
+              const emoji = badge.image || badge.icon || badge.emoji || '';
+              const badgeName = badge.name || badge.badge_name || badge.title || 'Badge';
+              const rarity = badge.rarity || badge.rarete || 'Commun';
+              const description = badge.description || 'Aucune description disponible';
+
+              // PRIORISER image_url (PNG) sur icon (emoji)
+              let imageHTML = '';
+              if (imageUrl && imageUrl.startsWith('http')) {
+                imageHTML = `<img src="${imageUrl}" alt="${badgeName}" class="badge-image">`;
+              } else if (emoji && emoji.startsWith && emoji.startsWith('http')) {
+                imageHTML = `<img src="${emoji}" alt="${badgeName}" class="badge-image">`;
+              } else if (emoji) {
+                imageHTML = `<div class="badge-emoji">${emoji}</div>`;
+              } else {
+                imageHTML = `<div class="badge-emoji">🏅</div>`;
+              }
+
+              // Normaliser la rareté pour la classe CSS
+              const rarityClass = rarity.toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]/g, '-');
+
+              const rarityHTML = showRarity ? `<div class="badge-rarity ${rarityClass}">${rarity}</div>` : '';
+
+              badgeItem.innerHTML = `
+                ${imageHTML}
+                ${rarityHTML}
+                <div class="badge-info-icon">
+                  <i class="fas fa-info"></i>
+                  <div class="badge-tooltip">
+                    <div class="tooltip-title">${badgeName}</div>
+                    <div class="tooltip-description">${description}</div>
+                  </div>
+                </div>
+              `;
+              return badgeItem;
+            };
+
+            // Grouper les badges par rareté
+            const rarityOrder = ['Mythique', 'Épique', 'Légendaire', 'Rare', 'Commun', 'Anti-Badge'];
+            const badgesByRarity = {};
+
+            // Initialiser les catégories
+            rarityOrder.forEach(r => badgesByRarity[r] = []);
+
+            // Grouper les badges
+            badges.forEach(badge => {
+              const rarity = badge.rarity || badge.rarete || 'Commun';
+              if (!badgesByRarity[rarity]) {
+                badgesByRarity[rarity] = [];
+              }
+              badgesByRarity[rarity].push(badge);
+            });
+
+            // === TOP 5 MEILLEURS BADGES (par rareté) ===
+            const topBadgesContainer = document.getElementById('user-stats-badges-top');
+            topBadgesContainer.innerHTML = '';
+
+            const topBadges = [];
+            rarityOrder.forEach(rarity => {
+              const rarityBadges = badgesByRarity[rarity];
+              if (rarityBadges && rarityBadges.length > 0) {
+                topBadges.push(...rarityBadges);
+              }
+            });
+
+            // Prendre les 5 premiers (les plus rares)
+            const top5 = topBadges.slice(0, 5);
+            if (top5.length > 0) {
+              top5.forEach(badge => {
+                topBadgesContainer.appendChild(createBadgeItem(badge, true)); // Afficher la rareté
+              });
+            } else {
+              topBadgesContainer.innerHTML = '<div class="no-badges-message">Aucun badge</div>';
+            }
+
+            // === TOUS LES BADGES PAR RARETÉ (caché par défaut) ===
+            badgesGrid.innerHTML = '';
+
+            rarityOrder.forEach(rarity => {
+              const rarityBadges = badgesByRarity[rarity];
+              if (rarityBadges && rarityBadges.length > 0) {
+                const rarityClass = rarity.toLowerCase()
+                  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                  .replace(/[^a-z0-9]/g, '-');
+
+                const raritySection = document.createElement('div');
+                raritySection.className = 'rarity-section';
+
+                const rarityTitle = document.createElement('div');
+                rarityTitle.className = 'rarity-section-title';
+                rarityTitle.innerHTML = `
+                  <span class="badge-rarity ${rarityClass}">${rarity}</span>
+                  <span class="rarity-badge-count">${rarityBadges.length}</span>
+                `;
+                raritySection.appendChild(rarityTitle);
+
+                const scrollContainer = document.createElement('div');
+                scrollContainer.className = 'badges-horizontal-scroll';
+
+                rarityBadges.forEach(badge => {
+                  scrollContainer.appendChild(createBadgeItem(badge));
+                });
+
+                raritySection.appendChild(scrollContainer);
+                badgesGrid.appendChild(raritySection);
+              }
+            });
+          } else {
+            document.getElementById('user-stats-badges-top').innerHTML = '<div class="no-badges-message">Aucun badge obtenu pour le moment</div>';
+            badgesGrid.innerHTML = '<div class="no-badges-message">Aucun badge obtenu pour le moment</div>';
+          }
+        }
+      } catch (error) {
+        console.error('Erreur chargement badges:', error);
+        document.getElementById('user-stats-badges-grid').innerHTML = '<div class="no-badges-message">Erreur de chargement des badges</div>';
+      }
+    }
+
+    // Fermer le modal en cliquant sur le fond
+    document.addEventListener('click', (e) => {
+      const modal = document.getElementById('user-stats-modal');
+      if (e.target === modal) {
+        closeUserStatsModal();
+      }
+    });
+
+    // Rendre les fonctions globales
+    window.openUserStatsModal = openUserStatsModal;
+    window.closeUserStatsModal = closeUserStatsModal;
+    window.toggleUserBadgesSection = toggleUserBadgesSection;
+
+    function filterClassementByGroup(groupValue) {
+      currentGroupFilter = groupValue;
+
+      // Pour l'instant, affiche tous les entrepreneurs peu importe le groupe
+      // TODO: Implémenter la logique de filtrage quand les groupes seront définis
+      let filteredData = classementData;
+
+      // Trier les données filtrées avec le tri actuel
+      const selectedSortOption = document.querySelector('#classement-sort-dropdown-menu .dropdown-option.selected');
+      const currentSort = selectedSortOption ? selectedSortOption.getAttribute('data-value') : 'ca';
+
+      const sortedData = [...filteredData].sort((a, b) => {
+        switch(currentSort) {
+          case 'ca': return (b.ca_actuel || 0) - (a.ca_actuel || 0);
+          case 'signees': return (b.soumissions_signees || 0) - (a.soumissions_signees || 0);
+          case 'etoiles': return (b.etoiles || 0) - (a.etoiles || 0);
+          case 'contrat': return (b.contrat_moyen || 0) - (a.contrat_moyen || 0);
+          case 'marketing': return (b.taux_marketing || 0) - (a.taux_marketing || 0);
+          case 'vente': return (b.taux_vente || 0) - (a.taux_vente || 0);
+          case 'prod': return (b.prod_horaire || 0) - (a.prod_horaire || 0);
+          case 'pap': return (b.heures_pap || 0) - (a.heures_pap || 0);
+          default: return 0;
+        }
+      });
+
+      renderClassement(sortedData);
+    }
+
+    async function loadClassementData() {
+      try {
+        console.log('🔄 Chargement des entrepreneurs...');
+        console.log('[DEBUG] window.heuresPAPReel:', window.heuresPAPReel);
+        const response = await fetch('/api/entrepreneurs');
+
+        if (!response.ok) {
+          throw new Error('Erreur lors du chargement des entrepreneurs');
+        }
+
+        classementData = await response.json();
+        console.log('[OK] Entrepreneurs chargés:', classementData);
+
+        // Initialiser heures_pap à 0 pour tous les entrepreneurs si le champ n'existe pas
+        classementData = classementData.map(e => ({
+          ...e,
+          heures_pap: e.heures_pap || 0
+        }));
+
+        // Corriger le taux marketing et les heures PÀP de l'utilisateur actuel avec les vraies valeurs (RPO)
+        const currentUsername = localStorage.getItem('username');
+        if (currentUsername && window.tauxMarketingReel !== undefined) {
+          const userIndex = classementData.findIndex(e => e.login_username === currentUsername || e.username === currentUsername);
+          if (userIndex !== -1) {
+            console.log(`[FIX] Correction taux marketing pour ${currentUsername}: ${classementData[userIndex].taux_marketing}% → ${window.tauxMarketingReel}%`);
+            classementData[userIndex].taux_marketing = window.tauxMarketingReel;
+          }
+        }
+        if (currentUsername && window.heuresPAPReel !== undefined) {
+          const userIndex = classementData.findIndex(e => e.login_username === currentUsername || e.username === currentUsername);
+          if (userIndex !== -1) {
+            console.log(`[FIX] Correction H de PÀP pour ${currentUsername}: ${classementData[userIndex].heures_pap}h → ${window.heuresPAPReel}h`);
+            classementData[userIndex].heures_pap = window.heuresPAPReel;
+            console.log(`[OK] Après correction:`, classementData[userIndex]);
+          } else {
+            console.log(`[WARNING] Utilisateur ${currentUsername} non trouvé dans classementData`);
+          }
+        } else {
+          console.log(`[WARNING] window.heuresPAPReel non défini ou currentUsername manquant`);
+        }
+
+        sortClassement('ca'); // Trier par CA par défaut
+      } catch (error) {
+        console.error('[ERROR] Erreur chargement classement:', error);
+        document.getElementById('classementTableBody').innerHTML = `
+          <tr>
+            <td colspan="11" class="text-center py-8 text-red-500">
+              <i class="fas fa-exclamation-triangle mr-2"></i>Erreur de chargement
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    // Fonctions pour la plainte popup
+    let plainteStartTime = new Date(); // Test data - will be replaced with actual timestamp
+
+    window.ouvrirPlaintePopup = function() {
+      document.getElementById('plaintePopup').classList.remove('hidden');
+      document.body.style.overflow = 'hidden'; // Bloquer le scroll
+      // Afficher la liste, cacher les détails
+      document.getElementById('plaintesListe').classList.remove('hidden');
+      document.getElementById('plainteDetails').classList.add('hidden');
+    };
+
+    window.fermerPlaintePopup = function() {
+      document.getElementById('plaintePopup').classList.add('hidden');
+      document.body.style.overflow = ''; // Réactiver le scroll
+    };
+
+    window.retourListePlaintes = function() {
+      document.getElementById('plaintesListe').classList.remove('hidden');
+      document.getElementById('plainteDetails').classList.add('hidden');
+    };
+
+    // Données des plaintes
+    const plaintesData = {
+      1: {
+        nom: 'Jean Dupont',
+        telephone: '514-555-1234',
+        email: 'jean.dupont@email.com',
+        message: "Le travail n'a pas été terminé dans les délais convenus. Je suis très insatisfait du service.",
+        temps: '2j 5h 12m 45s'
+      },
+      2: {
+        nom: 'Marie Tremblay',
+        telephone: '450-555-9876',
+        email: 'marie.t@email.com',
+        message: "La qualité du travail ne correspond pas à ce qui a été promis. Très déçue.",
+        temps: '0j 3h 25m 10s'
+      }
+    };
+
+    window.ouvrirDetailsPlainte = function(plainteId) {
+      const plainte = plaintesData[plainteId];
+      if (!plainte) return;
+
+      // Masquer la liste, afficher les détails
+      document.getElementById('plaintesListe').classList.add('hidden');
+      document.getElementById('plainteDetails').classList.remove('hidden');
+
+      // Afficher les détails
+      document.getElementById('plainteDetails').innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+          <button onclick="retourListePlaintes()" class="text-gray-400 hover:text-white transition-colors flex items-center gap-2">
+            <i class="fas fa-arrow-left"></i>
+            <span class="font-semibold">Retour</span>
+          </button>
+          <button onclick="fermerPlaintePopup()" class="text-gray-400 hover:text-red-500 transition-colors">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+
+        <div class="bg-gray-900 rounded-lg p-5 border border-red-500 border-opacity-30">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <div class="text-xs text-gray-500 mb-1">Client</div>
+              <div class="text-lg font-bold" style="color: var(--text-light);">${plainte.nom}</div>
+              <div class="flex items-center gap-3 mt-2">
+                <div class="text-xs" style="color: var(--text-gray);">
+                  <i class="fas fa-phone text-[10px] mr-1"></i>${plainte.telephone}
+                </div>
+                <div class="text-xs" style="color: var(--text-gray);">
+                  <i class="fas fa-envelope text-[10px] mr-1"></i>${plainte.email}
+                </div>
+              </div>
+            </div>
+            <div class="bg-red-900 bg-opacity-30 px-3 py-1.5 rounded-lg">
+              <div class="text-xs text-red-400 font-semibold">
+                <i class="fas fa-clock mr-1"></i>${plainte.temps}
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <div class="text-xs text-gray-500 mb-2">Message de la plainte</div>
+            <div class="text-sm leading-relaxed bg-gray-800 rounded-lg p-4" style="color: var(--text-light);">
+              ${plainte.message}
+            </div>
+          </div>
+
+          <div class="mt-5 flex gap-3">
+            <button onclick="reglerPlainte(${plainteId})" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-colors" style="background: #10b981; color: white;">
+              <i class="fas fa-check mr-2"></i>Régler cette plainte
+            </button>
+          </div>
+        </div>
+      `;
+    };
+
+    window.reglerPlainte = function(plainteId) {
+      // Pour l'instant, juste fermer le popup
+      // Plus tard: envoyer requête au serveur pour marquer comme réglée
+      console.log('Plainte réglée:', plainteId);
+      // Ici on pourrait retirer la plainte de la liste dynamiquement
+      // Réactiver le scroll avant de fermer
+      document.body.style.overflow = '';
+      fermerPlaintePopup();
+    };
+
+    function updatePlainteTimer() {
+      const plaintesCount = 0; // Test value
+      const badgeDiv = document.getElementById('plainteIcon');
+      const countSpan = document.getElementById('plaintesActuel');
+      const zeroSpan = document.getElementById('plaintesZero');
+
+      if (plaintesCount > 0) {
+        // Afficher le badge chrono + le compteur rouge
+        badgeDiv.classList.remove('hidden');
+        countSpan.classList.remove('hidden');
+        zeroSpan.classList.add('hidden');
+
+        // Mettre à jour le compteur
+        countSpan.textContent = plaintesCount;
+
+        const now = new Date();
+        const elapsed = Math.floor((now - plainteStartTime) / 1000); // seconds
+
+        const days = Math.floor(elapsed / 86400);
+        const hours = Math.floor((elapsed % 86400) / 3600);
+        const minutes = Math.floor((elapsed % 3600) / 60);
+        const seconds = elapsed % 60;
+
+        const displayText = `${days}j ${hours}h ${minutes}m ${seconds}s`;
+        document.getElementById('plainteTimer').textContent = displayText;
+
+        // Ajouter effet d'urgence si > 1 jour
+        if (days > 0) {
+          badgeDiv.style.animation = 'pulse 2s ease-in-out infinite';
+        }
+      } else {
+        // Afficher le "0" vert, cacher le badge et le compteur
+        badgeDiv.classList.add('hidden');
+        countSpan.classList.add('hidden');
+        zeroSpan.classList.remove('hidden');
+      }
+    }
+
+
+    // Update timer every second
+    setInterval(updatePlainteTimer, 1000);
+    // Initial update
+    updatePlainteTimer();
+
+    // Initialiser le dashboard moderne
+    updateCurrentDate();
+    setupPeriodButtons();
+    // initChart(); // Désactivé - remplacé par le tableau de classement
+    setupClassementDropdown();
+    setupClassementGroupDropdown();
+    setTimeout(loadDashboardData, 200);
+    setTimeout(loadClassementData, 300);
+  });
+
+  // ================================================================
+  // CALENDRIER PERSONNALISÉ - FONCTIONS
+  // ================================================================
+  
+  let currentCalendarType = null;
+  let currentDate = new Date();
+  let selectedStartDate = null;
+  let selectedEndDate = null;
+  
+  // Noms des mois en français
+  const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+  
+  // Fonction pour ouvrir/fermer un calendrier
+  window.toggleCalendar = function(type) {
+    const calendar = document.getElementById(type + 'Calendar');
+    const otherCalendar = document.getElementById(type === 'start' ? 'endCalendar' : 'startCalendar');
+    
+    // Fermer l'autre calendrier
+    if (otherCalendar && !otherCalendar.classList.contains('hidden')) {
+      otherCalendar.classList.add('hidden');
+    }
+    
+    if (calendar.classList.contains('hidden')) {
+      currentCalendarType = type;
+      calendar.classList.remove('hidden');
+      renderCalendar(type);
+    } else {
+      calendar.classList.add('hidden');
+      currentCalendarType = null;
+    }
+  };
+  
+  // Fonction pour changer de mois
+  window.changeMonth = function(type, direction) {
+    const calendar = type === 'start' ? new Date(currentDate) : new Date(currentDate);
+    calendar.setMonth(calendar.getMonth() + direction);
+    currentDate = calendar;
+    renderCalendar(type);
+  };
+  
+  // Fonction pour générer le calendrier
+  function renderCalendar(type) {
+    const calendarDays = document.getElementById(type + 'CalendarDays');
+    const calendarTitle = document.getElementById(type + 'CalendarTitle');
+    
+    if (!calendarDays || !calendarTitle) return;
+    
+    // Mettre à jour le titre
+    calendarTitle.textContent = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+    
+    // Générer les jours
+    const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+    const firstDayOfWeek = firstDay.getDay();
+    const today = new Date();
+    
+    // Vider le calendrier
+    calendarDays.innerHTML = '';
+    
+    // Ajouter les jours du mois précédent
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+      const prevDate = new Date(firstDay);
+      prevDate.setDate(prevDate.getDate() - (i + 1));
+      const dayElement = createDayElement(prevDate, true, type);
+      calendarDays.appendChild(dayElement);
+    }
+    
+    // Ajouter les jours du mois actuel
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+      const dayElement = createDayElement(date, false, type);
+      calendarDays.appendChild(dayElement);
+    }
+    
+    // Ajouter les jours du mois suivant pour compléter la grille
+    const totalCells = calendarDays.children.length;
+    const remainingCells = 42 - totalCells; // 6 semaines * 7 jours
+    for (let day = 1; day <= remainingCells; day++) {
+      const nextDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, day);
+      const dayElement = createDayElement(nextDate, true, type);
+      calendarDays.appendChild(dayElement);
+    }
+  }
+  
+  // Fonction pour créer un élément jour
+  function createDayElement(date, isOtherMonth, type) {
+    const dayElement = document.createElement('div');
+    dayElement.className = 'dashboard-calendar-day';
+    dayElement.textContent = date.getDate();
+    
+    if (isOtherMonth) {
+      dayElement.classList.add('other-month');
+    }
+    
+    // Marquer aujourd'hui
+    const today = new Date();
+    if (date.toDateString() === today.toDateString()) {
+      dayElement.classList.add('today');
+    }
+    
+    // Marquer les dates sélectionnées
+    const currentInput = document.getElementById('modal' + (type === 'start' ? 'Start' : 'End') + 'Date');
+    if (currentInput && currentInput.value) {
+      const inputDate = parseDisplayDate(currentInput.value);
+      if (inputDate && date.toDateString() === inputDate.toDateString()) {
+        dayElement.classList.add('selected');
+      }
+    }
+    
+    // Ajouter l'événement click
+    dayElement.addEventListener('click', function() {
+      selectDate(date, type);
+    });
+    
+    return dayElement;
+  }
+  
+  // Fonction pour sélectionner une date
+  function selectDate(date, type) {
+    const input = document.getElementById('modal' + (type === 'start' ? 'Start' : 'End') + 'Date');
+    const formattedDate = date.toLocaleDateString('fr-FR');
+    
+    input.value = formattedDate;
+    
+    // Stocker la date pour la validation
+    if (type === 'start') {
+      selectedStartDate = date;
+    } else {
+      selectedEndDate = date;
+    }
+    
+    // Fermer le calendrier
+    document.getElementById(type + 'Calendar').classList.add('hidden');
+    currentCalendarType = null;
+    
+    // Retirer la classe active des raccourcis et reset du tracking
+    document.querySelectorAll('.dashboard-shortcut-btn').forEach(b => b.classList.remove('active'));
+    lastSelectedShortcut = null; // Reset car l'utilisateur a sélectionné une date custom
+    
+    console.log(`[DATE] Date ${type} sélectionnée:`, formattedDate);
+  }
+  
+  // Fonction pour parser une date d'affichage (format français)
+  function parseDisplayDate(dateStr) {
+    if (!dateStr) return null;
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      return new Date(parts[2], parts[1] - 1, parts[0]);
+    }
+    return null;
+  }
+  
+  // Fermer les calendriers en cliquant ailleurs
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.dashboard-calendar-container') && !e.target.closest('.dashboard-calendar')) {
+      document.querySelectorAll('.dashboard-calendar').forEach(cal => {
+        cal.classList.add('hidden');
+      });
+      currentCalendarType = null;
+    }
+  });
+
+  // Script pour gestion menu actif - EXACT COPY de dashboard_user.html
+  function activateCurrentPageMenu() {
+    // Détecter la page actuelle
+    const currentPath = window.location.pathname;
+    console.log('🌐 Page actuelle détectée:', currentPath);
+    
+    // Enlever la classe menu-active de tous les liens
+    const allMenuLinks = document.querySelectorAll('#sidebar a');
+    allMenuLinks.forEach(link => {
+      link.classList.remove('menu-active');
+      link.removeAttribute('data-menu-state');
+    });
+    
+    // Mapping des pages vers leurs data-path correspondants
+    const pageMap = {
+      '/dashboard': '/dashboard',
+      '/centralevue': '/centralevue', 
+      '/calcul': '/calcul',
+      '/soumissions': '/soumissions',
+      '/gqp': '/gqp',
+      '/travaux': '/travaux',
+      '/facture': '/facture',
+      '/avis': '/avis',
+      '/centrale': '/centrale',
+      '/dashboardcoach': '/dashboardcoach'
+    };
+    
+    // Déterminer quel lien activer basé sur la page
+    const targetPath = pageMap[currentPath];
+    let targetLink = null;
+    
+    if (targetPath) {
+      targetLink = document.querySelector(`#sidebar a[data-path="${targetPath}"]`);
+      console.log('[TARGET] Page détectée - activation du menu pour:', targetPath);
+    }
+    
+    // Activer le lien correspondant
+    if (targetLink) {
+      targetLink.classList.add('menu-active');
+      targetLink.setAttribute('data-menu-state', 'active');
+      
+      console.log('[OK] Menu activé pour:', targetLink.textContent.trim());
+      console.log('[DEBUG] Classes actuelles:', targetLink.className);
+    } else {
+      console.log('[WARN] Aucun menu trouvé pour la page:', currentPath);
+    }
+  }
+
+  // S'assurer que le menu correct reste actif selon la page
+  document.addEventListener('DOMContentLoaded', function() {
+    activateCurrentPageMenu();
+    
+    // Re-activer après un délai pour contrer les autres scripts
+    setTimeout(activateCurrentPageMenu, 150);
+    setTimeout(activateCurrentPageMenu, 300);
+  });
+</script>
+
+  <!-- Footer -->
+<footer class="hidden md:block md:ml-[15%] md:mr-[15%] w-100% text-center text-sm text-gray-500 mt-12 mb-4">
+  <a href="/politique" class="hover:underline">Politique de confidentialité</a>
+  &nbsp;|&nbsp;
+  <a href="/conditions" class="hover:underline">Conditions d'utilisation</a>
+  &nbsp;|&nbsp;
+  <a href="/support" class="hover:underline">Support client</a>
+  <br><br>
+  <span>Propulsé par <strong>Qwota</strong></span>
+</footer>
+
+<!-- Popup Modal pour Sélecteur de Dates Personnalisé -->
+<div id="customDateModal" class="dashboard-modal hidden">
+  <div class="dashboard-modal-overlay"></div>
+  <div class="dashboard-modal-content">
+    <!-- Header du Modal -->
+    <div class="dashboard-modal-header">
+      <h3 class="dashboard-modal-title">
+        <i class="fas fa-calendar-alt mr-2"></i>
+        Sélectionner une période
+      </h3>
+      <button id="closeModal" class="dashboard-modal-close">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <!-- Body du Modal -->
+    <div class="dashboard-modal-body">
+      <div class="dashboard-date-grid">
+        <!-- Date de début -->
+        <div class="dashboard-date-section">
+          <label class="dashboard-date-label">
+            <i class="fas fa-play mr-1"></i>Date de début
+          </label>
+          <div class="dashboard-date-wrapper">
+            <div class="dashboard-calendar-container" id="startDateContainer">
+              <input type="text" id="modalStartDate" class="dashboard-date-display" readonly placeholder="Sélectionner une date">
+              <i class="fas fa-calendar dashboard-date-icon" onclick="toggleCalendar('start')"></i>
+              <div class="dashboard-calendar hidden" id="startCalendar">
+                <div class="dashboard-calendar-header">
+                  <button type="button" class="dashboard-calendar-nav" onclick="changeMonth('start', -1)">
+                    <i class="fas fa-chevron-left"></i>
+                  </button>
+                  <span class="dashboard-calendar-title" id="startCalendarTitle">Mars 2024</span>
+                  <button type="button" class="dashboard-calendar-nav" onclick="changeMonth('start', 1)">
+                    <i class="fas fa-chevron-right"></i>
+                  </button>
+                </div>
+                <div class="dashboard-calendar-weekdays">
+                  <span>Dim</span><span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span>
+                </div>
+                <div class="dashboard-calendar-days" id="startCalendarDays"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Date de fin -->
+        <div class="dashboard-date-section">
+          <label class="dashboard-date-label">
+            <i class="fas fa-stop mr-1"></i>Date de fin
+          </label>
+          <div class="dashboard-date-wrapper">
+            <div class="dashboard-calendar-container" id="endDateContainer">
+              <input type="text" id="modalEndDate" class="dashboard-date-display" readonly placeholder="Sélectionner une date">
+              <i class="fas fa-calendar dashboard-date-icon" onclick="toggleCalendar('end')"></i>
+              <div class="dashboard-calendar hidden" id="endCalendar">
+                <div class="dashboard-calendar-header">
+                  <button type="button" class="dashboard-calendar-nav" onclick="changeMonth('end', -1)">
+                    <i class="fas fa-chevron-left"></i>
+                  </button>
+                  <span class="dashboard-calendar-title" id="endCalendarTitle">Mars 2024</span>
+                  <button type="button" class="dashboard-calendar-nav" onclick="changeMonth('end', 1)">
+                    <i class="fas fa-chevron-right"></i>
+                  </button>
+                </div>
+                <div class="dashboard-calendar-weekdays">
+                  <span>Dim</span><span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span>
+                </div>
+                <div class="dashboard-calendar-days" id="endCalendarDays"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Raccourcis de dates -->
+      <div class="dashboard-shortcuts">
+        <h4 class="dashboard-shortcuts-title">Raccourcis rapides</h4>
+        <div class="dashboard-shortcuts-grid">
+          <button class="dashboard-shortcut-btn" data-days="7">
+            <i class="fas fa-clock mr-1"></i>7 derniers jours
+          </button>
+          <button class="dashboard-shortcut-btn" data-days="30">
+            <i class="fas fa-calendar-week mr-1"></i>30 derniers jours
+          </button>
+          <button class="dashboard-shortcut-btn" data-days="90">
+            <i class="fas fa-calendar-check mr-1"></i>90 derniers jours
+          </button>
+          <button class="dashboard-shortcut-btn" id="thisYear">
+            <i class="fas fa-calendar-days mr-1"></i>Cette année
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Footer du Modal -->
+    <div class="dashboard-modal-footer">
+      <button id="cancelModal" class="btn-secondary">
+        <i class="fas fa-times mr-1"></i>Annuler
+      </button>
+      <button id="applyCustomDates" class="btn-primary">
+        <i class="fas fa-check mr-1"></i>Appliquer
+      </button>
+    </div>
+    </div>
+  </div>
+</div>
+
+
+</body>
+</html>
+

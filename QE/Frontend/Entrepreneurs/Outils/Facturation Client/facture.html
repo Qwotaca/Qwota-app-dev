@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Facturation Client</title>
+  
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#1f2937">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Styles spécifiques à la Facturation Client -->
+  <link rel="stylesheet" href="/facture.css">
+
+</head>
+
+<body class="min-h-screen" style="margin: 0; padding: 0;">
+  
+
+  <!-- Main Content - FACTURATION MODERNE DARK -->
+  <div class="w-full" style="width: 100%; padding: 2rem;">
+
+    <!-- Bouton Retour -->
+    <div id="back-button-container" class="mb-6">
+      <button id="back-to-outils-btn" onclick="goBackToOutils()" class="back-button">
+        <i class="fas fa-arrow-left"></i>
+        <span class="back-button-text">Retour aux outils</span>
+      </button>
+    </div>
+
+    <!-- Header -->
+    <div class="mb-10">
+      <div class="relative">
+        <h1 class="text-4xl font-bold mb-3">
+          Facturation Client
+        </h1>
+        <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        <div class="flex items-center justify-between">
+          <p class="text-xl font-medium">Créez et gérez vos factures clients</p>
+          <div class="text-sm flex items-center" style="color: var(--text-gray);">
+            <i class="fas fa-calendar-alt mr-2"></i>
+            <span id="currentDate">Aujourd'hui</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sections modernes -->
+    <div class="space-y-8">
+
+      <!-- Créer une facture -->
+      <div class="box">
+        <div class="box-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+              <i class="fas fa-plus-circle"></i>
+            </div>
+            <h2 class="box-header-title">Créer une facture</h2>
+          </div>
+        </div>
+        <div class="box-body">
+          <form id="facture-form" class="space-y-6">
+            <input type="hidden" id="input-nom" name="nom" />
+            <input type="hidden" id="input-prenom" name="prenom" />
+            <input type="hidden" id="input-adresse" name="adresse" />
+            <input type="hidden" id="input-prix" name="prix" />
+            <input type="hidden" id="input-email" name="email" />
+            <input type="hidden" id="input-depot" name="depot" />
+
+            <!-- Input moderne pour les travaux complétés (identique à GQP) -->
+            <div class="w-full">
+              <label class="block text-sm font-semibold mb-2">
+                <i class="fas fa-check-circle mr-2" style="color: var(--primary-green);"></i>
+                Sélectionner un client
+              </label>
+              <div class="relative">
+                <div class="relative">
+                  <input type="text"
+                         id="clientSearchFacture"
+                         placeholder="Tapez pour rechercher un client..."
+                         class="modern-input w-full pr-8"
+                         autocomplete="off"
+                         oninput="rechercherClientsFacture(this.value)"
+                         onclick="event.stopPropagation(); ouvrirMenuFacture()"
+                         onfocus="ouvrirMenuFacture()">
+                  <i class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none" style="color: var(--text-gray);"></i>
+                </div>
+                <!-- Menu déroulant -->
+                <div class="modern-dropdown-menu hidden absolute z-50 w-full mt-1" id="clientMenuFacture" style="max-height: 200px;" onclick="event.stopPropagation();">
+                  <!-- Les clients seront chargés dynamiquement depuis travaux_complete_facture -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Section des détails du client (cachée par défaut, dans la même box) -->
+            <div id="client-details-section" class="hidden mt-8 pt-6" style="border-top: 1px solid var(--border-dark);">
+              <div class="mb-4">
+                <h3 class="text-lg font-semibold flex items-center" style="color: var(--text-light);">
+                  <i class="fas fa-edit mr-3" style="color: var(--primary-blue);"></i>
+                  Détails de la facture
+                </h3>
+              </div>
+              <!-- Message d'avertissement -->
+              <div class="mb-6 p-4 rounded-lg" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3);">
+                <div class="flex items-start">
+                  <div>
+                    <h4 class="font-semibold mb-1" style="color: #f59e0b;">Dépôt modifiable</h4>
+                    <p class="text-sm" style="color: var(--text-light);">
+                      Si le dépôt que le client vous a versé est différent de 25%, veuillez le changer pour que le montant correct soit affiché sur votre facture.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Champs cachés (gardés pour compatibilité backend) -->
+              <div class="hidden">
+                <input type="text" id="edit-prenom" class="modern-input" readonly>
+                <input type="text" id="edit-nom" class="modern-input" readonly>
+                <input type="email" id="edit-email" class="modern-input" readonly>
+                <input type="text" id="edit-adresse" class="modern-input" readonly>
+                <input type="text" id="edit-prix" class="modern-input" readonly>
+                <input type="text" id="edit-telephone" class="modern-input" readonly>
+                <input type="text" id="edit-endroit" class="modern-input" readonly>
+              </div>
+
+              <!-- Seul champ visible : Dépôt -->
+              <div class="max-w-sm">
+                <div>
+                  <label class="block text-sm font-semibold mb-2">
+                    <i class="fas fa-money-bill-wave mr-2" style="color: var(--primary-teal);"></i>
+                    Montant du dépôt
+                  </label>
+                  <input type="text" id="edit-depot" class="modern-input"
+                         placeholder="Montant du dépôt"
+                         style="border: 2px solid var(--primary-teal); background: rgba(20, 184, 166, 0.05);">
+                </div>
+              </div>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div class="flex justify-end space-x-4 pt-6" style="border-top: 1px solid var(--border-dark);">
+              <button type="button" class="btn-secondary px-6 py-2" id="telecharger-pdf">
+                <span>Voir en PDF</span>
+              </button>
+              <button type="submit" class="btn-primary px-6 py-2" id="envoyer-client">
+                <span>Envoyer au client</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Factures envoyées -->
+      <div class="box factures-envoyees" style="pointer-events: auto !important; position: relative !important; z-index: 1 !important;">
+        <div class="box-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+              <i class="fas fa-file-invoice"></i>
+            </div>
+            <h2 class="box-header-title">Factures envoyées</h2>
+          </div>
+        </div>
+        <div class="box-body">
+          
+          <!-- Barre de recherche moderne -->
+          <div class="mb-6 w-full">
+            <div class="search-container">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <i class="fas fa-search" style="color: var(--text-gray);"></i>
+          </div>
+              <input type="text" id="searchFacture" placeholder="Rechercher une facture..." class="modern-search" autocomplete="off" style="padding: 12px 16px 12px 35px !important;">
+            </div>
+          </div>
+
+          <!-- Tableau moderne -->
+          <div class="table-container">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Nom</th>
+                  <th>Prénom</th>
+                  <th>Téléphone</th>
+                  <th>Prix</th>
+                  <th class="text-center" style="text-align: center !important;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="facture-body">
+                <tr><td colspan="5" class="empty-state loading-shimmer">Chargement des factures...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Vue Mobile: Cards -->
+          <div id="facture-mobile-cards">
+            <div id="facture-mobile-list">
+              <!-- Les cards seront injectées ici dynamiquement -->
+              <div class="facture-empty-mobile">
+                <i class="fas fa-inbox"></i>
+                <p>Aucune facture</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <script>
+    // Variables globales - Username is handled by common.js
+
+    // Mobile Menu Functions
+    function toggleMobileMenu() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.querySelector('.mobile-overlay');
+      
+      sidebar.classList.toggle('mobile-open');
+      overlay.classList.toggle('active');
+    }
+
+    function closeMobileMenu() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.querySelector('.mobile-overlay');
+
+      sidebar.classList.remove('mobile-open');
+      overlay.classList.remove('active');
+    }
+
+    // Navigation: Retour aux outils
+    function goBackToOutils() {
+      window.history.back();
+    }
+
+    // Fonction pour mettre à jour la date
+    function updateCurrentDate() {
+      const now = new Date();
+      const options = { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      };
+      const dateString = now.toLocaleDateString('fr-FR', options);
+      document.getElementById('currentDate').textContent = dateString;
+    }
+
+    // Initialisation
+    document.addEventListener('DOMContentLoaded', function() {
+      updateCurrentDate();
+      setupMobileMenu();
+      setupAccountMenus();
+      setupDepotFormatting();
+      activateCurrentPageMenu();
+      setupSoumissionDropdownFacture();
+      setupSearchFilter();
+      chargerFactures();
+    });
+
+    // Variables globales pour la gestion des clients
+    let todosClientsFacture = [];
+    let selectedClientData = null; // Stocker les données complètes du client sélectionné
+
+    // Setup du dropdown pour sélection de travaux
+    function setupSoumissionDropdownFacture() {
+      console.log('[LAUNCH] Initialisation du dropdown travaux');
+      chargerClientsFacture();
+    }
+
+    // Charger les clients depuis l'API
+    async function chargerClientsFacture() {
+      try {
+        if (!window.username) {
+          console.log("[ERROR] Username non disponible pour charger les travaux complétés");
+          return;
+        }
+
+        // Récupérer les clients des ventes produit
+        const response = await fetch(`/ventes/produit/${window.username}`);
+        if (!response.ok) throw new Error('Erreur API');
+
+        const data = await response.json();
+        console.log("[DEBUG] Données reçues de ventes_produit:", data);
+
+        // Récupérer les factures déjà envoyées
+        let facturesEnvoyees = [];
+        try {
+          const facturesResponse = await fetch(`/factures/${window.username}`);
+          if (facturesResponse.ok) {
+            facturesEnvoyees = await facturesResponse.json();
+            console.log("[DEBUG] Factures déjà envoyées:", facturesEnvoyees);
+          }
+        } catch (error) {
+          console.log("ℹ️ Aucune facture envoyée trouvée");
+        }
+
+        todosClientsFacture = data.filter((s) => {
+          const hasNom = s.nom || s.clientNom || s.lastName || s.last_name || s.name;
+          const hasPrenom = s.prenom || s.clientPrenom || s.firstName || s.first_name;
+          const hasAdresse = s.adresse;
+          const hasPrix = s.prix;
+
+          // Vérifier si ce client a déjà une facture envoyée
+          const nom = hasNom.toLowerCase();
+          const prenom = hasPrenom.toLowerCase();
+          const dejaFacture = facturesEnvoyees.some(f =>
+            f.nom.toLowerCase() === nom && f.prenom.toLowerCase() === prenom
+          );
+
+          console.log('[DEBUG] Filtrage client:', {
+            nom: hasNom, prenom: hasPrenom,
+            hasRequiredFields: hasNom && hasPrenom && hasAdresse && hasPrix,
+            dejaFacture,
+            result: hasNom && hasPrenom && hasAdresse && hasPrix && !dejaFacture
+          });
+
+          return hasNom && hasPrenom && hasAdresse && hasPrix && !dejaFacture;
+        });
+
+        afficherClientsFacture(todosClientsFacture);
+      } catch (error) {
+        console.error('[ERROR] Erreur chargement clients Facture:', error);
+        todosClientsFacture = [];
+        // Afficher message d'erreur dans le dropdown
+        const menu = document.getElementById('clientMenuFacture');
+        if (menu) {
+          menu.innerHTML = `
+            <div class="dropdown-option" style="color: var(--text-gray); font-style: italic; padding: 12px;">
+              Erreur de chargement des clients
+            </div>
+          `;
+        }
+      }
+    }
+
+    function afficherClientsFacture(clients) {
+      const menu = document.getElementById('clientMenuFacture');
+      if (!menu) return;
+
+      menu.innerHTML = '';
+
+      if (clients.length === 0) {
+        menu.innerHTML = `
+          <div class="dropdown-option" style="color: var(--text-gray); font-style: italic; padding: 12px;">
+            Aucun travail complété disponible
+          </div>
+        `;
+        return;
+      }
+
+      clients.forEach((s) => {
+        const nom = s.nom || s.clientNom || s.lastName || s.last_name || s.name;
+        const prenom = s.prenom || s.clientPrenom || s.firstName || s.first_name;
+        const numeroSoumission = s.num;
+        const nomClient = `${prenom} ${nom}`;
+
+        const option = document.createElement('div');
+        option.className = 'dropdown-option';
+        option.style.cssText = `
+          padding: 12px 16px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+          color: var(--text-light);
+        `;
+
+        // Format identique à GQP: Nom Client - N° Soumission
+        option.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 500;">${nomClient}</span>
+            <span style="color: var(--text-gray); font-size: 0.875rem;">${numeroSoumission}</span>
+          </div>
+        `;
+
+        option.addEventListener('mouseenter', () => {
+          option.style.background = 'rgba(59, 130, 246, 0.1)';
+        });
+
+        option.addEventListener('mouseleave', () => {
+          option.style.background = 'transparent';
+        });
+
+        option.addEventListener('click', () => {
+          selectionnerClientFacture(s, nomClient, numeroSoumission);
+        });
+
+        menu.appendChild(option);
+      });
+    }
+
+    function rechercherClientsFacture(terme) {
+      if (!terme.trim()) {
+        afficherClientsFacture(todosClientsFacture);
+        return;
+      }
+
+      const clientsFiltres = todosClientsFacture.filter(client => {
+        const nom = client.nom || client.clientNom || client.lastName || client.last_name || client.name || '';
+        const prenom = client.prenom || client.clientPrenom || client.firstName || client.first_name || '';
+        const rechercheText = `${prenom} ${nom}`.toLowerCase();
+        return rechercheText.includes(terme.toLowerCase());
+      });
+
+      afficherClientsFacture(clientsFiltres);
+    }
+
+    function ouvrirMenuFacture() {
+      const menu = document.getElementById('clientMenuFacture');
+      if (menu) {
+        menu.classList.remove('hidden');
+        // Charger les clients si pas encore fait
+        if (todosClientsFacture.length === 0) {
+          chargerClientsFacture();
+        }
+      }
+    }
+
+    function fermerMenuFacture() {
+      const menu = document.getElementById('clientMenuFacture');
+      if (menu) {
+        menu.classList.add('hidden');
+      }
+    }
+
+    async function selectionnerClientFacture(clientData, nomClient, numeroSoumission) {
+      console.log("[OK] Client sélectionné:", nomClient, "- N°", numeroSoumission);
+
+      // Stocker les données complètes du client pour utilisation ultérieure
+      selectedClientData = clientData;
+      console.log("[DEBUG] Données complètes du client stockées:", selectedClientData);
+
+      // Extraire les données
+      const nom = clientData.nom || clientData.clientNom || clientData.lastName || clientData.last_name || clientData.name;
+      const prenom = clientData.prenom || clientData.clientPrenom || clientData.firstName || clientData.first_name;
+      const adresse = clientData.adresse || '';
+      const prixStr = clientData.prix || '';
+      const email = clientData.courriel || clientData.email || '';
+      const telephone = clientData.telephone || '';
+      const endroit = clientData.endroit || '';
+
+      // Calculer le dépôt (25% du prix avec taxes comme dans generate_pdf_facture.py)
+      let depot = '';
+      if (prixStr) {
+        try {
+          const prix = parseFloat(prixStr.toString().replace(/[^\d.-]/g, "").replace(",", "."));
+          const tps = prix * 0.05;
+          const tvq = prix * 0.09975;
+          const totalAvecTaxes = prix + tps + tvq;
+          const depotCalcule = totalAvecTaxes * 0.25;
+          depot = formaterPrix(depotCalcule.toFixed(2));
+        } catch (e) {
+          console.error("Erreur calcul dépôt:", e);
+          depot = '';
+        }
+      }
+
+      // Remplir les champs cachés (pour compatibilité)
+      document.getElementById("input-nom").value = nom;
+      document.getElementById("input-prenom").value = prenom;
+      document.getElementById("input-adresse").value = adresse;
+      document.getElementById("input-prix").value = prixStr;
+      document.getElementById("input-depot").value = depot;
+      document.getElementById("input-email").value = email;
+
+      // Pré-remplir les champs d'édition
+      document.getElementById("edit-nom").value = nom;
+      document.getElementById("edit-prenom").value = prenom;
+      document.getElementById("edit-adresse").value = adresse;
+      document.getElementById("edit-prix").value = prixStr ? formaterPrix(prixStr) : "";
+      document.getElementById("edit-depot").value = depot;
+      document.getElementById("edit-email").value = email;
+      document.getElementById("edit-telephone").value = telephone;
+      document.getElementById("edit-endroit").value = endroit;
+
+      // Afficher la section des détails
+      const detailsSection = document.getElementById('client-details-section');
+      if (detailsSection) {
+        detailsSection.classList.remove('hidden');
+        // Animation d'apparition
+        detailsSection.style.opacity = '0';
+        detailsSection.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+          detailsSection.style.transition = 'all 0.3s ease';
+          detailsSection.style.opacity = '1';
+          detailsSection.style.transform = 'translateY(0)';
+        }, 10);
+      }
+
+      // Fermer le menu
+      fermerMenuFacture();
+
+      // Mettre à jour l'input avec le nom du client et le numéro (comme dans GQP)
+      const inputSearch = document.getElementById('clientSearchFacture');
+      if (inputSearch) {
+        inputSearch.value = `${nomClient} - ${numeroSoumission}`;
+      }
+    }
+
+    // Event listener pour fermer le menu Facture en cliquant ailleurs
+    document.addEventListener('click', function(event) {
+      const input = document.getElementById('clientSearchFacture');
+      const menu = document.getElementById('clientMenuFacture');
+
+      if (input && menu) {
+        // Si on clique pas sur l'input ni sur le menu, fermer
+        if (event.target !== input && !menu.contains(event.target)) {
+          fermerMenuFacture();
+        }
+      }
+    });
+
+    // Setup du filtre de recherche
+    function setupSearchFilter() {
+      document.getElementById("searchFacture").addEventListener("input", function () {
+        const filter = this.value.toLowerCase();
+        const rows = document.querySelectorAll("#facture-body tr");
+
+        rows.forEach(row => {
+          const text = row.textContent.toLowerCase();
+          row.style.display = text.includes(filter) ? "" : "none";
+        });
+      });
+    }
+
+    // Fonctionnalité "Envoyer au client"
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById("envoyer-client").addEventListener("click", async function (e) {
+        e.preventDefault();
+
+        const btn = e.currentTarget;
+        const btnText = btn.querySelector("span");
+
+        btn.disabled = true;
+        btnText.textContent = "Envoi en cours...";
+
+        // Récupère les valeurs des champs d'édition (ou cachés si pas encore sélectionné)
+        const nom = document.getElementById("edit-nom").value || document.getElementById("input-nom").value;
+        const prenom = document.getElementById("edit-prenom").value || document.getElementById("input-prenom").value;
+        const adresse = document.getElementById("edit-adresse").value || document.getElementById("input-adresse").value;
+        const prix = document.getElementById("edit-prix").value || document.getElementById("input-prix").value;
+        const depot = document.getElementById("edit-depot").value || document.getElementById("input-depot").value;
+        const emailClient = document.getElementById("edit-email").value || document.getElementById("input-email").value;
+        const telephone = document.getElementById("edit-telephone").value || "";
+        const courriel = emailClient;
+        const endroit = document.getElementById("edit-endroit").value || "";
+
+        if (!emailClient) {
+          alert("Email client introuvable dans la soumission sélectionnée.");
+          btnText.textContent = "Envoyer au client";
+          btn.disabled = false;
+          return;
+        }
+
+        try {
+          // Préparer toutes les données pour la facture (incluant item, part, produit, payer_par)
+          const dataFacture = {
+            nom,
+            prenom,
+            adresse,
+            prix,
+            depot,
+            telephone,
+            courriel,
+            endroit,
+            item: selectedClientData?.item || "",
+            part: selectedClientData?.part || "",
+            produit: selectedClientData?.produit || "",
+            payer_par: selectedClientData?.payer_par || ""
+          };
+
+          // Appel backend pour créer la facture
+          const response = await fetch(`/creer-facture?username=${encodeURIComponent(window.username)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(dataFacture),
+          });
+
+          if (!response.ok) throw new Error("Erreur lors de la création de la facture");
+
+          const data = await response.json();
+
+          // Envoi email avec le lien public reçu
+          const emailResponse = await fetch("/envoyer-facture-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: window.username,
+              emailClient,
+              nom,
+              prenom,
+              prix,
+              lienPdf: data.lien_pdf_facture,
+            }),
+          });
+
+          if (!emailResponse.ok) {
+            const errorData = await emailResponse.text();
+            console.error("[ERROR] Erreur backend:", errorData);
+            throw new Error(`Erreur lors de l'envoi de l'email: ${errorData}`);
+          }
+
+          btnText.innerHTML = `Envoyé <svg class="w-4 h-4 inline ml-1 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+          </svg>`;
+
+          // Reset du bouton après 3 secondes
+          setTimeout(() => {
+            btnText.textContent = "Envoyer au client";
+            btn.disabled = false;
+          }, 3000);
+
+          // Recharger la liste des clients pour exclure celui qui vient d'être facturé
+          chargerClientsFacture();
+
+          // Recharger la table des factures envoyées
+          chargerFactures();
+
+          // Reset des champs
+          const clientSearchFacture = document.getElementById("clientSearchFacture");
+          if (clientSearchFacture) {
+            clientSearchFacture.value = "";
+            clientSearchFacture.placeholder = "Tapez pour rechercher un client...";
+          }
+
+          // Cacher la section des détails
+          const detailsSection = document.getElementById('client-details-section');
+          if (detailsSection) {
+            detailsSection.classList.add('hidden');
+          }
+
+          // Reset des champs d'édition
+          document.getElementById("edit-nom").value = "";
+          document.getElementById("edit-prenom").value = "";
+          document.getElementById("edit-adresse").value = "";
+          document.getElementById("edit-prix").value = "";
+          document.getElementById("edit-depot").value = "";
+          document.getElementById("edit-email").value = "";
+          document.getElementById("edit-telephone").value = "";
+          document.getElementById("edit-endroit").value = "";
+
+          // Recharge la liste des factures
+          chargerFactures();
+
+        } catch (error) {
+          console.error("Erreur envoi facture :", error);
+          btnText.textContent = "Erreur lors de l'envoi";
+          setTimeout(() => {
+            btnText.textContent = "Envoyer au client";
+            btn.disabled = false;
+          }, 3000);
+        }
+      });
+    });
+
+    // Fonctionnalité "Voir en PDF"
+    document.addEventListener('DOMContentLoaded', function() {
+      const voirPDFBtn = document.getElementById("telecharger-pdf");
+      if (voirPDFBtn) {
+        voirPDFBtn.addEventListener("click", async (e) => {
+          e.preventDefault();
+
+          const btn = e.currentTarget;
+          const btnText = btn.querySelector("span");
+
+          btn.disabled = true;
+          btnText.textContent = "Chargement...";
+
+          try {
+            // Récupérer les données du formulaire + les données complètes du client
+            const data = {
+              nom: document.getElementById("edit-nom").value || document.getElementById("input-nom").value,
+              prenom: document.getElementById("edit-prenom").value || document.getElementById("input-prenom").value,
+              adresse: document.getElementById("edit-adresse").value || document.getElementById("input-adresse").value,
+              prix: document.getElementById("edit-prix").value || document.getElementById("input-prix").value,
+              depot: document.getElementById("edit-depot").value || document.getElementById("input-depot").value,
+              email: document.getElementById("edit-email").value || document.getElementById("input-email").value,
+              telephone: document.getElementById("edit-telephone").value || "",
+              courriel: document.getElementById("edit-email").value || document.getElementById("input-email").value,
+              endroit: document.getElementById("edit-endroit").value || "",
+              // Ajouter les champs depuis les données complètes du client sélectionné
+              item: selectedClientData?.item || "",
+              part: selectedClientData?.part || "",
+              produit: selectedClientData?.produit || "",
+              payer_par: selectedClientData?.payer_par || ""
+            };
+
+            // Créer le PDF de prévisualisation
+            const response = await fetch(`/generate-facture-preview?username=${encodeURIComponent(window.username)}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(data),
+            });
+
+            if (!response.ok) throw new Error("Erreur lors de la génération du PDF");
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+
+            // Afficher le PDF dans le modal
+            showPDFModal(url);
+
+          } catch (error) {
+            console.error("Erreur:", error);
+            alert("Erreur lors de la génération du PDF : " + error.message);
+          } finally {
+            btn.disabled = false;
+            btnText.textContent = "Voir en PDF";
+          }
+        });
+      }
+    });
+
+    // Formatte un prix en format monétaire français canadien
+    function formaterPrix(valeur) {
+      try {
+        let montant = parseFloat(valeur.toString().replace(/[^\d.-]/g, "").replace(",", "."));
+        return montant.toLocaleString("fr-CA", {
+          style: "currency",
+          currency: "CAD",
+          minimumFractionDigits: 2,
+        }).replace(/\s/g, " ");
+      } catch {
+        return valeur;
+      }
+    }
+
+    // Formatte un prix simple pour la table (évite les problèmes de locale)
+    function formaterPrixSimple(valeur) {
+      try {
+        let montant = parseFloat(valeur.toString().replace(/[^\d.-]/g, "").replace(",", "."));
+        if (isNaN(montant)) return valeur;
+
+        // Format: 1 000,00 $
+        return montant.toFixed(2)
+          .replace(/\B(?=(\d{3})+(?!\d))/g, " ") // Ajouter espaces pour milliers
+          .replace(".", ",") + " $"; // Virgule française + devise
+      } catch {
+        return valeur || "-";
+      }
+    }
+
+    // Fonction de formatage du montant dépôt (copie de formatMontant de GQP.html)
+    function formatMontant(value) {
+      // Enlever tout sauf les chiffres et points/virgules
+      const cleanValue = value.replace(/[^\d.,]/g, '');
+
+      // Convertir en nombre
+      const number = parseFloat(cleanValue.replace(',', '.'));
+
+      if (isNaN(number)) return '';
+
+      // Formater avec espaces pour les milliers et virgule pour les décimales
+      const formatted = new Intl.NumberFormat('fr-CA', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(number);
+
+      return formatted + ' $';
+    }
+
+    // Configuration du formatage automatique du dépôt
+    function setupDepotFormatting() {
+      const depotInput = document.getElementById('edit-depot');
+
+      if (!depotInput) return;
+
+      depotInput.addEventListener('blur', function(e) {
+        const value = e.target.value.trim();
+        if (value && value !== '') {
+          e.target.value = formatMontant(value);
+        }
+      });
+
+      // Permettre seulement les chiffres, points, virgules et $
+      depotInput.addEventListener('input', function(e) {
+        const value = e.target.value;
+        // Garder seulement les caractères valides pour un montant
+        e.target.value = value.replace(/[^0-9.,$ ]/g, '');
+      });
+    }
+
+    // Fonction pour afficher le PDF (copié exactement de creer_soumission.html)
+    async function showPDFModal(lienPdf) {
+      try {
+        const pdfjsLib = window['pdfjs-dist/build/pdf'];
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
+
+        const pdf = await pdfjsLib.getDocument(lienPdf).promise;
+
+        const canvas = document.getElementById("pdfCanvas");
+        const context = canvas.getContext('2d');
+        const page = await pdf.getPage(1);
+
+        // Variables pour le zoom - Base 150% = 1.5 (affiché comme 100%)
+        let currentScale = 1.5;
+        let pdfPage = page;
+        let pdfDoc = pdf;
+        const minScale = 1.2;  // 80% affiché (1.2/1.5 = 0.8)
+        const maxScale = 1.8;  // 120% affiché (1.8/1.5 = 1.2)
+
+        // Niveaux de zoom fixes
+        const zoomLevels = [1.2, 1.5, 1.8]; // 80%, 100%, 120%
+        let currentZoomIndex = 1; // Commence à 100% (index 1)
+
+        // Fonction pour rendre le PDF avec le zoom actuel
+        async function renderPDF(scale) {
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          const viewport = pdfPage.getViewport({ scale: scale });
+
+          // Limiter la largeur pour empêcher le zoom horizontal excessif
+          const containerWidth = document.getElementById("pdfScrollContainer").clientWidth - 40; // 40px pour le padding
+          const maxWidth = containerWidth * 0.95; // Maximum 95% de la largeur du conteneur
+
+          if (viewport.width > maxWidth) {
+            const adjustedScale = scale * (maxWidth / viewport.width);
+            const adjustedViewport = pdfPage.getViewport({ scale: adjustedScale });
+            canvas.width = adjustedViewport.width;
+            canvas.height = adjustedViewport.height;
+            await pdfPage.render({ canvasContext: context, viewport: adjustedViewport }).promise;
+          } else {
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            await pdfPage.render({ canvasContext: context, viewport: viewport }).promise;
+          }
+
+          // Mettre à jour l'affichage du zoom et les boutons (1.5 = 100% affiché)
+          const displayPercentage = Math.round((scale / 1.5) * 100);
+          document.getElementById("zoomLevel").textContent = displayPercentage + "%";
+          updateZoomButtons(scale);
+        }
+
+        // Fonction pour mettre à jour l'état des boutons de zoom
+        function updateZoomButtons(scale) {
+          const zoomInBtn = document.getElementById("zoomIn");
+          const zoomOutBtn = document.getElementById("zoomOut");
+
+          // Griser le bouton zoom+ si on est au niveau maximum (120%)
+          if (currentZoomIndex >= zoomLevels.length - 1) {
+            zoomInBtn.style.opacity = "0.5";
+            zoomInBtn.style.cursor = "not-allowed";
+            zoomInBtn.disabled = true;
+          } else {
+            zoomInBtn.style.opacity = "1";
+            zoomInBtn.style.cursor = "pointer";
+            zoomInBtn.disabled = false;
+          }
+
+          // Griser le bouton zoom- si on est au niveau minimum (80%)
+          if (currentZoomIndex <= 0) {
+            zoomOutBtn.style.opacity = "0.5";
+            zoomOutBtn.style.cursor = "not-allowed";
+            zoomOutBtn.disabled = true;
+          } else {
+            zoomOutBtn.style.opacity = "1";
+            zoomOutBtn.style.cursor = "pointer";
+            zoomOutBtn.disabled = false;
+          }
+        }
+
+        // Rendu initial
+        await renderPDF(currentScale);
+
+        // S'assurer que l'affichage du zoom est correct dès le début
+        const initialDisplayPercentage = Math.round((currentScale / 1.5) * 100);
+        document.getElementById("zoomLevel").textContent = initialDisplayPercentage + "%";
+
+        // Contrôles de zoom - 3 niveaux fixes : 80%, 100%, 120%
+        document.getElementById("zoomIn").onclick = async () => {
+          if (currentZoomIndex < zoomLevels.length - 1) {
+            currentZoomIndex++;
+            currentScale = zoomLevels[currentZoomIndex];
+            await renderPDF(currentScale);
+          }
+        };
+
+        document.getElementById("zoomOut").onclick = async () => {
+          if (currentZoomIndex > 0) {
+            currentZoomIndex--;
+            currentScale = zoomLevels[currentZoomIndex];
+            await renderPDF(currentScale);
+          }
+        };
+
+        // Support du zoom avec la molette de la souris
+        document.getElementById("pdfScrollContainer").addEventListener("wheel", async (e) => {
+          if (e.ctrlKey) {
+            e.preventDefault();
+            if (e.deltaY < 0) {
+              // Zoom in - passer au niveau suivant
+              if (currentZoomIndex < zoomLevels.length - 1) {
+                currentZoomIndex++;
+                currentScale = zoomLevels[currentZoomIndex];
+              }
+            } else {
+              // Zoom out - passer au niveau précédent
+              if (currentZoomIndex > 0) {
+                currentZoomIndex--;
+                currentScale = zoomLevels[currentZoomIndex];
+              }
+            }
+            await renderPDF(currentScale);
+          }
+        });
+
+        // Afficher modal et overlay
+        document.getElementById("pdfModal").classList.remove("hidden");
+        document.getElementById("pdfOverlay").style.display = "block";
+
+        // Bloquer le scroll de l'arrière-plan
+        document.body.style.overflow = "hidden";
+
+        // Forcer un nouveau rendu après affichage du modal pour corriger l'affichage
+        setTimeout(async () => {
+          await renderPDF(currentScale);
+        }, 100);
+
+        // Fonction de fermeture
+        const closePDF = () => {
+          document.getElementById("pdfModal").classList.add("hidden");
+          document.getElementById("pdfOverlay").style.display = "none";
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(lienPdf);
+
+          // Restaurer le scroll de l'arrière-plan
+          document.body.style.overflow = "";
+
+          // Nettoyer les event listeners
+          document.getElementById("zoomIn").onclick = null;
+          document.getElementById("zoomOut").onclick = null;
+        };
+
+        document.getElementById("closePdfBtn").onclick = closePDF;
+        // Fermer aussi au clic sur l'overlay
+        document.getElementById("pdfOverlay").onclick = closePDF;
+
+      } catch (error) {
+        console.error('[ERROR] Erreur affichage PDF:', error);
+        alert('Erreur lors de l\'affichage du PDF: ' + error.message);
+      }
+    }
+
+    // Charge et affiche les factures dans le tableau
+    async function chargerFactures() {
+      const body = document.getElementById("facture-body");
+      const mobileList = document.getElementById("facture-mobile-list");
+      if (!body) return;
+
+      if (!window.username) {
+        body.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="fas fa-inbox"></i><br>Aucune facture envoyée</td></tr>';
+        if (mobileList) {
+          mobileList.innerHTML = '<div class="facture-empty-mobile"><i class="fas fa-inbox"></i><p>Aucune facture</p></div>';
+        }
+        return;
+      }
+
+      try {
+        const response = await fetch(`/factures/${window.username}`);
+        if (!response.ok) throw new Error("Erreur de chargement");
+
+        const data = await response.json();
+        body.innerHTML = "";
+        if (mobileList) mobileList.innerHTML = "";
+
+        if (data.length === 0) {
+          body.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="fas fa-inbox"></i><br>Aucune facture envoyée</td></tr>';
+          if (mobileList) {
+            mobileList.innerHTML = '<div class="facture-empty-mobile"><i class="fas fa-inbox"></i><p>Aucune facture</p></div>';
+          }
+          return;
+        }
+
+        data.forEach((f) => {
+          console.log("[DEBUG] Données facture:", f); // Debug pour voir les données
+
+          // Vue Desktop: Table row
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${f.nom || "-"}</td>
+            <td>${f.prenom || "-"}</td>
+            <td>${f.telephone || f.phone || f.courriel || "-"}</td>
+            <td>${f.prix}</td>
+            <td class="text-center" style="text-align: center !important;">
+              <div class="action-buttons">
+                <button onclick="showPDFModal('${f.pdf_url}')" class="btn-secondary" title="Voir la facture">
+                  <img src="https://img.icons8.com/color/48/000000/pdf.png" class="file-icon" alt="Fichier" style="width: 24px !important; height: 24px !important; min-width: 24px !important; display: inline-block !important;">
+                </button>
+                <button onclick="renvoyerFacture('${f.nom}', '${f.prenom}', '${f.pdf_url}')" class="btn-secondary" title="Renvoyer par email">
+                  <img src="https://i.ibb.co/CsvN8yQB/icons8-mail-48.png" class="file-icon" alt="Email" style="width: 24px !important; height: 24px !important; min-width: 24px !important; display: inline-block !important;">
+                </button>
+              </div>
+            </td>
+          `;
+          body.appendChild(row);
+
+          // Vue Mobile: Card
+          if (mobileList) {
+            const card = document.createElement('div');
+            card.className = 'facture-mobile-card';
+            card.innerHTML = `
+              <div class="facture-card-header">
+                <div style="flex: 1;">
+                  <div class="facture-card-nom">${f.prenom || ""} ${f.nom || ""}</div>
+                  <div class="facture-card-info">
+                    <i class="fas fa-phone" style="color: var(--primary-blue);"></i>
+                    <span>${f.telephone || f.phone || f.courriel || "-"}</span>
+                  </div>
+                </div>
+                <div class="facture-card-prix">${f.prix}</div>
+              </div>
+              <div class="facture-card-actions">
+                <button onclick="showPDFModal('${f.pdf_url}')" class="facture-action-btn view-btn">
+                  <i class="fas fa-file-pdf"></i>
+                  <span>Voir PDF</span>
+                </button>
+                <button onclick="renvoyerFacture('${f.nom}', '${f.prenom}', '${f.pdf_url}')" class="facture-action-btn delete-btn">
+                  <i class="fas fa-envelope"></i>
+                  <span>Renvoyer</span>
+                </button>
+              </div>
+            `;
+            mobileList.appendChild(card);
+          }
+        });
+
+        // Détecter si le scroll est nécessaire et ajuster le border-radius
+        setTimeout(() => {
+          const tableContainer = document.querySelector('.table-container');
+          if (tableContainer) {
+            const hasScroll = tableContainer.scrollHeight > tableContainer.clientHeight;
+            if (hasScroll) {
+              tableContainer.classList.add('has-scroll');
+            } else {
+              tableContainer.classList.remove('has-scroll');
+            }
+          }
+        }, 100);
+
+      } catch (error) {
+        console.error("Erreur chargement factures :", error);
+        body.innerHTML = '<tr><td colspan="6" class="empty-state" style="color: var(--primary-red);"><i class="fas fa-exclamation-triangle"></i><br>Erreur de chargement</td></tr>';
+      }
+    }
+
+    // Variables globales pour le popup de confirmation
+    let factureDataToResend = null;
+
+    // Fonction pour afficher le popup de confirmation de renvoi
+    function renvoyerFacture(nom, prenom, pdfUrl) {
+      const nomComplet = `${prenom} ${nom}`;
+      factureDataToResend = { nom, prenom, pdfUrl };
+
+      document.getElementById('confirmRenvoyerMessage').textContent =
+        `Êtes-vous sûr de vouloir renvoyer la facture à ${nomComplet} ?`;
+
+      document.getElementById('confirmRenvoyerPopup').style.display = 'flex';
+    }
+
+    // Fonction pour fermer le popup de confirmation
+    function fermerConfirmRenvoyer() {
+      document.getElementById('confirmRenvoyerPopup').style.display = 'none';
+      factureDataToResend = null;
+    }
+
+    // Fonction pour confirmer et renvoyer la facture
+    async function confirmerRenvoyerFacture() {
+      if (!factureDataToResend) return;
+
+      const { nom, prenom, pdfUrl } = factureDataToResend;
+
+      try {
+        // Fermer le popup
+        fermerConfirmRenvoyer();
+
+        console.log('🔄 Envoi renvoi facture:', { nom, prenom, pdfUrl, username: window.username });
+
+        // Appel à l'endpoint pour renvoyer la facture
+        const response = await fetch('/renvoyer-facture', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            nom: nom,
+            prenom: prenom,
+            pdf_url: pdfUrl,
+            username: window.username
+          })
+        });
+
+        console.log('📡 Réponse serveur:', response.status, response.statusText);
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('[OK] Succès renvoi:', result);
+          // Notification de succès
+          const notification = document.createElement('div');
+          notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--primary-green);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            z-index: 10001;
+            font-size: 14px;
+            font-weight: 500;
+          `;
+          notification.textContent = `✓ Facture renvoyée à ${prenom} ${nom}`;
+          document.body.appendChild(notification);
+
+          setTimeout(() => notification.remove(), 3000);
+        } else {
+          const errorText = await response.text();
+          console.error('[ERROR] Erreur HTTP:', response.status, errorText);
+          throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
+        }
+      } catch (error) {
+        console.error('Erreur renvoi facture:', error);
+
+        // Notification d'erreur
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: var(--primary-red);
+          color: white;
+          padding: 12px 16px;
+          border-radius: 8px;
+          z-index: 10001;
+          font-size: 14px;
+          font-weight: 500;
+        `;
+        notification.textContent = `✗ Erreur lors du renvoi de la facture`;
+        document.body.appendChild(notification);
+
+        setTimeout(() => notification.remove(), 3000);
+      }
+    }
+
+    // Fermer le popup en cliquant à l'extérieur
+    document.addEventListener('click', function(e) {
+      const popup = document.getElementById('confirmRenvoyerPopup');
+      if (e.target === popup) {
+        fermerConfirmRenvoyer();
+      }
+    });
+
+    // Setup Mobile Menu
+    function setupMobileMenu() {
+      const mobileToggle = document.getElementById('mobile-menu-toggle');
+      
+      if (mobileToggle) {
+        mobileToggle.addEventListener('click', toggleMobileMenu);
+      }
+
+      // Close menu when clicking on menu items
+      const menuLinks = document.querySelectorAll('#sidebar a');
+      menuLinks.forEach(link => {
+        link.addEventListener('click', closeMobileMenu);
+      });
+
+      // Close mobile menu when window is resized to desktop
+      window.addEventListener('resize', function() {
+        if (window.innerWidth >= 1024) {
+          closeMobileMenu();
+        }
+      });
+    }
+
+    // Setup Account Menus
+    function setupAccountMenus() {
+      // Desktop Account Menu
+      const btn = document.getElementById("account-menu-button");
+      const dropdown = document.getElementById("account-dropdown");
+
+      if (btn && dropdown) {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          dropdown.classList.toggle("hidden");
+        });
+
+        window.addEventListener("click", (e) => {
+          if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add("hidden");
+          }
+        });
+      }
+
+      // Mobile Account Menu
+      const mobileAccountBtn = document.getElementById('mobile-account-menu-button');
+      const mobileAccountDropdown = document.getElementById('mobile-account-dropdown');
+      
+      if (mobileAccountBtn && mobileAccountDropdown) {
+        mobileAccountBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          mobileAccountDropdown.classList.toggle('hidden');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+          if (!mobileAccountBtn.contains(e.target) && !mobileAccountDropdown.contains(e.target)) {
+            mobileAccountDropdown.classList.add('hidden');
+          }
+        });
+      }
+    }
+
+    // Script pour gestion menu actif
+    function activateCurrentPageMenu() {
+      const currentPath = window.location.pathname;
+      console.log('🌐 Page actuelle détectée:', currentPath);
+      
+      const allMenuLinks = document.querySelectorAll('#sidebar a');
+      allMenuLinks.forEach(link => {
+        link.classList.remove('menu-active');
+        link.removeAttribute('data-menu-state');
+      });
+      
+      const pageMap = {
+        '/facture': '/facture',
+        '/new_facture': '/facture',
+        '/new_facture_dark': '/facture'
+      };
+      
+      const targetPath = pageMap[currentPath] || currentPath;
+      const targetLink = document.querySelector(`#sidebar a[data-path="${targetPath}"]`);
+      
+      if (targetLink) {
+        targetLink.classList.add('menu-active');
+        targetLink.setAttribute('data-menu-state', 'active');
+        console.log('[OK] Menu activé pour:', targetLink.textContent.trim());
+      } else {
+        console.log('[WARN] Aucun menu trouvé pour la page:', currentPath);
+      }
+    }
+
+    // Fonction de déconnexion
+    window.logout = function() {
+      localStorage.removeItem('username');
+      localStorage.removeItem('token');
+      window.location.href = '/';
+    };
+  </script>
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Overlay flou (exactement comme GQP) -->
+  <div id="pdfOverlay"></div>
+  <!-- Modal PDF (exactement comme créer soumission) -->
+  <div id="pdfModal" class="hidden">
+    <div id="pdfContent">
+      <div id="pdfControls">
+        <div class="zoom-controls">
+          <button id="zoomOut" class="btn-secondary">−</button>
+          <span id="zoomLevel">100%</span>
+          <button id="zoomIn" class="btn-secondary">+</button>
+        </div>
+        <button id="closePdfBtn" class="">×</button>
+      </div>
+      <div id="pdfScrollContainer">
+        <canvas id="pdfCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+<!-- Popup de confirmation pour renvoyer facture -->
+<div id="confirmRenvoyerPopup" class="confirm-popup-overlay">
+  <div class="confirm-popup">
+    <h3>Confirmer l'envoi</h3>
+    <p id="confirmRenvoyerMessage">Êtes-vous sûr de vouloir renvoyer la facture à ce client ?</p>
+    <div class="confirm-popup-buttons">
+      <button class="btn-secondary" onclick="fermerConfirmRenvoyer()">Non</button>
+      <button class="btn-primary" onclick="confirmerRenvoyerFacture()">Oui</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

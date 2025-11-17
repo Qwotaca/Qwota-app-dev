@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Niveaux & Trophées - Qwota</title>
+
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#1f2937">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Feuille de style principale - Thème Dark -->
+  <link rel="stylesheet" href="/base.css">
+
+  <!-- Styles spécifiques à Gamification -->
+  <link rel="stylesheet" href="/gamification.css">
+</head>
+<body class="min-h-screen" style="margin: 0; padding: 0;">
+
+  <!-- Contenu principal -->
+  <div class="main-content w-full" style="width: 100%; padding: 2rem;">
+    <div class="w-full">
+
+    <!-- Header -->
+    <div class="mb-10 mt-5 md:mt-0">
+      <div class="relative">
+        <h1 class="text-4xl font-bold mb-3">
+          Niveaux & Trophées
+        </h1>
+        <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        <div class="flex items-center justify-between">
+          <p class="text-xl font-medium">
+            <span>Suivez votre progression et vos réalisations</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section Progression -->
+    <div class="progress-section">
+      <!-- Header Profil -->
+      <div class="profile-header">
+        <div class="profile-photo-banner">
+          <div class="profile-photo-wrapper">
+            <div id="profilePhotoContainer" class="profile-photo-container">
+              <img id="profilePhoto" src="" alt="Profile" class="profile-photo" onerror="this.style.display='none'">
+            </div>
+            <div class="photo-level-banner">
+              <span>Niv. <span id="photo-level-text">1</span></span>
+            </div>
+          </div>
+        </div>
+        <div class="profile-info">
+          <h2 id="profileName">Chargement...</h2>
+          <div id="entrepreneurGrade" class="entrepreneur-grade">Chargement...</div>
+        </div>
+        <!-- Badge du grade actuel -->
+        <div class="profile-grade-badge">
+          <img id="profileCurrentGrade" src="" alt="Grade actuel">
+          <div>
+            <div class="profile-grade-name" id="profileGradeName">Démarrage</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barre de progression XP -->
+      <div class="xp-progress-container">
+        <div class="xp-progress-header">
+          <span><i class="fas fa-bolt"></i> Expérience</span>
+          <span id="xpText">0 / 100 XP</span>
+        </div>
+        <div class="xp-progress-bar">
+          <div id="xpProgressFill" class="xp-progress-fill" style="width: 0%"></div>
+          <div id="xpProgressText" class="xp-progress-text">0%</div>
+        </div>
+      </div>
+
+      <!-- Statistiques -->
+      <div class="stats-header">
+        <span class="stats-title">Statistiques</span>
+        <button class="view-grades-btn" onclick="openGradesModal()">
+          <i class="fas fa-ranking-star"></i>
+          <span>Parcours</span>
+        </button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">
+            <span>XP Total</span>
+            <i class="fas fa-bolt stat-icon"></i>
+          </div>
+          <div id="totalXp" class="stat-value">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">
+            <span>Badges Obtenus</span>
+            <i class="fas fa-trophy stat-icon"></i>
+          </div>
+          <div id="badgesEarned" class="stat-value">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">
+            <span>Vers Prochain Grade</span>
+            <i class="fas fa-ranking-star stat-icon"></i>
+          </div>
+          <div class="grade-progress-container">
+            <!-- Ligne du haut : badges et texte -->
+            <div class="grade-progress-top">
+              <div class="grade-progress-badge">
+                <img id="currentGradeBadge" src="" alt="Grade actuel">
+              </div>
+              <div class="grade-progress-text" id="gradeProgressText">Niv. 1 / 1</div>
+              <div class="grade-progress-badge">
+                <img id="nextGradeBadge" src="" alt="Prochain grade">
+              </div>
+            </div>
+            <!-- Barre de progression en dessous -->
+            <div class="grade-progress-bar-container">
+              <div class="grade-progress-bar-fill" id="gradeProgressBarFill" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Parcours de Progression -->
+    <div class="grades-modal" id="gradesModal" onclick="closeGradesModal(event)">
+      <div class="grades-modal-content" onclick="event.stopPropagation()">
+        <button class="grades-modal-close" onclick="closeGradesModal()">
+          <i class="fas fa-times"></i>
+        </button>
+
+        <!-- Section Grades / Rangs -->
+        <div class="grades-section">
+      <div class="grades-header">
+        <h3><i class="fas fa-ranking-star"></i> Parcours de Progression</h3>
+        <p class="grades-subtitle">Évoluez à travers 7 grades prestigieux</p>
+      </div>
+
+      <!-- Info Grade Actuel -->
+      <div class="grades-current-info">
+        <!-- Section Gauche: Statistiques -->
+        <div class="grades-stats-section">
+          <div class="grades-section-title">Statistiques</div>
+          <div class="grades-current-stats">
+            <div class="grades-stat-item">
+              <div class="grades-stat-label">XP Total</div>
+              <div class="grades-stat-value highlight" id="statsCurrentXP">0</div>
+            </div>
+            <div class="grades-stat-item">
+              <div class="grades-stat-label">Badges</div>
+              <div class="grades-stat-value" id="statsCurrentBadges">0</div>
+            </div>
+            <div class="grades-stat-item">
+              <div class="grades-stat-label">Niveau</div>
+              <div class="grades-stat-value" id="statsCurrentLevel">1</div>
+            </div>
+          </div>
+          <!-- Instructions -->
+          <div class="grades-current-instruction">
+            <strong>Comment progresser :</strong> Gagnez de l'expérience en complétant des tâches, en obtenant des badges, et en participant activement. Chaque niveau vous rapproche du prochain grade prestigieux !
+          </div>
+        </div>
+
+        <!-- Section Droite: Grade Actuel -->
+        <div class="grades-current-section">
+          <div class="grades-section-title">Votre Grade Actuel</div>
+          <div class="grades-current-content">
+            <!-- Icône du grade actuel -->
+            <div class="grades-current-icon" id="currentGradeIcon">
+              <i class="fas fa-star"></i>
+            </div>
+            <div class="grades-current-name" id="currentGradeName">Chargement...</div>
+            <div class="grades-current-xp" id="currentGradeXP">0 XP</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progression Container -->
+      <div class="grades-progression-container">
+        <!-- Ligne de progression -->
+        <div class="grades-progression-line" id="gradesProgressionLine">
+          <div class="grades-progression-fill" id="gradesProgressionFill" style="width: 0%"></div>
+          <!-- Points de progression pour chaque grade (positionnés dynamiquement) -->
+        </div>
+
+        <!-- Grilles des grades -->
+        <div class="grades-grid">
+        <!-- Démarrage -->
+        <div class="grade-card" data-grade="demarrage">
+          <div class="grade-icon-wrapper">
+            <img src="https://i.ibb.co/v6PRQ6RX/2.png" alt="Démarrage" class="grade-icon">
+          </div>
+          <div class="grade-info">
+            <h4 class="grade-name">Démarrage</h4>
+            <p class="grade-levels">Niv. 1</p>
+          </div>
+        </div>
+
+        <!-- Apprenti -->
+        <div class="grade-card" data-grade="apprenti">
+          <div class="grade-icon-wrapper">
+            <img src="https://i.ibb.co/CpT20JQK/3.png" alt="Apprenti" class="grade-icon">
+          </div>
+          <div class="grade-info">
+            <h4 class="grade-name">Apprenti</h4>
+            <p class="grade-levels">Niv. 2-10</p>
+          </div>
+        </div>
+
+        <!-- Pilier -->
+        <div class="grade-card" data-grade="pilier">
+          <div class="grade-icon-wrapper">
+            <img src="https://i.ibb.co/ksw5bZnH/4.png" alt="Pilier" class="grade-icon">
+          </div>
+          <div class="grade-info">
+            <h4 class="grade-name">Pilier</h4>
+            <p class="grade-levels">Niv. 11-30</p>
+          </div>
+        </div>
+
+        <!-- Expert -->
+        <div class="grade-card" data-grade="expert">
+          <div class="grade-icon-wrapper">
+            <img src="https://i.ibb.co/HfDN4YV2/5.png" alt="Expert" class="grade-icon">
+          </div>
+          <div class="grade-info">
+            <h4 class="grade-name">Expert</h4>
+            <p class="grade-levels">Niv. 31-50</p>
+          </div>
+        </div>
+
+        <!-- Maître -->
+        <div class="grade-card" data-grade="maitre">
+          <div class="grade-icon-wrapper">
+            <img src="https://i.ibb.co/PvmNXcqX/22.png" alt="Maître" class="grade-icon">
+          </div>
+          <div class="grade-info">
+            <h4 class="grade-name">Maître</h4>
+            <p class="grade-levels">Niv. 51-75</p>
+          </div>
+        </div>
+
+        <!-- Héros -->
+        <div class="grade-card" data-grade="heros">
+          <div class="grade-icon-wrapper">
+            <img src="https://i.ibb.co/XfBWrtLB/22.png" alt="Héros" class="grade-icon">
+          </div>
+          <div class="grade-info">
+            <h4 class="grade-name">Héros</h4>
+            <p class="grade-levels">Niv. 76-90</p>
+          </div>
+        </div>
+
+        <!-- Prestige -->
+        <div class="grade-card" data-grade="prestige">
+          <div class="grade-icon-wrapper">
+            <img src="https://i.ibb.co/Zp0YrH31/23.png" alt="Prestige" class="grade-icon">
+          </div>
+          <div class="grade-info">
+            <h4 class="grade-name">Prestige</h4>
+            <p class="grade-levels">Niv. 91-100</p>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+
+      </div>
+    </div>
+
+    <!-- Bannière Flottante Side Quest -->
+    <div class="quest-banner-float" id="questBannerFloat">
+      <div class="quest-banner-content">
+        <div class="quest-banner-icon">
+          <i class="fas fa-crosshairs"></i>
+        </div>
+        <div class="quest-banner-info">
+          <div class="quest-banner-title">Side Quest</div>
+          <div class="quest-banner-subtitle" id="bannerQuestTitle">Chargement...</div>
+          <div class="quest-banner-progress">
+            <div class="quest-banner-progress-bar">
+              <div class="quest-banner-progress-fill" id="bannerProgressFill" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="quest-banner-arrow">
+          <i class="fas fa-chevron-left"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Side Quest Détaillée -->
+    <div class="quest-modal" id="questModal">
+      <div class="quest-modal-overlay" onclick="closeQuestModal()"></div>
+      <div class="quest-modal-content">
+        <button class="quest-modal-close" onclick="closeQuestModal()">
+          <i class="fas fa-times"></i>
+        </button>
+
+        <div class="quest-modal-header">
+          <div class="quest-modal-icon">
+            <i class="fas fa-crosshairs"></i>
+          </div>
+          <div>
+            <h2>Side Quest</h2>
+            <p class="quest-modal-subtitle">Complétez le défi de la semaine</p>
+          </div>
+        </div>
+
+        <div class="quest-modal-body">
+          <div class="quest-modal-columns">
+            <!-- Colonne Gauche : Side Quest Active -->
+            <div class="quest-column-left">
+              <div class="quest-card-modal">
+                <div class="quest-header">
+                  <div class="quest-info-full">
+                    <h3 class="quest-title" id="modalQuestTitle">Chargement...</h3>
+                    <div class="quest-deadline">
+                      <i class="fas fa-clock"></i>
+                      <span id="modalQuestDeadline">--</span>
+                    </div>
+                  </div>
+                  <div class="quest-status" id="modalQuestStatus">
+                    <span class="status-badge status-active">En cours</span>
+                  </div>
+                </div>
+
+                <div class="quest-progress-container">
+                  <div class="quest-progress-bar">
+                    <div class="quest-progress-fill" id="modalQuestProgressFill" style="width: 0%"></div>
+                  </div>
+                  <div class="quest-progress-text">
+                    <span id="modalQuestProgressCurrent">0</span> / <span id="modalQuestProgressTarget">0</span>
+                  </div>
+                </div>
+
+                <div class="quest-reward">
+                  <div class="reward-label">
+                    <i class="fas fa-gift"></i>
+                    Récompenses
+                  </div>
+                  <div class="reward-content">
+                    <div class="reward-item">
+                      <i class="fas fa-star reward-icon"></i>
+                      <span id="modalQuestRewardXP">+10 XP</span>
+                    </div>
+                    <div class="reward-item reward-streak-indicator" id="modalStreakReward" style="display: none;">
+                      <i class="fas fa-fire reward-icon-fire"></i>
+                      <span>Streaks de profil</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="quest-streak">
+                  <div class="streak-info">
+                    <i class="fas fa-fire"></i>
+                    <span id="modalQuestStreakText">Streak: 0 side quests</span>
+                  </div>
+                  <div class="streak-bonus" id="modalQuestStreakBonus">
+                    Prochain bonus à 4 side quests: +5 XP
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Colonne Droite : Flammes de Profil -->
+            <div class="quest-column-right">
+              <div class="quest-flames-section">
+                <div class="flames-header">
+                  <h3><i class="fas fa-fire"></i> Streaks de Profil</h3>
+                  <p class="flames-subtitle">Débloquez des streaks consécutifs</p>
+                </div>
+
+                <div class="flames-progression">
+                  <div class="flame-tier" data-tier="0">
+                    <div class="flame-avatar-container">
+                      <div class="flame-avatar no-flame">
+                        <img class="flame-user-avatar" id="flameAvatar0" src="" alt="Avatar">
+                      </div>
+                    </div>
+                    <div class="flame-tier-info">
+                      <div class="flame-tier-name">Aucun Streak</div>
+                      <div class="flame-tier-requirement">0 - 3</div>
+                    </div>
+                  </div>
+
+                  <div class="flame-tier" data-tier="4">
+                    <div class="flame-avatar-container">
+                      <div class="flame-avatar">
+                        <img class="flame-user-avatar" id="flameAvatar4" src="" alt="Avatar">
+                      </div>
+                    </div>
+                    <div class="flame-tier-info">
+                      <div class="flame-tier-name">Petit Streak</div>
+                      <div class="flame-tier-requirement">4 - 9</div>
+                    </div>
+                  </div>
+
+                  <div class="flame-tier" data-tier="10">
+                    <div class="flame-avatar-container">
+                      <div class="flame-avatar">
+                        <img class="flame-user-avatar" id="flameAvatar10" src="" alt="Avatar">
+                      </div>
+                    </div>
+                    <div class="flame-tier-info">
+                      <div class="flame-tier-name">Streak Moyen</div>
+                      <div class="flame-tier-requirement">10 - 14</div>
+                    </div>
+                  </div>
+
+                  <div class="flame-tier" data-tier="15">
+                    <div class="flame-avatar-container">
+                      <div class="flame-avatar">
+                        <img class="flame-user-avatar" id="flameAvatar15" src="" alt="Avatar">
+                      </div>
+                    </div>
+                    <div class="flame-tier-info">
+                      <div class="flame-tier-name">Grand Streak</div>
+                      <div class="flame-tier-requirement">15 - 19</div>
+                    </div>
+                  </div>
+
+                  <div class="flame-tier" data-tier="20">
+                    <div class="flame-avatar-container">
+                      <div class="flame-avatar">
+                        <img class="flame-user-avatar" id="flameAvatar20" src="" alt="Avatar">
+                      </div>
+                    </div>
+                    <div class="flame-tier-info">
+                      <div class="flame-tier-name">Streak Énorme</div>
+                      <div class="flame-tier-requirement">20 - 24</div>
+                    </div>
+                  </div>
+
+                  <div class="flame-tier" data-tier="25">
+                    <div class="flame-avatar-container">
+                      <div class="flame-avatar">
+                        <img class="flame-user-avatar" id="flameAvatar25" src="" alt="Avatar">
+                      </div>
+                    </div>
+                    <div class="flame-tier-info">
+                      <div class="flame-tier-name">Streak Maximum</div>
+                      <div class="flame-tier-requirement">25+</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section Badges -->
+    <div class="box">
+      <div class="box-header">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div class="box-header-icon" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);">
+            <i class="fas fa-trophy"></i>
+          </div>
+          <h3 class="box-header-title">Mes Badges & Trophées</h3>
+        </div>
+      </div>
+      <div class="box-body">
+        <div id="badgesGrid" class="loading">
+          <i class="fas fa-hourglass-half"></i>
+          <p>Chargement des badges...</p>
+        </div>
+      </div>
+    </div>
+
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+    let userProfile = null;
+    let allBadges = {};
+    let userBadges = [];
+
+    let userFullName = '';
+
+    // Initialisation
+    async function init() {
+      try {
+        // Récupérer l'utilisateur depuis common.js
+        if (typeof username !== 'undefined') {
+          currentUser = username;
+        } else {
+          const pathParts = window.location.pathname.split('/');
+          currentUser = pathParts[pathParts.length - 1] || 'mathis';
+        }
+
+        // Récupérer les informations utilisateur pour le nom complet
+        try {
+          const userResponse = await fetch(`/api/me/${currentUser}`);
+          const userData = await userResponse.json();
+          if (userData.prenom && userData.nom) {
+            userFullName = `${userData.prenom} ${userData.nom}`;
+          }
+        } catch (error) {
+          console.error('Erreur chargement infos utilisateur:', error);
+        }
+
+        // Charger les données en parallèle
+        await Promise.all([
+          loadProfile(),
+          loadBadges()
+        ]);
+      } catch (error) {
+        console.error('Erreur d\'initialisation:', error);
+      }
+    }
+
+    // Charger le profil utilisateur
+    async function loadProfile() {
+      try {
+        const response = await fetch(`/api/gamification/profile/${currentUser}`);
+        const data = await response.json();
+
+        if (data.status === 'success') {
+          userProfile = data.profile;
+          renderProfile();
+        }
+      } catch (error) {
+        console.error('Erreur chargement profil:', error);
+        document.getElementById('profileName').textContent = 'Erreur de chargement';
+      }
+    }
+
+    // Charger les badges
+    async function loadBadges() {
+      try {
+        // Charger tous les badges et les badges utilisateur en parallèle
+        const [allBadgesRes, userBadgesRes] = await Promise.all([
+          fetch('/api/gamification/badges/all'),
+          fetch(`/api/gamification/badges/user/${currentUser}`)
+        ]);
+
+        const allBadgesData = await allBadgesRes.json();
+        const userBadgesData = await userBadgesRes.json();
+
+        if (allBadgesData.status === 'success') {
+          allBadges = allBadgesData.all_badges;
+          console.log(`✅ ${allBadgesData.total} badges chargés depuis le backend`);
+        }
+
+        if (userBadgesData.status === 'success') {
+          userBadges = userBadgesData.badges;
+
+          // Mettre à jour le compteur de badges (en incluant les x2, x3, etc.)
+          const totalBadgeCount = userBadges.reduce((total, badge) => {
+            return total + (badge.count || 1);
+          }, 0);
+          document.getElementById('badgesEarned').textContent = totalBadgeCount;
+        }
+
+        renderBadges();
+      } catch (error) {
+        console.error('Erreur chargement badges:', error);
+        document.getElementById('badgesGrid').innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>Erreur de chargement des badges</p>
+          </div>
+        `;
+      }
+    }
+
+    // Fonction pour obtenir l'icône du grade (avec images)
+    function getGradeIcon(category) {
+      const images = {
+        'Démarrage': 'https://i.ibb.co/rGtd1CBF/Design-sans-titre-81.png',
+        'Apprenti': 'https://i.ibb.co/6cYBGTG8/Design-sans-titre-82.png',
+        'Pilier': 'https://i.ibb.co/FbxZNYxQ/Design-sans-titre-88.png',
+        'Expert': 'https://i.ibb.co/HD7d2fx0/Design-sans-titre-86.png',
+        'Maître': 'https://i.ibb.co/PvmNXcqX/22.png',
+        'Héros': 'https://i.ibb.co/XfBWrtLB/22.png',
+        'Prestige': 'https://i.ibb.co/Zp0YrH31/23.png'
+      };
+
+      const fallbackIcons = {
+        'Démarrage': 'fas fa-seedling',
+        'Apprenti': 'fas fa-user-graduate',
+        'Pilier': 'fas fa-shield-alt',
+        'Expert': 'fas fa-crown',
+        'Maître': 'fas fa-gem',
+        'Héros': 'fas fa-dragon',
+        'Prestige': 'fas fa-star'
+      };
+
+      if (images[category]) {
+        return `<img src="${images[category]}" alt="${category}" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'${fallbackIcons[category] || 'fas fa-certificate'}\\'></i>'">`;
+      }
+      return `<i class="${fallbackIcons[category] || 'fas fa-certificate'}"></i>`;
+    }
+
+    // Rendre le profil
+    function renderProfile() {
+      // Récupérer la photo de profil via l'API
+      const photoEl = document.getElementById('profilePhoto');
+
+      fetch(`/api/get-profile-photo/${currentUser}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.photoUrl) {
+            photoEl.style.display = 'block';
+            photoEl.src = data.photoUrl;
+          } else {
+            // Utiliser la photo par défaut
+            const initial = userFullName ? userFullName.charAt(0).toUpperCase() : currentUser.charAt(0).toUpperCase();
+            photoEl.style.display = 'block';
+            photoEl.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+          }
+        })
+        .catch(error => {
+          console.error('Erreur chargement photo:', error);
+          const initial = userFullName ? userFullName.charAt(0).toUpperCase() : currentUser.charAt(0).toUpperCase();
+          photoEl.style.display = 'block';
+          photoEl.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+        });
+
+      // Mettre à jour le nom avec le nom complet
+      const displayName = userFullName || currentUser;
+      document.getElementById('profileName').textContent = displayName;
+
+      // Mettre à jour le niveau dans le banner sous la photo
+      document.getElementById('photo-level-text').textContent = userProfile.level;
+
+      // Récupérer et afficher le grade d'entrepreneur
+      fetchEntrepreneurGrade();
+
+      // Mettre à jour le badge du grade actuel dans le header
+      const currentCategory = userProfile.category;
+      const gradeImageMap = {
+        'Démarrage': 'https://i.ibb.co/v6PRQ6RX/2.png',
+        'Apprenti': 'https://i.ibb.co/CpT20JQK/3.png',
+        'Pilier': 'https://i.ibb.co/ksw5bZnH/4.png',
+        'Expert': 'https://i.ibb.co/HfDN4YV2/5.png',
+        'Maître': 'https://i.ibb.co/PvmNXcqX/22.png',
+        'Héros': 'https://i.ibb.co/XfBWrtLB/22.png',
+        'Prestige': 'https://i.ibb.co/Zp0YrH31/23.png'
+      };
+
+      const gradeImage = gradeImageMap[currentCategory];
+      if (gradeImage) {
+        document.getElementById('profileCurrentGrade').src = gradeImage;
+      }
+      document.getElementById('profileGradeName').textContent = currentCategory;
+
+      // Appliquer le contour avec XP au conteneur de photo de profil
+      const profilePhotoContainer = document.getElementById('profilePhotoContainer');
+      if (profilePhotoContainer) {
+        // Retirer toutes les anciennes classes de grade
+        const classList = profilePhotoContainer.className.split(' ');
+        profilePhotoContainer.className = classList.filter(c => !c.startsWith('grade-')).join(' ');
+        // Ajouter la nouvelle classe de grade
+        const gradeClass = 'grade-' + currentCategory.toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/\s+/g, '-');
+        profilePhotoContainer.classList.add(gradeClass);
+      }
+
+      // Mettre à jour la barre de progression XP
+      document.getElementById('xpText').textContent = `${userProfile.xp_progress} / ${userProfile.xp_for_next_level} XP`;
+      document.getElementById('xpProgressFill').style.width = `${userProfile.progress_percentage}%`;
+      document.getElementById('xpProgressText').textContent = `${userProfile.progress_percentage}%`;
+
+      // Mettre à jour les statistiques
+      document.getElementById('totalXp').textContent = userProfile.total_xp.toLocaleString();
+      // Le compteur de badges est mis à jour dans loadBadges()
+
+      // Calculer la progression vers le prochain grade
+      const gradeLevels = [
+        { name: 'Démarrage', minLevel: 1, maxLevel: 1 },
+        { name: 'Apprenti', minLevel: 2, maxLevel: 10 },
+        { name: 'Pilier', minLevel: 11, maxLevel: 30 },
+        { name: 'Expert', minLevel: 31, maxLevel: 50 },
+        { name: 'Maître', minLevel: 51, maxLevel: 75 },
+        { name: 'Héros', minLevel: 76, maxLevel: 90 },
+        { name: 'Prestige', minLevel: 91, maxLevel: 100 }
+      ];
+
+      const currentLevel = userProfile.level;
+      const currentGradeIndex = gradeLevels.findIndex(g => currentLevel >= g.minLevel && currentLevel <= g.maxLevel);
+      const currentGrade = gradeLevels[currentGradeIndex];
+
+      if (currentGrade) {
+        // Mettre à jour le badge actuel
+        document.getElementById('currentGradeBadge').src = gradeImageMap[currentGrade.name];
+
+        if (currentGrade.name === 'Prestige') {
+          // Grade maximum atteint
+          document.getElementById('gradeProgressText').innerHTML = `<span style="color: var(--primary-gold);">Max</span>`;
+          document.getElementById('gradeProgressBarFill').style.width = '100%';
+          document.getElementById('nextGradeBadge').src = gradeImageMap['Prestige'];
+        } else {
+          // Prochain grade
+          const nextGrade = gradeLevels[currentGradeIndex + 1];
+          const nextGradeLevel = nextGrade.minLevel;
+
+          // Mettre à jour le badge suivant
+          document.getElementById('nextGradeBadge').src = gradeImageMap[nextGrade.name];
+
+          // Afficher niveau actuel / niveau du prochain grade
+          document.getElementById('gradeProgressText').textContent = `Niv. ${currentLevel} / ${nextGradeLevel}`;
+
+          // Calculer le pourcentage de progression dans le grade actuel
+          const levelsInCurrentGrade = currentGrade.maxLevel - currentGrade.minLevel + 1;
+          const levelProgress = currentLevel - currentGrade.minLevel;
+          const progressPercentage = (levelProgress / levelsInCurrentGrade) * 100;
+          document.getElementById('gradeProgressBarFill').style.width = `${progressPercentage}%`;
+        }
+      }
+    }
+
+    // Récupérer et afficher le grade d'entrepreneur
+    async function fetchEntrepreneurGrade() {
+      try {
+        const response = await fetch(`/api/get-info/${currentUser}`);
+        if (!response.ok) throw new Error('Erreur lors de la récupération du grade');
+
+        const result = await response.json();
+        const grade = result.data?.grade;
+
+        // Formater le nom du grade
+        let gradeDisplay = 'Non défini';
+        if (grade) {
+          switch(grade) {
+            case 'recrue':
+              gradeDisplay = 'Recrue';
+              break;
+            case 'senior1':
+              gradeDisplay = 'Senior | 1';
+              break;
+            case 'senior2':
+              gradeDisplay = 'Senior | 2';
+              break;
+            case 'senior3':
+              gradeDisplay = 'Senior | 3';
+              break;
+            default:
+              gradeDisplay = grade.charAt(0).toUpperCase() + grade.slice(1);
+          }
+        }
+
+        // Afficher le grade
+        document.getElementById('entrepreneurGrade').textContent = gradeDisplay;
+      } catch (error) {
+        console.error('Erreur lors de la récupération du grade:', error);
+        document.getElementById('entrepreneurGrade').textContent = 'Non défini';
+      }
+    }
+
+    // Rendre les badges par catégorie
+    function renderBadges() {
+      // Créer une Map badge_id -> count pour un accès rapide
+      const userBadgeMap = new Map(userBadges.map(b => [b.badge_id, b.count || 1]));
+
+      // Grouper les badges par type ET rareté
+      const badgesByType = {
+        fleur: { Commun: [], Rare: [], Épique: [], Légendaire: [], Mythique: [], 'Anti-Badge': [] },
+        etoile: { Commun: [], Rare: [], Épique: [], Légendaire: [], Mythique: [], 'Anti-Badge': [] },
+        trophee: { Commun: [], Rare: [], Épique: [], Légendaire: [], Mythique: [], 'Anti-Badge': [] },
+        badge: { Commun: [], Rare: [], Épique: [], Légendaire: [], Mythique: [], 'Anti-Badge': [] }
+      };
+
+      Object.entries(allBadges).forEach(([badgeId, badge]) => {
+        const type = badge.type || 'fleur';
+        const rarity = badge.rarity || 'Commun';
+        if (badgesByType[type] && badgesByType[type][rarity]) {
+          badgesByType[type][rarity].push([badgeId, badge]);
+        }
+      });
+
+      // Créer le HTML pour chaque catégorie
+      const categoryConfig = {
+        fleur: { icon: '<i class="fas fa-spa"></i>', name: 'Fleurs' },
+        etoile: { icon: '<i class="fas fa-star"></i>', name: 'Étoiles' },
+        trophee: { icon: '<i class="fas fa-trophy"></i>', name: 'Trophées' },
+        badge: { icon: '<i class="fas fa-medal"></i>', name: 'Badges' }
+      };
+
+      // Ordre des raretés (du plus faible au plus fort)
+      const rarityOrder = ['Commun', 'Rare', 'Légendaire', 'Mythique', 'Épique', 'Anti-Badge'];
+
+      let sectionsHTML = '';
+
+      Object.entries(badgesByType).forEach(([type, rarities]) => {
+        // Compter le nombre total de badges de ce type
+        const totalBadges = Object.values(rarities).reduce((sum, arr) => sum + arr.length, 0);
+        if (totalBadges === 0) return;
+
+        const config = categoryConfig[type];
+        const earnedCount = Object.values(rarities)
+          .flat()
+          .filter(([id]) => userBadgeMap.has(id)).length;
+
+        // Header de la catégorie (type)
+        sectionsHTML += `
+          <div class="badge-category">
+            <div class="category-header">
+              <span class="category-icon">${config.icon}</span>
+              <h3>${config.name}</h3>
+              <span class="category-count">${earnedCount} / ${totalBadges}</span>
+            </div>
+        `;
+
+        // Sections par rareté
+        rarityOrder.forEach(rarity => {
+          const badges = rarities[rarity];
+          if (!badges || badges.length === 0) return;
+
+          const rarityClass = rarity.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]/g, '-');
+
+          const earnedCountRarity = badges.filter(([id]) => userBadgeMap.has(id)).length;
+
+          const badgesHTML = badges.map(([badgeId, badge]) => {
+            const badgeCount = userBadgeMap.get(badgeId) || 0;
+            const isEarned = badgeCount > 0;
+            const xpClass = badge.xp_bonus < 0 ? 'negative' : '';
+
+            // PRIORISER image_url (PNG) sur icon (emoji)
+            const imageUrl = badge.image_url || '';
+            const icon = badge.icon || '';
+
+            let iconDisplay = '';
+            if (imageUrl && (imageUrl.startsWith('http') || imageUrl.startsWith('/static/'))) {
+              // Priorité 1: PNG/URL (externe ou local)
+              iconDisplay = `<img src="${imageUrl}" alt="${badge.name}" />`;
+            } else if (icon && (icon.startsWith('http') || icon.startsWith('/static/'))) {
+              // Priorité 2: URL ou chemin local dans le champ icon
+              iconDisplay = `<img src="${icon}" alt="${badge.name}" />`;
+            } else if (icon && icon.endsWith('.png')) {
+              // Priorité 3: Chemin PNG sans /static/ (ancien format)
+              iconDisplay = `<img src="/static/badges/${icon}" alt="${badge.name}" />`;
+            } else {
+              // Priorité 4: Emoji
+              iconDisplay = icon;
+            }
+
+            return `
+              <div class="badge-card ${isEarned ? '' : 'locked'}">
+                ${!isEarned ? `<div class="badge-locked-icon"><i class="fas fa-lock"></i></div>` : ''}
+                ${badgeCount > 1 ? `<div class="badge-count">x${badgeCount}</div>` : ''}
+                <div class="badge-name">
+                  <span class="badge-name-text">${badge.name}</span>
+                  <div class="badge-name-tooltip">${badge.name}</div>
+                </div>
+                <span class="badge-rarity-visible rarity-${badge.rarity.toLowerCase()}">${badge.rarity}</span>
+                <div class="badge-icon">${iconDisplay}</div>
+                <div class="badge-info-icon">
+                  <i class="fas fa-info"></i>
+                  <div class="badge-tooltip">
+                    <div class="tooltip-description">${badge.description}</div>
+                    <div class="tooltip-footer">
+                      <span class="badge-xp ${xpClass}">
+                        ${badge.xp_bonus > 0 ? '+' : ''}${badge.xp_bonus} XP
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          sectionsHTML += `
+            <div class="rarity-section">
+              <div class="rarity-section-title">
+                <span class="badge-rarity ${rarityClass}">${rarity}</span>
+                <span class="rarity-badge-count">${earnedCountRarity} / ${badges.length}</span>
+              </div>
+              <div class="badges-grid">
+                ${badgesHTML}
+              </div>
+            </div>
+          `;
+        });
+
+        sectionsHTML += `</div>`; // Fermer badge-category
+      });
+
+      if (sectionsHTML === '') {
+        document.getElementById('badgesGrid').innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-medal"></i>
+            <p>Aucun badge dans cette catégorie</p>
+          </div>
+        `;
+      } else {
+        document.getElementById('badgesGrid').innerHTML = sectionsHTML;
+
+        // Détecter les titres tronqués et ajouter une classe pour le hover
+        setTimeout(() => {
+          const badgeNames = document.querySelectorAll('.badge-name');
+          badgeNames.forEach(nameEl => {
+            const textSpan = nameEl.querySelector('.badge-name-text');
+            if (textSpan && textSpan.scrollWidth > textSpan.clientWidth) {
+              nameEl.classList.add('truncated');
+              nameEl.setAttribute('data-full-name', textSpan.textContent);
+            }
+          });
+        }, 100);
+      }
+    }
+
+    // Fonctions pour le modal des grades
+    function openGradesModal() {
+      const modal = document.getElementById('gradesModal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden'; // Empêcher le scroll du body
+      updateGradesProgression();
+    }
+
+    // Mettre à jour la progression des grades
+    function updateGradesProgression() {
+      if (!userProfile) return;
+
+      const currentLevel = userProfile.level;
+      const currentXP = userProfile.total_xp;
+      const currentCategory = userProfile.category;
+
+      // Afficher les informations du grade actuel
+      document.getElementById('currentGradeName').textContent = currentCategory;
+      document.getElementById('currentGradeXP').textContent = `${currentXP.toLocaleString()} XP - Niveau ${currentLevel}`;
+
+      // Mettre à jour l'icône du grade actuel avec images
+      const gradeImageMap = {
+        'Démarrage': 'https://i.ibb.co/v6PRQ6RX/2.png',
+        'Apprenti': 'https://i.ibb.co/CpT20JQK/3.png',
+        'Pilier': 'https://i.ibb.co/ksw5bZnH/4.png',
+        'Expert': 'https://i.ibb.co/HfDN4YV2/5.png',
+        'Maître': 'https://i.ibb.co/PvmNXcqX/22.png',
+        'Héros': 'https://i.ibb.co/XfBWrtLB/22.png',
+        'Prestige': 'https://i.ibb.co/Zp0YrH31/23.png'
+      };
+
+      const gradeFallbackIcons = {
+        'Démarrage': 'fas fa-seedling',
+        'Apprenti': 'fas fa-user-graduate',
+        'Pilier': 'fas fa-shield-alt',
+        'Expert': 'fas fa-crown',
+        'Maître': 'fas fa-gem',
+        'Héros': 'fas fa-dragon',
+        'Prestige': 'fas fa-star'
+      };
+
+      const imageUrl = gradeImageMap[currentCategory];
+      const fallbackIcon = gradeFallbackIcons[currentCategory] || 'fas fa-star';
+
+      if (imageUrl) {
+        document.getElementById('currentGradeIcon').innerHTML = `<img src="${imageUrl}" alt="${currentCategory}" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'${fallbackIcon}\\'></i>'">`;
+      } else {
+        document.getElementById('currentGradeIcon').innerHTML = `<i class="${fallbackIcon}"></i>`;
+      }
+
+      // Mettre à jour les statistiques
+      document.getElementById('statsCurrentXP').textContent = currentXP.toLocaleString();
+      document.getElementById('statsCurrentBadges').textContent = userBadges.length;
+      document.getElementById('statsCurrentLevel').textContent = currentLevel;
+
+      // Définir les paliers de grades (en niveau)
+      const gradeLevels = [
+        { name: 'Démarrage', minLevel: 1, maxLevel: 1 },
+        { name: 'Apprenti', minLevel: 2, maxLevel: 10 },
+        { name: 'Pilier', minLevel: 11, maxLevel: 30 },
+        { name: 'Expert', minLevel: 31, maxLevel: 50 },
+        { name: 'Maître', minLevel: 51, maxLevel: 75 },
+        { name: 'Héros', minLevel: 76, maxLevel: 90 },
+        { name: 'Prestige', minLevel: 91, maxLevel: 100 }
+      ];
+
+      // Trouver l'index du grade actuel
+      let currentGradeIndex = 0;
+      for (let i = 0; i < gradeLevels.length; i++) {
+        if (currentLevel >= gradeLevels[i].minLevel && currentLevel <= gradeLevels[i].maxLevel) {
+          currentGradeIndex = i;
+          break;
+        }
+      }
+
+      // Calculer le pourcentage de progression
+      let progressPercentage = (currentGradeIndex / (gradeLevels.length - 1)) * 100;
+
+      // Créer les points de progression alignés avec les cartes
+      const progressionLine = document.getElementById('gradesProgressionLine');
+      const allGradeCards = document.querySelectorAll('.grade-card');
+      const progressionLineRect = progressionLine.getBoundingClientRect();
+
+      // Retirer les anciens points s'ils existent
+      const oldPoints = progressionLine.querySelectorAll('.progress-point');
+      oldPoints.forEach(point => point.remove());
+
+      // Créer un point pour chaque carte et calculer la position
+      let currentGradePosition = 0;
+      let nextGradePosition = 0;
+      const cardPositions = [];
+
+      allGradeCards.forEach((card, index) => {
+        const cardRect = card.getBoundingClientRect();
+        const cardCenter = cardRect.left + (cardRect.width / 2);
+        const lineLeft = progressionLineRect.left;
+        const lineWidth = progressionLineRect.width;
+
+        // Calculer la position en pourcentage
+        const positionPercent = ((cardCenter - lineLeft) / lineWidth) * 100;
+        cardPositions.push(positionPercent);
+
+        // Sauvegarder la position du grade actuel et du suivant
+        if (index === currentGradeIndex) {
+          currentGradePosition = positionPercent;
+        }
+        if (index === currentGradeIndex + 1) {
+          nextGradePosition = positionPercent;
+        }
+
+        // Créer le point
+        const point = document.createElement('div');
+        point.className = 'progress-point';
+        point.style.left = `${positionPercent}%`;
+        progressionLine.appendChild(point);
+      });
+
+      // Calculer la progression à l'intérieur du grade actuel
+      let finalProgressPosition = currentGradePosition;
+      if (currentGradeIndex < gradeLevels.length - 1) {
+        const currentGrade = gradeLevels[currentGradeIndex];
+        const levelsInGrade = currentGrade.maxLevel - currentGrade.minLevel + 1;
+        const levelProgress = currentLevel - currentGrade.minLevel;
+        const progressRatio = levelProgress / levelsInGrade;
+
+        // Interpoler entre la position actuelle et la suivante
+        const segmentWidth = nextGradePosition - currentGradePosition;
+        finalProgressPosition = currentGradePosition + (progressRatio * segmentWidth);
+      }
+
+      // Mettre à jour la barre de progression
+      document.getElementById('gradesProgressionFill').style.width = `${finalProgressPosition}%`;
+
+      // Marquer les cartes de grades
+      const gradeCards = allGradeCards;
+      gradeCards.forEach((card, index) => {
+        card.classList.remove('current', 'completed', 'locked');
+
+        if (index < currentGradeIndex) {
+          card.classList.add('completed');
+        } else if (index === currentGradeIndex) {
+          card.classList.add('current');
+        } else {
+          card.classList.add('locked');
+        }
+      });
+
+      // Marquer les points de progression
+      const progressPoints = document.querySelectorAll('.progress-point');
+      progressPoints.forEach((point, index) => {
+        // Forcer les dimensions pour TOUS les cercles (plus petits)
+        point.style.width = '14px';
+        point.style.height = '14px';
+        point.style.borderRadius = '50%';
+        point.style.position = 'absolute';
+        point.style.top = '50%';
+
+        if (index < currentGradeIndex) {
+          // Points complétés (BLEU OPAQUE PLEIN avec contour bleu AUTOUR - MÊME TAILLE)
+          point.style.setProperty('background', 'rgba(96, 165, 250, 1)', 'important');
+          point.style.setProperty('background-color', 'rgba(96, 165, 250, 1)', 'important');
+          point.style.setProperty('opacity', '1', 'important');
+          point.style.setProperty('border', 'none', 'important');
+          point.style.boxShadow = '0 0 0 2px #60a5fa, 0 0 10px rgba(96, 165, 250, 0.8)';
+          point.style.transform = 'translate(-50%, -50%) scale(1.3)';
+        } else if (index === currentGradeIndex) {
+          // Point actuel (BLEU OPAQUE PLEIN même taille mais plus lumineux avec contour bleu AUTOUR)
+          point.style.setProperty('background', 'rgba(96, 165, 250, 1)', 'important');
+          point.style.setProperty('background-color', 'rgba(96, 165, 250, 1)', 'important');
+          point.style.setProperty('opacity', '1', 'important');
+          point.style.setProperty('border', 'none', 'important');
+          point.style.boxShadow = '0 0 0 3px #60a5fa, 0 0 20px rgba(96, 165, 250, 1), 0 0 10px rgba(96, 165, 250, 0.7)';
+          point.style.transform = 'translate(-50%, -50%) scale(1.3)';
+        } else {
+          // Points futurs (fond bg-card avec contour bleu AUTOUR - taille normale)
+          point.style.setProperty('background', 'var(--bg-card)', 'important');
+          point.style.setProperty('background-color', 'var(--bg-card)', 'important');
+          point.style.setProperty('border', 'none', 'important');
+          point.style.boxShadow = '0 0 0 2px #60a5fa, 0 0 8px rgba(96, 165, 250, 0.6)';
+          point.style.transform = 'translate(-50%, -50%) scale(1)';
+        }
+      });
+    }
+
+    function closeGradesModal(event) {
+      // Si event est undefined, c'est un appel direct (bouton close)
+      // Si event existe et que c'est le background, fermer aussi
+      if (!event || event.target.id === 'gradesModal') {
+        const modal = document.getElementById('gradesModal');
+        modal.classList.remove('active');
+        document.body.style.overflow = ''; // Réactiver le scroll du body
+      }
+    }
+
+    // Fermer avec la touche Escape
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        closeGradesModal();
+      }
+    });
+
+    // Repositionner les points lors du redimensionnement de la fenêtre
+    window.addEventListener('resize', function() {
+      const modal = document.getElementById('gradesModal');
+      if (modal && modal.classList.contains('active')) {
+        // Petit délai pour que le DOM se mette à jour
+        setTimeout(() => {
+          updateGradesProgression();
+        }, 100);
+      }
+    });
+
+    // ================================================================
+    // WEEKLY QUESTS SYSTEM
+    // ================================================================
+
+    const weeklyQuests = [
+      { title: "Faire 12h de PAP durant la semaine Internationale", deadline: "2026-01-12", target: 12, unit: "heures" },
+      { title: "Faire 12h de PAP durant la semaine", deadline: "2026-01-19", target: 12, unit: "heures" },
+      { title: "Faire 3 estimations ou plus cette semaine", deadline: "2026-01-26", target: 3, unit: "estimations" },
+      { title: "Avoir un taux marketing de 0,75 estimations par heure", deadline: "2026-02-02", target: 0.75, unit: "taux" },
+      { title: "Faire 5 estimations cette semaine", deadline: "2026-02-09", target: 5, unit: "estimations" },
+      { title: "Faire 5 estimations cette semaine", deadline: "2026-02-16", target: 5, unit: "estimations" },
+      { title: "Faire 7 estimations cette semaine", deadline: "2026-02-23", target: 7, unit: "estimations" },
+      { title: "Signer 5000$", deadline: "2026-03-02", target: 5000, unit: "$" },
+      { title: "Collecter plus de 1500$ en dépôt", deadline: "2026-03-09", target: 1500, unit: "$" },
+      { title: "Signer 7500$", deadline: "2026-03-16", target: 7500, unit: "$" },
+      { title: "Signer un contrat de plus de 4000$ avant taxes", deadline: "2026-03-23", target: 4000, unit: "$" },
+      { title: "Profiter de la folie de Pâques pour signer 15000$ cette semaine", deadline: "2026-03-30", target: 15000, unit: "$" },
+      { title: "Embaucher un premier peintre", deadline: "2026-04-06", target: 1, unit: "peintre" },
+      { title: "Signer 10000$", deadline: "2026-04-13", target: 10000, unit: "$" },
+      { title: "Signer 12000$", deadline: "2026-04-20", target: 12000, unit: "$" },
+      { title: "Signer 12000$", deadline: "2026-04-27", target: 12000, unit: "$" },
+      { title: "Signer 12000$", deadline: "2026-05-04", target: 12000, unit: "$" },
+      { title: "Signer 12000$", deadline: "2026-05-11", target: 12000, unit: "$" },
+      { title: "15 estimations cette semaine", deadline: "2026-05-18", target: 15, unit: "estimations" },
+      { title: "Atteindre 100000$ de ventes cumulatif depuis le début de l'année", deadline: "2026-05-25", target: 100000, unit: "$" },
+      { title: "Produire 5000$ de contrats", deadline: "2026-06-01", target: 5000, unit: "$" },
+      { title: "Productivité horaire de plus de 90", deadline: "2026-06-08", target: 90, unit: "productivité" },
+      { title: "Faire 10h de PAP cette semaine", deadline: "2026-06-15", target: 10, unit: "heures" },
+      { title: "Faire plus de 15 estimations cette semaine", deadline: "2026-06-22", target: 15, unit: "estimations" },
+      { title: "Productivité horaire de plus de 100", deadline: "2026-06-29", target: 100, unit: "productivité" },
+      { title: "Produire 15000$ cette semaine", deadline: "2026-07-06", target: 15000, unit: "$" },
+      { title: "Satisfaction client cumulative de plus de 4,5 étoiles", deadline: "2026-07-13", target: 4.5, unit: "étoiles" },
+      { title: "10 estimations cette semaine", deadline: "2026-07-20", target: 10, unit: "estimations" },
+      { title: "Signer 5000$", deadline: "2026-07-27", target: 5000, unit: "$" },
+      { title: "Productivité horaire de 110", deadline: "2026-08-03", target: 110, unit: "productivité" },
+      { title: "Produire 10000$", deadline: "2026-08-10", target: 10000, unit: "$" },
+      { title: "Produire 10000$", deadline: "2026-08-17", target: 10000, unit: "$" },
+      { title: "Faire 9h de PAP", deadline: "2026-09-28", target: 9, unit: "heures" },
+      { title: "Signer 5000$", deadline: "2026-10-05", target: 5000, unit: "$" },
+      { title: "Signer 10000$", deadline: "2026-10-12", target: 10000, unit: "$" },
+      { title: "Signer 10000$", deadline: "2026-10-19", target: 10000, unit: "$" },
+      { title: "Signer 5000$", deadline: "2026-10-26", target: 5000, unit: "$" }
+    ];
+
+    // Paliers de streak et XP correspondants
+    const streakTiers = [
+      { minStreak: 25, xpPerQuest: 100, bonusPerQuest: 90 },
+      { minStreak: 20, xpPerQuest: 50, bonusPerQuest: 40 },
+      { minStreak: 15, xpPerQuest: 25, bonusPerQuest: 15 },
+      { minStreak: 10, xpPerQuest: 20, bonusPerQuest: 10 },
+      { minStreak: 4, xpPerQuest: 15, bonusPerQuest: 5 },
+      { minStreak: 1, xpPerQuest: 10, bonusPerQuest: 0 }
+    ];
+
+    function getStreakXP(currentStreak) {
+      for (let tier of streakTiers) {
+        if (currentStreak >= tier.minStreak) {
+          return tier;
+        }
+      }
+      return streakTiers[streakTiers.length - 1];
+    }
+
+    function getNextStreakBonus(currentStreak) {
+      for (let i = streakTiers.length - 1; i >= 0; i--) {
+        if (currentStreak < streakTiers[i].minStreak) {
+          return {
+            nextTarget: streakTiers[i].minStreak,
+            bonusXP: streakTiers[i].bonusPerQuest
+          };
+        }
+      }
+      return null;
+    }
+
+    function openQuestModal() {
+      document.getElementById('questModal').classList.add('active');
+      document.body.classList.add('modal-open');
+    }
+
+    function closeQuestModal() {
+      document.getElementById('questModal').classList.remove('active');
+      document.body.classList.remove('modal-open');
+    }
+
+    async function loadWeeklyQuest() {
+      const today = new Date();
+      const username = localStorage.getItem('username');
+
+      // Récupérer le streak actuel depuis le backend (pour l'instant simulé)
+      let currentStreak = 0;
+      try {
+        const response = await fetch(`/api/gamification/quest-streak/${username}`);
+        if (response.ok) {
+          const data = await response.json();
+          currentStreak = data.streak || 0;
+        } else if (response.status === 404) {
+          // API endpoint pas encore implémenté, utiliser valeur par défaut
+          currentStreak = 0;
+        }
+      } catch (error) {
+        // Streak non disponible, utilisation de 0
+        currentStreak = 0;
+      }
+
+      // Calculer l'XP basé sur le streak
+      const streakInfo = getStreakXP(currentStreak);
+      const nextBonus = getNextStreakBonus(currentStreak);
+
+      // Trouver la quête la plus proche dans le futur
+      let nextQuest = null;
+      let minDiff = Infinity;
+
+      weeklyQuests.forEach(quest => {
+        const questDate = new Date(quest.deadline);
+        const diff = questDate - today;
+
+        // Si la quête est dans le futur et plus proche que la précédente
+        if (diff > 0 && diff < minDiff) {
+          minDiff = diff;
+          nextQuest = quest;
+        }
+      });
+
+      if (!nextQuest) {
+        // Aucune side quest disponible
+        document.getElementById('bannerQuestTitle').textContent = "Aucune side quest disponible";
+        document.getElementById('modalQuestTitle').textContent = "Aucune side quest disponible";
+        document.getElementById('modalQuestDeadline').textContent = "Revenez plus tard";
+        document.querySelector('#modalQuestStatus .status-badge').textContent = "Terminé";
+        document.querySelector('#modalQuestStatus .status-badge').className = "status-badge status-completed";
+        return;
+      }
+
+      // Calculer la période de la semaine en cours (lundi à dimanche)
+      const currentDate = new Date();
+      const currentDay = currentDate.getDay(); // 0 = dimanche, 1 = lundi, etc.
+
+      // Calculer le lundi de cette semaine
+      const monday = new Date(currentDate);
+      const daysToMonday = currentDay === 0 ? -6 : 1 - currentDay; // Si dimanche, reculer de 6 jours
+      monday.setDate(currentDate.getDate() + daysToMonday);
+      monday.setHours(0, 0, 0, 0);
+
+      // Calculer le dimanche de cette semaine
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      sunday.setHours(23, 59, 59, 999);
+
+      // Formater les dates pour l'affichage
+      const mondayStr = monday.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+      const sundayStr = sunday.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+      let deadlineText = `${mondayStr} - ${sundayStr}`;
+
+      // REMPLIR LA BANNIÈRE
+      document.getElementById('bannerQuestTitle').textContent = nextQuest.title;
+      document.getElementById('bannerProgressFill').style.width = "0%"; // Sera mis à jour avec vraies données
+
+      // REMPLIR LE MODAL
+      document.getElementById('modalQuestTitle').textContent = nextQuest.title;
+      document.getElementById('modalQuestDeadline').textContent = deadlineText;
+
+      // Progression
+      document.getElementById('modalQuestProgressCurrent').textContent = "0";
+      document.getElementById('modalQuestProgressTarget').textContent = nextQuest.target + " " + nextQuest.unit;
+      document.getElementById('modalQuestProgressFill').style.width = "0%";
+
+      // Récompense XP
+      document.getElementById('modalQuestRewardXP').textContent = `+${streakInfo.xpPerQuest} XP`;
+
+      // Streak
+      if (currentStreak === 0) {
+        document.getElementById('modalQuestStreakText').textContent = "Streak: Aucune side quest complétée";
+      } else if (currentStreak === 1) {
+        document.getElementById('modalQuestStreakText').textContent = "Streak: 1 side quest";
+      } else {
+        document.getElementById('modalQuestStreakText').textContent = `Streak: ${currentStreak} side quests`;
+      }
+
+      // Prochain bonus
+      if (nextBonus && nextBonus.bonusXP > 0) {
+        const questsNeeded = nextBonus.nextTarget - currentStreak;
+        if (questsNeeded === 1) {
+          document.getElementById('modalQuestStreakBonus').textContent = `Prochain bonus dans 1 side quest: +${nextBonus.bonusXP} XP (Total: ${streakInfo.xpPerQuest + nextBonus.bonusXP} XP)`;
+        } else {
+          document.getElementById('modalQuestStreakBonus').textContent = `Prochain bonus dans ${questsNeeded} side quests: +${nextBonus.bonusXP} XP (Total: ${streakInfo.xpPerQuest + nextBonus.bonusXP} XP)`;
+        }
+      } else if (!nextBonus) {
+        document.getElementById('modalQuestStreakBonus').textContent = `Maximum atteint! Vous gagnez ${streakInfo.xpPerQuest} XP par side quest`;
+      } else {
+        document.getElementById('modalQuestStreakBonus').textContent = '';
+      }
+
+      // Afficher les flammes de profil si streak >= 4
+      const streakRewardElement = document.getElementById('modalStreakReward');
+      if (currentStreak >= 4) {
+        streakRewardElement.style.display = 'flex';
+      } else {
+        streakRewardElement.style.display = 'none';
+      }
+
+      // Mettre à jour la progression des flammes
+      updateFlamesTiers(currentStreak);
+
+      // Charger la photo de profil de l'utilisateur dans les flammes
+      loadUserAvatarInFlames();
+
+      // Ajouter l'événement click sur la bannière
+      document.getElementById('questBannerFloat').onclick = openQuestModal;
+    }
+
+    function initializeLottieFlames() {
+      // Configuration des flammes style anime/jeu vidéo pour chaque tier
+      const flameTiers = [
+        { id: 'lottieFlame4', count: 3, size: 'small', duration: '1.5s' },      // Petit
+        { id: 'lottieFlame10', count: 5, size: 'medium', duration: '1.3s' },    // Moyen
+        { id: 'lottieFlame15', count: 7, size: 'large', duration: '1.1s' },     // Grand
+        { id: 'lottieFlame20', count: 9, size: 'xlarge', duration: '0.9s' },    // Énorme
+        { id: 'lottieFlame25', count: 12, size: 'max', duration: '0.7s' }       // Maximum
+      ];
+
+      flameTiers.forEach(tier => {
+        const container = document.getElementById(tier.id);
+        if (container) {
+          container.innerHTML = '';
+
+          // Créer plusieurs flammes autour du cercle
+          for (let i = 0; i < tier.count; i++) {
+            const angle = (360 / tier.count) * i;
+            const flameDiv = document.createElement('div');
+            flameDiv.className = `flame-particle flame-${tier.size}`;
+            flameDiv.style.setProperty('--angle', `${angle}deg`);
+            flameDiv.style.setProperty('--delay', `${(i * 0.1)}s`);
+
+            // Créer la forme de flamme SVG style anime
+            flameDiv.innerHTML = `
+              <svg viewBox="0 0 30 50" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="flame-grad-${tier.id}-${i}" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+                    <stop offset="30%" style="stop-color:#FFA500;stop-opacity:1" />
+                    <stop offset="60%" style="stop-color:#FF6347;stop-opacity:0.9" />
+                    <stop offset="100%" style="stop-color:#FF4500;stop-opacity:0.7" />
+                  </linearGradient>
+                  <filter id="glow-${tier.id}-${i}">
+                    <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                    <feMerge>
+                      <feMergeNode in="coloredBlur"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                </defs>
+                <!-- Forme de flamme stylisée -->
+                <path d="M 15 5 Q 10 15, 12 25 Q 8 35, 15 45 Q 22 35, 18 25 Q 20 15, 15 5 Z"
+                      fill="url(#flame-grad-${tier.id}-${i})"
+                      filter="url(#glow-${tier.id}-${i})"
+                      stroke="#FFD700"
+                      stroke-width="0.5"
+                      opacity="0.95">
+                  <animate attributeName="d"
+                           values="M 15 5 Q 10 15, 12 25 Q 8 35, 15 45 Q 22 35, 18 25 Q 20 15, 15 5 Z;
+                                   M 15 3 Q 9 14, 11 24 Q 7 36, 15 47 Q 23 36, 19 24 Q 21 14, 15 3 Z;
+                                   M 15 5 Q 10 15, 12 25 Q 8 35, 15 45 Q 22 35, 18 25 Q 20 15, 15 5 Z"
+                           dur="${tier.duration}"
+                           repeatCount="indefinite" />
+                  <animateTransform attributeName="transform"
+                                    type="scale"
+                                    values="1;1.1;0.95;1"
+                                    dur="${tier.duration}"
+                                    repeatCount="indefinite" />
+                </path>
+              </svg>
+            `;
+
+            container.appendChild(flameDiv);
+          }
+        }
+      });
+    }
+
+    async function loadUserAvatarInFlames() {
+      const username = localStorage.getItem('username');
+      if (!username) return;
+
+      try {
+        // Récupérer la photo de profil
+        const photoResponse = await fetch(`/api/get-profile-photo/${username}`);
+        const photoData = await photoResponse.json();
+
+        // Récupérer le profil utilisateur pour le grade - MÊME FORMULE QUE APPPC.HTML
+        const profileResponse = await fetch(`/api/gamification/profile/${username}`);
+        const profileData = await profileResponse.json();
+
+        let gradeClass = 'grade-demarrage'; // Grade par défaut
+
+        if (profileData.status === 'success' && profileData.profile && profileData.profile.category) {
+          // Utiliser profile.category directement comme dans apppc.html
+          gradeClass = 'grade-' + profileData.profile.category.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, '-');
+        }
+
+        // Appliquer la classe de grade à tous les avatars
+        document.querySelectorAll('.flame-avatar').forEach(avatar => {
+          avatar.className = 'flame-avatar ' + gradeClass;
+        });
+
+        // Mettre à jour les photos
+        if (photoData.success && photoData.photoUrl) {
+          const avatarUrl = photoData.photoUrl;
+
+          document.querySelectorAll('.flame-user-avatar').forEach(img => {
+            img.src = avatarUrl;
+            img.style.display = 'block';
+          });
+        } else if (photoData.profile_photo) {
+          const avatarUrl = photoData.profile_photo;
+
+          document.querySelectorAll('.flame-user-avatar').forEach(img => {
+            img.src = avatarUrl;
+            img.style.display = 'block';
+          });
+        } else {
+          document.querySelectorAll('.flame-user-avatar').forEach(img => {
+            img.src = '/static/default-avatar.png';
+            img.style.display = 'block';
+          });
+        }
+      } catch (error) {
+        console.log('Erreur chargement avatar pour flammes:', error);
+        document.querySelectorAll('.flame-user-avatar').forEach(img => {
+          img.src = '/static/default-avatar.png';
+          img.style.display = 'block';
+        });
+      }
+    }
+
+    function updateFlamesTiers(currentStreak) {
+      // Réinitialiser tous les tiers
+      document.querySelectorAll('.flame-tier').forEach(tier => {
+        tier.classList.remove('active', 'locked');
+      });
+
+      // Déterminer le tier actuel
+      let activeTier = 0;
+      if (currentStreak >= 25) activeTier = 25;
+      else if (currentStreak >= 20) activeTier = 20;
+      else if (currentStreak >= 15) activeTier = 15;
+      else if (currentStreak >= 10) activeTier = 10;
+      else if (currentStreak >= 4) activeTier = 4;
+
+      // Activer le tier actuel et verrouiller les suivants
+      let foundActive = false;
+      document.querySelectorAll('.flame-tier').forEach(tier => {
+        const tierValue = parseInt(tier.getAttribute('data-tier'));
+
+        if (tierValue === activeTier) {
+          tier.classList.add('active');
+          foundActive = true;
+        } else if (tierValue > activeTier) {
+          tier.classList.add('locked');
+        } else if (tierValue === 0 && activeTier === 0) {
+          tier.classList.add('active');
+          foundActive = true;
+        }
+      });
+
+    }
+
+    // Démarrer l'application
+    document.addEventListener('DOMContentLoaded', () => {
+      init();
+      loadWeeklyQuest();
+    });
+  </script>
+
+  <!-- Updated: Points centered on progress line with 2rem padding -->
+</body>
+</html>

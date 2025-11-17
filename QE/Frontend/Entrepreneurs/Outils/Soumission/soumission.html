@@ -1,0 +1,4534 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Créer une soumission</title>
+  
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#5271ff">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Script Service Worker -->
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      // Ne pas enregistrer le SW sur localhost (mode dev)
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log('[DEV] Service Worker désactivé sur localhost');
+        // Désenregistrer le SW s'il existe déjà
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+            console.log('[DEV] Service Worker désenregistré');
+          }
+        });
+        return;
+      }
+
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          console.log('SW registered: ', registration);
+        })
+        .catch((registrationError) => {
+          console.log('SW registration failed: ', registrationError);
+        });
+    });
+  }
+  </script>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="/favicon" type="image/x-icon">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="/base.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
+
+<!-- Variables globales définies dans common.js -->
+<script>
+  // Ces variables sont maintenant gérées par common.js
+  // username, userRole, canEditParameters sont disponibles globalement
+</script>
+
+  <link rel="stylesheet" href="/soumission.css">
+
+
+  
+</head>
+<body class="min-h-screen" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: var(--text-light); margin: 0; padding: 0; font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;">
+
+<div id="main-content">
+
+
+
+
+
+
+
+
+
+  <!-- Wrapper pour SPA - extraction du contenu uniquement -->
+  <div>
+
+  <!-- Header moderne comme newgqp.html -->
+  <div class="w-full" style="width: 100%; padding: 2rem;">
+
+    <!-- Bouton Retour -->
+    <div id="back-button-container" class="mb-6">
+      <button id="back-to-outils-btn" onclick="goBackToOutils()" class="back-button">
+        <i class="fas fa-arrow-left"></i>
+        <span class="back-button-text">Retour aux outils</span>
+      </button>
+    </div>
+
+    <!-- Header -->
+    <div class="mb-10" id="page-header">
+      <div class="relative">
+        <h1 class="text-4xl font-bold mb-3" style="color: var(--text-light);">
+          Nouvelle soumission
+        </h1>
+<span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        <div class="flex items-center justify-between">
+          <p class="text-xl font-medium" style="color: var(--text-gray);">Créez et envoyez une soumission professionnelle à votre client</p>
+          <div class="text-sm flex items-center" style="color: var(--text-gray);">
+            <i class="fas fa-calendar-alt mr-2"></i>
+            <span id="currentDate">Aujourd'hui</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- [WARN] Avertissement profil incomplet -->
+    <div id="profile-warning" style="display: none;">
+      <div style="max-width: 700px; margin: 60px auto; background: var(--bg-card); padding: 50px; border-radius: 20px; box-shadow: var(--shadow-dark-strong); border: 1px solid var(--border-dark);">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <i class="fas fa-exclamation-triangle" style="font-size: 70px; color: #fb923c; margin-bottom: 20px;"></i>
+          <h2 style="font-size: 32px; font-weight: 700; color: var(--text-light); margin-bottom: 10px;">
+            Profil incomplet
+          </h2>
+          <p style="font-size: 18px; color: var(--text-gray);">
+            Veuillez compléter votre profil avant de créer une soumission
+          </p>
+        </div>
+
+        <!-- Informations valides -->
+        <div id="valid-items" style="background: rgba(52, 211, 153, 0.1); border-left: 4px solid #34d399; padding: 25px; border-radius: 12px; margin-bottom: 20px; display: none;">
+          <p style="font-weight: 600; color: var(--text-light); margin-bottom: 20px; font-size: 16px;">
+            <i class="fas fa-check-circle mr-2"></i>Informations valides :
+          </p>
+          <ul id="valid-list" style="list-style: none; padding-left: 0;">
+            <!-- Liste dynamique des éléments valides -->
+          </ul>
+        </div>
+
+        <!-- Informations manquantes -->
+        <div id="missing-items" style="background: rgba(251, 146, 60, 0.1); border-left: 4px solid #fb923c; padding: 25px; border-radius: 12px; margin-bottom: 40px;">
+          <p style="font-weight: 600; color: var(--text-light); margin-bottom: 20px; font-size: 16px;">
+            <i class="fas fa-list-ul mr-2"></i>Informations manquantes :
+          </p>
+          <ul id="missing-list" style="list-style: none; padding-left: 0;">
+            <!-- Liste dynamique des éléments manquants -->
+          </ul>
+        </div>
+
+        <div style="text-align: center;">
+          <a href="/connection" class="btn-parametres" style="display: inline-block; position: relative; overflow: hidden; background: linear-gradient(135deg, #fb923c 0%, #f97316 100%); color: white; padding: 14px 40px; border-radius: 28px; font-weight: 700; font-size: 16px; text-decoration: none; box-shadow: 0 4px 12px rgba(251, 146, 60, 0.3); transition: all 0.3s ease;">
+            <span style="position: relative; z-index: 1;">
+              <i class="fas fa-cog mr-2"></i>Aller aux Paramètres
+            </span>
+          </a>
+        </div>
+
+        
+      </div>
+    </div>
+
+    <!-- Contenu principal de la page -->
+    <div id="page-content">
+    <!-- Formulaire moderne dans une carte comme les status cards -->
+    <div class="status-cards-grid grid grid-cols-1 gap-6 mb-8">
+      <div class="box">
+        <div class="box-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);">
+              <i class="fas fa-file-alt"></i>
+            </div>
+            <h2 class="box-header-title">Créer une soumission</h2>
+          </div>
+        </div>
+        <div class="box-body">
+
+  <form id="soumissionForm" autocomplete="off">
+    
+    <!-- SECTION INFORMATION CLIENT -->
+    <div class="form-section mb-6">
+      <h2 class="section-title">
+        <i class="fas fa-user mr-2 text-blue-500"></i>
+        Information client
+      </h2>
+      
+      <!-- Ligne 1: Prénom, Nom, Adresse, Téléphone -->
+      <div class="grid grid-cols-4 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-id-badge mr-2 text-green-500"></i>
+            Prénom
+          </label>
+          <input type="text" name="prenom" placeholder="Ex: Jean" class="modern-input" required autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-id-badge mr-2 text-green-500"></i>
+            Nom
+          </label>
+          <input type="text" name="nom" placeholder="Ex: Dupont" class="modern-input" required autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-map-marker-alt mr-2 text-red-500"></i>
+            Adresse
+          </label>
+          <input type="text" 
+                 id="adresseAutocomplete"
+                 name="adresse" 
+                 placeholder="Ex: 123 Rue de la Paix, Montréal, QC" 
+                 class="modern-input" 
+                 autocomplete="new-password"
+                 autocorrect="off"
+                 autocapitalize="off"
+                 spellcheck="false"
+                 readonly
+                 onfocus="this.removeAttribute('readonly');"
+                 data-form-type="other">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-phone mr-2 text-purple-500"></i>
+            Téléphone
+          </label>
+          <input type="text" id="telephoneInput" name="telephone" placeholder="Ex: 514-029-2001" class="modern-input" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" maxlength="12">
+        </div>
+      </div>
+
+      <!-- Ligne 2: Courriel, N° soumission, Date création, Payé par -->
+      <div class="grid grid-cols-4 gap-4">
+        <div>
+          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-envelope mr-2 text-blue-500"></i>
+            Courriel
+          </label>
+          <input type="email" name="courriel" placeholder="Ex: jean.dupont@email.com" class="modern-input" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-hashtag mr-2 text-orange-500"></i>
+            N° de soumission
+          </label>
+          <input type="text" name="num" placeholder="Ex: 24-0001" class="modern-input" autocomplete="off" value="24-">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-calendar mr-2 text-indigo-500"></i>
+            Date de création
+          </label>
+          <div class="dashboard-calendar-container">
+            <input type="text" name="date_creation" class="dashboard-date-display" id="autoDate" readonly placeholder="Sélectionner une date" onclick="openCreationCalendar()">
+            <i class="fas fa-calendar dashboard-date-icon" onclick="toggleCreationCalendar()"></i>
+            <div class="dashboard-calendar hidden" id="creationCalendar">
+              <div class="dashboard-calendar-header">
+                <button type="button" class="dashboard-calendar-nav" onclick="changeCreationMonth(-1)">
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+                <span class="dashboard-calendar-title" id="creationCalendarTitle">Mars 2024</span>
+                <button type="button" class="dashboard-calendar-nav" onclick="changeCreationMonth(1)">
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+              <div class="dashboard-calendar-weekdays">
+                <span>Dim</span><span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span>
+              </div>
+              <div class="dashboard-calendar-days" id="creationCalendarDays"></div>
+            </div>
+          </div>
+        </div>
+        <div class="dropdown col-span-1">
+          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-credit-card mr-2 text-teal-500"></i>
+            Payé par
+          </label>
+          <div class="dropdown-toggle" id="paidByToggle">
+            <span class="tag">Virement Interac</span>
+          </div>
+          <div class="dropdown-menu hidden bg-white" id="paidByMenu">
+            <div class="dropdown-option" data-value="Virement Interac">Virement Interac</div>
+            <div class="dropdown-option" data-value="Chèque">Chèque</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION DESCRIPTION DES TRAVAUX -->
+    <div class="form-section mb-6">
+      <h2 class="section-title">
+        <i class="fas fa-paint-brush mr-2 text-orange-500"></i>
+        Description des travaux
+      </h2>
+      
+      <!-- 3 champs principaux avec hauteur augmentée -->
+      <div class="grid grid-cols-3 gap-4 mb-6">
+        <div>
+          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-home mr-2 text-green-500"></i>
+            Endroit à peinturer
+          </label>
+          <textarea name="endroit_peinture" placeholder="Ex: Salon, cuisine, chambres..." class="modern-textarea endroit-textarea" style="height: 120px; max-height: 120px; vertical-align: top; padding: 12px 16px; overflow-y: auto; resize: none; box-sizing: border-box;" autocomplete="off"></textarea>
+        </div>
+
+        <!-- PRODUIT/COULEUR -->
+        <div>
+          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-palette mr-2 text-purple-500"></i>
+            Produit/Couleurs
+          </label>
+          <div class="popup-trigger modern-input" id="productTrigger" style="min-height: 120px; max-height: 120px; height: 120px; display: flex; align-items: flex-start; cursor: pointer; padding: 12px 16px; position: relative; overflow-y: auto; font-size: 14px; box-sizing: border-box;">
+            <span id="productDisplay" style="color: var(--text-gray); font-size: 14px; line-height: 1.4; word-wrap: break-word; flex: 1;">Cliquez pour sélectionner produits et couleurs...</span>
+            <i class="fas fa-plus" style="position: sticky; top: 4px; margin-left: 16px; color: var(--primary-blue); align-self: flex-start;"></i>
+            <input type="hidden" id="produitCouleursHidden" name="produitCouleurs">
+          </div>
+        </div>
+
+        <!-- PARTICULARITÉ DES TRAVAUX -->
+        <div>
+          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-star mr-2 text-yellow-500"></i>
+            Particularité des travaux
+          </label>
+          <div class="popup-trigger modern-input" id="partTravauxTrigger" style="min-height: 120px; max-height: 120px; height: 120px; display: flex; align-items: flex-start; cursor: pointer; padding: 12px 16px; position: relative; overflow-y: auto; font-size: 14px; box-sizing: border-box;">
+            <span id="partTravauxDisplay" style="color: var(--text-gray); font-size: 14px; line-height: 1.4; word-wrap: break-word; flex: 1;">Cliquez pour sélectionner particularités des travaux...</span>
+            <i class="fas fa-plus" style="position: sticky; top: 4px; margin-left: 16px; color: var(--primary-blue); align-self: flex-start;"></i>
+            <input type="hidden" id="partTravauxHidden" name="partTravaux">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION DÉTAILS DES TRAVAUX -->
+    <div class="form-section mb-6">
+      <h2 class="section-title">
+        <i class="fas fa-clipboard-list mr-2 text-indigo-500"></i>
+        Détails des travaux
+      </h2>
+
+      <!-- Deuxième ligne: 4 champs sur une ligne -->
+      <div class="grid grid-cols-4 gap-4">
+        <div>
+          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-dollar-sign mr-2 text-green-500"></i>
+            Prix
+          </label>
+          <input type="text" name="prix" placeholder="Ex: 850$" class="modern-input" autocomplete="off">
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-clock mr-2 text-blue-500"></i>
+            Durée des travaux
+          </label>
+          <input type="text" name="temps" placeholder="Ex: 2-3 jours" class="modern-input" autocomplete="off">
+        </div>
+
+        <!-- TYPE DE TRAVAUX -->
+        <div class="dropdown">
+          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-hammer mr-2 text-orange-500"></i>
+            Type de travaux
+          </label>
+          <div class="dropdown-toggle" id="itemToggle">
+            <span class="placeholder" style="color: rgb(156 163 175); font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px;">Ex: Intérieur, Extérieur...</span>
+          </div>
+          <div class="dropdown-menu hidden bg-white" id="itemMenu">
+            <div class="dropdown-option" data-value="Travaux intérieurs">Travaux intérieurs</div>
+            <div class="dropdown-option" data-value="Travaux extérieurs">Travaux extérieurs</div>
+            <div class="dropdown-option" data-value="Travaux intérieurs et extérieurs">Travaux intérieurs et extérieurs</div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-calendar-alt mr-2 text-purple-500"></i>
+            Date des travaux
+          </label>
+          <input type="text" name="date_travaux" placeholder="Ex: Semaine du 15 janvier" class="modern-input" autocomplete="off">
+        </div>
+      </div>
+    </div>
+
+    <!-- Boutons d'action avec options d'envoi -->
+    <div class="flex justify-between items-center mt-8 pt-6" style="border-top: 1px solid var(--border-dark);">
+      <!-- Options d'envoi (gauche) - Version compacte -->
+      <div class="flex items-center gap-3" style="font-size: 0.8rem;">
+        <!-- Option: Envoyer maintenant -->
+        <div class="assignment-option-compact flex items-center cursor-pointer px-2 py-1 rounded transition-all duration-200" style="border: 1px solid var(--border-dark);" id="send-now-option">
+          <input type="radio" name="send_type" value="send" id="send-now" checked style="display: none;">
+          <i class="fas fa-paper-plane mr-1.5 text-green-400" style="font-size: 0.75rem;"></i>
+          <span style="color: var(--text-light); font-size: 0.8rem;">Envoyer maintenant</span>
+        </div>
+
+        <!-- Option: Ne pas envoyer -->
+        <div class="assignment-option-compact flex items-center cursor-pointer px-2 py-1 rounded transition-all duration-200" style="border: 1px solid var(--border-dark);" id="save-only-option">
+          <input type="radio" name="send_type" value="save" id="save-only" style="display: none;">
+          <i class="fas fa-save mr-1.5 text-orange-400" style="font-size: 0.75rem;"></i>
+          <span style="color: var(--text-light); font-size: 0.8rem;">Ne pas envoyer maintenant</span>
+        </div>
+      </div>
+
+      <!-- Boutons d'action (droite) -->
+      <div class="flex space-x-4">
+        <button type="button" class="btn-secondary px-6 py-2" id="voirPDFBtn">
+          <i class="fas fa-file-signature mr-2"></i>
+          Présenter au client
+        </button>
+        <button type="submit" id="submitBtn" class="btn-primary px-6 py-2 flex items-center gap-2">
+          <span id="btnText">Envoyer au client</span>
+          <span id="btnSpinner" class="hidden absolute inset-0 flex items-center justify-center">
+            <span class="w-5 h-5 border-2 border-white border-t-black rounded-full animate-spin"></span>
+          </span>
+        </button>
+      </div>
+    </div>
+  </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Soumissions à envoyer -->
+  <div id="pending-soumissions-section">
+    <div class="status-cards-grid grid grid-cols-1 gap-6 mb-8">
+      <div class="box mb-0">
+        <div class="box-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);">
+              <i class="fas fa-paper-plane"></i>
+            </div>
+            <h2 class="box-header-title">Soumissions à envoyer</h2>
+          </div>
+          <span id="pending-count" class="px-3 py-1 rounded-full text-sm font-semibold" style="background: rgba(251, 146, 60, 0.2); color: #fb923c;">
+            0 en attente
+          </span>
+        </div>
+        <div class="box-body">
+        <!-- Vue Desktop: Table -->
+        <div class="table-container">
+          <table class="soumissions-table">
+            <thead>
+              <tr>
+                <th class="w-1/6">N° Soumission</th>
+                <th class="w-1/6">Client</th>
+                <th class="w-1/6">Date de création</th>
+                <th class="w-1/4">Adresse</th>
+                <th class="w-1/6">Montant</th>
+                <th class="w-1/4" style="text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="pending-soumissions-body">
+              <tr>
+                <td colspan="6" class="empty-state">
+                  <i class="fas fa-inbox mr-2"></i>
+                  Aucune soumission en attente
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Vue Mobile: Cards -->
+        <div id="pending-soumissions-mobile">
+          <div id="pending-soumissions-mobile-list">
+            <!-- Les cards seront injectées ici dynamiquement -->
+            <div class="soumissions-empty-mobile">
+              <i class="fas fa-inbox"></i>
+              <p>Aucune soumission en attente</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  </div><!-- Fin de .main-content pour extraction SPA -->
+
+<script>
+// Fonction pour retourner à la page Outils
+function goBackToOutils() {
+  // La page soumissions est chargée DANS l'iframe outils
+  // Il faut utiliser l'historique pour revenir en arrière
+
+  if (window.parent && window.parent !== window) {
+    // On est dans un iframe - utiliser l'historique pour revenir en arrière
+    window.history.back();
+  } else if (window.top && window.top !== window) {
+    // Deuxième niveau d'iframe
+    window.history.back();
+  } else {
+    // Pas dans un iframe - redirection directe
+    window.location.href = 'outilsmobile.html';
+  }
+}
+
+// Fonction pour assurer la visibilité du bouton retour - DÉSACTIVÉE (géré par CSS)
+function ensureBackButtonVisible() {
+  // Ne rien faire - la visibilité est gérée par CSS responsive
+}
+
+// Fonction pour forcer les permissions et visibilité des éléments selon le rôle
+function enforceRoleBasedVisibility() {
+  ensureBackButtonVisible();
+  console.log('Role-based visibility enforced - User:', window.username);
+}
+
+// S'assurer que le bouton est toujours visible - TOUS les événements possibles
+document.addEventListener('DOMContentLoaded', enforceRoleBasedVisibility);
+window.addEventListener('load', enforceRoleBasedVisibility);
+window.addEventListener('pageshow', enforceRoleBasedVisibility);
+
+// Exécution immédiate si le DOM est déjà chargé
+if (document.readyState !== 'loading') {
+  enforceRoleBasedVisibility();
+}
+
+// Vérification répétée pour s'assurer que tout reste correct
+setTimeout(enforceRoleBasedVisibility, 100);
+setTimeout(enforceRoleBasedVisibility, 500);
+setTimeout(enforceRoleBasedVisibility, 1000);
+
+document.getElementById("voirPDFBtn").addEventListener("click", async () => {
+  // Les popups gèrent déjà les champs cachés, pas besoin de updateProduitCouleursHidden()
+  // qui était pour l'ancien système de tags
+  const btn = document.getElementById("voirPDFBtn");
+  const originalText = btn.innerHTML;
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Chargement...';
+
+  const form = document.getElementById("soumissionForm");
+
+  const data = {
+    username: window.username,
+    nom: form.nom.value,
+    prenom: form.prenom.value,
+    telephone: form.telephone.value,
+    courriel: form.courriel.value,
+    date: form.date_creation.value,
+    temps: form.temps.value,
+    num: form.num.value,
+    date2: form.date_travaux.value,
+    prix: form.prix.value,
+    adresse: form.adresse.value,
+    endroit: form.endroit_peinture.value,
+    item: document.querySelector("#itemToggle .tag")?.textContent?.trim() || "",
+    produit: document.getElementById("produitCouleursHidden").value,
+    part: document.getElementById("partTravauxHidden").value,
+    payer_par: window.dropdownStates?.paidBy || "Virement Interac",
+  };
+
+  // Vérifier le mode sélectionné
+  const saveOnlyRadio = document.getElementById('save-only');
+  const isSaveOnlyMode = saveOnlyRadio?.checked;
+
+  // Si mode "Ne pas envoyer maintenant", afficher un popup simple avec le PDF
+  if (isSaveOnlyMode) {
+    try {
+      const response = await fetch(`${window.location.origin}/preview-pdf?username=${window.username}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        throw new Error("Erreur lors de la création du PDF");
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+
+      const pdfjsLib = window['pdfjs-dist/build/pdf'];
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
+
+      const pdf = await pdfjsLib.getDocument(url).promise;
+      const page = await pdf.getPage(1);
+
+      const canvas = document.getElementById("pdfCanvas");
+      const context = canvas.getContext('2d');
+
+      // Échelle fixe à 1.5
+      const scale = 1.5;
+      const viewport = page.getViewport({ scale: scale });
+
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+
+      // Rendu du PDF
+      await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+      // Afficher le modal SANS déplacer vers parent et SANS cacher AppPC
+      const pdfModal = document.getElementById("pdfModal");
+      const pdfOverlay = document.getElementById("pdfOverlay");
+      const closePdfBtn = document.getElementById("closePdfBtn");
+
+      pdfModal.classList.remove("hidden");
+      pdfOverlay.style.display = "block";
+      closePdfBtn.classList.remove("hidden");
+
+      // Cacher les boutons de présentation (signature, accepter, annuler)
+      const signatureOverlay = document.getElementById('signatureOverlay');
+      const acceptBtn = document.getElementById('acceptPresentationBtn');
+      const cancelBtn = document.getElementById('cancelPresentationBtn');
+
+      if (signatureOverlay) signatureOverlay.style.display = 'none';
+      if (acceptBtn) acceptBtn.style.display = 'none';
+      if (cancelBtn) cancelBtn.style.display = 'none';
+
+      // Fonction de fermeture simple
+      const closePDF = () => {
+        pdfModal.classList.add("hidden");
+        pdfOverlay.style.display = "none";
+        closePdfBtn.classList.add("hidden");
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+
+        // Réafficher les boutons pour le prochain mode présentation
+        if (signatureOverlay) signatureOverlay.style.display = 'block';
+        if (acceptBtn) acceptBtn.style.display = 'block';
+        if (cancelBtn) cancelBtn.style.display = 'block';
+      };
+
+      closePdfBtn.onclick = closePDF;
+      pdfOverlay.onclick = closePDF;
+
+      // Réinitialiser le bouton
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+
+      return; // Sortir ici, ne pas continuer avec le mode présentation
+    } catch (error) {
+      console.error('[ERROR] Erreur génération PDF:', error);
+      alert('Erreur lors de la génération du PDF');
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+      return;
+    }
+  }
+
+  // MODE PRÉSENTATION (Envoyer maintenant) - Continuer avec le code existant
+  // Stocker les données du formulaire pour la signature
+  currentFormData = data;
+
+  console.log('[DEBUG] PRÉSENTATION - Produit envoyé:', data.produit);
+  console.log('[DEBUG] PRÉSENTATION - Part envoyé:', data.part);
+
+  try {
+    // Pour la présentation, on utilise juste preview-pdf (pas de création en attente)
+    // La soumission sera créée uniquement si le client signe
+    const response = await fetch(`${window.location.origin}/preview-pdf?username=${window.username}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error("Erreur lors de la création du PDF : " + errText);
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+
+    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
+
+    const pdf = await pdfjsLib.getDocument(url).promise;
+
+    // Stocker le PDF et la page pour le popup zoom
+    currentPdfDocument = pdf;
+    currentPdfPage = await pdf.getPage(1);
+
+    const canvas = document.getElementById("pdfCanvas");
+    const context = canvas.getContext('2d');
+
+    // Échelle fixe à 1.5 (pas de zoom)
+    const scale = 1.5;
+    const viewport = currentPdfPage.getViewport({ scale: scale });
+
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    // Rendu du PDF
+    await currentPdfPage.render({ canvasContext: context, viewport: viewport }).promise;
+
+    // Afficher modal et overlay
+    document.getElementById("pdfModal").classList.remove("hidden");
+    document.getElementById("pdfOverlay").style.display = "block";
+    document.getElementById("closePdfBtn").classList.remove("hidden");
+
+    // Réinitialiser le bouton accepter en gris/désactivé
+    const acceptBtn = document.getElementById('acceptPresentationBtn');
+    acceptBtn.disabled = true;
+    acceptBtn.classList.remove('btn-success');
+    acceptBtn.setAttribute('style', 'background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;');
+
+    // Réinitialiser l'état de la signature
+    hasPresentationSignature = false;
+
+    // MODE PRÉSENTATION: Déplacer modal et overlay vers parent, puis cacher AppPC
+    const pdfModal = document.getElementById("pdfModal");
+    const pdfOverlay = document.getElementById("pdfOverlay");
+    const closePdfBtn = document.getElementById("closePdfBtn");
+    const parentBody = window.parent.document.body;
+    const parentDoc = window.parent.document;
+
+    // Injecter les styles nécessaires dans le parent si pas déjà fait
+    if (!parentDoc.getElementById('soumission-modal-styles')) {
+      const styleLink = parentDoc.createElement('link');
+      styleLink.id = 'soumission-modal-styles';
+      styleLink.rel = 'stylesheet';
+      styleLink.href = '/frontend/Entrepreneurs/Outils/Soumission/soumission.css';
+      parentDoc.head.appendChild(styleLink);
+
+      const baseLink = parentDoc.createElement('link');
+      baseLink.id = 'base-css-for-modal';
+      baseLink.rel = 'stylesheet';
+      baseLink.href = '/base.css';
+      parentDoc.head.appendChild(baseLink);
+    }
+
+    // Déplacer vers le body parent si pas déjà fait
+    if (pdfModal && pdfModal.parentElement !== parentBody) {
+      parentBody.appendChild(pdfModal);
+      parentBody.appendChild(pdfOverlay);
+    }
+
+    // Attacher l'événement de signature via JavaScript
+    // Chercher dans l'iframe d'abord, puis dans le parent (après déplacement)
+    let signatureOverlay = document.getElementById('signatureOverlay');
+    if (!signatureOverlay && pdfModal.parentElement === parentBody) {
+      // Le modal a été déplacé, chercher dans le modal déplacé
+      signatureOverlay = pdfModal.querySelector('#signatureOverlay');
+    }
+
+    console.log('[DEBUG] signatureOverlay trouvé:', signatureOverlay);
+    if (signatureOverlay) {
+      signatureOverlay.onclick = () => {
+        console.log('[DEBUG] Click sur signature overlay détecté!');
+        window.openSignatureZoomPopup();
+      };
+      console.log('[DEBUG] Événement onclick attaché à signatureOverlay');
+    } else {
+      console.error('[ERROR] signatureOverlay non trouvé!');
+    }
+
+    // Maintenant cacher AppPC
+    const appContainer = window.parent.document.querySelector('#app-container');
+    if (appContainer) appContainer.style.display = 'none';
+
+    // Bloquer le scroll de l'arrière-plan
+    document.body.style.overflow = "hidden";
+
+    // Fonction de fermeture
+    const closePDF = () => {
+      if (pdfModal) pdfModal.classList.add("hidden");
+      if (pdfOverlay) pdfOverlay.style.display = "none";
+      if (closePdfBtn) closePdfBtn.classList.add("hidden");
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+
+      // Restaurer AppPC
+      const appContainer = window.parent.document.querySelector('#app-container');
+      if (appContainer) appContainer.style.display = '';
+
+      // Restaurer le scroll de l'arrière-plan
+      document.body.style.overflow = "";
+    };
+
+    if (closePdfBtn) closePdfBtn.onclick = closePDF;
+    // NE PAS fermer au clic sur l'overlay - seulement avec Annuler ou X
+
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
+});
+</script>
+
+
+
+
+
+
+
+  <script>
+  // ================================================================
+  // CALENDRIER PERSONNALISÉ - FONCTIONS
+  // ================================================================
+
+  let creationCurrentDate = new Date();
+  let creationSelectedDate = null;
+
+  // Noms des mois en français
+  const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+  // Fonction pour ouvrir/fermer le calendrier de création
+  window.toggleCreationCalendar = function() {
+    const calendar = document.getElementById('creationCalendar');
+    
+    if (calendar.classList.contains('hidden')) {
+      calendar.classList.remove('hidden');
+      renderCreationCalendar();
+    } else {
+      calendar.classList.add('hidden');
+    }
+  };
+
+  // Fonction pour ouvrir le calendrier au clic sur l'input
+  window.openCreationCalendar = function() {
+    const calendar = document.getElementById('creationCalendar');
+    if (calendar.classList.contains('hidden')) {
+      calendar.classList.remove('hidden');
+      renderCreationCalendar();
+    }
+  };
+
+  // Fonction pour changer de mois
+  window.changeCreationMonth = function(direction) {
+    creationCurrentDate.setMonth(creationCurrentDate.getMonth() + direction);
+    renderCreationCalendar();
+  };
+
+  // Fonction pour générer le calendrier
+  function renderCreationCalendar() {
+    const calendarDays = document.getElementById('creationCalendarDays');
+    const calendarTitle = document.getElementById('creationCalendarTitle');
+    
+    if (!calendarDays || !calendarTitle) return;
+    
+    // Mettre à jour le titre
+    calendarTitle.textContent = `${monthNames[creationCurrentDate.getMonth()]} ${creationCurrentDate.getFullYear()}`;
+    
+    // Générer les jours
+    const firstDay = new Date(creationCurrentDate.getFullYear(), creationCurrentDate.getMonth(), 1);
+    const lastDay = new Date(creationCurrentDate.getFullYear(), creationCurrentDate.getMonth() + 1, 0);
+    const firstDayOfWeek = firstDay.getDay();
+    const today = new Date();
+    
+    // Vider le calendrier
+    calendarDays.innerHTML = '';
+    
+    // Ajouter les jours du mois précédent
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+      const prevDate = new Date(firstDay);
+      prevDate.setDate(prevDate.getDate() - (i + 1));
+      const dayElement = createCreationDayElement(prevDate, true, today);
+      calendarDays.appendChild(dayElement);
+    }
+    
+    // Ajouter les jours du mois actuel
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      const date = new Date(creationCurrentDate.getFullYear(), creationCurrentDate.getMonth(), day);
+      const dayElement = createCreationDayElement(date, false, today);
+      calendarDays.appendChild(dayElement);
+    }
+    
+    // Ajouter les jours du mois suivant pour compléter la grille
+    const totalCells = calendarDays.children.length;
+    const remainingCells = 42 - totalCells; // 6 semaines * 7 jours
+    for (let day = 1; day <= remainingCells; day++) {
+      const nextDate = new Date(creationCurrentDate.getFullYear(), creationCurrentDate.getMonth() + 1, day);
+      const dayElement = createCreationDayElement(nextDate, true, today);
+      calendarDays.appendChild(dayElement);
+    }
+  }
+
+  // Fonction pour créer un élément jour
+  function createCreationDayElement(date, isOtherMonth, today) {
+    const dayElement = document.createElement('div');
+    dayElement.className = 'dashboard-calendar-day';
+    dayElement.textContent = date.getDate();
+    
+    if (isOtherMonth) {
+      dayElement.classList.add('other-month');
+    }
+    
+    // Marquer aujourd'hui
+    if (date.toDateString() === today.toDateString()) {
+      dayElement.classList.add('today');
+    }
+    
+    // Marquer la date sélectionnée
+    const currentInput = document.getElementById('autoDate');
+    if (currentInput && currentInput.value) {
+      const inputDate = parseCreationDisplayDate(currentInput.value);
+      if (inputDate && date.toDateString() === inputDate.toDateString()) {
+        dayElement.classList.add('selected');
+      }
+    }
+    // Si aucune date n'est sélectionnée, présélectionner aujourd'hui
+    else if (date.toDateString() === today.toDateString()) {
+      dayElement.classList.add('selected');
+    }
+    
+    // Ajouter l'événement click
+    dayElement.addEventListener('click', function() {
+      selectCreationDate(date);
+    });
+    
+    return dayElement;
+  }
+
+  // Fonction pour sélectionner une date
+  function selectCreationDate(date) {
+    const input = document.getElementById('autoDate');
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const formattedDate = `${day}/${month}/${year}`;
+    
+    input.value = formattedDate;
+    creationSelectedDate = date;
+    
+    // Fermer le calendrier
+    document.getElementById('creationCalendar').classList.add('hidden');
+    
+    console.log('[DATE] Date de création sélectionnée:', formattedDate);
+  }
+
+  // Fonction pour parser une date d'affichage (format français)
+  function parseCreationDisplayDate(dateStr) {
+    if (!dateStr) return null;
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      return new Date(parts[2], parts[1] - 1, parts[0]);
+    }
+    return null;
+  }
+
+  // Fermer le calendrier si on clique ailleurs
+  document.addEventListener('click', function(e) {
+    const calendar = document.getElementById('creationCalendar');
+    const container = document.querySelector('.dashboard-calendar-container');
+    
+    if (calendar && !calendar.classList.contains('hidden') && container && !container.contains(e.target)) {
+      calendar.classList.add('hidden');
+    }
+  });
+
+  function getLocalDateISO() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // Initialiser la date proprement
+  function initializeCreationDate() {
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    const formattedDate = `${day}/${month}/${year}`;
+    
+    const autoDateElement = document.getElementById("autoDate");
+    if (autoDateElement) {
+      autoDateElement.value = formattedDate;
+      creationSelectedDate = today;
+    }
+  }
+
+  // Initialisation dès que le DOM est prêt
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeCreationDate);
+  } else {
+    initializeCreationDate();
+  }
+
+  // Protection contre les resets du formulaire
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      const autoDateElement = document.getElementById("autoDate");
+      if (autoDateElement && !autoDateElement.value) {
+        initializeCreationDate();
+      }
+    }, 100);
+  });
+
+  function setupMultiSelect(toggleId, menuId, placeholder) {
+    const toggle = document.getElementById(toggleId);
+    const menu = document.getElementById(menuId);
+    const options = menu.querySelectorAll('.dropdown-option');
+    const selected = new Set();
+
+    toggle.addEventListener('click', () => {
+      document.querySelectorAll('.dropdown-menu').forEach(m => {
+        if (m !== menu) m.classList.add('hidden');
+      });
+      document.querySelectorAll('.dropdown-toggle').forEach(t => {
+        if (t !== toggle) t.classList.remove('active');
+      });
+      menu.classList.toggle('hidden');
+      toggle.classList.toggle('active', !menu.classList.contains('hidden'));
+    });
+
+    options.forEach(option => {
+      option.addEventListener('click', () => {
+        const value = option.dataset.value;
+        const check = option.querySelector('.check');
+
+        if (selected.has(value)) {
+          selected.delete(value);
+          check.textContent = '';
+        } else {
+          selected.add(value);
+          check.textContent = '✓';
+        }
+
+        updateToggle(toggle, selected, placeholder);
+      });
+    });
+
+function updateToggle() {
+  toggle.innerHTML = "";
+  if (selected.length > 0) {
+    toggle.classList.add('has-selection');
+  } else {
+    toggle.classList.remove('has-selection');
+  }
+  selected.forEach(val => {
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.textContent = val;
+    toggle.appendChild(tag);
+  });
+  toggle.appendChild(input);
+
+  // 🔹 Mettre à jour le champ caché
+  const hiddenField = document.getElementById("produitCouleursHidden");
+  if (hiddenField) {
+    hiddenField.value = selected.join("\n");
+  }
+
+  // Cacher le placeholder s'il y a des tags sélectionnés
+  if (selected.length > 0) {
+    hidePlaceholder();
+  } else if (input !== document.activeElement && input.value.trim() === "") {
+    showPlaceholder();
+  }
+}
+
+  }
+
+function updateProduitCouleursHidden() {
+  const toggle = document.getElementById("toggleBox");
+  if (!toggle) {
+    console.warn('Element toggleBox non trouvé');
+    return;
+  }
+  
+  const tags = toggle.querySelectorAll(".tag");
+  const values = Array.from(tags).map(tag => tag.textContent.trim());
+
+  const inputField = document.getElementById("customProductInput");
+  if (inputField && inputField.value.trim() !== "") {
+    values.push(inputField.value.trim());
+  }
+
+  const hidden = document.getElementById("produitCouleursHidden");
+  if (hidden) {
+    hidden.value = values.map(item => ` ${item}`).join("\n\n");
+  }
+}
+
+function updatePartTravauxHidden() {
+  const toggle = document.getElementById("partTravauxToggle");
+  if (!toggle) {
+    console.warn('Element partTravauxToggle non trouvé');
+    return;
+  }
+  
+  const tags = toggle.querySelectorAll(".tag");
+  const values = Array.from(tags).map(tag => tag.textContent.trim());
+
+  const inputField = document.getElementById("customPartTravauxInput");
+  if (inputField && inputField.value.trim() !== "") {
+    values.push(inputField.value.trim());
+  }
+
+  const hidden = document.getElementById("partTravauxHidden");
+  if (hidden) {
+    hidden.value = values.map(item => `- ${item}`).join("\n\n");
+  }
+}
+
+
+function setupMultiSelectWithInput(toggleId, menuId, placeholder, inputId, hiddenId) {
+  const toggle = document.getElementById(toggleId);
+  const menu = document.getElementById(menuId);
+  const options = menu.querySelectorAll('.dropdown-option');
+  const selected = [];
+  const input = document.getElementById(inputId);
+  const hiddenField = document.getElementById(hiddenId);
+
+  // Ouvrir menu + focus input
+  toggle.addEventListener('click', (e) => {
+    if (e.target === input) return;
+    
+    // Gérer la fermeture de l'autre dropdown multi-select
+    document.querySelectorAll('#customProductInput, #customPartTravauxInput').forEach(otherInput => {
+      if (otherInput !== input && otherInput.style.display === 'inline-block') {
+        otherInput.style.display = 'none';
+        const otherToggleId = otherInput.id === 'customProductInput' ? 'toggleBox' : 'partTravauxToggle';
+        const otherToggle = document.getElementById(otherToggleId);
+        
+        // Vérifier les selections existantes
+        let hasSelections = false;
+        if (otherToggleId === 'toggleBox') {
+          hasSelections = otherToggle.querySelectorAll('.tag').length > 0;
+        } else {
+          hasSelections = otherToggle.querySelectorAll('.tag').length > 0;
+        }
+        
+        // Restaurer placeholder si pas de sélections et input vide
+        if (!hasSelections && otherInput.value.trim() === "") {
+          const placeholderText = otherToggleId === 'toggleBox' ? 
+            'Ex: Peinture, couleurs, produits...' : 
+            'Ex: Assurance, garantie, équipement...';
+          if (!otherToggle.querySelector('.placeholder')) {
+            otherToggle.insertAdjacentHTML('afterbegin', `<span class="placeholder" style="color: rgb(156 163 175); font-size: 14px;">${placeholderText}</span>`);
+          }
+        }
+      }
+    });
+    
+    document.querySelectorAll('.dropdown-menu').forEach(m => {
+      if (m !== menu) m.classList.add('hidden');
+    });
+    document.querySelectorAll('.dropdown-toggle').forEach(t => {
+      if (t !== toggle) t.classList.remove('active');
+    });
+    menu.classList.toggle('hidden');
+    toggle.classList.toggle('active', !menu.classList.contains('hidden'));
+    hidePlaceholder();
+    input.style.display = 'inline-block';
+    input.focus();
+    e.stopPropagation();
+  });
+
+  // Sélection depuis la liste
+  options.forEach(option => {
+    option.addEventListener('click', (e) => {
+      const value = option.dataset.value;
+      const check = option.querySelector('.check');
+
+      if (selected.includes(value)) {
+        selected.splice(selected.indexOf(value), 1);
+        check.textContent = '';
+      } else {
+        selected.push(value);
+        check.textContent = '✓';
+      }
+      updateToggle();
+      input.focus();
+      e.stopPropagation();
+    });
+  });
+
+  // Ajout via Enter ou suppression via Backspace/Delete
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && input.value.trim() !== "") {
+      const value = input.value.trim();
+      if (!selected.includes(value)) {
+        selected.push(value);
+      }
+      input.value = "";
+      updateToggle();
+      input.focus();
+      e.preventDefault();
+    }
+if (e.key === "Backspace" && input.value === "" && selected.length > 0) {
+  const removed = selected.pop();
+  uncheckMenuOption(removed);
+  updateToggle();
+  setTimeout(() => input.focus(), 0);
+}
+
+if (e.key === "Delete" && document.activeElement === input && selected.length > 0) {
+  const removed = selected.pop();
+  uncheckMenuOption(removed);
+  updateToggle();
+  setTimeout(() => input.focus(), 0);
+}
+  });
+
+  // Placeholder visible seulement si vide et pas focus
+  input.addEventListener("blur", () => {
+    if (selected.length === 0 && input.value.trim() === "") {
+      showPlaceholder();
+    }
+  });
+
+  input.addEventListener("focus", () => {
+    hidePlaceholder();
+  });
+
+  // Fermeture quand on clique ailleurs
+  document.addEventListener("click", (e) => {
+    if (!toggle.contains(e.target) && !menu.contains(e.target)) {
+      menu.classList.add('hidden');
+      toggle.classList.remove('active');
+      input.style.display = 'none';
+      if (selected.length === 0 && input.value.trim() === "") {
+        showPlaceholder();
+      }
+    }
+  });
+
+  // Fonctions internes
+  function updateToggle() {
+    toggle.innerHTML = "";
+    if (selected.length > 0) {
+      toggle.classList.add('has-selection');
+    } else {
+      toggle.classList.remove('has-selection');
+    }
+    selected.forEach(val => {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = val;
+      toggle.appendChild(tag);
+    });
+    toggle.appendChild(input);
+
+    // Mise à jour du champ caché lié
+    if (hiddenField) {
+      hiddenField.value = selected.map(item => ` ${item}`).join("\n\n");
+    }
+
+    // Cacher le placeholder s'il y a des tags sélectionnés
+    if (selected.length > 0) {
+      hidePlaceholder();
+    } else if (input !== document.activeElement && input.value.trim() === "") {
+      showPlaceholder();
+    }
+  }
+
+  function uncheckMenuOption(value) {
+    options.forEach(opt => {
+      if (opt.dataset.value === value) {
+        opt.querySelector('.check').textContent = '';
+      }
+    });
+  }
+
+  function showPlaceholder() {
+    if (!toggle.querySelector('.placeholder') && input.style.display === 'none') {
+      toggle.insertAdjacentHTML('afterbegin', `<span class="placeholder" style="color: rgb(156 163 175); font-size: 14px;">${placeholder}</span>`);
+    }
+  }
+
+  function hidePlaceholder() {
+    const ph = toggle.querySelector('.placeholder');
+    if (ph) ph.remove();
+  }
+}
+
+
+  // setupMultiSelectWithInput('toggleBox', 'productMenu', 'Ex: Peinture, couleurs, produits...', 'customProductInput', 'produitCouleursHidden');
+  // setupMultiSelectWithInput('partTravauxToggle', 'partTravauxMenu', 'Ex: Assurance, garantie, équipement...', 'customPartTravauxInput', 'partTravauxHidden');
+
+  // // Ajouter les placeholders de base avec exemples - COMMENTÉ car remplacé par popups
+  // const toggleBox = document.getElementById('toggleBox');
+  // const partTravauxToggle = document.getElementById('partTravauxToggle');
+  // 
+  // if (toggleBox && !toggleBox.querySelector('.placeholder')) {
+  //   toggleBox.insertAdjacentHTML('afterbegin', '<span class="placeholder" style="color: rgb(156 163 175); font-size: 14px;">Ex: Peinture, couleurs, produits...</span>');
+  // }
+  // 
+  // if (partTravauxToggle && !partTravauxToggle.querySelector('.placeholder')) {
+  //   partTravauxToggle.insertAdjacentHTML('afterbegin', '<span class="placeholder" style="color: rgb(156 163 175); font-size: 14px;">Ex: Assurance, garantie, équipement...</span>');
+  // }
+
+  function setupSingleSelect(toggleId, menuId, placeholder) {
+    const toggle = document.getElementById(toggleId);
+    const menu = document.getElementById(menuId);
+    const options = menu.querySelectorAll('.dropdown-option');
+    let selectedValue = null;
+
+    toggle.addEventListener('click', () => {
+      document.querySelectorAll('.dropdown-menu').forEach(m => {
+        if (m !== menu) m.classList.add('hidden');
+      });
+      document.querySelectorAll('.dropdown-toggle').forEach(t => {
+        if (t !== toggle) t.classList.remove('active');
+      });
+      menu.classList.toggle('hidden');
+      toggle.classList.toggle('active', !menu.classList.contains('hidden'));
+    });
+
+    options.forEach(option => {
+      option.addEventListener('click', () => {
+        const value = option.dataset.value;
+        if (selectedValue === value) {
+          selectedValue = null;
+          toggle.classList.remove('has-selection');
+          toggle.innerHTML = `<span class="placeholder" style="color: rgb(156 163 175); font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px;">${placeholder}</span>`;
+          // Mettre à jour l'état global
+          if (window.dropdownStates) {
+            if (toggleId === 'paidByToggle') window.dropdownStates.paidBy = null;
+            if (toggleId === 'itemToggle') window.dropdownStates.item = null;
+          }
+        } else {
+          selectedValue = value;
+          toggle.classList.add('has-selection');
+          toggle.innerHTML = `<span class="tag">${value}</span>`;
+          // Mettre à jour l'état global
+          if (window.dropdownStates) {
+            if (toggleId === 'paidByToggle') window.dropdownStates.paidBy = value;
+            if (toggleId === 'itemToggle') window.dropdownStates.item = value;
+          }
+        }
+        
+        // Fermer le menu après sélection
+        menu.classList.add('hidden');
+        toggle.classList.remove('active');
+      });
+    });
+  }
+
+  setupSingleSelect('paidByToggle', 'paidByMenu', 'Payé par');
+  setupSingleSelect('itemToggle', 'itemMenu', 'Item');
+
+  // Exposer les états des dropdowns pour l'auto-fill
+  window.dropdownStates = {
+    paidBy: 'Virement Interac', // Valeur par défaut
+    item: null
+  };
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.dropdown')) {
+      document.querySelectorAll('.dropdown-menu').forEach(menu => menu.classList.add('hidden'));
+      document.querySelectorAll('.dropdown-toggle').forEach(toggle => toggle.classList.remove('active'));
+    }
+  });
+
+  // =====================================
+  // SYSTÈME AUTO-INCRÉMENTATION NUMÉROS
+  // =====================================
+  
+  function initSoumissionNumber() {
+    const numInput = document.querySelector('input[name="num"]');
+    const lastNumber = localStorage.getItem('lastSoumissionNumber');
+    
+    if (lastNumber) {
+      // Utilise directement le dernier numéro sauvegardé (déjà incrémenté)
+      numInput.value = lastNumber;
+    } else {
+      // Première utilisation, mettre juste 24- par défaut pour que l'utilisateur complète
+      numInput.value = "24-";
+    }
+    
+    // Ajouter des listeners pour maintenir le préfixe 24-
+    numInput.addEventListener('input', function(e) {
+      let value = e.target.value;
+      
+      // Si l'utilisateur efface tout ou n'a pas le préfixe, le remettre
+      if (!value.startsWith('24-')) {
+        // Garder seulement les chiffres après le préfixe
+        const numbers = value.replace(/[^0-9]/g, '');
+        e.target.value = '24-' + numbers;
+      }
+    });
+
+    // Observer pour détecter les changements externes
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
+          if (!numInput.value.startsWith('24-')) {
+            numInput.value = '24-';
+          }
+        }
+      });
+    });
+    
+    observer.observe(numInput, { attributes: true, attributeFilter: ['value'] });
+    
+    // Protection supplémentaire avec setInterval
+    setInterval(function() {
+      if (!numInput.value.startsWith('24-')) {
+        const lastNumber = localStorage.getItem('lastSoumissionNumber');
+        numInput.value = lastNumber || '24-';
+      }
+    }, 100);
+    
+    numInput.addEventListener('keydown', function(e) {
+      // Empêcher l'effacement du préfixe 24-
+      if ((e.key === 'Backspace' || e.key === 'Delete') && 
+          e.target.value.length <= 3 && 
+          e.target.selectionStart <= 3) {
+        e.preventDefault();
+        e.target.value = '24-';
+        e.target.setSelectionRange(3, 3);
+      }
+    });
+    
+    // Positionner le curseur après le préfixe au focus
+    numInput.addEventListener('focus', function(e) {
+      if (e.target.value === '24-') {
+        setTimeout(() => {
+          e.target.setSelectionRange(3, 3);
+        }, 0);
+      }
+    });
+  }
+  
+  function extractSoumissionNumber(value) {
+    // Extrait le numéro de format "24-0009" -> retourne 9
+    const match = value.match(/^24-(\d+)$/);
+    return match ? parseInt(match[1]) : null;
+  }
+  
+  function formatSoumissionNumber(number) {
+    // Convertit 9 -> "24-0009"  
+    return `24-${number.toString().padStart(4, '0')}`;
+  }
+  
+  function incrementSoumissionNumber(currentValue) {
+    const currentNumber = extractSoumissionNumber(currentValue);
+    if (currentNumber !== null) {
+      return formatSoumissionNumber(currentNumber + 1);
+    }
+    return "24-0001"; // Fallback
+  }
+  
+  // Ne plus sauvegarder automatiquement au blur pour éviter les doublons
+  
+  // Fonction pour incrémenter et mettre à jour
+  function handleSoumissionSent() {
+    const numInput = document.querySelector('input[name="num"]');
+    const currentValue = numInput.value.trim();
+    if (extractSoumissionNumber(currentValue) !== null) {
+      const nextNumber = incrementSoumissionNumber(currentValue);
+      localStorage.setItem('lastSoumissionNumber', nextNumber);
+      // Mettre à jour le champ immédiatement
+      numInput.value = nextNumber;
+      console.log(`Numéro incrémenté: ${currentValue} -> ${nextNumber}`);
+    }
+  }
+
+  // Fonction de validation des champs requis
+  function validateRequiredFields() {
+    const sendNowRadio = document.getElementById('send-now');
+    const saveOnlyRadio = document.getElementById('save-only');
+    const submitBtn = document.getElementById('submitBtn');
+    const voirPDFBtn = document.getElementById('voirPDFBtn');
+
+    // Champs toujours requis
+    const nom = document.querySelector('input[name="nom"]')?.value.trim() || '';
+    const prenom = document.querySelector('input[name="prenom"]')?.value.trim() || '';
+
+    // Vérifier le mode sélectionné
+    const isSendNow = sendNowRadio?.checked;
+
+    let isValid = false;
+
+    if (isSendNow) {
+      // Mode "Envoyer maintenant": tous les champs requis
+      const num = document.querySelector('input[name="num"]')?.value.trim() || '';
+      const telephone = document.querySelector('input[name="telephone"]')?.value.trim() || '';
+      const courriel = document.querySelector('input[name="courriel"]')?.value.trim() || '';
+      const adresse = document.querySelector('input[name="adresse"]')?.value.trim() || '';
+      const ville = document.querySelector('input[name="ville"]')?.value.trim() || '';
+      const codePostal = document.querySelector('input[name="code_postal"]')?.value.trim() || '';
+
+      isValid = nom && prenom && num && telephone && courriel && adresse && ville && codePostal;
+    } else {
+      // Mode "Ne pas envoyer maintenant": seulement nom et prénom requis
+      isValid = nom && prenom;
+    }
+
+    // Activer/désactiver les boutons
+    if (submitBtn) {
+      submitBtn.disabled = !isValid;
+      if (isValid) {
+        submitBtn.removeAttribute('style');
+        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      } else {
+        submitBtn.setAttribute('style', 'background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;');
+        submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+    }
+
+    if (voirPDFBtn) {
+      voirPDFBtn.disabled = !isValid;
+      if (isValid) {
+        voirPDFBtn.removeAttribute('style');
+        voirPDFBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      } else {
+        voirPDFBtn.setAttribute('style', 'background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;');
+        voirPDFBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+    }
+  }
+
+  // Initialisation au chargement de la page
+  document.addEventListener('DOMContentLoaded', function() {
+    initSoumissionNumber();
+
+    // Hook sur le bouton "Envoyer au client" quand le DOM est prêt
+    const submitBtn = document.getElementById('submitBtn');
+    console.log('[DEBUG] Recherche submitBtn:', submitBtn);
+
+    if (submitBtn) {
+      console.log('[OK] submitBtn trouvé, ajout du listener');
+      submitBtn.addEventListener('click', function(e) {
+        console.log('[TARGET] Clic détecté sur submitBtn');
+        const numInput = document.querySelector('input[name="num"]');
+        const currentValue = numInput.value.trim();
+        console.log('[NOTE] Valeur actuelle:', currentValue);
+
+        if (extractSoumissionNumber(currentValue) !== null) {
+          const nextNumber = incrementSoumissionNumber(currentValue);
+          localStorage.setItem('lastSoumissionNumber', nextNumber);
+          console.log('💾 Sauvé dans localStorage:', nextNumber);
+
+          // Mettre à jour après l'envoi
+          setTimeout(() => {
+            numInput.value = nextNumber;
+            console.log(`[OK] Champ mis à jour: ${currentValue} -> ${nextNumber}`);
+          }, 2000);
+        }
+      });
+    } else {
+      console.log('[ERROR] submitBtn non trouvé dans le DOM');
+    }
+
+    // Gestion des options d'envoi
+    const sendNowOption = document.getElementById('send-now-option');
+    const saveOnlyOption = document.getElementById('save-only-option');
+    const sendNowRadio = document.getElementById('send-now');
+    const saveOnlyRadio = document.getElementById('save-only');
+    const btnText = document.getElementById('btnText');
+    const voirPDFBtn = document.getElementById('voirPDFBtn');
+
+    if (sendNowOption && saveOnlyOption && btnText && voirPDFBtn) {
+      // Click sur "Envoyer maintenant"
+      sendNowOption.addEventListener('click', function() {
+        sendNowRadio.checked = true;
+        saveOnlyRadio.checked = false;
+        btnText.textContent = 'Envoyer au client';
+        voirPDFBtn.innerHTML = '<i class="fas fa-file-signature mr-2"></i>Présenter au client';
+        console.log('📧 Mode: Envoyer au client');
+        validateRequiredFields(); // Revalider quand on change de mode
+      });
+
+      // Click sur "Ne pas envoyer maintenant"
+      saveOnlyOption.addEventListener('click', function() {
+        saveOnlyRadio.checked = true;
+        sendNowRadio.checked = false;
+        btnText.textContent = 'Enregistrer sans envoyer';
+        voirPDFBtn.innerHTML = '<i class="fas fa-file-pdf mr-2"></i>Voir en PDF';
+        console.log('💾 Mode: Enregistrer sans envoyer');
+        validateRequiredFields(); // Revalider quand on change de mode
+      });
+    }
+
+    // Ajouter des listeners sur tous les champs pour validation en temps réel
+    const inputs = document.querySelectorAll('input[name="nom"], input[name="prenom"], input[name="num"], input[name="telephone"], input[name="courriel"], input[name="adresse"], input[name="ville"], input[name="code_postal"]');
+    inputs.forEach(input => {
+      input.addEventListener('input', validateRequiredFields);
+    });
+
+    // Validation initiale
+    validateRequiredFields();
+
+    // Initialiser les informations de l'entrepreneur pour le PDF
+    initEntrepreneurInfo();
+
+    // Charger les soumissions en attente au démarrage
+    loadPendingSoumissions();
+  });
+
+  // Fonction pour initialiser les informations de l'entrepreneur
+  async function initEntrepreneurInfo() {
+    try {
+      // Récupérer les informations depuis l'API utilisateur
+      const response = await fetch(`${window.location.origin}/api/get-user-profile?username=${window.username}`);
+
+      if (response.ok) {
+        const userData = await response.json();
+
+        const nom = userData.nom || '';
+        const prenom = userData.prenom || '';
+        const telephone = userData.telephone || '';
+        const courriel = userData.courriel || '';
+
+        // Si toutes les infos sont présentes, créer/mettre à jour user_info.json
+        if (nom && prenom && telephone && courriel) {
+          const saveResponse = await fetch(`${window.location.origin}/api/save-user-info`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              username: window.username,
+              nom: nom,
+              prenom: prenom,
+              telephone: telephone,
+              courriel: courriel
+            })
+          });
+
+          if (saveResponse.ok) {
+            console.log('[OK] Informations entrepreneur sauvegardées pour le PDF');
+          }
+        } else {
+          console.log('[INFO] Informations entrepreneur incomplètes dans le profil');
+        }
+      }
+    } catch (error) {
+      console.error('[ERROR] Erreur initialisation info entrepreneur:', error);
+    }
+  }
+</script>
+
+
+
+
+
+<script>
+
+// Bannir un client de la liste "à compléter" par ID unique
+async function bannirClientACompleter(soumissionData, eventId) {
+  try {
+    console.log("🚫 Tentative de bannissement du client à compléter");
+    
+    // Utiliser l'eventId passé en paramètre directement
+    console.log("[DEBUG] Event ID reçu en paramètre:", eventId);
+    
+    // Si pas d'eventId, générer un fallback basé sur les données client
+    if (!eventId) {
+      const clientInfo = `${soumissionData.nom}_${soumissionData.prenom}_${soumissionData.telephone}`;
+      eventId = btoa(clientInfo).replace(/[^a-zA-Z0-9]/g, ''); // Encode en base64 et nettoie
+      console.log("[FIX] Fallback ID généré:", eventId);
+    }
+    
+    const banData = {
+      username: window.username,
+      event_id: eventId, // Envoyer l'eventId au lieu de nom/prénom pour le bannissement
+      client_email: soumissionData.courriel || `${soumissionData.prenom}.${soumissionData.nom}@temp.local`,
+      client_nom: soumissionData.nom,
+      client_prenom: soumissionData.prenom,
+      adresse: soumissionData.adresse,
+      telephone: soumissionData.telephone,
+      bannedAt: new Date().toISOString(),
+      raison: 'Soumission envoyée - ne plus afficher dans clients à compléter'
+    };
+    
+    console.log("[BAN] Donnees de bannissement par ID unique:", banData);
+
+    // Appel à l'API pour bannir le client par ID unique (nouveau endpoint)
+    const response = await fetch(`${window.location.origin}/bannir-client-par-id`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(banData)
+    });
+    
+    if (response.ok) {
+      console.log("[OK] Client banni de la liste 'à compléter' avec succès");
+      
+      // Notifier les autres onglets ouverts (calcul.html) pour rafraîchir leur liste
+      try {
+        localStorage.setItem('clientsBannedUpdate', Date.now().toString());
+        console.log("📡 Signal de mise à jour envoyé aux autres onglets");
+
+        // Déclencher aussi un événement personnalisé pour le même onglet
+        window.dispatchEvent(new CustomEvent('clientBanned', {
+          detail: { eventId: eventId, clientInfo: banData }
+        }));
+        console.log("📡 Événement clientBanned déclenché pour la page actuelle");
+      } catch (e) {
+        console.log("[WARN] Impossible d'envoyer le signal de mise à jour");
+      }
+    } else {
+      console.log("[WARN] Impossible de bannir le client de la liste 'à compléter'");
+    }
+    
+  } catch (error) {
+    console.error("[ERROR] Erreur lors du bannissement du client à compléter:", error);
+  }
+}
+
+</script>
+
+<script>
+// Attendre que common.js soit initialisé
+</script>
+
+
+<script>
+function confirmerSuppression(prenom, nom, btn) {
+  const confirmation = confirm(`Êtes-vous sûr de vouloir supprimer la soumission de ${prenom} ${nom} ?`);
+  if (confirmation) {
+    const row = btn.closest("tr");
+    row.remove(); // [ERROR] Supprime la ligne de la table côté visuel
+
+    // Tu peux aussi appeler une API pour la suppression si nécessaire ici
+    // Exemple :
+    // fetch(/supprimer-evenement?id=xxx, { method: "DELETE" });
+  }
+}
+</script>
+
+
+<script>
+</script>
+
+
+<script>
+// Fonction pour nettoyer uniquement les données stockées (pas le formulaire)
+function clearStoredData() {
+  console.log("🧹 NETTOYAGE DES DONNÉES STOCKÉES");
+  
+  // Nettoyer sessionStorage
+  sessionStorage.removeItem('submissionData');
+  
+  // Nettoyer localStorage (optionnel - commenter si vous voulez garder le numéro)
+  // localStorage.removeItem('lastSoumissionNumber');
+  
+  console.log("[OK] Données stockées nettoyées");
+}
+
+// Fonction pour nettoyer complètement (données + formulaire)
+function clearAllData() {
+  console.log("🧹 NETTOYAGE COMPLET");
+  
+  // Nettoyer les données stockées
+  clearStoredData();
+  
+  // Nettoyer tous les champs du formulaire
+  setTimeout(() => {
+    const inputs = document.querySelectorAll('input[type="text"], input[type="email"], textarea');
+    inputs.forEach(input => {
+      input.value = '';
+    });
+    
+    // Réinitialiser les dropdowns
+    const dropdowns = document.querySelectorAll('.dropdown-selected');
+    dropdowns.forEach(dropdown => {
+      dropdown.textContent = dropdown.getAttribute('data-placeholder') || 'Sélectionner...';
+    });
+    
+    console.log("[DELETE] Formulaire réinitialisé");
+  }, 100);
+  
+  console.log("[OK] Nettoyage complet terminé");
+}
+
+// Variable globale pour stocker le clientOriginalId des clients perdus récupérés
+window.clientOriginalId = null;
+
+// Fonction d'auto-fill qui peut s'exécuter à tout moment
+function autoFillForm() {
+  console.log("🔄 AUTO-FILL DÉMARRÉ");
+
+  // Vérifier s'il y a des données à auto-remplir (venant du calcul)
+  const submissionData = sessionStorage.getItem('submissionData');
+  console.log("[DEBUG] submissionData trouvé:", submissionData);
+  
+  if (submissionData) {
+    try {
+      const data = JSON.parse(submissionData);
+      console.log("[OK] Données de préremplissage trouvées:", data);
+
+      // Sauvegarder le clientOriginalId si c'est un client perdu récupéré
+      if (data.clientOriginalId) {
+        window.clientOriginalId = data.clientOriginalId;
+        console.log("💾 clientOriginalId sauvegardé:", window.clientOriginalId);
+      }
+
+      // Attendre que les champs soient disponibles
+      setTimeout(() => {
+        // Remplir les champs du formulaire
+        if (data.prenom) {
+          const prenomField = document.querySelector('input[name="prenom"]');
+          if (prenomField) prenomField.value = data.prenom;
+        }
+        if (data.nom) {
+          const nomField = document.querySelector('input[name="nom"]');
+          if (nomField) nomField.value = data.nom;
+        }
+        if (data.adresse) {
+          const adresseField = document.querySelector('input[name="adresse"]');
+          if (adresseField) {
+            adresseField.value = data.adresse;
+            // Marquer que l'adresse vient de calcul (donc déjà validée)
+            window.googleProspectAddressSelected = true;
+            window.initialAutofilledAddress = data.adresse; // Stocker pour comparaison
+            console.log("[OK] Adresse auto-remplie depuis calcul - validation désactivée");
+          }
+        }
+        if (data.telephone) {
+          const telephoneField = document.querySelector('input[name="telephone"]');
+          if (telephoneField) telephoneField.value = data.telephone;
+        }
+        if (data.prix) {
+          const prixField = document.querySelector('input[name="prix"]');
+          if (prixField) prixField.value = data.prix;
+        }
+        if (data.item) {
+          // Gérer le dropdown personnalisé pour "item"
+          const itemToggle = document.getElementById('itemToggle');
+          const itemOption = document.querySelector(`#itemMenu .dropdown-option[data-value="${data.item}"]`);
+          
+          if (itemToggle && itemOption) {
+            // Mettre à jour l'affichage du toggle avec le bon style de tag
+            itemToggle.innerHTML = `<span class="tag">${data.item}</span>`;
+            
+            // Option sélectionnée (plus de checkmarks)
+            
+            // Synchroniser avec l'état global
+            if (window.dropdownStates) {
+              window.dropdownStates.item = data.item;
+            }
+            
+            console.log(`[BAN] Item dropdown mis à jour: "${data.item}"`);
+          } else {
+            console.log(`[ERROR] Dropdown item non trouvé pour: "${data.item}"`);
+          }
+        }
+        if (data.temps) {
+          const tempsField = document.querySelector('input[name="temps"]');
+          if (tempsField) tempsField.value = data.temps;
+        }
+        
+        console.log("[OK] Formulaire prérempli avec succès");
+        
+        // Stocker l'eventId AVANT de nettoyer sessionStorage
+        window.storedEventId = data.eventId || data.id;
+        console.log("💾 EventId sauvegardé avant nettoyage:", window.storedEventId);
+
+        // Nettoyer les données stockées après l'autofill pour éviter qu'elles persistent
+        setTimeout(() => {
+          clearStoredData();
+          console.log("🧹 Données nettoyées après autofill");
+        }, 1000);
+        
+      }, 500);
+      
+    } catch (error) {
+      console.error("[ERROR] Erreur lors du préremplissage:", error);
+    }
+  } else {
+    console.log("ℹ️ Aucune donnée submissionData trouvée");
+  }
+}
+
+// Détecter si c'est un refresh ou une navigation normale
+function detectRefreshAndExecute() {
+  // Vérifier s'il y a un referrer (venant d'une autre page) ou si c'est un refresh
+  const isRefresh = !document.referrer || document.referrer === window.location.href;
+  
+  if (isRefresh) {
+    console.log("🔄 Refresh détecté - nettoyage complet");
+    clearAllData();
+  } else {
+    console.log("🔗 Navigation normale - autofill autorisé");
+    autoFillForm();
+  }
+}
+
+// Exécuter le système de détection
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', detectRefreshAndExecute);
+} else {
+  // DOM déjà chargé
+  detectRefreshAndExecute();
+}
+
+// Backup: essayer aussi après un délai (seulement si pas un refresh)
+setTimeout(() => {
+  const isRefresh = !document.referrer || document.referrer === window.location.href;
+  if (!isRefresh) {
+    autoFillForm();
+  }
+}, 100);
+
+setTimeout(() => {
+  const isRefresh = !document.referrer || document.referrer === window.location.href;
+  if (!isRefresh) {
+    autoFillForm();
+  }
+}, 1000);
+
+// ========== GESTION DES SOUMISSIONS EN ATTENTE ==========
+
+// Sauvegarder une soumission en attente via l'API backend
+async function savePendingSoumission(formEl) {
+  const btn = document.getElementById("submitBtn");
+  const btnText = document.getElementById("btnText");
+
+  btn.disabled = true;
+  btnText.textContent = "Génération...";
+
+  const form = formEl;
+  const soumissionData = {
+    username: window.username,
+    num: form.num.value,
+    nom: form.nom.value,
+    prenom: form.prenom.value,
+    telephone: form.telephone.value,
+    courriel: form.courriel.value,
+    date: form.date_creation.value,
+    temps: form.temps.value,
+    date2: form.date_travaux.value,
+    prix: form.prix.value,
+    adresse: form.adresse.value,
+    endroit: form.endroit_peinture.value,
+    item: document.querySelector("#itemToggle .tag")?.textContent?.trim() || "",
+    produit: document.getElementById("produitCouleursHidden").value,
+    part: document.getElementById("partTravauxHidden").value,
+    payer_par: window.dropdownStates?.paidBy || "Virement Interac"
+  };
+
+  try {
+    // Sauvegarder via l'API backend
+    const response = await fetch('/save-soumission-to-queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(soumissionData)
+    });
+
+    if (!response.ok) {
+      throw new Error('Erreur lors de la sauvegarde');
+    }
+
+    const result = await response.json();
+    console.log('[OK] Soumission sauvegardée en base:', result.soumission_id);
+
+    // Rafraîchir l'affichage de la table
+    await loadPendingSoumissions();
+
+    // Réinitialiser le bouton
+    btn.disabled = false;
+    btnText.innerHTML = `<svg class="w-4 h-4 inline mr-1 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Sauvegardée`;
+
+    setTimeout(() => {
+      btnText.textContent = "Enregistrer sans envoyer";
+
+      // Reset complet du formulaire comme pour "Envoyer au client"
+      formEl.reset();
+
+      // Reset des dropdowns
+      const itemToggle = document.getElementById('itemToggle');
+      if (itemToggle) {
+        const placeholder = itemToggle.querySelector('.placeholder, .selected');
+        if (placeholder) {
+          placeholder.textContent = 'Ex: Intérieur, Extérieur...';
+          placeholder.className = 'placeholder';
+          placeholder.style.color = 'rgb(156 163 175)';
+        }
+      }
+
+      // Reset produits/couleurs
+      const productDisplay = document.getElementById('productDisplay');
+      if (productDisplay) {
+        productDisplay.innerHTML = 'Cliquez pour sélectionner produits et couleurs...';
+        productDisplay.style.color = 'var(--text-gray)';
+      }
+      document.getElementById('produitCouleursHidden').value = '';
+
+      // Reset particularités
+      const partDisplay = document.getElementById('partTravauxDisplay');
+      if (partDisplay) {
+        partDisplay.innerHTML = 'Cliquez pour sélectionner particularités des travaux...';
+        partDisplay.style.color = 'var(--text-gray)';
+      }
+      document.getElementById('partTravauxHidden').value = '';
+
+      // Reset l'ID d'édition si présent
+      if (window.editingSoumissionId) {
+        window.editingSoumissionId = null;
+      }
+
+      console.log('[OK] Formulaire réinitialisé');
+    }, 2000);
+
+  } catch (error) {
+    console.error('[ERROR] Erreur sauvegarde:', error);
+    btn.disabled = false;
+    btnText.textContent = "Erreur";
+    alert('Erreur lors de la sauvegarde de la soumission');
+    setTimeout(() => {
+      btnText.textContent = "Enregistrer sans envoyer";
+    }, 2000);
+  }
+}
+
+// Charger et afficher les soumissions en attente depuis l'API backend
+async function loadPendingSoumissions() {
+  const tbody = document.getElementById('pending-soumissions-body');
+  const mobileList = document.getElementById('pending-soumissions-mobile-list');
+  const countBadge = document.getElementById('pending-count');
+
+  try {
+    // Récupérer depuis l'API backend
+    const response = await fetch(`/get-soumissions-queue/${window.username}`);
+
+    if (!response.ok) {
+      throw new Error('Erreur lors du chargement');
+    }
+
+    const data = await response.json();
+    const pendingSoumissions = data.soumissions || [];
+
+    // Mettre à jour le compteur
+    countBadge.textContent = `${pendingSoumissions.length} en attente`;
+
+    if (pendingSoumissions.length === 0) {
+      // Vue desktop
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" class="text-center py-8" style="color: var(--text-gray);">
+            <i class="fas fa-inbox text-4xl mb-2 opacity-50"></i>
+            <p>Aucune soumission en attente</p>
+          </td>
+        </tr>
+      `;
+
+      // Vue mobile
+      mobileList.innerHTML = `
+        <div class="soumissions-empty-mobile">
+          <i class="fas fa-inbox"></i>
+          <p>Aucune soumission en attente</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Générer les lignes de la table (desktop)
+    tbody.innerHTML = pendingSoumissions.map(soumission => {
+      return `
+        <tr data-id="${soumission.id}">
+          <td>${soumission.num}</td>
+          <td>${soumission.prenom} ${soumission.nom}</td>
+          <td>${soumission.date || 'N/A'}</td>
+          <td>${soumission.adresse}</td>
+          <td>${soumission.prix}</td>
+          <td class="text-center">
+            <button onclick="editPendingSoumission('${soumission.id}')"
+                    class="btn-primary action-btn-send"
+                    title="Modifier">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button onclick="deletePendingSoumission('${soumission.id}')"
+                    class="btn-secondary action-btn-delete"
+                    title="Supprimer">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // Générer les cards mobiles
+    mobileList.innerHTML = pendingSoumissions.map(soumission => {
+      return `
+        <div class="soumission-mobile-card" data-id="${soumission.id}">
+          <div class="soumission-card-header">
+            <div style="flex: 1;">
+              <div class="soumission-card-numero">Soumission ${soumission.num}</div>
+              <div class="soumission-card-client">${soumission.prenom} ${soumission.nom}</div>
+              <div class="soumission-card-adresse">
+                <i class="fas fa-map-marker-alt" style="color: var(--primary-green); margin-top: 2px;"></i>
+                <span>${soumission.adresse}</span>
+              </div>
+            </div>
+            <div class="soumission-card-montant">${soumission.prix}</div>
+          </div>
+          <div class="soumission-card-actions">
+            <button onclick="editPendingSoumission('${soumission.id}')" class="soumission-action-btn edit-btn">
+              <i class="fas fa-edit"></i>
+              <span>Modifier</span>
+            </button>
+            <button onclick="deletePendingSoumission('${soumission.id}')" class="soumission-action-btn delete-btn">
+              <i class="fas fa-trash"></i>
+              <span>Supprimer</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (error) {
+    console.error('[ERROR] Erreur chargement soumissions:', error);
+
+    // Vue desktop
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" class="text-center py-8" style="color: var(--text-red);">
+          <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+          <p>Erreur lors du chargement des soumissions</p>
+        </td>
+      </tr>
+    `;
+
+    // Vue mobile
+    mobileList.innerHTML = `
+      <div class="soumissions-empty-mobile" style="color: var(--text-red);">
+        <i class="fas fa-exclamation-triangle"></i>
+        <p>Erreur lors du chargement des soumissions</p>
+      </div>
+    `;
+  }
+}
+
+// Modifier/Compléter une soumission en attente (prefill le formulaire)
+async function editPendingSoumission(soumissionId) {
+  console.log('✏️ Édition de la soumission ID:', soumissionId);
+
+  try {
+    // Récupérer les données de la soumission depuis la base
+    const queueResponse = await fetch(`/get-soumissions-queue/${window.username}`);
+    if (!queueResponse.ok) throw new Error("Erreur récupération queue");
+
+    const queueData = await queueResponse.json();
+    const soumission = queueData.soumissions.find(s => s.id === soumissionId);
+
+    if (!soumission) {
+      throw new Error("Soumission introuvable dans la queue");
+    }
+
+    // Scroller vers le haut du formulaire
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Attendre un peu pour le scroll
+    setTimeout(() => {
+      // Prefill tous les champs du formulaire
+      const form = document.getElementById('soumissionForm');
+
+      form.num.value = soumission.num || '';
+      form.nom.value = soumission.nom || '';
+      form.prenom.value = soumission.prenom || '';
+      form.telephone.value = soumission.telephone || '';
+      form.courriel.value = soumission.courriel || '';
+      form.date_creation.value = soumission.date || '';
+      form.temps.value = soumission.temps || '';
+      form.date_travaux.value = soumission.date2 || '';
+      form.prix.value = soumission.prix || '';
+      form.adresse.value = soumission.adresse || '';
+      form.endroit_peinture.value = soumission.endroit || '';
+
+      // Prefill le type de travaux (dropdown)
+      if (soumission.item) {
+        const itemToggle = document.getElementById('itemToggle');
+        if (itemToggle) {
+          // Mettre à jour l'affichage avec le bon style de tag
+          itemToggle.innerHTML = `<span class="tag">${soumission.item}</span>`;
+
+          // Mettre à jour l'état global
+          if (window.dropdownStates) {
+            window.dropdownStates.item = soumission.item;
+          }
+        }
+      }
+
+      // Prefill produits/couleurs
+      if (soumission.produit) {
+        document.getElementById('produitCouleursHidden').value = soumission.produit;
+        const productDisplay = document.getElementById('productDisplay');
+        if (productDisplay) {
+          productDisplay.innerHTML = soumission.produit.replace(/\n/g, '<br>');
+          productDisplay.style.color = 'var(--text-light)';
+        }
+      }
+
+      // Prefill particularités
+      if (soumission.part) {
+        document.getElementById('partTravauxHidden').value = soumission.part;
+        const partDisplay = document.getElementById('partTravauxDisplay');
+        if (partDisplay) {
+          partDisplay.innerHTML = soumission.part.replace(/\n/g, '<br>');
+          partDisplay.style.color = 'var(--text-light)';
+        }
+      }
+
+      // Stocker l'ID pour savoir qu'on édite une soumission existante
+      window.editingSoumissionId = soumissionId;
+
+      // Changer le mode vers "Envoyer maintenant" automatiquement
+      const sendNowRadio = document.getElementById('send-now');
+      const sendNowOption = document.getElementById('send-now-option');
+      const btnText = document.getElementById('btnText');
+
+      if (sendNowRadio) {
+        sendNowRadio.checked = true;
+        document.getElementById('save-only').checked = false;
+        btnText.textContent = 'Envoyer au client';
+      }
+
+      console.log('[OK] Formulaire prefilled avec les données de la soumission');
+
+      // Notification visuelle
+      const notification = document.createElement('div');
+      notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #3b82f6; color: white; padding: 1rem 1.5rem; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
+      notification.innerHTML = '<i class="fas fa-edit mr-2"></i>Soumission chargée - Vous pouvez modifier et envoyer';
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.3s';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+
+    }, 300);
+
+  } catch (error) {
+    console.error('[ERROR] Erreur:', error);
+    alert('Erreur lors du chargement de la soumission.');
+  }
+}
+
+// Supprimer une soumission en attente depuis la base de données
+async function deletePendingSoumission(soumissionId) {
+  try {
+    const response = await fetch('/remove-soumission-from-queue', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: window.username,
+        soumission_id: soumissionId
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Erreur lors de la suppression');
+    }
+
+    console.log('[DELETE] Soumission supprimée:', soumissionId);
+
+    // Rafraîchir la table
+    await loadPendingSoumissions();
+
+  } catch (error) {
+    console.error('[ERROR] Erreur suppression:', error);
+    alert('Erreur lors de la suppression de la soumission');
+  }
+}
+
+// Exposer les fonctions globalement
+window.editPendingSoumission = editPendingSoumission;
+window.deletePendingSoumission = deletePendingSoumission;
+
+// ========== FIN GESTION DES SOUMISSIONS EN ATTENTE ==========
+
+// Initialiser le formulaire principal
+function initFormulaire() {
+  const formEl = document.getElementById("soumissionForm");
+
+  if (!formEl) {
+    console.error("Formulaire introuvable");
+    return;
+  }
+
+  formEl.addEventListener("submit", async function (e) {
+    // Les popups gèrent déjà les champs cachés
+    e.preventDefault();
+    console.log("[LAUNCH] DÉBUT SOUMISSION - Form submit intercepté");
+    console.log("[LAUNCH] Prix dans le form au moment du submit:", document.querySelector('input[name="prix"]').value);
+
+    // Vérifier si l'utilisateur veut sauvegarder sans envoyer
+    const saveOnlyRadio = document.getElementById('save-only');
+    if (saveOnlyRadio && saveOnlyRadio.checked) {
+      console.log('💾 Mode: Sauvegarder sans envoyer');
+      savePendingSoumission(formEl);
+      return;
+    }
+
+    // Validation de l'adresse Google - Accepter aussi les adresses au format canadien valide
+    const adresseInput = document.querySelector('input[name="adresse"]');
+    console.log('[DEBUG] DEBUG Validation adresse:', {
+      adresse: adresseInput?.value,
+      googleProspectAddressSelected: window.googleProspectAddressSelected,
+      initialAutofilledAddress: window.initialAutofilledAddress
+    });
+
+    if (adresseInput && adresseInput.value.trim() !== '' && !window.googleProspectAddressSelected) {
+      // Vérifier si l'adresse est au format canadien valide
+      const adresse = adresseInput.value.trim();
+      const formatCanadienRegex = /^.+,\s*.+,\s*(QC|Quebec|Québec)\s+[A-Za-z]\d[A-Za-z]\s*\d[A-Za-z]\d$/i;
+
+      if (!formatCanadienRegex.test(adresse)) {
+        console.log('[ERROR] Adresse invalide:', adresse);
+        alert('Veuillez sélectionner une adresse valide dans les suggestions Google ou entrer une adresse au format : "123 Rue Example, Ville, QC J7E 4S9"');
+        const btn = document.getElementById("submitBtn");
+        const btnText = document.getElementById("btnText");
+        btn.disabled = false;
+        btnText.textContent = "Créer la soumission";
+        return;
+      } else {
+        console.log('[OK] Adresse au format canadien valide détectée:', adresse);
+      }
+    } else {
+      console.log('[OK] Validation adresse bypassed (auto-remplie depuis prospect/calcul)');
+    }
+
+    // username est maintenant géré par common.js
+    const btn = document.getElementById("submitBtn");
+    const btnText = document.getElementById("btnText");
+
+    btn.disabled = true;
+    btnText.textContent = "Envoi en cours...";
+
+    const form = e.target;
+    const eventId = form.dataset.eventId || null;
+
+    const data = {
+      username: window.username,
+      nom: form.nom.value,
+      prenom: form.prenom.value,
+      telephone: form.telephone.value,
+      courriel: form.courriel.value,
+      date: form.date_creation.value,
+      temps: form.temps.value,
+      num: form.num.value,
+      date2: form.date_travaux.value,
+      prix: (() => {
+        const prixValue = form.prix.value.trim();
+        console.log('[MONEY] Prix original du form:', prixValue);
+        console.log('[MONEY] Prix en unicode échappé:', JSON.stringify(prixValue));
+        
+        if (!prixValue || prixValue === '') {
+          console.log('[MONEY] Prix vide, retour de "0"');
+          return '0';
+        }
+        
+        // Enlever tout sauf chiffres, espaces (normaux ET insécables), virgules et points
+        let cleaned = prixValue.replace(/[^\d\s\u00A0.,]/g, '');
+        console.log('[MONEY] Prix après nettoyage symboles:', cleaned);
+        
+        // Enlever TOUS les espaces (normaux \s ET insécables \u00A0)
+        cleaned = cleaned.replace(/[\s\u00A0]+/g, '');
+        console.log('[MONEY] Prix après nettoyage espaces:', cleaned);
+        
+        // Si on a un format français avec virgule décimale (ex: "1000,00")
+        // On veut convertir "1000,00" vers "1000.00" pour le backend
+        
+        // Détecter le format: si dernière virgule est suivie de 2 chiffres exactement, c'est français
+        const lastCommaIndex = cleaned.lastIndexOf(',');
+        const lastDotIndex = cleaned.lastIndexOf('.');
+        
+        if (lastCommaIndex > lastDotIndex && lastCommaIndex === cleaned.length - 3) {
+          // Format français: "1000,00" -> remplacer dernière virgule par point
+          cleaned = cleaned.substring(0, lastCommaIndex) + '.' + cleaned.substring(lastCommaIndex + 1);
+          console.log('[MONEY] Format français détecté, conversion:', cleaned);
+        }
+        
+        // Nettoyer les virgules restantes (séparateurs de milliers)
+        cleaned = cleaned.replace(/,/g, '');
+        console.log('[MONEY] Prix final envoyé:', cleaned);
+        
+        // Validation finale
+        const finalNumber = parseFloat(cleaned);
+        if (isNaN(finalNumber)) {
+          console.log('[MONEY] [ERROR] Nombre invalide, retour de "0"');
+          return '0';
+        }
+        
+        console.log('[MONEY] [OK] Validation réussie:', finalNumber);
+        return cleaned;
+      })(),
+      adresse: form.adresse.value,
+      endroit: form.endroit_peinture.value,
+      item: document.querySelector("#itemToggle .tag")?.textContent?.trim() || "",
+      produit: document.getElementById("produitCouleursHidden").value,
+      part: document.getElementById("partTravauxHidden").value,
+      payer_par: window.dropdownStates?.paidBy || "Virement Interac",
+    };
+
+    console.log("[LAUNCH] AVANT FETCH - Données à envoyer:", data);
+    console.log("[LAUNCH] AVANT FETCH - URL:", `/creer-pdf?username=${window.username}`);
+    
+    try {
+      const pdfResponse = await fetch(`/creer-pdf?username=${window.username}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+
+      if (!pdfResponse.ok) {
+        const text = await pdfResponse.text();
+        console.error("Erreur lors de la création du PDF :", pdfResponse.status, text);
+        throw new Error("Erreur PDF");
+      }
+
+      const { lien_pdf } = await pdfResponse.json();
+      console.log("[OK] PDF créé avec succès :", lien_pdf);
+
+      const emailPayload = {
+        username: window.username,
+        destinataire: form.courriel.value,
+        nom_client: form.nom.value,
+        prenom_client: form.prenom.value,
+        lien_pdf,
+        prix_str: form.prix.value,
+        adresse: form.adresse.value || " ",
+        telephone: form.telephone.value || " "
+      };
+
+      console.log("EMAIL PAYLOAD", emailPayload);
+      console.log("📤 Envoi vers /envoyer-soumission-email déclenché");
+
+      const emailRes = await fetch(`${window.location.origin}/envoyer-soumission-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(emailPayload)
+      });
+
+      const errorText = await emailRes.text();
+      console.log("EMAIL ERROR", errorText);
+
+      if (!emailRes.ok) {
+        console.error("Erreur email:", errorText);
+        throw new Error("Erreur email");
+      }
+
+      // [OK] Email envoyé avec succès - Enregistrer la soumission pour les statistiques
+      try {
+        const statsResponse = await fetch(`/api/record-soumission/${window.username}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (statsResponse.ok) {
+          console.log("[DATA] Soumission enregistrée dans les statistiques");
+        } else {
+          console.log("[WARN] Erreur enregistrement statistiques (non bloquant)");
+        }
+      } catch (e) {
+        console.log("[WARN] Erreur stats (non bloquant):", e);
+      }
+
+      // [OK] Si on modifiait une soumission en attente, la supprimer de la queue
+      if (window.editingSoumissionId) {
+        try {
+          console.log("[DELETE] Suppression de la soumission de la queue:", window.editingSoumissionId);
+          await fetch('/remove-soumission-from-queue', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              username: window.username,
+              soumission_id: window.editingSoumissionId
+            })
+          });
+          console.log("[OK] Soumission retirée de la queue après envoi");
+          // Réinitialiser la variable
+          window.editingSoumissionId = null;
+          // Rafraîchir la table
+          await loadPendingSoumissions();
+        } catch (e) {
+          console.log("[WARN] Erreur suppression de la queue (non bloquant):", e);
+        }
+      }
+
+      // [OK] Supprimer le prospect de la liste des potentiels
+      try {
+        const prospectData = {
+          nom: form.nom.value,
+          prenom: form.prenom.value,
+          telephone: form.telephone.value
+        };
+
+        console.log("[DELETE] Tentative de suppression du prospect:", prospectData);
+
+        const deleteResponse = await fetch(`${window.location.origin}/supprimer-prospect/${window.username}`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(prospectData)
+        });
+
+        if (deleteResponse.ok) {
+          const deleteResult = await deleteResponse.json();
+          console.log("[OK] Prospect supprimé de la liste potentiels:", deleteResult);
+        } else {
+          console.log("[WARN] Prospect non trouvé dans la liste potentiels (normal si pas venu d'un prospect)");
+        }
+      } catch (prospectError) {
+        console.log("[WARN] Erreur lors de la suppression du prospect (non critique):", prospectError);
+      }
+
+      // [OK] Retirer le client de la liste des perdus si c'est une récupération
+      try {
+        if (window.clientOriginalId) {
+          console.log("🔄 Tentative de retrait du client perdu récupéré:", window.clientOriginalId);
+
+          const retirerResponse = await fetch(`${window.location.origin}/retirer-client-perdu`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: window.username,
+              clientOriginalId: window.clientOriginalId
+            })
+          });
+
+          if (retirerResponse.ok) {
+            const retirerResult = await retirerResponse.json();
+            console.log("[OK] Client retiré de la liste des perdus:", retirerResult);
+            // Nettoyer la variable après avoir retiré de perdus
+            window.clientOriginalId = null;
+          } else {
+            console.log("[WARN] Client non trouvé dans les perdus");
+          }
+        }
+      } catch (perduError) {
+        console.log("[WARN] Erreur lors du retrait du client perdu (non critique):", perduError);
+      }
+
+      if (eventId) {
+        await fetch("/supprimer-evenement", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ event_id: eventId, username })
+        });
+
+        const rowToRemove = document.querySelector(`tr[data-event-id="${eventId}"]`);
+        if (rowToRemove) rowToRemove.remove();
+      }
+
+      const oldDate = form.date_creation.value;
+      form.reset();
+      // Remettre la date d'aujourd'hui par défaut
+      const today = new Date();
+      const day = String(today.getDate()).padStart(2, '0');
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const year = today.getFullYear();
+      const formattedDate = `${day}/${month}/${year}`;
+      form.date_creation.value = formattedDate;
+      form.removeAttribute("data-event-id");
+      
+      // Restaurer le numéro de soumission après reset
+      initSoumissionNumber();
+
+      const resetDropdown = (id, placeholder) => {
+        const toggle = document.getElementById(id);
+        if (toggle) {
+          toggle.classList.remove('has-selection');
+          toggle.innerHTML = `<span class="placeholder" style="color: rgb(156 163 175); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 14px;">${placeholder}</span>`;
+          document.querySelectorAll(`#${id.replace("Toggle", "Menu")} .check`).forEach(c => c.textContent = "");
+        } else {
+          console.warn(`Element ${id} non trouvé pour reset dropdown`);
+        }
+      };
+
+      resetDropdown("toggleBox", "Produit/Couleurs");
+      resetDropdown("partTravauxToggle", "Particularité des travaux");
+      resetDropdown("itemToggle", "Item");
+      resetDropdown("paidByToggle", "Payé par");
+
+      // Réinitialiser les champs cachés
+      const produitHidden = document.getElementById("produitCouleursHidden");
+      if (produitHidden) produitHidden.value = "";
+
+      const partHidden = document.getElementById("partTravauxHidden");
+      if (partHidden) partHidden.value = "";
+
+      // Réinitialiser l'affichage des champs produit/couleurs et part des travaux
+      const productDisplay = document.getElementById("productDisplay");
+      if (productDisplay) {
+        productDisplay.textContent = "Cliquez pour sélectionner produits et couleurs...";
+        productDisplay.style.color = "var(--text-gray)";
+      }
+
+      const partTravauxDisplay = document.getElementById("partTravauxDisplay");
+      if (partTravauxDisplay) {
+        partTravauxDisplay.textContent = "Cliquez pour sélectionner particularités des travaux...";
+        partTravauxDisplay.style.color = "var(--text-gray)";
+      }
+
+      // Réinitialiser "Payé par" vers "Virement Interac" (sélection correcte)
+      if (window.dropdownStates) {
+        window.dropdownStates.paidBy = "Virement Interac";
+      }
+      const paidByToggle = document.getElementById("paidByToggle");
+      if (paidByToggle) {
+        paidByToggle.classList.add('has-selection');
+        paidByToggle.innerHTML = `<span class="tag">Virement Interac</span>`;
+      }
+
+      console.log("[OK] Champs réinitialisés: produit/couleurs, part des travaux, payé par");
+
+      btnText.innerHTML = `Envoyée <svg class="w-4 h-4 inline ml-1 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
+
+      setTimeout(() => {
+        btnText.textContent = "Envoyer au client";
+        btn.disabled = false;
+      }, 3000);
+      
+      // Bannir le client de la liste "à compléter" du calculateur
+      // Utiliser l'eventId stocké au moment de l'autofill (avant nettoyage sessionStorage)
+      let clientEventId = eventId || window.storedEventId;
+      console.log("[DEBUG] EventId pour bannissement:", clientEventId, "(original:", eventId, ", stocké:", window.storedEventId, ")");
+      bannirClientACompleter(data, clientEventId);
+      
+      // Nettoyer les données de session après le bannissement
+      sessionStorage.removeItem('submissionData');
+      sessionStorage.removeItem('clientData');
+
+    } catch (error) {
+      console.error("[ERROR] ERREUR JS COMPLÈTE :", error);
+      btnText.textContent = "Erreur lors de l'envoi";
+      setTimeout(() => {
+        btnText.textContent = "Envoyer au client";
+        btn.disabled = false;
+      }, 3000);
+    }
+  });
+}
+
+// Fonction pour mettre à jour la date - EXACT COPY de newgqp.html
+function updateCurrentDate() {
+  const now = new Date();
+  const options = { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  };
+  const dateString = now.toLocaleDateString('fr-FR', options);
+  document.getElementById('currentDate').textContent = dateString;
+}
+
+// Initialiser la date au chargement
+document.addEventListener('DOMContentLoaded', function() {
+  updateCurrentDate();
+});
+
+// Appeler l'initialisation du formulaire
+initFormulaire();
+
+// Formatage automatique du prix
+function formatPrice(value) {
+  // Enlever tout sauf les chiffres et points/virgules
+  const cleanValue = value.replace(/[^\d.,]/g, '');
+  
+  // Convertir en nombre
+  const number = parseFloat(cleanValue.replace(',', '.'));
+  
+  if (isNaN(number)) return '';
+  
+  // Formater avec espaces pour les milliers et virgule pour les décimales
+  const formatted = new Intl.NumberFormat('fr-CA', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(number);
+  
+  return formatted + ' $';
+}
+
+// Ajouter le listener sur le champ prix
+document.addEventListener('DOMContentLoaded', function() {
+  const prixField = document.querySelector('input[name="prix"]');
+  
+  if (prixField) {
+    prixField.addEventListener('blur', function(e) {
+      const value = e.target.value.trim();
+      if (value && value !== '') {
+        e.target.value = formatPrice(value);
+      }
+    });
+    
+    // Permettre seulement les chiffres, points, virgules et $
+    prixField.addEventListener('input', function(e) {
+      const value = e.target.value;
+      // Garder seulement les caractères valides pour un prix
+      e.target.value = value.replace(/[^0-9.,$ ]/g, '');
+    });
+  }
+});
+
+// Fonction de déconnexion
+window.logout = function() {
+  localStorage.removeItem("qwotaCredentials");
+  localStorage.removeItem("rememberMe");
+  localStorage.removeItem('username');
+  localStorage.removeItem('token');
+  window.location.href = "/login";
+};
+
+// ===================================
+// GESTION SIGNATURE PRÉSENTATION
+// ===================================
+
+let presentationSignatureCanvas = null;
+let presentationSignatureCtx = null;
+let isPresentationDrawing = false;
+let hasPresentationSignature = false;
+let presentationPoints = [];
+let currentPdfUrl = null; // Pour stocker l'URL du PDF affiché
+let currentPdfDocument = null; // Pour stocker le document PDF
+let currentPdfPage = null; // Pour stocker la page PDF actuelle
+let currentFormData = null; // Pour stocker les données du formulaire
+let currentSoumissionId = null; // Pour stocker l'ID de la soumission
+
+// Dimensions du rectangle de signature original dans le PDF (pas zoomé)
+window.originalSignatureRect = {width: 150, height: 35};
+
+// Ouvrir le popup de signature zoom
+window.openSignatureZoomPopup = async function() {
+  // RESET COMPLET - Tout remettre à 0 avant d'ouvrir
+  hasPresentationSignature = false;
+  presentationPoints = [];
+
+  // Chercher dans l'iframe d'abord, puis dans le parent
+  let popup = document.getElementById('signatureZoomPopup');
+  if (!popup) {
+    popup = window.parent.document.getElementById('signatureZoomPopup');
+  }
+
+  let pdfModal = document.getElementById('pdfModal');
+  if (!pdfModal) {
+    pdfModal = window.parent.document.getElementById('pdfModal');
+  }
+
+  const parentBody = window.parent.document.body;
+
+  console.log('[DEBUG] Popup signature:', popup);
+  console.log('[DEBUG] PDF Modal:', pdfModal);
+  console.log('[DEBUG] Popup parent:', popup ? popup.parentElement : 'null');
+
+  // Déplacer le popup vers le parent si pas déjà fait
+  if (popup && popup.parentElement !== parentBody) {
+    parentBody.appendChild(popup);
+    console.log('[DEBUG] Popup déplacé vers parent');
+  }
+
+  // Cacher temporairement le modal PDF pour voir seulement le popup signature
+  if (pdfModal) {
+    pdfModal.style.display = 'none';
+    console.log('[DEBUG] PDF Modal caché');
+  }
+
+  if (popup) {
+    popup.style.display = 'flex';
+    console.log('[DEBUG] Popup display set to flex');
+    console.log('[DEBUG] Popup computed style:', {
+      display: window.parent.getComputedStyle(popup).display,
+      zIndex: window.parent.getComputedStyle(popup).zIndex,
+      position: window.parent.getComputedStyle(popup).position
+    });
+
+    // Attacher les événements des boutons du popup
+    const clearBtn = popup.querySelector('button[onclick*="clearSignatureZoom"]');
+    const closeBtn = popup.querySelector('button[onclick*="closeSignatureZoomPopup"]');
+    const validateBtn = popup.querySelector('#validateSignatureBtn');
+
+    if (clearBtn) {
+      clearBtn.onclick = () => window.clearSignatureZoom();
+    }
+    if (closeBtn) {
+      closeBtn.onclick = () => window.closeSignatureZoomPopup();
+    }
+    if (validateBtn) {
+      validateBtn.onclick = () => window.validateSignature();
+    }
+  }
+
+  // Rendre le PDF zoomé en arrière-plan
+  setTimeout(async () => {
+    await renderZoomedPdfBackground();
+    initPresentationSignatureCanvas();
+
+    // Effacer complètement le canvas après init pour être sûr qu'il est vide
+    if (presentationSignatureCtx && presentationSignatureCanvas) {
+      presentationSignatureCtx.clearRect(0, 0, presentationSignatureCanvas.width, presentationSignatureCanvas.height);
+    }
+
+    // Désactiver le bouton valider
+    let validateBtn = document.getElementById('validateSignatureBtn');
+    if (!validateBtn) validateBtn = window.parent.document.getElementById('validateSignatureBtn');
+    if (validateBtn) {
+      validateBtn.disabled = true;
+      validateBtn.classList.remove('btn-success');
+      validateBtn.setAttribute('style', 'background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;');
+    }
+
+    // Afficher le hint
+    let zoomHint = document.getElementById('signatureZoomHint');
+    if (!zoomHint) zoomHint = window.parent.document.getElementById('signatureZoomHint');
+    if (zoomHint) zoomHint.style.display = 'block';
+  }, 100);
+};
+
+// Rendre le PDF zoomé en arrière-plan du popup
+async function renderZoomedPdfBackground() {
+  if (!currentPdfPage) return;
+
+  // Chercher le canvas dans l'iframe d'abord, puis dans le parent
+  let zoomCanvas = document.getElementById('pdfZoomCanvas');
+  if (!zoomCanvas) {
+    zoomCanvas = window.parent.document.getElementById('pdfZoomCanvas');
+  }
+
+  if (!zoomCanvas) {
+    console.error('[ERROR] pdfZoomCanvas non trouvé!');
+    return;
+  }
+
+  const zoomCtx = zoomCanvas.getContext('2d');
+  console.log('[DEBUG] Rendu du PDF zoomé sur canvas:', zoomCanvas);
+
+  // Échelle de zoom (4x pour un bon zoom)
+  const zoomScale = 6.0; // 4 fois plus grand que l'affichage normal (1.5 * 4)
+  const viewport = currentPdfPage.getViewport({ scale: zoomScale });
+
+  // Calculer quelle partie du PDF afficher (zone de signature en bas)
+  // La signature est à bottom: 123px du bas du PDF à échelle 1.5
+  // À échelle 4.5, c'est 123 * (4.5/1.5) = 369px du bas
+
+  const containerWidth = 700 - 48; // max-width du popup - padding
+  const containerHeight = 300;
+
+  // Dimensions du canvas zoom
+  zoomCanvas.width = containerWidth;
+  zoomCanvas.height = containerHeight;
+
+  // Créer un canvas temporaire pour le rendu complet
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = viewport.width;
+  tempCanvas.height = viewport.height;
+  const tempCtx = tempCanvas.getContext('2d');
+
+  // Rendre le PDF complet sur le canvas temporaire
+  await currentPdfPage.render({
+    canvasContext: tempCtx,
+    viewport: viewport
+  }).promise;
+
+  // La signature est à bottom: 123px, left: 117px à l'échelle 1.5
+  // Convertir en position à l'échelle 6.0:
+  const signatureBottomAt1_5 = 123;
+  const signatureLeftAt1_5 = 117;
+  const signatureWidthAt1_5 = 150;
+  const signatureHeightAt1_5 = 35;
+
+  // Position à l'échelle 6.0 (multiplier par 4)
+  const zoomMultiplier = 4;
+  const signatureBottomAtZoom = signatureBottomAt1_5 * zoomMultiplier;
+  const signatureLeftAtZoom = signatureLeftAt1_5 * zoomMultiplier;
+  const signatureWidthAtZoom = signatureWidthAt1_5 * zoomMultiplier;
+  const signatureHeightAtZoom = signatureHeightAt1_5 * zoomMultiplier;
+
+  // Position Y du haut de la zone de signature (depuis le haut du PDF)
+  const signatureTopFromTop = viewport.height - signatureBottomAtZoom - signatureHeightAtZoom;
+
+  // Centrer la zone de signature dans la vue (verticalement)
+  const sourceY = signatureTopFromTop - (containerHeight - signatureHeightAtZoom) / 2;
+  const sourceX = signatureLeftAtZoom - (containerWidth - signatureWidthAtZoom) / 2;
+
+  zoomCtx.drawImage(
+    tempCanvas,
+    sourceX, sourceY, containerWidth, containerHeight, // Source (zone à copier)
+    0, 0, containerWidth, containerHeight // Destination (canvas zoom)
+  );
+
+  // Dessiner un rectangle pour indiquer la zone de signature
+  // Position dans le canvas zoom (centré)
+  const signatureXInZoom = (containerWidth - signatureWidthAtZoom) / 2;
+  const signatureYInZoom = (containerHeight - signatureHeightAtZoom) / 2;
+
+  // Stocker les coordonnées de la zone de signature pour la restriction
+  window.signatureZoomBounds = {
+    x: signatureXInZoom,
+    y: signatureYInZoom,
+    width: signatureWidthAtZoom,
+    height: signatureHeightAtZoom
+  };
+
+  // Dessiner un rectangle avec bordure en pointillés bleus
+  zoomCtx.strokeStyle = 'rgba(96, 165, 250, 0.6)';
+  zoomCtx.lineWidth = 3;
+  zoomCtx.setLineDash([10, 5]);
+  zoomCtx.strokeRect(signatureXInZoom, signatureYInZoom, signatureWidthAtZoom, signatureHeightAtZoom);
+  zoomCtx.setLineDash([]); // Réinitialiser
+}
+
+// Fermer le popup de signature zoom
+window.closeSignatureZoomPopup = function() {
+  let popup = document.getElementById('signatureZoomPopup');
+  if (!popup) popup = window.parent.document.getElementById('signatureZoomPopup');
+
+  let pdfModal = document.getElementById('pdfModal');
+  if (!pdfModal) pdfModal = window.parent.document.getElementById('pdfModal');
+
+  if (popup) {
+    popup.style.display = 'none';
+  }
+
+  // Réafficher le modal PDF
+  if (pdfModal) {
+    pdfModal.style.display = 'flex';
+  }
+
+  // TOUJOURS réinitialiser quand on annule (ne pas garder l'ancienne signature)
+  clearSignatureZoom();
+};
+
+// Effacer la signature dans le zoom
+window.clearSignatureZoom = function() {
+  clearPresentationSignature();
+};
+
+// Valider la signature et fermer le popup
+window.validateSignature = function() {
+  if (!hasPresentationSignature) return;
+
+  // Copier la signature sur le canvas preview
+  let previewCanvas = document.getElementById('signaturePreviewCanvas');
+  if (!previewCanvas) previewCanvas = window.parent.document.getElementById('signaturePreviewCanvas');
+
+  if (!previewCanvas) {
+    console.error('[ERROR] signaturePreviewCanvas non trouvé!');
+    return;
+  }
+
+  const previewCtx = previewCanvas.getContext('2d');
+
+  // Configurer le preview canvas avec le même ratio pour éviter pixelisation
+  const ratio = Math.max(window.devicePixelRatio || 1, 2);
+
+  // Le rectangle de signature dans le PDF original (taille réelle, pas zoomée)
+  const originalSignatureRect = window.originalSignatureRect || {width: 200, height: 50};
+
+  const previewWidth = originalSignatureRect.width;
+  const previewHeight = originalSignatureRect.height;
+
+  previewCanvas.width = previewWidth * ratio;
+  previewCanvas.height = previewHeight * ratio;
+  previewCanvas.style.width = previewWidth + 'px';
+  previewCanvas.style.height = previewHeight + 'px';
+
+  previewCtx.scale(ratio, ratio);
+
+  // Activer le lissage pour une meilleure qualité lors du redimensionnement
+  previewCtx.imageSmoothingEnabled = true;
+  previewCtx.imageSmoothingQuality = 'high';
+
+  // Effacer d'abord
+  previewCtx.clearRect(0, 0, previewWidth, previewHeight);
+
+  // Extraire la zone de signature du canvas zoom et la réduire pour fit dans le petit rectangle
+  if (window.signatureZoomBounds) {
+    const bounds = window.signatureZoomBounds;
+
+    // Le canvas interne est ratio fois plus grand, donc multiplier les coordonnées source
+    // Destination: réduit à la taille du petit rectangle original
+    previewCtx.drawImage(
+      presentationSignatureCanvas,
+      bounds.x * ratio, bounds.y * ratio, bounds.width * ratio, bounds.height * ratio, // Source: zone de signature zoomée avec ratio
+      0, 0, previewWidth, previewHeight // Destination: taille du petit rectangle (réduit)
+    );
+  } else {
+    // Fallback: copier tout le canvas si pas de bounds
+    previewCtx.drawImage(presentationSignatureCanvas, 0, 0, presentationSignatureCanvas.width, presentationSignatureCanvas.height, 0, 0, previewWidth, previewHeight);
+  }
+
+  // Afficher le preview, cacher le hint
+  previewCanvas.style.display = 'block';
+
+  let signatureHint = document.getElementById('signatureHint');
+  if (!signatureHint) signatureHint = window.parent.document.getElementById('signatureHint');
+  if (signatureHint) signatureHint.style.display = 'none';
+
+  // Activer le bouton accepter avec style vert vif
+  let acceptBtn = document.getElementById('acceptPresentationBtn');
+  if (!acceptBtn) acceptBtn = window.parent.document.getElementById('acceptPresentationBtn');
+
+  if (acceptBtn) {
+    acceptBtn.disabled = false;
+    acceptBtn.removeAttribute('style'); // Enlever le style inline gris
+    acceptBtn.classList.add('btn-success');
+  }
+
+  // Effacer le canvas zoom (mais PAS le preview) pour être prêt pour la prochaine signature
+  if (presentationSignatureCtx && presentationSignatureCanvas) {
+    presentationSignatureCtx.clearRect(0, 0, presentationSignatureCanvas.width, presentationSignatureCanvas.height);
+  }
+  hasPresentationSignature = false;
+  presentationPoints = [];
+
+  // Fermer le popup
+  let popup = document.getElementById('signatureZoomPopup');
+  if (!popup) popup = window.parent.document.getElementById('signatureZoomPopup');
+
+  let pdfModal = document.getElementById('pdfModal');
+  if (!pdfModal) pdfModal = window.parent.document.getElementById('pdfModal');
+
+  if (popup) {
+    popup.style.display = 'none';
+  }
+
+  // Réafficher le modal PDF
+  if (pdfModal) {
+    pdfModal.style.display = 'flex';
+  }
+};
+
+// Initialiser le canvas de signature lors de l'ouverture du popup zoom
+function initPresentationSignatureCanvas() {
+  // Chercher le canvas dans l'iframe d'abord, puis dans le parent
+  presentationSignatureCanvas = document.getElementById('presentationSignaturePad');
+  if (!presentationSignatureCanvas) {
+    presentationSignatureCanvas = window.parent.document.getElementById('presentationSignaturePad');
+  }
+
+  if (!presentationSignatureCanvas) {
+    console.error('[ERROR] presentationSignaturePad non trouvé!');
+    return;
+  }
+
+  console.log('[DEBUG] presentationSignaturePad trouvé:', presentationSignatureCanvas);
+
+  presentationSignatureCtx = presentationSignatureCanvas.getContext('2d');
+
+  // Configuration du canvas avec ratio plus élevé pour éviter pixelisation
+  const ratio = Math.max(window.devicePixelRatio || 1, 2); // Minimum 2x au lieu de 1
+  const rect = presentationSignatureCanvas.getBoundingClientRect();
+
+  // Utiliser les dimensions réelles du canvas dans le DOM
+  const canvasWidth = rect.width;
+  const canvasHeight = rect.height;
+
+  presentationSignatureCanvas.width = canvasWidth * ratio;
+  presentationSignatureCanvas.height = canvasHeight * ratio;
+  presentationSignatureCanvas.style.width = canvasWidth + "px";
+  presentationSignatureCanvas.style.height = canvasHeight + "px";
+
+  presentationSignatureCtx.scale(ratio, ratio);
+  presentationSignatureCtx.lineCap = 'round';
+  presentationSignatureCtx.lineJoin = 'round';
+  presentationSignatureCtx.lineWidth = 3;
+  presentationSignatureCtx.strokeStyle = '#000000';
+
+  // IMPORTANT: S'assurer que le fond reste transparent
+  presentationSignatureCtx.clearRect(0, 0, presentationSignatureCanvas.width, presentationSignatureCanvas.height);
+
+  // Événements tactiles et souris
+  presentationSignatureCanvas.addEventListener('pointerdown', startPresentationDrawing);
+  presentationSignatureCanvas.addEventListener('pointermove', drawPresentation);
+  presentationSignatureCanvas.addEventListener('pointerup', stopPresentationDrawing);
+  presentationSignatureCanvas.addEventListener('pointercancel', stopPresentationDrawing);
+}
+
+function startPresentationDrawing(e) {
+  const rect = presentationSignatureCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  // Vérifier si on est dans la zone de signature autorisée
+  if (window.signatureZoomBounds) {
+    const bounds = window.signatureZoomBounds;
+    if (x < bounds.x || x > bounds.x + bounds.width ||
+        y < bounds.y || y > bounds.y + bounds.height) {
+      // En dehors de la zone - ne pas dessiner
+      return;
+    }
+  }
+
+  isPresentationDrawing = true;
+  presentationPoints = [];
+
+  // Cacher les hints (preview et zoom)
+  let hint = document.getElementById('signatureHint');
+  if (!hint) hint = window.parent.document.getElementById('signatureHint');
+  if (hint) hint.style.display = 'none';
+
+  let zoomHint = document.getElementById('signatureZoomHint');
+  if (!zoomHint) zoomHint = window.parent.document.getElementById('signatureZoomHint');
+  if (zoomHint) zoomHint.style.display = 'none';
+
+  presentationPoints.push({ x, y });
+  presentationSignatureCtx.beginPath();
+  presentationSignatureCtx.moveTo(x, y);
+}
+
+function drawPresentation(e) {
+  if (!isPresentationDrawing) return;
+  e.preventDefault();
+
+  const rect = presentationSignatureCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  // Vérifier si on est dans la zone de signature autorisée
+  if (window.signatureZoomBounds) {
+    const bounds = window.signatureZoomBounds;
+    if (x < bounds.x || x > bounds.x + bounds.width ||
+        y < bounds.y || y > bounds.y + bounds.height) {
+      // En dehors de la zone - arrêter de dessiner
+      stopPresentationDrawing();
+      return;
+    }
+  }
+
+  presentationPoints.push({ x, y });
+
+  // Dessin EXACTEMENT comme Connect Agenda
+  if (presentationPoints.length >= 3) {
+    const [p0, p1, p2] = presentationPoints.slice(-3);
+    const cpx = (p0.x + p1.x) / 2;
+    const cpy = (p0.y + p1.y) / 2;
+    presentationSignatureCtx.quadraticCurveTo(p0.x, p0.y, cpx, cpy);
+    presentationSignatureCtx.stroke();
+    presentationSignatureCtx.beginPath();
+    presentationSignatureCtx.moveTo(cpx, cpy);
+  } else {
+    presentationSignatureCtx.lineTo(x, y);
+    presentationSignatureCtx.stroke();
+  }
+
+  // Activer le bouton d'acceptation
+  hasPresentationSignature = true;
+
+  // Activer le bouton valider dans le popup zoom
+  let validateBtn = document.getElementById('validateSignatureBtn');
+  if (!validateBtn) validateBtn = window.parent.document.getElementById('validateSignatureBtn');
+
+  if (validateBtn) {
+    validateBtn.disabled = false;
+    validateBtn.removeAttribute('style'); // Enlever le style inline gris
+    validateBtn.classList.add('btn-success');
+  }
+
+  // Afficher le bouton effacer
+  let clearBtn = document.getElementById('clearSignatureBtn');
+  if (!clearBtn) clearBtn = window.parent.document.getElementById('clearSignatureBtn');
+  if (clearBtn) clearBtn.style.display = 'block';
+}
+
+function stopPresentationDrawing() {
+  if (!isPresentationDrawing) return;
+  isPresentationDrawing = false;
+
+  if (presentationPoints.length >= 3) {
+    const lastTwoPoints = presentationPoints.slice(-2);
+    presentationSignatureCtx.lineTo(lastTwoPoints[1].x, lastTwoPoints[1].y);
+    presentationSignatureCtx.stroke();
+  }
+  presentationSignatureCtx.closePath();
+}
+
+// Fonction pour effacer la signature
+window.clearPresentationSignature = function() {
+  // Effacer le canvas de signature zoom
+  if (presentationSignatureCtx && presentationSignatureCanvas) {
+    presentationSignatureCtx.clearRect(0, 0, presentationSignatureCanvas.width, presentationSignatureCanvas.height);
+  }
+
+  // Effacer aussi le canvas preview
+  let previewCanvas = document.getElementById('signaturePreviewCanvas');
+  if (!previewCanvas) previewCanvas = window.parent.document.getElementById('signaturePreviewCanvas');
+  if (previewCanvas) {
+    const previewCtx = previewCanvas.getContext('2d');
+    previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+    previewCanvas.style.display = 'none';
+  }
+
+  // Réinitialiser toutes les variables
+  hasPresentationSignature = false;
+  presentationPoints = [];
+
+  // Remettre le bouton accepter en gris
+  let acceptBtn = document.getElementById('acceptPresentationBtn');
+  if (!acceptBtn) acceptBtn = window.parent.document.getElementById('acceptPresentationBtn');
+
+  if (acceptBtn) {
+    acceptBtn.disabled = true;
+    acceptBtn.classList.remove('btn-success');
+    acceptBtn.setAttribute('style', 'background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;');
+  }
+
+  // Désactiver le bouton valider dans le popup zoom
+  let validateBtn = document.getElementById('validateSignatureBtn');
+  if (!validateBtn) validateBtn = window.parent.document.getElementById('validateSignatureBtn');
+
+  if (validateBtn) {
+    validateBtn.disabled = true;
+    validateBtn.classList.remove('btn-success');
+    validateBtn.setAttribute('style', 'background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;');
+  }
+
+  // Réafficher les hints (preview et zoom)
+  let hint = document.getElementById('signatureHint');
+  if (!hint) hint = window.parent.document.getElementById('signatureHint');
+  if (hint) hint.style.display = 'block';
+
+  let zoomHint = document.getElementById('signatureZoomHint');
+  if (!zoomHint) zoomHint = window.parent.document.getElementById('signatureZoomHint');
+  if (zoomHint) zoomHint.style.display = 'block';
+
+  // Cacher le bouton effacer
+  let clearBtn = document.getElementById('clearSignatureBtn');
+  if (!clearBtn) clearBtn = window.parent.document.getElementById('clearSignatureBtn');
+  if (clearBtn) clearBtn.style.display = 'none';
+};
+
+// Fonction pour fermer le modal
+window.closePdfModal = function() {
+  document.getElementById("pdfModal").classList.add("hidden");
+  document.getElementById("pdfOverlay").style.display = "none";
+  document.getElementById("closePdfBtn").classList.add("hidden");
+  document.body.style.overflow = "auto";
+
+  // Restaurer AppPC
+  const appContainer = window.parent.document.querySelector('#app-container');
+  if (appContainer) appContainer.style.display = '';
+
+  // Réinitialiser la signature
+  clearPresentationSignature();
+};
+
+// Fonction pour accepter la soumission avec signature
+window.acceptPresentation = async function() {
+  if (!hasPresentationSignature) {
+    alert('Veuillez signer avant d\'accepter.');
+    return;
+  }
+
+  if (!currentFormData) {
+    alert('Erreur: Données manquantes. Veuillez réessayer.');
+    return;
+  }
+
+  const btn = document.getElementById('acceptPresentationBtn');
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Création...';
+
+  try {
+    // Étape 1: Créer la soumission (elle ira directement dans acceptées après signature)
+    const createResponse = await fetch(`${window.location.origin}/creer-pdf?username=${window.username}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(currentFormData)
+    });
+
+    if (!createResponse.ok) {
+      const errText = await createResponse.text();
+      throw new Error("Erreur lors de la création de la soumission : " + errText);
+    }
+
+    const createResult = await createResponse.json();
+    const pdfUrl = createResult.lien_pdf;
+    const soumissionId = createResult.id;
+
+    console.log('[DEBUG] ACCEPTATION - Soumission créée:', soumissionId);
+
+    // Étape 2: Préparer la signature
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Signature...';
+    const previewCanvas = document.getElementById('signaturePreviewCanvas');
+    const signatureDataUrl = previewCanvas.toDataURL('image/png');
+
+    // Étape 3: Envoyer avec signature (va dans ventes_acceptees)
+    const payload = {
+      username: window.username,
+      clientEmail: currentFormData.courriel,
+      clientNom: currentFormData.nom,
+      clientPrenom: currentFormData.prenom,
+      pdfUrl: pdfUrl,
+      signatureDataUrl: signatureDataUrl,
+      prix_str: currentFormData.prix,
+      soumission_id: soumissionId,
+      num: currentFormData.num,
+      adresse: currentFormData.adresse || "",
+      telephone: currentFormData.telephone || ""
+    };
+
+    console.log('[DEBUG] ACCEPTATION - Envoi signature:', payload);
+
+    const response = await fetch('/api/envoyer-soumission-signee', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Erreur ${response.status}: ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log('[DEBUG] ACCEPTATION - Réponse:', result);
+
+    // Fermer le modal
+    closePdfModal();
+
+    // Afficher message de succès
+    alert('✅ Soumission signée avec succès!\n\nLes courriels ont été envoyés au client et à l\'entrepreneur.\nLa vente a été enregistrée dans vos ventes acceptées.');
+
+    // Recharger la page pour rafraîchir les données
+    setTimeout(() => {
+      window.location.reload();
+    }, 1500);
+
+  } catch (err) {
+    console.error('[ERROR] Erreur acceptation:', err);
+    alert('❌ Erreur lors de l\'envoi: ' + err.message);
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
+};
+
+</script>
+
+
+
+<!-- Overlay flou -->
+<div id="pdfOverlay"></div>
+
+<!-- Modal PDF avec Signature Overlay -->
+<div id="pdfModal" class="hidden">
+  <div id="pdfContent">
+    <div id="pdfControls">
+      <button id="closePdfBtn" class="hidden">×</button>
+    </div>
+
+    <div id="pdfScrollContainer" style="position: relative;">
+      <div style="position: relative; display: inline-block;">
+        <canvas id="pdfCanvas"></canvas>
+
+        <!-- Zone signature cliquable - ouvre popup -->
+        <div id="signatureOverlay" style="position: absolute; bottom: 123px; left: 117px; width: 150px; pointer-events: auto; cursor: pointer;">
+          <div style="position: relative;">
+            <div id="signaturePreview" style="width: 100%; height: 35px; border-radius: 2px; background: transparent; display: flex; align-items: center; justify-content: center; border: 1px dashed rgba(96, 165, 250, 0.3);">
+              <div id="signatureHint" style="color: rgba(148, 163, 184, 0.5); font-size: 8px; font-style: italic; text-align: center;">
+                ✍️ Cliquez pour signer
+              </div>
+              <canvas id="signaturePreviewCanvas" style="display: none; width: 100%; height: 100%;"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer avec boutons actions -->
+    <div style="padding: 12px 16px; background: transparent; border-top: none; display: flex; gap: 10px; align-items: center; justify-content: flex-end;">
+      <button type="button" id="acceptPresentationBtn" class="btn-primary" onclick="acceptPresentation()" disabled style="background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;">
+        <i class="fas fa-check-circle"></i>
+        <span>Accepter la soumission</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Popup Signature Zoom -->
+<div id="signatureZoomPopup" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.85); z-index: 999999; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
+  <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 24px; max-width: 700px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(148, 163, 184, 0.2);">
+    <div style="text-align: center; margin-bottom: 20px;">
+      <div style="font-size: 18px; font-weight: 600; color: #e2e8f0; margin-bottom: 8px;">
+        <i class="fas fa-search-plus" style="color: #60a5fa; margin-right: 8px;"></i>
+        Zone de signature - Zoom
+      </div>
+      <div style="font-size: 12px; color: #94a3b8;">
+        Signez dans la zone indiquée sur le PDF
+      </div>
+    </div>
+
+    <div style="position: relative; background: white; border-radius: 8px; padding: 12px; margin-bottom: 20px; overflow: hidden;">
+      <!-- Canvas du PDF zoomé (arrière-plan) -->
+      <canvas id="pdfZoomCanvas" style="width: 100%; height: 300px; display: block; border-radius: 6px;"></canvas>
+
+      <!-- Canvas de signature transparent par-dessus -->
+      <canvas id="presentationSignaturePad" style="position: absolute; top: 12px; left: 12px; width: calc(100% - 24px); height: 300px; border-radius: 6px; cursor: crosshair; touch-action: none; display: block;"></canvas>
+
+      <div id="signatureZoomHint" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(100, 100, 100, 0.4); font-size: 14px; pointer-events: none; font-style: italic; text-align: center;">
+        ✍️ Signez ici
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 12px; justify-content: space-between;">
+      <button type="button" class="btn-secondary" onclick="clearSignatureZoom()">
+        <i class="fas fa-eraser"></i>
+        <span>Effacer</span>
+      </button>
+      <div style="display: flex; gap: 12px;">
+        <button type="button" class="btn-secondary" onclick="closeSignatureZoomPopup()">
+          <i class="fas fa-times"></i>
+          <span>Annuler</span>
+        </button>
+        <button type="button" id="validateSignatureBtn" class="btn-primary" onclick="validateSignature()" disabled style="background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;">
+          <i class="fas fa-check"></i>
+          <span>Valider</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Variable globale pour tracker si une adresse Google a été sélectionnée
+  window.googleProspectAddressSelected = false;
+
+  window.initProspectAutocomplete = function() {
+    const input = document.getElementById('adresseAutocomplete');
+    if (!input) return;
+
+    // Forcer la désactivation de l'autocomplete navigateur
+    input.setAttribute('autocomplete', 'new-password');
+    input.setAttribute('autocorrect', 'off');
+    input.setAttribute('autocapitalize', 'off');
+    input.setAttribute('spellcheck', 'false');
+
+    const autocomplete = new google.maps.places.Autocomplete(input, {
+      types: ['address'],
+      componentRestrictions: { country: 'ca' }
+    });
+
+    // Reset flag when user types manually (mais pas si c'est un auto-fill)
+    input.addEventListener('input', (e) => {
+      // Si l'utilisateur modifie l'adresse auto-remplie, reset le flag
+      if (window.googleProspectAddressSelected && window.initialAutofilledAddress) {
+        if (input.value !== window.initialAutofilledAddress) {
+          window.googleProspectAddressSelected = false;
+          console.log('[WARN] Adresse modifiée manuellement, validation Google requise');
+        }
+      }
+      // Réappliquer les attributs anti-autocomplete
+      input.setAttribute('autocomplete', 'new-password');
+    });
+
+    // Supprimer l'autocomplete navigateur sur focus
+    input.addEventListener('focus', () => {
+      input.setAttribute('autocomplete', 'new-password');
+      input.removeAttribute('readonly');
+    });
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (!place.geometry) {
+        console.log("Adresse invalide");
+        window.googleProspectAddressSelected = false;
+        return;
+      }
+
+      // Marquer qu'une adresse Google a été sélectionnée
+      window.googleProspectAddressSelected = true;
+
+      const components = place.address_components;
+      let streetNumber = '';
+      let route = '';
+      let city = '';
+      let province = '';
+      let postalCode = '';
+
+      components.forEach(component => {
+        const types = component.types;
+
+        if (types.includes('street_number')) {
+          streetNumber = component.long_name;
+        }
+        if (types.includes('route')) {
+          route = component.long_name;
+        }
+        if (types.includes('locality')) {
+          city = component.long_name;
+        }
+        if (types.includes('administrative_area_level_1')) {
+          province = component.short_name;
+        }
+        if (types.includes('postal_code')) {
+          postalCode = component.long_name;
+        }
+      });
+
+      const fullAddress = `${streetNumber} ${route}, ${city}, ${province} ${postalCode}`;
+      input.value = fullAddress.trim();
+    });
+  };
+</script>
+
+<input type="hidden" id="produitCouleursHidden" name="produitCouleurs">
+<input type="hidden" id="partTravauxHidden" name="partTravaux">
+<script
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAZDi-RMHDdA4l-4sv_5H8GhsUAYXV4DVE&libraries=places&callback=initProspectAutocomplete&language=fr&region=CA"
+  async
+  defer
+></script>
+
+  <!-- Script pour gestion menu actif -->
+  <script>
+    // Fonction pour activer le menu basé sur la page actuelle
+    function activateCurrentPageMenu() {
+      const currentPath = window.location.pathname;
+      console.log('🌐 Page actuelle détectée:', currentPath);
+      
+      // Enlever la classe menu-active de tous les liens
+      const allMenuLinks = document.querySelectorAll('#sidebar a');
+      allMenuLinks.forEach(link => {
+        link.classList.remove('menu-active');
+        link.removeAttribute('data-menu-state');
+      });
+      
+      // Mapping des pages vers leurs data-path correspondants
+      const pageMap = {
+        '/dashboard': '/dashboard',
+        '/centralevue': '/centralevue', 
+        '/calcul': '/calcul',
+        '/soumissions': '/soumissions',
+        '/gqp': '/gqp',
+        '/travaux': '/travaux',
+        '/facture': '/facture',
+        '/avis': '/avis',
+        '/centrale': '/centrale',
+        '/dashboardcoach': '/dashboardcoach'
+      };
+      
+      const targetPath = pageMap[currentPath];
+      let targetLink = null;
+      
+      if (targetPath) {
+        targetLink = document.querySelector(`#sidebar a[data-path="${targetPath}"]`);
+        console.log('[TARGET] Page détectée - activation du menu pour:', targetPath);
+      }
+      
+      if (targetLink) {
+        targetLink.classList.add('menu-active');
+        targetLink.setAttribute('data-menu-state', 'active');
+        console.log('[OK] Menu activé pour:', targetLink.textContent.trim());
+      } else {
+        console.log('[WARN] Aucun menu trouvé pour la page:', currentPath);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      activateCurrentPageMenu();
+      setTimeout(activateCurrentPageMenu, 150);
+      setTimeout(activateCurrentPageMenu, 300);
+    });
+  </script>
+
+  </div> <!-- Fermeture page-content -->
+  </div> <!-- Fermeture ml-[15%] mr-[15%] -->
+
+  <!-- Popup Modal pour Produit/Couleurs -->
+  <div class="popup-modal" id="productModal">
+    <div class="popup-content">
+      <div class="popup-left">
+        <div class="popup-header" style="position: sticky; top: 0; z-index: 999999; background: var(--bg-card); border-bottom: 1px solid var(--border-dark); padding-top: 15px;">
+          <div class="popup-title">
+            <i class="fas fa-palette text-purple-500"></i>
+            Produit/Couleurs
+          </div>
+        </div>
+        <div class="popup-options" id="productOptions" style="padding-top: 20px;">
+          <!-- Catégorie: Préparation des surfaces -->
+          <div class="popup-category" style="padding: 8px 16px; background: rgba(59, 130, 246, 0.1); color: var(--primary-blue); font-weight: 600; font-size: 12px; text-transform: uppercase; margin-bottom: 8px; border-radius: 6px;">Préparation des surfaces</div>
+          <div class="popup-option" data-value="Lavage doux avec savon TSP">
+            <span>Lavage doux avec savon TSP</span>
+          </div>
+          <div class="popup-option" data-value="Lavage à pression avec savon TSP">
+            <span>Lavage à pression avec savon TSP</span>
+          </div>
+          <div class="popup-option" data-value="Sablage léger">
+            <span>Sablage léger</span>
+          </div>
+          <div class="popup-option" data-value="Sablage modéré">
+            <span>Sablage modéré</span>
+          </div>
+          <div class="popup-option" data-value="Sablage au bois">
+            <span>Sablage au bois</span>
+          </div>
+          <div class="popup-option" data-value="Sablage de surface">
+            <span>Sablage de surface</span>
+          </div>
+          <div class="popup-option" data-value="Grattage aux endroits nécessaires">
+            <span>Grattage aux endroits nécessaires</span>
+          </div>
+          <div class="popup-option" data-value="Réparations mineures">
+            <span>Réparations mineures</span>
+          </div>
+          <div class="popup-option" data-value="Protection des surfaces">
+            <span>Protection des surfaces</span>
+          </div>
+
+          <!-- Catégorie: Apprêts -->
+          <div class="popup-category" style="padding: 8px 16px; background: rgba(59, 130, 246, 0.1); color: var(--primary-blue); font-weight: 600; font-size: 12px; text-transform: uppercase; margin: 16px 0 8px 0; border-radius: 6px;">Apprêts</div>
+          <div class="popup-option" data-value="Application de une couche d'apprêt sur les murs de couleurs">
+            <span>Application de une couche d'apprêt sur les murs de couleurs</span>
+          </div>
+          <div class="popup-option" data-value="Application de une couche d'apprêt au endroits rouillés">
+            <span>Application de une couche d'apprêt au endroits rouillés</span>
+          </div>
+
+          <!-- Catégorie: Peintures -->
+          <div class="popup-category" style="padding: 8px 16px; background: rgba(59, 130, 246, 0.1); color: var(--primary-blue); font-weight: 600; font-size: 12px; text-transform: uppercase; margin: 16px 0 8px 0; border-radius: 6px;">Peintures</div>
+          <div class="popup-option" data-value="Application de 2 couches de peinture">
+            <span>Application de 2 couches de peinture</span>
+          </div>
+          <div class="popup-option" data-value="Application de 2 couches de peinture diament extérieure">
+            <span>Application de 2 couches de peinture diament extérieure</span>
+          </div>
+
+          <!-- Catégorie: Teintures -->
+          <div class="popup-category" style="padding: 8px 16px; background: rgba(59, 130, 246, 0.1); color: var(--primary-blue); font-weight: 600; font-size: 12px; text-transform: uppercase; margin: 16px 0 8px 0; border-radius: 6px;">Teintures</div>
+          <div class="popup-option" data-value="Application de 2 couches de teinture opaque">
+            <span>Application de 2 couches de teinture opaque</span>
+          </div>
+          <div class="popup-option" data-value="Application de 2 couche de teinture semi transparente">
+            <span>Application de 2 couche de teinture semi transparente</span>
+          </div>
+
+          <!-- Catégorie: Finitions par surface -->
+          <div class="popup-category" style="padding: 8px 16px; background: rgba(59, 130, 246, 0.1); color: var(--primary-blue); font-weight: 600; font-size: 12px; text-transform: uppercase; margin: 16px 0 8px 0; border-radius: 6px;">Finitions par surface</div>
+          <div class="popup-option" data-value="Mur: coquille d'œuf">
+            <span>Mur: coquille d'œuf</span>
+          </div>
+          <div class="popup-option" data-value="Plafond: mât">
+            <span>Plafond: mât</span>
+          </div>
+          <div class="popup-option" data-value="Portes et moulures: perle">
+            <span>Portes et moulures: perle</span>
+          </div>
+          <div class="popup-option" data-value="Portes: perle">
+            <span>Portes: perle</span>
+          </div>
+          <div class="popup-option" data-value="moulures: perle">
+            <span>Moulures: perle</span>
+          </div>
+        </div>
+      </div>
+      <div class="popup-right">
+        <h3 style="color: var(--text-light); margin-bottom: 16px; font-weight: 600;">Zone de texte</h3>
+        <textarea class="popup-textarea" id="productTextarea" placeholder="Ajoutez des détails personnalisés..."></textarea>
+        <div class="popup-buttons">
+          <button class="btn-secondary px-6 py-2" onclick="closeProductModal()">Annuler</button>
+          <button class="btn-primary px-6 py-2" onclick="confirmProductSelection()">Confirmer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup Modal pour Particularité des travaux -->
+  <div class="popup-modal" id="partTravauxModal">
+    <div class="popup-content">
+      <div class="popup-left">
+        <div class="popup-header" style="position: sticky; top: 0; z-index: 999999; background: var(--bg-card); padding-top: 15px; display: block !important;">
+          <div class="popup-title">
+            <i class="fas fa-star text-yellow-500"></i>
+            Particularité des travaux
+          </div>
+
+          <!-- Section Templates (dans le header sticky, en dessous du titre) -->
+          <div style="padding: 12px 16px; background: rgba(59, 130, 246, 0.1); border-radius: 0; border-bottom: 1px solid rgba(59, 130, 246, 0.3); margin-top: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <i class="fas fa-bookmark" style="color: var(--primary-blue);"></i>
+              <span style="color: var(--text-light); font-weight: 600; font-size: 13px; flex-shrink: 0;">Templates</span>
+              <div style="position: relative; flex: 1;">
+                <div class="dropdown-toggle" id="templateToggle" style="width: 100%; cursor: pointer; height: 40px !important; min-height: 40px !important; display: flex !important; align-items: center !important; font-size: 13px !important;">
+                  <span class="placeholder" style="color: rgb(156 163 175); font-size: 13px;">-- Sélectionner --</span>
+                </div>
+                <div class="dropdown-menu hidden" id="templateMenu" style="width: 100%; max-height: 200px; overflow-y: auto;">
+                  <!-- Les options seront ajoutées dynamiquement -->
+                </div>
+              </div>
+              <button class="btn-primary" style="padding: 6px 10px !important; font-size: 12px !important; height: 32px !important; min-height: 32px !important; display: flex !important; align-items: center !important; justify-content: center !important; gap: 5px !important;" onclick="saveTemplatePrompt()" title="Nouveau template">
+                <i class="fas fa-plus" style="font-size: 11px !important;"></i>
+                <span style="font-size: 12px !important;">Nouveau template</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="popup-options" id="partTravauxOptions" style="padding-top: 8px;">
+          <!-- Catégorie: Assurances et certifications -->
+          <div class="popup-category" style="padding: 8px 16px; background: rgba(59, 130, 246, 0.1); color: var(--primary-blue); font-weight: 600; font-size: 12px; text-transform: uppercase; margin-bottom: 8px; border-radius: 6px;">Assurances et certifications</div>
+          <div class="popup-option" data-value="Assurance responsabilité civile 2M$ + CNESST">
+            <span>Assurance responsabilité civile 2M$ + CNESST</span>
+          </div>
+
+          <!-- Catégorie: Services -->
+          <div class="popup-category" style="padding: 8px 16px; background: rgba(59, 130, 246, 0.1); color: var(--primary-blue); font-weight: 600; font-size: 12px; text-transform: uppercase; margin: 16px 0 8px 0; border-radius: 6px;">Services</div>
+          <div class="popup-option" data-value="Service clé en main (équipement, main d'œuvre)">
+            <span>Service clé en main (équipement, main d'œuvre)</span>
+          </div>
+          <div class="popup-option" data-value="Service clé en main (équipement, peinture, main d'œuvre)">
+            <span>Service clé en main (équipement, peinture, main d'œuvre)</span>
+          </div>
+          <div class="popup-option" data-value="Produits fournis par le client">
+            <span>Produits fournis par le client</span>
+          </div>
+
+          <!-- Catégorie: Garanties -->
+          <div class="popup-category" style="padding: 8px 16px; background: rgba(59, 130, 246, 0.1); color: var(--primary-blue); font-weight: 600; font-size: 12px; text-transform: uppercase; margin: 16px 0 8px 0; border-radius: 6px;">Garanties</div>
+          <div class="popup-option" data-value="Satisfaction garantie (25/75)">
+            <span>Satisfaction garantie (25/75)</span>
+          </div>
+          <div class="popup-option" data-value="Garantie de 2 ans sur les travaux">
+            <span>Garantie de 2 ans sur les travaux</span>
+          </div>
+        </div>
+      </div>
+      <div class="popup-right">
+        <h3 style="color: var(--text-light); margin-bottom: 16px; font-weight: 600;">Zone de texte</h3>
+        <textarea class="popup-textarea" id="partTravauxTextarea" placeholder="Ajoutez des particularités personnalisées..."></textarea>
+        <div class="popup-buttons">
+          <button class="btn-secondary px-6 py-2" onclick="closePartTravauxModal()">Annuler</button>
+          <button class="btn-primary px-6 py-2" onclick="confirmPartTravauxSelection()">Confirmer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup pour nom du template (Nouveau) -->
+  <div id="templateNameModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999999; justify-content: center; align-items: center;">
+    <div style="background: var(--bg-card); border-radius: 12px; padding: 24px; width: 400px; max-width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+      <h3 style="color: var(--text-light); margin-bottom: 16px; font-size: 18px; font-weight: 600;">
+        <i class="fas fa-bookmark" style="color: var(--primary-blue); margin-right: 8px;"></i>
+        Nouveau template
+      </h3>
+      <input type="text" id="templateNameInput" placeholder="Nom du template..." class="modern-input" style="width: 100%; margin-bottom: 16px;" autocomplete="off">
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button class="btn-secondary px-4 py-2" onclick="closeTemplateNameModal()">Annuler</button>
+        <button class="btn-primary px-4 py-2" onclick="confirmSaveTemplate()">
+          <i class="fas fa-save" style="margin-right: 6px;"></i>
+          Sauvegarder
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup pour modifier un template -->
+  <div id="templateEditModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999999; justify-content: center; align-items: center;">
+    <div style="background: var(--bg-card); border-radius: 12px; padding: 24px; width: 400px; max-width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+      <h3 style="color: var(--text-light); margin-bottom: 16px; font-size: 18px; font-weight: 600;">
+        <i class="fas fa-pencil-alt" style="color: var(--primary-blue); margin-right: 8px;"></i>
+        Modifier le template
+      </h3>
+      <input type="text" id="templateEditInput" placeholder="Nouveau nom..." class="modern-input" style="width: 100%; margin-bottom: 16px;" autocomplete="off">
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button class="btn-secondary px-4 py-2" onclick="closeTemplateEditModal()">Annuler</button>
+        <button class="btn-primary px-4 py-2" onclick="confirmEditTemplate()">
+          <i class="fas fa-check" style="margin-right: 6px;"></i>
+          Modifier
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup pour supprimer un template -->
+  <div id="templateDeleteModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999999; justify-content: center; align-items: center;">
+    <div style="background: var(--bg-card); border-radius: 12px; padding: 24px; width: 400px; max-width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+      <h3 style="color: var(--text-light); margin-bottom: 16px; font-size: 18px; font-weight: 600;">
+        <i class="fas fa-trash" style="color: #ef4444; margin-right: 8px;"></i>
+        Supprimer le template
+      </h3>
+      <p id="templateDeleteMessage" style="color: var(--text-muted); margin-bottom: 16px;"></p>
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button class="btn-secondary px-4 py-2" onclick="closeTemplateDeleteModal()">Annuler</button>
+        <button class="btn-secondary px-4 py-2" onclick="confirmDeleteTemplate()">
+          <i class="fas fa-trash" style="margin-right: 6px;"></i>
+          Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Variables pour stocker les sélections
+    let productSelections = [];
+    let partTravauxSelections = [];
+    let userTemplates = []; // Templates sauvegardés de l'utilisateur
+    let currentEditIndex = null; // Pour stocker l'index du template en cours de modification
+    let currentDeleteIndex = null; // Pour stocker l'index du template en cours de suppression
+
+    // ===== GESTION DES TEMPLATES =====
+
+    // Charger les templates de l'utilisateur depuis le backend
+    async function loadUserTemplates() {
+      const username = localStorage.getItem('username');
+
+      if (!username) {
+        // Pas de username, initialiser avec liste vide
+        userTemplates = [];
+        updateTemplateSelect();
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/templates/part-travaux/${username}`);
+        if (response.ok) {
+          userTemplates = await response.json();
+          updateTemplateSelect();
+        }
+      } catch (error) {
+        console.error('Erreur chargement templates:', error);
+        userTemplates = [];
+        updateTemplateSelect();
+      }
+    }
+
+    // Variable pour stocker le template sélectionné
+    let selectedTemplateIndex = null;
+
+    // Mettre à jour le dropdown de sélection
+    function updateTemplateSelect() {
+      const menu = document.getElementById('templateMenu');
+      menu.innerHTML = '';
+
+      if (userTemplates.length === 0) {
+        // Si aucun template, afficher un message
+        const emptyOption = document.createElement('div');
+        emptyOption.className = 'dropdown-option';
+        emptyOption.style.color = 'rgb(156 163 175)';
+        emptyOption.style.fontStyle = 'italic';
+        emptyOption.style.cursor = 'default';
+        emptyOption.textContent = 'Pas de template enregistré';
+        menu.appendChild(emptyOption);
+      } else {
+        userTemplates.forEach((template, index) => {
+          const option = document.createElement('div');
+          option.className = 'dropdown-option';
+          option.style.display = 'flex';
+          option.style.alignItems = 'center';
+          option.style.justifyContent = 'space-between';
+          option.style.gap = '8px';
+          option.style.height = '40px';
+          option.style.minHeight = '40px';
+
+          const nameSpan = document.createElement('span');
+          nameSpan.textContent = template.name;
+          nameSpan.style.flex = '1';
+          nameSpan.onclick = function(e) {
+            e.stopPropagation();
+            selectTemplate(index, template.name);
+          };
+
+          const actionsDiv = document.createElement('div');
+          actionsDiv.style.display = 'flex';
+          actionsDiv.style.gap = '4px';
+          actionsDiv.style.alignItems = 'center';
+
+          // Bouton modifier
+          const editBtn = document.createElement('button');
+          editBtn.innerHTML = '<i class="fas fa-pencil-alt" style="font-size: 10px !important;"></i>';
+          editBtn.className = 'btn-primary';
+          editBtn.style.cssText = 'padding: 3px 6px !important; font-size: 10px !important; height: 24px !important; min-height: 24px !important;';
+          editBtn.title = 'Modifier';
+          editBtn.onclick = function(e) {
+            e.stopPropagation();
+            editTemplate(index);
+          };
+
+          // Bouton supprimer
+          const deleteBtn = document.createElement('button');
+          deleteBtn.innerHTML = '<i class="fas fa-trash" style="font-size: 10px !important;"></i>';
+          deleteBtn.className = 'btn-secondary';
+          deleteBtn.style.cssText = 'padding: 3px 6px !important; font-size: 10px !important; height: 24px !important; min-height: 24px !important;';
+          deleteBtn.title = 'Supprimer';
+          deleteBtn.onclick = function(e) {
+            e.stopPropagation();
+            deleteTemplate(index);
+          };
+
+          actionsDiv.appendChild(editBtn);
+          actionsDiv.appendChild(deleteBtn);
+
+          option.appendChild(nameSpan);
+          option.appendChild(actionsDiv);
+          menu.appendChild(option);
+        });
+      }
+
+      // Reset le toggle
+      const toggle = document.getElementById('templateToggle');
+      toggle.innerHTML = '<span class="placeholder" style="color: rgb(156 163 175); font-size: 13px;">-- Sélectionner --</span>';
+      toggle.classList.remove('has-selection');
+      selectedTemplateIndex = null;
+    }
+
+    // Sélectionner et charger un template
+    function selectTemplate(index, name) {
+      const toggle = document.getElementById('templateToggle');
+      const menu = document.getElementById('templateMenu');
+
+      // Mettre à jour l'affichage du dropdown
+      toggle.innerHTML = `<span class="tag" style="padding: 0px 8px;">${name}</span>`;
+      toggle.classList.add('has-selection');
+      menu.classList.add('hidden');
+
+      // Sauvegarder l'index sélectionné
+      selectedTemplateIndex = index;
+
+      // Charger le contenu du template
+      const template = userTemplates[index];
+      if (template) {
+        document.getElementById('partTravauxTextarea').value = template.content;
+        // Synchroniser les checkboxes
+        syncPartTravauxCheckboxes();
+      }
+    }
+
+    // Toggle du dropdown - initialiser après que le DOM soit chargé
+    function initTemplateDropdown() {
+      const toggle = document.getElementById('templateToggle');
+      const menu = document.getElementById('templateMenu');
+
+      if (!toggle || !menu) return;
+
+      // Click sur le toggle pour ouvrir/fermer
+      toggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        menu.classList.toggle('hidden');
+      });
+
+      // Click ailleurs pour fermer
+      document.addEventListener('click', function(e) {
+        if (!toggle.contains(e.target) && !menu.contains(e.target)) {
+          menu.classList.add('hidden');
+        }
+      });
+    }
+
+    // Initialiser le dropdown quand le DOM est prêt
+    setTimeout(initTemplateDropdown, 100);
+
+    // Ouvrir le popup pour demander le nom du template
+    function saveTemplatePrompt() {
+      const content = document.getElementById('partTravauxTextarea').value.trim();
+
+      if (!content) {
+        return;
+      }
+
+      // Ouvrir le modal
+      const modal = document.getElementById('templateNameModal');
+      const input = document.getElementById('templateNameInput');
+      modal.style.display = 'flex';
+      input.value = '';
+      input.focus();
+    }
+
+    // Fermer le popup de nom
+    function closeTemplateNameModal() {
+      document.getElementById('templateNameModal').style.display = 'none';
+    }
+
+    // Confirmer et sauvegarder le template
+    async function confirmSaveTemplate() {
+      const name = document.getElementById('templateNameInput').value.trim();
+
+      if (!name) {
+        return;
+      }
+
+      const content = document.getElementById('partTravauxTextarea').value.trim();
+      const username = localStorage.getItem('username');
+
+      if (!username) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/templates/part-travaux', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: username,
+            name: name,
+            content: content
+          })
+        });
+
+        if (response.ok) {
+          closeTemplateNameModal();
+          await loadUserTemplates();
+          // Sélectionner automatiquement le template créé
+          const newIndex = userTemplates.findIndex(t => t.name === name);
+          if (newIndex !== -1) {
+            selectTemplate(newIndex, name);
+          }
+        }
+      } catch (error) {
+        console.error('Erreur sauvegarde template:', error);
+      }
+    }
+
+    // Support de la touche Enter dans les modals
+    document.addEventListener('DOMContentLoaded', function() {
+      const nameInput = document.getElementById('templateNameInput');
+      if (nameInput) {
+        nameInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            confirmSaveTemplate();
+          }
+        });
+      }
+
+      const editInput = document.getElementById('templateEditInput');
+      if (editInput) {
+        editInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            confirmEditTemplate();
+          }
+        });
+      }
+    });
+
+    // Ouvrir popup pour supprimer un template
+    function deleteTemplate(index) {
+      currentDeleteIndex = index;
+      const template = userTemplates[index];
+      document.getElementById('templateDeleteMessage').textContent =
+        `Voulez-vous vraiment supprimer le template "${template.name}" ?`;
+      document.getElementById('templateDeleteModal').style.display = 'flex';
+    }
+
+    // Fermer popup de suppression
+    function closeTemplateDeleteModal() {
+      document.getElementById('templateDeleteModal').style.display = 'none';
+      currentDeleteIndex = null;
+    }
+
+    // Confirmer la suppression
+    async function confirmDeleteTemplate() {
+      if (currentDeleteIndex === null) return;
+
+      const template = userTemplates[currentDeleteIndex];
+      const username = localStorage.getItem('username');
+
+      try {
+        const response = await fetch(`/api/templates/part-travaux/${username}/${encodeURIComponent(template.name)}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          closeTemplateDeleteModal();
+          await loadUserTemplates();
+        }
+      } catch (error) {
+        console.error('Erreur suppression template:', error);
+      }
+    }
+
+    // Ouvrir popup pour modifier un template
+    function editTemplate(index) {
+      currentEditIndex = index;
+      const template = userTemplates[index];
+      document.getElementById('templateEditInput').value = template.name;
+      document.getElementById('templateEditModal').style.display = 'flex';
+      document.getElementById('templateEditInput').focus();
+    }
+
+    // Fermer popup de modification
+    function closeTemplateEditModal() {
+      document.getElementById('templateEditModal').style.display = 'none';
+      currentEditIndex = null;
+    }
+
+    // Confirmer la modification
+    async function confirmEditTemplate() {
+      if (currentEditIndex === null) return;
+
+      const newName = document.getElementById('templateEditInput').value.trim();
+      const template = userTemplates[currentEditIndex];
+
+      if (!newName) {
+        return;
+      }
+
+      if (newName === template.name) {
+        closeTemplateEditModal();
+        return;
+      }
+
+      const username = localStorage.getItem('username');
+
+      try {
+        // Supprimer l'ancien
+        await fetch(`/api/templates/part-travaux/${username}/${encodeURIComponent(template.name)}`, {
+          method: 'DELETE'
+        });
+
+        // Créer le nouveau avec le nouveau nom
+        const response = await fetch('/api/templates/part-travaux', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: username,
+            name: newName,
+            content: template.content
+          })
+        });
+
+        if (response.ok) {
+          closeTemplateEditModal();
+          await loadUserTemplates();
+          // Sélectionner automatiquement le template renommé
+          const newIndex = userTemplates.findIndex(t => t.name === newName);
+          if (newIndex !== -1) {
+            selectTemplate(newIndex, newName);
+          }
+        }
+      } catch (error) {
+        console.error('Erreur modification template:', error);
+      }
+    }
+
+    // Ouvrir popup Produit/Couleurs
+    function openProductModal() {
+      document.getElementById('productModal').classList.add('active');
+      document.body.style.overflow = 'hidden'; // Désactiver le scroll de la page
+
+      // Restaurer le contenu sauvegardé
+      const savedContent = document.getElementById('produitCouleursHidden').value;
+      if (savedContent) {
+        // Le champ caché contient le texte AVEC tirets maintenant
+        // Restaurer tel quel dans le textarea
+        document.getElementById('productTextarea').value = savedContent;
+
+        // Synchroniser les checkboxes avec le contenu du textarea
+        syncProductCheckboxes();
+      } else {
+        // Vider le textarea si rien n'est sauvegardé
+        document.getElementById('productTextarea').value = '';
+      }
+    }
+
+    // Fermer popup Produit/Couleurs
+    function closeProductModal() {
+      document.getElementById('productModal').classList.remove('active');
+      document.body.style.overflow = 'auto'; // Réactiver le scroll de la page
+      // Désélectionner toutes les checkboxes (le texte reste dans le display)
+      productSelections = [];
+      document.querySelectorAll('#productOptions .popup-option').forEach(option => {
+        option.classList.remove('selected');
+      });
+      // Vider le textarea de travail (pas le display qui contient le texte sauvegardé)
+      document.getElementById('productTextarea').value = '';
+    }
+
+    // Ouvrir popup Particularité des travaux
+    async function openPartTravauxModal() {
+      document.getElementById('partTravauxModal').classList.add('active');
+      document.body.style.overflow = 'hidden'; // Désactiver le scroll de la page
+
+      // Charger les templates de l'utilisateur
+      await loadUserTemplates();
+
+      // Restaurer le contenu sauvegardé
+      const savedContent = document.getElementById('partTravauxHidden').value;
+      if (savedContent) {
+        document.getElementById('partTravauxTextarea').value = savedContent;
+
+        // Synchroniser les checkboxes avec le contenu du textarea
+        syncPartTravauxCheckboxes();
+      } else {
+        // Vider le textarea si rien n'est sauvegardé
+        document.getElementById('partTravauxTextarea').value = '';
+      }
+    }
+
+    // Fermer popup Particularité des travaux
+    function closePartTravauxModal() {
+      document.getElementById('partTravauxModal').classList.remove('active');
+      document.body.style.overflow = 'auto'; // Réactiver le scroll de la page
+      // Désélectionner toutes les checkboxes (le texte reste dans le display)
+      partTravauxSelections = [];
+      document.querySelectorAll('#partTravauxOptions .popup-option').forEach(option => {
+        option.classList.remove('selected');
+      });
+      // Vider le textarea de travail (pas le display qui contient le texte sauvegardé)
+      document.getElementById('partTravauxTextarea').value = '';
+    }
+
+    // Gérer les sélections d'options Produit/Couleurs
+    document.getElementById('productOptions').addEventListener('click', function(e) {
+      if (e.target.closest('.popup-option')) {
+        const option = e.target.closest('.popup-option');
+        const value = option.getAttribute('data-value');
+        const textarea = document.getElementById('productTextarea');
+        
+        if (option.classList.contains('selected')) {
+          // Désélectionner
+          option.classList.remove('selected');
+          productSelections = productSelections.filter(item => item !== value);
+
+          // Retirer la ligne avec tiret
+          const currentLines = textarea.value.split('\n');
+          const filteredLines = currentLines.filter(line => {
+            const cleaned = line.replace(/^-\s*/, '').trim();
+            return cleaned !== value;
+          });
+          textarea.value = filteredLines.join('\n');
+        } else {
+          // Sélectionner
+          option.classList.add('selected');
+          if (!productSelections.includes(value)) {
+            productSelections.push(value);
+          }
+
+          // Ajouter simplement à la fin avec un tiret
+          const currentText = textarea.value.trim();
+          if (currentText) {
+            textarea.value = currentText + '\n- ' + value;
+          } else {
+            textarea.value = '- ' + value;
+          }
+        }
+      }
+    });
+
+    // Gérer les sélections d'options Particularité des travaux
+    document.getElementById('partTravauxOptions').addEventListener('click', function(e) {
+      if (e.target.closest('.popup-option')) {
+        const option = e.target.closest('.popup-option');
+        const value = option.getAttribute('data-value');
+        const textarea = document.getElementById('partTravauxTextarea');
+        
+        if (option.classList.contains('selected')) {
+          // Désélectionner
+          option.classList.remove('selected');
+          partTravauxSelections = partTravauxSelections.filter(item => item !== value);
+
+          // Retirer la ligne avec tiret
+          const currentLines = textarea.value.split('\n');
+          const filteredLines = currentLines.filter(line => {
+            const cleaned = line.replace(/^-\s*/, '').trim();
+            return cleaned !== value;
+          });
+          textarea.value = filteredLines.join('\n');
+        } else {
+          // Sélectionner
+          option.classList.add('selected');
+          if (!partTravauxSelections.includes(value)) {
+            partTravauxSelections.push(value);
+          }
+
+          // Ajouter simplement à la fin avec un tiret
+          const currentText = textarea.value.trim();
+          if (currentText) {
+            textarea.value = currentText + '\n- ' + value;
+          } else {
+            textarea.value = '- ' + value;
+          }
+        }
+      }
+    });
+
+    // Confirmer sélection Produit/Couleurs
+    function confirmProductSelection() {
+      const textarea = document.getElementById('productTextarea').value.trim();
+      const display = document.getElementById('productDisplay');
+      const hidden = document.getElementById('produitCouleursHidden');
+
+      console.log('[DEBUG] PRODUIT - Contenu textarea:', textarea);
+
+      if (textarea) {
+        // Garder les tirets pour le backend et l'affichage
+        const lines = textarea.split('\n');
+        const cleanedLines = lines.map(line => line.trim()).filter(line => line);
+        const textForBackend = cleanedLines.join('\n');
+
+        console.log('[DEBUG] PRODUIT - Contenu envoyé au backend (avec tirets):', textForBackend);
+
+        // Afficher avec tirets (visuel pour l'utilisateur)
+        display.innerHTML = textarea.replace(/\n/g, '<br>');
+        display.style.color = 'var(--text-light)';
+
+        // Stocker AVEC tirets pour le backend
+        hidden.value = textForBackend;
+
+        console.log('[DEBUG] PRODUIT - Contenu dans hidden field:', hidden.value);
+      } else {
+        display.textContent = 'Cliquez pour sélectionner produits et couleurs...';
+        display.style.color = 'var(--text-gray)';
+        hidden.value = '';
+      }
+
+      closeProductModal();
+    }
+
+    // Confirmer sélection Particularité des travaux
+    function confirmPartTravauxSelection() {
+      const textarea = document.getElementById('partTravauxTextarea').value.trim();
+      const display = document.getElementById('partTravauxDisplay');
+      const hidden = document.getElementById('partTravauxHidden');
+
+      if (textarea) {
+        // Envoyer avec tirets EXACTEMENT comme le textarea
+        const formattedText = textarea;
+
+        // Afficher avec tirets
+        display.innerHTML = formattedText.replace(/\n/g, '<br>');
+        display.style.color = 'var(--text-light)';
+
+        // Stocker AVEC tirets
+        hidden.value = formattedText;
+      } else {
+        display.textContent = 'Cliquez pour sélectionner particularités des travaux...';
+        display.style.color = 'var(--text-gray)';
+        hidden.value = '';
+      }
+
+      closePartTravauxModal();
+    }
+
+    // Synchroniser les checkboxes avec le contenu du textarea Produit
+    function syncProductCheckboxes() {
+      const textarea = document.getElementById('productTextarea');
+      const currentLines = textarea.value.split('\n')
+        .map(line => line.replace(/^-\s*/, '').trim())
+        .filter(line => line);
+
+      // Parcourir toutes les options et mettre à jour leur état
+      document.querySelectorAll('#productOptions .popup-option').forEach(option => {
+        const value = option.getAttribute('data-value');
+
+        if (currentLines.includes(value)) {
+          // Le texte existe -> sélectionner
+          if (!option.classList.contains('selected')) {
+            option.classList.add('selected');
+            if (!productSelections.includes(value)) {
+              productSelections.push(value);
+            }
+          }
+        } else {
+          // Le texte n'existe pas -> désélectionner
+          if (option.classList.contains('selected')) {
+            option.classList.remove('selected');
+            productSelections = productSelections.filter(item => item !== value);
+          }
+        }
+      });
+    }
+
+    // Synchroniser les checkboxes avec le contenu du textarea Particularités
+    function syncPartTravauxCheckboxes() {
+      const textarea = document.getElementById('partTravauxTextarea');
+      const currentLines = textarea.value.split('\n')
+        .map(line => line.replace(/^-\s*/, '').trim())
+        .filter(line => line);
+
+      // Parcourir toutes les options et mettre à jour leur état
+      document.querySelectorAll('#partTravauxOptions .popup-option').forEach(option => {
+        const value = option.getAttribute('data-value');
+
+        if (currentLines.includes(value)) {
+          // Le texte existe -> sélectionner
+          if (!option.classList.contains('selected')) {
+            option.classList.add('selected');
+            if (!partTravauxSelections.includes(value)) {
+              partTravauxSelections.push(value);
+            }
+          }
+        } else {
+          // Le texte n'existe pas -> désélectionner
+          if (option.classList.contains('selected')) {
+            option.classList.remove('selected');
+            partTravauxSelections = partTravauxSelections.filter(item => item !== value);
+          }
+        }
+      });
+    }
+
+    // Ajouter tiret automatiquement sur Enter + sync checkboxes
+    document.getElementById('productTextarea').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const textarea = e.target;
+        const cursorPos = textarea.selectionStart;
+        const textBefore = textarea.value.substring(0, cursorPos);
+        const textAfter = textarea.value.substring(cursorPos);
+
+        textarea.value = textBefore + '\n- ' + textAfter;
+        textarea.selectionStart = textarea.selectionEnd = cursorPos + 3; // Position après "- "
+      }
+    });
+
+    // Synchroniser après chaque modification du textarea Produit
+    document.getElementById('productTextarea').addEventListener('input', function() {
+      syncProductCheckboxes();
+    });
+
+    document.getElementById('partTravauxTextarea').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const textarea = e.target;
+        const cursorPos = textarea.selectionStart;
+        const textBefore = textarea.value.substring(0, cursorPos);
+        const textAfter = textarea.value.substring(cursorPos);
+
+        textarea.value = textBefore + '\n- ' + textAfter;
+        textarea.selectionStart = textarea.selectionEnd = cursorPos + 3; // Position après "- "
+      }
+    });
+
+    // Synchroniser après chaque modification du textarea Particularités
+    document.getElementById('partTravauxTextarea').addEventListener('input', function() {
+      syncPartTravauxCheckboxes();
+    });
+
+    // Formatage automatique du téléphone (000-000-0000)
+    const telephoneInput = document.getElementById('telephoneInput');
+
+    telephoneInput.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\D/g, ''); // Garder seulement les chiffres
+      let formattedValue = '';
+
+      if (value.length > 0) {
+        formattedValue = value.substring(0, 3);
+      }
+      if (value.length >= 4) {
+        formattedValue += '-' + value.substring(3, 6);
+      }
+      if (value.length >= 7) {
+        formattedValue += '-' + value.substring(6, 10);
+      }
+
+      e.target.value = formattedValue;
+    });
+
+    telephoneInput.addEventListener('keydown', function(e) {
+      // Si l'utilisateur appuie sur Backspace ou Delete
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        const cursorPos = e.target.selectionStart;
+        const value = e.target.value;
+
+        // Si le curseur est juste après un tiret, effacer le tiret + le chiffre avant
+        if (e.key === 'Backspace' && cursorPos > 0 && value[cursorPos - 1] === '-') {
+          e.preventDefault();
+          const newValue = value.substring(0, cursorPos - 2) + value.substring(cursorPos);
+          e.target.value = newValue;
+
+          // Reformater
+          const cleanValue = newValue.replace(/\D/g, '');
+          let formattedValue = '';
+          if (cleanValue.length > 0) {
+            formattedValue = cleanValue.substring(0, 3);
+          }
+          if (cleanValue.length >= 4) {
+            formattedValue += '-' + cleanValue.substring(3, 6);
+          }
+          if (cleanValue.length >= 7) {
+            formattedValue += '-' + cleanValue.substring(6, 10);
+          }
+          e.target.value = formattedValue;
+
+          // Replacer le curseur
+          const newCursorPos = cursorPos - 2;
+          e.target.setSelectionRange(newCursorPos, newCursorPos);
+        }
+      }
+    });
+
+    // Event listeners pour ouvrir les popups
+    document.getElementById('productTrigger').addEventListener('click', openProductModal);
+    document.getElementById('partTravauxTrigger').addEventListener('click', openPartTravauxModal);
+
+    // Fermer popup en cliquant sur le fond
+    document.getElementById('productModal').addEventListener('click', function(e) {
+      if (e.target === this) closeProductModal();
+    });
+
+    document.getElementById('partTravauxModal').addEventListener('click', function(e) {
+      if (e.target === this) closePartTravauxModal();
+    });
+  </script>
+
+  <!-- Script de vérification du profil -->
+  <script>
+    document.addEventListener('DOMContentLoaded', async function() {
+      const username = localStorage.getItem("username");
+
+      if (!username) {
+        console.error("[WARN] Aucun username trouvé");
+        return;
+      }
+
+      try {
+        console.log('[DEBUG] Vérification du profil pour:', username);
+        const response = await fetch(`/api/check-profile-complete/${username}`);
+        const result = await response.json();
+
+        console.log('[OK] Résultat vérification profil:', result);
+
+        if (!result.is_complete) {
+          // Afficher l'avertissement
+          const warningDiv = document.getElementById('profile-warning');
+          const pageContent = document.getElementById('page-content');
+          const pageHeader = document.getElementById('page-header');
+          const missingList = document.getElementById('missing-list');
+          const validList = document.getElementById('valid-list');
+          const validItems = document.getElementById('valid-items');
+
+          // Construire la liste des éléments manquants
+          missingList.innerHTML = result.missing.map(item => `
+            <li style="padding: 10px 0; color: var(--text-gray); font-size: 16px;">
+              <i class="fas fa-times-circle" style="color: #f87171; margin-right: 10px;"></i>
+              ${item}
+            </li>
+          `).join('');
+
+          // Construire la liste des éléments valides
+          if (result.valid && result.valid.length > 0) {
+            validList.innerHTML = result.valid.map(item => `
+              <li style="padding: 10px 0; color: var(--text-gray); font-size: 16px;">
+                <i class="fas fa-check-circle" style="color: #34d399; margin-right: 10px;"></i>
+                ${item}
+              </li>
+            `).join('');
+            validItems.style.display = 'block';
+          }
+
+          // Afficher l'avertissement et cacher le contenu principal + header + soumissions à envoyer
+          warningDiv.style.display = 'block';
+          pageContent.style.display = 'none';
+          pageHeader.style.display = 'none';
+
+          const pendingSoumissionsSection = document.getElementById('pending-soumissions-section');
+          if (pendingSoumissionsSection) {
+            pendingSoumissionsSection.style.display = 'none';
+          }
+
+          console.log('[WARN] Profil incomplet - Éléments manquants:', result.missing, 'Valides:', result.valid);
+        } else {
+          console.log('[OK] Profil complet - Accès autorisé');
+        }
+
+      } catch (error) {
+        console.error('[ERROR] Erreur vérification profil:', error);
+        // En cas d'erreur, on laisse l'utilisateur accéder (fallback)
+      }
+    });
+  </script>
+
+  <!-- Script commun de gestion des permissions et interface -->
+  <script src="/common.js"></script>
+</div> <!-- Fermeture main-content -->
+</body>
+</html>
+
+
+
+
+
+

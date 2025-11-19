@@ -115,7 +115,7 @@ def init_database():
 
 
 def init_support_user():
-    """Crée l'utilisateur support s'il n'existe pas"""
+    """Crée les utilisateurs support et direction s'ils n'existent pas"""
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -137,9 +137,26 @@ def init_support_user():
         else:
             print("[INFO] Utilisateur support déjà existant")
 
+        # Vérifier si l'utilisateur direction existe
+        cursor.execute('SELECT username FROM users WHERE username = ?', ('direction',))
+        if cursor.fetchone() is None:
+            # Créer l'utilisateur direction
+            hashed_pw = hash_password('direction123')
+            created_at = datetime.now().isoformat()
+
+            cursor.execute('''
+                INSERT INTO users (username, password, role, email, created_at, is_active)
+                VALUES (?, ?, ?, ?, ?, 1)
+            ''', ('direction', hashed_pw, 'direction', 'direction@qwota.com', created_at))
+
+            conn.commit()
+            print("[OK] Utilisateur direction créé (username: direction, password: direction123)")
+        else:
+            print("[INFO] Utilisateur direction déjà existant")
+
         conn.close()
     except Exception as e:
-        print(f"[ERREUR] Erreur création utilisateur support: {e}")
+        print(f"[ERREUR] Erreur création utilisateurs par défaut: {e}")
 
 
 #  GESTION DES UTILISATEURS

@@ -2845,38 +2845,49 @@
         return;
       }
 
-      // Vider le container des clients potentiels
-      const clientPotentielContainer = document.getElementById('clientPotentielContainer');
-      if (clientPotentielContainer) {
-        clientPotentielContainer.innerHTML = '';
+      // Filtrer les prospects potentiels
+      prospectsPotentiels = prospects.filter(p => p.statut === 'client_potentiel');
 
-        // Filtrer les prospects potentiels
-        prospectsPotentiels = prospects.filter(p => p.statut === 'client_potentiel');
-
-        // Vérifier s'il y a des prospects potentiels
-        if (prospectsPotentiels.length === 0) {
-          // Afficher le message vide
-          clientPotentielContainer.innerHTML = `
-            <div class="text-center py-8" style="color: var(--text-gray);">
-              <i class="fas fa-user-plus text-2xl mb-2" style="color: rgba(96, 165, 250, 0.3);"></i>
-              <p class="text-sm">Aucun client potentiel</p>
-            </div>
-          `;
-        } else {
-          // Ajouter chaque prospect à la colonne
-          prospectsPotentiels.forEach(prospect => {
-            // Stocker le prospect dans l'objet global
-            prospectsData[prospect.id] = prospect;
-            ajouterProspectAColonne(prospect);
-          });
-        }
-
-        // Mettre à jour le compteur
-        const countElement = document.getElementById('potentiel-count');
-        if (countElement) {
-          countElement.textContent = prospectsPotentiels.length;
-        }
+      // Remplir la table des clients potentiels
+      const tbody = document.getElementById('potentiel-tbody');
+      if (!tbody) {
+        console.warn('[WARN] tbody #potentiel-tbody introuvable');
+        return;
       }
+
+      tbody.innerHTML = '';
+
+      if (prospectsPotentiels.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="empty-state">
+              <i class="fas fa-user-plus" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
+              <p style="font-size: 1rem;">Aucun client potentiel</p>
+            </td>
+          </tr>
+        `;
+      } else {
+        prospectsPotentiels.forEach((prospect, index) => {
+          const prospectId = `potentiel-${index}`;
+          const nomComplet = `${prospect.prenom || ''} ${prospect.nom || ''}`.trim();
+
+          // Stocker le prospect dans l'objet global
+          prospectsData[prospect.id] = prospect;
+
+          const rowHtml = `
+            <tr style="cursor: pointer;" onclick="showProspectInfo('${prospect.id}')">
+              <td style="padding: 1rem;">${nomComplet}</td>
+              <td style="padding: 1rem;">${prospect.telephone || '-'}</td>
+              <td style="padding: 1rem;">${prospect.adresse || '-'}</td>
+              <td style="padding: 1rem;">-</td>
+              <td style="padding: 1rem;">-</td>
+            </tr>
+          `;
+          tbody.innerHTML += rowHtml;
+        });
+      }
+
+      console.log('[OK] Prospects chargés:', prospectsPotentiels.length);
     } catch (error) {
       console.error('[ERROR] Erreur lors du chargement des prospects:', error);
       prospectsPotentiels = [];
@@ -2955,7 +2966,8 @@
       });
     }, true);
 
-    // Rafraîchir automatiquement les données toutes les 5 secondes pour voir les signatures en temps réel
+    // Rafraîchissement automatique désactivé - les données se rechargent uniquement lors d'actions utilisateur
+    /*
     setInterval(async () => {
       // Ne pas rafraîchir si un dropdown est ouvert
       const dropdownOuvert = document.querySelector('.modern-dropdown-menu.show');
@@ -2975,6 +2987,7 @@
         console.error('[ERROR] Erreur lors du rafraîchissement automatique:', error);
       }
     }, 5000); // Toutes les 5 secondes
+    */
 
     // Event listeners pour les modals (comme dashboard)
     const clientInfoModal = document.getElementById('clientInfoModal');

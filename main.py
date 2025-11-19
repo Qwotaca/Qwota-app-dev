@@ -447,6 +447,10 @@ def newfacturationqe_file():
 def centrale_index():
     return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Entrepreneurs", "Gestions", "Ventes", "Ventes.html"))
 
+@app.get("/ventes")
+def ventes_index():
+    return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Entrepreneurs", "Gestions", "Ventes", "Ventes.html"))
+
 @app.get("/centralevue")
 def centralevue_index():
     return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Entrepreneurs", "General", "La Centrale", "Centralevue.html"))
@@ -485,6 +489,10 @@ def favicon():
 
 @app.get("/common.js", include_in_schema=False)
 def common_js():
+    return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Common", "common.js"), media_type="application/javascript")
+
+@app.get("/frontend/common.js", include_in_schema=False)
+def frontend_common_js():
     return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Common", "common.js"), media_type="application/javascript")
 
 @app.get("/robots.txt", include_in_schema=False)
@@ -2317,6 +2325,56 @@ def get_blacklist_event_ids(username: str):
             detail=f"Erreur lors de la récupération de la blacklist: {str(e)}"
         )
 
+@app.get("/get-clients-by-username/{username}")
+def get_clients_by_username(username: str):
+    """
+    Récupère tous les clients de tous les statuts pour un utilisateur
+    """
+    try:
+        all_clients = []
+
+        # Prospects
+        prospects_path = os.path.join(base_cloud, "prospects", username, "prospects.json")
+        if os.path.exists(prospects_path):
+            with open(prospects_path, 'r', encoding='utf-8') as f:
+                prospects = json.load(f)
+                for p in prospects:
+                    p['status'] = 'prospect'
+                    all_clients.append(p)
+
+        # Clients perdus
+        perdus_path = os.path.join(base_cloud, "clients_perdus", username, "clients_perdus.json")
+        if os.path.exists(perdus_path):
+            with open(perdus_path, 'r', encoding='utf-8') as f:
+                perdus = json.load(f)
+                for p in perdus:
+                    p['status'] = 'perdu'
+                    all_clients.append(p)
+
+        # Ventes acceptées
+        acceptees_path = os.path.join(base_cloud, "ventes_acceptees", username, "ventes.json")
+        if os.path.exists(acceptees_path):
+            with open(acceptees_path, 'r', encoding='utf-8') as f:
+                acceptees = json.load(f)
+                for v in acceptees:
+                    v['status'] = 'accepte'
+                    all_clients.append(v)
+
+        # Ventes produit
+        produit_path = os.path.join(base_cloud, "ventes_produit", username, "ventes.json")
+        if os.path.exists(produit_path):
+            with open(produit_path, 'r', encoding='utf-8') as f:
+                produit = json.load(f)
+                for v in produit:
+                    v['status'] = 'produit'
+                    all_clients.append(v)
+
+        return {"clients": all_clients}
+
+    except Exception as e:
+        print(f"[ERROR] Récupération clients pour {username}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/blacklist-clients")
 def get_blacklist_clients(username: str):
     """
@@ -2325,21 +2383,21 @@ def get_blacklist_clients(username: str):
     try:
         blacklist_dir = f"{base_cloud}/blacklist"
         blacklist_file = os.path.join(blacklist_dir, f"{username}_clients.json")
-        
+
         # Si le fichier n'existe pas, retourner une liste vide
         if not os.path.exists(blacklist_file):
             return {"blacklisted_clients": []}
-        
+
         # Charger et retourner la blacklist existante
         with open(blacklist_file, "r", encoding="utf-8") as f:
             blacklisted_clients = json.load(f)
-        
+
         return {"blacklisted_clients": blacklisted_clients}
-        
+
     except Exception as e:
         print(f"[[ERROR] ERREUR] Récupération blacklist pour {username}: {e}")
         raise HTTPException(
-            status_code=500, 
+            status_code=500,
             detail=f"Erreur lors de la récupération de la blacklist: {str(e)}"
         )
 

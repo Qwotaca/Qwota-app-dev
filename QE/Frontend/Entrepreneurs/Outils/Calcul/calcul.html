@@ -181,37 +181,28 @@
               </div>
             </div>
           </div>
-          <div id="clients-content" class="mt-4 overflow-x-auto transition-all duration-300 ease-in-out clients-collapsed" style="max-height: 0; overflow: hidden; opacity: 0;">
-            <table class="w-full border-collapse rounded-lg overflow-hidden" style="min-width: 800px; background: var(--bg-card); box-shadow: var(--shadow-dark);">
-              <thead style="background: rgba(30, 41, 59, 0.8);">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-medium" style="border: 1px solid var(--border-dark); color: var(--text-light);">
-                    <i class="fas fa-user mr-2"></i>Prénom
-                  </th>
-                  <th class="px-4 py-3 text-left text-sm font-medium" style="border: 1px solid var(--border-dark); color: var(--text-light);">
-                    <i class="fas fa-user mr-2" style="color: var(--primary-purple);"></i>Nom
-                  </th>
-                  <th class="px-4 py-3 text-left text-sm font-medium" style="border: 1px solid var(--border-dark); color: var(--text-light);">
-                    <i class="fas fa-map-marker-alt mr-2" style="color: var(--primary-green);"></i>Adresse
-                  </th>
-                  <th class="px-4 py-3 text-left text-sm font-medium" style="border: 1px solid var(--border-dark); color: var(--text-light);">
-                    <i class="fas fa-phone mr-2" style="color: var(--primary-orange);"></i>Téléphone
-                  </th>
-                  <th class="px-4 py-3 text-center text-sm font-medium" style="border: 1px solid var(--border-dark); color: var(--text-light);">
-                    <i class="fas fa-cog mr-2"></i>Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody id="clients-body">
-                <tr>
-                  <td colspan="5" class="px-4 py-8 text-center" style="border: 1px solid var(--border-dark); background: var(--bg-card); color: var(--text-gray);">
-                    <i class="fas fa-calendar-times text-4xl mb-3 opacity-50"></i>
-                    <p class="text-lg font-medium" style="color: var(--text-light);">Aucun client à compléter aujourd'hui</p>
-                    <p class="text-sm mt-2">Les clients de votre Google Agenda apparaîtront ici</p>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div id="clients-content" class="mt-4 transition-all duration-300 ease-in-out clients-collapsed" style="max-height: 0; opacity: 0;">
+            <div class="table-container">
+              <table class="modern-table">
+                <thead>
+                  <tr>
+                    <th>Prénom</th>
+                    <th>Nom</th>
+                    <th>Adresse</th>
+                    <th>Téléphone</th>
+                    <th class="text-center" style="text-align: center !important;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="clients-body">
+                  <tr>
+                    <td colspan="5" class="empty-state">
+                      <i class="fas fa-calendar-times"></i>
+                      <p>Aucun client à compléter aujourd'hui</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
             <!-- Liste mobile simple -->
             <div id="mobile-clients-list" class="mobile-clients-list" style="display: none;">
               <!-- Sera peuplé dynamiquement -->
@@ -17998,11 +17989,11 @@ function initializeApp() {
               row.dataset.eventId = ev.id;
 
               row.innerHTML = `
-                <td class="border: 1px solid var(--border-dark); px-4 py-3 text-sm text-white">${ev.prenom}</td>
-                <td class="border: 1px solid var(--border-dark); px-4 py-3 text-sm text-white">${ev.nom}</td>
-                <td class="border: 1px solid var(--border-dark); px-4 py-3 text-sm text-white">${ev.adresse}</td>
-                <td class="border: 1px solid var(--border-dark); px-4 py-3 text-sm text-white">${ev.telephone}</td>
-                <td class="border: 1px solid var(--border-dark); px-4 py-3 text-center">
+                <td>${ev.prenom}</td>
+                <td>${ev.nom}</td>
+                <td>${ev.adresse}</td>
+                <td>${ev.telephone}</td>
+                <td class="text-center">
                   <button class="btn-primary" onclick="startCalculationForClient('${ev.id}', '${(ev.prenom || '').replace(/'/g, '\\\'').replace(/"/g, '\\"')}', '${(ev.nom || '').replace(/'/g, '\\\'').replace(/"/g, '\\"')}', '${(ev.adresse || '').replace(/'/g, '\\\'').replace(/"/g, '\\"')}', '${(ev.telephone || '').replace(/'/g, '\\\'').replace(/"/g, '\\"')}')">
                     <i class="fas fa-play mr-1"></i>Compléter
                   </button>
@@ -18040,15 +18031,14 @@ function initializeApp() {
               clientCounter.textContent = `0 client(s)`;
             }
 
-            const row = document.createElement("tr");
-            row.innerHTML = `
-              <td colspan="5" class="border: 1px solid var(--border-dark); px-4 py-8 text-center text-gray-500">
-                <i class="fas fa-calendar-times text-4xl mb-3 opacity-50"></i>
-                <p class="text-lg font-medium">Aucun client à compléter aujourd'hui</p>
-                <p class="text-sm mt-2">Les clients de votre Google Agenda apparaîtront ici</p>
-              </td>
+            tbody.innerHTML = `
+              <tr>
+                <td colspan="5" class="empty-state">
+                  <i class="fas fa-calendar-times"></i>
+                  <p>Aucun client à compléter aujourd'hui</p>
+                </td>
+              </tr>
             `;
-            tbody.appendChild(row);
 
             // Message pour mobile
             mobileList.innerHTML = `
@@ -18068,15 +18058,14 @@ function initializeApp() {
             clientCounter.textContent = `0 client(s)`;
           }
 
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td colspan="5" class="border: 1px solid var(--border-dark); px-4 py-8 text-center text-gray-500">
-              <i class="fas fa-calendar-times text-4xl mb-3 opacity-50"></i>
-              <p class="text-lg font-medium">Aucun client à compléter aujourd'hui</p>
-              <p class="text-sm mt-2">Les clients de votre Google Agenda apparaîtront ici</p>
-            </td>
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="5" class="empty-state">
+                <i class="fas fa-calendar-times"></i>
+                <p>Aucun client à compléter aujourd'hui</p>
+              </td>
+            </tr>
           `;
-          tbody.appendChild(row);
 
           // Message pour mobile
           mobileList.innerHTML = `
@@ -18094,10 +18083,9 @@ function initializeApp() {
         const tbody = document.getElementById("clients-body");
         tbody.innerHTML = `
           <tr>
-            <td colspan="5" class="border: 1px solid var(--border-dark); px-4 py-8 text-center text-red-500">
-              <i class="fas fa-exclamation-triangle text-4xl mb-3 opacity-50"></i>
-              <p class="text-lg font-medium">Erreur lors du chargement des clients</p>
-              <p class="text-sm mt-2">Veuillez actualiser la page</p>
+            <td colspan="5" class="empty-state" style="color: var(--primary-red);">
+              <i class="fas fa-exclamation-triangle"></i>
+              <p>Erreur lors du chargement des clients</p>
             </td>
           </tr>
         `;
@@ -18655,7 +18643,6 @@ function initializeApp() {
       content.style.transition = 'none';
       content.style.maxHeight = 'none';
       content.style.visibility = 'visible';
-      content.style.overflow = 'visible';
 
       // Calculer la vraie hauteur du contenu
       const fullHeight = content.scrollHeight;
@@ -18663,7 +18650,6 @@ function initializeApp() {
 
       // Remettre à 0 avant l'animation
       content.style.maxHeight = '0px';
-      content.style.overflow = 'hidden';
 
       // Forcer le reflow
       void content.offsetHeight;
@@ -18683,7 +18669,6 @@ function initializeApp() {
       content.classList.add('clients-collapsed');
       content.style.maxHeight = '0px';
       content.style.opacity = '0';
-      content.style.overflow = 'hidden';
       arrow.style.transform = 'rotate(0deg)';
     }
   }

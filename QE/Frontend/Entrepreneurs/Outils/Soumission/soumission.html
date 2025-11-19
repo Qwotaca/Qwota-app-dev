@@ -394,11 +394,11 @@
 
       <!-- Boutons d'action (droite) -->
       <div class="flex space-x-4">
-        <button type="button" class="btn-secondary px-6 py-2" id="voirPDFBtn">
+        <button type="button" class="btn-secondary px-6 py-2" id="voirPDFBtn" disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
           <i class="fas fa-file-signature mr-2"></i>
           Présenter au client
         </button>
-        <button type="submit" id="submitBtn" class="btn-primary px-6 py-2 flex items-center gap-2">
+        <button type="submit" id="submitBtn" class="btn-primary px-6 py-2 flex items-center gap-2" disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
           <span id="btnText">Envoyer au client</span>
           <span id="btnSpinner" class="hidden absolute inset-0 flex items-center justify-center">
             <span class="w-5 h-5 border-2 border-white border-t-black rounded-full animate-spin"></span>
@@ -430,22 +430,22 @@
         <div class="box-body">
         <!-- Vue Desktop: Table -->
         <div class="table-container">
-          <table class="soumissions-table">
+          <table class="modern-table">
             <thead>
               <tr>
-                <th class="w-1/6">N° Soumission</th>
-                <th class="w-1/6">Client</th>
-                <th class="w-1/6">Date de création</th>
-                <th class="w-1/4">Adresse</th>
-                <th class="w-1/6">Montant</th>
-                <th class="w-1/4" style="text-align: center;">Actions</th>
+                <th>N° Soumission</th>
+                <th>Client</th>
+                <th>Date de création</th>
+                <th>Adresse</th>
+                <th>Montant</th>
+                <th class="text-center" style="text-align: center !important;">Actions</th>
               </tr>
             </thead>
             <tbody id="pending-soumissions-body">
               <tr>
                 <td colspan="6" class="empty-state">
-                  <i class="fas fa-inbox mr-2"></i>
-                  Aucune soumission en attente
+                  <i class="fas fa-inbox" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
+                  <p style="font-size: 1rem;">Aucune soumission en attente</p>
                 </td>
               </tr>
             </tbody>
@@ -1309,10 +1309,15 @@ if (e.key === "Delete" && document.activeElement === input && selected.length > 
             if (toggleId === 'itemToggle') window.dropdownStates.item = value;
           }
         }
-        
+
         // Fermer le menu après sélection
         menu.classList.add('hidden');
         toggle.classList.remove('active');
+
+        // Déclencher la validation après changement
+        if (typeof validateRequiredFields === 'function') {
+          validateRequiredFields();
+        }
       });
     });
   }
@@ -1439,17 +1444,24 @@ if (e.key === "Delete" && document.activeElement === input && selected.length > 
 
   // Fonction de validation des champs requis
   function validateRequiredFields() {
+    console.log('[VALIDATION] ========== Début de validateRequiredFields ==========');
+
     const sendNowRadio = document.getElementById('send-now');
     const saveOnlyRadio = document.getElementById('save-only');
     const submitBtn = document.getElementById('submitBtn');
     const voirPDFBtn = document.getElementById('voirPDFBtn');
 
+    console.log('[VALIDATION] Boutons trouvés:', { submitBtn: !!submitBtn, voirPDFBtn: !!voirPDFBtn });
+
     // Champs toujours requis
     const nom = document.querySelector('input[name="nom"]')?.value.trim() || '';
     const prenom = document.querySelector('input[name="prenom"]')?.value.trim() || '';
 
+    console.log('[VALIDATION] Champs de base - Nom:', nom, '| Prénom:', prenom);
+
     // Vérifier le mode sélectionné
     const isSendNow = sendNowRadio?.checked;
+    console.log('[VALIDATION] Mode sélectionné:', isSendNow ? '📧 Envoyer maintenant' : '💾 Ne pas envoyer');
 
     let isValid = false;
 
@@ -1459,37 +1471,79 @@ if (e.key === "Delete" && document.activeElement === input && selected.length > 
       const telephone = document.querySelector('input[name="telephone"]')?.value.trim() || '';
       const courriel = document.querySelector('input[name="courriel"]')?.value.trim() || '';
       const adresse = document.querySelector('input[name="adresse"]')?.value.trim() || '';
-      const ville = document.querySelector('input[name="ville"]')?.value.trim() || '';
-      const codePostal = document.querySelector('input[name="code_postal"]')?.value.trim() || '';
 
-      isValid = nom && prenom && num && telephone && courriel && adresse && ville && codePostal;
+      // Validation de l'adresse au format: "123 Rue Saint Viateur Ouest, Montréal, QC H2T 2L2"
+      // Format requis: numéro + rue, ville, QC + code postal (H2T 2L2)
+      const adresseRegex = /^.+,\s*.+,\s*(QC|Quebec|Québec)\s+[A-Z]\d[A-Z]\s*\d[A-Z]\d\s*$/i;
+      const adresseValide = adresseRegex.test(adresse);
+
+      // Description des travaux
+      const endroitPeinture = document.querySelector('textarea[name="endroit_peinture"]')?.value.trim() || '';
+      const produitCouleurs = document.getElementById('produitCouleursHidden')?.value.trim() || '';
+      const partTravaux = document.getElementById('partTravauxHidden')?.value.trim() || '';
+
+      // Détails des travaux
+      const prix = document.querySelector('input[name="prix"]')?.value.trim() || '';
+      const temps = document.querySelector('input[name="temps"]')?.value.trim() || '';
+      const typeTravaux = document.querySelector("#itemToggle .tag")?.textContent?.trim() || '';
+      const dateTravaux = document.querySelector('input[name="date_travaux"]')?.value.trim() || '';
+
+      console.log('[VALIDATION] Vérification complète des champs:');
+      console.log('  📋 Information client:');
+      console.log('    - Nom:', nom ? '✓' : '✗', `"${nom}"`);
+      console.log('    - Prénom:', prenom ? '✓' : '✗', `"${prenom}"`);
+      console.log('    - N° Soumission:', num ? '✓' : '✗', `"${num}"`);
+      console.log('    - Téléphone:', telephone ? '✓' : '✗', `"${telephone}"`);
+      console.log('    - Courriel:', courriel ? '✓' : '✗', `"${courriel}"`);
+      console.log('    - Adresse:', adresseValide ? '✓' : '✗', `"${adresse}"`);
+      if (adresse && !adresseValide) {
+        console.log('      ⚠️ Format requis: "123 Rue Example, Ville, QC H2T 2L2"');
+      }
+      console.log('  🎨 Description des travaux:');
+      console.log('    - Endroit à peinturer:', endroitPeinture ? '✓' : '✗', `"${endroitPeinture}"`);
+      console.log('    - Produit/Couleurs (ID: produitCouleursHidden):', produitCouleurs ? '✓' : '✗', `"${produitCouleurs}"`);
+      console.log('    - Particularités (ID: partTravauxHidden):', partTravaux ? '✓' : '✗', `"${partTravaux}"`);
+      console.log('  📊 Détails des travaux:');
+      console.log('    - Prix:', prix ? '✓' : '✗', `"${prix}"`);
+      console.log('    - Durée:', temps ? '✓' : '✗', `"${temps}"`);
+      console.log('    - Type de travaux:', typeTravaux ? '✓' : '✗', `"${typeTravaux}"`);
+      console.log('    - Date des travaux:', dateTravaux ? '✓' : '✗', `"${dateTravaux}"`);
+
+      isValid = nom && prenom && num && telephone && courriel && adresseValide &&
+                endroitPeinture && produitCouleurs && partTravaux &&
+                prix && temps && typeTravaux && dateTravaux;
     } else {
       // Mode "Ne pas envoyer maintenant": seulement nom et prénom requis
+      console.log('[VALIDATION] Mode "Ne pas envoyer" - Vérification nom et prénom seulement');
+      console.log('  - Nom:', nom ? '✓' : '✗', nom);
+      console.log('  - Prénom:', prenom ? '✓' : '✗', prenom);
       isValid = nom && prenom;
     }
 
-    // Activer/désactiver les boutons
-    if (submitBtn) {
-      submitBtn.disabled = !isValid;
-      if (isValid) {
-        submitBtn.removeAttribute('style');
-        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-      } else {
-        submitBtn.setAttribute('style', 'background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;');
-        submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-      }
+    console.log('[VALIDATION] Résultat final: isValid =', isValid);
+
+    // Activer/désactiver les boutons selon la validation (même style que GQP)
+    if (isValid) {
+      voirPDFBtn.disabled = false;
+      voirPDFBtn.style.opacity = '1';
+      voirPDFBtn.style.cursor = 'pointer';
+      voirPDFBtn.style.pointerEvents = 'auto';
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = '1';
+      submitBtn.style.cursor = 'pointer';
+      submitBtn.style.pointerEvents = 'auto';
+    } else {
+      voirPDFBtn.disabled = true;
+      voirPDFBtn.style.opacity = '0.5';
+      voirPDFBtn.style.cursor = 'not-allowed';
+      voirPDFBtn.style.pointerEvents = 'none';
+      submitBtn.disabled = true;
+      submitBtn.style.opacity = '0.5';
+      submitBtn.style.cursor = 'not-allowed';
+      submitBtn.style.pointerEvents = 'none';
     }
 
-    if (voirPDFBtn) {
-      voirPDFBtn.disabled = !isValid;
-      if (isValid) {
-        voirPDFBtn.removeAttribute('style');
-        voirPDFBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-      } else {
-        voirPDFBtn.setAttribute('style', 'background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;');
-        voirPDFBtn.classList.add('opacity-50', 'cursor-not-allowed');
-      }
-    }
+    console.log('[VALIDATION] ========== Fin de validateRequiredFields ==========');
   }
 
   // Initialisation au chargement de la page
@@ -1555,10 +1609,24 @@ if (e.key === "Delete" && document.activeElement === input && selected.length > 
     }
 
     // Ajouter des listeners sur tous les champs pour validation en temps réel
-    const inputs = document.querySelectorAll('input[name="nom"], input[name="prenom"], input[name="num"], input[name="telephone"], input[name="courriel"], input[name="adresse"], input[name="ville"], input[name="code_postal"]');
+    // Tous les champs sauf l'adresse (qui utilise Google autocomplete)
+    const inputs = document.querySelectorAll('input[name="nom"], input[name="prenom"], input[name="num"], input[name="telephone"], input[name="courriel"], input[name="prix"], input[name="temps"], input[name="date_travaux"], textarea[name="endroit_peinture"]');
     inputs.forEach(input => {
       input.addEventListener('input', validateRequiredFields);
     });
+
+    // Champ adresse: écouter 'change' et 'blur' pour capturer l'autocomplete Google
+    const adresseInput = document.querySelector('input[name="adresse"]');
+    if (adresseInput) {
+      adresseInput.addEventListener('change', validateRequiredFields);
+      adresseInput.addEventListener('blur', validateRequiredFields);
+      // Aussi écouter input pour la saisie manuelle
+      adresseInput.addEventListener('input', validateRequiredFields);
+      console.log('[VALIDATION] Écouteurs spéciaux sur adresse pour Google autocomplete');
+    }
+
+    console.log('[VALIDATION] Écouteurs d\'événements installés sur tous les champs visibles');
+    console.log('[VALIDATION] Les champs cachés (produit/particularités) seront validés après fermeture des popups');
 
     // Validation initiale
     validateRequiredFields();
@@ -3462,6 +3530,16 @@ window.acceptPresentation = async function() {
 
       const fullAddress = `${streetNumber} ${route}, ${city}, ${province} ${postalCode}`;
       input.value = fullAddress.trim();
+
+      console.log('[GOOGLE AUTOCOMPLETE] Adresse sélectionnée:', fullAddress.trim());
+
+      // Déclencher la validation après que Google ait rempli l'adresse
+      if (typeof validateRequiredFields === 'function') {
+        // Utiliser setTimeout pour s'assurer que la valeur est bien définie avant validation
+        setTimeout(() => {
+          validateRequiredFields();
+        }, 100);
+      }
     });
   };
 </script>
@@ -4265,6 +4343,11 @@ window.acceptPresentation = async function() {
       }
 
       closeProductModal();
+
+      // Déclencher la validation après fermeture du modal
+      if (typeof validateRequiredFields === 'function') {
+        validateRequiredFields();
+      }
     }
 
     // Confirmer sélection Particularité des travaux
@@ -4290,6 +4373,11 @@ window.acceptPresentation = async function() {
       }
 
       closePartTravauxModal();
+
+      // Déclencher la validation après fermeture du modal
+      if (typeof validateRequiredFields === 'function') {
+        validateRequiredFields();
+      }
     }
 
     // Synchroniser les checkboxes avec le contenu du textarea Produit

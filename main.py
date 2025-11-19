@@ -62,6 +62,7 @@ import uuid
 import datetime as dt
 import shutil
 import re
+import asyncio
 
 from PyPDF2 import PdfReader, PdfWriter
 
@@ -136,6 +137,10 @@ os.makedirs(f"{base_cloud}/ventes_produit", exist_ok=True)
 from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 app = FastAPI()
+
+# Variables globales pour les sessions photo mobile
+mobile_photo_sessions = {}
+mobile_photo_waiters = {}
 
 app.mount("/cloud/factures", StaticFiles(directory=f"{base_cloud}/factures_completes"), name="factures")
 app.mount("/cloud/soumissions_completes", StaticFiles(directory=f"{base_cloud}/soumissions_completes"), name="soumissions_completes")
@@ -464,6 +469,11 @@ def badge_assignment_page():
 def centrale_admin_page():
     """Page de la centrale admin pour la direction"""
     return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Admin", "centraleadmin.html"))
+
+@app.get("/connect-agenda")
+def connect_agenda_page():
+    """Page de connexion Google Calendar et Gmail"""
+    return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Entrepreneurs", "General", "Parametres", "connect_agenda.html"))
 
 @app.get("/")
 def read_index():
@@ -1781,7 +1791,7 @@ SCOPES = [
 ]
 
 @app.get("/connect-google")
-def connect_google(username: str):
+def connect_google(username: str, return_url: bool = False):
     params = {
         "client_id": CLIENT_ID,
         "redirect_uri": REDIRECT_URI,
@@ -1792,7 +1802,13 @@ def connect_google(username: str):
         "state": username
     }
     url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
-    return RedirectResponse(url)
+    print(f"[DEBUG CALENDAR] OAuth URL: {url}")
+
+    # Si return_url=true, retourner l'URL au lieu de rediriger
+    if return_url:
+        return {"oauth_url": url}
+    else:
+        return RedirectResponse(url)
 
 @app.get("/oauth2callback")
 def oauth2callback(code: str = Query(...), state: str = Query(...)):
@@ -1818,20 +1834,49 @@ def oauth2callback(code: str = Query(...), state: str = Query(...)):
         json.dump(tokens, f, indent=2)
 
     return HTMLResponse(content=f"""
+    <!DOCTYPE html>
     <html>
       <head>
         <title>Connexion réussie</title>
+        <style>
+          body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+          }}
+          .message {{
+            text-align: center;
+          }}
+          .icon {{
+            font-size: 64px;
+            margin-bottom: 20px;
+          }}
+        </style>
       </head>
       <body>
+        <div class="message">
+          <div class="icon">✓</div>
+          <h1>Google Calendar connecté avec succès!</h1>
+          <p>Fermeture en cours...</p>
+        </div>
         <script>
-          // Si c'est une popup (window.opener existe), utiliser postMessage
+          localStorage.setItem('agenda_connected', Date.now().toString());
+
+          // Essayer de fermer si c'est un popup
           if (window.opener) {{
             window.opener.postMessage("agenda_connected", "*");
             window.close();
-          }} else {{
-            // Sinon, rediriger vers onboarding
-            window.location.href = "/onboarding";
           }}
+
+          // Si c'est une BrowserView Electron, fermer après 1 seconde
+          setTimeout(() => {{
+            window.close();
+          }}, 1000);
         </script>
       </body>
     </html>
@@ -2286,7 +2331,7 @@ def get_blacklist_clients(username: str):
         )
 
 @app.get("/connect-gmail")
-def connect_gmail(username: str):
+def connect_gmail(username: str, return_url: bool = False):
     print(f"[DEBUG GMAIL] GMAIL_REDIRECT_URI: {GMAIL_REDIRECT_URI}")
     print(f"[DEBUG GMAIL] BASE_URL: {BASE_URL}")
     params = {
@@ -2299,8 +2344,13 @@ def connect_gmail(username: str):
         "state": username
     }
     url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
-    print(f"[DEBUG GMAIL] Redirecting to: {url}")
-    return RedirectResponse(url)
+    print(f"[DEBUG GMAIL] OAuth URL: {url}")
+
+    # Si return_url=true, retourner l'URL au lieu de rediriger
+    if return_url:
+        return {"oauth_url": url}
+    else:
+        return RedirectResponse(url)
 
 
 @app.get("/gmail/callback")
@@ -2336,27 +2386,49 @@ def gmail_callback(code: str = Query(...), state: str = Query(...)):
         json.dump(tokens, f, indent=2)
 
     return HTMLResponse("""
+    <!DOCTYPE html>
     <html>
     <head>
-      <title>Connexion en cours...</title>
+      <title>Connexion réussie</title>
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          margin: 0;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+        }
+        .message {
+          text-align: center;
+        }
+        .icon {
+          font-size: 64px;
+          margin-bottom: 20px;
+        }
+      </style>
     </head>
     <body>
+      <div class="message">
+        <div class="icon">✓</div>
+        <h1>Gmail connecté avec succès!</h1>
+        <p>Fermeture en cours...</p>
+      </div>
       <script>
-        // Enregistrer dans localStorage pour communication avec l'app PWA
         localStorage.setItem('gmail_connected', Date.now().toString());
 
-        if (window.opener && !window.opener.closed) {
-          // Si c'est un popup, envoyer le message et fermer
-          try {
-            window.opener.postMessage("gmail_connected", "*");
-          } catch(e) {
-            console.log("Impossible d'envoyer le message au parent:", e);
-          }
+        // Essayer de fermer si c'est un popup
+        if (window.opener) {
+          window.opener.postMessage("gmail_connected", "*");
           window.close();
-        } else {
-          // Si c'est un onglet ou PWA, rediriger vers onboarding
-          window.location.href = "/onboarding";
         }
+
+        // Si c'est une BrowserView Electron, fermer après 1 seconde
+        setTimeout(() => {
+          window.close();
+        }, 1000);
       </script>
     </body>
     </html>
@@ -6492,10 +6564,11 @@ async def get_user_profile(request: Request, username: str):
 @app.post("/api/save-user-info")
 async def save_user_info(
     username: str = Body(...),
-    nom: str = Body(...),
-    prenom: str = Body(...),
-    telephone: str = Body(...),
-    courriel: str = Body(...)
+    nom: str = Body(default=""),
+    prenom: str = Body(default=""),
+    telephone: str = Body(default=""),
+    courriel: str = Body(default=""),
+    grade: str = Body(default=None)
 ):
     """Sauvegarde les informations de l'entrepreneur dans user_info.json"""
     try:
@@ -6506,7 +6579,7 @@ async def save_user_info(
         # Créer le fichier user_info.json
         user_info_path = os.path.join(user_signature_dir, "user_info.json")
 
-        # Charger les données existantes pour préserver onboarding_completed
+        # Charger les données existantes pour préserver onboarding_completed et grade
         existing_info = {}
         if os.path.exists(user_info_path):
             try:
@@ -6518,11 +6591,17 @@ async def save_user_info(
 
         # Mettre à jour avec les nouvelles données
         user_info = {
-            "nom": nom,
-            "prenom": prenom,
-            "telephone": telephone,
-            "courriel": courriel
+            "nom": nom or existing_info.get("nom", ""),
+            "prenom": prenom or existing_info.get("prenom", ""),
+            "telephone": telephone or existing_info.get("telephone", ""),
+            "courriel": courriel or existing_info.get("courriel", "")
         }
+
+        # Ajouter le grade si fourni, sinon préserver l'existant
+        if grade:
+            user_info["grade"] = grade
+        elif "grade" in existing_info:
+            user_info["grade"] = existing_info["grade"]
 
         # IMPORTANT: Une fois onboarding_completed = true, il ne peut JAMAIS redevenir false
         if existing_info.get("onboarding_completed") == True:
@@ -6680,6 +6759,86 @@ async def delete_profile_photo(username: str = Body(...)):
     except Exception as e:
         print(f"[ERREUR] Erreur suppression photo de profil: {e}", flush=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# Endpoints pour photo mobile via QR code
+@app.get('/mobile-camera')
+async def mobile_camera():
+    """Servir la page mobile de capture photo"""
+    return FileResponse('QE/Frontend/Common/mobile-camera.html')
+
+
+@app.post('/api/upload-mobile-photo')
+async def upload_mobile_photo(
+    session: str = Form(...),
+    username: str = Form(...),
+    photo: UploadFile = File(...)
+):
+    """Recevoir la photo depuis le mobile"""
+    try:
+        # Lire la photo et la convertir en base64
+        photo_data = await photo.read()
+        photo_base64 = f"data:image/jpeg;base64,{base64.b64encode(photo_data).decode()}"
+
+        # Stocker temporairement
+        mobile_photo_sessions[session] = {
+            'photo': photo_base64,
+            'timestamp': datetime.now(),
+            'username': username
+        }
+
+        print(f"[OK] Photo mobile reçue pour session {session}", flush=True)
+
+        # Notifier les clients en attente via SSE
+        if session in mobile_photo_waiters:
+            mobile_photo_waiters[session].set()
+
+        return {"success": True}
+    except Exception as e:
+        print(f"[ERREUR] Erreur upload mobile photo: {e}", flush=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get('/api/wait-mobile-photo/{session_id}')
+async def wait_mobile_photo(session_id: str):
+    """Attendre qu'une photo soit uploadée via SSE"""
+    async def event_generator():
+        # Créer un événement pour ce session_id
+        event = asyncio.Event()
+        mobile_photo_waiters[session_id] = event
+
+        print(f"[SSE] Client en attente pour session {session_id}", flush=True)
+
+        try:
+            # Attendre jusqu'à 5 minutes ou jusqu'à ce qu'une photo soit uploadée
+            await asyncio.wait_for(event.wait(), timeout=300)
+
+            # Photo disponible!
+            if session_id in mobile_photo_sessions:
+                photo_data = mobile_photo_sessions[session_id]['photo']
+                del mobile_photo_sessions[session_id]
+
+                print(f"[OK] Photo envoyée au client pour session {session_id}", flush=True)
+                yield f"data: {json.dumps({'photo': photo_data})}\n\n"
+
+        except asyncio.TimeoutError:
+            # Timeout après 5 minutes
+            print(f"[TIMEOUT] Session {session_id} expirée", flush=True)
+            yield f"data: {json.dumps({'photo': None})}\n\n"
+        finally:
+            # Nettoyer
+            if session_id in mobile_photo_waiters:
+                del mobile_photo_waiters[session_id]
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 
 # Endpoints pour le nouveau workflow des soumissions
@@ -8491,6 +8650,10 @@ async def update_user_info(username: str, request: Request):
             user_data["grade"] = body["grade"]
             print(f"[DEBUG] [UPDATE-INFO] Grade mis à jour pour {username}: {body['grade']}")
 
+        # Debug: afficher toutes les données reçues
+        print(f"[DEBUG] [UPDATE-INFO] Body reçu: {body}")
+        print(f"[DEBUG] [UPDATE-INFO] Données avant sauvegarde: {user_data}")
+
         # Ajouter la date de dernière mise à jour
         from datetime import datetime
         user_data["last_updated"] = datetime.now().isoformat()
@@ -8499,7 +8662,8 @@ async def update_user_info(username: str, request: Request):
         with open(info_file, "w", encoding="utf-8") as f:
             json.dump(user_data, f, indent=2, ensure_ascii=False)
 
-        print(f"[DEBUG] [UPDATE-INFO] Informations sauvegardées pour {username}")
+        print(f"[DEBUG] [UPDATE-INFO] Informations sauvegardées dans {info_file}")
+        print(f"[DEBUG] [UPDATE-INFO] Contenu sauvegardé: {user_data}")
 
         return {
             "success": True,

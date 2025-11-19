@@ -377,6 +377,26 @@
       opacity: 1;
     }
 
+    /* Afficher les cadenas pour les items verrouillés */
+    .sidebar .nav-item[style*="pointer-events: none"] .nav-lock-icon,
+    .sidebar .nav-item.locked-for-entrepreneur .nav-lock-icon {
+      opacity: 1 !important;
+      display: inline-block !important;
+    }
+
+    /* Positionner les cadenas en bas à droite des icônes quand le sidebar est fermé */
+    .sidebar:not(.expanded) .nav-item .nav-lock-icon {
+      position: absolute;
+      bottom: 8px;
+      right: 16px;
+      margin-left: 0;
+      font-size: 9px;
+      opacity: 1;
+      background: #1e293b;
+      border-radius: 50%;
+      padding: 2px;
+    }
+
     .sidebar .nav-item:not([style*="pointer-events: none"]) .nav-lock-icon {
       display: none;
     }
@@ -414,6 +434,42 @@
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      position: relative;
+    }
+
+    /* Cadenas pour items verrouillés */
+    .lock-icon {
+      position: absolute;
+      bottom: -4px;
+      right: -4px;
+      font-size: 10px !important;
+      color: #f59e0b;
+      background: #1e293b;
+      border-radius: 50%;
+      padding: 2px;
+      display: none;
+    }
+
+    .locked-for-entrepreneur .lock-icon {
+      display: block;
+    }
+
+    /* Positionner les cadenas en bas à droite des icônes quand le sidebar est fermé */
+    .sidebar:not(.expanded) .lock-icon {
+      bottom: 2px;
+      right: 2px;
+      font-size: 8px !important;
+      padding: 1px;
+    }
+
+    .locked-for-entrepreneur {
+      opacity: 0.5;
+      cursor: not-allowed !important;
+      pointer-events: none;
+    }
+
+    .locked-for-entrepreneur:hover {
+      background: transparent !important;
     }
 
     .nav-icon svg {
@@ -860,6 +916,22 @@
 
     .dropdown-item.logout:hover {
       background: rgba(239, 68, 68, 0.1);
+    }
+
+    /* Cadenas pour dropdown items */
+    .dropdown-lock-icon {
+      margin-left: auto;
+      font-size: 0.75rem;
+      color: #94a3b8;
+      display: none;
+    }
+
+    .dropdown-item.locked-guide .dropdown-lock-icon {
+      display: block;
+    }
+
+    .dropdown-item.locked-guide {
+      position: relative;
     }
 
     /* ================================================================
@@ -2266,6 +2338,12 @@
       #swipe-overlay {
         display: block;
       }
+
+      /* Reset du contenu sur mobile - pas de sidebar */
+      #app-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+      }
     }
 
     /* Animation de transition entre pages */
@@ -3157,11 +3235,12 @@
             <span class="nav-label">Dashboard</span>
             <span class="tooltip">Dashboard</span>
           </a>
-          <a href="#/rpo" class="nav-item" data-page="rpo">
+          <a href="#/rpo" class="nav-item locked-for-entrepreneur" data-page="rpo" id="nav-rpo">
             <span class="nav-icon">
               <i class="fas fa-calendar-alt"></i>
             </span>
             <span class="nav-label">RPO</span>
+            <i class="fas fa-lock nav-lock-icon"></i>
             <span class="tooltip">RPO</span>
           </a>
           <a href="#/centralevue" class="nav-item" data-page="centralevue">
@@ -3230,11 +3309,12 @@
             <span class="nav-label">Employés</span>
             <span class="tooltip">Employés</span>
           </a>
-          <a href="#/facturationqe" class="nav-item" data-page="facturationqe">
+          <a href="#/facturationqe" class="nav-item locked-for-entrepreneur" data-page="facturationqe" id="nav-facturationqe">
             <span class="nav-icon">
               <i class="fas fa-file-invoice-dollar"></i>
             </span>
             <span class="nav-label">Facturation QE</span>
+            <i class="fas fa-lock nav-lock-icon"></i>
             <span class="tooltip">Facturation QE</span>
           </a>
           <a href="#/avis" class="nav-item" data-page="avis">
@@ -3302,10 +3382,12 @@
           <button class="dropdown-item stats-item" onclick="openStatsModal()">
             <i class="fas fa-chart-line"></i>
             <span>Statistiques</span>
+            <i class="fas fa-lock dropdown-lock-icon"></i>
           </button>
-          <button class="dropdown-item" onclick="navigateTo('connection')">
+          <button class="dropdown-item params-item" onclick="navigateTo('connection')">
             <i class="fas fa-cog"></i>
             <span>Parametres</span>
+            <i class="fas fa-lock dropdown-lock-icon"></i>
           </button>
           <button class="dropdown-item logout" onclick="logout()">
             <i class="fas fa-sign-out-alt"></i>
@@ -3727,6 +3809,10 @@
         const menuItems = document.querySelectorAll('.nav-item');
         const sidebar = document.querySelector('.sidebar');
 
+        // Sélectionner les items du dropdown (Statistiques et Parametres)
+        const statsItem = document.querySelector('.dropdown-item.stats-item');
+        const paramsItem = document.querySelector('.dropdown-item.params-item');
+
         if (pageName === 'guide') {
           menuItems.forEach(item => {
             item.style.pointerEvents = 'none';
@@ -3734,6 +3820,20 @@
             item.style.cursor = 'not-allowed';
             item.style.position = 'relative';
           });
+
+          // Bloquer aussi les items du dropdown et ajouter les cadenas
+          if (statsItem) {
+            statsItem.style.pointerEvents = 'none';
+            statsItem.style.opacity = '0.5';
+            statsItem.style.cursor = 'not-allowed';
+            statsItem.classList.add('locked-guide');
+          }
+          if (paramsItem) {
+            paramsItem.style.pointerEvents = 'none';
+            paramsItem.style.opacity = '0.5';
+            paramsItem.style.cursor = 'not-allowed';
+            paramsItem.classList.add('locked-guide');
+          }
         } else {
           menuItems.forEach(item => {
             item.style.pointerEvents = '';
@@ -3741,6 +3841,20 @@
             item.style.cursor = '';
             item.style.position = '';
           });
+
+          // Débloquer les items du dropdown et retirer les cadenas
+          if (statsItem) {
+            statsItem.style.pointerEvents = '';
+            statsItem.style.opacity = '';
+            statsItem.style.cursor = '';
+            statsItem.classList.remove('locked-guide');
+          }
+          if (paramsItem) {
+            paramsItem.style.pointerEvents = '';
+            paramsItem.style.opacity = '';
+            paramsItem.style.cursor = '';
+            paramsItem.classList.remove('locked-guide');
+          }
         }
 
         // PC: Utiliser une seule iframe qui change de src
@@ -4745,6 +4859,27 @@
       router.init();
       loadUserInfo();
       initMenuTooltips();
+
+      // Verrouiller RPO et Facturation QE pour les entrepreneurs
+      const userRole = localStorage.getItem('role');
+      if (userRole === 'entrepreneur' || userRole === 'beta') {
+        const navRpo = document.getElementById('nav-rpo');
+        const navFacturationQe = document.getElementById('nav-facturationqe');
+
+        if (navRpo) {
+          navRpo.style.pointerEvents = 'none';
+          navRpo.style.opacity = '0.5';
+          navRpo.style.cursor = 'not-allowed';
+          console.log('[LOCK] RPO verrouillé pour entrepreneur');
+        }
+
+        if (navFacturationQe) {
+          navFacturationQe.style.pointerEvents = 'none';
+          navFacturationQe.style.opacity = '0.5';
+          navFacturationQe.style.cursor = 'not-allowed';
+          console.log('[LOCK] Facturation QE verrouillée pour entrepreneur');
+        }
+      }
 
       console.log('[LAUNCH] Qwota SPA initialized');
 

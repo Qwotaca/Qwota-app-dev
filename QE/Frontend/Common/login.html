@@ -780,33 +780,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 100);
 });
 
-function initializeLoginPage() {
-  // Vérifier s'il y a des données sauvegardées au chargement de la page
-  const savedCredentials = localStorage.getItem('qwotaCredentials');
-  if (savedCredentials) {
-    try {
-      const { username, password, rememberMe } = JSON.parse(savedCredentials);
-      if (rememberMe) {
-        document.getElementById('username').value = username;
-        document.getElementById('password').value = password;
-        document.getElementById('rememberMe').checked = true;
-
-        // Connexion automatique si "Se souvenir de moi" était coché
-        document.getElementById('loginForm').dispatchEvent(new Event('submit'));
-      }
-    } catch (error) {
-      // Erreur lors du chargement des données sauvegardées
-      localStorage.removeItem('qwotaCredentials');
-    }
-  }
-
-  // Gestion du formulaire de connexion
-  document.getElementById("loginForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  const username = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value;
-  const rememberMe = document.getElementById("rememberMe").checked;
+// Fonction de connexion réutilisable
+async function performLogin(username, password, rememberMe) {
   const btnText = document.getElementById("btnText");
   const btnSpinner = document.getElementById("btnSpinner");
   const loginButton = document.getElementById("loginButton");
@@ -873,15 +848,55 @@ function initializeLoginPage() {
       }
     } else {
       message.textContent = data.detail || "Erreur de connexion";
+      // Hide loading state on error
+      loginButton.classList.remove("loading");
+      btnText.style.opacity = "1";
+      btnSpinner.classList.add("hidden");
     }
   } catch (error) {
     message.textContent = "Erreur serveur, réessayez plus tard.";
-  } finally {
-    // Hide loading state
+    // Hide loading state on error
     loginButton.classList.remove("loading");
     btnText.style.opacity = "1";
     btnSpinner.classList.add("hidden");
   }
+}
+
+function initializeLoginPage() {
+  // Vérifier s'il y a des données sauvegardées au chargement de la page
+  const savedCredentials = localStorage.getItem('qwotaCredentials');
+  if (savedCredentials) {
+    try {
+      const { username, password, rememberMe } = JSON.parse(savedCredentials);
+      if (rememberMe) {
+        document.getElementById('username').value = username;
+        document.getElementById('password').value = password;
+        document.getElementById('rememberMe').checked = true;
+
+        console.log('[AUTO-LOGIN] Connexion automatique détectée pour:', username);
+
+        // Connexion automatique si "Se souvenir de moi" était coché
+        setTimeout(() => {
+          performLogin(username, password, rememberMe);
+        }, 500);
+      }
+    } catch (error) {
+      // Erreur lors du chargement des données sauvegardées
+      console.error('[AUTO-LOGIN] Erreur:', error);
+      localStorage.removeItem('qwotaCredentials');
+    }
+  }
+
+  // Gestion du formulaire de connexion
+  document.getElementById("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value;
+    const rememberMe = document.getElementById("rememberMe").checked;
+
+    // Utiliser la fonction réutilisable
+    await performLogin(username, password, rememberMe);
   });
 
   // Smooth animations for form inputs

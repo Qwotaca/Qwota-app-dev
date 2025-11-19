@@ -91,7 +91,7 @@
                 <i class="fas fa-check-circle mr-2" style="color: var(--primary-green);"></i>
                 Sélectionner un client
               </label>
-              <div class="relative">
+              <div class="relative" style="max-width: 400px;">
                 <div class="relative">
                   <input type="text"
                          id="clientSearchFacture"
@@ -157,10 +157,10 @@
 
             <!-- Boutons d'action -->
             <div class="flex justify-end space-x-4 pt-6" style="border-top: 1px solid var(--border-dark);">
-              <button type="button" class="btn-secondary px-6 py-2" id="telecharger-pdf">
+              <button type="button" class="btn-secondary px-6 py-2" id="telecharger-pdf" disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
                 <span>Voir en PDF</span>
               </button>
-              <button type="submit" class="btn-primary px-6 py-2" id="envoyer-client">
+              <button type="submit" class="btn-primary px-6 py-2" id="envoyer-client" disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
                 <span>Envoyer au client</span>
               </button>
             </div>
@@ -440,12 +440,43 @@
       }
     }
 
+    // Fonction de validation des boutons (même style que GQP)
+    function validateFactureButtons() {
+      const telechargerBtn = document.getElementById('telecharger-pdf');
+      const envoyerBtn = document.getElementById('envoyer-client');
+
+      const isValid = selectedClientData !== null;
+
+      if (isValid) {
+        telechargerBtn.disabled = false;
+        telechargerBtn.style.opacity = '1';
+        telechargerBtn.style.cursor = 'pointer';
+        telechargerBtn.style.pointerEvents = 'auto';
+        envoyerBtn.disabled = false;
+        envoyerBtn.style.opacity = '1';
+        envoyerBtn.style.cursor = 'pointer';
+        envoyerBtn.style.pointerEvents = 'auto';
+      } else {
+        telechargerBtn.disabled = true;
+        telechargerBtn.style.opacity = '0.5';
+        telechargerBtn.style.cursor = 'not-allowed';
+        telechargerBtn.style.pointerEvents = 'none';
+        envoyerBtn.disabled = true;
+        envoyerBtn.style.opacity = '0.5';
+        envoyerBtn.style.cursor = 'not-allowed';
+        envoyerBtn.style.pointerEvents = 'none';
+      }
+    }
+
     async function selectionnerClientFacture(clientData, nomClient, numeroSoumission) {
       console.log("[OK] Client sélectionné:", nomClient, "- N°", numeroSoumission);
 
       // Stocker les données complètes du client pour utilisation ultérieure
       selectedClientData = clientData;
       console.log("[DEBUG] Données complètes du client stockées:", selectedClientData);
+
+      // Valider les boutons après sélection
+      validateFactureButtons();
 
       // Extraire les données
       const nom = clientData.nom || clientData.clientNom || clientData.lastName || clientData.last_name || clientData.name;

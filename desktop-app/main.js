@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, BrowserView } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -22,6 +22,7 @@ if (fs.existsSync(CONFIG_FILE)) {
 
 let mainWindow;
 let splashWindow;
+let oauthView;
 
 function createSplashScreen() {
   // Créer la fenêtre splash (popup stylé)
@@ -62,7 +63,8 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      webSecurity: true
+      webSecurity: true,
+      preload: path.join(__dirname, 'preload.js')
     },
     icon: path.join(__dirname, 'icon.ico'),
     title: 'Qwota',
@@ -200,8 +202,13 @@ function createWindow() {
     `);
   });
 
-  // Intercepter les nouvelles fenêtres pour les ouvrir dans la même fenêtre
+  // Permettre les popups OAuth, bloquer les autres
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    // Autoriser les popups OAuth Google
+    if (url.includes('accounts.google.com') || url.includes('oauth')) {
+      return { action: 'allow' };
+    }
+    // Autres URLs: charger dans la fenêtre principale
     mainWindow.loadURL(url);
     return { action: 'deny' };
   });
@@ -224,4 +231,106 @@ app.whenReady().then(() => {
 // Quitter quand toutes les fenêtres sont fermées, sauf sur macOS
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
+});
+
+// Gestion de l'OAuth Google avec BrowserView
+ipcMain.handle('open-oauth-modal', async (event, url, type) => {
+  if (!mainWindow) return { success: false, error: 'No main window' };
+
+  // Créer la BrowserView pour OAuth
+  oauthView = new BrowserView({
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      webSecurity: true
+    }
+  });
+
+  // Ajouter la vue à la fenêtre principale
+  mainWindow.addBrowserView(oauthView);
+
+  // Positionner la BrowserView (modal-like, centrée)
+  const { width, height } = mainWindow.getBounds();
+  const viewWidth = 800;
+  const viewHeight = 700;
+  const x = Math.floor((width - viewWidth) / 2);
+  const y = Math.floor((height - viewHeight) / 2);
+
+  oauthView.setBounds({
+    x: x,
+    y: y,
+    width: viewWidth,
+    height: viewHeight
+  });
+
+  // Charger l'URL OAuth
+  oauthView.webContents.loadURL(url);
+
+  // Écouter l'événement de navigation
+  let callbackDetected = false;
+
+  const closeOAuthView = () => {
+    if (callbackDetected) return;
+    callbackDetected = true;
+
+    console.log('✅ OAuth callback - fermeture BrowserView');
+
+    setTimeout(() => {
+      if (oauthView) {
+        mainWindow.removeBrowserView(oauthView);
+        oauthView.webContents.destroy();
+        oauthView = null;
+        console.log('✅ BrowserView détruite');
+      }
+
+      // Notifier la page principale
+      mainWindow.webContents.send('oauth-success', type);
+      console.log('✅ Message oauth-success envoyé:', type);
+    }, 1500);
+  };
+
+  // Détecter quand une page est chargée
+  oauthView.webContents.on('did-finish-load', () => {
+    if (!oauthView) return;
+
+    try {
+      const url = oauthView.webContents.getURL();
+      console.log('📄 Page chargée:', url);
+
+      // Vérifier si c'est le callback
+      if (url.includes('/gmail/callback') || url.includes('/oauth2callback')) {
+        console.log('🎯 Callback détecté!');
+        closeOAuthView();
+        return; // Ne pas injecter le bouton si on ferme
+      }
+
+      // Injecter un bouton de fermeture sur toutes les autres pages
+      oauthView.webContents.executeJavaScript(`
+        if (!document.getElementById('oauth-close-btn')) {
+          const closeBtn = document.createElement('div');
+          closeBtn.id = 'oauth-close-btn';
+          closeBtn.innerHTML = '✕';
+          closeBtn.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 999999; background: #ef4444; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.3);';
+          closeBtn.onclick = () => {
+            console.log('❌ Bouton fermeture cliqué');
+          };
+          document.body.appendChild(closeBtn);
+        }
+      `).catch(err => console.error('Erreur injection bouton:', err));
+    } catch(err) {
+      console.error('❌ Erreur did-finish-load:', err);
+    }
+  });
+
+  return { success: true };
+});
+
+// Fermer l'OAuth modal
+ipcMain.handle('close-oauth-modal', async () => {
+  if (oauthView) {
+    mainWindow.removeBrowserView(oauthView);
+    oauthView.webContents.destroy();
+    oauthView = null;
+  }
+  return { success: true };
 });

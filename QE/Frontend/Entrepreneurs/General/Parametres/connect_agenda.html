@@ -26,6 +26,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <link rel="icon" href="/favicon" type="image/x-icon" />
 
   <!-- Script commun en premier pour vérification onboarding -->
@@ -62,7 +63,7 @@
       </div>
 
       <!-- Widget de progression du profil -->
-      <div class="card p-6 mb-6" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05)); border: 1px solid rgba(59, 130, 246, 0.2);">
+      <div class="card p-6 mb-6" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(59, 130, 246, 0.05)); border: 1px solid rgba(59, 130, 246, 0.2);">
         <!-- En-tête avec progression globale -->
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 cursor-pointer" id="profile-progress-header" onclick="toggleProfileProgress()">
           <div class="flex items-center gap-4">
@@ -374,17 +375,19 @@
       </div>
 
       <!-- Gestion équipes -->
-      <div id="teams-container" class="card p-4 mt-6">
-        <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-3">
-          <h2 class="text-lg md:text-xl font-semibold" style="color: var(--text-light);">Gestion des équipes</h2>
-          <div class="flex justify-end">
-            <button id="add-team-btn" class="btn-primary px-2 py-1 text-xs md:px-4 md:py-2 md:text-sm">+ Ajouter une équipe</button>
+      <div id="teams-container" class="box mt-6">
+        <div class="box-header">
+          <div class="flex items-center gap-3">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, rgb(59, 130, 246), rgb(59, 130, 246));">
+              <i class="fas fa-users text-white" style="font-size: 1.25rem;"></i>
+            </div>
+            <h2 class="text-lg md:text-xl font-semibold" style="color: var(--text-light);">Gestion des équipes</h2>
           </div>
+          <button id="edit-teams-btn" onclick="toggleEditTeams()" class="btn-primary px-4 py-2 text-sm">
+            Modifier
+          </button>
         </div>
-        <div id="teams-list" class="space-y-6"></div>
-        <div class="flex justify-end mt-4">
-          <button id="save-teams-btn" class="btn-primary hidden px-4 py-2">Sauvegarder</button>
-        </div>
+        <div id="teams-list" class="space-y-4" style="padding: 1.5rem;"></div>
       </div>
 
       <!-- Section Title: Informations personnelles -->
@@ -421,15 +424,20 @@
       </div>
 
       <!-- Mes informations -->
-      <div class="card p-4 mt-6">
-        <div class="flex justify-between items-center mb-4 md:mb-6">
-          <h2 class="text-lg md:text-xl font-semibold" style="color: var(--text-light);">Mes informations</h2>
+      <div class="box mt-6">
+        <div class="box-header">
+          <div class="flex items-center gap-3">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, rgb(59, 130, 246), rgb(59, 130, 246));">
+              <i class="fas fa-user text-white" style="font-size: 1.1rem;"></i>
+            </div>
+            <h2 class="text-lg md:text-xl font-semibold" style="color: var(--text-light);">Mes informations</h2>
+          </div>
           <button id="edit-info-btn" onclick="toggleEditInfo()" class="btn-primary px-4 py-2 text-sm">
             Modifier
           </button>
         </div>
 
-        <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-4" style="padding: 1.5rem;">
           <!-- Sous-titre: Information personnelle -->
           <div class="mb-2 mt-2">
             <h3 class="text-base md:text-lg font-semibold flex items-center gap-2" style="color: var(--text-light);">
@@ -510,10 +518,10 @@
               <input type="file" id="specimen" class="hidden info-file-input" onchange="previewFile('specimen', this)" disabled>
               <label for="specimen" id="specimen-label" class="btn-secondary cursor-pointer file-upload-btn">Choisir un fichier</label>
               <div id="specimen-preview" class="hidden relative inline-block">
-                <a href="#" target="_blank">
+                <a href="#" target="_blank" class="file-preview-link">
                   <img class="h-12 rounded shadow" />
                 </a>
-                <button type="button" onclick="removeFile('specimen')" class="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center shadow hover:bg-red-700">
+                <button type="button" onclick="removeFile('specimen')" class="file-remove-btn absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center shadow hover:bg-red-700">
                   ✕
                 </button>
               </div>
@@ -527,10 +535,10 @@
               <input type="file" id="betonel" class="hidden info-file-input" onchange="previewFile('betonel', this)" disabled>
               <label for="betonel" id="betonel-label" class="btn-secondary cursor-pointer file-upload-btn">Choisir un fichier</label>
               <div id="betonel-preview" class="hidden relative inline-block">
-                <a href="#" target="_blank">
+                <a href="#" target="_blank" class="file-preview-link">
                   <img class="h-12 rounded shadow" />
                 </a>
-                <button type="button" onclick="removeFile('betonel')" class="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center shadow hover:bg-red-700">
+                <button type="button" onclick="removeFile('betonel')" class="file-remove-btn absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center shadow hover:bg-red-700">
                   ✕
                 </button>
               </div>
@@ -544,10 +552,10 @@
               <input type="file" id="integration" class="hidden info-file-input" onchange="previewFile('integration', this)" disabled>
               <label for="integration" id="integration-label" class="btn-secondary cursor-pointer file-upload-btn">Choisir un fichier</label>
               <div id="integration-preview" class="hidden relative inline-block">
-                <a href="#" target="_blank">
+                <a href="#" target="_blank" class="file-preview-link">
                   <img class="h-12 rounded shadow" />
                 </a>
-                <button type="button" onclick="removeFile('integration')" class="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center shadow hover:bg-red-700">
+                <button type="button" onclick="removeFile('integration')" class="file-remove-btn absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center shadow hover:bg-red-700">
                   ✕
                 </button>
               </div>
@@ -558,9 +566,17 @@
 
       <!-- Section Ma signature & Photo de profil (en 50/50) -->
       <div class="flex flex-col md:flex-row gap-6 mt-6">
-        <!-- Card Signature (50%) -->
-        <div class="card p-4 w-full md:w-1/2">
-          <h2 class="text-lg md:text-xl font-semibold mb-3" style="color: var(--text-light);">Ma signature</h2>
+        <!-- Ma signature (50%) -->
+        <div class="box w-full md:w-1/2">
+          <div class="box-header">
+            <div class="flex items-center gap-3">
+              <div class="box-header-icon" style="background: linear-gradient(135deg, rgb(139, 92, 246), rgb(139, 92, 246));">
+                <i class="fas fa-signature text-white" style="font-size: 1.1rem;"></i>
+              </div>
+              <h2 class="text-lg md:text-xl font-semibold" style="color: var(--text-light);">Ma signature</h2>
+            </div>
+          </div>
+          <div style="padding: 1.5rem;">
           <p class="text-sm mb-4" style="color: var(--text-gray);">
             <i class="fas fa-info-circle mr-2"></i>
             La signature sera utilisée dans les soumissions envoyées aux clients uniquement.
@@ -584,11 +600,20 @@
               </div>
             </div>
           </div>
+          </div>
         </div>
 
-        <!-- Card Photo de profil (50%) -->
-        <div class="card p-4 w-full md:w-1/2">
-          <h2 class="text-lg md:text-xl font-semibold mb-3" style="color: var(--text-light);">Photo de profil</h2>
+        <!-- Photo de profil (50%) -->
+        <div class="box w-full md:w-1/2">
+          <div class="box-header">
+            <div class="flex items-center gap-3">
+              <div class="box-header-icon" style="background: linear-gradient(135deg, rgb(16, 185, 129), rgb(16, 185, 129));">
+                <i class="fas fa-camera text-white" style="font-size: 1.1rem;"></i>
+              </div>
+              <h2 class="text-lg md:text-xl font-semibold" style="color: var(--text-light);">Photo de profil</h2>
+            </div>
+          </div>
+          <div style="padding: 1.5rem;">
           <p class="text-sm mb-4" style="color: var(--text-gray);">
             <i class="fas fa-info-circle mr-2"></i>
             La photo sera affichée dans votre compte et sur votre profil.
@@ -625,7 +650,8 @@
             </div>
 
             <input type="file" id="profile-photo-input" accept="image/*" class="hidden" />
-            <input type="file" id="camera-capture-input" accept="image/*" capture="user" class="hidden" />
+            <input type="file" id="camera-capture-input" accept="image/*" capture="environment" class="hidden" />
+          </div>
           </div>
         </div>
       </div>
@@ -659,6 +685,128 @@
             <div class="flex gap-3 w-full">
               <button id="cancel-editor-btn" class="btn-secondary flex-1">Annuler</button>
               <button id="save-editor-btn" class="btn-primary flex-1">Enregistrer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de choix caméra -->
+      <div id="camera-choice-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.8);">
+        <div class="card p-6 w-full max-w-md mx-4">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-semibold" style="color: var(--text-light);">Prendre une photo</h3>
+            <button id="close-choice-modal-btn" class="text-2xl" style="color: var(--text-gray);">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <p class="text-sm mb-6" style="color: var(--text-gray);">
+            Choisissez comment vous souhaitez prendre votre photo
+          </p>
+
+          <div class="grid grid-cols-1 gap-4">
+            <!-- Option Caméra PC -->
+            <button id="use-pc-camera-btn" class="p-6 rounded-lg border-2 transition-all hover:border-blue-500" style="background: var(--bg-dark); border-color: var(--border-dark);">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background: rgba(59, 130, 246, 0.2);">
+                  <i class="fas fa-desktop text-2xl" style="color: var(--primary-blue);"></i>
+                </div>
+                <div class="text-left">
+                  <h4 class="font-semibold mb-1" style="color: var(--text-light);">Caméra PC</h4>
+                  <p class="text-sm" style="color: var(--text-gray);">Utiliser la webcam de votre ordinateur</p>
+                </div>
+              </div>
+            </button>
+
+            <!-- Option Mobile avec QR -->
+            <button id="use-mobile-qr-btn" class="p-6 rounded-lg border-2 transition-all hover:border-blue-500" style="background: var(--bg-dark); border-color: var(--border-dark);">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background: rgba(34, 197, 94, 0.2);">
+                  <i class="fas fa-mobile-alt text-2xl" style="color: var(--primary-green);"></i>
+                </div>
+                <div class="text-left">
+                  <h4 class="font-semibold mb-1" style="color: var(--text-light);">Mobile (QR Code)</h4>
+                  <p class="text-sm" style="color: var(--text-gray);">Scanner un QR code avec votre téléphone</p>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de caméra PC -->
+      <div id="camera-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.95);">
+        <div class="w-full h-full flex flex-col items-center justify-center p-4">
+          <div class="w-full max-w-lg">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xl font-semibold" style="color: var(--text-light);">Caméra PC</h3>
+              <button id="close-camera-btn" class="text-2xl" style="color: var(--text-gray);">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+
+            <div class="relative rounded-lg overflow-hidden" style="background: #000;">
+              <video id="camera-video" autoplay playsinline class="w-full" style="max-height: 60vh;"></video>
+              <canvas id="camera-canvas" class="hidden"></canvas>
+            </div>
+
+            <div class="flex gap-3 mt-4">
+              <button id="cancel-camera-btn" class="btn-secondary flex-1">Annuler</button>
+              <button id="capture-photo-btn" class="btn-primary flex-1">
+                <i class="fas fa-camera mr-2"></i>Capturer
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal QR Code Mobile -->
+      <div id="qr-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.8);">
+        <div class="card p-6 w-full max-w-md mx-4">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-semibold" style="color: var(--text-light);">Scanner le QR Code</h3>
+            <button id="close-qr-modal-btn" class="text-2xl" style="color: var(--text-gray);">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <div class="text-center">
+            <p class="text-sm mb-6" style="color: var(--text-gray);">
+              Scannez ce QR code avec votre téléphone pour prendre une photo
+            </p>
+
+            <div id="qrcode-container" class="flex justify-center mb-6 p-4 rounded-lg" style="background: white;">
+              <!-- Le QR code sera généré ici -->
+            </div>
+
+            <div class="flex items-center justify-center gap-2 mb-4">
+              <div class="spinner-border" style="display: none;" id="qr-waiting-spinner"></div>
+              <p class="text-sm" style="color: var(--text-gray);" id="qr-status-text">
+                En attente de la photo...
+              </p>
+            </div>
+
+            <button id="cancel-qr-btn" class="btn-secondary w-full">Annuler</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de confirmation de suppression de photo -->
+      <div id="delete-photo-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.8);">
+        <div class="card p-6 w-full max-w-md mx-4">
+          <div class="flex flex-col items-center gap-4">
+            <div class="w-16 h-16 rounded-full flex items-center justify-center" style="background: rgba(239, 68, 68, 0.2);">
+              <i class="fas fa-exclamation-triangle text-3xl" style="color: var(--primary-red);"></i>
+            </div>
+            <h3 class="text-xl font-semibold text-center" style="color: var(--text-light);">Supprimer la photo de profil</h3>
+            <p class="text-center" style="color: var(--text-gray);">
+              Êtes-vous sûr de vouloir supprimer votre photo de profil ? Cette action ne peut pas être annulée.
+            </p>
+            <div class="flex gap-3 w-full mt-4">
+              <button id="cancel-delete-photo-btn" class="btn-secondary flex-1">Annuler</button>
+              <button id="confirm-delete-photo-btn" class="flex-1 px-4 py-2 rounded-lg font-semibold transition-colors" style="background: var(--primary-red); color: white;">
+                <i class="fas fa-trash mr-2"></i>Supprimer
+              </button>
             </div>
           </div>
         </div>
@@ -1033,7 +1181,6 @@
   // Username is now handled by common.js
   const teamsKey = `teams_${window.username}`;
   const teamsContainer = document.getElementById("teams-list");
-  const addTeamBtn = document.getElementById("add-team-btn");
 
   function loadTeams() {
     console.log('👥 Chargement équipes pour utilisateur:', window.username);
@@ -1153,6 +1300,7 @@
 
         const option = document.createElement("div");
         option.className = "agenda-dropdown-option";
+        option.style.cursor = "pointer";
         option.textContent = `${emp.prenom} ${emp.nom}`;
         option.dataset.prenom = emp.prenom;
         option.dataset.nom = emp.nom;
@@ -1182,7 +1330,6 @@
             nom: emp.nom,
             courriel: emp.courriel
           };
-          saveTeams(teams);
 
           // Fermer le dropdown
           employeeDropdownMenu.classList.remove("show");
@@ -1252,7 +1399,6 @@
     });
     removeBtn.addEventListener("click", () => {
       teams[teamIndex].painters.splice(painterIndex, 1);
-      saveTeams(teams);
       renderTeams();
     });
 
@@ -1315,7 +1461,7 @@
 
       const option = document.createElement("div");
       option.className = "agenda-dropdown-option";
-      option.style.cssText = "overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
+      option.style.cssText = "overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;";
       option.textContent = `${emp.prenom} ${emp.nom}`;
       option.dataset.prenom = emp.prenom;
       option.dataset.nom = emp.nom;
@@ -1333,7 +1479,6 @@
           nom: emp.nom,
           courriel: emp.courriel
         };
-        saveTeams(teams);
         renderTeams();
       });
 
@@ -1375,7 +1520,6 @@
     });
     mobileRemoveBtn.addEventListener("click", () => {
       teams[teamIndex].painters.splice(painterIndex, 1);
-      saveTeams(teams);
       renderTeams();
     });
 
@@ -1409,81 +1553,130 @@
 
 function createTeamBox(team, index) {
   const box = document.createElement("div");
-  box.className = "border border-gray-300 p-4 rounded";
-  box.style.borderRadius = "0.5rem !important";
-  box.style.background = "var(--bg-card)";
-  box.style.borderColor = "var(--border-dark)";
+  box.className = "border p-5 rounded-xl";
+  box.style.cssText = `
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.4), rgba(30, 41, 59, 0.2)) !important;
+    border: 1px solid var(--border-dark) !important;
+    border-radius: 1rem !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    transition: all 0.3s ease !important;
+  `;
+
+  // Hover effect
+  box.addEventListener("mouseenter", () => {
+    box.style.borderColor = "rgba(59, 130, 246, 0.3)";
+    box.style.boxShadow = "0 4px 16px rgba(0, 0, 0, 0.25)";
+  });
+  box.addEventListener("mouseleave", () => {
+    box.style.borderColor = "var(--border-dark)";
+    box.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.1)";
+  });
 
   const removeTeamBtn = document.createElement("button");
-  removeTeamBtn.textContent = "- Supprimer l'équipe";
-  removeTeamBtn.className = "btn-secondary px-2 py-1 text-xs md:px-4 md:py-2 md:text-sm";
-  removeTeamBtn.style.cssText = "white-space: nowrap !important; flex-shrink: 0 !important;";
+  removeTeamBtn.innerHTML = '<i class="fas fa-trash mr-2"></i><span>Supprimer l\'équipe</span>';
+  removeTeamBtn.className = "btn-secondary px-3 py-1.5 text-xs md:px-4 md:py-2 md:text-sm team-remove-btn";
+  removeTeamBtn.style.cssText = "white-space: nowrap !important; flex-shrink: 0 !important; display: none !important; align-items: center !important; gap: 0.5rem !important;";
   removeTeamBtn.addEventListener("click", async () => {
     const confirmed = await showConfirm("Supprimer cette équipe ?");
     if (confirmed) {
       teams.splice(index, 1);
-      saveTeams(teams);
       renderTeams();
-
-      if (teams.length === 0) {
-        document.getElementById("save-teams-btn").classList.add("hidden");
-      }
     }
   });
 
   const topButtonContainer = document.createElement("div");
-  topButtonContainer.className = "flex justify-start mb-3";
+  topButtonContainer.className = "flex justify-between items-center mb-4";
+
+  // Add team number badge
+  const teamBadge = document.createElement("div");
+  teamBadge.style.cssText = `
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.3)) !important;
+    border: 1px solid var(--primary-blue) !important;
+    color: var(--primary-blue) !important;
+    padding: 4px 12px !important;
+    border-radius: 20px !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+  `;
+  teamBadge.innerHTML = `<i class="fas fa-users" style="font-size: 0.7rem;"></i>Équipe ${index + 1}`;
+
+  topButtonContainer.appendChild(teamBadge);
   topButtonContainer.appendChild(removeTeamBtn);
 
   // Nom de l'équipe input (styled like info fields)
   const titleLabel = document.createElement("div");
-  titleLabel.textContent = "Nom de l'équipe";
+  titleLabel.innerHTML = '<i class="fas fa-tag mr-2" style="color: var(--primary-blue); font-size: 0.7rem;"></i>Nom de l\'équipe';
   titleLabel.style.cssText = `
-    font-size: 0.75rem !important;
-    color: var(--text-gray) !important;
-    margin-bottom: 4px !important;
-    font-weight: 500 !important;
+    font-size: 0.8rem !important;
+    color: var(--text-light) !important;
+    margin-bottom: 8px !important;
+    font-weight: 600 !important;
+    display: flex !important;
+    align-items: center !important;
   `;
 
   const titleInput = document.createElement("input");
   titleInput.type = "text";
   titleInput.value = team.name || `Équipe ${index + 1}`;
   titleInput.maxLength = 40;
+  titleInput.className = "team-name-input";
+  titleInput.disabled = true;
   titleInput.style.cssText = `
-    background: #172033 !important;
-    border: 2px solid var(--border-dark) !important;
+    background: rgba(128, 128, 128, 0.1) !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+    cursor: not-allowed !important;
+    border: 2px solid rgba(128, 128, 128, 0.3) !important;
     border-radius: 12px !important;
-    color: var(--text-light) !important;
     padding: 12px 16px !important;
     font-size: 0.875rem !important;
-    transition: all 0.3s ease;
-    width: 20% !important;
-    min-width: 200px !important;
+    transition: all 0.3s ease !important;
+    width: 100% !important;
+    max-width: 350px !important;
   `;
+
+  titleInput.addEventListener("focus", () => {
+    titleInput.style.borderColor = "var(--primary-blue)";
+    titleInput.style.background = "rgba(23, 32, 51, 0.8)";
+  });
+  titleInput.addEventListener("blur", () => {
+    titleInput.style.borderColor = "var(--border-dark)";
+    titleInput.style.background = "rgba(23, 32, 51, 0.6)";
+  });
 
   titleInput.addEventListener("input", () => {
     teams[index].name = titleInput.value.trim();
-    saveTeams(teams);
   });
 
   const titleContainer = document.createElement("div");
-  titleContainer.className = "mb-4";
+  titleContainer.className = "mb-5";
   titleContainer.appendChild(titleLabel);
   titleContainer.appendChild(titleInput);
 
   // Peintre section label
   const paintersLabel = document.createElement("div");
-  paintersLabel.textContent = "Membres de l'équipe";
+  paintersLabel.innerHTML = '<i class="fas fa-user-friends mr-2" style="color: var(--primary-blue); font-size: 0.7rem;"></i>Membres de l\'équipe';
   paintersLabel.style.cssText = `
-    font-size: 0.75rem !important;
-    color: var(--text-gray) !important;
-    margin-bottom: 8px !important;
-    font-weight: 500 !important;
+    font-size: 0.8rem !important;
+    color: var(--text-light) !important;
+    margin-bottom: 10px !important;
+    font-weight: 600 !important;
+    display: flex !important;
+    align-items: center !important;
   `;
 
   // Container for badges and add button
   const badgesContainer = document.createElement("div");
-  badgesContainer.className = "flex flex-wrap gap-2 items-center mb-4";
+  badgesContainer.className = "flex flex-wrap gap-2.5 items-center";
+  badgesContainer.style.cssText = `
+    background: rgba(30, 41, 59, 0.3) !important;
+    padding: 12px !important;
+    border-radius: 10px !important;
+    border: 1px dashed var(--border-dark) !important;
+    min-height: 56px !important;
+  `;
 
   // Add badges for each painter
   team.painters.forEach((painter, pIndex) => {
@@ -1495,19 +1688,19 @@ function createTeamBox(team, index) {
 
   // Add "+" button with dropdown
   const addPainterWrapper = document.createElement("div");
-  addPainterWrapper.className = "relative";
-  addPainterWrapper.style.display = "inline-block";
+  addPainterWrapper.className = "relative team-add-member-btn";
+  addPainterWrapper.style.display = "none";
 
   const addPainterBtn = document.createElement("button");
-  addPainterBtn.innerHTML = "+";
+  addPainterBtn.innerHTML = '<i class="fas fa-plus"></i>';
   addPainterBtn.style.cssText = `
-    background: rgba(59, 130, 246, 0.15) !important;
-    border: 2px solid var(--primary-blue) !important;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.3)) !important;
+    border: 2px dashed var(--primary-blue) !important;
     color: var(--primary-blue) !important;
-    width: 32px !important;
-    height: 32px !important;
+    width: 36px !important;
+    height: 36px !important;
     border-radius: 50% !important;
-    font-size: 1.25rem !important;
+    font-size: 0.95rem !important;
     font-weight: bold !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
@@ -1515,17 +1708,38 @@ function createTeamBox(team, index) {
     align-items: center !important;
     justify-content: center !important;
     padding: 0 !important;
+    flex-shrink: 0 !important;
   `;
+
+  addPainterBtn.addEventListener("mouseenter", () => {
+    addPainterBtn.style.background = "linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(59, 130, 246, 0.4))";
+    addPainterBtn.style.transform = "scale(1.08)";
+    addPainterBtn.style.borderStyle = "solid";
+  });
+  addPainterBtn.addEventListener("mouseleave", () => {
+    addPainterBtn.style.background = "linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.3))";
+    addPainterBtn.style.transform = "scale(1)";
+    addPainterBtn.style.borderStyle = "dashed";
+  });
 
   // Dropdown menu
   const dropdown = document.createElement("div");
   dropdown.className = "agenda-dropdown-menu";
-  dropdown.style.display = "none";
-  dropdown.style.position = "absolute";
-  dropdown.style.top = "36px";
-  dropdown.style.left = "0";
-  dropdown.style.zIndex = "1000";
-  dropdown.style.minWidth = "200px";
+  dropdown.style.cssText = `
+    display: none;
+    position: absolute;
+    top: 36px;
+    left: 0;
+    z-index: 1000;
+    min-width: 200px;
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-dark) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 8px !important;
+  `;
 
   // Populate dropdown with available employees
   if (activeEmployees.length === 0) {
@@ -1549,6 +1763,7 @@ function createTeamBox(team, index) {
 
       const option = document.createElement("div");
       option.className = "agenda-dropdown-option";
+      option.style.cursor = "pointer";
       option.textContent = `${emp.prenom} ${emp.nom}`;
 
       option.addEventListener("click", (e) => {
@@ -1561,7 +1776,6 @@ function createTeamBox(team, index) {
           courriel: emp.courriel
         });
 
-        saveTeams(teams);
         renderTeams();
 
         dropdown.style.display = "none";
@@ -1606,50 +1820,83 @@ function createTeamBox(team, index) {
 function createPainterBadge(teamIndex, painterIndex, painter) {
   const badge = document.createElement("div");
   badge.style.cssText = `
-    background: rgba(59, 130, 246, 0.15) !important;
-    border: 1px solid var(--primary-blue) !important;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1)) !important;
+    border: 1.5px solid rgba(59, 130, 246, 0.4) !important;
     color: var(--text-light) !important;
-    padding: 6px 12px !important;
-    border-radius: 20px !important;
+    padding: 8px 14px !important;
+    border-radius: 25px !important;
     font-size: 0.875rem !important;
     display: inline-flex !important;
     align-items: center !important;
-    gap: 8px !important;
+    gap: 10px !important;
+    transition: all 0.2s ease !important;
+    font-weight: 500 !important;
   `;
+
+  // Hover effect
+  badge.addEventListener("mouseenter", () => {
+    badge.style.background = "linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(59, 130, 246, 0.15))";
+    badge.style.borderColor = "rgba(59, 130, 246, 0.6)";
+    badge.style.transform = "translateY(-1px)";
+  });
+  badge.addEventListener("mouseleave", () => {
+    badge.style.background = "linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1))";
+    badge.style.borderColor = "rgba(59, 130, 246, 0.4)";
+    badge.style.transform = "translateY(0)";
+  });
+
+  // Icon
+  const icon = document.createElement("i");
+  icon.className = "fas fa-user";
+  icon.style.cssText = "font-size: 0.75rem; color: var(--primary-blue);";
 
   const nameSpan = document.createElement("span");
   nameSpan.textContent = `${painter.prenom} ${painter.nom}`;
 
   const removeBtn = document.createElement("button");
+  removeBtn.className = "team-member-remove-btn";
   removeBtn.innerHTML = "×";
   removeBtn.style.cssText = `
-    background: none !important;
+    background: rgba(239, 68, 68, 0.15) !important;
     border: none !important;
-    color: var(--text-light) !important;
-    font-size: 1.25rem !important;
+    color: #ef4444 !important;
+    font-size: 1.1rem !important;
     cursor: pointer !important;
     padding: 0 !important;
     margin: 0 !important;
     line-height: 1 !important;
-    width: 16px !important;
-    height: 16px !important;
-    display: flex !important;
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 50% !important;
+    display: none !important;
     align-items: center !important;
     justify-content: center !important;
+    transition: all 0.2s ease !important;
   `;
+
+  removeBtn.addEventListener("mouseenter", () => {
+    removeBtn.style.background = "rgba(239, 68, 68, 0.3)";
+    removeBtn.style.transform = "scale(1.15)";
+  });
+  removeBtn.addEventListener("mouseleave", () => {
+    removeBtn.style.background = "rgba(239, 68, 68, 0.15)";
+    removeBtn.style.transform = "scale(1)";
+  });
 
   removeBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     teams[teamIndex].painters.splice(painterIndex, 1);
-    saveTeams(teams);
     renderTeams();
   });
 
+  badge.appendChild(icon);
   badge.appendChild(nameSpan);
   badge.appendChild(removeBtn);
 
   return badge;
 }
+
+  let isEditingTeams = false; // Variable pour suivre l'état d'édition
 
   function renderTeams() {
     console.log('🎨 Rendu équipes:', teams.length, 'équipes à afficher');
@@ -1658,18 +1905,28 @@ function createPainterBadge(teamIndex, painterIndex, painter) {
       teamsContainer.appendChild(createTeamBox(team, i));
       console.log('[OK] Équipe', i, 'ajoutée:', team);
     });
+
+    // Réappliquer l'état d'édition après le rendu
+    if (isEditingTeams) {
+      const teamNameInputs = document.querySelectorAll(".team-name-input");
+      const teamRemoveBtns = document.querySelectorAll(".team-remove-btn");
+      const teamAddMemberBtns = document.querySelectorAll(".team-add-member-btn");
+      const memberRemoveBtns = document.querySelectorAll(".team-member-remove-btn");
+
+      teamNameInputs.forEach(input => {
+        input.disabled = false;
+        input.style.background = "rgba(23, 32, 51, 0.6)";
+        input.style.color = "var(--text-light)";
+        input.style.cursor = "text";
+        input.style.border = "2px solid var(--border-dark)";
+      });
+      teamRemoveBtns.forEach(btn => { btn.style.display = "flex"; });
+      teamAddMemberBtns.forEach(btn => { btn.style.display = "inline-block"; });
+      memberRemoveBtns.forEach(btn => { btn.style.display = "flex"; });
+    }
   }
 
-  addTeamBtn.addEventListener("click", () => {
-    teams.push({ name: `Équipe ${teams.length + 1}`, painters: [] });
-    saveTeams(teams);
-    renderTeams();
-
-    // Afficher le bouton sauvegarder si c'est la première équipe
-    if (teams.length > 0) {
-      document.getElementById("save-teams-btn").classList.remove("hidden");
-    }
-  });
+  // Removed - now handled by toggleEditTeams
 
   let teams = [];
 
@@ -1689,11 +1946,6 @@ function createPainterBadge(teamIndex, painterIndex, painter) {
     teams = loadedTeams;
 
     renderTeams();
-
-    // Afficher le bouton sauvegarder si des équipes existent déjà
-    if (teams.length > 0) {
-      document.getElementById("save-teams-btn").classList.remove("hidden");
-    }
   }
 
   // Initialiser la section équipes après le chargement du DOM
@@ -1804,15 +2056,43 @@ async function saveTeamsToBackend() {
 }
 
 
-  function connect() {
-    const width = 500, height = 600;
-    const left = (screen.width - width) / 2;
-    const top = (screen.height - height) / 2;
-    window.open(
-      `/connect-google?username=${username}`,
-      "popup",
-      `width=${width},height=${height},top=${top},left=${left}`
-    );
+  async function connect() {
+    try {
+      // 1. Récupérer l'URL OAuth depuis le backend
+      const response = await fetch(`/connect-google?username=${username}&return_url=true`);
+      const data = await response.json();
+      const oauthUrl = data.oauth_url;
+
+      console.log('🔐 URL OAuth Calendar récupérée');
+
+      // 2. Ouvrir popup web
+      const width = 600, height = 700;
+      const left = (screen.width - width) / 2;
+      const top = (screen.height - height) / 2;
+
+      const popup = window.open(
+        oauthUrl,
+        "calendar_oauth",
+        `width=${width},height=${height},top=${top},left=${left},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
+      );
+
+      // Écouter le message de succès
+      const messageHandler = (event) => {
+        if (event.data === 'agenda_connected') {
+          console.log('✅ Google Calendar connecté avec succès');
+          if (popup && !popup.closed) {
+            popup.close();
+          }
+          checkConnection();
+          window.removeEventListener('message', messageHandler);
+        }
+      };
+
+      window.addEventListener('message', messageHandler);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la connexion Google Calendar:', error);
+    }
   }
 
   function disconnect() {
@@ -1943,16 +2223,45 @@ async function saveTeamsToBackend() {
       });
   }
 
-  function connectGmail() {
-    const width = 500, height = 600;
-    const left = (screen.width - width) / 2;
-    const top = (screen.height - height) / 2;
-    window.open(
-      `/connect-gmail?username=${username}`,
-      "popup",
-      `width=${width},height=${height},top=${top},left=${left}`
-    );
+  async function connectGmail() {
+    try {
+      // 1. Récupérer l'URL OAuth depuis le backend
+      const response = await fetch(`/connect-gmail?username=${username}&return_url=true`);
+      const data = await response.json();
+      const oauthUrl = data.oauth_url;
+
+      console.log('🔐 URL OAuth Gmail récupérée');
+
+      // 2. Ouvrir popup web
+      const width = 600, height = 700;
+      const left = (screen.width - width) / 2;
+      const top = (screen.height - height) / 2;
+
+      const popup = window.open(
+        oauthUrl,
+        "gmail_oauth",
+        `width=${width},height=${height},top=${top},left=${left},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
+      );
+
+      // Écouter le message de succès
+      const messageHandler = (event) => {
+        if (event.data === 'gmail_connected') {
+          console.log('✅ Gmail connecté avec succès');
+          if (popup && !popup.closed) {
+            popup.close();
+          }
+          checkEmailConnection();
+          window.removeEventListener('message', messageHandler);
+        }
+      };
+
+      window.addEventListener('message', messageHandler);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la connexion Gmail:', error);
+    }
   }
+
 
   function disconnectGmail() {
     fetch(`/deconnecter-email?username=${username}`, { method: "DELETE" })
@@ -2005,8 +2314,6 @@ async function saveTeamsToBackend() {
 
   checkConnection();
   checkEmailConnection();
-
-  document.getElementById("save-teams-btn").addEventListener("click", saveTeamsToBackend);
 
 });
 
@@ -2075,12 +2382,94 @@ function toggleEditInfo() {
       button.style.pointerEvents = "auto";
     });
 
+    // Afficher les boutons X et permettre le clic sur les fichiers
+    const removeButtons = document.querySelectorAll(".file-remove-btn");
+    removeButtons.forEach(btn => btn.style.display = "flex");
+
+    const previewLinks = document.querySelectorAll(".file-preview-link");
+    previewLinks.forEach(link => link.style.pointerEvents = "auto");
+
     // Changer le bouton en "Enregistrer"
     btn.textContent = "Enregistrer";
   }
   // Si on est en mode "Enregistrer", on sauvegarde et repasse en mode lecture
   else {
     saveInfo();
+  }
+}
+
+// Toggle entre mode lecture et mode édition des équipes
+function toggleEditTeams() {
+  const btn = document.getElementById("edit-teams-btn");
+  const teamNameInputs = document.querySelectorAll(".team-name-input");
+  const teamRemoveBtns = document.querySelectorAll(".team-remove-btn");
+  const teamAddMemberBtns = document.querySelectorAll(".team-add-member-btn");
+  const memberRemoveBtns = document.querySelectorAll(".team-member-remove-btn");
+
+  // Si on est en mode "Modifier", on passe en mode édition
+  if (btn.textContent.trim() === "Modifier") {
+    isEditingTeams = true; // Activer le mode édition
+
+    // Activer les champs de nom d'équipe
+    teamNameInputs.forEach(input => {
+      input.disabled = false;
+      input.style.background = "rgba(23, 32, 51, 0.6)";
+      input.style.color = "var(--text-light)";
+      input.style.cursor = "text";
+      input.style.border = "2px solid var(--border-dark)";
+    });
+
+    // Afficher les boutons "Supprimer l'équipe"
+    teamRemoveBtns.forEach(btn => {
+      btn.style.display = "flex";
+    });
+
+    // Afficher les boutons "+" pour ajouter des membres
+    teamAddMemberBtns.forEach(btn => {
+      btn.style.display = "inline-block";
+    });
+
+    // Afficher les boutons "×" pour retirer des membres
+    memberRemoveBtns.forEach(btn => {
+      btn.style.display = "flex";
+    });
+
+    // Changer le bouton en "Enregistrer"
+    btn.textContent = "Enregistrer";
+  }
+  // Si on est en mode "Enregistrer", on sauvegarde et repasse en mode lecture
+  else {
+    isEditingTeams = false; // Désactiver le mode édition
+
+    // Sauvegarder les équipes (saveTeams calls saveTeamsToBackend internally)
+    saveTeams(teams);
+
+    // Désactiver les champs
+    teamNameInputs.forEach(input => {
+      input.disabled = true;
+      input.style.background = "rgba(128, 128, 128, 0.1)";
+      input.style.color = "rgba(255, 255, 255, 0.5)";
+      input.style.cursor = "not-allowed";
+      input.style.border = "2px solid rgba(128, 128, 128, 0.3)";
+    });
+
+    // Masquer les boutons "Supprimer l'équipe"
+    teamRemoveBtns.forEach(btn => {
+      btn.style.display = "none";
+    });
+
+    // Masquer les boutons "+" pour ajouter des membres
+    teamAddMemberBtns.forEach(btn => {
+      btn.style.display = "none";
+    });
+
+    // Masquer les boutons "×" pour retirer des membres
+    memberRemoveBtns.forEach(btn => {
+      btn.style.display = "none";
+    });
+
+    // Changer le bouton en "Modifier"
+    btn.textContent = "Modifier";
   }
 }
 
@@ -2166,6 +2555,13 @@ async function saveInfo() {
       button.style.cursor = "not-allowed";
       button.style.pointerEvents = "none";
     });
+
+    // Cacher les boutons X et désactiver le clic sur les fichiers
+    const removeButtons = document.querySelectorAll(".file-remove-btn");
+    removeButtons.forEach(btn => btn.style.display = "none");
+
+    const previewLinks = document.querySelectorAll(".file-preview-link");
+    previewLinks.forEach(link => link.style.pointerEvents = "none");
 
     btn.textContent = "Modifier";
   } catch (e) {
@@ -2306,6 +2702,13 @@ async function loadInfos(bust = false) {
       box.classList.remove("hidden");
     }
   }
+
+  // Par défaut, cacher les boutons X et désactiver le clic sur les fichiers
+  const removeButtons = document.querySelectorAll(".file-remove-btn");
+  removeButtons.forEach(btn => btn.style.display = "none");
+
+  const previewLinks = document.querySelectorAll(".file-preview-link");
+  previewLinks.forEach(link => link.style.pointerEvents = "none");
 }
 window.addEventListener("DOMContentLoaded", () => loadInfos());
 
@@ -2545,10 +2948,20 @@ document.addEventListener("DOMContentLoaded", function() {
   let isDragging = false;
   let startX, startY;
 
+  // Détection mobile
+  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+
   // Toggle menu dropdown
   photoMenuBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    photoMenuDropdown.classList.toggle("hidden");
+
+    // Sur mobile, ouvrir directement le sélecteur de fichiers natif
+    if (isMobileDevice) {
+      photoInput.click();
+    } else {
+      // Sur desktop, afficher le menu
+      photoMenuDropdown.classList.toggle("hidden");
+    }
   });
 
   // Fermer le menu en cliquant ailleurs
@@ -2562,19 +2975,205 @@ document.addEventListener("DOMContentLoaded", function() {
     photoInput.click();
   });
 
-  // Option: Prendre photo
+  // Variable pour stocker le stream de la caméra
+  let cameraStream = null;
+  let qrCheckInterval = null;
+  let currentSessionId = null;
+
+  // Option: Prendre photo - Ouvrir le modal de choix
   cameraPhotoOption.addEventListener("click", () => {
     photoMenuDropdown.classList.add("hidden");
-    cameraInput.click();
+    document.getElementById("camera-choice-modal").classList.remove("hidden");
   });
 
-  // Option: Supprimer photo
-  deletePhotoOption.addEventListener("click", async () => {
-    photoMenuDropdown.classList.add("hidden");
+  // Fermer le modal de choix
+  document.getElementById("close-choice-modal-btn").addEventListener("click", () => {
+    document.getElementById("camera-choice-modal").classList.add("hidden");
+  });
 
-    if (!confirm("Êtes-vous sûr de vouloir supprimer votre photo de profil ?")) {
-      return;
+  // Choix caméra PC
+  document.getElementById("use-pc-camera-btn").addEventListener("click", async () => {
+    document.getElementById("camera-choice-modal").classList.add("hidden");
+    await openCamera();
+  });
+
+  // Choix QR Code Mobile
+  document.getElementById("use-mobile-qr-btn").addEventListener("click", () => {
+    document.getElementById("camera-choice-modal").classList.add("hidden");
+    openQRModal();
+  });
+
+  // Fonction pour ouvrir la caméra
+  async function openCamera() {
+    const cameraModal = document.getElementById("camera-modal");
+    const video = document.getElementById("camera-video");
+
+    try {
+      // Demander l'accès à la caméra (préférence pour la caméra frontale sur mobile)
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false
+      });
+
+      video.srcObject = cameraStream;
+      cameraModal.classList.remove("hidden");
+    } catch (error) {
+      console.error("Erreur d'accès à la caméra:", error);
+      showToast("Impossible d'accéder à la caméra", "error");
     }
+  }
+
+  // Fonction pour arrêter la caméra
+  function stopCamera() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      cameraStream = null;
+    }
+    document.getElementById("camera-modal").classList.add("hidden");
+  }
+
+  // Bouton fermer caméra
+  document.getElementById("close-camera-btn").addEventListener("click", stopCamera);
+  document.getElementById("cancel-camera-btn").addEventListener("click", stopCamera);
+
+  // Bouton capturer photo
+  document.getElementById("capture-photo-btn").addEventListener("click", () => {
+    const video = document.getElementById("camera-video");
+    const canvas = document.getElementById("camera-canvas");
+    const ctx = canvas.getContext("2d");
+
+    // Définir la taille du canvas basée sur la vidéo
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    // Dessiner l'image de la vidéo sur le canvas
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Convertir en blob et traiter comme un fichier
+    canvas.toBlob((blob) => {
+      stopCamera();
+
+      // Créer un objet File depuis le blob
+      const file = new File([blob], "camera-photo.jpg", { type: "image/jpeg" });
+      handleImageFile(file);
+    }, "image/jpeg", 0.95);
+  });
+
+  // Fonction pour ouvrir le modal QR
+  function openQRModal() {
+    const qrModal = document.getElementById("qr-modal");
+    const qrcodeContainer = document.getElementById("qrcode-container");
+
+    // Générer un ID de session unique
+    currentSessionId = 'photo_' + Date.now() + '_' + Math.random().toString(36).substring(7);
+
+    // Nettoyer le container QR
+    qrcodeContainer.innerHTML = '';
+
+    // Utiliser l'adresse IP locale pour que le mobile puisse se connecter
+    const hostname = window.location.hostname;
+    const port = window.location.port;
+    const protocol = window.location.protocol;
+
+    // Si on est sur localhost, utiliser l'IP locale
+    let baseUrl;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      baseUrl = `${protocol}//192.168.2.231:${port}`;
+    } else {
+      baseUrl = window.location.origin;
+    }
+
+    const mobileUrl = `${baseUrl}/mobile-camera?session=${currentSessionId}&username=${encodeURIComponent(username)}`;
+
+    // Générer le QR code
+    new QRCode(qrcodeContainer, {
+      text: mobileUrl,
+      width: 256,
+      height: 256,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.H
+    });
+
+    // Afficher le modal
+    qrModal.classList.remove("hidden");
+
+    // Commencer à vérifier si une photo a été uploadée
+    startPhotoPolling();
+  }
+
+  // Fonction pour démarrer le polling avec SSE
+  function startPhotoPolling() {
+    // Arrêter tout polling existant
+    if (qrCheckInterval) {
+      qrCheckInterval.close();
+      qrCheckInterval = null;
+    }
+
+    // Utiliser Server-Sent Events pour recevoir la notification
+    const eventSource = new EventSource(`/api/wait-mobile-photo/${currentSessionId}`);
+
+    eventSource.onmessage = async (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.photo) {
+          // Photo reçue!
+          eventSource.close();
+          stopPhotoPolling();
+
+          // Convertir la base64 en blob
+          const photoBlob = await fetch(data.photo).then(r => r.blob());
+          const file = new File([photoBlob], "mobile-photo.jpg", { type: "image/jpeg" });
+
+          // Traiter la photo
+          handleImageFile(file);
+        }
+      } catch (error) {
+        console.error("Erreur lors du traitement de la photo:", error);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error("Erreur SSE:", error);
+      eventSource.close();
+    };
+
+    // Stocker la référence
+    qrCheckInterval = eventSource;
+  }
+
+  // Fonction pour arrêter le polling
+  function stopPhotoPolling() {
+    if (qrCheckInterval) {
+      if (qrCheckInterval.close) {
+        qrCheckInterval.close();
+      }
+      qrCheckInterval = null;
+    }
+    document.getElementById("qr-modal").classList.add("hidden");
+    currentSessionId = null;
+  }
+
+  // Boutons fermer/annuler QR modal
+  document.getElementById("close-qr-modal-btn").addEventListener("click", stopPhotoPolling);
+  document.getElementById("cancel-qr-btn").addEventListener("click", stopPhotoPolling);
+
+  // Option: Supprimer photo - Afficher le modal de confirmation
+  deletePhotoOption.addEventListener("click", () => {
+    photoMenuDropdown.classList.add("hidden");
+    document.getElementById("delete-photo-modal").classList.remove("hidden");
+  });
+
+  // Annuler la suppression de photo
+  document.getElementById("cancel-delete-photo-btn").addEventListener("click", () => {
+    document.getElementById("delete-photo-modal").classList.add("hidden");
+  });
+
+  // Confirmer la suppression de photo
+  document.getElementById("confirm-delete-photo-btn").addEventListener("click", async () => {
+    const deleteModal = document.getElementById("delete-photo-modal");
+    deleteModal.classList.add("hidden");
 
     try {
       const response = await fetch('/api/delete-profile-photo', {
@@ -3334,8 +3933,35 @@ async function updateProfileProgress() {
       completed: completedSteps
     });
 
+    // Gérer l'ouverture/fermeture du widget selon le profil
+    const stepsContainer = document.getElementById('profile-progress-steps');
+    const chevron = document.getElementById('profile-progress-chevron');
+    const header = document.getElementById('profile-progress-header');
+
+    if (stepsContainer && chevron && header) {
+      if (overallProgress < 100) {
+        // Profil incomplet - ouvrir le widget
+        stepsContainer.style.maxHeight = '2000px';
+        stepsContainer.style.marginTop = '1.5rem';
+        chevron.style.transform = 'rotate(0deg)';
+        header.classList.remove('mb-0');
+        header.classList.add('mb-6');
+        console.log('[PROGRESS] Widget ouvert - profil à', Math.round(overallProgress), '%');
+      } else {
+        // Profil complet - fermer le widget
+        stepsContainer.style.maxHeight = '0';
+        stepsContainer.style.marginTop = '0';
+        chevron.style.transform = 'rotate(-180deg)';
+        header.classList.remove('mb-6');
+        header.classList.add('mb-0');
+        console.log('[PROGRESS] Widget fermé - profil complet à 100%');
+      }
+    }
+
+    return overallProgress;
   } catch (error) {
     console.error('[PROGRESS] Erreur lors du calcul de la progression:', error);
+    return 0;
   }
 }
 
@@ -3414,20 +4040,35 @@ async function selectGrade(grade) {
 document.addEventListener('DOMContentLoaded', () => {
   loadGrade();
   updateProfileProgress();
-
-  // Fermer les étapes par défaut avec animation
-  const stepsContainer = document.getElementById('profile-progress-steps');
-  const chevron = document.getElementById('profile-progress-chevron');
-  const header = document.getElementById('profile-progress-header');
-  if (stepsContainer && chevron && header) {
-    stepsContainer.style.maxHeight = '0';
-    stepsContainer.style.marginTop = '0';
-    chevron.style.transform = 'rotate(-180deg)';
-    header.classList.remove('mb-6');
-    header.classList.add('mb-0');
-  }
 });
 </script>
+
+<!-- Modal OAuth Google (Gmail & Calendar) -->
+<div id="oauth-modal" class="fixed inset-0 z-50 hidden" style="background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(4px);">
+  <div class="flex items-center justify-center h-full p-4">
+    <div class="relative w-full max-w-2xl h-[80vh] rounded-xl overflow-hidden shadow-2xl" style="background: var(--bg-card); border: 2px solid var(--border-dark);">
+      <!-- Header du modal -->
+      <div class="flex items-center justify-between p-4" style="background: linear-gradient(135deg, #3b82f6 0%, #3b82f6 100%); border-bottom: 1px solid rgba(255,255,255,0.1);">
+        <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+          <i class="fab fa-google"></i>
+          <span id="oauth-modal-title">Connexion Google</span>
+        </h3>
+        <button onclick="closeOAuthModal()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-white hover:bg-opacity-20" style="color: white;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <!-- Iframe pour Google OAuth -->
+      <iframe id="oauth-iframe" class="w-full h-full border-0" style="height: calc(100% - 64px);" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+
+      <!-- Loading indicator -->
+      <div id="oauth-loading" class="absolute inset-0 flex flex-col items-center justify-center" style="background: var(--bg-card);">
+        <i class="fas fa-spinner fa-spin text-4xl mb-4" style="color: var(--primary-blue);"></i>
+        <p style="color: var(--text-gray);">Chargement...</p>
+      </div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>

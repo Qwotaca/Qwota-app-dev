@@ -829,7 +829,6 @@ BADGES_CONFIG = {
         "rarity": "Commun",
         "type": "trophee",
         "xp_bonus": 50,
-        "icon": "🏆",
         "automatic": True,
         "trigger": {"type": "total_sales", "amount": 100000}
     },
@@ -839,7 +838,6 @@ BADGES_CONFIG = {
         "rarity": "Rare",
         "type": "trophee",
         "xp_bonus": 100,
-        "icon": "🏆",
         "automatic": True,
         "trigger": {"type": "total_sales", "amount": 125000}
     },
@@ -849,7 +847,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "trophee",
         "xp_bonus": 200,
-        "icon": "🏆",
         "automatic": True,
         "trigger": {"type": "total_sales", "amount": 300000}
     },
@@ -859,7 +856,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "trophee",
         "xp_bonus": 300,
-        "icon": "🏆",
         "automatic": True,
         "trigger": {"type": "total_sales", "amount": 500000}
     },
@@ -869,7 +865,6 @@ BADGES_CONFIG = {
         "rarity": "Épique",
         "type": "trophee",
         "xp_bonus": 500,
-        "icon": "🏆",
         "automatic": True,
         "trigger": {"type": "total_sales", "amount": 1000000}
     },
@@ -881,7 +876,6 @@ BADGES_CONFIG = {
         "rarity": "Commun",
         "type": "trophee",
         "xp_bonus": 50,
-        "icon": "🏆",
         "automatic": True,
         "trigger": {"type": "weekly_sales", "amount": 10000}
     },
@@ -891,7 +885,6 @@ BADGES_CONFIG = {
         "rarity": "Rare",
         "type": "trophee",
         "xp_bonus": 100,
-        "icon": "🏆",
         "automatic": True,
         "trigger": {"type": "weekly_sales", "amount": 20000}
     },
@@ -901,7 +894,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "trophee",
         "xp_bonus": 200,
-        "icon": "🏆",
         "automatic": True,
         "trigger": {"type": "weekly_sales", "amount": 30000}
     },
@@ -911,7 +903,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "trophee",
         "xp_bonus": 300,
-        "icon": "🏆",
         "automatic": True,
         "trigger": {"type": "weekly_sales", "amount": 40000}
     },
@@ -923,7 +914,6 @@ BADGES_CONFIG = {
         "rarity": "Commun",
         "type": "trophee",
         "xp_bonus": 50,
-        "icon": "🏆",
         "automatic": True,
         "trigger": {"type": "weekly_production", "amount": 10000}
     },
@@ -933,7 +923,6 @@ BADGES_CONFIG = {
         "rarity": "Rare",
         "type": "trophee",
         "xp_bonus": 100,
-        "icon": "🏆",
         "automatic": True,
         "trigger": {"type": "weekly_production", "amount": 20000}
     },
@@ -943,7 +932,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "trophee",
         "xp_bonus": 200,
-        "icon": "🏆",
         "automatic": True,
         "trigger": {"type": "weekly_production", "amount": 30000}
     },
@@ -953,7 +941,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "trophee",
         "xp_bonus": 300,
-        "icon": "🏆",
         "automatic": True,
         "trigger": {"type": "weekly_production", "amount": 40000}
     },
@@ -965,7 +952,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "trophee",
         "xp_bonus": 300,
-        "icon": "🏆",
         "automatic": False
     },
     "goat_recrue": {
@@ -974,7 +960,6 @@ BADGES_CONFIG = {
         "rarity": "Épique",
         "type": "trophee",
         "xp_bonus": 500,
-        "icon": "🏆",
         "automatic": False
     },
     "etoile_montante": {
@@ -983,7 +968,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "trophee",
         "xp_bonus": 200,
-        "icon": "🏆",
         "automatic": False
     },
 
@@ -994,7 +978,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "trophee",
         "xp_bonus": 300,
-        "icon": "🏆",
         "automatic": False
     },
     "finaliste_excellence": {
@@ -1003,7 +986,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "trophee",
         "xp_bonus": 200,
-        "icon": "🏆",
         "automatic": False
     },
 
@@ -1014,7 +996,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "trophee",
         "xp_bonus": 300,
-        "icon": "🏆",
         "automatic": False
     },
     "chouchou": {
@@ -1023,7 +1004,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "trophee",
         "xp_bonus": 200,
-        "icon": "🏆",
         "automatic": False
     },
 
@@ -1034,7 +1014,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "trophee",
         "xp_bonus": 200,
-        "icon": "🏆",
         "automatic": False
     },
     "goat": {
@@ -1043,7 +1022,6 @@ BADGES_CONFIG = {
         "rarity": "Épique",
         "type": "trophee",
         "xp_bonus": 500,
-        "icon": "🏆",
         "automatic": False
     },
     "big_5": {
@@ -1052,7 +1030,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "trophee",
         "xp_bonus": 300,
-        "icon": "🏆",
         "automatic": False
     },
     "triple": {
@@ -1061,7 +1038,6 @@ BADGES_CONFIG = {
         "rarity": "Rare",
         "type": "trophee",
         "xp_bonus": 100,
-        "icon": "🏆",
         "automatic": False
     },
 
@@ -1072,7 +1048,6 @@ BADGES_CONFIG = {
         "rarity": "Commun",
         "type": "trophee",
         "xp_bonus": 50,
-        "icon": "🏆",
         "automatic": False
     },
     "bande_organisee": {
@@ -1081,7 +1056,6 @@ BADGES_CONFIG = {
         "rarity": "Rare",
         "type": "trophee",
         "xp_bonus": 100,
-        "icon": "🏆",
         "automatic": False
     },
 
@@ -1092,7 +1066,6 @@ BADGES_CONFIG = {
         "rarity": "Rare",
         "type": "trophee",
         "xp_bonus": 100,
-        "icon": "🏆",
         "automatic": False
     },
     "coup_canon": {
@@ -1101,7 +1074,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "trophee",
         "xp_bonus": 200,
-        "icon": "🏆",
         "automatic": False
     },
 
@@ -1112,7 +1084,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "trophee",
         "xp_bonus": 300,
-        "icon": "🏆",
         "automatic": False
     },
     "travaillant": {
@@ -1121,7 +1092,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "trophee",
         "xp_bonus": 200,
-        "icon": "🏆",
         "automatic": False
     },
     "consultant_or": {
@@ -1130,7 +1100,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "trophee",
         "xp_bonus": 300,
-        "icon": "🏆",
         "automatic": False
     },
     "propulsion": {
@@ -1139,7 +1108,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "trophee",
         "xp_bonus": 200,
-        "icon": "🏆",
         "automatic": False
     },
     "modele_tous": {
@@ -1148,7 +1116,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "trophee",
         "xp_bonus": 300,
-        "icon": "🏆",
         "automatic": False
     },
     "collegue_or": {
@@ -1157,7 +1124,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "trophee",
         "xp_bonus": 200,
-        "icon": "🏆",
         "automatic": False
     },
     "mentor_mentors": {
@@ -1166,7 +1132,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "trophee",
         "xp_bonus": 300,
-        "icon": "🏆",
         "automatic": False
     },
     "modele_releve": {
@@ -1175,7 +1140,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "trophee",
         "xp_bonus": 200,
-        "icon": "🏆",
         "automatic": False
     },
     "money_maker": {
@@ -1184,7 +1148,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "trophee",
         "xp_bonus": 200,
-        "icon": "🏆",
         "automatic": False
     },
     "make_it_rain": {
@@ -1193,7 +1156,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "trophee",
         "xp_bonus": 300,
-        "icon": "🏆",
         "automatic": False
     },
     "madness": {
@@ -1202,7 +1164,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "trophee",
         "xp_bonus": 300,
-        "icon": "🏆",
         "automatic": False
     },
 
@@ -1747,7 +1708,6 @@ BADGES_CONFIG = {
         "rarity": "Commun",
         "type": "etoile",
         "xp_bonus": 50,
-        "icon": "⭐",
         "automatic": False
     },
     "droit_passage": {
@@ -1756,7 +1716,6 @@ BADGES_CONFIG = {
         "rarity": "Commun",
         "type": "etoile",
         "xp_bonus": 50,
-        "icon": "⭐",
         "automatic": False
     },
 
@@ -1767,7 +1726,6 @@ BADGES_CONFIG = {
         "rarity": "Commun",
         "type": "etoile",
         "xp_bonus": 50,
-        "icon": "⭐",
         "automatic": False
     },
     "super_producteur": {
@@ -1776,7 +1734,6 @@ BADGES_CONFIG = {
         "rarity": "Rare",
         "type": "etoile",
         "xp_bonus": 100,
-        "icon": "⭐",
         "automatic": False
     },
     "maitre_producteur": {
@@ -1785,7 +1742,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "etoile",
         "xp_bonus": 200,
-        "icon": "⭐",
         "automatic": False
     },
     "roi_production": {
@@ -1794,7 +1750,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "etoile",
         "xp_bonus": 400,
-        "icon": "⭐",
         "automatic": False
     },
 
@@ -1805,7 +1760,6 @@ BADGES_CONFIG = {
         "rarity": "Commun",
         "type": "etoile",
         "xp_bonus": 50,
-        "icon": "⭐",
         "automatic": False
     },
     "paneliste_agguerri": {
@@ -1814,7 +1768,6 @@ BADGES_CONFIG = {
         "rarity": "Rare",
         "type": "etoile",
         "xp_bonus": 100,
-        "icon": "⭐",
         "automatic": False
     },
     "paneliste_expert": {
@@ -1823,7 +1776,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "etoile",
         "xp_bonus": 200,
-        "icon": "⭐",
         "automatic": False
     },
     "roi_panel": {
@@ -1832,7 +1784,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "etoile",
         "xp_bonus": 400,
-        "icon": "⭐",
         "automatic": False
     },
 
@@ -1843,7 +1794,6 @@ BADGES_CONFIG = {
         "rarity": "Commun",
         "type": "etoile",
         "xp_bonus": 50,
-        "icon": "⭐",
         "automatic": False
     },
 
@@ -1854,7 +1804,6 @@ BADGES_CONFIG = {
         "rarity": "Commun",
         "type": "etoile",
         "xp_bonus": 50,
-        "icon": "⭐",
         "automatic": False
     },
 
@@ -1865,7 +1814,6 @@ BADGES_CONFIG = {
         "rarity": "Commun",
         "type": "etoile",
         "xp_bonus": 50,
-        "icon": "⭐",
         "automatic": False
     },
     "grosse_annee": {
@@ -1874,7 +1822,6 @@ BADGES_CONFIG = {
         "rarity": "Rare",
         "type": "etoile",
         "xp_bonus": 100,
-        "icon": "⭐",
         "automatic": False
     },
     "annee_record": {
@@ -1883,7 +1830,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "etoile",
         "xp_bonus": 200,
-        "icon": "⭐",
         "automatic": False
     },
     "meilleur_panel_senior": {
@@ -1892,7 +1838,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "etoile",
         "xp_bonus": 400,
-        "icon": "⭐",
         "automatic": False
     },
 
@@ -1903,7 +1848,6 @@ BADGES_CONFIG = {
         "rarity": "Rare",
         "type": "etoile",
         "xp_bonus": 100,
-        "icon": "⭐",
         "automatic": False
     },
     "valet_formateur": {
@@ -1912,7 +1856,6 @@ BADGES_CONFIG = {
         "rarity": "Commun",
         "type": "etoile",
         "xp_bonus": 50,
-        "icon": "⭐",
         "automatic": False
     },
     "dame_formateur": {
@@ -1921,7 +1864,6 @@ BADGES_CONFIG = {
         "rarity": "Rare",
         "type": "etoile",
         "xp_bonus": 100,
-        "icon": "⭐",
         "automatic": False
     },
     "roi_formateur": {
@@ -1930,7 +1872,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "etoile",
         "xp_bonus": 200,
-        "icon": "⭐",
         "automatic": False
     },
 
@@ -1941,7 +1882,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "etoile",
         "xp_bonus": 200,
-        "icon": "⭐",
         "automatic": False
     },
     "coaching_expert_1": {
@@ -1950,7 +1890,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "etoile",
         "xp_bonus": 200,
-        "icon": "⭐",
         "automatic": False
     },
     "conferencier_expert_1": {
@@ -1959,7 +1898,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "etoile",
         "xp_bonus": 200,
-        "icon": "⭐",
         "automatic": False
     },
     "coach_terrain_expert_1": {
@@ -1968,7 +1906,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "etoile",
         "xp_bonus": 200,
-        "icon": "⭐",
         "automatic": False
     },
     "formateur_prod_expert_1": {
@@ -1977,7 +1914,6 @@ BADGES_CONFIG = {
         "rarity": "Légendaire",
         "type": "etoile",
         "xp_bonus": 200,
-        "icon": "⭐",
         "automatic": False
     },
 
@@ -1988,7 +1924,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "etoile",
         "xp_bonus": 400,
-        "icon": "⭐",
         "automatic": False
     },
     "organisateur_expert_1": {
@@ -1997,7 +1932,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "etoile",
         "xp_bonus": 400,
-        "icon": "⭐",
         "automatic": False
     },
     "coaching_expert_2": {
@@ -2006,7 +1940,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "etoile",
         "xp_bonus": 400,
-        "icon": "⭐",
         "automatic": False
     },
     "conferencier_expert_2": {
@@ -2015,7 +1948,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "etoile",
         "xp_bonus": 400,
-        "icon": "⭐",
         "automatic": False
     },
     "formateur_prod_expert_2": {
@@ -2024,7 +1956,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "etoile",
         "xp_bonus": 400,
-        "icon": "⭐",
         "automatic": False
     },
 
@@ -2035,7 +1966,6 @@ BADGES_CONFIG = {
         "rarity": "Épique",
         "type": "etoile",
         "xp_bonus": 800,
-        "icon": "⭐",
         "automatic": False
     },
     "former_releve_1": {
@@ -2044,7 +1974,6 @@ BADGES_CONFIG = {
         "rarity": "Mythique",
         "type": "etoile",
         "xp_bonus": 400,
-        "icon": "⭐",
         "automatic": False
     },
     "former_releve_2": {
@@ -2053,7 +1982,6 @@ BADGES_CONFIG = {
         "rarity": "Épique",
         "type": "etoile",
         "xp_bonus": 800,
-        "icon": "⭐",
         "automatic": False
     },
     "conferencier_expert_3": {
@@ -2062,7 +1990,6 @@ BADGES_CONFIG = {
         "rarity": "Épique",
         "type": "etoile",
         "xp_bonus": 800,
-        "icon": "⭐",
         "automatic": False
     }
 }

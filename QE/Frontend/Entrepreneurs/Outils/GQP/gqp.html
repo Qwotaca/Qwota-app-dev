@@ -216,10 +216,10 @@
                     Glissez vos images ici ou cliquez pour sélectionner
                   </p>
                   <p class="text-sm mt-2" style="color: var(--text-gray);">
-                    Formats acceptés: JPG, PNG, WebP
+                    Formats acceptés: JPG, PNG, WebP, MP4, MOV, AVI
                   </p>
                 </div>
-                <input type="file" id="photo-input" name="photos" accept="image/*" multiple class="hidden">
+                <input type="file" id="photo-input" name="photos" accept="image/*,video/*" multiple class="hidden">
               </div>
               <div id="preview" class="flex flex-wrap gap-4 mt-4"></div>
             </div>
@@ -269,10 +269,10 @@
 
         <!-- Boutons d'action -->
         <div class="flex justify-end space-x-4 mt-8 pt-6" style="border-top: 1px solid var(--border-dark);">
-          <button type="button" class="btn-secondary px-6 py-2" id="voirPDFBtn">
+          <button type="button" class="btn-secondary px-6 py-2" id="voirPDFBtn" disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
             Voir en PDF
           </button>
-          <button type="submit" id="generateButton" class="btn-primary px-6 py-2 flex items-center gap-2">
+          <button type="submit" id="generateButton" class="btn-primary px-6 py-2 flex items-center gap-2" disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
             <span id="btnText">Envoyer à l'équipe</span>
             <span id="btnSpinner" class="hidden absolute inset-0 flex items-center justify-center">
               <span class="w-5 h-5 border-2 border-white border-t-black rounded-full animate-spin"></span>
@@ -287,29 +287,32 @@
     <!-- Section Table GQP à envoyé -->
     <div class="box mb-8">
       <div class="box-header">
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
           <div class="box-header-icon" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);">
             <i class="fas fa-paper-plane"></i>
           </div>
           <h2 class="box-header-title">GQP à envoyé</h2>
         </div>
+        <span id="gqp-count" class="px-3 py-1 rounded-full text-sm font-semibold" style="background: rgba(96, 165, 250, 0.2); color: #60a5fa;">
+          0 en attente
+        </span>
       </div>
       <div class="box-body">
         <!-- Vue Desktop: Table -->
         <div class="table-container">
-          <table class="gqp-table">
+          <table class="modern-table">
             <thead>
               <tr>
-                <th class="w-1/4">Client</th>
-                <th class="w-1/4">N° Soumission</th>
-                <th class="w-1/2 text-center">Actions</th>
+                <th>Client</th>
+                <th>N° Soumission</th>
+                <th class="text-center" style="text-align: center !important;">Actions</th>
               </tr>
             </thead>
             <tbody id="gqp-envoys-body">
               <tr>
                 <td colspan="3" class="empty-state">
-                  <i class="fas fa-inbox mr-2"></i>
-                  Aucun GQP envoyé pour le moment
+                  <i class="fas fa-inbox" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
+                  <p style="font-size: 1rem;">Aucun GQP envoyé pour le moment</p>
                 </td>
               </tr>
             </tbody>
@@ -396,6 +399,39 @@
   let isAutoFilledFromTable = false; // Pour détecter si on vient d'un auto-fill
   let currentGqpId = null; // Pour stocker l'ID du GQP en cours
 
+  // Fonction de validation des champs requis (étapes, montant, heure)
+  function validateRequiredFields() {
+    const etapes = document.getElementById('etapes');
+    const montant = document.getElementById('montant');
+    const heure = document.getElementById('heure');
+    const voirPDFBtn = document.getElementById('voirPDFBtn');
+    const generateButton = document.getElementById('generateButton');
+
+    const isValid = etapes.value.trim() !== '' &&
+                    montant.value.trim() !== '' &&
+                    heure.value.trim() !== '';
+
+    if (isValid) {
+      voirPDFBtn.disabled = false;
+      voirPDFBtn.style.opacity = '1';
+      voirPDFBtn.style.cursor = 'pointer';
+      voirPDFBtn.style.pointerEvents = 'auto';
+      generateButton.disabled = false;
+      generateButton.style.opacity = '1';
+      generateButton.style.cursor = 'pointer';
+      generateButton.style.pointerEvents = 'auto';
+    } else {
+      voirPDFBtn.disabled = true;
+      voirPDFBtn.style.opacity = '0.5';
+      voirPDFBtn.style.cursor = 'not-allowed';
+      voirPDFBtn.style.pointerEvents = 'none';
+      generateButton.disabled = true;
+      generateButton.style.opacity = '0.5';
+      generateButton.style.cursor = 'not-allowed';
+      generateButton.style.pointerEvents = 'none';
+    }
+  }
+
   // Initialisation
   document.addEventListener('DOMContentLoaded', function() {
     setupDropzone();
@@ -409,7 +445,19 @@
     activateCurrentPageMenu();
     setupMobileMenu();
     updateCurrentDate();
-    
+
+    // Ajouter des listeners pour validation
+    const etapes = document.getElementById('etapes');
+    const montant = document.getElementById('montant');
+    const heure = document.getElementById('heure');
+
+    if (etapes) etapes.addEventListener('input', validateRequiredFields);
+    if (montant) montant.addEventListener('input', validateRequiredFields);
+    if (heure) heure.addEventListener('input', validateRequiredFields);
+
+    // Validation initiale
+    validateRequiredFields();
+
     // Note: loadGqpQueue sera appelé dans l'autre DOMContentLoaded où elle est définie
   });
 
@@ -1172,26 +1220,33 @@
 
     mobileList.appendChild(card);
 
+    // Mettre à jour le compteur
+    updateGqpCount();
+
     console.log('[OK] GQP ajouté à la table et mobile:', clientName, numeroSoumission, 'ID:', finalGqpId);
   }
 
   // Sélection d'une équipe
   function selectEquipe(equipe) {
     const toggle = document.getElementById('equipeToggle');
+    if (!toggle) return;
+
     const placeholder = toggle.querySelector('.placeholder');
-    
+    if (!placeholder) return;
+
     // Afficher le nom de l'équipe
     const equipeName = equipe.name || 'Équipe sans nom';
     placeholder.textContent = equipeName;
     placeholder.className = 'selected';
     placeholder.style.color = 'var(--text-light)';
-    
+
     // Stocker l'équipe sélectionnée (objet complet avec painters)
     selectedEquipe = equipe;
-    
+
     // Fermer le dropdown
-    document.getElementById('equipeMenu').classList.add('hidden');
-    document.getElementById('equipeToggle').classList.remove('active');
+    const equipeMenu = document.getElementById('equipeMenu');
+    if (equipeMenu) equipeMenu.classList.add('hidden');
+    if (toggle) toggle.classList.remove('active');
   }
 
   // Configuration du formulaire
@@ -2240,6 +2295,21 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
+  // Fonction pour mettre à jour le compteur de GQP
+  function updateGqpCount() {
+    const tbody = document.getElementById('gqp-envoys-body');
+    const countElement = document.getElementById('gqp-count');
+
+    if (!tbody || !countElement) return;
+
+    // Compter les lignes qui ne sont pas des états vides
+    const rows = tbody.querySelectorAll('tr:not(.empty-state-row)');
+    const emptyState = tbody.querySelector('.empty-state');
+    const count = emptyState ? 0 : rows.length;
+
+    countElement.textContent = count === 0 ? '0 en attente' : count === 1 ? '1 en attente' : `${count} en attente`;
+  }
+
   // Fonction pour supprimer un GQP de la table
   function removeGqpFromTable(gqpId) {
     const tbody = document.getElementById('gqp-envoys-body');
@@ -2265,6 +2335,9 @@ document.addEventListener('DOMContentLoaded', function() {
       `;
       tbody.appendChild(emptyRow);
     }
+
+    // Mettre à jour le compteur
+    updateGqpCount();
   }
   
   // Fonction pour charger les GQP en attente au démarrage
@@ -2319,22 +2392,28 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('[BAN] Queue GQP récupérée:', data);
       console.log('[BAN] Nombre de GQPs:', data.gqps ? data.gqps.length : 0);
       console.log('[BAN] Premier GQP exemple:', data.gqps && data.gqps[0] ? data.gqps[0] : 'Aucun');
-      
+
       const tbody = document.getElementById('gqp-envoys-body');
       if (!tbody) return;
-      
+
+      // Mettre à jour le compteur
+      const count = data.gqps ? data.gqps.length : 0;
+      const countElement = document.getElementById('gqp-count');
+      if (countElement) {
+        countElement.textContent = count === 0 ? '0 en attente' : count === 1 ? '1 en attente' : `${count} en attente`;
+      }
+
       // Vider la table actuelle
       tbody.innerHTML = '';
-      
+
       if (!data.gqps || data.gqps.length === 0) {
         // Aucun GQP en attente - afficher le message vide
         const emptyRow = document.createElement('tr');
         emptyRow.innerHTML = `
           <td colspan="3" class="empty-state">
-            <div style="text-align: center; padding: 2rem; color: var(--text-gray);">
+            <div style="text-align: center; color: var(--text-gray);">
               <i class="fas fa-inbox fa-3x mb-4"></i>
               <p>Aucun GQP en attente d'assignation</p>
-              <p class="text-sm">Les GQP générés sans assignation d'équipe apparaîtront ici</p>
             </div>
           </td>
         `;

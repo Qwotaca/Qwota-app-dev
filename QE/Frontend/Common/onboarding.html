@@ -758,35 +758,7 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Dropdown d'agenda dans onboarding - Full width */
-#agenda-selector .agenda-dropdown {
-  width: 100% !important;
-}
-
-/* Hauteur max du menu dropdown d'agenda sur onboarding */
-#agenda-selector .agenda-dropdown-menu {
-  max-height: 150px !important;
-}
-
-/* Style de scrollbar propre et discret pour le dropdown d'agenda */
-.agenda-dropdown-menu::-webkit-scrollbar {
-  width: 8px;
-}
-
-.agenda-dropdown-menu::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 0 12px 12px 0;
-}
-
-.agenda-dropdown-menu::-webkit-scrollbar-thumb {
-  background: var(--border-dark);
-  border-radius: 10px;
-  border: 2px solid var(--bg-card);
-}
-
-.agenda-dropdown-menu::-webkit-scrollbar-thumb:hover {
-  background: var(--text-gray);
-}
+/* Dropdown utilise maintenant les classes custom-select de base.css */
 </style>
 
 </head>
@@ -922,34 +894,63 @@ html {
           Connectez votre agenda pour synchroniser vos rendez-vous
         </p>
 
-        <div style="max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem;">
-          <!-- Connexion Agenda -->
-          <button class="btn-google" onclick="connectGoogleAgenda()" id="connectAgendaBtn">
-            <div class="btn-google-left">
-              <img src="https://www.gstatic.com/images/branding/product/1x/calendar_2020q4_48dp.png" alt="Agenda" />
-              <span>Connexion Agenda</span>
+        <div style="max-width: 500px; margin: 0 auto;">
+          <!-- Zone de connexion -->
+          <div style="background: rgba(15, 23, 42, 0.6); border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem;">
+            <!-- Bouton de connexion (visible quand déconnecté) -->
+            <div id="agenda-disconnected">
+              <button onclick="connectGoogleAgenda()" class="btn-google" style="width: 100%;">
+                <div class="btn-google-left">
+                  <img src="https://www.gstatic.com/images/branding/product/1x/calendar_2020q4_48dp.png" alt="Agenda" />
+                  <span>Connexion Agenda</span>
+                </div>
+                <div class="btn-google-status disconnected" id="agendaStatus">
+                  <i class="fas fa-circle"></i>
+                  <span>Non connecté</span>
+                </div>
+              </button>
             </div>
-            <div class="btn-google-status disconnected" id="agendaStatus">
-              <i class="fas fa-circle"></i>
-              <span>Non connecté</span>
-            </div>
-          </button>
 
-          <!-- Sélection d'agenda (visible après connexion) -->
-          <div id="agenda-selector" style="display: none; padding: 1rem; background: rgba(15, 23, 42, 0.6); border-radius: 8px; margin-top: 0.75rem;">
-            <p style="color: rgba(255, 255, 255, 0.9); font-size: 0.875rem; margin-bottom: 0.75rem;">
-              Sélectionnez votre agenda principal :
-            </p>
-            <div class="relative">
-              <div id="agenda-dropdown" class="agenda-dropdown">
-                <span id="agenda-selected-text" style="color: rgba(148, 163, 184, 0.7);">Chargement...</span>
-                <i class="fas fa-chevron-down" style="color: rgba(148, 163, 184, 0.7);"></i>
+            <!-- Zone connectée (visible après connexion) -->
+            <div id="agenda-connected" style="display: none;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <img src="https://www.gstatic.com/images/branding/product/1x/calendar_2020q4_48dp.png" alt="Agenda" style="width: 32px; height: 32px;" />
+                  <div>
+                    <p style="color: rgba(255, 255, 255, 0.9); font-weight: 600; font-size: 0.875rem;">Google Agenda</p>
+                    <p id="agenda-user-email" style="color: rgba(148, 163, 184, 0.8); font-size: 0.75rem;">Connecté</p>
+                  </div>
+                </div>
+                <div class="btn-google-status connected">
+                  <i class="fas fa-check-circle"></i>
+                  <span>Connecté</span>
+                </div>
               </div>
-              <div id="agenda-dropdown-menu" class="agenda-dropdown-menu"></div>
+
+              <!-- Sélection d'agenda -->
+              <p style="color: rgba(255, 255, 255, 0.9); font-size: 0.875rem; margin-bottom: 0.75rem;">
+                Sélectionnez votre agenda principal :
+              </p>
+              <div class="custom-select" id="agenda-select">
+                <button type="button" class="custom-select-button" id="agenda-select-button">
+                  <span class="custom-select-text" id="agenda-selected-text" style="color: var(--text-gray);">Choisir un agenda...</span>
+                  <i class="fas fa-chevron-down custom-select-arrow"></i>
+                </button>
+                <div class="custom-select-dropdown" id="agenda-dropdown-menu">
+                  <!-- Options générées dynamiquement -->
+                </div>
+              </div>
+
+              <!-- Bouton déconnexion -->
+              <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+                <button onclick="disconnectAgenda()" class="btn btn-secondary">
+                  <i class="fas fa-sign-out-alt"></i> Déconnecter
+                </button>
+              </div>
             </div>
           </div>
 
-          <p style="color: rgba(203, 213, 225, 0.6); font-size: 0.75rem; text-align: center; margin-top: 0.5rem;">
+          <p style="color: rgba(203, 213, 225, 0.6); font-size: 0.75rem; text-align: center;">
             Vous pourrez modifier cette connexion plus tard dans les paramètres
           </p>
         </div>
@@ -970,23 +971,52 @@ html {
           Connexion Courriel
         </h2>
         <p style="color: white; margin-bottom: 2rem; text-align: center;">
-          Connectez votre courriel pour recevoir des notifications
+          Connectez votre courriel pour envoyer des soumissions et factures
         </p>
 
-        <div style="max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem;">
-          <!-- Connexion Courriel -->
-          <button class="btn-google" onclick="connectGmail()" id="connectGmailBtn">
-            <div class="btn-google-left">
-              <img src="https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_48dp.png" alt="Courriel" />
-              <span>Connexion Courriel</span>
+        <div style="max-width: 500px; margin: 0 auto;">
+          <!-- Zone de connexion -->
+          <div style="background: rgba(15, 23, 42, 0.6); border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem;">
+            <!-- Bouton de connexion (visible quand déconnecté) -->
+            <div id="gmail-disconnected">
+              <button onclick="connectGmail()" class="btn-google" style="width: 100%;">
+                <div class="btn-google-left">
+                  <img src="https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_48dp.png" alt="Gmail" />
+                  <span>Connexion Gmail</span>
+                </div>
+                <div class="btn-google-status disconnected" id="gmailStatus">
+                  <i class="fas fa-circle"></i>
+                  <span>Non connecté</span>
+                </div>
+              </button>
             </div>
-            <div class="btn-google-status disconnected" id="gmailStatus">
-              <i class="fas fa-circle"></i>
-              <span>Non connecté</span>
-            </div>
-          </button>
 
-          <p style="color: rgba(203, 213, 225, 0.6); font-size: 0.75rem; text-align: center; margin-top: 0.5rem;">
+            <!-- Zone connectée (visible après connexion) -->
+            <div id="gmail-connected" style="display: none;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <img src="https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_48dp.png" alt="Gmail" style="width: 32px; height: 32px;" />
+                  <div>
+                    <p style="color: rgba(255, 255, 255, 0.9); font-weight: 600; font-size: 0.875rem;">Gmail</p>
+                    <p id="gmail-user-email" style="color: rgba(148, 163, 184, 0.8); font-size: 0.75rem;">Connecté</p>
+                  </div>
+                </div>
+                <div class="btn-google-status connected">
+                  <i class="fas fa-check-circle"></i>
+                  <span>Connecté</span>
+                </div>
+              </div>
+
+              <!-- Bouton déconnexion -->
+              <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+                <button onclick="disconnectGmail()" class="btn btn-secondary">
+                  <i class="fas fa-sign-out-alt"></i> Déconnecter
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <p style="color: rgba(203, 213, 225, 0.6); font-size: 0.75rem; text-align: center;">
             Vous pourrez modifier cette connexion plus tard dans les paramètres
           </p>
         </div>
@@ -1195,15 +1225,130 @@ function prevStep() {
 }
 
 // Connexion Google Agenda
-function connectGoogleAgenda() {
-  // Rediriger directement dans la même fenêtre au lieu d'ouvrir un popup
-  window.location.href = `/connect-google?username=${window.username}`;
+async function connectGoogleAgenda() {
+  try {
+    // 1. Récupérer l'URL OAuth depuis le backend
+    const response = await fetch(`/connect-google?username=${window.username}&return_url=true`);
+    const data = await response.json();
+    const oauthUrl = data.oauth_url;
+
+    console.log('🔐 URL OAuth Agenda récupérée');
+
+    // 2. Ouvrir popup web
+    const width = 600, height = 700;
+    const left = (screen.width - width) / 2;
+    const top = (screen.height - height) / 2;
+
+    const popup = window.open(
+      oauthUrl,
+      "agenda_oauth",
+      `width=${width},height=${height},top=${top},left=${left},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
+    );
+
+    // Écouter le message de succès
+    const messageHandler = (event) => {
+      if (event.data === 'agenda_connected') {
+        console.log('✅ Agenda connecté avec succès');
+        if (popup && !popup.closed) {
+          popup.close();
+        }
+
+        // Mettre à jour l'UI - afficher la zone connectée
+        document.getElementById('agenda-disconnected').style.display = 'none';
+        document.getElementById('agenda-connected').style.display = 'block';
+
+        // Charger les agendas
+        loadCalendars();
+
+        window.removeEventListener('message', messageHandler);
+      }
+    };
+
+    window.addEventListener('message', messageHandler);
+  } catch (error) {
+    console.error('❌ Erreur lors de la connexion Agenda:', error);
+  }
+}
+
+// Déconnexion Agenda
+async function disconnectAgenda() {
+  if (!confirm('Voulez-vous vraiment déconnecter votre agenda Google ?')) return;
+
+  try {
+    const response = await fetch(`/disconnect-agenda?username=${window.username}`, { method: 'POST' });
+    if (response.ok) {
+      // Masquer la zone connectée
+      document.getElementById('agenda-connected').style.display = 'none';
+      document.getElementById('agenda-disconnected').style.display = 'block';
+
+      console.log('✅ Agenda déconnecté');
+    }
+  } catch (error) {
+    console.error('❌ Erreur lors de la déconnexion:', error);
+    alert('Erreur lors de la déconnexion');
+  }
 }
 
 // Connexion Gmail
-function connectGmail() {
-  // Rediriger directement dans la même fenêtre au lieu d'ouvrir un popup
-  window.location.href = `/connect-gmail?username=${window.username}`;
+async function connectGmail() {
+  try {
+    // 1. Récupérer l'URL OAuth depuis le backend
+    const response = await fetch(`/connect-gmail?username=${window.username}&return_url=true`);
+    const data = await response.json();
+    const oauthUrl = data.oauth_url;
+
+    console.log('🔐 URL OAuth Gmail récupérée');
+
+    // 2. Ouvrir popup web
+    const width = 600, height = 700;
+    const left = (screen.width - width) / 2;
+    const top = (screen.height - height) / 2;
+
+    const popup = window.open(
+      oauthUrl,
+      "gmail_oauth",
+      `width=${width},height=${height},top=${top},left=${left},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
+    );
+
+    // Écouter le message de succès
+    const messageHandler = (event) => {
+      if (event.data === 'gmail_connected') {
+        console.log('✅ Gmail connecté avec succès');
+        if (popup && !popup.closed) {
+          popup.close();
+        }
+
+        // Mettre à jour l'UI - afficher la zone connectée
+        document.getElementById('gmail-disconnected').style.display = 'none';
+        document.getElementById('gmail-connected').style.display = 'block';
+
+        window.removeEventListener('message', messageHandler);
+      }
+    };
+
+    window.addEventListener('message', messageHandler);
+  } catch (error) {
+    console.error('❌ Erreur lors de la connexion Gmail:', error);
+  }
+}
+
+// Déconnexion Gmail
+async function disconnectGmail() {
+  if (!confirm('Voulez-vous vraiment déconnecter votre compte Gmail ?')) return;
+
+  try {
+    const response = await fetch(`/disconnect-email?username=${window.username}`, { method: 'POST' });
+    if (response.ok) {
+      // Masquer la zone connectée
+      document.getElementById('gmail-connected').style.display = 'none';
+      document.getElementById('gmail-disconnected').style.display = 'block';
+
+      console.log('✅ Gmail déconnecté');
+    }
+  } catch (error) {
+    console.error('❌ Erreur lors de la déconnexion:', error);
+    alert('Erreur lors de la déconnexion');
+  }
 }
 
 // Variable pour stocker l'agenda sélectionné
@@ -1229,14 +1374,10 @@ function loadSelectedAgenda() {
 
 // Charger la liste des agendas
 function loadCalendars() {
-  console.log('[DATE] Chargement agendars pour:', window.username);
-  const dropdown = document.getElementById("agenda-dropdown");
+  console.log('[DATE] Chargement agendas pour:', window.username);
+  const selectButton = document.getElementById("agenda-select-button");
   const dropdownMenu = document.getElementById("agenda-dropdown-menu");
   const selectedText = document.getElementById("agenda-selected-text");
-
-  // S'assurer que le dropdown est fermé au chargement
-  dropdownMenu.classList.remove("show");
-  dropdown.classList.remove("active");
 
   // D'abord récupérer l'agenda sélectionné depuis le backend
   loadSelectedAgenda().then(() => {
@@ -1251,10 +1392,10 @@ function loadCalendars() {
         // Vider le menu dropdown
         dropdownMenu.innerHTML = "";
 
-        // Ajouter les options
+        // Ajouter les options en utilisant les classes custom-select
         data.forEach((cal, index) => {
           const option = document.createElement("div");
-          option.className = "agenda-dropdown-option";
+          option.className = "custom-select-option";
           if (cal.id === lastSelectedId) {
             option.classList.add("selected");
             selectedText.textContent = cal.nom;
@@ -1268,7 +1409,7 @@ function loadCalendars() {
             e.stopPropagation();
 
             // Supprimer la sélection précédente
-            dropdownMenu.querySelectorAll(".agenda-dropdown-option").forEach(opt => {
+            dropdownMenu.querySelectorAll(".custom-select-option").forEach(opt => {
               opt.classList.remove("selected");
             });
 
@@ -1290,8 +1431,7 @@ function loadCalendars() {
             });
 
             // Fermer le dropdown
-            dropdownMenu.classList.remove("show");
-            dropdown.classList.remove("active");
+            selectContainer.classList.remove("open");
           });
 
           dropdownMenu.appendChild(option);
@@ -1300,58 +1440,36 @@ function loadCalendars() {
         // Si aucun agenda sélectionné, afficher le placeholder
         if (!lastSelectedId && data.length > 0) {
           selectedText.textContent = "Choisir un agenda...";
-          selectedText.style.color = "rgba(148, 163, 184, 0.7)";
+          selectedText.style.color = "var(--text-gray)";
         }
 
-        // Gestion du clic sur le dropdown - ajouter les listeners une seule fois
-        if (!dropdown.dataset.listenerAttached) {
-          dropdown.dataset.listenerAttached = "true";
+        // Gestion du clic sur le bouton
+        const selectContainer = document.getElementById("agenda-select");
+        selectButton.onclick = (e) => {
+          e.stopPropagation();
+          console.log('[DROPDOWN] Click sur bouton, toggle open');
+          const isOpen = selectContainer.classList.contains("open");
 
-          dropdown.addEventListener("click", (e) => {
-            e.stopPropagation();
-            dropdownMenu.classList.toggle("show");
-            dropdown.classList.toggle("active");
-          });
+          // Fermer tous les autres dropdowns
+          document.querySelectorAll('.custom-select').forEach(s => s.classList.remove("open"));
 
-          // Fermer le dropdown en cliquant à l'extérieur
-          document.addEventListener("click", () => {
-            dropdownMenu.classList.remove("show");
-            dropdown.classList.remove("active");
-          });
-        }
+          // Toggle celui-ci
+          if (!isOpen) {
+            selectContainer.classList.add("open");
+          }
+        };
+
+        // Fermer le dropdown en cliquant à l'extérieur
+        document.addEventListener("click", (e) => {
+          if (!selectContainer.contains(e.target)) {
+            selectContainer.classList.remove("open");
+          }
+        });
     });
   });
 }
 
-// Écouter la connexion réussie
-window.addEventListener('message', (event) => {
-  console.log('Message reçu:', event.data); // Debug
-
-  if (event.data === 'agenda_connected') {
-    const agendaBtn = document.getElementById('connectAgendaBtn');
-    const agendaStatus = document.getElementById('agendaStatus');
-    const agendaSelector = document.getElementById('agenda-selector');
-
-    agendaBtn.classList.add('connected');
-    agendaStatus.classList.remove('disconnected');
-    agendaStatus.classList.add('connected');
-    agendaStatus.innerHTML = '<i class="fas fa-check-circle"></i><span>Connecté</span>';
-
-    // Afficher le sélecteur d'agenda
-    agendaSelector.style.display = 'block';
-
-    // Charger les agendas
-    loadCalendars();
-  }
-  if (event.data === 'gmail_connected') {
-    const gmailBtn = document.getElementById('connectGmailBtn');
-    const gmailStatus = document.getElementById('gmailStatus');
-    gmailBtn.classList.add('connected');
-    gmailStatus.classList.remove('disconnected');
-    gmailStatus.classList.add('connected');
-    gmailStatus.innerHTML = '<i class="fas fa-check-circle"></i><span>Connecté</span>';
-  }
-});
+// Les listeners de messages sont maintenant gérés directement dans les fonctions connectGoogleAgenda() et connectGmail()
 
 // Afficher nom de fichier
 function showFileName(input, displayId) {
@@ -1436,15 +1554,9 @@ async function checkConnections() {
     if (agendaResponse.ok) {
       const agendaData = await agendaResponse.json();
       if (agendaData.linked) {
-        const agendaBtn = document.getElementById('connectAgendaBtn');
-        const agendaStatus = document.getElementById('agendaStatus');
-        const agendaSelector = document.getElementById('agenda-selector');
-
-        agendaBtn.classList.add('connected');
-        agendaStatus.classList.remove('disconnected');
-        agendaStatus.classList.add('connected');
-        agendaStatus.innerHTML = '<i class="fas fa-check-circle"></i><span>Connecté</span>';
-        agendaSelector.style.display = 'block';
+        // Afficher la zone connectée
+        document.getElementById('agenda-disconnected').style.display = 'none';
+        document.getElementById('agenda-connected').style.display = 'block';
         loadCalendars();
       }
     }
@@ -1456,12 +1568,9 @@ async function checkConnections() {
   try {
     const gmailResponse = await fetch(`/email-connecte?username=${window.username}`);
     if (gmailResponse.ok) {
-      const gmailBtn = document.getElementById('connectGmailBtn');
-      const gmailStatus = document.getElementById('gmailStatus');
-      gmailBtn.classList.add('connected');
-      gmailStatus.classList.remove('disconnected');
-      gmailStatus.classList.add('connected');
-      gmailStatus.innerHTML = '<i class="fas fa-check-circle"></i><span>Connecté</span>';
+      // Afficher la zone connectée
+      document.getElementById('gmail-disconnected').style.display = 'none';
+      document.getElementById('gmail-connected').style.display = 'block';
     }
   } catch (error) {
     console.log('Erreur vérification gmail:', error);

@@ -2764,6 +2764,13 @@ function removeFile(field) {
 }
 
 async function loadInfos(bust = false) {
+  // Attendre que window.username soit défini
+  if (!window.username) {
+    console.log('[WARN] Attente de window.username pour loadInfos...');
+    setTimeout(() => loadInfos(bust), 100);
+    return;
+  }
+
   const res = await fetch(`/api/get-info/${window.username}`);
   if (!res.ok) return;
   const result = await res.json();
@@ -2787,9 +2794,15 @@ async function loadInfos(bust = false) {
   if (prenomElement) prenomElement.value = result.data?.prenom || "";
   if (telephoneElement) telephoneElement.value = result.data?.telephone || "";
   if (courrielElement) courrielElement.value = result.data?.courriel || "";
-  document.getElementById("neq").value = result.data?.neq || "";
-  document.getElementById("tps").value = result.data?.tps || "";
-  document.getElementById("tvq").value = result.data?.tvq || "";
+
+  // Info entreprise avec vérification
+  const neqElement = document.getElementById("neq");
+  const tpsElement = document.getElementById("tps");
+  const tvqElement = document.getElementById("tvq");
+
+  if (neqElement) neqElement.value = result.data?.neq || "";
+  if (tpsElement) tpsElement.value = result.data?.tps || "";
+  if (tvqElement) tvqElement.value = result.data?.tvq || "";
 
   // reset previews
   ["specimen","betonel","integration"].forEach(field => {

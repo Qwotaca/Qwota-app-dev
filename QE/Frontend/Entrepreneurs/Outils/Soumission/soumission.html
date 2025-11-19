@@ -3340,7 +3340,23 @@ window.acceptPresentation = async function() {
 
     // Étape 2: Préparer la signature
     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Signature...';
-    const previewCanvas = document.getElementById('signaturePreviewCanvas');
+
+    // Chercher le canvas de signature dans l'iframe d'abord, puis dans le parent
+    let previewCanvas = document.getElementById('signaturePreviewCanvas');
+    if (!previewCanvas && window.parent && window.parent.document) {
+      previewCanvas = window.parent.document.getElementById('signaturePreviewCanvas');
+      console.log('[acceptPresentation] Canvas signature trouvé dans le parent');
+    }
+
+    if (!previewCanvas) {
+      console.error('[acceptPresentation] ERREUR - Canvas signature non trouvé!');
+      alert('Erreur: Signature non trouvée. Veuillez réessayer.');
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+      return;
+    }
+
+    console.log('[acceptPresentation] Canvas signature trouvé:', previewCanvas);
     const signatureDataUrl = previewCanvas.toDataURL('image/png');
 
     // Étape 3: Envoyer avec signature (va dans ventes_acceptees)

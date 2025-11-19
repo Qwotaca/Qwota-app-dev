@@ -106,7 +106,7 @@
                 </div>
                 <div>
                   <h4 class="text-sm font-semibold" style="color: var(--text-light);">Connexion</h4>
-                  <p class="text-xs" style="color: var(--text-gray);">Gmail connecté</p>
+                  <p class="text-xs" style="color: var(--text-gray);" id="connection-status-text">Gmail, Agenda, Monday</p>
                 </div>
               </div>
               <div class="step-check" data-step="connection">
@@ -114,9 +114,9 @@
               </div>
             </div>
             <div class="h-1.5 rounded-full overflow-hidden" style="background: rgba(59, 130, 246, 0.2);">
-              <div class="h-full rounded-full transition-all duration-500" style="width: 100%; background: #22c55e;"></div>
+              <div id="connection-progress-bar" class="h-full rounded-full transition-all duration-500" style="width: 0%; background: #22c55e;"></div>
             </div>
-            <p class="text-xs font-semibold mt-2 text-green-500">100%</p>
+            <p class="text-xs font-semibold mt-2 text-green-500" id="connection-progress-percent">0%</p>
           </div>
 
           <!-- Étape 2: Grade -->
@@ -3929,8 +3929,70 @@ async function updateProfileProgress() {
 
     console.log('[PROGRESS] Données chargées:', { data, files });
 
-    // Étape 1: Connexion (toujours 100%)
-    const connectionProgress = 100;
+    // Étape 1: Connexion (Gmail, Agenda, Monday = 33.33% chacun)
+    let connectionProgress = 0;
+    let connectedServices = [];
+
+    // Vérifier Gmail
+    const gmailConnected = data.email_connected || false;
+    if (gmailConnected) {
+      connectionProgress += 33.33;
+      connectedServices.push('Gmail');
+    }
+
+    // Vérifier Google Agenda
+    const agendaConnected = data.calendar_connected || false;
+    if (agendaConnected) {
+      connectionProgress += 33.33;
+      connectedServices.push('Agenda');
+    }
+
+    // Vérifier Monday.com
+    try {
+      const mondayResponse = await fetch(`/api/monday/get-config/${window.username}`);
+      if (mondayResponse.ok) {
+        const mondayData = await mondayResponse.json();
+        if (mondayData.connected) {
+          connectionProgress += 33.34;
+          connectedServices.push('Monday');
+        }
+      }
+    } catch (error) {
+      console.log('[PROGRESS] Monday.com non connecté');
+    }
+
+    // Mettre à jour le texte de statut de connexion
+    const connectionStatusText = document.getElementById('connection-status-text');
+    if (connectionStatusText) {
+      if (connectedServices.length === 0) {
+        connectionStatusText.textContent = 'Aucun service connecté';
+      } else if (connectedServices.length === 3) {
+        connectionStatusText.textContent = 'Tous les services connectés';
+      } else {
+        connectionStatusText.textContent = `${connectedServices.join(', ')} connecté${connectedServices.length > 1 ? 's' : ''}`;
+      }
+    }
+
+    // Mettre à jour la barre de progression de connexion
+    const connectionProgressBar = document.getElementById('connection-progress-bar');
+    const connectionProgressPercent = document.getElementById('connection-progress-percent');
+    if (connectionProgressBar) {
+      connectionProgressBar.style.width = `${connectionProgress}%`;
+    }
+    if (connectionProgressPercent) {
+      connectionProgressPercent.textContent = `${Math.round(connectionProgress)}%`;
+      // Changer la couleur selon le pourcentage
+      if (connectionProgress === 100) {
+        connectionProgressPercent.classList.remove('text-yellow-500', 'text-red-500');
+        connectionProgressPercent.classList.add('text-green-500');
+      } else if (connectionProgress > 0) {
+        connectionProgressPercent.classList.remove('text-green-500', 'text-red-500');
+        connectionProgressPercent.classList.add('text-yellow-500');
+      } else {
+        connectionProgressPercent.classList.remove('text-green-500', 'text-yellow-500');
+        connectionProgressPercent.classList.add('text-red-500');
+      }
+    }
 
     // Étape 2: Grade (100% si défini, 0% sinon)
     const gradeProgress = data.grade ? 100 : 0;
@@ -4272,6 +4334,7 @@ async function saveMondayConfig() {
     if (response.ok && data.success) {
       showToast('Configuration Monday.com sauvegardée avec succès', 'success');
       updateMondayUI(true, data.board_name);
+      updateProfileProgress(); // Mettre à jour la progression du profil
     } else {
       showToast(data.error || 'Erreur lors de la sauvegarde', 'error');
     }
@@ -4301,6 +4364,7 @@ async function disconnectMonday() {
       document.getElementById('monday-board-id').value = '';
       updateMondayUI(false);
       showToast('Compte Monday.com déconnecté', 'success');
+      updateProfileProgress(); // Mettre à jour la progression du profil
     } else {
       showToast('Erreur lors de la déconnexion', 'error');
     }

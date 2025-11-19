@@ -3403,13 +3403,36 @@ def incrementer_total_signees(username: str):
 @app.get("/api/chiffre-affaires/{username}")
 def get_chiffre_affaires_api(username: str):
     try:
-        path = f"{base_cloud}/chiffre_affaires/{username}.json"
-        if not os.path.exists(path):
-            # Pas de total stocké, retourner 0
-            return {"total": "0,00 $"}
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        total = data.get("total", 0.0)
+        total = 0.0
+
+        # 1. Additionner les prix des ventes acceptées
+        acceptees_path = f"{base_cloud}/ventes_acceptees/{username}/ventes.json"
+        if os.path.exists(acceptees_path):
+            with open(acceptees_path, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if content:
+                    ventes_acceptees = json.loads(content)
+                    for vente in ventes_acceptees:
+                        prix_str = vente.get("prix", "0").replace(" ", "").replace(",", ".")
+                        try:
+                            total += float(prix_str)
+                        except:
+                            continue
+
+        # 2. Additionner les prix des ventes produit
+        produit_path = f"{base_cloud}/ventes_produit/{username}/ventes.json"
+        if os.path.exists(produit_path):
+            with open(produit_path, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if content:
+                    ventes_produit = json.loads(content)
+                    for vente in ventes_produit:
+                        prix_str = vente.get("prix", "0").replace(" ", "").replace(",", ".")
+                        try:
+                            total += float(prix_str)
+                        except:
+                            continue
+
         # Formater le total au format français
         parts = f"{total:,.2f}".split(".")
         partie_entiere = parts[0].replace(",", " ")

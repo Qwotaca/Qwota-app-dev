@@ -1329,8 +1329,24 @@
       });
   }
 
-  function saveTeams(teams) {
+  async function saveTeams(teams) {
+    // Sauvegarder dans localStorage
     localStorage.setItem(teamsKey, JSON.stringify(teams));
+
+    // Sauvegarder aussi sur le backend
+    try {
+      const response = await fetch(`/save-equipes/${window.username}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(teams)
+      });
+
+      if (!response.ok) {
+        console.error('[TEAMS] Erreur sauvegarde backend:', response.status);
+      }
+    } catch (error) {
+      console.error('[TEAMS] Erreur sauvegarde backend:', error);
+    }
   }
 
   // Variable globale pour stocker les employés actifs

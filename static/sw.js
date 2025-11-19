@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qwota-v136';
+const CACHE_NAME = 'qwota-v137';
 const urlsToCache = [
   '/',
   // '/frontend/login.html', // JAMAIS CACHER - doit toujours être frais

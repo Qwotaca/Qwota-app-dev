@@ -175,21 +175,33 @@
   </div>
 
   <script>
-    let progress = 0;
+    const { ipcRenderer } = require('electron');
     const progressBar = document.getElementById('progressBar');
 
-    // Simuler une progression de chargement - atteint 100% en ~3 secondes
-    const interval = setInterval(() => {
-      progress += Math.random() * 10 + 5;
-      if (progress >= 100) {
-        progress = 100;
-        progressBar.style.width = progress + '%';
-        clearInterval(interval);
-        return;
+    // Animation de démarrage
+    let initialProgress = 0;
+    const startupAnimation = setInterval(() => {
+      initialProgress += 2;
+      if (initialProgress >= 15) {
+        clearInterval(startupAnimation);
+      } else {
+        progressBar.style.width = initialProgress + '%';
       }
+    }, 100);
 
-      progressBar.style.width = progress + '%';
-    }, 200);
+    // Écouter les mises à jour de progression depuis le processus principal
+    ipcRenderer.on('loading-progress', (event, data) => {
+      const { loaded, total } = data;
+      const percentage = Math.round((loaded / total) * 100);
+      console.log(`[SPLASH] Progression: ${percentage}% (${loaded}/${total})`);
+      progressBar.style.width = percentage + '%';
+    });
+
+    // Écouter la fin du chargement
+    ipcRenderer.on('loading-complete', () => {
+      console.log('[SPLASH] Chargement terminé - 100%');
+      progressBar.style.width = '100%';
+    });
   </script>
 </body>
 </html>

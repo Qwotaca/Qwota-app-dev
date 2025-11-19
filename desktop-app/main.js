@@ -23,6 +23,101 @@ if (fs.existsSync(CONFIG_FILE)) {
 let mainWindow;
 let splashWindow;
 let oauthView;
+let pageCache = {}; // Cache pour les pages préchargées
+
+// Fonction pour précharger toutes les pages principales en arrière-plan
+function preloadAllPages() {
+  const baseUrl = serverConfig.url.replace('/login', '');
+
+  const pagesToPreload = [
+    '/dashboard',
+    '/calcul',
+    '/soumissions',
+    '/gqp',
+    '/travaux',
+    '/facture',
+    '/rpo',
+    '/centralevue',
+    '/gamification',
+    '/gestionemployes',
+    '/facturationqe',
+    '/avis',
+    '/centrale',
+    '/ventes'
+  ];
+
+  console.log(`[ELECTRON] 📋 Préchargement de ${pagesToPreload.length} pages en arrière-plan...`);
+
+  let loadedCount = 0;
+  const totalPages = pagesToPreload.length;
+
+  // Envoyer la progression initiale au splash
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.webContents.send('loading-progress', { loaded: 0, total: totalPages });
+  }
+
+  pagesToPreload.forEach((pagePath, index) => {
+    const view = new BrowserView({
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        webSecurity: true,
+        session: mainWindow.webContents.session // Partager la même session pour le cache
+      }
+    });
+
+    // Positionner hors écran (invisible mais chargé)
+    view.setBounds({ x: 0, y: 0, width: 1, height: 1 });
+
+    // Ajouter à la fenêtre (mais invisible)
+    mainWindow.addBrowserView(view);
+
+    // Charger la page
+    const fullUrl = baseUrl + pagePath;
+    view.webContents.loadURL(fullUrl);
+
+    // Quand la page est chargée
+    view.webContents.on('did-finish-load', () => {
+      loadedCount++;
+      console.log(`[ELECTRON] ✅ Page préchargée (${loadedCount}/${totalPages}): ${pagePath}`);
+
+      // Envoyer la progression au splash
+      if (splashWindow && !splashWindow.isDestroyed()) {
+        splashWindow.webContents.send('loading-progress', { loaded: loadedCount, total: totalPages });
+      }
+
+      // Quand toutes les pages sont chargées
+      if (loadedCount === totalPages) {
+        console.log('[ELECTRON] 🎉 TOUTES LES PAGES SONT PRÉCHARGÉES!');
+
+        // Envoyer l'événement de fin au splash
+        if (splashWindow && !splashWindow.isDestroyed()) {
+          splashWindow.webContents.send('loading-complete');
+        }
+
+        // Fermer le splash et montrer la fenêtre principale
+        setTimeout(() => {
+          if (splashWindow && !splashWindow.isDestroyed()) {
+            splashWindow.close();
+          }
+          mainWindow.show();
+
+          // Les retirer de l'affichage mais les garder en cache
+          const views = mainWindow.getBrowserViews();
+          views.forEach(v => {
+            if (v !== oauthView) { // Ne pas toucher à l'OAuth view
+              mainWindow.removeBrowserView(v);
+            }
+          });
+          console.log('[ELECTRON] 🗑️ BrowserViews temporaires retirées (cache conservé)');
+        }, 1000);
+      }
+    });
+
+    // Stocker dans le cache
+    pageCache[pagePath] = view;
+  });
+}
 
 function createSplashScreen() {
   // Créer la fenêtre splash (popup stylé)
@@ -37,8 +132,8 @@ function createSplashScreen() {
     movable: false,
     skipTaskbar: true,
     webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true
+      nodeIntegration: true, // Permettre require('electron') dans le splash
+      contextIsolation: false // Désactiver l'isolation pour le splash (il ne charge pas de contenu externe)
     }
   });
 
@@ -49,7 +144,7 @@ function createSplashScreen() {
 }
 
 function createWindow() {
-  // Créer la fenêtre du navigateur (cachée au départ)
+  // Créer la fenêtre du navigateur
   mainWindow = new BrowserWindow({
     width: 1920,
     height: 1080,
@@ -64,7 +159,8 @@ function createWindow() {
       contextIsolation: true,
       enableRemoteModule: false,
       webSecurity: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      cache: true // Activer le cache HTTP
     },
     icon: path.join(__dirname, 'icon.ico'),
     title: 'Qwota',

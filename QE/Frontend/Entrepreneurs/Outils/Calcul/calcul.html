@@ -17657,7 +17657,7 @@ function initializeApp() {
             <div class="text-xs text-gray-500">${projet.telephone || ''}</div>
           </td>
           <td class="border: 1px solid var(--border-dark); px-4 py-3 text-sm text-white">
-            ${new Date(projet.dateCreation).toLocaleDateString('fr-FR')}
+            ${projet.dateCreation ? new Date(projet.dateCreation).toLocaleDateString('fr-FR') : 'N/A'}
           </td>
           <td class="border: 1px solid var(--border-dark); px-4 py-3 text-sm font-medium text-white">
             ${formatCurrency(projet.total || 0)}
@@ -17683,7 +17683,7 @@ function initializeApp() {
 
       // Vue mobile (cartes)
       mobileList.innerHTML = projets.map(projet => `
-        <div class="project-mobile-card" onclick="openProjectDetails(${projet.id}, '${(projet.client || 'Client').replace(/'/g, "\\'")}', '${projet.telephone || ''}', ${projet.total || 0}, '${new Date(projet.dateCreation).toLocaleDateString('fr-FR')}')">
+        <div class="project-mobile-card" onclick="openProjectDetails(${projet.id}, '${(projet.client || 'Client').replace(/'/g, "\\'")}', '${projet.telephone || ''}', ${projet.total || 0}, '${projet.dateCreation ? new Date(projet.dateCreation).toLocaleDateString('fr-FR') : 'N/A'}')">
           <div class="project-card-header">
             <div style="flex: 1;">
               <div class="project-card-title">${projet.client || 'Client'}</div>
@@ -17693,7 +17693,7 @@ function initializeApp() {
           </div>
           <div class="project-card-info">
             <div class="project-card-date">
-              <i class="fas fa-calendar mr-1"></i>${new Date(projet.dateCreation).toLocaleDateString('fr-FR')}
+              <i class="fas fa-calendar mr-1"></i>${projet.dateCreation ? new Date(projet.dateCreation).toLocaleDateString('fr-FR') : 'N/A'}
             </div>
             <div class="project-card-actions">
               <button class="project-action-btn edit-btn" onclick="event.stopPropagation(); chargerProjet(${projet.id})">
@@ -17785,9 +17785,11 @@ function initializeApp() {
       
       // Projet le plus récent
       if (projets.length > 0) {
-        const projetRecent = projets.reduce((recent, projet) => 
-          new Date(projet.dateCreation) > new Date(recent.dateCreation) ? projet : recent
-        );
+        const projetRecent = projets.reduce((recent, projet) => {
+          const projetDate = projet.dateCreation ? new Date(projet.dateCreation) : new Date(0);
+          const recentDate = recent.dateCreation ? new Date(recent.dateCreation) : new Date(0);
+          return projetDate > recentDate ? projet : recent;
+        });
         if (document.getElementById('projetRecent')) {
           document.getElementById('projetRecent').textContent = projetRecent.client;
         }

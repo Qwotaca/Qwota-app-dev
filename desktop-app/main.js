@@ -5,7 +5,7 @@ const fs = require('fs');
 // Configuration du serveur
 const CONFIG_FILE = path.join(__dirname, 'server-config.json');
 let serverConfig = {
-  url: 'https://qwota.ca/login'
+  url: 'https://qwota.ca'
 };
 
 // Charger la configuration si elle existe
@@ -117,8 +117,12 @@ function createWindow() {
   });
 
   // Gérer les erreurs de chargement
-  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    console.error('Erreur de chargement:', errorDescription);
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error('=== ERREUR DE CHARGEMENT ===');
+    console.error('URL:', validatedURL);
+    console.error('Code d\'erreur:', errorCode);
+    console.error('Description:', errorDescription);
+    console.error('==========================');
 
     // Fermer le splash en cas d'erreur
     if (splashWindow && !splashWindow.isDestroyed()) {
@@ -164,6 +168,14 @@ function createWindow() {
               margin: 20px 0;
               font-family: monospace;
             }
+            .error-details {
+              background: rgba(239, 68, 68, 0.1);
+              padding: 15px;
+              border-radius: 5px;
+              margin: 20px 0;
+              font-family: monospace;
+              font-size: 0.9em;
+            }
             .instructions {
               margin-top: 30px;
               padding: 20px;
@@ -186,6 +198,11 @@ function createWindow() {
             <p>L'application ne peut pas se connecter au serveur Qwota.</p>
             <div class="server-url">
               URL du serveur: ${serverConfig.url}
+            </div>
+            <div class="error-details">
+              <strong>Détails de l'erreur:</strong><br>
+              Code: ${errorCode}<br>
+              Description: ${errorDescription}
             </div>
             <div class="instructions">
               <h3>Pour résoudre ce problème:</h3>

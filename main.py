@@ -15,7 +15,7 @@ from collections import defaultdict
 # Database imports
 from database import (
     init_database, init_support_user, get_user, authenticate_user,
-    list_all_users, get_user_stats,
+    list_all_users, get_user_stats, create_user,
     get_guide_progress, init_guide_progress,
     update_video_progress, complete_guide,
     mark_onboarding_completed, mark_videos_completed, check_user_access,
@@ -6300,6 +6300,45 @@ class EmployeModifier(BaseModel):
 class TerminerEmploye(BaseModel):
     motif: str
     justificatif: Optional[str] = ""
+
+class CreateUserData(BaseModel):
+    username: str
+    password: str
+    role: str
+    email: Optional[str] = None
+
+# Route pour créer un nouvel utilisateur (admin uniquement)
+@app.post("/api/admin/users/create")
+async def create_new_user(user_data: CreateUserData):
+    """Crée un nouvel utilisateur (accessible aux rôles admin/direction)"""
+    try:
+        success = create_user(
+            username=user_data.username,
+            password=user_data.password,
+            role=user_data.role,
+            email=user_data.email
+        )
+
+        if success:
+            return {
+                "success": True,
+                "message": f"Utilisateur '{user_data.username}' créé avec succès",
+                "user": {
+                    "username": user_data.username,
+                    "role": user_data.role,
+                    "email": user_data.email
+                }
+            }
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Impossible de créer l'utilisateur '{user_data.username}'. Il existe peut-être déjà."
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERREUR] Création utilisateur via API: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Récupérer tous les projets d'un utilisateur

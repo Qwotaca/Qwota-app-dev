@@ -127,6 +127,13 @@
           </div>
         </div>
         <div class="box-body">
+          <!-- Champ de recherche -->
+          <div class="mb-4">
+            <div class="relative">
+              <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: var(--text-gray);"></i>
+              <input type="text" id="searchPotentiel" placeholder="Rechercher par nom, téléphone, adresse, prix..." class="w-full pl-10 pr-4 py-2 rounded-lg" style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-dark); color: var(--text-light);">
+            </div>
+          </div>
           <div class="table-container">
             <table class="modern-table" style="table-layout: fixed; width: 100%;">
               <thead>
@@ -162,6 +169,13 @@
           </div>
         </div>
         <div class="box-body">
+          <!-- Champ de recherche -->
+          <div class="mb-4">
+            <div class="relative">
+              <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: var(--text-gray);"></i>
+              <input type="text" id="searchAttente" placeholder="Rechercher par nom, téléphone, adresse, prix..." class="w-full pl-10 pr-4 py-2 rounded-lg" style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-dark); color: var(--text-light);">
+            </div>
+          </div>
           <div class="table-container">
             <table class="modern-table" style="table-layout: fixed; width: 100%;">
               <thead>
@@ -197,6 +211,13 @@
           </div>
         </div>
         <div class="box-body">
+          <!-- Champ de recherche -->
+          <div class="mb-4">
+            <div class="relative">
+              <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: var(--text-gray);"></i>
+              <input type="text" id="searchAccepte" placeholder="Rechercher par nom, téléphone, adresse, prix..." class="w-full pl-10 pr-4 py-2 rounded-lg" style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-dark); color: var(--text-light);">
+            </div>
+          </div>
           <div class="table-container">
             <table class="modern-table" style="table-layout: fixed; width: 100%;">
               <thead>
@@ -232,6 +253,13 @@
           </div>
         </div>
         <div class="box-body">
+          <!-- Champ de recherche -->
+          <div class="mb-4">
+            <div class="relative">
+              <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: var(--text-gray);"></i>
+              <input type="text" id="searchProduit" placeholder="Rechercher par nom, téléphone, adresse, prix..." class="w-full pl-10 pr-4 py-2 rounded-lg" style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-dark); color: var(--text-light);">
+            </div>
+          </div>
           <div class="table-container">
             <table class="modern-table" style="table-layout: fixed; width: 100%;">
               <thead>
@@ -902,7 +930,7 @@
       const paiementStatut = client.statut_paiement || 'En attente';
 
       const rowHtml = `
-        <tr style="cursor: pointer;" onclick="showClientInfo('${clientId}')" onmouseover="this.style.background='rgba(245, 158, 11, 0.1)'" onmouseout="this.style.background=''">
+        <tr style="cursor: pointer;" onclick="showClientInfo('${clientId}')">
           <td style="padding: 1rem;">${nomComplet}</td>
           <td style="padding: 1rem;">${client.telephone || '-'}</td>
           <td style="padding: 1rem;">${client.adresse || '-'}</td>
@@ -955,7 +983,7 @@
       const paiementStatut = client.statut_paiement || 'En attente';
 
       const rowHtml = `
-        <tr style="cursor: pointer;" onclick="showClientInfo('${clientId}')" onmouseover="this.style.background='rgba(16, 185, 129, 0.1)'" onmouseout="this.style.background=''">
+        <tr style="cursor: pointer;" onclick="showClientInfo('${clientId}')">
           <td style="padding: 1rem;">${nomComplet}</td>
           <td style="padding: 1rem;">${client.telephone || '-'}</td>
           <td style="padding: 1rem;">${client.adresse || '-'}</td>
@@ -3108,6 +3136,51 @@
       input.value = fullAddress.trim();
     });
   };
+
+  // Fonctions de recherche pour les tables
+  function setupTableSearch(searchInputId, tableId) {
+    const searchInput = document.getElementById(searchInputId);
+    const tbody = document.getElementById(tableId);
+
+    if (!searchInput || !tbody) return;
+
+    searchInput.addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase().trim();
+      const rows = tbody.getElementsByTagName('tr');
+
+      Array.from(rows).forEach(row => {
+        // Ignorer les lignes "empty-state"
+        if (row.querySelector('.empty-state')) {
+          return;
+        }
+
+        const cells = row.getElementsByTagName('td');
+        let found = false;
+
+        // Rechercher dans toutes les cellules (nom, téléphone, adresse, prix, paiement)
+        Array.from(cells).forEach(cell => {
+          const text = cell.textContent.toLowerCase();
+          if (text.includes(searchTerm)) {
+            found = true;
+          }
+        });
+
+        // Afficher ou cacher la ligne selon le résultat
+        row.style.display = found ? '' : 'none';
+      });
+    });
+  }
+
+  // Initialiser la recherche pour toutes les tables après le chargement de la page
+  document.addEventListener('DOMContentLoaded', function() {
+    // Attendre un peu pour s'assurer que les tables sont chargées
+    setTimeout(function() {
+      setupTableSearch('searchPotentiel', 'potentiel-tbody');
+      setupTableSearch('searchAttente', 'attente-tbody');
+      setupTableSearch('searchAccepte', 'accepte-tbody');
+      setupTableSearch('searchProduit', 'produit-tbody');
+    }, 500);
+  });
 </script>
 
   <!-- Modaux pour gestion sections -->

@@ -2219,7 +2219,10 @@ async function saveTeamsToBackend() {
 
   function disconnect() {
     fetch(`/deconnecter-agenda?username=${username}`, { method: "DELETE" })
-      .then(() => checkConnection());
+      .then(() => {
+        checkConnection();
+        updateProfileProgress(); // Mettre à jour la progression du profil
+      });
   }
 
   let lastSelectedId = localStorage.getItem(`selected-agenda-${window.username}`) || null;
@@ -2389,6 +2392,7 @@ async function saveTeamsToBackend() {
     fetch(`/deconnecter-email?username=${username}`, { method: "DELETE" })
       .then(() => {
         checkEmailConnection();
+        updateProfileProgress(); // Mettre à jour la progression du profil
       });
   }
 
@@ -2403,9 +2407,11 @@ async function saveTeamsToBackend() {
   window.addEventListener("message", (event) => {
     if (event.data === "gmail_connected") {
       checkEmailConnection();
+      setTimeout(() => updateProfileProgress(), 500); // Mettre à jour après que l'UI soit mise à jour
     }
     if (event.data === "agenda_connected") {
       checkConnection();
+      setTimeout(() => updateProfileProgress(), 500); // Mettre à jour après que l'UI soit mise à jour
     }
   });
 
@@ -3933,15 +3939,17 @@ async function updateProfileProgress() {
     let connectionProgress = 0;
     let connectedServices = [];
 
-    // Vérifier Gmail
-    const gmailConnected = data.email_connected || false;
+    // Vérifier Gmail - basé sur l'état de l'UI
+    const gmailBox = document.getElementById('gmail-box');
+    const gmailConnected = gmailBox && !gmailBox.classList.contains('hidden');
     if (gmailConnected) {
       connectionProgress += 33.33;
       connectedServices.push('Gmail');
     }
 
-    // Vérifier Google Agenda
-    const agendaConnected = data.calendar_connected || false;
+    // Vérifier Google Agenda - basé sur l'état de l'UI
+    const agendaBox = document.getElementById('calendar-box');
+    const agendaConnected = agendaBox && !agendaBox.classList.contains('hidden');
     if (agendaConnected) {
       connectionProgress += 33.33;
       connectedServices.push('Agenda');

@@ -368,6 +368,126 @@
         </div>
       </div>
 
+      <!-- Connexion Monday.com - Nouvelle section -->
+      <div class="mb-8 mt-12">
+        <h1 class="text-xl md:text-2xl font-bold mb-2" style="color: var(--text-light);">Intégration Monday.com</h1>
+        <p class="text-sm md:text-base" style="color: var(--text-gray);">Synchronisez vos clients et ventes avec votre board Monday.com personnel.</p>
+      </div>
+
+      <div class="card p-6">
+        <!-- Header avec logo et statut -->
+        <div class="flex flex-col md:flex-row md:items-start md:justify-between mb-6 gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #FF3D57 0%, #FC4C4E 100%);">
+              <i class="fas fa-briefcase text-white text-xl"></i>
+            </div>
+            <div>
+              <h2 class="text-lg font-semibold" style="color: var(--text-light);">Monday.com</h2>
+              <p class="text-sm" style="color: var(--text-gray);">Gestion de projets et clients</p>
+            </div>
+          </div>
+          <!-- Étiquette état -->
+          <div class="flex md:justify-end">
+            <div id="monday-status-disconnected" class="inline-block bg-yellow-500 text-yellow-900 px-3 py-1 rounded-full text-xs font-medium">
+              Non connecté
+            </div>
+            <div id="monday-status-connected" class="hidden inline-block bg-green-500 text-green-900 px-3 py-1 rounded-full text-xs font-medium">
+              Connecté
+            </div>
+          </div>
+        </div>
+
+        <!-- Formulaire de configuration -->
+        <div id="monday-config-form" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">
+              <i class="fas fa-key mr-2"></i>Clé API Monday.com
+            </label>
+            <input
+              type="password"
+              id="monday-api-key"
+              placeholder="Entrez votre clé API Monday.com"
+              class="w-full px-4 py-3 rounded-lg text-sm transition-all"
+              style="background: var(--bg-input); border: 1px solid var(--border-dark); color: var(--text-light);"
+            />
+            <p class="text-xs mt-1" style="color: var(--text-gray);">
+              <i class="fas fa-info-circle mr-1"></i>
+              Trouvez votre clé API dans Monday.com → Avatar → Developers → API
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">
+              <i class="fas fa-table mr-2"></i>ID du Board
+            </label>
+            <input
+              type="text"
+              id="monday-board-id"
+              placeholder="Ex: 1234567890"
+              class="w-full px-4 py-3 rounded-lg text-sm transition-all"
+              style="background: var(--bg-input); border: 1px solid var(--border-dark); color: var(--text-light);"
+            />
+            <p class="text-xs mt-1" style="color: var(--text-gray);">
+              <i class="fas fa-info-circle mr-1"></i>
+              L'ID du board se trouve dans l'URL: monday.com/boards/<strong>1234567890</strong>
+            </p>
+          </div>
+
+          <!-- Info sur les données synchronisées -->
+          <div class="p-4 rounded-lg" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
+            <h4 class="text-sm font-semibold mb-2" style="color: var(--text-light);">
+              <i class="fas fa-sync-alt mr-2"></i>Données synchronisées
+            </h4>
+            <ul class="text-xs space-y-1" style="color: var(--text-gray);">
+              <li><i class="fas fa-check text-green-500 mr-2"></i>Clients et prospects</li>
+              <li><i class="fas fa-check text-green-500 mr-2"></i>Ventes acceptées et en production</li>
+              <li><i class="fas fa-check text-green-500 mr-2"></i>Statuts et informations de contact</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Info connecté -->
+        <div id="monday-connected-info" class="hidden">
+          <div class="p-4 rounded-lg mb-4" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);">
+            <p class="text-sm" style="color: var(--text-light);">
+              <i class="fas fa-check-circle text-green-500 mr-2"></i>
+              Monday.com est connecté et synchronisé
+            </p>
+            <p class="text-xs mt-1" style="color: var(--text-gray);">
+              Board ID: <span id="monday-connected-board-id" class="font-mono">-</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- Boutons actions -->
+        <div class="flex gap-3 mt-6">
+          <button
+            id="monday-test-btn"
+            onclick="testMondayConnection()"
+            class="btn-secondary text-sm px-4 py-2 flex items-center gap-2"
+          >
+            <i class="fas fa-plug"></i>
+            Tester la connexion
+          </button>
+          <button
+            id="monday-save-btn"
+            onclick="saveMondayConfig()"
+            class="btn-primary text-sm px-4 py-2 flex items-center gap-2"
+          >
+            <i class="fas fa-save"></i>
+            Sauvegarder
+          </button>
+          <button
+            id="monday-disconnect-btn"
+            onclick="disconnectMonday()"
+            class="hidden btn-danger text-sm px-4 py-2 flex items-center gap-2"
+          >
+            <i class="fas fa-unlink"></i>
+            Déconnecter
+          </button>
+        </div>
+      </div>
+
       <!-- Section Title: Gestion équipe & Information -->
       <div class="mb-8 mt-12">
         <h1 class="text-xl md:text-2xl font-bold mb-2" style="color: var(--text-light);">Gestion équipe & Information</h1>
@@ -4040,7 +4160,184 @@ async function selectGrade(grade) {
 document.addEventListener('DOMContentLoaded', () => {
   loadGrade();
   updateProfileProgress();
+  loadMondayConfig();
 });
+
+// ========================================
+// MONDAY.COM INTEGRATION
+// ========================================
+
+// Charger la configuration Monday.com existante
+async function loadMondayConfig() {
+  try {
+    const response = await fetch(`/api/monday/get-config/${username}`);
+    if (!response.ok) {
+      // Pas de config existante, afficher comme déconnecté
+      updateMondayUI(false);
+      return;
+    }
+
+    const data = await response.json();
+    if (data.connected) {
+      // Configuration existante trouvée
+      document.getElementById('monday-api-key').value = data.api_key || '';
+      document.getElementById('monday-board-id').value = data.board_id || '';
+      updateMondayUI(true, data.board_name);
+    } else {
+      updateMondayUI(false);
+    }
+  } catch (error) {
+    console.error('[MONDAY] Erreur lors du chargement de la config:', error);
+    updateMondayUI(false);
+  }
+}
+
+// Tester la connexion Monday.com
+async function testMondayConnection() {
+  const apiKey = document.getElementById('monday-api-key').value.trim();
+  const boardId = document.getElementById('monday-board-id').value.trim();
+
+  if (!apiKey || !boardId) {
+    showToast('Veuillez remplir tous les champs', 'error');
+    return;
+  }
+
+  // Afficher loading
+  const testBtn = event.target;
+  const originalText = testBtn.innerHTML;
+  testBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Test en cours...';
+  testBtn.disabled = true;
+
+  try {
+    const response = await fetch('/api/monday/test-connection', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        api_key: apiKey,
+        board_id: boardId
+      })
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      showToast(`Connexion réussie ! Board: ${data.board_name}`, 'success');
+    } else {
+      showToast(data.error || 'Erreur lors du test de connexion', 'error');
+    }
+  } catch (error) {
+    console.error('[MONDAY] Erreur lors du test:', error);
+    showToast('Erreur lors du test de connexion', 'error');
+  } finally {
+    testBtn.innerHTML = originalText;
+    testBtn.disabled = false;
+  }
+}
+
+// Sauvegarder la configuration Monday.com
+async function saveMondayConfig() {
+  const apiKey = document.getElementById('monday-api-key').value.trim();
+  const boardId = document.getElementById('monday-board-id').value.trim();
+
+  if (!apiKey || !boardId) {
+    showToast('Veuillez remplir tous les champs', 'error');
+    return;
+  }
+
+  // Afficher loading
+  const saveBtn = event.target;
+  const originalText = saveBtn.innerHTML;
+  saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sauvegarde...';
+  saveBtn.disabled = true;
+
+  try {
+    const response = await fetch('/api/monday/save-config', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: username,
+        api_key: apiKey,
+        board_id: boardId
+      })
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      showToast('Configuration Monday.com sauvegardée avec succès', 'success');
+      updateMondayUI(true, data.board_name);
+    } else {
+      showToast(data.error || 'Erreur lors de la sauvegarde', 'error');
+    }
+  } catch (error) {
+    console.error('[MONDAY] Erreur lors de la sauvegarde:', error);
+    showToast('Erreur lors de la sauvegarde', 'error');
+  } finally {
+    saveBtn.innerHTML = originalText;
+    saveBtn.disabled = false;
+  }
+}
+
+// Déconnecter Monday.com
+async function disconnectMonday() {
+  if (!confirm('Voulez-vous vraiment déconnecter votre compte Monday.com ?')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/monday/disconnect/${username}`, {
+      method: 'DELETE'
+    });
+
+    if (response.ok) {
+      // Réinitialiser les champs
+      document.getElementById('monday-api-key').value = '';
+      document.getElementById('monday-board-id').value = '';
+      updateMondayUI(false);
+      showToast('Compte Monday.com déconnecté', 'success');
+    } else {
+      showToast('Erreur lors de la déconnexion', 'error');
+    }
+  } catch (error) {
+    console.error('[MONDAY] Erreur lors de la déconnexion:', error);
+    showToast('Erreur lors de la déconnexion', 'error');
+  }
+}
+
+// Mettre à jour l'interface utilisateur selon l'état de connexion
+function updateMondayUI(isConnected, boardName = '') {
+  const statusConnected = document.getElementById('monday-status-connected');
+  const statusDisconnected = document.getElementById('monday-status-disconnected');
+  const configForm = document.getElementById('monday-config-form');
+  const connectedInfo = document.getElementById('monday-connected-info');
+
+  if (isConnected) {
+    // Afficher comme connecté
+    statusConnected.classList.remove('hidden');
+    statusDisconnected.classList.add('hidden');
+    configForm.classList.add('hidden');
+    connectedInfo.classList.remove('hidden');
+
+    // Mettre à jour le nom du board si fourni
+    if (boardName) {
+      const boardNameSpan = document.getElementById('monday-board-name');
+      if (boardNameSpan) {
+        boardNameSpan.textContent = boardName;
+      }
+    }
+  } else {
+    // Afficher comme déconnecté
+    statusConnected.classList.add('hidden');
+    statusDisconnected.classList.remove('hidden');
+    configForm.classList.remove('hidden');
+    connectedInfo.classList.add('hidden');
+  }
+}
+
 </script>
 
 <!-- Modal OAuth Google (Gmail & Calendar) -->

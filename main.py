@@ -2422,6 +2422,193 @@ def get_blacklist_clients(username: str):
             detail=f"Erreur lors de la récupération de la blacklist: {str(e)}"
         )
 
+# ========================================
+# MONDAY.COM INTEGRATION ENDPOINTS
+# ========================================
+
+@app.post("/api/monday/save-config")
+async def save_monday_config(request: Request):
+    """
+    Sauvegarde la configuration Monday.com d'un entrepreneur
+    """
+    try:
+        data = await request.json()
+        username = data.get('username')
+        api_key = data.get('api_key')
+        board_id = data.get('board_id')
+
+        if not username or not api_key or not board_id:
+            raise HTTPException(status_code=400, detail="Paramètres manquants")
+
+        # Tester d'abord la connexion avec Monday API
+        test_result = await test_monday_connection_internal(api_key, board_id)
+        if not test_result['success']:
+            raise HTTPException(status_code=400, detail=test_result['error'])
+
+        # Créer le dossier de configuration Monday pour cet utilisateur
+        monday_dir = os.path.join(base_cloud, "monday_credentials", username)
+        os.makedirs(monday_dir, exist_ok=True)
+
+        # Créer le fichier de configuration
+        config_file = os.path.join(monday_dir, "monday_config.json")
+        config_data = {
+            "api_key": api_key,
+            "board_id": board_id,
+            "board_name": test_result.get('board_name', ''),
+            "connected_at": datetime.now().isoformat()
+        }
+
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(config_data, f, ensure_ascii=False, indent=2)
+
+        return {
+            "success": True,
+            "board_name": test_result.get('board_name', '')
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Sauvegarde config Monday pour {username}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/monday/get-config/{username}")
+def get_monday_config(username: str):
+    """
+    Récupère la configuration Monday.com d'un entrepreneur
+    """
+    try:
+        config_file = os.path.join(base_cloud, "monday_credentials", username, "monday_config.json")
+
+        if not os.path.exists(config_file):
+            return {"connected": False}
+
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+
+        return {
+            "connected": True,
+            "api_key": config.get('api_key', ''),
+            "board_id": config.get('board_id', ''),
+            "board_name": config.get('board_name', '')
+        }
+
+    except Exception as e:
+        print(f"[ERROR] Récupération config Monday pour {username}: {e}")
+        return {"connected": False}
+
+@app.post("/api/monday/test-connection")
+async def test_monday_connection(request: Request):
+    """
+    Teste la connexion avec l'API Monday.com
+    """
+    try:
+        data = await request.json()
+        api_key = data.get('api_key')
+        board_id = data.get('board_id')
+
+        if not api_key or not board_id:
+            raise HTTPException(status_code=400, detail="API key et Board ID requis")
+
+        result = await test_monday_connection_internal(api_key, board_id)
+
+        if result['success']:
+            return result
+        else:
+            raise HTTPException(status_code=400, detail=result['error'])
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Test connexion Monday: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def test_monday_connection_internal(api_key: str, board_id: str):
+    """
+    Fonction interne pour tester la connexion Monday.com
+    """
+    try:
+        import httpx
+
+        # Query GraphQL pour récupérer les infos du board
+        query = f"""
+        query {{
+            boards (ids: {board_id}) {{
+                id
+                name
+                state
+            }}
+        }}
+        """
+
+        headers = {
+            "Authorization": api_key,
+            "Content-Type": "application/json"
+        }
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://api.monday.com/v2",
+                json={"query": query},
+                headers=headers,
+                timeout=10.0
+            )
+
+            if response.status_code != 200:
+                return {
+                    "success": False,
+                    "error": f"Erreur HTTP {response.status_code}"
+                }
+
+            data = response.json()
+
+            # Vérifier si la réponse contient des erreurs
+            if "errors" in data:
+                return {
+                    "success": False,
+                    "error": "Clé API invalide ou board inaccessible"
+                }
+
+            # Vérifier si le board existe
+            if not data.get("data", {}).get("boards"):
+                return {
+                    "success": False,
+                    "error": "Board ID introuvable"
+                }
+
+            board = data["data"]["boards"][0]
+
+            return {
+                "success": True,
+                "board_name": board.get("name", "Board"),
+                "board_id": board.get("id")
+            }
+
+    except Exception as e:
+        print(f"[ERROR] Test connexion Monday interne: {e}")
+        return {
+            "success": False,
+            "error": f"Erreur de connexion: {str(e)}"
+        }
+
+@app.delete("/api/monday/disconnect/{username}")
+def disconnect_monday(username: str):
+    """
+    Déconnecte Monday.com en supprimant la configuration
+    """
+    try:
+        config_file = os.path.join(base_cloud, "monday_credentials", username, "monday_config.json")
+
+        if os.path.exists(config_file):
+            os.remove(config_file)
+            return {"success": True}
+
+        return {"success": True, "message": "Aucune configuration à supprimer"}
+
+    except Exception as e:
+        print(f"[ERROR] Déconnexion Monday pour {username}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/connect-gmail")
 def connect_gmail(username: str, return_url: bool = False):
     print(f"[DEBUG GMAIL] GMAIL_REDIRECT_URI: {GMAIL_REDIRECT_URI}")

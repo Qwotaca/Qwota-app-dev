@@ -3301,7 +3301,20 @@ window.acceptPresentation = async function() {
     return;
   }
 
-  const btn = document.getElementById('acceptPresentationBtn');
+  // Chercher le bouton dans l'iframe d'abord, puis dans le parent
+  let btn = document.getElementById('acceptPresentationBtn');
+  if (!btn && window.parent && window.parent.document) {
+    btn = window.parent.document.getElementById('acceptPresentationBtn');
+    console.log('[acceptPresentation] Bouton trouvé dans le parent');
+  }
+
+  if (!btn) {
+    console.error('[acceptPresentation] ERREUR - Bouton non trouvé!');
+    alert('Erreur: Bouton non trouvé. Veuillez réessayer.');
+    return;
+  }
+
+  console.log('[acceptPresentation] Bouton trouvé:', btn);
   const originalText = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Création...';

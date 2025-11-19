@@ -3404,42 +3404,66 @@ def incrementer_total_signees(username: str):
 def get_chiffre_affaires_api(username: str):
     try:
         total = 0.0
+        print(f"[CHIFFRE_AFFAIRES] Calcul pour {username}")
+        print(f"[CHIFFRE_AFFAIRES] base_cloud = {base_cloud}")
 
         # 1. Additionner les prix des ventes acceptées
         acceptees_path = f"{base_cloud}/ventes_acceptees/{username}/ventes.json"
+        print(f"[CHIFFRE_AFFAIRES] Chemin acceptées: {acceptees_path}")
+        print(f"[CHIFFRE_AFFAIRES] Fichier existe: {os.path.exists(acceptees_path)}")
+
         if os.path.exists(acceptees_path):
             with open(acceptees_path, "r", encoding="utf-8") as f:
                 content = f.read().strip()
                 if content:
                     ventes_acceptees = json.loads(content)
+                    print(f"[CHIFFRE_AFFAIRES] Nombre de ventes acceptées: {len(ventes_acceptees)}")
                     for vente in ventes_acceptees:
                         prix_str = vente.get("prix", "0").replace(" ", "").replace(",", ".")
+                        prix_str = prix_str.replace("$", "").strip()
+                        print(f"[CHIFFRE_AFFAIRES] Prix acceptée brut: '{vente.get('prix')}' -> nettoyé: '{prix_str}'")
                         try:
-                            total += float(prix_str)
-                        except:
+                            prix_float = float(prix_str)
+                            total += prix_float
+                            print(f"[CHIFFRE_AFFAIRES] Ajouté: {prix_float}, Total: {total}")
+                        except Exception as e:
+                            print(f"[CHIFFRE_AFFAIRES] ERREUR conversion prix: {e}")
                             continue
 
         # 2. Additionner les prix des ventes produit
         produit_path = f"{base_cloud}/ventes_produit/{username}/ventes.json"
+        print(f"[CHIFFRE_AFFAIRES] Chemin produit: {produit_path}")
+        print(f"[CHIFFRE_AFFAIRES] Fichier existe: {os.path.exists(produit_path)}")
+
         if os.path.exists(produit_path):
             with open(produit_path, "r", encoding="utf-8") as f:
                 content = f.read().strip()
                 if content:
                     ventes_produit = json.loads(content)
+                    print(f"[CHIFFRE_AFFAIRES] Nombre de ventes produit: {len(ventes_produit)}")
                     for vente in ventes_produit:
                         prix_str = vente.get("prix", "0").replace(" ", "").replace(",", ".")
+                        prix_str = prix_str.replace("$", "").strip()
+                        print(f"[CHIFFRE_AFFAIRES] Prix produit brut: '{vente.get('prix')}' -> nettoyé: '{prix_str}'")
                         try:
-                            total += float(prix_str)
-                        except:
+                            prix_float = float(prix_str)
+                            total += prix_float
+                            print(f"[CHIFFRE_AFFAIRES] Ajouté: {prix_float}, Total: {total}")
+                        except Exception as e:
+                            print(f"[CHIFFRE_AFFAIRES] ERREUR conversion prix: {e}")
                             continue
+
+        print(f"[CHIFFRE_AFFAIRES] Total final: {total}")
 
         # Formater le total au format français
         parts = f"{total:,.2f}".split(".")
         partie_entiere = parts[0].replace(",", " ")
         partie_decimale = parts[1]
         total_formate = f"{partie_entiere},{partie_decimale} $"
+        print(f"[CHIFFRE_AFFAIRES] Total formaté: {total_formate}")
         return {"total": total_formate}
     except Exception as e:
+        print(f"[CHIFFRE_AFFAIRES] EXCEPTION: {e}")
         raise HTTPException(status_code=500, detail=f"Erreur calcul chiffre d'affaires: {e}")
 
 

@@ -5,7 +5,7 @@ const fs = require('fs');
 // Configuration du serveur
 const CONFIG_FILE = path.join(__dirname, 'server-config.json');
 let serverConfig = {
-  url: 'http://127.0.0.1:8080/login'
+  url: 'https://qwota.ca/login'
 };
 
 // Charger la configuration si elle existe

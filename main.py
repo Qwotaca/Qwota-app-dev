@@ -495,6 +495,19 @@ def robots():
 def sitemap():
     return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Common", "sitemap.xml"), media_type="application/xml")
 
+@app.get("/download/qwota-windows", include_in_schema=False)
+def download_windows_app():
+    """Route pour télécharger l'application Windows"""
+    file_path = os.path.join(BASE_DIR, "static", "downloads", "Qwota-Setup.exe")
+    if os.path.exists(file_path):
+        return FileResponse(
+            file_path,
+            media_type="application/octet-stream",
+            filename="Qwota-Setup.exe"
+        )
+    else:
+        raise HTTPException(status_code=404, detail="Fichier d'installation non trouvé")
+
 
 
 

@@ -365,6 +365,27 @@ def soumissions_file():
 def avis_file():
     return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Entrepreneurs", "Gestions", "Avis", "avis.html"))
 
+@app.get("/api/reviews/{username}")
+def get_reviews(username: str):
+    """
+    Récupère les avis d'un utilisateur, crée le fichier s'il n'existe pas
+    """
+    reviews_dir = os.path.join(base_cloud, "reviews", username)
+    reviews_file = os.path.join(reviews_dir, "reviews.json")
+
+    # Créer le dossier s'il n'existe pas
+    os.makedirs(reviews_dir, exist_ok=True)
+
+    # Créer le fichier vide s'il n'existe pas
+    if not os.path.exists(reviews_file):
+        with open(reviews_file, 'w', encoding='utf-8') as f:
+            json.dump([], f)
+
+    # Retourner les reviews
+    with open(reviews_file, 'r', encoding='utf-8') as f:
+        reviews = json.load(f)
+
+    return {"reviews": reviews}
 
 @app.get("/signer-soumission", include_in_schema=False)
 def signer_soumission_file():

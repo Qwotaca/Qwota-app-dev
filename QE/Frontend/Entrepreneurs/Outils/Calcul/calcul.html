@@ -275,7 +275,7 @@
           <button onclick="enregistrerProjetRapide()" class="btn-secondary blue-hover" style="font-size: 12px !important; padding: 8px 12px !important;">
             <i class="fas fa-save mr-2"></i>Enregistrer sans compléter
           </button>
-          <button onclick="completerSoumission()" class="btn-secondary blue-hover" style="font-size: 12px !important; padding: 8px 12px !important;">
+          <button id="completer-btn" onclick="completerSoumission()" class="btn-primary" style="font-size: 12px !important; padding: 8px 12px !important;" disabled>
             <i class="fas fa-file-alt mr-2"></i>Compléter soumission
           </button>
         </div>
@@ -291,7 +291,7 @@
           <i class="fas fa-save"></i>
           <span>Enregistrer</span>
         </button>
-        <button class="mobile-action-btn mobile-complete-btn" onclick="completerSoumission()">
+        <button id="completer-btn-mobile" class="mobile-action-btn mobile-complete-btn" onclick="completerSoumission()" disabled>
           <i class="fas fa-paper-plane"></i>
           <span>Compléter</span>
         </button>
@@ -3105,6 +3105,81 @@
     setTimeout(enforceRoleBasedVisibility, 100);
     setTimeout(enforceRoleBasedVisibility, 500);
     setTimeout(enforceRoleBasedVisibility, 1000);
+
+    // ========================================
+    // VALIDATION BOUTON "COMPLÉTER SOUMISSION"
+    // ========================================
+
+    // Fonction pour vérifier si tous les champs requis sont remplis
+    function validateCompleterButton() {
+      const prenom = document.getElementById('clientPrenom')?.value.trim() || '';
+      const nom = document.getElementById('clientNom')?.value.trim() || '';
+      const adresse = document.getElementById('clientAddress')?.value.trim() || '';
+      const telephone = document.getElementById('clientPhone')?.value.trim() || '';
+
+      const allFieldsFilled = prenom && nom && adresse && telephone;
+
+      // Boutons desktop et mobile
+      const btnDesktop = document.getElementById('completer-btn');
+      const btnMobile = document.getElementById('completer-btn-mobile');
+
+      if (allFieldsFilled) {
+        // Activer les boutons
+        if (btnDesktop) {
+          btnDesktop.disabled = false;
+          btnDesktop.style.opacity = '1';
+          btnDesktop.style.cursor = 'pointer';
+        }
+        if (btnMobile) {
+          btnMobile.disabled = false;
+          btnMobile.style.opacity = '1';
+          btnMobile.style.cursor = 'pointer';
+        }
+      } else {
+        // Désactiver et griser les boutons
+        if (btnDesktop) {
+          btnDesktop.disabled = true;
+          btnDesktop.style.opacity = '0.5';
+          btnDesktop.style.cursor = 'not-allowed';
+        }
+        if (btnMobile) {
+          btnMobile.disabled = true;
+          btnMobile.style.opacity = '0.5';
+          btnMobile.style.cursor = 'not-allowed';
+        }
+      }
+    }
+
+    // Ajouter des écouteurs d'événements sur les champs
+    document.addEventListener('DOMContentLoaded', function() {
+      const fields = ['clientPrenom', 'clientNom', 'clientAddress', 'clientPhone'];
+
+      fields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+          field.addEventListener('input', validateCompleterButton);
+          field.addEventListener('change', validateCompleterButton);
+        }
+      });
+
+      // Validation initiale
+      validateCompleterButton();
+    });
+
+    // Validation initiale si le DOM est déjà chargé
+    if (document.readyState !== 'loading') {
+      const fields = ['clientPrenom', 'clientNom', 'clientAddress', 'clientPhone'];
+
+      fields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+          field.addEventListener('input', validateCompleterButton);
+          field.addEventListener('change', validateCompleterButton);
+        }
+      });
+
+      validateCompleterButton();
+    }
 
     // Paramètres complets basés sur l'analyse Excel
     const DEFAULT_PARAMETERS = {

@@ -713,7 +713,7 @@ def login(data: LoginData):
 @app.get("/admin/users")
 def list_users_route():
     users_list = list_all_users()
-    return [{"username": u["username"], "role": u["role"]} for u in users_list]
+    return users_list  # Retourne tous les champs incluant id, email, created_at, last_login
 
 @app.get("/api/entrepreneurs")
 def get_all_entrepreneurs():

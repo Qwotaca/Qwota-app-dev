@@ -738,6 +738,12 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
       console.error('[ERROR] signatureOverlay non trouvé!');
     }
 
+    // Attacher l'événement au bouton "Accepter" après le déplacement
+    console.log('[DEBUG] Appel de attachAcceptButtonEvent après déplacement modal');
+    if (window.attachAcceptButtonEvent) {
+      window.attachAcceptButtonEvent();
+    }
+
     // Maintenant cacher AppPC
     const appContainer = window.parent.document.querySelector('#app-container');
     if (appContainer) appContainer.style.display = 'none';
@@ -3377,7 +3383,14 @@ window.acceptPresentation = async function() {
 // Attacher l'événement click au bouton après la définition de la fonction
 function attachAcceptButtonEvent() {
   console.log('[attachAcceptButtonEvent] Tentative d\'attachement');
-  const acceptBtn = document.getElementById('acceptPresentationBtn');
+
+  // Chercher le bouton dans l'iframe d'abord, puis dans le parent
+  let acceptBtn = document.getElementById('acceptPresentationBtn');
+  if (!acceptBtn && window.parent && window.parent.document) {
+    acceptBtn = window.parent.document.getElementById('acceptPresentationBtn');
+    console.log('[attachAcceptButtonEvent] Bouton cherché dans le parent');
+  }
+
   console.log('[attachAcceptButtonEvent] Bouton trouvé:', !!acceptBtn);
 
   if (acceptBtn) {
@@ -3389,15 +3402,18 @@ function attachAcceptButtonEvent() {
       console.log('[acceptBtn] Click détecté');
       console.log('[acceptBtn] disabled:', acceptBtn.disabled);
       console.log('[acceptBtn] acceptPresentation exists:', !!window.acceptPresentation);
+      console.log('[acceptBtn] hasPresentationSignature:', hasPresentationSignature);
 
       if (!acceptBtn.disabled && window.acceptPresentation) {
         console.log('[acceptBtn] Appel de acceptPresentation()');
         window.acceptPresentation();
       } else {
-        console.log('[acceptBtn] BLOQUÉ - disabled ou fonction manquante');
+        console.log('[acceptBtn] BLOQUÉ - disabled:', acceptBtn.disabled, ', fonction:', !!window.acceptPresentation);
       }
     });
     console.log('[attachAcceptButtonEvent] Événement attaché avec succès');
+  } else {
+    console.log('[attachAcceptButtonEvent] ERREUR - Bouton non trouvé!');
   }
 }
 

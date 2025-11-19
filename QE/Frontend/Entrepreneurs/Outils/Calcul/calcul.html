@@ -48,6 +48,29 @@
 <!-- Styles spécifiques au Calculateur -->
 <link rel="stylesheet" href="/calcul.css">
 
+<style>
+  /* Désactiver les effets hover sur les boutons désactivés */
+  button:disabled,
+  button[disabled] {
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+    opacity: 0.5 !important;
+  }
+
+  button:disabled:hover,
+  button[disabled]:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .btn-primary:disabled:hover,
+  .btn-secondary:disabled:hover,
+  .blue-hover:disabled:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+</style>
+
 </head>
 <body class="min-h-screen" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: var(--text-light); margin: 0; padding: 0;">
 
@@ -272,7 +295,7 @@
           <button onclick="resetForm()" class="btn-secondary" style="font-size: 12px !important; padding: 8px 12px !important;">
             <i class="fas fa-refresh mr-2"></i>Réinitialiser
           </button>
-          <button onclick="enregistrerProjetRapide()" class="btn-secondary blue-hover" style="font-size: 12px !important; padding: 8px 12px !important;">
+          <button id="enregistrer-btn" onclick="enregistrerProjetRapide()" class="btn-secondary blue-hover" style="font-size: 12px !important; padding: 8px 12px !important;" disabled>
             <i class="fas fa-save mr-2"></i>Enregistrer sans compléter
           </button>
           <button id="completer-btn" onclick="completerSoumission()" class="btn-primary" style="font-size: 12px !important; padding: 8px 12px !important;" disabled>
@@ -287,7 +310,7 @@
           <i class="fas fa-redo-alt"></i>
           <span>Reset</span>
         </button>
-        <button class="mobile-action-btn mobile-save-btn" onclick="enregistrerProjetRapide()">
+        <button id="enregistrer-btn-mobile" class="mobile-action-btn mobile-save-btn" onclick="enregistrerProjetRapide()" disabled>
           <i class="fas fa-save"></i>
           <span>Enregistrer</span>
         </button>
@@ -3119,34 +3142,36 @@
 
       const allFieldsFilled = prenom && nom && adresse && telephone;
 
-      // Boutons desktop et mobile
-      const btnDesktop = document.getElementById('completer-btn');
-      const btnMobile = document.getElementById('completer-btn-mobile');
+      // Boutons "Compléter soumission"
+      const completerDesktop = document.getElementById('completer-btn');
+      const completerMobile = document.getElementById('completer-btn-mobile');
+
+      // Boutons "Enregistrer sans compléter"
+      const enregistrerDesktop = document.getElementById('enregistrer-btn');
+      const enregistrerMobile = document.getElementById('enregistrer-btn-mobile');
 
       if (allFieldsFilled) {
-        // Activer les boutons
-        if (btnDesktop) {
-          btnDesktop.disabled = false;
-          btnDesktop.style.opacity = '1';
-          btnDesktop.style.cursor = 'pointer';
-        }
-        if (btnMobile) {
-          btnMobile.disabled = false;
-          btnMobile.style.opacity = '1';
-          btnMobile.style.cursor = 'pointer';
-        }
+        // Activer tous les boutons
+        [completerDesktop, completerMobile, enregistrerDesktop, enregistrerMobile].forEach(btn => {
+          if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            btn.style.pointerEvents = 'auto';
+            btn.style.transform = '';
+          }
+        });
       } else {
-        // Désactiver et griser les boutons
-        if (btnDesktop) {
-          btnDesktop.disabled = true;
-          btnDesktop.style.opacity = '0.5';
-          btnDesktop.style.cursor = 'not-allowed';
-        }
-        if (btnMobile) {
-          btnMobile.disabled = true;
-          btnMobile.style.opacity = '0.5';
-          btnMobile.style.cursor = 'not-allowed';
-        }
+        // Désactiver et griser tous les boutons
+        [completerDesktop, completerMobile, enregistrerDesktop, enregistrerMobile].forEach(btn => {
+          if (btn) {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+            btn.style.pointerEvents = 'none';
+            btn.style.transform = 'none';
+          }
+        });
       }
     }
 

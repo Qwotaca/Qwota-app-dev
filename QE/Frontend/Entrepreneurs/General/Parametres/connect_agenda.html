@@ -1304,39 +1304,18 @@
   const teamsKey = `teams_${window.username}`;
   const teamsContainer = document.getElementById("teams-list");
 
-  function loadTeams() {
-    console.log('👥 Chargement équipes pour utilisateur:', window.username);
-    // D'abord essayer de récupérer depuis le backend
-    return fetch(`/get-equipes/${window.username}`)
-      .then(res => {
-        console.log('👥 Réponse backend:', res.status, res.ok);
-        return res.ok ? res.json() : { equipes: [] };
-      })
-      .then(data => {
-        console.log('👥 Données reçues du backend:', data);
-        if (data && data.length > 0) {
-          console.log('👥 Équipes récupérées depuis backend:', data);
-          localStorage.setItem(teamsKey, JSON.stringify(data));
-          return data;
-        } else {
-          console.log('👥 Backend retourne des données vides:', data);
-          return [];
-        }
-      })
-      .catch(err => {
-        console.log('👥 ERREUR backend:', err);
-        throw err; // Propager l'erreur au lieu d'utiliser localStorage
-      });
+  async function loadTeams() {
+    console.log('👥 Chargement équipes depuis user_info pour:', window.username);
+    // Les équipes sont chargées automatiquement par loadInfos()
+    // Cette fonction ne fait que retourner les équipes déjà chargées
+    return teams || [];
   }
 
   async function saveTeams(teamsData) {
     // Mettre à jour la variable globale teams
     teams = teamsData;
 
-    // Sauvegarder dans localStorage
-    localStorage.setItem(teamsKey, JSON.stringify(teams));
-
-    // Sauvegarder aussi sur le backend via /api/save-info
+    // Sauvegarder UNIQUEMENT sur le backend via /api/save-info (pas de localStorage)
     try {
       const data = {
         nom: document.getElementById("nom").value.trim(),
@@ -2893,10 +2872,12 @@ async function loadInfos(bust = false) {
   if (tpsElement) tpsElement.value = result.data?.tps || "";
   if (tvqElement) tvqElement.value = result.data?.tvq || "";
 
-  // Charger les équipes depuis le backend
+  // Charger les équipes depuis le backend (user_info.json)
   if (result.data?.equipes && Array.isArray(result.data.equipes)) {
     teams = result.data.equipes;
-    localStorage.setItem(teamsKey, JSON.stringify(teams));
+    renderTeams();
+  } else {
+    teams = [];
     renderTeams();
   }
 

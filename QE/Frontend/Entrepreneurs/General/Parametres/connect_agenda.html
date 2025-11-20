@@ -1329,16 +1329,35 @@
       });
   }
 
-  async function saveTeams(teams) {
+  async function saveTeams(teamsData) {
+    // Mettre à jour la variable globale teams
+    teams = teamsData;
+
     // Sauvegarder dans localStorage
     localStorage.setItem(teamsKey, JSON.stringify(teams));
 
-    // Sauvegarder aussi sur le backend
+    // Sauvegarder aussi sur le backend via /api/save-info
     try {
-      const response = await fetch(`/save-equipes/${window.username}`, {
+      const data = {
+        nom: document.getElementById("nom").value.trim(),
+        prenom: document.getElementById("prenom").value.trim(),
+        telephone: document.getElementById("telephone").value.trim(),
+        courriel: document.getElementById("courriel").value.trim(),
+        neq: document.getElementById("neq").value.trim(),
+        tps: document.getElementById("tps").value.trim(),
+        tvq: document.getElementById("tvq").value.trim(),
+        equipes: teams,
+        date_disponibilite: document.getElementById("date-disponibilite")?.value || "",
+        niveau_actuel: parseInt(document.getElementById("niveau-actuel")?.value || "1", 10)
+      };
+
+      const formData = new FormData();
+      formData.append("username", window.username);
+      formData.append("data", JSON.stringify(data));
+
+      const response = await fetch('/api/save-info', {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(teams)
+        body: formData
       });
 
       if (!response.ok) {
@@ -2670,6 +2689,9 @@ async function saveInfo() {
     neq: document.getElementById("neq").value.trim(),
     tps: document.getElementById("tps").value.trim(),
     tvq: document.getElementById("tvq").value.trim(),
+    equipes: teams || [],
+    date_disponibilite: document.getElementById("date-disponibilite")?.value || "",
+    niveau_actuel: parseInt(document.getElementById("niveau-actuel")?.value || "1", 10),
     // flags de suppression si l'utilisateur a cliqué sur ✕
     specimen_delete: document.getElementById("specimen-preview").classList.contains("hidden"),
     betonel_delete: document.getElementById("betonel-preview").classList.contains("hidden"),
@@ -2872,6 +2894,25 @@ async function loadInfos(bust = false) {
   if (neqElement) neqElement.value = result.data?.neq || "";
   if (tpsElement) tpsElement.value = result.data?.tps || "";
   if (tvqElement) tvqElement.value = result.data?.tvq || "";
+
+  // Charger les équipes depuis le backend
+  if (result.data?.equipes && Array.isArray(result.data.equipes)) {
+    teams = result.data.equipes;
+    localStorage.setItem(teamsKey, JSON.stringify(teams));
+    renderTeams();
+  }
+
+  // Charger la date de disponibilité
+  const dateDispoElement = document.getElementById("date-disponibilite");
+  if (dateDispoElement && result.data?.date_disponibilite) {
+    dateDispoElement.value = result.data.date_disponibilite;
+  }
+
+  // Charger le niveau actuel
+  const niveauElement = document.getElementById("niveau-actuel");
+  if (niveauElement && result.data?.niveau_actuel) {
+    niveauElement.value = result.data.niveau_actuel;
+  }
 
   // reset previews
   ["specimen","betonel","integration"].forEach(field => {

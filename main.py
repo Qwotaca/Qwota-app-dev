@@ -8785,6 +8785,9 @@ async def save_user_info(
             "neq": user_data.get("neq", ""),
             "tps": user_data.get("tps", ""),
             "tvq": user_data.get("tvq", ""),
+            "equipes": user_data.get("equipes", []),
+            "date_disponibilite": user_data.get("date_disponibilite", ""),
+            "niveau_actuel": user_data.get("niveau_actuel", 1),
             "last_updated": datetime.now().isoformat()
         }
 
@@ -8981,6 +8984,9 @@ def get_user_info(username: str):
                 "tps": user_data.get("tps", ""),
                 "tvq": user_data.get("tvq", ""),
                 "grade": user_data.get("grade", ""),
+                "equipes": user_data.get("equipes", []),
+                "date_disponibilite": user_data.get("date_disponibilite", ""),
+                "niveau_actuel": user_data.get("niveau_actuel", 1),
                 **file_status
             },
             "files": files

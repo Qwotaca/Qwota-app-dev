@@ -8786,7 +8786,6 @@ async def save_user_info(
             "tps": user_data.get("tps", ""),
             "tvq": user_data.get("tvq", ""),
             "equipes": user_data.get("equipes", []),
-            "date_disponibilite": user_data.get("date_disponibilite", ""),
             "niveau_actuel": user_data.get("niveau_actuel", 1),
             "last_updated": datetime.now().isoformat()
         }
@@ -8802,6 +8801,17 @@ async def save_user_info(
                 updated_data["onboarding_completed"] = user_data["onboarding_completed"]
             if "onboarding_date" in user_data:
                 updated_data["onboarding_date"] = user_data["onboarding_date"]
+
+        # Une fois guide_completed = true, il ne peut JAMAIS redevenir false
+        if existing_info.get("guide_completed") == True:
+            updated_data["guide_completed"] = True
+            updated_data["guide_date"] = existing_info.get("guide_date", "")
+        else:
+            # Pas encore complété, on met à jour selon les données reçues
+            if "guide_completed" in user_data:
+                updated_data["guide_completed"] = user_data["guide_completed"]
+            if "guide_date" in user_data:
+                updated_data["guide_date"] = user_data["guide_date"]
 
         existing_info.update(updated_data)
 
@@ -8985,8 +8995,11 @@ def get_user_info(username: str):
                 "tvq": user_data.get("tvq", ""),
                 "grade": user_data.get("grade", ""),
                 "equipes": user_data.get("equipes", []),
-                "date_disponibilite": user_data.get("date_disponibilite", ""),
                 "niveau_actuel": user_data.get("niveau_actuel", 1),
+                "onboarding_completed": user_data.get("onboarding_completed", False),
+                "onboarding_date": user_data.get("onboarding_date", ""),
+                "guide_completed": user_data.get("guide_completed", False),
+                "guide_date": user_data.get("guide_date", ""),
                 **file_status
             },
             "files": files

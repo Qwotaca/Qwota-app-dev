@@ -22,8 +22,11 @@
 
   <!-- DÉSACTIVATION COMPLÈTE DU STORAGE ET SERVICE WORKERS -->
   <script>
+  // IMPORTANT: Ce script doit être le PREMIER dans le <head>
   (function() {
     'use strict';
+
+    console.log('[STORAGE] Désactivation en cours...');
 
     // Mock storage qui ne sauvegarde rien
     const mockStorage = {
@@ -37,50 +40,82 @@
 
     // Bloquer localStorage
     try {
+      delete window.localStorage;
       Object.defineProperty(window, 'localStorage', {
         get: function() { return mockStorage; },
-        configurable: false
+        set: function() {},
+        configurable: false,
+        enumerable: true
       });
-    } catch(e) {}
+      console.log('[STORAGE] localStorage bloqué');
+    } catch(e) {
+      console.warn('[STORAGE] Erreur blocage localStorage:', e);
+    }
 
     // Bloquer sessionStorage
     try {
+      delete window.sessionStorage;
       Object.defineProperty(window, 'sessionStorage', {
         get: function() { return mockStorage; },
-        configurable: false
+        set: function() {},
+        configurable: false,
+        enumerable: true
       });
-    } catch(e) {}
+      console.log('[STORAGE] sessionStorage bloqué');
+    } catch(e) {
+      console.warn('[STORAGE] Erreur blocage sessionStorage:', e);
+    }
 
-    // Bloquer Service Workers ET désenregistrer existants
+    // Bloquer Service Workers AVANT qu'il ne s'enregistre
     if ('serviceWorker' in navigator) {
-      // Désenregistrer tous les SW existants
+      // D'abord désenregistrer tous les SW existants
       navigator.serviceWorker.getRegistrations().then(function(registrations) {
         for(let registration of registrations) {
           registration.unregister();
-          console.log('[STORAGE] Service Worker désenregistré');
+          console.log('[STORAGE] Service Worker désenregistré:', registration.scope);
         }
+      }).catch(function(e) {
+        console.warn('[STORAGE] Erreur désenregistrement SW:', e);
       });
 
-      // Bloquer l'accès à serviceWorker
+      // Ensuite bloquer complètement l'accès
       try {
+        delete navigator.serviceWorker;
         Object.defineProperty(navigator, 'serviceWorker', {
-          get: function() { return undefined; },
-          configurable: false
+          get: function() {
+            console.warn('[STORAGE] Tentative d\'accès à serviceWorker bloquée');
+            return undefined;
+          },
+          set: function() {},
+          configurable: false,
+          enumerable: false
         });
-      } catch(e) {}
+        console.log('[STORAGE] navigator.serviceWorker bloqué');
+      } catch(e) {
+        console.warn('[STORAGE] Erreur blocage serviceWorker:', e);
+      }
     }
 
     // Bloquer Cache API
     if ('caches' in window) {
       try {
+        delete window.caches;
         Object.defineProperty(window, 'caches', {
-          get: function() { return undefined; },
-          configurable: false
+          get: function() {
+            console.warn('[STORAGE] Tentative d\'accès à caches bloquée');
+            return undefined;
+          },
+          set: function() {},
+          configurable: false,
+          enumerable: false
         });
-      } catch(e) {}
+        console.log('[STORAGE] window.caches bloqué');
+      } catch(e) {
+        console.warn('[STORAGE] Erreur blocage caches:', e);
+      }
     }
 
-    console.log('[STORAGE DISABLED] localStorage, sessionStorage, SW et cache désactivés');
+    console.log('[STORAGE DISABLED] ✓ Tout le storage est désactivé');
   })();
   </script>
 

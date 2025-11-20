@@ -3,6 +3,69 @@
  * À inclure dans toutes les pages de l'application
  */
 
+// ==========================================
+// DÉSACTIVATION DU STORAGE LOCAL
+// ==========================================
+(function() {
+  'use strict';
+
+  // Créer un mock storage qui ne sauvegarde rien
+  const mockStorage = {
+    getItem: function() { return null; },
+    setItem: function() {},
+    removeItem: function() {},
+    clear: function() {},
+    key: function() { return null; },
+    length: 0
+  };
+
+  // Remplacer localStorage par le mock
+  try {
+    Object.defineProperty(window, 'localStorage', {
+      get: function() { return mockStorage; },
+      configurable: false
+    });
+  } catch(e) {
+    console.warn('[STORAGE] Impossible de désactiver localStorage:', e);
+  }
+
+  // Remplacer sessionStorage par le mock
+  try {
+    Object.defineProperty(window, 'sessionStorage', {
+      get: function() { return mockStorage; },
+      configurable: false
+    });
+  } catch(e) {
+    console.warn('[STORAGE] Impossible de désactiver sessionStorage:', e);
+  }
+
+  // Bloquer Service Workers
+  if ('serviceWorker' in navigator) {
+    try {
+      Object.defineProperty(navigator, 'serviceWorker', {
+        get: function() { return undefined; },
+        configurable: false
+      });
+    } catch(e) {
+      console.warn('[STORAGE] Impossible de désactiver service workers:', e);
+    }
+  }
+
+  // Désactiver le cache API
+  if ('caches' in window) {
+    try {
+      Object.defineProperty(window, 'caches', {
+        get: function() { return undefined; },
+        configurable: false
+      });
+    } catch(e) {
+      console.warn('[STORAGE] Impossible de désactiver cache API:', e);
+    }
+  }
+
+  console.log('[STORAGE DISABLED] localStorage, sessionStorage, service workers et cache sont désactivés');
+})();
+
 // Variables globales - éviter la redéclaration
 if (typeof window.userRole === 'undefined') {
   window.userRole = null;
@@ -20,8 +83,9 @@ var canEditParameters = window.canEditParameters;
 var systemInitialized = window.systemInitialized;
 
 // Éviter la redéclaration si déjà définie
+// Note: localStorage est désactivé, username sera toujours "demo" par défaut
 if (typeof window.username === 'undefined') {
-  window.username = localStorage.getItem("username") || "demo";
+  window.username = "demo"; // Pas de localStorage, valeur par défaut
 }
 
 // Référence locale pour compatibilité

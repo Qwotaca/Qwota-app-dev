@@ -20,32 +20,68 @@
   <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
   <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
 
-  <!-- Script Service Worker -->
+  <!-- DÉSACTIVATION COMPLÈTE DU STORAGE ET SERVICE WORKERS -->
   <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      // Ne pas enregistrer le SW sur localhost (mode dev)
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        console.log('[DEV] Service Worker désactivé sur localhost');
-        // Désenregistrer le SW s'il existe déjà
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for(let registration of registrations) {
-            registration.unregister();
-            console.log('[DEV] Service Worker désenregistré');
-          }
-        });
-        return;
-      }
+  (function() {
+    'use strict';
 
-      navigator.serviceWorker.register('/sw.js')
-        .then((registration) => {
-          console.log('SW registered: ', registration);
-        })
-        .catch((registrationError) => {
-          console.log('SW registration failed: ', registrationError);
+    // Mock storage qui ne sauvegarde rien
+    const mockStorage = {
+      getItem: function() { return null; },
+      setItem: function() {},
+      removeItem: function() {},
+      clear: function() {},
+      key: function() { return null; },
+      length: 0
+    };
+
+    // Bloquer localStorage
+    try {
+      Object.defineProperty(window, 'localStorage', {
+        get: function() { return mockStorage; },
+        configurable: false
+      });
+    } catch(e) {}
+
+    // Bloquer sessionStorage
+    try {
+      Object.defineProperty(window, 'sessionStorage', {
+        get: function() { return mockStorage; },
+        configurable: false
+      });
+    } catch(e) {}
+
+    // Bloquer Service Workers ET désenregistrer existants
+    if ('serviceWorker' in navigator) {
+      // Désenregistrer tous les SW existants
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          registration.unregister();
+          console.log('[STORAGE] Service Worker désenregistré');
+        }
+      });
+
+      // Bloquer l'accès à serviceWorker
+      try {
+        Object.defineProperty(navigator, 'serviceWorker', {
+          get: function() { return undefined; },
+          configurable: false
         });
-    });
-  }
+      } catch(e) {}
+    }
+
+    // Bloquer Cache API
+    if ('caches' in window) {
+      try {
+        Object.defineProperty(window, 'caches', {
+          get: function() { return undefined; },
+          configurable: false
+        });
+      } catch(e) {}
+    }
+
+    console.log('[STORAGE DISABLED] localStorage, sessionStorage, SW et cache désactivés');
+  })();
   </script>
 
   <!-- 📱 Blocage Mobile DÉSACTIVÉ - App maintenant responsive -->

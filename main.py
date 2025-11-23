@@ -1951,6 +1951,13 @@ def oauth2callback(code: str = Query(...), state: str = Query(...)):
           if (window.opener) {{
             window.opener.postMessage("agenda_connected", "*");
             window.close();
+          }} else {{
+            // MOBILE: Pas de popup, rediriger vers l'app
+            // Récupérer le username depuis l'URL ou localStorage
+            const username = '{state}' || localStorage.getItem('username');
+            setTimeout(() => {{
+              window.location.href = '/apppc?user=' + encodeURIComponent(username) + '#/connection';
+            }}, 1500);
           }}
 
           // Si c'est une BrowserView Electron, fermer après 1 seconde
@@ -2702,13 +2709,13 @@ def gmail_callback(code: str = Query(...), state: str = Query(...)):
     with open(fichier, "w", encoding="utf-8") as f:
         json.dump(tokens, f, indent=2)
 
-    return HTMLResponse("""
+    return HTMLResponse(f"""
     <!DOCTYPE html>
     <html>
     <head>
       <title>Connexion réussie</title>
       <style>
-        body {
+        body {{
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           display: flex;
           align-items: center;
@@ -2717,14 +2724,14 @@ def gmail_callback(code: str = Query(...), state: str = Query(...)):
           margin: 0;
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: white;
-        }
-        .message {
+        }}
+        .message {{
           text-align: center;
-        }
-        .icon {
+        }}
+        .icon {{
           font-size: 64px;
           margin-bottom: 20px;
-        }
+        }}
       </style>
     </head>
     <body>
@@ -2737,15 +2744,21 @@ def gmail_callback(code: str = Query(...), state: str = Query(...)):
         localStorage.setItem('gmail_connected', Date.now().toString());
 
         // Essayer de fermer si c'est un popup
-        if (window.opener) {
+        if (window.opener) {{
           window.opener.postMessage("gmail_connected", "*");
           window.close();
-        }
+        }} else {{
+          // MOBILE: Pas de popup, rediriger vers l'app
+          const username = '{state}' || localStorage.getItem('username');
+          setTimeout(() => {{
+            window.location.href = '/apppc?user=' + encodeURIComponent(username) + '#/connection';
+          }}, 1500);
+        }}
 
         // Si c'est une BrowserView Electron, fermer après 1 seconde
-        setTimeout(() => {
+        setTimeout(() => {{
           window.close();
-        }, 1000);
+        }}, 1000);
       </script>
     </body>
     </html>

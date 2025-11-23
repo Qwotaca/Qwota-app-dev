@@ -58,7 +58,7 @@ def init_database():
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
+                password_hash TEXT NOT NULL,
                 role TEXT NOT NULL,
                 email TEXT,
                 created_at TEXT NOT NULL,
@@ -129,7 +129,7 @@ def init_support_user():
                 created_at = datetime.now().isoformat()
 
                 cursor.execute('''
-                    INSERT INTO users (username, password, role, email, created_at, is_active)
+                    INSERT INTO users (username, password_hash, role, email, created_at, is_active)
                     VALUES (?, ?, ?, ?, ?, 1)
                 ''', ('support', hashed_pw, 'support', 'support@qwota.com', created_at))
 
@@ -146,7 +146,7 @@ def init_support_user():
                 created_at = datetime.now().isoformat()
 
                 cursor.execute('''
-                    INSERT INTO users (username, password, role, email, created_at, is_active)
+                    INSERT INTO users (username, password_hash, role, email, created_at, is_active)
                     VALUES (?, ?, ?, ?, ?, 1)
                 ''', ('direction', hashed_pw, 'direction', 'direction@qwota.com', created_at))
 

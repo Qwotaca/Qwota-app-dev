@@ -164,6 +164,18 @@ def generate_gqp_html(infos: dict, media_urls: list) -> str:
             .info-grid {{
                 grid-template-columns: 1fr;
             }}
+            .header h1 {{
+                font-size: 18px;
+            }}
+            .header .subtitle {{
+                font-size: 11px;
+            }}
+            .footer-item .label {{
+                font-size: 10px;
+            }}
+            .footer-item .value {{
+                font-size: 15px;
+            }}
         }}
 
         .info-item {{
@@ -247,7 +259,7 @@ def generate_gqp_html(infos: dict, media_urls: list) -> str:
         }}
 
         .footer-item .value {{
-            font-size: 20px;
+            font-size: 15px;
             font-weight: 700;
             color: #34d399;
         }}

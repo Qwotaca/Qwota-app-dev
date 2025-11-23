@@ -915,7 +915,7 @@
       });
     }
 
-    // Fonction pour afficher le PDF (copié exactement de creer_soumission.html)
+    // Fonction pour afficher le PDF - IDENTIQUE à soumission
     async function showPDFModal(lienPdf) {
       try {
         const pdfjsLib = window['pdfjs-dist/build/pdf'];
@@ -927,116 +927,14 @@
         const context = canvas.getContext('2d');
         const page = await pdf.getPage(1);
 
-        // Variables pour le zoom - Base 150% = 1.5 (affiché comme 100%)
-        let currentScale = 1.8;
-        let pdfPage = page;
-        let pdfDoc = pdf;
-        const minScale = 1.2;  // 80% affiché (1.2/1.5 = 0.8)
-        const maxScale = 1.8;  // 120% affiché (1.8/1.5 = 1.2)
+        // Scale fixe pour un bon rendu
+        const scale = 1.5;
+        const viewport = page.getViewport({ scale: scale });
 
-        // Niveaux de zoom fixes
-        const zoomLevels = [1.2, 1.5, 1.8]; // 80%, 100%, 120%
-        let currentZoomIndex = 2; // Commence à 120% (index 2) - zoom max
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
 
-        // Fonction pour rendre le PDF avec le zoom actuel
-        async function renderPDF(scale) {
-          context.clearRect(0, 0, canvas.width, canvas.height);
-          const viewport = pdfPage.getViewport({ scale: scale });
-
-          // Limiter la largeur pour empêcher le zoom horizontal excessif
-          const containerWidth = document.getElementById("pdfScrollContainer").clientWidth - 40; // 40px pour le padding
-          const maxWidth = containerWidth * 0.95; // Maximum 95% de la largeur du conteneur
-
-          if (viewport.width > maxWidth) {
-            const adjustedScale = scale * (maxWidth / viewport.width);
-            const adjustedViewport = pdfPage.getViewport({ scale: adjustedScale });
-            canvas.width = adjustedViewport.width;
-            canvas.height = adjustedViewport.height;
-            await pdfPage.render({ canvasContext: context, viewport: adjustedViewport }).promise;
-          } else {
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
-            await pdfPage.render({ canvasContext: context, viewport: viewport }).promise;
-          }
-
-          // Mettre à jour l'affichage du zoom et les boutons (1.5 = 100% affiché)
-          const displayPercentage = Math.round((scale / 1.5) * 100);
-          document.getElementById("zoomLevel").textContent = displayPercentage + "%";
-          updateZoomButtons(scale);
-        }
-
-        // Fonction pour mettre à jour l'état des boutons de zoom
-        function updateZoomButtons(scale) {
-          const zoomInBtn = document.getElementById("zoomIn");
-          const zoomOutBtn = document.getElementById("zoomOut");
-
-          // Griser le bouton zoom+ si on est au niveau maximum (120%)
-          if (currentZoomIndex >= zoomLevels.length - 1) {
-            zoomInBtn.style.opacity = "0.5";
-            zoomInBtn.style.cursor = "not-allowed";
-            zoomInBtn.disabled = true;
-          } else {
-            zoomInBtn.style.opacity = "1";
-            zoomInBtn.style.cursor = "pointer";
-            zoomInBtn.disabled = false;
-          }
-
-          // Griser le bouton zoom- si on est au niveau minimum (80%)
-          if (currentZoomIndex <= 0) {
-            zoomOutBtn.style.opacity = "0.5";
-            zoomOutBtn.style.cursor = "not-allowed";
-            zoomOutBtn.disabled = true;
-          } else {
-            zoomOutBtn.style.opacity = "1";
-            zoomOutBtn.style.cursor = "pointer";
-            zoomOutBtn.disabled = false;
-          }
-        }
-
-        // Rendu initial
-        await renderPDF(currentScale);
-
-        // S'assurer que l'affichage du zoom est correct dès le début
-        const initialDisplayPercentage = Math.round((currentScale / 1.5) * 100);
-        document.getElementById("zoomLevel").textContent = initialDisplayPercentage + "%";
-
-        // Contrôles de zoom - 3 niveaux fixes : 80%, 100%, 120%
-        document.getElementById("zoomIn").onclick = async () => {
-          if (currentZoomIndex < zoomLevels.length - 1) {
-            currentZoomIndex++;
-            currentScale = zoomLevels[currentZoomIndex];
-            await renderPDF(currentScale);
-          }
-        };
-
-        document.getElementById("zoomOut").onclick = async () => {
-          if (currentZoomIndex > 0) {
-            currentZoomIndex--;
-            currentScale = zoomLevels[currentZoomIndex];
-            await renderPDF(currentScale);
-          }
-        };
-
-        // Support du zoom avec la molette de la souris
-        document.getElementById("pdfScrollContainer").addEventListener("wheel", async (e) => {
-          if (e.ctrlKey) {
-            e.preventDefault();
-            if (e.deltaY < 0) {
-              // Zoom in - passer au niveau suivant
-              if (currentZoomIndex < zoomLevels.length - 1) {
-                currentZoomIndex++;
-                currentScale = zoomLevels[currentZoomIndex];
-              }
-            } else {
-              // Zoom out - passer au niveau précédent
-              if (currentZoomIndex > 0) {
-                currentZoomIndex--;
-                currentScale = zoomLevels[currentZoomIndex];
-              }
-            }
-            await renderPDF(currentScale);
-          }
-        });
+        await page.render({ canvasContext: context, viewport: viewport }).promise;
 
         // Afficher modal et overlay
         document.getElementById("pdfModal").classList.remove("hidden");
@@ -1045,24 +943,14 @@
         // Bloquer le scroll de l'arrière-plan
         document.body.style.overflow = "hidden";
 
-        // Forcer un nouveau rendu après affichage du modal pour corriger l'affichage
-        setTimeout(async () => {
-          await renderPDF(currentScale);
-        }, 100);
-
         // Fonction de fermeture
         const closePDF = () => {
           document.getElementById("pdfModal").classList.add("hidden");
           document.getElementById("pdfOverlay").style.display = "none";
           context.clearRect(0, 0, canvas.width, canvas.height);
-          URL.revokeObjectURL(lienPdf);
 
           // Restaurer le scroll de l'arrière-plan
           document.body.style.overflow = "";
-
-          // Nettoyer les event listeners
-          document.getElementById("zoomIn").onclick = null;
-          document.getElementById("zoomOut").onclick = null;
         };
 
         document.getElementById("closePdfBtn").onclick = closePDF;
@@ -1390,21 +1278,19 @@
   <!-- Script commun -->
   <script src="/common.js"></script>
 
-  <!-- Overlay flou (exactement comme GQP) -->
+  <!-- Overlay flou -->
   <div id="pdfOverlay"></div>
-  <!-- Modal PDF (exactement comme créer soumission) -->
-  <div id="pdfModal" class="hidden">
-    <div id="pdfContent">
-      <div id="pdfControls">
-        <div class="zoom-controls">
-          <button id="zoomOut" class="btn-secondary">−</button>
-          <span id="zoomLevel">100%</span>
-          <button id="zoomIn" class="btn-secondary">+</button>
-        </div>
-        <button id="closePdfBtn" class="">×</button>
+  <!-- Modal PDF - IDENTIQUE à soumission -->
+  <div id="pdfModal" class="hidden" tabindex="-1" aria-hidden="true">
+    <div id="pdfContent" tabindex="-1">
+      <div id="pdfControls" class="pdf-header">
+        <span class="pdf-header-title">Aperçu Facture</span>
+        <button id="closePdfBtn" class="close-btn" tabindex="-1">×</button>
       </div>
-      <div id="pdfScrollContainer">
-        <canvas id="pdfCanvas"></canvas>
+      <div id="pdfScrollContainer" tabindex="-1">
+        <div id="pdfCanvasContainer">
+          <canvas id="pdfCanvas" tabindex="-1"></canvas>
+        </div>
       </div>
     </div>
   </div>

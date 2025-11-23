@@ -3857,6 +3857,13 @@
           return;
         }
 
+        // BLOQUER navigation si guide non complété (sauf vers guide lui-même)
+        if (pageName !== 'guide' && window.guideIsCompleted === false) {
+          console.log(`[APPPC] Guide non complété - blocage navigation vers ${pageName}, redirection vers guide`);
+          location.hash = '#/guide';
+          pageName = 'guide';
+        }
+
         console.log(`[APPPC] Navigation vers ${pageName}`);
 
         // Si on est sur le guide, bloquer tous les items du menu et ajouter des cadenas
@@ -4034,6 +4041,9 @@
               const response = await fetch(`/api/guide-progress/${username}`);
               if (response.ok) {
                 const guideData = await response.json();
+
+                // IMPORTANT: Définir la variable globale pour bloquer les navigations futures
+                window.guideIsCompleted = guideData.completed;
 
                 // Si le guide n'est pas complété, forcer le chargement du guide
                 if (!guideData.completed) {

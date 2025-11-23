@@ -5125,9 +5125,18 @@
           }
         };
 
-        // Fonction pour masquer l'ecran de chargement
+        // Fonction pour masquer l'ecran de chargement ET afficher le contenu
         const hideLoadingScreen = () => {
           const loadingOverlay = document.getElementById('loading-overlay');
+          const appContainer = document.getElementById('app-container');
+
+          // IMPORTANT: Afficher le contenu (même logique que desktop)
+          if (appContainer) {
+            appContainer.classList.add('loaded');
+            appContainer.style.opacity = '1';
+            console.log('[MOBILE] ✅ App container rendu visible');
+          }
+
           if (loadingOverlay) {
             console.log('[MOBILE] Masquage de l ecran de chargement');
             setTimeout(() => {
@@ -5172,6 +5181,16 @@
             loadedPages++;
             updateLoadingProgress(loadedPages, totalPages);
             console.log(`[MOBILE] Page chargee (${loadedPages}/${totalPages}): Dashboard`);
+
+            // IMPORTANT: Afficher le contenu dès que le dashboard est chargé
+            // pour éviter une page blanche si les autres pages prennent du temps
+            const appContainer = document.getElementById('app-container');
+            if (appContainer && !appContainer.classList.contains('loaded')) {
+              appContainer.classList.add('loaded');
+              appContainer.style.opacity = '1';
+              console.log('[MOBILE] ✅ Dashboard chargé - App visible immédiatement');
+            }
+
             if (loadedPages === totalPages) {
               console.log('[MOBILE] TOUTES LES PAGES SONT PRECHARGEES ET PRETES!');
               hideLoadingScreen();

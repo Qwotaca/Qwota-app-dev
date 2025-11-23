@@ -22,30 +22,7 @@
 
   <!-- Script Service Worker -->
   <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      // Ne pas enregistrer le SW sur localhost (mode dev)
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        console.log('[DEV] Service Worker désactivé sur localhost');
-        // Désenregistrer le SW s'il existe déjà
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for(let registration of registrations) {
-            registration.unregister();
-            console.log('[DEV] Service Worker désenregistré');
-          }
-        });
-        return;
-      }
-
-      // DISABLED - navigator.serviceWorker.register('/sw.js')
-        .then((registration) => {
-          console.log('SW registered: ', registration);
-        })
-        .catch((registrationError) => {
-          console.log('SW registration failed: ', registrationError);
-        });
-    });
-  }
+  /* Service Worker disabled */
   </script>
   
   <script src="https://cdn.tailwindcss.com"></script>
@@ -1915,7 +1892,59 @@ function autoFillForm() {
       console.error("[ERROR] Erreur lors du préremplissage:", error);
     }
   } else {
-    console.log("ℹ️ Aucune donnée submissionData trouvée");
+    // Vérifier s'il y a des données de récupération client (venant de Ventes - clients perdus)
+    const recuperationData = localStorage.getItem('recuperationClient');
+    console.log("[DEBUG] recuperationClient trouvé:", recuperationData);
+
+    if (recuperationData) {
+      try {
+        const data = JSON.parse(recuperationData);
+        console.log("[OK] Données de récupération client trouvées:", data);
+
+        setTimeout(() => {
+          if (data.prenom) {
+            const prenomField = document.querySelector('input[name="prenom"]');
+            if (prenomField) prenomField.value = data.prenom;
+          }
+          if (data.nom) {
+            const nomField = document.querySelector('input[name="nom"]');
+            if (nomField) nomField.value = data.nom;
+          }
+          if (data.adresse) {
+            const adresseField = document.querySelector('input[name="adresse"]');
+            if (adresseField) {
+              adresseField.value = data.adresse;
+              window.googleProspectAddressSelected = true;
+              window.initialAutofilledAddress = data.adresse;
+              console.log("[OK] Adresse auto-remplie depuis récupération client");
+            }
+          }
+          if (data.telephone) {
+            const telephoneField = document.querySelector('input[name="telephone"]');
+            if (telephoneField) telephoneField.value = data.telephone;
+          }
+          if (data.courriel) {
+            const courrielField = document.querySelector('input[name="courriel"]');
+            if (courrielField) courrielField.value = data.courriel;
+          }
+          if (data.prix) {
+            const prixField = document.querySelector('input[name="prix"]');
+            if (prixField) prixField.value = data.prix;
+          }
+
+          console.log("[OK] Formulaire prérempli avec données client récupéré");
+
+          // Nettoyer les données de récupération
+          localStorage.removeItem('recuperationClient');
+          console.log("🧹 Données de récupération nettoyées");
+        }, 500);
+
+      } catch (error) {
+        console.error("[ERROR] Erreur lors du préremplissage récupération:", error);
+      }
+    } else {
+      console.log("ℹ️ Aucune donnée submissionData trouvée");
+    }
   }
 }
 
@@ -1985,6 +2014,12 @@ async function savePendingSoumission(formEl) {
     part: document.getElementById("partTravauxHidden").value,
     payer_par: window.dropdownStates?.paidBy || "Virement Interac"
   };
+
+  // Si on édite une soumission existante, ajouter l'ID pour mise à jour
+  if (window.editingSoumissionId) {
+    soumissionData.soumission_id = window.editingSoumissionId;
+    console.log('[UPDATE] Mode mise à jour - ID:', window.editingSoumissionId);
+  }
 
   try {
     // Sauvegarder via l'API backend
@@ -2264,6 +2299,14 @@ async function editPendingSoumission(soumissionId) {
 
       console.log('[OK] Formulaire prefilled avec les données de la soumission');
 
+      // Revalider les champs pour activer les boutons
+      if (typeof validateRequiredFields === 'function') {
+        setTimeout(() => {
+          validateRequiredFields();
+          console.log('[OK] Validation des champs après chargement soumission');
+        }, 100);
+      }
+
       // Notification visuelle
       const notification = document.createElement('div');
       notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #3b82f6; color: white; padding: 1rem 1.5rem; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
@@ -2286,29 +2329,113 @@ async function editPendingSoumission(soumissionId) {
 
 // Supprimer une soumission en attente depuis la base de données
 async function deletePendingSoumission(soumissionId) {
-  try {
-    const response = await fetch('/remove-soumission-from-queue', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: window.username,
-        soumission_id: soumissionId
-      })
-    });
+  // Créer le popup de confirmation
+  showDeleteConfirmPopup(soumissionId);
+}
 
-    if (!response.ok) {
-      throw new Error('Erreur lors de la suppression');
+// Fonction pour afficher le popup de confirmation de suppression
+function showDeleteConfirmPopup(soumissionId) {
+  // Créer l'overlay (même style que calcul.html)
+  const overlay = document.createElement('div');
+  overlay.id = 'deleteConfirmOverlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `;
+
+  // Créer la modal (même style que calcul.html)
+  const popup = document.createElement('div');
+  popup.style.cssText = `
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 450px;
+    width: 90%;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(71, 85, 105, 0.3);
+    transform: scale(0.9);
+    opacity: 0;
+    transition: all 0.3s ease;
+  `;
+
+  popup.innerHTML = `
+    <div style="text-align: center;">
+      <div style="width: 64px; height: 64px; background: rgba(239, 68, 68, 0.2); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center;">
+        <i class="fas fa-exclamation-triangle" style="color: #ef4444; font-size: 28px;"></i>
+      </div>
+      <h3 style="color: white; font-size: 24px; font-weight: bold; margin-bottom: 16px;">Supprimer cette soumission</h3>
+      <p style="color: #cbd5e1; font-size: 16px; line-height: 1.5; margin-bottom: 32px;">Êtes-vous sûr de vouloir supprimer cette soumission ? Cette action est irréversible.</p>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button id="cancelDeleteBtn" class="btn-secondary" style="font-size: 16px;">Annuler</button>
+        <button id="confirmDeleteBtn" class="btn-primary" style="
+          background: #ef4444 !important;
+          border-color: #ef4444 !important;
+          border-radius: 24px !important;
+          font-size: 16px;
+        ">Supprimer</button>
+      </div>
+    </div>
+  `;
+
+  overlay.appendChild(popup);
+  document.body.appendChild(overlay);
+
+  // Animation d'apparition
+  setTimeout(() => {
+    popup.style.transform = 'scale(1)';
+    popup.style.opacity = '1';
+  }, 10);
+
+  // Gérer les clics
+  document.getElementById('cancelDeleteBtn').addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+    try {
+      const response = await fetch('/remove-soumission-from-queue', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: window.username,
+          soumission_id: soumissionId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la suppression');
+      }
+
+      console.log('[DELETE] Soumission supprimée:', soumissionId);
+
+      // Fermer le popup
+      overlay.remove();
+
+      // Rafraîchir la table
+      await loadPendingSoumissions();
+
+    } catch (error) {
+      console.error('[ERROR] Erreur suppression:', error);
+      alert('Erreur lors de la suppression de la soumission');
+      overlay.remove();
     }
+  });
 
-    console.log('[DELETE] Soumission supprimée:', soumissionId);
-
-    // Rafraîchir la table
-    await loadPendingSoumissions();
-
-  } catch (error) {
-    console.error('[ERROR] Erreur suppression:', error);
-    alert('Erreur lors de la suppression de la soumission');
-  }
+  // Fermer en cliquant sur l'overlay
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      overlay.remove();
+    }
+  });
 }
 
 // Exposer les fonctions globalement
@@ -3406,6 +3533,25 @@ window.acceptPresentation = async function() {
 
     const result = await response.json();
     console.log('[DEBUG] ACCEPTATION - Réponse:', result);
+
+    // Si on modifiait une soumission en attente, la supprimer de la queue
+    if (window.editingSoumissionId) {
+      try {
+        console.log("[DELETE] Suppression de la soumission de la queue après signature:", window.editingSoumissionId);
+        await fetch('/remove-soumission-from-queue', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: window.username,
+            soumission_id: window.editingSoumissionId
+          })
+        });
+        console.log("[OK] Soumission retirée de la queue après signature");
+        window.editingSoumissionId = null;
+      } catch (e) {
+        console.log("[WARN] Erreur suppression de la queue (non bloquant):", e);
+      }
+    }
 
     // Fermer le modal
     closePdfModal();

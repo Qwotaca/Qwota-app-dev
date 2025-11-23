@@ -203,17 +203,17 @@
               </div>
             </div>
 
-            <!-- Upload d'images -->
+            <!-- Upload d'images et vidéos -->
             <div id="images-section">
               <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
-                <i class="fas fa-images mr-2 text-indigo-500"></i>
-                Images du projet (max 16)
+                <i class="fas fa-photo-video mr-2 text-indigo-500"></i>
+                Images et vidéos du projet (max 16)
               </label>
               <div class="upload-zone" id="dropzone">
                 <div class="mb-4">
                   <i class="fas fa-cloud-upload-alt text-4xl text-blue-500 mb-4"></i>
                   <p class="text-lg font-medium" style="color: var(--text-light);">
-                    Glissez vos images ici ou cliquez pour sélectionner
+                    Glissez vos fichiers ici ou cliquez pour sélectionner
                   </p>
                   <p class="text-sm mt-2" style="color: var(--text-gray);">
                     Formats acceptés: JPG, PNG, WebP, MP4, MOV, AVI
@@ -270,7 +270,7 @@
         <!-- Boutons d'action -->
         <div class="flex justify-end space-x-4 mt-8 pt-6" style="border-top: 1px solid var(--border-dark);">
           <button type="button" class="btn-secondary px-6 py-2" id="voirPDFBtn" disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
-            Voir en PDF
+            Voir GQP
           </button>
           <button type="submit" id="generateButton" class="btn-primary px-6 py-2 flex items-center gap-2" disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
             <span id="btnText">Envoyer à l'équipe</span>
@@ -303,14 +303,17 @@
           <table class="modern-table">
             <thead>
               <tr>
-                <th>Client</th>
                 <th>N° Soumission</th>
+                <th>Client</th>
+                <th>Date de création</th>
+                <th>Adresse</th>
+                <th>Montant</th>
                 <th class="text-center" style="text-align: center !important;">Actions</th>
               </tr>
             </thead>
             <tbody id="gqp-envoys-body">
               <tr>
-                <td colspan="3" class="empty-state">
+                <td colspan="6" class="empty-state">
                   <i class="fas fa-inbox" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
                   <p style="font-size: 1rem;">Aucun GQP envoyé pour le moment</p>
                 </td>
@@ -354,10 +357,10 @@
         </div>
         
         <div class="grid grid-cols-2 gap-4 mb-6">
-          <!-- Voir PDF -->
+          <!-- Voir GQP -->
           <button id="modal-voir-pdf" class="modal-btn modal-btn-secondary">
-            <i class="fas fa-file-pdf mr-2"></i>
-            Voir en PDF
+            <i class="fas fa-eye mr-2"></i>
+            Voir GQP
           </button>
           
           <!-- Sélection équipe -->
@@ -644,57 +647,91 @@
     });
   }
 
-  // Gestion de la sélection de fichiers
+  // Gestion de la sélection de fichiers (images et vidéos)
   function handleFileSelection(files) {
-    const imageFiles = files.filter(file => file.type.startsWith('image/'));
-    
-    if (allFiles.length + imageFiles.length > maxImages) {
-      showError(`Le maximum est de ${maxImages} images.`);
+    const mediaFiles = files.filter(file => file.type.startsWith('image/') || file.type.startsWith('video/'));
+
+    if (allFiles.length + mediaFiles.length > maxImages) {
+      showError(`Le maximum est de ${maxImages} fichiers.`);
       return;
     }
 
-    imageFiles.forEach(file => {
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        showError(`Le fichier ${file.name} est trop volumineux (max 10MB).`);
+    mediaFiles.forEach(file => {
+      const maxSize = file.type.startsWith('video/') ? 50 * 1024 * 1024 : 10 * 1024 * 1024; // 50MB pour vidéos, 10MB pour images
+      if (file.size > maxSize) {
+        const maxSizeMB = maxSize / (1024 * 1024);
+        showError(`Le fichier ${file.name} est trop volumineux (max ${maxSizeMB}MB).`);
         return;
       }
 
       // Ajouter aux deux arrays pour compatibilité
       allFiles.push(file);
-      
-      const reader = new FileReader();
-      reader.onload = (e) => {
+
+      const isVideo = file.type.startsWith('video/');
+
+      if (isVideo) {
+        // Pour les vidéos, créer une URL blob directement
+        const videoUrl = URL.createObjectURL(file);
         selectedImages.push({
           file: file,
-          src: e.target.result,
-          id: Date.now() + Math.random()
+          src: videoUrl,
+          id: Date.now() + Math.random(),
+          isVideo: true
         });
         updatePreview();
-        
+
         // Synchroniser fileInput
         const dataTransfer = new DataTransfer();
         allFiles.forEach(f => dataTransfer.items.add(f));
         document.getElementById('photo-input').files = dataTransfer.files;
-      };
-      reader.readAsDataURL(file);
+      } else {
+        // Pour les images, utiliser FileReader
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          selectedImages.push({
+            file: file,
+            src: e.target.result,
+            id: Date.now() + Math.random(),
+            isVideo: false
+          });
+          updatePreview();
+
+          // Synchroniser fileInput
+          const dataTransfer = new DataTransfer();
+          allFiles.forEach(f => dataTransfer.items.add(f));
+          document.getElementById('photo-input').files = dataTransfer.files;
+        };
+        reader.readAsDataURL(file);
+      }
     });
   }
 
-  // Mise à jour de l'aperçu des images
+  // Mise à jour de l'aperçu des images et vidéos
   function updatePreview() {
     const preview = document.getElementById('preview');
     preview.innerHTML = '';
 
-    selectedImages.forEach((image, index) => {
-      const imageDiv = document.createElement('div');
-      imageDiv.className = 'image-preview relative';
-      imageDiv.innerHTML = `
-        <img src="${image.src}" alt="Aperçu ${index + 1}">
-        <button type="button" class="delete-btn" onclick="removeImage(${image.id})">
-          <i class="fas fa-times"></i>
-        </button>
-      `;
-      preview.appendChild(imageDiv);
+    selectedImages.forEach((media, index) => {
+      const mediaDiv = document.createElement('div');
+      mediaDiv.className = 'media-preview relative';
+
+      if (media.isVideo) {
+        mediaDiv.innerHTML = `
+          <video src="${media.src}" muted></video>
+          <div class="video-icon"><i class="fas fa-play-circle"></i></div>
+          <button type="button" class="delete-btn" onclick="removeImage(${media.id})">
+            <i class="fas fa-times"></i>
+          </button>
+        `;
+      } else {
+        mediaDiv.innerHTML = `
+          <img src="${media.src}" alt="Aperçu ${index + 1}">
+          <button type="button" class="delete-btn" onclick="removeImage(${media.id})">
+            <i class="fas fa-times"></i>
+          </button>
+        `;
+      }
+      preview.appendChild(mediaDiv);
     });
   }
 
@@ -788,8 +825,9 @@
 
       // Filtrer les clients qui n'ont PAS encore de GQP envoyé
       const clientsSansGQP = ventesAcceptees.filter(client => {
-        // Vérifier si le client a déjà un GQP
+        // Vérifier si le client a déjà un GQP (vérifier tous les champs possibles)
         const hasGQP = (client.gqp && client.gqp !== 'Non disponible') ||
+                       (client.lien_gqp && client.lien_gqp !== 'Non disponible') ||
                        (client.documents && client.documents.gqp && client.documents.gqp !== 'Non disponible');
 
         // Retourner true seulement si le client N'A PAS de GQP
@@ -880,14 +918,33 @@
       afficherClientsGQP(todosClients);
       return;
     }
-    
+
     const queryLower = query.toLowerCase();
-    const clientsFiltres = todosClients.filter(client => 
+    const clientsFiltres = todosClients.filter(client =>
       client.nom_client.toLowerCase().includes(queryLower) ||
       client.numero_soumission.toLowerCase().includes(queryLower)
     );
-    
+
     afficherClientsGQP(clientsFiltres);
+  }
+
+  // Fonction pour retirer un client du dropdown après envoi du GQP
+  function retirerClientDuDropdown(numeroSoumission) {
+    console.log('🗑️ Retrait du client du dropdown:', numeroSoumission);
+
+    // Retirer de la liste locale
+    todosClients = todosClients.filter(client => client.numero_soumission !== numeroSoumission);
+
+    // Rafraîchir l'affichage du dropdown
+    afficherClientsGQP(todosClients);
+
+    // Réinitialiser le champ de recherche
+    const inputSearch = document.getElementById('clientSearchGQP');
+    if (inputSearch) {
+      inputSearch.value = '';
+    }
+
+    console.log('[OK] Client retiré, clients restants:', todosClients.length);
   }
 
   function ouvrirMenuGQP() {
@@ -972,7 +1029,8 @@
         adresse: soumissionData.adresse,
         telephone: soumissionData.telephone,
         courriel: soumissionData.courriel,
-        endroit: soumissionData.endroit
+        endroit: soumissionData.endroit,
+        prix: soumissionData.prix || ''
       };
       
       console.log('[OK] Client GQP sélectionné avec données complètes:', selectedSoumission);
@@ -1091,7 +1149,7 @@
       } else if (noAssignment.checked) {
         teamSelectionContainer.classList.add('hidden');
         teamSelectionContainer.style.display = 'none';
-        btnText.textContent = "Générer GQP";
+        btnText.textContent = "Enregistrer sans envoyer";
         // Reset équipe sélectionnée
         const equipeToggle = document.getElementById('equipeToggle');
         if (equipeToggle) {
@@ -1155,8 +1213,232 @@
     console.log('[OK] Options d\'assignation configurées avec debug');
   }
 
+  // Fonction pour mettre à jour le compteur de GQP (définie tôt pour être disponible)
+  function updateGqpCount() {
+    const tbody = document.getElementById('gqp-envoys-body');
+    const countElement = document.getElementById('gqp-count');
+
+    if (!tbody || !countElement) return;
+
+    // Compter les lignes qui ne sont pas des états vides
+    const rows = tbody.querySelectorAll('tr:not(.empty-state-row)');
+    const emptyState = tbody.querySelector('.empty-state');
+    const count = emptyState ? 0 : rows.length;
+
+    countElement.textContent = count === 0 ? '0 en attente' : count === 1 ? '1 en attente' : `${count} en attente`;
+  }
+
+  // Fonction pour afficher un message de succès
+  function showSuccess(message) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #10b981;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 99999;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    `;
+    toast.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  // Fonction pour afficher un message d'erreur
+  function showError(message) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #ef4444;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 99999;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    `;
+    toast.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
+  }
+
+  // Fonction pour afficher le popup de confirmation de suppression GQP
+  function showDeleteGqpConfirmPopup(gqpId) {
+    // Créer l'overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'deleteGqpConfirmOverlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `;
+
+    // Créer la modal
+    const popup = document.createElement('div');
+    popup.style.cssText = `
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 450px;
+      width: 90%;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(71, 85, 105, 0.3);
+      transform: scale(0.9);
+      opacity: 0;
+      transition: all 0.3s ease;
+    `;
+
+    popup.innerHTML = `
+      <div style="text-align: center;">
+        <div style="width: 64px; height: 64px; background: rgba(239, 68, 68, 0.2); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center;">
+          <i class="fas fa-exclamation-triangle" style="color: #ef4444; font-size: 28px;"></i>
+        </div>
+        <h3 style="color: white; font-size: 24px; font-weight: bold; margin-bottom: 16px;">Supprimer cette soumission</h3>
+        <p style="color: #cbd5e1; font-size: 16px; line-height: 1.5; margin-bottom: 32px;">Êtes-vous sûr de vouloir supprimer cette soumission ? Cette action est irréversible.</p>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+          <button id="cancelDeleteGqpBtn" class="btn-secondary" style="font-size: 16px;">Annuler</button>
+          <button id="confirmDeleteGqpBtn" class="btn-primary" style="
+            background: #ef4444 !important;
+            border-color: #ef4444 !important;
+            border-radius: 24px !important;
+            font-size: 16px;
+          ">Supprimer</button>
+        </div>
+      </div>
+    `;
+
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+
+    // Animation d'apparition
+    setTimeout(() => {
+      popup.style.transform = 'scale(1)';
+      popup.style.opacity = '1';
+    }, 10);
+
+    // Gérer les clics
+    document.getElementById('cancelDeleteGqpBtn').addEventListener('click', () => {
+      overlay.remove();
+    });
+
+    document.getElementById('confirmDeleteGqpBtn').addEventListener('click', async () => {
+      try {
+        const username = localStorage.getItem('username');
+
+        // Appeler l'API pour supprimer du serveur
+        const response = await fetch('/delete-gqp-from-queue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: username,
+            gqp_id: gqpId.toString()
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Erreur serveur lors de la suppression');
+        }
+
+        console.log('[DELETE] GQP supprimé:', gqpId);
+
+        // Fermer le popup
+        overlay.remove();
+
+        // Supprimer de la vue Desktop
+        const tbody = document.getElementById('gqp-envoys-body');
+        const row = tbody.querySelector(`tr[data-gqp-id="${gqpId}"]`);
+        if (row) {
+          row.remove();
+        }
+
+        // Supprimer de la vue Mobile
+        const mobileList = document.getElementById('gqp-mobile-list');
+        const card = mobileList.querySelector(`.gqp-mobile-card[data-gqp-id="${gqpId}"]`);
+        if (card) {
+          card.remove();
+        }
+
+        // Vérifier si la liste est vide et ajouter message vide
+        const remainingRows = tbody.querySelectorAll('tr');
+        if (remainingRows.length === 0) {
+          const emptyRow = document.createElement('tr');
+          emptyRow.innerHTML = `
+            <td colspan="6" class="empty-state">
+              <i class="fas fa-inbox" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
+              <p style="font-size: 1rem;">Aucun GQP en attente d'envoi</p>
+            </td>
+          `;
+          tbody.appendChild(emptyRow);
+        }
+
+        const remainingCards = mobileList.querySelectorAll('.gqp-mobile-card');
+        if (remainingCards.length === 0) {
+          const emptyCard = document.createElement('div');
+          emptyCard.className = 'gqp-empty-mobile';
+          emptyCard.innerHTML = '<i class="fas fa-inbox"></i><p>Aucun GQP en attente</p>';
+          mobileList.appendChild(emptyCard);
+        }
+
+        // Mettre à jour le compteur
+        updateGqpCount();
+
+      } catch (error) {
+        console.error('[ERROR] Erreur suppression GQP:', error);
+        showError('Erreur lors de la suppression: ' + error.message);
+        overlay.remove();
+      }
+    });
+
+    // Fermer en cliquant sur l'overlay
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        overlay.remove();
+      }
+    });
+  }
+
+  // Fonction pour supprimer un GQP de la queue
+  function deleteGqpFromQueue(gqpId) {
+    showDeleteGqpConfirmPopup(gqpId);
+  }
+
+  // Fonction pour formater une date ISO en format français DD/MM/YYYY
+  function formatDateFr(dateStr) {
+    if (!dateStr) return 'N/A';
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return 'N/A';
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch (e) {
+      return 'N/A';
+    }
+  }
+
   // Fonction pour ajouter une entrée à la table "GQP à envoyé"
-  function addGqpToTable(clientName, numeroSoumission, pdfUrl = null, gqpId = null) {
+  function addGqpToTable(clientName, numeroSoumission, pdfUrl = null, gqpId = null, dateCreation = '', adresse = '', montant = '') {
     const tbody = document.getElementById('gqp-envoys-body');
     const mobileList = document.getElementById('gqp-mobile-list');
 
@@ -1173,29 +1455,38 @@
     }
 
     const finalGqpId = gqpId || Date.now(); // Utiliser l'ID de la base ou un ID temporaire
+    const displayDate = formatDateFr(dateCreation);
+    const displayAdresse = adresse || 'N/A';
+    const displayMontant = montant ? `${montant} $` : 'N/A';
 
-    // Vue Desktop: Table row
+    // Vue Desktop: Table row (même format que soumission à envoyer)
     const row = document.createElement('tr');
     row.setAttribute('data-gqp-id', finalGqpId);
     row.setAttribute('data-pdf-url', pdfUrl || '');
 
     row.innerHTML = `
-      <td>
-        <div style="color: var(--text-light); font-weight: 500;">${clientName}</div>
-      </td>
-      <td>
-        <div style="color: var(--text-gray);">${numeroSoumission}</div>
-      </td>
+      <td>${numeroSoumission}</td>
+      <td>${clientName}</td>
+      <td>${displayDate}</td>
+      <td>${displayAdresse}</td>
+      <td>${displayMontant}</td>
       <td class="text-center">
-        <button class="btn-secondary px-3 py-1 text-xs" onclick="assignToFormFromTable('${clientName}', '${numeroSoumission}', '${finalGqpId}')">
-          <i class="fas fa-users mr-1"></i>Assigner à une équipe
+        <button onclick="assignToFormFromTable('${clientName}', '${numeroSoumission}', '${finalGqpId}')"
+                class="btn-primary action-btn-send"
+                title="Assigner">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button onclick="deleteGqpFromQueue('${finalGqpId}')"
+                class="btn-secondary action-btn-delete"
+                title="Supprimer">
+          <i class="fas fa-trash"></i>
         </button>
       </td>
     `;
 
     tbody.appendChild(row);
 
-    // Vue Mobile: Card
+    // Vue Mobile: Card (même format que soumission)
     const card = document.createElement('div');
     card.className = 'gqp-mobile-card';
     card.setAttribute('data-gqp-id', finalGqpId);
@@ -1203,17 +1494,23 @@
     card.innerHTML = `
       <div class="gqp-card-header">
         <div style="flex: 1;">
+          <div class="gqp-card-numero">GQP ${numeroSoumission}</div>
           <div class="gqp-card-client">${clientName}</div>
-          <div class="gqp-card-numero">
-            <i class="fas fa-file-invoice" style="color: var(--primary-blue);"></i>
-            <span>${numeroSoumission}</span>
+          <div class="gqp-card-adresse">
+            <i class="fas fa-map-marker-alt" style="color: var(--primary-green); margin-top: 2px;"></i>
+            <span>${displayAdresse}</span>
           </div>
         </div>
+        <div class="gqp-card-montant">${displayMontant}</div>
       </div>
       <div class="gqp-card-actions">
         <button onclick="assignToFormFromTable('${clientName}', '${numeroSoumission}', '${finalGqpId}')" class="gqp-action-btn assign-btn">
-          <i class="fas fa-users"></i>
-          <span>Assigner à une équipe</span>
+          <i class="fas fa-edit"></i>
+          <span>Assigner</span>
+        </button>
+        <button onclick="deleteGqpFromQueue('${finalGqpId}')" class="gqp-action-btn delete-btn">
+          <i class="fas fa-trash"></i>
+          <span>Supprimer</span>
         </button>
       </div>
     `;
@@ -1323,7 +1620,7 @@
 
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(`Erreur lors de la génération du PDF : ${errorText}`);
+          throw new Error(`Erreur lors de la génération du GQP : ${errorText}`);
         }
 
         const json = await response.json();
@@ -1408,7 +1705,12 @@
 
           btnText.innerHTML = `Envoyé <svg class="w-4 h-4 inline ml-1 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>`;
 
-          // Recharger la liste des clients pour retirer celui qui vient d'être envoyé
+          // Retirer immédiatement le client du dropdown
+          if (selectedSoumission?.numero_soumission) {
+            retirerClientDuDropdown(selectedSoumission.numero_soumission);
+          }
+
+          // Recharger la liste des clients pour s'assurer de la synchronisation avec le serveur
           console.log('🔄 Rechargement de la liste des clients après envoi GQP');
           await chargerClientsGQP();
 
@@ -1454,6 +1756,7 @@
             heure: heure.value,
             montant: montant.value,
             etapes: etapes.value,
+            prix: selectedSoumission?.prix || '',
             images_info: allFiles.map(file => ({
               name: file.name,
               size: file.size,
@@ -1486,14 +1789,20 @@
             
             const saveResult = await saveResponse.json();
             console.log('[OK] GQP sauvegardé en base:', saveResult.gqp_id);
-            
-            // Ajouter à la table IMMÉDIATEMENT avec l'ID de la base
-            addGqpToTable(clientName, numeroSoumission, lienPdf, saveResult.gqp_id);
-            
+
+            // Ajouter à la table IMMÉDIATEMENT avec l'ID de la base et toutes les données
+            const dateCreation = new Date().toISOString();
+            const adresseDisplay = gqpData.adresse || '';
+            const prixDisplay = gqpData.prix || '';
+            addGqpToTable(clientName, numeroSoumission, lienPdf, saveResult.gqp_id, dateCreation, adresseDisplay, prixDisplay);
+
           } catch (error) {
             console.error('[ERROR] Erreur sauvegarde GQP:', error);
-            // Ajouter quand même à la table en mode fallback
-            addGqpToTable(clientName, numeroSoumission, lienPdf);
+            // Ajouter quand même à la table en mode fallback avec les données disponibles
+            const dateCreation = new Date().toISOString();
+            const adresseDisplay = gqpData.adresse || '';
+            const prixDisplay = gqpData.prix || '';
+            addGqpToTable(clientName, numeroSoumission, lienPdf, null, dateCreation, adresseDisplay, prixDisplay);
           }
           
           btnText.innerHTML = `GQP généré <svg class="w-4 h-4 inline ml-1 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>`;
@@ -1528,7 +1837,7 @@
       }
 
       voirPDFBtn.disabled = true;
-      voirPDFBtn.textContent = "Génération PDF...";
+      voirPDFBtn.textContent = "Génération...";
 
       const formData = new FormData(document.getElementById("gqp-form"));
       allFiles.forEach(file => formData.append("photos", file));
@@ -1547,7 +1856,7 @@
 
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(`Erreur lors de la génération du PDF : ${errorText}`);
+          throw new Error(`Erreur lors de la génération du GQP : ${errorText}`);
         }
 
         const json = await response.json();
@@ -1560,7 +1869,7 @@
         showError(err.message || "Erreur lors de la génération du PDF");
       } finally {
         voirPDFBtn.disabled = false;
-        voirPDFBtn.textContent = "Voir en PDF";
+        voirPDFBtn.textContent = "Voir GQP";
       }
     });
   }
@@ -1570,13 +1879,26 @@
     alert(msg); // Simple pour l'instant
   }
 
-  // Fonction pour afficher le PDF avec toutes les pages en scroll vertical
-  async function showPDFModal(lienPdf) {
+  // Fonction pour afficher le GQP (maintenant en HTML avec support vidéo)
+  async function showPDFModal(lienGqp) {
+    // Ouvrir le GQP HTML dans une modal popup intégrée
+    console.log('[GQP] Ouverture du GQP dans modal:', lienGqp);
+
+    const modal = document.getElementById('gqpPreviewModal');
+    const iframe = document.getElementById('gqpPreviewFrame');
+
+    iframe.src = lienGqp;
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    return; // Fin de la fonction - pas besoin du code PDF ci-dessous
+
+    // --- ANCIEN CODE PDF (conservé pour référence) ---
     try {
       const pdfjsLib = window['pdfjs-dist/build/pdf'];
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
 
-      const pdf = await pdfjsLib.getDocument(lienPdf).promise;
+      const pdf = await pdfjsLib.getDocument(lienGqp).promise;
       console.log('[FILE] PDF chargé avec', pdf.numPages, 'pages');
 
       const totalPages = pdf.numPages;
@@ -2075,9 +2397,12 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // 9. Scroller vers le haut pour voir le formulaire
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      
+
+      // 10. Valider les champs pour activer les boutons
+      validateRequiredFields();
+
       console.log('[OK] Formulaire auto-rempli avec succès');
-      
+
     } catch (error) {
       console.error('[ERROR] Erreur auto-remplissage:', error);
       alert('Erreur lors du remplissage automatique: ' + error.message);
@@ -2224,29 +2549,43 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('[OK] Équipe sélectionnée dans modal:', equipe.nom);
   }
 
-  // Fonction pour voir le PDF dans le modal
+  // Fonction pour voir le GQP dans le modal
   document.getElementById('modal-voir-pdf').addEventListener('click', function() {
     if (!currentGqpData) return;
-    
-    // Générer et ouvrir le PDF (utiliser la même logique que le bouton principal)
-    generateModalPDF();
+
+    // Ouvrir le lien GQP dans un nouvel onglet
+    openGQPFromModal();
   });
 
-  async function generateModalPDF() {
+  async function openGQPFromModal() {
     if (!currentGqpData) return;
-    
+
     try {
-      // Ici vous pouvez utiliser la même logique que le bouton "Voir en PDF" principal
-      // Pour l'instant, on simule juste l'ouverture
-      console.log('[FILE] Génération PDF pour:', currentGqpData);
-      
-      // TODO: Implémenter la génération PDF avec les données actuelles
-      showSuccess('PDF généré avec succès!');
-      
+      console.log('[GQP] Ouverture GQP pour:', currentGqpData);
+
+      // Si on a déjà un lien GQP, l'ouvrir dans la modal intégrée
+      if (currentGqpData.lien_pdf) {
+        showPDFModal(currentGqpData.lien_pdf);
+        return;
+      }
+
+      // Sinon, informer l'utilisateur
+      showError('Aucun lien GQP disponible');
+
     } catch (error) {
-      console.error('[ERROR] Erreur génération PDF:', error);
-      showError('Erreur lors de la génération du PDF');
+      console.error('[ERROR] Erreur ouverture GQP:', error);
+      showError('Erreur lors de l\'ouverture du GQP');
     }
+  }
+
+  // Fonction pour fermer la modal GQP Preview
+  function closeGqpPreviewModal(event) {
+    const modal = document.getElementById('gqpPreviewModal');
+    const iframe = document.getElementById('gqpPreviewFrame');
+
+    modal.classList.add('hidden');
+    iframe.src = '';
+    document.body.style.overflow = '';
   }
 
   // Fonction pour assigner le GQP à l'équipe
@@ -2285,10 +2624,19 @@ document.addEventListener('DOMContentLoaded', function() {
       
       showSuccess(`GQP assigné à l'équipe ${modalSelectedEquipe.nom}`);
       closeAssignModal();
-      
+
       // Supprimer la ligne du tableau
       removeGqpFromTable(currentGqpId);
-      
+
+      // Retirer immédiatement le client du dropdown
+      if (currentGqpData?.numeroSoumission) {
+        retirerClientDuDropdown(currentGqpData.numeroSoumission);
+      }
+
+      // Recharger la liste des clients pour s'assurer de la synchronisation avec le serveur
+      console.log('🔄 Rechargement de la liste des clients après assignation GQP');
+      await chargerClientsGQP();
+
     } catch (error) {
       console.error('[ERROR] Erreur assignation GQP:', error);
       showError('Erreur lors de l\'assignation du GQP: ' + error.message);
@@ -2328,12 +2676,35 @@ document.addEventListener('DOMContentLoaded', function() {
     if (remainingRows.length === 0) {
       const emptyRow = document.createElement('tr');
       emptyRow.innerHTML = `
-        <td colspan="3" class="empty-state">
-          <i class="fas fa-inbox mr-2"></i>
-          Aucun GQP envoyé pour le moment
+        <td colspan="6" class="empty-state">
+          <div style="text-align: center; color: var(--text-gray);">
+            <i class="fas fa-inbox fa-3x mb-4" style="display: block;"></i>
+            <p>Aucun GQP en attente d'assignation</p>
+          </div>
         </td>
       `;
       tbody.appendChild(emptyRow);
+    }
+
+    // Supprimer aussi la carte mobile si présente
+    const mobileList = document.getElementById('gqp-mobile-list');
+    if (mobileList) {
+      const mobileCard = mobileList.querySelector(`.gqp-mobile-card[data-gqp-id="${gqpId}"]`);
+      if (mobileCard) {
+        mobileCard.remove();
+      }
+
+      // Si plus de cartes, remettre le message vide mobile
+      const remainingCards = mobileList.querySelectorAll('.gqp-mobile-card');
+      if (remainingCards.length === 0) {
+        const existingEmpty = mobileList.querySelector('.gqp-empty-mobile');
+        if (!existingEmpty) {
+          const emptyCard = document.createElement('div');
+          emptyCard.className = 'gqp-empty-mobile';
+          emptyCard.innerHTML = '<i class="fas fa-inbox"></i><p>Aucun GQP en attente</p>';
+          mobileList.appendChild(emptyCard);
+        }
+      }
     }
 
     // Mettre à jour le compteur
@@ -2359,7 +2730,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Pas de GQP, afficher le message vide
         const emptyRow = document.createElement('tr');
         emptyRow.innerHTML = `
-          <td colspan="3" class="empty-state">
+          <td colspan="6" class="empty-state">
             <i class="fas fa-inbox mr-2"></i>
             Aucun GQP envoyé pour le moment
           </td>
@@ -2368,7 +2739,10 @@ document.addEventListener('DOMContentLoaded', function() {
       } else {
         // Ajouter chaque GQP à la table
         data.gqps.forEach(gqp => {
-          addGqpToTable(gqp.client_name, gqp.numero_soumission, gqp.pdf_url, gqp.id);
+          // Extraire adresse et prix de gqp_data (données de la soumission)
+          const adresse = gqp.gqp_data?.adresse || '';
+          const prix = gqp.gqp_data?.prix || '';
+          addGqpToTable(gqp.client_name, gqp.numero_soumission, gqp.pdf_url, gqp.id, gqp.date_creation, adresse, prix);
         });
       }
       
@@ -2410,7 +2784,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Aucun GQP en attente - afficher le message vide
         const emptyRow = document.createElement('tr');
         emptyRow.innerHTML = `
-          <td colspan="3" class="empty-state">
+          <td colspan="6" class="empty-state">
             <div style="text-align: center; color: var(--text-gray);">
               <i class="fas fa-inbox fa-3x mb-4"></i>
               <p>Aucun GQP en attente d'assignation</p>
@@ -2422,9 +2796,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Ajouter chaque GQP à la table
         data.gqps.forEach((gqp, index) => {
           console.log(`[BAN] Ajout GQP ${index + 1}:`, gqp.client_name, gqp.numero_soumission, gqp.id);
-          addGqpToTable(gqp.client_name, gqp.numero_soumission, gqp.pdf_url, gqp.id);
+          // Extraire adresse et prix de gqp_data (données de la soumission)
+          const adresse = gqp.gqp_data?.adresse || '';
+          const prix = gqp.gqp_data?.prix || '';
+          addGqpToTable(gqp.client_name, gqp.numero_soumission, gqp.pdf_url, gqp.id, gqp.date_creation, adresse, prix);
         });
-        
+
         console.log(`[OK] ${data.gqps.length} GQP(s) chargé(s) dans la table`);
       }
       
@@ -2444,6 +2821,170 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- PDF Viewer Modal (copié depuis créer_soumission) -->
 <!-- Overlay flou -->
 <div id="pdfOverlay"></div>
+
+<!-- Modal GQP Preview (iframe popup) -->
+<div id="gqpPreviewModal" class="gqp-preview-overlay hidden" onclick="closeGqpPreviewModal(event)">
+  <div class="gqp-preview-container" onclick="event.stopPropagation()">
+    <div class="gqp-preview-header">
+      <span class="gqp-preview-title">Aperçu GQP</span>
+      <button class="gqp-preview-close" onclick="closeGqpPreviewModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <iframe id="gqpPreviewFrame" src="" frameborder="0"></iframe>
+  </div>
+</div>
+
+<style>
+  /* Styles des boutons d'action GQP - même style que soumission */
+  .action-btn-send {
+    font-size: 11px !important;
+    padding: 4px 8px !important;
+  }
+
+  .action-btn-delete {
+    font-size: 11px !important;
+    padding: 4px 8px !important;
+    margin-left: 0.5rem;
+  }
+
+  /* GQP Action buttons mobile (identique à soumission.css) */
+  .gqp-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+  }
+
+  .gqp-action-btn {
+    flex: 1;
+    padding: 0.625rem;
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    transition: all 0.2s ease;
+    border: 1px solid;
+    cursor: pointer;
+  }
+
+  .gqp-action-btn.assign-btn {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: var(--primary-blue);
+    color: var(--primary-blue);
+  }
+
+  .gqp-action-btn.delete-btn {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+    color: #ef4444;
+  }
+
+  .gqp-action-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* GQP Preview Modal - Compact et solide */
+  .gqp-preview-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #0f172a;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .gqp-preview-overlay.hidden {
+    display: none;
+  }
+  .gqp-preview-container {
+    width: 100%;
+    max-width: 900px;
+    height: 90vh;
+    max-height: 750px;
+    background: #1e293b;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #334155;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+  /* Scrollbar discret pour le conteneur */
+  .gqp-preview-container::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .gqp-preview-container::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .gqp-preview-container::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.4);
+    border-radius: 3px;
+  }
+  .gqp-preview-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.6);
+  }
+  .gqp-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: #0f172a;
+    border-bottom: 1px solid #334155;
+    flex-shrink: 0;
+  }
+  .gqp-preview-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #60a5fa;
+  }
+  .gqp-preview-close {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #94a3b8;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .gqp-preview-close:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+  }
+  #gqpPreviewFrame {
+    flex: 1;
+    width: 100%;
+    border: none;
+    background: #0f172a;
+  }
+</style>
+
+<script>
+  // Fonction globale pour fermer la modal GQP Preview
+  function closeGqpPreviewModal(event) {
+    const modal = document.getElementById('gqpPreviewModal');
+    const iframe = document.getElementById('gqpPreviewFrame');
+    if (modal) {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+    if (iframe) {
+      iframe.src = '';
+    }
+  }
+</script>
+
 <!-- Modal PDF -->
 <div id="pdfModal" class="hidden">
   <div id="pdfContent">

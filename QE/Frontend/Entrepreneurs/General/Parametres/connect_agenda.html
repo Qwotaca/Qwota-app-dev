@@ -106,7 +106,7 @@
                 </div>
                 <div>
                   <h4 class="text-sm font-semibold" style="color: var(--text-light);">Connexion</h4>
-                  <p class="text-xs" style="color: var(--text-gray);" id="connection-status-text">Gmail, Agenda, Monday</p>
+                  <p class="text-xs" style="color: var(--text-gray);" id="connection-status-text">Gmail, Agenda</p>
                 </div>
               </div>
               <div class="step-check" data-step="connection">
@@ -368,13 +368,13 @@
         </div>
       </div>
 
-      <!-- Connexion Monday.com - Nouvelle section -->
-      <div class="mb-8 mt-12">
+      <!-- Connexion Monday.com - Nouvelle section (HIDDEN FOR NOW) -->
+      <div id="monday-section-title" class="mb-8 mt-12" style="display: none;">
         <h1 class="text-xl md:text-2xl font-bold mb-2" style="color: var(--text-light);">Intégration Monday.com</h1>
         <p class="text-sm md:text-base" style="color: var(--text-gray);">Synchronisez vos clients et ventes avec votre board Monday.com personnel.</p>
       </div>
 
-      <div class="card p-6">
+      <div id="monday-section-card" class="card p-6" style="display: none;">
         <!-- Header avec logo et statut -->
         <div class="flex flex-col md:flex-row md:items-start md:justify-between mb-6 gap-3">
           <div class="flex items-center gap-3">
@@ -505,9 +505,14 @@
             </div>
             <h2 class="text-lg md:text-xl font-semibold" style="color: var(--text-light);">Gestion des équipes</h2>
           </div>
-          <button id="edit-teams-btn" onclick="toggleEditTeams()" class="btn-primary px-4 py-2 text-sm">
-            Modifier
-          </button>
+          <div class="flex gap-2">
+            <button id="add-team-btn" onclick="addNewTeam()" class="btn-secondary px-4 py-2 text-sm" style="display: none;">
+              + Ajouter une équipe
+            </button>
+            <button id="edit-teams-btn" onclick="toggleEditTeams()" class="btn-primary px-4 py-2 text-sm">
+              Modifier
+            </button>
+          </div>
         </div>
         <div id="teams-list" class="space-y-4" style="padding: 1.5rem;"></div>
       </div>
@@ -715,7 +720,7 @@
             </div>
 
             <div id="signature-saved-mode" class="hidden">
-              <img id="signature-image" style="border: 1px solid var(--border-dark); border-radius: 6px; width: 100%; max-width: 400px; height: 150px; background-color: transparent; box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.1); object-fit: contain;" />
+              <img id="signature-image" style="border: 1px solid var(--border-dark); border-radius: 6px; width: 100%; max-width: 400px; height: 150px !important; min-height: 150px !important; background-color: transparent; box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.1); object-fit: contain;" />
 
               <div class="flex gap-3 mt-3">
                 <button id="edit-signature-btn" class="btn-secondary">Modifier</button>
@@ -1312,8 +1317,10 @@
   }
 
   async function saveTeams(teamsData) {
-    // Mettre à jour la variable globale teams
-    teams = teamsData;
+    // Filtrer pour ne garder que les équipes avec au moins 1 membre
+    const validTeams = teamsData.filter(team => team.painters && team.painters.length > 0);
+    // Mettre à jour la variable globale teams avec les équipes valides uniquement
+    teams = validTeams;
 
     // Sauvegarder UNIQUEMENT sur le backend via /api/save-info (pas de localStorage)
     try {
@@ -1325,7 +1332,7 @@
         neq: document.getElementById("neq").value.trim(),
         tps: document.getElementById("tps").value.trim(),
         tvq: document.getElementById("tvq").value.trim(),
-        equipes: teams,
+        equipes: validTeams,
         niveau_actuel: parseInt(document.getElementById("niveau-actuel")?.value || "1", 10)
       };
 
@@ -1340,6 +1347,12 @@
 
       if (!response.ok) {
         console.error('[TEAMS] Erreur sauvegarde backend:', response.status);
+      } else {
+        // Notifier le top window pour recharger l'iframe GQP
+        if (window.top && window.top !== window) {
+          window.top.postMessage({ type: 'reload-gqp' }, '*');
+          console.log('[TEAMS] Message envoyé à window.top pour recharger GQP');
+        }
       }
     } catch (error) {
       console.error('[TEAMS] Erreur sauvegarde backend:', error);
@@ -1715,6 +1728,16 @@ function createTeamBox(team, index) {
     const confirmed = await showConfirm("Supprimer cette équipe ?");
     if (confirmed) {
       teams.splice(index, 1);
+
+      // Si c'était la dernière équipe, sortir du mode édition et revenir à l'état initial
+      if (teams.length === 0) {
+        isEditingTeams = false;
+        const editBtn = document.getElementById("edit-teams-btn");
+        const addTeamBtn = document.getElementById("add-team-btn");
+        if (editBtn) editBtn.textContent = "Ajouter ma première équipe";
+        if (addTeamBtn) addTeamBtn.style.display = "none";
+      }
+
       renderTeams();
     }
   });
@@ -2037,10 +2060,10 @@ function createPainterBadge(teamIndex, painterIndex, painter) {
     console.log('🎨 Rendu équipes:', teams.length, 'équipes à afficher');
     teamsContainer.innerHTML = "";
 
-    // Mettre à jour le texte du bouton selon le nombre d'équipes
+    // Le bouton change selon le nombre d'équipes (sauf en mode édition)
     const editBtn = document.getElementById("edit-teams-btn");
     if (editBtn && !isEditingTeams) {
-      editBtn.textContent = teams.length === 0 ? "Ajouter une équipe" : "Modifier";
+      editBtn.textContent = teams.length === 0 ? "Ajouter ma première équipe" : "Modifier";
     }
 
     // Si aucune équipe, afficher un message
@@ -2054,7 +2077,7 @@ function createPainterBadge(teamIndex, painterIndex, painter) {
       emptyState.innerHTML = `
         <i class="fas fa-users" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem; display: block;"></i>
         <p style="font-size: 1rem; margin-bottom: 0.5rem;">Aucune équipe créée...</p>
-        <p style="font-size: 0.875rem; opacity: 0.7;">Cliquez sur "Ajouter une équipe" pour créer votre première équipe</p>
+        <p style="font-size: 0.875rem; opacity: 0.7;">Cliquez sur "Ajouter ma première équipe" pour commencer</p>
       `;
       teamsContainer.appendChild(emptyState);
       return;
@@ -2161,6 +2184,22 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 async function saveTeamsToBackend() {
+  // Vérifier s'il y a des équipes sans membres
+  const teamsWithoutMembers = teams.filter(team => !team.painters || team.painters.length === 0);
+  const validTeams = teams.filter(team => team.painters && team.painters.length > 0);
+
+  // Si toutes les équipes sont invalides (0 membre), afficher un message d'erreur
+  if (teams.length > 0 && validTeams.length === 0) {
+    showToast("Impossible d'enregistrer : chaque équipe doit avoir au moins un membre", "error");
+    return;
+  }
+
+  // Si certaines équipes n'ont pas de membres, avertir l'utilisateur
+  if (teamsWithoutMembers.length > 0) {
+    const teamNames = teamsWithoutMembers.map(t => t.nom || "Sans nom").join(", ");
+    showToast(`Les équipes suivantes n'ont pas de membres et ne seront pas enregistrées : ${teamNames}`, "warning");
+  }
+
   const confirmed = await showConfirm("Voulez-vous vraiment sauvegarder les équipes ?");
   if (!confirmed) return;
 
@@ -2172,13 +2211,24 @@ async function saveTeamsToBackend() {
     saveBtn.disabled = true;
     saveBtn.innerHTML = '<span class="spinner"></span> Sauvegarde...';
 
+    // Mapper 'nom' vers 'name' pour le backend
+    const teamsForBackend = validTeams.map(team => ({
+      name: team.nom || team.name || '',
+      painters: team.painters || []
+    }));
+
     const response = await fetch(`/save-equipes/${window.username}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(teams)
+      body: JSON.stringify(teamsForBackend)
     });
 
     if (response.ok) {
+      // Mettre à jour la variable teams avec seulement les équipes valides
+      teams = validTeams;
+
+      // Rafraîchir l'affichage pour supprimer visuellement les équipes sans membres
+      renderTeams();
 
       // Récupérer les équipes depuis le backend
       const resGet = await fetch(`/get-equipes/${window.username}`);
@@ -2201,6 +2251,12 @@ async function saveTeamsToBackend() {
 
       // Afficher notification de succès
       showToast("Équipes sauvegardées avec succès", "success");
+
+      // Notifier le top window pour recharger l'iframe GQP
+      if (window.top && window.top !== window) {
+        window.top.postMessage({ type: 'reload-gqp' }, '*');
+        console.log('[TEAMS] Message envoyé à window.top pour recharger GQP');
+      }
     } else {
       showToast("Une erreur s'est produite lors de la sauvegarde", "error");
     }
@@ -2563,22 +2619,52 @@ function toggleEditInfo() {
   }
 }
 
+// Fonction pour ajouter une nouvelle équipe (seulement en mode édition)
+function addNewTeam() {
+  if (!isEditingTeams) return;
+
+  teams.push({ nom: "", painters: [] });
+  renderTeams();
+
+  // Réappliquer le mode édition aux nouveaux éléments
+  const teamNameInputs = document.querySelectorAll(".team-name-input");
+  const teamRemoveBtns = document.querySelectorAll(".team-remove-btn");
+  const teamAddMemberBtns = document.querySelectorAll(".team-add-member-btn");
+  const memberRemoveBtns = document.querySelectorAll(".team-member-remove-btn");
+
+  teamNameInputs.forEach(input => {
+    input.disabled = false;
+    input.style.background = "rgba(23, 32, 51, 0.6)";
+    input.style.color = "var(--text-light)";
+    input.style.cursor = "text";
+    input.style.border = "2px solid var(--border-dark)";
+  });
+
+  teamRemoveBtns.forEach(btn => btn.style.display = "flex");
+  teamAddMemberBtns.forEach(btn => btn.style.display = "inline-block");
+  memberRemoveBtns.forEach(btn => btn.style.display = "flex");
+}
+
 // Toggle entre mode lecture et mode édition des équipes
 function toggleEditTeams() {
   const btn = document.getElementById("edit-teams-btn");
+  const addTeamBtn = document.getElementById("add-team-btn");
 
   // Déclarer les variables au début de la fonction pour éviter les erreurs de scope
   let teamNameInputs, teamRemoveBtns, teamAddMemberBtns, memberRemoveBtns;
 
-  // Si on est en mode "Modifier" ou "Ajouter une équipe", on passe en mode édition
-  if (btn.textContent.trim() === "Modifier" || btn.textContent.trim() === "Ajouter une équipe") {
+  // Si on est en mode "Modifier" ou "Ajouter ma première équipe", on passe en mode édition
+  if (btn.textContent.trim() === "Modifier" || btn.textContent.trim() === "Ajouter ma première équipe") {
     isEditingTeams = true; // Activer le mode édition
 
-    // Si c'est "Ajouter une équipe" et qu'il n'y a aucune équipe, créer une équipe vide
-    if (btn.textContent.trim() === "Ajouter une équipe" && teams.length === 0) {
+    // Si c'est "Ajouter ma première équipe", créer une équipe vide automatiquement
+    if (btn.textContent.trim() === "Ajouter ma première équipe") {
       teams.push({ nom: "", painters: [] });
       renderTeams();
     }
+
+    // Afficher le bouton "Ajouter une équipe"
+    if (addTeamBtn) addTeamBtn.style.display = "inline-block";
 
     // Re-sélectionner les éléments après le render potentiel
     teamNameInputs = document.querySelectorAll(".team-name-input");
@@ -2613,12 +2699,37 @@ function toggleEditTeams() {
     // Changer le bouton en "Enregistrer"
     btn.textContent = "Enregistrer";
   }
-  // Si on est en mode "Enregistrer", on sauvegarde et repasse en mode lecture
+  // Si on est en mode "Enregistrer", on valide et sauvegarde
   else {
+    // Vérifier s'il y a des équipes sans membres
+    const teamsWithoutMembers = teams.filter(team => !team.painters || team.painters.length === 0);
+    const validTeams = teams.filter(team => team.painters && team.painters.length > 0);
+
+    // Si toutes les équipes sont invalides (0 membre), afficher un message d'erreur
+    if (teams.length > 0 && validTeams.length === 0) {
+      showToast("Impossible d'enregistrer : chaque équipe doit avoir au moins un membre", "error");
+      return; // Ne pas sortir du mode édition
+    }
+
+    // Si certaines équipes n'ont pas de membres, avertir l'utilisateur
+    if (teamsWithoutMembers.length > 0) {
+      const teamNames = teamsWithoutMembers.map(t => t.nom || "Sans nom").join(", ");
+      showToast(`Les équipes sans membres seront supprimées : ${teamNames}`, "warning");
+    }
+
+    // Mettre à jour teams avec seulement les équipes valides
+    teams = validTeams;
+
     isEditingTeams = false; // Désactiver le mode édition
 
-    // Sauvegarder les équipes (saveTeams calls saveTeamsToBackend internally)
+    // Masquer le bouton "Ajouter une équipe"
+    if (addTeamBtn) addTeamBtn.style.display = "none";
+
+    // Sauvegarder les équipes
     saveTeams(teams);
+
+    // Rafraîchir l'affichage avec les équipes valides uniquement
+    renderTeams();
 
     // Re-sélectionner les éléments pour la désactivation
     teamNameInputs = document.querySelectorAll(".team-name-input");
@@ -2650,14 +2761,17 @@ function toggleEditTeams() {
       btn.style.display = "none";
     });
 
-    // Changer le bouton en "Modifier" ou "Ajouter une équipe" selon le nombre d'équipes
-    btn.textContent = teams.length === 0 ? "Ajouter une équipe" : "Modifier";
+    // Changer le bouton en "Modifier"
+    btn.textContent = "Modifier";
   }
 }
 
 async function saveInfo() {
   const btn = document.getElementById("edit-info-btn");
   const originalText = btn.innerHTML;
+
+  // Filtrer les équipes qui ont au moins un membre
+  const validTeams = (teams || []).filter(team => team.painters && team.painters.length > 0);
 
   const data = {
     nom: document.getElementById("nom").value.trim(),
@@ -2667,7 +2781,7 @@ async function saveInfo() {
     neq: document.getElementById("neq").value.trim(),
     tps: document.getElementById("tps").value.trim(),
     tvq: document.getElementById("tvq").value.trim(),
-    equipes: teams || [],
+    equipes: validTeams,
     niveau_actuel: parseInt(document.getElementById("niveau-actuel")?.value || "1", 10),
     // flags de suppression si l'utilisateur a cliqué sur ✕
     specimen_delete: document.getElementById("specimen-preview").classList.contains("hidden"),
@@ -2873,8 +2987,9 @@ async function loadInfos(bust = false) {
   if (tvqElement) tvqElement.value = result.data?.tvq || "";
 
   // Charger les équipes depuis le backend (user_info.json)
+  // Filtrer pour ne garder que les équipes avec au moins 1 membre
   if (result.data?.equipes && Array.isArray(result.data.equipes)) {
-    teams = result.data.equipes;
+    teams = result.data.equipes.filter(team => team.painters && team.painters.length > 0);
     renderTeams();
   } else {
     teams = [];
@@ -2950,16 +3065,16 @@ document.addEventListener("DOMContentLoaded", function() {
   const savedMode = document.getElementById("signature-saved-mode");
   const signatureImg = document.getElementById("signature-image");
 
-  // Configuration du canvas - optimisée pour mobile
+  // Configuration du canvas - toujours 150px de hauteur
   function setupCanvas() {
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
     const rect = canvas.getBoundingClientRect();
 
-    // Ajuster pour mobile
+    // Largeur responsive, hauteur fixe à 150px
     const isMobile = window.innerWidth <= 768;
     const maxWidth = isMobile ? Math.min(rect.width, window.innerWidth - 32) : 400; // 32px pour padding
     const canvasWidth = Math.min(maxWidth, 400);
-    const canvasHeight = isMobile ? (window.innerWidth <= 480 ? 100 : 120) : 150;
+    const canvasHeight = 150; // Toujours 150px
 
     canvas.width = canvasWidth * ratio;
     canvas.height = canvasHeight * ratio;
@@ -2975,7 +3090,32 @@ document.addEventListener("DOMContentLoaded", function() {
     // IMPORTANT: S'assurer que le fond reste transparent
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
+
+  // Initialiser le canvas - multiple tentatives pour s'assurer que c'est correct
   setupCanvas();
+  setTimeout(setupCanvas, 100);
+  setTimeout(setupCanvas, 300);
+  setTimeout(setupCanvas, 500);
+  setTimeout(setupCanvas, 1000);
+  window.addEventListener('load', setupCanvas);
+
+  // Observer pour détecter quand le canvas devient visible
+  const canvasObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        setupCanvas();
+      }
+    });
+  });
+  canvasObserver.observe(canvas);
+
+  // Appeler setupCanvas quand on clique sur Modifier
+  if (editBtn) {
+    const originalEditClick = editBtn.onclick;
+    editBtn.addEventListener("click", () => {
+      setTimeout(setupCanvas, 50);
+    });
+  }
 
   // Variables de dessin
   let drawing = false;
@@ -2987,9 +3127,14 @@ document.addEventListener("DOMContentLoaded", function() {
     const touch = e.touches ? e.touches[0] : e;
     const clientX = touch.clientX || e.clientX;
     const clientY = touch.clientY || e.clientY;
+
+    // Calculer les coordonnées en tenant compte du ratio entre taille affichée et taille réelle
+    const scaleX = rect.width / 400; // 400 est la largeur de base
+    const scaleY = rect.height / 150; // 150 est la hauteur fixe
+
     return {
-      x: clientX - rect.left,
-      y: clientY - rect.top
+      x: (clientX - rect.left) / scaleX,
+      y: (clientY - rect.top) / scaleY
     };
   }
 
@@ -3087,10 +3232,8 @@ document.addEventListener("DOMContentLoaded", function() {
       // Passer en mode signature sauvegardée
       signatureImg.src = signatureDataUrl;
 
-      // Synchroniser la hauteur de l'image avec le canvas
-      const isMobile = window.innerWidth <= 768;
-      const imageHeight = isMobile ? (window.innerWidth <= 480 ? 100 : 120) : 150;
-      signatureImg.style.height = imageHeight + "px";
+      // Toujours 150px de hauteur pour la signature
+      signatureImg.style.height = "150px";
 
       drawingMode.classList.add("hidden");
       savedMode.classList.remove("hidden");
@@ -3129,10 +3272,8 @@ document.addEventListener("DOMContentLoaded", function() {
         if (data.signatureUrl) {
           signatureImg.src = data.signatureUrl;
 
-          // Synchroniser la hauteur de l'image avec le canvas (même logique que lors de la sauvegarde)
-          const isMobile = window.innerWidth <= 768;
-          const imageHeight = isMobile ? (window.innerWidth <= 480 ? 100 : 120) : 150;
-          signatureImg.style.height = imageHeight + "px";
+          // Toujours 150px de hauteur pour la signature
+          signatureImg.style.height = "150px";
 
           drawingMode.classList.add("hidden");
           savedMode.classList.remove("hidden");
@@ -4031,7 +4172,7 @@ async function updateProfileProgress() {
 
     console.log('[PROGRESS] Données chargées:', { data, files });
 
-    // Étape 1: Connexion (Gmail, Agenda, Monday = 33.33% chacun)
+    // Étape 1: Connexion (Gmail, Agenda = 50% chacun)
     let connectionProgress = 0;
     let connectedServices = [];
 
@@ -4039,7 +4180,7 @@ async function updateProfileProgress() {
     const gmailBox = document.getElementById('gmail-box');
     const gmailConnected = gmailBox && !gmailBox.classList.contains('hidden');
     if (gmailConnected) {
-      connectionProgress += 33.33;
+      connectionProgress += 50;
       connectedServices.push('Gmail');
     }
 
@@ -4047,22 +4188,8 @@ async function updateProfileProgress() {
     const agendaBox = document.getElementById('calendar-box');
     const agendaConnected = agendaBox && !agendaBox.classList.contains('hidden');
     if (agendaConnected) {
-      connectionProgress += 33.33;
+      connectionProgress += 50;
       connectedServices.push('Agenda');
-    }
-
-    // Vérifier Monday.com
-    try {
-      const mondayResponse = await fetch(`/api/monday/get-config/${window.username}`);
-      if (mondayResponse.ok) {
-        const mondayData = await mondayResponse.json();
-        if (mondayData.connected) {
-          connectionProgress += 33.34;
-          connectedServices.push('Monday');
-        }
-      }
-    } catch (error) {
-      console.log('[PROGRESS] Monday.com non connecté');
     }
 
     // Mettre à jour le texte de statut de connexion
@@ -4070,7 +4197,7 @@ async function updateProfileProgress() {
     if (connectionStatusText) {
       if (connectedServices.length === 0) {
         connectionStatusText.textContent = 'Aucun service connecté';
-      } else if (connectedServices.length === 3) {
+      } else if (connectedServices.length === 2) {
         connectionStatusText.textContent = 'Tous les services connectés';
       } else {
         connectionStatusText.textContent = `${connectedServices.join(', ')} connecté${connectedServices.length > 1 ? 's' : ''}`;

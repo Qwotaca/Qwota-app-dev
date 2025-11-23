@@ -195,15 +195,16 @@
             <table class="modern-table">
               <thead>
                 <tr>
-                  <th>Nom</th>
-                  <th>Prénom</th>
-                  <th>Téléphone</th>
-                  <th>Prix</th>
+                  <th>N° Soumission</th>
+                  <th>Client</th>
+                  <th>Date de création</th>
+                  <th>Adresse</th>
+                  <th>Montant</th>
                   <th class="text-center" style="text-align: center !important;">Actions</th>
                 </tr>
               </thead>
               <tbody id="facture-body">
-                <tr><td colspan="5" class="empty-state loading-shimmer">Chargement des factures...</td></tr>
+                <tr><td colspan="6" class="empty-state loading-shimmer">Chargement des factures...</td></tr>
               </tbody>
             </table>
           </div>
@@ -285,20 +286,52 @@
       chargerClientsFacture();
     }
 
-    // Charger les clients depuis l'API
+    // Charger les clients depuis l'API (acceptés + produit)
     async function chargerClientsFacture() {
       try {
         if (!window.username) {
-          console.log("[ERROR] Username non disponible pour charger les travaux complétés");
+          console.log("[ERROR] Username non disponible pour charger les clients");
           return;
         }
 
-        // Récupérer les clients des ventes produit
-        const response = await fetch(`/ventes/produit/${window.username}`);
-        if (!response.ok) throw new Error('Erreur API');
+        // Récupérer les clients des ventes acceptées ET produit
+        let allClients = [];
 
-        const data = await response.json();
-        console.log("[DEBUG] Données reçues de ventes_produit:", data);
+        console.log("[FACTURE] Début chargement clients pour username:", window.username);
+
+        // 1. Récupérer les clients acceptés
+        console.log("[FACTURE] Appel API ventes/acceptees...");
+        try {
+          const responseAcceptees = await fetch(`/ventes/acceptees/${window.username}`);
+          console.log("[FACTURE] Réponse ventes/acceptees status:", responseAcceptees.status);
+          if (responseAcceptees.ok) {
+            const dataAcceptees = await responseAcceptees.json();
+            console.log("[FACTURE] ✅ Ventes acceptées reçues:", dataAcceptees.length, dataAcceptees);
+            allClients = [...allClients, ...dataAcceptees];
+          } else {
+            console.log("[FACTURE] ❌ Réponse ventes_acceptees non OK:", responseAcceptees.status);
+          }
+        } catch (error) {
+          console.log("[FACTURE] ❌ Erreur chargement ventes acceptées:", error);
+        }
+
+        // 2. Récupérer les clients produit
+        console.log("[FACTURE] Appel API ventes/produit...");
+        try {
+          const responseProduit = await fetch(`/ventes/produit/${window.username}`);
+          console.log("[FACTURE] Réponse ventes/produit status:", responseProduit.status);
+          if (responseProduit.ok) {
+            const dataProduit = await responseProduit.json();
+            console.log("[FACTURE] ✅ Ventes produit reçues:", dataProduit.length, dataProduit);
+            allClients = [...allClients, ...dataProduit];
+          } else {
+            console.log("[FACTURE] ❌ Réponse ventes_produit non OK:", responseProduit.status);
+          }
+        } catch (error) {
+          console.log("[FACTURE] ❌ Erreur chargement ventes produit:", error);
+        }
+
+        console.log("[FACTURE] Total clients combinés:", allClients.length);
 
         // Récupérer les factures déjà envoyées
         let facturesEnvoyees = [];
@@ -312,27 +345,43 @@
           console.log("ℹ️ Aucune facture envoyée trouvée");
         }
 
-        todosClientsFacture = data.filter((s) => {
+        // Dédupliquer par numéro de soumission pour éviter les doublons
+        const clientsUniques = [];
+        const numerosVus = new Set();
+
+        allClients.forEach(client => {
+          const numero = client.num || client.numero_soumission || '';
+          const nom = (client.nom || client.clientNom || '').toLowerCase();
+          const prenom = (client.prenom || client.clientPrenom || '').toLowerCase();
+          const key = numero || `${nom}-${prenom}`;
+
+          if (key && !numerosVus.has(key)) {
+            numerosVus.add(key);
+            clientsUniques.push(client);
+          }
+        });
+
+        console.log("[DEBUG] Clients uniques après déduplication:", clientsUniques.length);
+
+        todosClientsFacture = clientsUniques.filter((s) => {
           const hasNom = s.nom || s.clientNom || s.lastName || s.last_name || s.name;
           const hasPrenom = s.prenom || s.clientPrenom || s.firstName || s.first_name;
-          const hasAdresse = s.adresse;
-          const hasPrix = s.prix;
 
           // Vérifier si ce client a déjà une facture envoyée
-          const nom = hasNom.toLowerCase();
-          const prenom = hasPrenom.toLowerCase();
+          const nom = (hasNom || '').toLowerCase();
+          const prenom = (hasPrenom || '').toLowerCase();
           const dejaFacture = facturesEnvoyees.some(f =>
-            f.nom.toLowerCase() === nom && f.prenom.toLowerCase() === prenom
+            f.nom && f.prenom && f.nom.toLowerCase() === nom && f.prenom.toLowerCase() === prenom
           );
 
           console.log('[DEBUG] Filtrage client:', {
             nom: hasNom, prenom: hasPrenom,
-            hasRequiredFields: hasNom && hasPrenom && hasAdresse && hasPrix,
             dejaFacture,
-            result: hasNom && hasPrenom && hasAdresse && hasPrix && !dejaFacture
+            result: (hasNom || hasPrenom) && !dejaFacture
           });
 
-          return hasNom && hasPrenom && hasAdresse && hasPrix && !dejaFacture;
+          // Accepter si au moins nom OU prénom existe
+          return (hasNom || hasPrenom) && !dejaFacture;
         });
 
         afficherClientsFacture(todosClientsFacture);
@@ -360,7 +409,7 @@
       if (clients.length === 0) {
         menu.innerHTML = `
           <div class="dropdown-option" style="color: var(--text-gray); font-style: italic; padding: 12px;">
-            Aucun travail complété disponible
+            Aucun client disponible
           </div>
         `;
         return;
@@ -491,12 +540,25 @@
       let depot = '';
       if (prixStr) {
         try {
-          const prix = parseFloat(prixStr.toString().replace(/[^\d.-]/g, "").replace(",", "."));
-          const tps = prix * 0.05;
-          const tvq = prix * 0.09975;
-          const totalAvecTaxes = prix + tps + tvq;
-          const depotCalcule = totalAvecTaxes * 0.25;
-          depot = formaterPrix(depotCalcule.toFixed(2));
+          console.log("[DEBUG] Prix brut reçu:", prixStr);
+          // Nettoyer le prix: enlever $, espaces, et convertir virgule en point
+          let prixNettoye = prixStr.toString()
+            .replace(/\s/g, '')      // Enlever les espaces
+            .replace('$', '')         // Enlever le $
+            .replace(',', '.');       // Remplacer virgule par point
+          console.log("[DEBUG] Prix nettoyé:", prixNettoye);
+
+          const prix = parseFloat(prixNettoye);
+          console.log("[DEBUG] Prix parsé:", prix);
+
+          if (!isNaN(prix) && prix > 0) {
+            const tps = prix * 0.05;
+            const tvq = prix * 0.09975;
+            const totalAvecTaxes = prix + tps + tvq;
+            const depotCalcule = totalAvecTaxes * 0.25;
+            console.log("[DEBUG] Calcul dépôt: prix=", prix, "total avec taxes=", totalAvecTaxes, "dépôt 25%=", depotCalcule);
+            depot = formaterPrix(depotCalcule.toFixed(2));
+          }
         } catch (e) {
           console.error("Erreur calcul dépôt:", e);
           depot = '';
@@ -601,6 +663,9 @@
         }
 
         try {
+          // Récupérer le numéro de soumission depuis les données du client
+          const numeroSoumission = selectedClientData?.num || selectedClientData?.numero_soumission || "";
+
           // Préparer toutes les données pour la facture (incluant item, part, produit, payer_par)
           const dataFacture = {
             nom,
@@ -611,11 +676,14 @@
             telephone,
             courriel,
             endroit,
+            numero_soumission: numeroSoumission,
             item: selectedClientData?.item || "",
             part: selectedClientData?.part || "",
             produit: selectedClientData?.produit || "",
             payer_par: selectedClientData?.payer_par || ""
           };
+
+          console.log("[DEBUG] Données facture envoyées:", dataFacture);
 
           // Appel backend pour créer la facture
           const response = await fetch(`/creer-facture?username=${encodeURIComponent(window.username)}`, {
@@ -762,12 +830,31 @@
     // Formatte un prix en format monétaire français canadien
     function formaterPrix(valeur) {
       try {
-        let montant = parseFloat(valeur.toString().replace(/[^\d.-]/g, "").replace(",", "."));
-        return montant.toLocaleString("fr-CA", {
-          style: "currency",
-          currency: "CAD",
-          minimumFractionDigits: 2,
-        }).replace(/\s/g, " ");
+        console.log("[DEBUG formaterPrix] Valeur entrée:", valeur);
+        // Nettoyer: enlever $, espaces, et convertir virgule en point
+        let cleaned = valeur.toString()
+          .replace(/\s/g, '')     // Enlever tous les espaces
+          .replace('$', '')        // Enlever $
+          .replace(/,/g, '.');     // Remplacer virgules par points
+
+        // Si plusieurs points (ex: 2.555.00), garder seulement le dernier comme décimal
+        const parts = cleaned.split('.');
+        if (parts.length > 2) {
+          // Joindre tout sauf le dernier, puis ajouter le dernier comme décimales
+          cleaned = parts.slice(0, -1).join('') + '.' + parts[parts.length - 1];
+        }
+
+        let montant = parseFloat(cleaned);
+        console.log("[DEBUG formaterPrix] Montant parsé:", montant);
+
+        if (isNaN(montant)) return valeur;
+
+        // Format simple: X XXX,XX $
+        const formatted = montant.toFixed(2)
+          .replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+          .replace('.', ',') + ' $';
+        console.log("[DEBUG formaterPrix] Résultat:", formatted);
+        return formatted;
       } catch {
         return valeur;
       }
@@ -841,7 +928,7 @@
         const page = await pdf.getPage(1);
 
         // Variables pour le zoom - Base 150% = 1.5 (affiché comme 100%)
-        let currentScale = 1.5;
+        let currentScale = 1.8;
         let pdfPage = page;
         let pdfDoc = pdf;
         const minScale = 1.2;  // 80% affiché (1.2/1.5 = 0.8)
@@ -849,7 +936,7 @@
 
         // Niveaux de zoom fixes
         const zoomLevels = [1.2, 1.5, 1.8]; // 80%, 100%, 120%
-        let currentZoomIndex = 1; // Commence à 100% (index 1)
+        let currentZoomIndex = 2; // Commence à 120% (index 2) - zoom max
 
         // Fonction pour rendre le PDF avec le zoom actuel
         async function renderPDF(scale) {
@@ -1021,22 +1108,28 @@
         data.forEach((f) => {
           console.log("[DEBUG] Données facture:", f); // Debug pour voir les données
 
+          // Formater la date
+          const dateCreation = f.date_creation || f.date || '';
+          const dateFormatee = dateCreation ? new Date(dateCreation).toLocaleDateString('fr-CA') : '-';
+
+          // Nom complet du client
+          const clientNom = `${f.prenom || ''} ${f.nom || ''}`.trim() || '-';
+
           // Vue Desktop: Table row
           const row = document.createElement("tr");
           row.innerHTML = `
-            <td>${f.nom || "-"}</td>
-            <td>${f.prenom || "-"}</td>
-            <td>${f.telephone || f.phone || f.courriel || "-"}</td>
-            <td>${f.prix}</td>
-            <td class="text-center" style="text-align: center !important;">
-              <div class="action-buttons">
-                <button onclick="showPDFModal('${f.pdf_url}')" class="btn-secondary" title="Voir la facture">
-                  <img src="https://img.icons8.com/color/48/000000/pdf.png" class="file-icon" alt="Fichier" style="width: 24px !important; height: 24px !important; min-width: 24px !important; display: inline-block !important;">
-                </button>
-                <button onclick="renvoyerFacture('${f.nom}', '${f.prenom}', '${f.pdf_url}')" class="btn-secondary" title="Renvoyer par email">
-                  <img src="https://i.ibb.co/CsvN8yQB/icons8-mail-48.png" class="file-icon" alt="Email" style="width: 24px !important; height: 24px !important; min-width: 24px !important; display: inline-block !important;">
-                </button>
-              </div>
+            <td>${f.numero_soumission || f.num || '-'}</td>
+            <td>${clientNom}</td>
+            <td>${dateFormatee}</td>
+            <td>${f.adresse || '-'}</td>
+            <td>${f.prix || '-'}</td>
+            <td class="text-center">
+              <button onclick="showPDFModal('${f.pdf_url}')" class="btn-primary action-btn-send" title="Voir la facture">
+                <i class="fas fa-file-pdf"></i>
+              </button>
+              <button onclick="renvoyerFacture('${f.nom}', '${f.prenom}', '${f.pdf_url}')" class="btn-secondary action-btn-delete" title="Renvoyer par email">
+                <i class="fas fa-envelope"></i>
+              </button>
             </td>
           `;
           body.appendChild(row);
@@ -1048,20 +1141,21 @@
             card.innerHTML = `
               <div class="facture-card-header">
                 <div style="flex: 1;">
-                  <div class="facture-card-nom">${f.prenom || ""} ${f.nom || ""}</div>
-                  <div class="facture-card-info">
-                    <i class="fas fa-phone" style="color: var(--primary-blue);"></i>
-                    <span>${f.telephone || f.phone || f.courriel || "-"}</span>
+                  <div class="facture-card-numero">Facture ${f.numero_soumission || f.num || ''}</div>
+                  <div class="facture-card-nom">${clientNom}</div>
+                  <div class="facture-card-adresse">
+                    <i class="fas fa-map-marker-alt" style="color: var(--primary-green); margin-top: 2px;"></i>
+                    <span>${f.adresse || '-'}</span>
                   </div>
                 </div>
-                <div class="facture-card-prix">${f.prix}</div>
+                <div class="facture-card-prix">${f.prix || '-'}</div>
               </div>
               <div class="facture-card-actions">
                 <button onclick="showPDFModal('${f.pdf_url}')" class="facture-action-btn view-btn">
                   <i class="fas fa-file-pdf"></i>
                   <span>Voir PDF</span>
                 </button>
-                <button onclick="renvoyerFacture('${f.nom}', '${f.prenom}', '${f.pdf_url}')" class="facture-action-btn delete-btn">
+                <button onclick="renvoyerFacture('${f.nom}', '${f.prenom}', '${f.pdf_url}')" class="facture-action-btn send-btn">
                   <i class="fas fa-envelope"></i>
                   <span>Renvoyer</span>
                 </button>

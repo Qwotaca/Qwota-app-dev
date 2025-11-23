@@ -24,11 +24,13 @@
   <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      // DISABLED - navigator.serviceWorker.register('/sw.js')
+      /* DISABLED - Service Worker
+      navigator.serviceWorker.register('/sw.js')
         .then((registration) => {
-                  })
+        })
         .catch((registrationError) => {
         });
+      */
     });
   }
   </script>
@@ -10861,7 +10863,7 @@ function updateNewResultsUI(costs, hours, selectedProduct, surfaceData) {
   
 }
 
-function switchTab(tabName) {
+function switchTab(tabName, skipRefresh = false) {
   // Vérification des permissions pour l'onglet paramètres-admin
   // TEMPORAIRE: Accès libre aux paramètres pour développement
   // if (tabName === 'parametres-admin' && !canEditParameters) {
@@ -10869,30 +10871,31 @@ function switchTab(tabName) {
   //   showNotification('[ERROR] Accès refusé: Vous n\'avez pas les permissions pour accéder aux Paramètres Admin', 'error');
   //   return; // Empêcher l'accès
   // }
-  
+
   // Hide all tabs
   document.querySelectorAll('.tab-content').forEach(tab => {
     tab.classList.add('hidden');
   });
-  
+
   // Remove active class from all buttons
   document.querySelectorAll('[id$="-tab-btn"]').forEach(btn => {
     btn.classList.remove('btn-primary');
     btn.classList.add('btn-secondary');
   });
-  
+
   // Show selected tab
   document.getElementById(tabName + '-tab').classList.remove('hidden');
-  
+
   // CORRECTION: Trouver le bon bouton par le paramètre tabName
   const activeButton = document.getElementById(tabName + '-tab-btn');
   if (activeButton) {
     activeButton.classList.remove('btn-secondary');
     activeButton.classList.add('btn-primary');
   }
-  
+
   // AJOUT: Relancer les calculs et actualiser la liste quand on revient sur l'onglet estimation
-  if (tabName === 'estimation') {
+  // skipRefresh = true quand appelé depuis chargerProjet pour éviter double chargement
+  if (tabName === 'estimation' && !skipRefresh) {
     setTimeout(() => {
       refreshProductSelection(); // Force l'actualisation de la liste
       updateCalculation();
@@ -12770,25 +12773,15 @@ function initializeApp() {
           <p style="color: #cbd5e1; font-size: 16px; line-height: 1.5; margin-bottom: 32px;">${message}</p>
           <div style="display: flex; gap: 12px; justify-content: center;">
             <button id="cancelBtn" class="btn-secondary" style="font-size: 16px;">${cancelText}</button>
-            <button id="confirmBtn" style="
-              padding: 12px 24px;
-              border-radius: 8px;
-              border: none;
-              background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-              color: white;
-              font-weight: 600;
-              cursor: pointer;
-              transition: all 0.2s ease;
+            <button id="confirmBtn" class="btn-primary" style="
+              background: #ef4444 !important;
+              border-color: #ef4444 !important;
+              border-radius: 24px !important;
               font-size: 16px;
-              position: relative;
-              overflow: hidden;
-            " onmouseover="this.style.transform='scale(1.05)'; this.querySelector('.hover-effect').style.left='0'" 
-               onmouseout="this.style.transform='scale(1)'; this.querySelector('.hover-effect').style.left='-100%'">
+            " onmouseover="this.style.background='#dc2626 !important'"
+               onmouseout="this.style.background='#ef4444 !important'">
                <span class="hover-effect" style="
-                 position: absolute;
-                 top: 0;
-                 left: -100%;
-                 width: 100%;
+                 display: none;
                  height: 100%;
                  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
                  transition: left 0.3s ease;
@@ -17339,6 +17332,44 @@ function initializeApp() {
         updateAppretGlobalList();
       }
 
+      // 9. RÉINITIALISER LES AFFICHAGES DE SURFACES ET HEURES
+      const surfaceElements = [
+        'surfaceTotal', 'totalHours', 'totalHeuresInt',
+        'surfaceLavage', 'surfacePreparation', 'surfacePrimer', 'surfacePeinture',
+        'coutLavageDisplay', 'coutPreparationDisplay', 'coutPrimerDisplay', 'coutPeintureDisplay',
+        'coutMateriaux', 'coutTotal'
+      ];
+
+      surfaceElements.forEach(elementId => {
+        const element = document.getElementById(elementId);
+        if (element) {
+          if (elementId.includes('cout') || elementId.includes('Total')) {
+            element.textContent = '0.00 $';
+          } else if (elementId.includes('surface') || elementId.includes('Surface')) {
+            element.textContent = '0';
+          } else if (elementId.includes('Heures') || elementId.includes('Hours')) {
+            element.textContent = '0.0';
+          }
+        }
+      });
+
+      // 10. RECALCULER POUR REMETTRE TOUT À ZÉRO
+      setTimeout(() => {
+        if (typeof updateCalculation === 'function') {
+          updateCalculation();
+        }
+        if (typeof calculerInterieur === 'function') {
+          calculerInterieur();
+        }
+        if (typeof refreshProductSelection === 'function') {
+          refreshProductSelection();
+        }
+        // Revalider les boutons (ils devraient être désactivés maintenant)
+        if (typeof validateCompleterButton === 'function') {
+          validateCompleterButton();
+        }
+      }, 100);
+
       console.log('🧹 Calculateur complètement réinitialisé');
     }
 
@@ -17416,8 +17447,11 @@ function initializeApp() {
       const username = localStorage.getItem('username') || 'default';
       const clientName = `${clientPrenom} ${clientNom}`;
 
+      // Utiliser l'ID existant si on modifie un projet chargé, sinon créer un nouvel ID
+      const projetId = currentLoadedProjectId || Date.now().toString();
+
       const projet = {
-        id: Date.now().toString(),
+        id: projetId,
         client: clientName,
         adresse: clientAddress,
         telephone: clientPhone,
@@ -17432,27 +17466,34 @@ function initializeApp() {
         formData: collecterToutesDonnees()
       };
 
-      // 5. Sauvegarder via API
+      // 5. Sauvegarder via API (mise à jour si projet existant)
       try {
         const response = await fetch('/api/projets', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             username: username,
-            projet: projet
+            projet: projet,
+            updateExisting: currentLoadedProjectId ? true : false
           })
         });
 
         if (response.ok) {
-          console.log('[OK] Projet sauvegardé dans le cloud');
+          console.log('[OK] Projet ' + (currentLoadedProjectId ? 'mis à jour' : 'sauvegardé') + ' dans le cloud');
+          showNotification(currentLoadedProjectId ? 'Projet mis à jour!' : 'Projet enregistré!', 'success');
 
-          // Basculer vers l'onglet Mes Projets
+          // Basculer vers l'onglet Mes Projets AVANT le refresh
           switchTab('mes-projets');
 
           // Actualiser la liste des projets
           setTimeout(() => {
             afficherListeProjets();
           }, 100);
+
+          // Forcer un rechargement complet de la page après un délai pour bien voir la notification
+          setTimeout(() => {
+            window.location.reload();
+          }, 800);
         } else {
           showNotification('Erreur lors de l\'enregistrement', 'error');
         }
@@ -17600,21 +17641,45 @@ function initializeApp() {
         telephone: projet.telephone
       }));
 
-      // Revenir à l'onglet qui était actif lors de la sauvegarde
-      const ongletActif = formData.ongletActif || 'estimation-tab';
-      const tabName = ongletActif.replace('-tab', '');
-      console.log(`🔄 Changement d'onglet vers: ${tabName} (depuis ${ongletActif})`);
+      // Déterminer l'onglet approprié basé sur les totaux du projet
+      // Si extérieur > 0 -> onglet extérieur (estimation)
+      // Si seulement intérieur > 0 -> onglet intérieur
+      let tabName = 'estimation'; // Par défaut extérieur
 
-      if (typeof switchTab === 'function') {
-        switchTab(tabName);
-      } else {
-        console.error('[ERROR] Fonction switchTab non trouvée');
-      }
+      // Attendre que les calculs soient faits pour déterminer le bon onglet
+      setTimeout(() => {
+        const totalExtElement = document.getElementById('subTotal');
+        const totalIntElement = document.getElementById('subTotalInt');
+
+        const totalExt = parseFloat(totalExtElement?.textContent.replace('$', '').replace(/\s+/g, '').replace(',', '.').trim() || '0');
+        const totalInt = parseFloat(totalIntElement?.textContent.replace('$', '').replace(/\s+/g, '').replace(',', '.').trim() || '0');
+
+        console.log(`[DEBUG] Totaux projet: Ext=${totalExt}$, Int=${totalInt}$`);
+
+        // Logique: si extérieur a des données -> extérieur, sinon si intérieur -> intérieur
+        if (totalExt > 0) {
+          tabName = 'estimation'; // Extérieur
+        } else if (totalInt > 0) {
+          tabName = 'interieur'; // Intérieur seulement
+        }
+
+        console.log(`🔄 Changement d'onglet vers: ${tabName}`);
+
+        if (typeof switchTab === 'function') {
+          // skipRefresh = true pour éviter le double chargement des produits
+          switchTab(tabName, true);
+        }
+      }, 200);
 
       // Modifier le header pour indiquer qu'on modifie un projet existant
       const calculatorHeader = document.querySelector('.glass-card h1');
       if (calculatorHeader) {
         calculatorHeader.innerHTML = `Calculateur d'Estimation <span class="text-sm text-green-600">(modification: ${projet.client})</span>`;
+      }
+
+      // Valider les boutons après le chargement des données client
+      if (typeof validateCompleterButton === 'function') {
+        validateCompleterButton();
       }
 
       console.log('[OK] Projet chargé complètement!');
@@ -17757,7 +17822,7 @@ function initializeApp() {
             <div class="text-xs text-gray-500">${projet.telephone || ''}</div>
           </td>
           <td class="border: 1px solid var(--border-dark); px-4 py-3 text-sm text-white">
-            ${projet.dateCreation ? new Date(projet.dateCreation).toLocaleDateString('fr-FR') : 'N/A'}
+            ${projet.dateCreation ? (projet.dateCreation.includes('/') ? projet.dateCreation : new Date(projet.dateCreation).toLocaleDateString('fr-FR')) : 'N/A'}
           </td>
           <td class="border: 1px solid var(--border-dark); px-4 py-3 text-sm font-medium text-white">
             ${formatCurrency(projet.total || 0)}
@@ -18611,8 +18676,12 @@ function initializeApp() {
     // NOUVEAU: Sauvegarder le projet dans "Mes Projets" (API Cloud)
     const username = localStorage.getItem('username') || 'default';
     const clientName = `${clientPrenom} ${clientNom}`;
+
+    // Utiliser l'ID existant si on modifie un projet chargé, sinon créer un nouvel ID
+    const projetId = currentLoadedProjectId || Date.now().toString();
+
     const projet = {
-      id: Date.now().toString(), // ID unique basé sur timestamp
+      id: projetId,
       client: clientName,
       adresse: clientAddress,
       telephone: clientPhone,
@@ -18628,19 +18697,20 @@ function initializeApp() {
       formData: collecterToutesDonnees()
     };
 
-    // Sauvegarder dans le cloud via API
+    // Sauvegarder dans le cloud via API (mise à jour si projet existant)
     try {
       const response = await fetch('/api/projets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: username,
-          projet: projet
+          projet: projet,
+          updateExisting: currentLoadedProjectId ? true : false
         })
       });
 
       if (response.ok) {
-        console.log('[OK] Projet sauvegardé dans le cloud');
+        console.log('[OK] Projet ' + (currentLoadedProjectId ? 'mis à jour' : 'sauvegardé') + ' dans le cloud');
       } else {
         console.error('[ERROR] Erreur sauvegarde projet:', response.status, response.statusText);
       }

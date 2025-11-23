@@ -1,5 +1,6 @@
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
+from reportlab.lib.utils import simpleSplit, ImageReader
 from io import BytesIO
 from PyPDF2 import PdfReader, PdfWriter
 from datetime import datetime
@@ -43,7 +44,7 @@ def formater_prix(prix_str):
         montant = 0.0
     return f"{montant:,.2f}".replace(",", "X").replace(".", ",").replace("X", " ") + " $"
 
-def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: str = "0", telephone: str = "", courriel: str = "", endroit: str = "", item: str = "", part: str = "", produit: str = "", payer_par: str = "") -> BytesIO:
+def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: str = "0", telephone: str = "", courriel: str = "", endroit: str = "", item: str = "", part: str = "", produit: str = "", payer_par: str = "", username: str = "", temps: str = "") -> BytesIO:
     print(f"[DEBUG FACTURE] Téléphone reçu: '{telephone}'")
     print(f"[DEBUG FACTURE] Courriel reçu: '{courriel}'")
     print(f"[DEBUG FACTURE] Endroit reçu: '{endroit}'")
@@ -120,25 +121,42 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
 
 
     c.setFillColorRGB(0, 0, 0)
-    c.setFont("Helvetica", 7)
-    c.drawCentredString(467, 762.5, f"{datetime.today().strftime('%d/%m/%Y')}")  # 2px plus vers la gauche (469-2=467)
+    date = datetime.today().strftime('%d/%m/%Y')
 
-    # Numéro de facture avec police Helvetica-Oblique 9.5 (même que generate_pdf.py ligne 50)
+    c.setFont("Helvetica", 7)
+    c.drawCentredString(468.5, 762.5, date)
+
+    # Numéro de facture avec police Helvetica-Oblique 9.5 (même que generate_pdf.py)
     c.setFont("Helvetica-Oblique", 9.5)
-    c.drawString(295, 761.5, facture_num)  # 10px plus vers la gauche (305-10=295)
+    c.drawString(295, 761.5, facture_num)
 
     c.setFont("Helvetica", 8.5)
     c.drawCentredString(308, 736.5, nom)
     c.drawCentredString(447, 736.5, prenom)
 
-    # Adresse aux mêmes positions que generate_pdf.py
-    c.drawCentredString(308, 720, rue)
+    # === AUTO-AJUSTEMENT ADRESSE (identique à generate_pdf.py) ===
+    adresse_center_x = 308
+    adresse_y = 720
+    adresse_max_width = 90
+
+    font_size_rue = 8.5
+    min_font_size_rue = 5.0
+
+    while font_size_rue >= min_font_size_rue:
+        text_width = c.stringWidth(rue, "Helvetica", font_size_rue)
+        if text_width <= adresse_max_width:
+            break
+        font_size_rue -= 0.2
+
+    c.setFont("Helvetica", font_size_rue)
+    c.drawCentredString(adresse_center_x, adresse_y, rue)
+
+    c.setFont("Helvetica", 8.5)
     c.drawCentredString(448, 720, ville)
     c.drawCentredString(308, 703, code_postal)
 
     # Téléphone avec police Helvetica 8.5 (même que generate_pdf.py ligne 47)
     c.setFont("Helvetica", 8.5)
-    print(f"[DEBUG FACTURE] Dessin téléphone '{telephone}' à position (447, 703)")
     c.drawCentredString(447, 703, telephone)
 
     # Courriel avec police Helvetica 8 (même que generate_pdf.py ligne 40)
@@ -146,7 +164,7 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
     print(f"[DEBUG FACTURE] Dessin courriel '{courriel}' à position (447, 685.5)")
     c.drawCentredString(447, 685.5, courriel)
 
-    # Endroit avec la même logique exacte que generate_pdf.py
+    # === ENDROIT (identique à generate_pdf.py) ===
     c.setFont("Helvetica", 7.5)
     x = 76
     y = 458.5
@@ -156,41 +174,48 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
     min_font_size = 4.5
     line_height_ratio = 1.3
 
-    print(f"[DEBUG FACTURE] Dessin endroit '{endroit}' à position ({x}, {y})")
+    # Fonction pour appliquer word wrap sur UNE ligne (respecte les \n)
+    def wrap_single_line(text, size):
+        words = text.split()
+        wrapped = []
+        line = ""
+        for word in words:
+            test_line = f"{line} {word}".strip()
+            if c.stringWidth(test_line, "Helvetica", size) <= max_width:
+                line = test_line
+            else:
+                if line:
+                    wrapped.append(line)
+                line = word
+        if line:
+            wrapped.append(line)
+        return wrapped if wrapped else [""]
 
-    if endroit:
-        def split_lines(text, size):
-            words = text.split()
-            lines = []
-            line = ""
-            for word in words:
-                test_line = f"{line} {word}".strip()
-                if c.stringWidth(test_line, "Helvetica", size) <= max_width:
-                    line = test_line
-                else:
-                    lines.append(line)
-                    line = word
-            if line:
-                lines.append(line)
-            return lines
+    # Séparer d'abord par \n, puis appliquer word wrap sur chaque ligne
+    def split_lines_with_newlines(text, size):
+        all_lines = []
+        raw_lines = text.split('\n')
+        for raw_line in raw_lines:
+            if raw_line.strip():
+                all_lines.extend(wrap_single_line(raw_line.strip(), size))
+            else:
+                all_lines.append("")  # Ligne vide
+        return all_lines
 
-        while font_size >= min_font_size:
-            lines = split_lines(endroit, font_size)
-            line_height = font_size * line_height_ratio
-            total_height = len(lines) * line_height
-            if total_height <= max_height:
-                break
-            font_size -= 0.2
+    while font_size >= min_font_size:
+        lines = split_lines_with_newlines(endroit, font_size)
+        line_height = font_size * line_height_ratio
+        total_height = len(lines) * line_height
+        if total_height <= max_height:
+            break
+        font_size -= 0.2
 
-        text_obj = c.beginText()
-        text_obj.setTextOrigin(x, y + max_height - line_height)
-        text_obj.setFont("Helvetica", font_size)
-        print(f"[DEBUG FACTURE] Endroit avec police {font_size}, {len(lines)} lignes, origine ({x}, {y + max_height - line_height})")
-        for line in lines:
-            text_obj.textLine(line)
-        c.drawText(text_obj)
-    else:
-        print("[DEBUG FACTURE] Endroit vide, rien à dessiner")
+    text_obj = c.beginText()
+    text_obj.setTextOrigin(x, y + max_height - line_height)
+    text_obj.setFont("Helvetica", font_size)
+    for line in lines:
+        text_obj.textLine(line)
+    c.drawText(text_obj)
 
 
     c.setFont("Helvetica", 8.5)
@@ -203,10 +228,11 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
 
     c.drawRightString(211, 73.5, total_f)  # Total 8px plus à droite (203+8=211)
 
-    # === ITEM ET PRIX ===
-    # Positions identiques à generate_pdf.py
+    # === ITEM ET PRIX (identique à generate_pdf.py) ===
     c.setFont("Helvetica", 8.5)
     c.drawString(76, 249.5, item)
+    c.drawString(476, 249.5, temps)
+    c.drawString(310, 305.5, temps)
 
     # Prix avec dollar sur la même ligne (position 381, 249.5)
     try:
@@ -218,44 +244,50 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
     prix_avec_dollar = f"{prix_formate} $" if prix_formate else ""
     c.drawString(381, 249.5, prix_avec_dollar)
 
-    # === PRODUIT / COULEURS ===
-    # Code identique à generate_pdf.py
-    produit_lines = [f"- {line.strip()}" for line in produit.split("\n") if line.strip()]
-    produit_text = "\n".join(produit_lines)
+    # === PRODUIT / COULEURS (identique à generate_pdf.py) ===
+    lines_produit_raw = [line.strip() for line in produit.split("\n") if line.strip()]
 
+    font_size_produit = 7.5
+    line_height_produit = font_size_produit * 1.4
     x_produit = 403
     y_produit = 458.5
-    max_width_produit = 137
+    max_width_produit = 135
     max_height_produit = 130
-    font_size_produit = 7.5
-    min_font_size_produit = 4.5
-    line_height_ratio = 1.5
 
-    def break_text_paragraphs(text, font_size):
-        from reportlab.lib.utils import simpleSplit
-        lines = []
-        for paragraph in text.split("\n"):
-            wrapped = simpleSplit(paragraph, "Helvetica", font_size, max_width_produit)
-            lines.append(wrapped)
-        return lines
+    # Fonction pour couper les lignes trop longues (word wrap)
+    def wrap_line_produit(text, max_w, font_s):
+        words = text.split()
+        wrapped = []
+        current = ""
+        for word in words:
+            test = f"{current} {word}".strip()
+            if c.stringWidth(test, "Helvetica", font_s) <= max_w:
+                current = test
+            else:
+                if current:
+                    wrapped.append(current)
+                current = word
+        if current:
+            wrapped.append(current)
+        return wrapped if wrapped else [text]
 
-    while font_size_produit >= min_font_size_produit:
-        wrapped_blocks = break_text_paragraphs(produit_text, font_size_produit)
-        line_height = font_size_produit * line_height_ratio
-        total_lines = sum(len(block) + 1 for block in wrapped_blocks)
-        total_height = total_lines * line_height
-        if total_height <= max_height_produit:
-            break
-        font_size_produit -= 0.2
+    # Appliquer le word wrap à chaque ligne
+    lines_produit = []
+    for line in lines_produit_raw:
+        lines_produit.extend(wrap_line_produit(line, max_width_produit, font_size_produit))
+
+    start_y_produit = y_produit + max_height_produit - font_size_produit
 
     text_obj = c.beginText()
-    text_obj.setTextOrigin(x_produit, y_produit + max_height_produit - line_height)
     text_obj.setFont("Helvetica", font_size_produit)
 
-    for block in wrapped_blocks:
-        for line in block:
-            text_obj.textLine(line)
-        text_obj.textLine("")
+    for i, line in enumerate(lines_produit):
+        current_y = start_y_produit - (i * line_height_produit)
+        if current_y < y_produit:
+            break
+        text_obj.setTextOrigin(x_produit, current_y)
+        text_obj.textLine(line)
+
     c.drawText(text_obj)
 
     # === PARTICULARITÉ DES TRAVAUX ===
@@ -333,6 +365,27 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
     if xcheque:
         c.drawString(x_coords["xcheque"], y_coord_cheque, "X")
 
+    # === COURRIEL ENTREPRENEUR EN BAS ===
+    if username:
+        # Charger les informations de l'entrepreneur depuis user_info.json
+        user_info_path = os.path.join(base_cloud, "signatures", username, "user_info.json")
+        user_info = {}
+
+        if os.path.exists(user_info_path):
+            try:
+                with open(user_info_path, "r", encoding="utf-8") as f:
+                    user_info = json.load(f)
+            except Exception as e:
+                print(f"[WARN] Erreur chargement user_info.json: {e}")
+
+        # Afficher courriel entrepreneur en petit (même position que dans soumission)
+        if user_info.get("courriel"):
+            c.setFont("Helvetica", 6)
+            # Position identique à generate_pdf.py (au-dessus de la zone signature)
+            courriel_x = 80 + 100 + 20 - 25 - 8 - 5 - 4  # = 58
+            courriel_y = 112.5 + 30 + 50 - 10 - 5 + 1 - 0.5  # = 178
+            c.drawCentredString(courriel_x, courriel_y, user_info['courriel'])
+
     c.save()
     packet.seek(0)
 
@@ -346,8 +399,8 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
     output.seek(0)
     return output
 
-def save_facture_and_return_url(nom, prenom, adresse, prix, username, depot="0", telephone="", courriel="", endroit="", item="", part="", produit="", payer_par=""):
-    buffer = generate_facture_pdf(nom, prenom, adresse, prix, depot, telephone, courriel, endroit, item, part, produit, payer_par)
+def save_facture_and_return_url(nom, prenom, adresse, prix, username, depot="0", telephone="", courriel="", endroit="", item="", part="", produit="", payer_par="", temps=""):
+    buffer = generate_facture_pdf(nom, prenom, adresse, prix, depot, telephone, courriel, endroit, item, part, produit, payer_par, username, temps)
 
     folder = os.path.join(base_cloud, "factures_completes", username)
     os.makedirs(folder, exist_ok=True)

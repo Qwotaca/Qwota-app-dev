@@ -25,6 +25,9 @@ from database import (
     get_resolved_today_count
 )
 
+# Configuration sécurisée
+import config
+
 # Backend QE imports
 from QE.Backend.auth import hash_password, verify_password
 from QE.Backend.coach_access import get_entrepreneurs_for_coach
@@ -45,8 +48,10 @@ from QE.Backend.facturationqe import (
 # PDF QE imports
 from QE.PDF.generate_pdf import generate_pdf
 from QE.PDF.generate_gqp_pdf import generate_gqp_pdf
+from QE.PDF.generate_gqp_html import generate_gqp_html
 from QE.PDF.generate_pdf_facture import generate_facture_pdf
 from QE.PDF.generate_pdf_calcul import generate_calcul_pdf
+import uuid
 
 import base64
 from io import BytesIO
@@ -504,6 +509,11 @@ def connect_agenda_page():
 def read_index():
     return FileResponse(os.path.join(BASE_DIR, "Qwota", "Frontend", "index.html"))
 
+@app.get("/apppc")
+def read_apppc():
+    """Page principale pour les entrepreneurs (responsive mobile et PC)"""
+    return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Common", "apppc.html"))
+
 @app.get("/favicon", include_in_schema=False)
 def favicon():
     return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Common", "favicon.ico"))
@@ -558,12 +568,12 @@ def template_file():
     return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "template.html"))
 
 
-# 🔐 Middleware CORS
+# 🔐 Middleware CORS sécurisé
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=config.ALLOWED_ORIGINS,  # Origines spécifiques depuis config
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],  # Méthodes spécifiques
     allow_headers=["*"],
 )
 
@@ -714,7 +724,7 @@ def get_valid_gmail_token(username: str) -> str:
     return tokens["access_token"]
 
 @app.post("/login")
-def login(data: LoginData):
+def login(data: LoginData, response: Response):
     # Authentifier avec la base de données SQLite
     user_info = authenticate_user(data.username, data.password)
 
@@ -729,10 +739,19 @@ def login(data: LoginData):
         user_json = {
             "username": data.username,
             "role": user_info["role"],
-            "password": user_info["password"]  # hashé
+            "password": user_info.get("password_hash") or user_info.get("password", "")  # hashé
         }
         with open(user_file, "w", encoding="utf-8") as f:
             json.dump(user_json, f, indent=2, ensure_ascii=False)
+
+    # Définir un cookie avec le username pour l'authentification
+    response.set_cookie(
+        key="username",
+        value=data.username,
+        max_age=7*24*60*60,  # 7 jours
+        httponly=False,  # Permet l'accès depuis JavaScript
+        samesite="lax"
+    )
 
     # Définir la redirection selon le rôle
     if user_info["role"] == "entrepreneur":
@@ -929,13 +948,32 @@ def calculate_dashboard_stats(username: str) -> dict:
                 perdus = json.load(f)
                 stats["status_soumissions"]["perdus"] = len(perdus)
 
-        # 2. CHIFFRE D'AFFAIRES
+        # 2. CHIFFRE D'AFFAIRES (calculé depuis ventes_acceptees + ventes_produit, comme la page Ventes)
         ca_actuel = 0.0
-        if os.path.exists(signees_path):
-            with open(signees_path, 'r', encoding='utf-8') as f:
-                signees = json.load(f)
-                for s in signees:
-                    prix_str = s.get("prix", "0").replace(" ", "").replace(",", ".")
+
+        # Additionner les ventes acceptées
+        acceptees_path = os.path.join(base_cloud, "ventes_acceptees", username, "ventes.json")
+        if os.path.exists(acceptees_path):
+            with open(acceptees_path, 'r', encoding='utf-8') as f:
+                acceptees = json.load(f)
+                for v in acceptees:
+                    # Nettoyer le prix (gérer espaces insécables \xa0, espaces normaux, virgules françaises)
+                    prix_str = str(v.get("prix", "0"))
+                    prix_str = prix_str.replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
+                    try:
+                        ca_actuel += float(prix_str)
+                    except:
+                        continue
+
+        # Additionner les ventes produit (travaux terminés)
+        produit_path = os.path.join(base_cloud, "ventes_produit", username, "ventes.json")
+        if os.path.exists(produit_path):
+            with open(produit_path, 'r', encoding='utf-8') as f:
+                produit = json.load(f)
+                for v in produit:
+                    # Nettoyer le prix (gérer espaces insécables \xa0, espaces normaux, virgules françaises)
+                    prix_str = str(v.get("prix", "0"))
+                    prix_str = prix_str.replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
                     try:
                         ca_actuel += float(prix_str)
                     except:
@@ -968,7 +1006,7 @@ def calculate_dashboard_stats(username: str) -> dict:
             rpo_data = load_user_rpo_data(username)
             annual = rpo_data.get("annual", {})
 
-            stats["metriques"]["taux_marketing"] = round(float(annual.get("mktg_vise", 0)), 2)
+            stats["metriques"]["taux_marketing"] = round(float(annual.get("mktg_reel", 0)), 2)
 
             # Charger prod_horaire directement depuis RPO (comme le dashboard personnel)
             prod_horaire_rpo = float(annual.get("prod_horaire", 0))
@@ -2738,33 +2776,72 @@ def deconnecter_email(username: str):
 @app.post("/generate-gqp-pdf")
 async def generate_gqp_and_save(
     username: str = Form(...),
-    photos: List[UploadFile] = File(...),
-    nom: str = Form(...),
-    prenom: str = Form(...),
-    adresse: str = Form(...),
-    telephone: str = Form(...),
-    courriel: str = Form(...),
-    endroit: str = Form(...),
-    etapes: str = Form(...),
-    heure: str = Form(...),
-    montant: str = Form(...),
+    photos: List[UploadFile] = File(default=[]),
+    nom: str = Form(default=""),
+    prenom: str = Form(default=""),
+    adresse: str = Form(default=""),
+    telephone: str = Form(default=""),
+    courriel: str = Form(default=""),
+    endroit: str = Form(default=""),
+    etapes: str = Form(default=""),
+    heure: str = Form(default=""),
+    montant: str = Form(default=""),
     numero_soumission: str = Form(default=""),
     assignment_type: str = Form(default="none")
 ):
-    print(f"Images reçues (avant dédoublonnage) : {len(photos)}")
-    
-    # Dédoublonnage des images reçues
-    unique_bytes = set()
-    unique_files = []
-    for photo in photos:
-        content = await photo.read()
-        if content not in unique_bytes:
-            unique_bytes.add(content)
-            bio = BytesIO(content)
-            bio.seek(0)  # Important: remettre le pointeur au début
-            unique_files.append(bio)
+    print(f"[GQP-HTML] Fichiers reçus: {len(photos)}")
 
-    print(f"Images uniques (après dédoublonnage) : {len(unique_files)}")
+    # Extensions supportées
+    IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff'}
+    VIDEO_EXTENSIONS = {'.mp4', '.mov', '.avi', '.webm', '.mkv', '.m4v'}
+
+    # Générer un ID unique pour ce GQP
+    gqp_id = str(uuid.uuid4())[:8]
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+    # Créer le dossier pour ce GQP
+    dossier_user = os.path.join(f"{base_cloud}/gqp", username)
+    dossier_gqp = os.path.join(dossier_user, f"gqp_{gqp_id}")
+    dossier_medias = os.path.join(dossier_gqp, "medias")
+    os.makedirs(dossier_medias, exist_ok=True)
+
+    # Sauvegarder les médias et préparer les URLs
+    media_urls = []
+    unique_bytes = set()
+
+    for i, photo in enumerate(photos):
+        filename = photo.filename.lower() if photo.filename else ""
+        ext = os.path.splitext(filename)[1]
+
+        # Vérifier le type de fichier
+        if ext in IMAGE_EXTENSIONS:
+            media_type = 'image'
+        elif ext in VIDEO_EXTENSIONS:
+            media_type = 'video'
+        else:
+            print(f"[GQP-HTML] Fichier ignoré (type non supporté): {photo.filename}")
+            continue
+
+        content = await photo.read()
+
+        # Dédoublonnage
+        content_hash = hash(content)
+        if content_hash in unique_bytes:
+            continue
+        unique_bytes.add(content_hash)
+
+        # Sauvegarder le fichier
+        media_filename = f"media_{i}{ext}"
+        media_path = os.path.join(dossier_medias, media_filename)
+        with open(media_path, "wb") as f:
+            f.write(content)
+
+        # URL accessible
+        media_url = f"{BASE_URL}/cloud/gqp/{username}/gqp_{gqp_id}/medias/{media_filename}"
+        media_urls.append({'url': media_url, 'type': media_type})
+        print(f"[GQP-HTML] {media_type} sauvegardé: {media_filename}")
+
+    print(f"[GQP-HTML] Total médias sauvegardés: {len(media_urls)}")
 
     infos = {
         "nom": nom,
@@ -2778,18 +2855,17 @@ async def generate_gqp_and_save(
         "montant": montant
     }
 
-    pdf_buffer = generate_gqp_pdf(unique_files, infos)
+    # Générer le HTML
+    html_content = generate_gqp_html(infos, media_urls)
 
-    dossier_user = os.path.join(f"{base_cloud}/gqp", username)
-    os.makedirs(dossier_user, exist_ok=True)
+    # Sauvegarder le fichier HTML
+    nom_fichier = f"gqp_{gqp_id}.html"
+    chemin_html = os.path.join(dossier_gqp, "index.html")
+    with open(chemin_html, "w", encoding="utf-8") as f:
+        f.write(html_content)
 
-    nom_fichier = f"GQP_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-    chemin_pdf = os.path.join(dossier_user, nom_fichier)
-
-    with open(chemin_pdf, "wb") as f:
-        f.write(pdf_buffer.getvalue())
-
-    lien_pdf = f"{BASE_URL}/cloud/gqp/{username}/{nom_fichier}"
+    # Lien vers la page GQP
+    lien_pdf = f"{BASE_URL}/gqp-view/{username}/{gqp_id}"
 
     json_file = os.path.join(dossier_user, "gqp_list.json")
     if os.path.exists(json_file):
@@ -2986,11 +3062,17 @@ async def block_sensitive_files(request: Request, call_next):
     )
 
     if protected_page:
-        # Récupérer le username depuis localStorage (envoyé via cookie ou query param)
+        # Recuperer le username depuis localStorage (envoye via cookie ou query param)
         username = request.cookies.get("username") or request.query_params.get("username")
 
+        # Verifier aussi qu'il y a un token JWT valide (pas juste un cookie username)
+        token = request.cookies.get("access_token")
+        if not token:
+            # Pas de token = pas vraiment connecte, laisser passer vers login
+            return await call_next(request)
+
         if username and get_user(username):
-            # Vérifier si onboarding complété
+            # Verifier si onboarding complete
             info_file = f"{base_cloud}/signatures/{username}/user_info.json"
             onboarding_ok = False
 
@@ -3008,14 +3090,18 @@ async def block_sensitive_files(request: Request, call_next):
 
             # Si onboarding incomplet, rediriger
             if not onboarding_ok:
-                print(f"🚫 Accès refusé à {path} pour {username} - onboarding incomplet")
+                print(f"[BLOQUE] Acces refuse a {path} pour {username} - onboarding incomplet")
                 return RedirectResponse(url="/onboarding", status_code=303)
 
-            # Vérifier si le guide est complété
+            # Verifier si le guide est complete
             guide_progress = get_guide_progress(username)
             if guide_progress is None or not guide_progress.get("completed", False):
-                print(f"🚫 Accès refusé à {path} pour {username} - guide non complété")
-                return RedirectResponse(url="/apppc#/guide", status_code=303)
+                # Permettre l'acces a /apppc pour afficher le guide (hash #/guide)
+                if path == "/apppc":
+                    pass  # Laisser passer pour afficher le guide
+                else:
+                    print(f"[BLOQUE] Acces refuse a {path} pour {username} - guide non complete")
+                    return RedirectResponse(url="/apppc#/guide", status_code=303)
 
     return await call_next(request)
 
@@ -3036,15 +3122,17 @@ async def creer_facture(request: Request):
     telephone = body.get("telephone", "")
     courriel = body.get("courriel", "")
     endroit = body.get("endroit", "")
+    numero_soumission = body.get("numero_soumission", "")
     item = body.get("item", "")
     part = body.get("part", "")
     produit = body.get("produit", "")
     payer_par = body.get("payer_par", "")
+    temps = body.get("temps", "")
 
     if not all([nom, prenom, adresse, prix]):
         raise HTTPException(status_code=400, detail="Champs manquants")
 
-    pdf_buffer: BytesIO = generate_facture_pdf(nom, prenom, adresse, prix, depot, telephone, courriel, endroit, item, part, produit, payer_par)
+    pdf_buffer: BytesIO = generate_facture_pdf(nom, prenom, adresse, prix, depot, telephone, courriel, endroit, item, part, produit, payer_par, utilisateur, temps)
 
     user_folder = os.path.join(f"{base_cloud}/factures_completes", utilisateur)
     os.makedirs(user_folder, exist_ok=True)
@@ -3058,6 +3146,7 @@ async def creer_facture(request: Request):
 
     lien_pdf_facture = f"{BASE_URL}/cloud/factures/{utilisateur}/{nom_fichier_facture}"
 
+    from datetime import datetime
     data = {
         "nom": nom,
         "prenom": prenom,
@@ -3065,7 +3154,9 @@ async def creer_facture(request: Request):
         "prix": prix,
         "telephone": telephone,
         "courriel": courriel,
-        "depot": depot
+        "depot": depot,
+        "numero_soumission": numero_soumission,
+        "date_creation": datetime.now().isoformat()
     }
 
     try:
@@ -3119,6 +3210,7 @@ def enregistrer_facture(utilisateur: str, facture: dict, lien_pdf: str):
 @app.post("/generate-facture-preview")
 async def generate_facture_preview(request: Request):
     body = await request.json()
+    utilisateur = request.query_params.get("username", "inconnu")
 
     nom = body.get("nom", "")
     prenom = body.get("prenom", "")
@@ -3132,11 +3224,12 @@ async def generate_facture_preview(request: Request):
     part = body.get("part", "")
     produit = body.get("produit", "")
     payer_par = body.get("payer_par", "")
+    temps = body.get("temps", "")
 
     if not all([nom, prenom, adresse, prix]):
         raise HTTPException(status_code=400, detail="Champs manquants")
 
-    pdf_buffer: BytesIO = generate_facture_pdf(nom, prenom, adresse, prix, depot, telephone, courriel, endroit, item, part, produit, payer_par)
+    pdf_buffer: BytesIO = generate_facture_pdf(nom, prenom, adresse, prix, depot, telephone, courriel, endroit, item, part, produit, payer_par, utilisateur, temps)
 
     return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={
         "Content-Disposition": "inline; filename=facture.pdf"
@@ -3685,7 +3778,7 @@ def get_chiffre_affaires_api(username: str):
                     ventes_acceptees = json.loads(content)
                     print(f"[CHIFFRE_AFFAIRES] Nombre de ventes acceptées: {len(ventes_acceptees)}")
                     for vente in ventes_acceptees:
-                        prix_str = vente.get("prix", "0").replace(" ", "").replace(",", ".")
+                        prix_str = vente.get("prix", "0").replace("\xa0", "").replace(" ", "").replace(",", ".")
                         prix_str = prix_str.replace("$", "").strip()
                         print(f"[CHIFFRE_AFFAIRES] Prix acceptée brut: '{vente.get('prix')}' -> nettoyé: '{prix_str}'")
                         try:
@@ -3708,7 +3801,7 @@ def get_chiffre_affaires_api(username: str):
                     ventes_produit = json.loads(content)
                     print(f"[CHIFFRE_AFFAIRES] Nombre de ventes produit: {len(ventes_produit)}")
                     for vente in ventes_produit:
-                        prix_str = vente.get("prix", "0").replace(" ", "").replace(",", ".")
+                        prix_str = vente.get("prix", "0").replace("\xa0", "").replace(" ", "").replace(",", ".")
                         prix_str = prix_str.replace("$", "").strip()
                         print(f"[CHIFFRE_AFFAIRES] Prix produit brut: '{vente.get('prix')}' -> nettoyé: '{prix_str}'")
                         try:
@@ -4667,9 +4760,12 @@ async def save_equipes(username: str, data: List[Team] = Body(...)):
     os.makedirs(folder, exist_ok=True)
     filepath = os.path.join(folder, f"{username}.json")
 
+    # Filtrer les équipes qui ont au moins un membre (painter)
+    valid_teams = [team for team in data if team.painters and len(team.painters) > 0]
+
     with open(filepath, "w", encoding="utf-8") as f:
-        json.dump([team.dict() for team in data], f, ensure_ascii=False, indent=2)
-    return {"message": "Équipes sauvegardées", "user": username, "count": len(data)}
+        json.dump([team.dict() for team in valid_teams], f, ensure_ascii=False, indent=2)
+    return {"message": "Équipes sauvegardées", "user": username, "count": len(valid_teams)}
 
 # Endpoint pour récupérer l'agenda sélectionné
 @app.get("/get-agenda-id")
@@ -4727,24 +4823,36 @@ def save_theme(username: str, theme_data: dict = Body(...)):
 
 @app.get("/get-equipes/{username}")
 def get_equipes(username: str):
+    # 1. D'abord chercher dans le dossier equipe/{username}.json
     folder = f"{base_cloud}/equipe"
     filepath = os.path.join(folder, f"{username}.json")
-    if not os.path.exists(filepath):
-        return []  # Retourner directement un array vide
-    try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            equipes_data = json.load(f)
-            # Si c'est déjà un array, le retourner directement
-            if isinstance(equipes_data, list):
-                return equipes_data
-            # Si c'est un objet avec une clé "equipes", extraire l'array
-            if isinstance(equipes_data, dict) and "equipes" in equipes_data:
-                return equipes_data["equipes"]
-            # Sinon retourner un array vide
-            return []
-    except Exception as e:
-        print(f"[ERROR] Erreur lecture équipes {username}: {e}")
-        return []
+
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                equipes_data = json.load(f)
+                if isinstance(equipes_data, list):
+                    return equipes_data
+                if isinstance(equipes_data, dict) and "equipes" in equipes_data:
+                    return equipes_data["equipes"]
+        except Exception as e:
+            print(f"[ERROR] Erreur lecture équipes {username}: {e}")
+
+    # 2. Sinon chercher dans signatures/{username}/user_info.json
+    user_info_path = os.path.join(f"{base_cloud}/signatures", username, "user_info.json")
+    if os.path.exists(user_info_path):
+        try:
+            with open(user_info_path, "r", encoding="utf-8") as f:
+                user_data = json.load(f)
+                if "equipes" in user_data and isinstance(user_data["equipes"], list):
+                    # Filtrer seulement les équipes avec des membres
+                    equipes = [eq for eq in user_data["equipes"] if eq.get("painters") and len(eq.get("painters", [])) > 0]
+                    print(f"[OK] Équipes trouvées dans user_info.json pour {username}: {len(equipes)}")
+                    return equipes
+        except Exception as e:
+            print(f"[ERROR] Erreur lecture user_info.json {username}: {e}")
+
+    return []
 
 @app.get("/get-teams")
 def get_teams(request: Request):
@@ -4831,19 +4939,42 @@ def envoyer_gqp_email_simple(
 
 @app.get("/api/chiffre-affaires-signes/{username}")
 def get_chiffre_affaires_signes(username: str):
+    """
+    Calcule le montant total signé depuis ventes_acceptees + ventes_produit
+    (même logique que /api/chiffre-affaires)
+    """
     try:
-        chemin = f"{base_cloud}/soumissions_signees/{username}/soumissions.json"
-        if not os.path.exists(chemin):
-            return {"total": "0,00 $"}
-        with open(chemin, "r", encoding="utf-8") as f:
-            soumissions = json.load(f)
         total = 0.0
-        for s in soumissions:
-            prix_str = s.get("prix", "0").replace(" ", "").replace(",", ".")
-            try:
-                total += float(prix_str)
-            except:
-                continue
+
+        # 1. Additionner les ventes acceptées
+        acceptees_path = f"{base_cloud}/ventes_acceptees/{username}/ventes.json"
+        if os.path.exists(acceptees_path):
+            with open(acceptees_path, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if content:
+                    ventes = json.loads(content)
+                    for v in ventes:
+                        prix_str = str(v.get("prix", "0")).replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
+                        try:
+                            total += float(prix_str)
+                        except:
+                            continue
+
+        # 2. Additionner les ventes produit
+        produit_path = f"{base_cloud}/ventes_produit/{username}/ventes.json"
+        if os.path.exists(produit_path):
+            with open(produit_path, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if content:
+                    ventes = json.loads(content)
+                    for v in ventes:
+                        prix_str = str(v.get("prix", "0")).replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
+                        try:
+                            total += float(prix_str)
+                        except:
+                            continue
+
+        # Formater le total
         parts = f"{total:,.2f}".split(".")
         partie_entiere = parts[0].replace(",", " ")
         partie_decimale = parts[1]
@@ -6968,6 +7099,22 @@ async def save_user_info(
         elif "grade" in existing_info:
             user_info["grade"] = existing_info["grade"]
 
+        # IMPORTANT: Préserver les champs NEQ, TPS, TVQ s'ils existent
+        if "neq" in existing_info:
+            user_info["neq"] = existing_info["neq"]
+        if "tps" in existing_info:
+            user_info["tps"] = existing_info["tps"]
+        if "tvq" in existing_info:
+            user_info["tvq"] = existing_info["tvq"]
+
+        # Préserver equipes et niveau_actuel s'ils existent
+        if "equipes" in existing_info:
+            user_info["equipes"] = existing_info["equipes"]
+        if "niveau_actuel" in existing_info:
+            user_info["niveau_actuel"] = existing_info["niveau_actuel"]
+        if "last_updated" in existing_info:
+            user_info["last_updated"] = existing_info["last_updated"]
+
         # IMPORTANT: Une fois onboarding_completed = true, il ne peut JAMAIS redevenir false
         if existing_info.get("onboarding_completed") == True:
             # Déjà complété, on garde true peu importe ce qui est envoyé
@@ -6979,6 +7126,12 @@ async def save_user_info(
                 user_info["onboarding_completed"] = existing_info["onboarding_completed"]
             if "onboarding_date" in existing_info:
                 user_info["onboarding_date"] = existing_info["onboarding_date"]
+
+        # Préserver guide_completed si existe
+        if "guide_completed" in existing_info:
+            user_info["guide_completed"] = existing_info["guide_completed"]
+        if "guide_date" in existing_info:
+            user_info["guide_date"] = existing_info["guide_date"]
 
         with open(user_info_path, "w", encoding="utf-8") as f:
             json.dump(user_info, f, ensure_ascii=False, indent=2)
@@ -7374,6 +7527,83 @@ async def marquer_comme_perdu(data: dict = Body(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/annuler-client-accepte")
+async def annuler_client_accepte(data: dict = Body(...)):
+    """
+    Annule un client accepté et le déplace vers clients_perdus
+    """
+    try:
+        username = data.get("username")
+        client_id = data.get("id")
+
+        if not username or not client_id:
+            raise HTTPException(status_code=400, detail="Username et ID requis")
+
+        print(f"[ANNULATION] Annulation client accepté pour {username}, ID: {client_id}")
+
+        # Dossiers
+        acceptees_dir = f"{base_cloud}/ventes_acceptees/{username}"
+        perdus_dir = f"{base_cloud}/clients_perdus/{username}"
+        os.makedirs(perdus_dir, exist_ok=True)
+
+        acceptees_file = os.path.join(acceptees_dir, "ventes.json")
+        perdus_file = os.path.join(perdus_dir, "clients.json")
+
+        if not os.path.exists(acceptees_file):
+            raise HTTPException(status_code=404, detail="Aucune vente acceptée trouvée")
+
+        # Charger les ventes acceptées
+        with open(acceptees_file, "r", encoding="utf-8") as f:
+            ventes_acceptees = json.load(f)
+
+        # Trouver le client à annuler
+        client_trouve = None
+        ventes_acceptees_updated = []
+        for vente in ventes_acceptees:
+            # Comparer par ID direct (UUID) ou par prenom_nom_telephone
+            vente_uuid = vente.get('id', '')
+            vente_composite_id = f"{vente.get('prenom', '')}_{vente.get('nom', '')}_{vente.get('telephone', '')}"
+            if vente_uuid == client_id or vente_composite_id == client_id:
+                client_trouve = vente
+            else:
+                ventes_acceptees_updated.append(vente)
+
+        if not client_trouve:
+            raise HTTPException(status_code=404, detail="Client non trouvé dans les ventes acceptées")
+
+        client_nom = f"{client_trouve.get('prenom', '')} {client_trouve.get('nom', '')}"
+
+        # Sauvegarder la liste mise à jour (sans le client annulé)
+        with open(acceptees_file, "w", encoding="utf-8") as f:
+            json.dump(ventes_acceptees_updated, f, ensure_ascii=False, indent=2)
+
+        # Ajouter le client dans clients_perdus avec date d'annulation
+        clients_perdus = []
+        if os.path.exists(perdus_file):
+            with open(perdus_file, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if content:
+                    clients_perdus = json.loads(content)
+
+        client_trouve["date_perdu"] = datetime.now().isoformat()
+        client_trouve["statut"] = "perdu"
+        client_trouve["raison"] = "annulation"
+        clients_perdus.append(client_trouve)
+
+        with open(perdus_file, "w", encoding="utf-8") as f:
+            json.dump(clients_perdus, f, ensure_ascii=False, indent=2)
+
+        print(f"[OK] Client {client_nom} annulé et déplacé vers clients perdus")
+
+        return {"success": True, "message": f"{client_nom} annulé et déplacé vers clients perdus"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Erreur annuler client accepté: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/clients-perdus/{username}")
 async def get_clients_perdus(username: str):
     """
@@ -7492,10 +7722,14 @@ async def supprimer_client_perdu(data: dict = Body(...)):
         clients_perdus_updated = []
         client_supprime = None
         for client in clients_perdus:
-            # Comparer par nom, prénom et téléphone
-            if not (client.get('prenom') == prenom and
-                   client.get('nom') == nom and
-                   client.get('telephone') == telephone):
+            # Comparer par nom, prénom et téléphone (supporter les deux formats)
+            client_prenom = client.get('prenom') or client.get('clientPrenom', '')
+            client_nom = client.get('nom') or client.get('clientNom', '')
+            client_tel = client.get('telephone', '')
+
+            if not (client_prenom == prenom and
+                   client_nom == nom and
+                   client_tel == telephone):
                 clients_perdus_updated.append(client)
             else:
                 client_supprime = client
@@ -8776,19 +9010,30 @@ async def save_user_info(
             existing_info = {}
         
         # Mettre à jour avec les nouvelles données
-        # IMPORTANT: Préserver onboarding_completed et onboarding_date si déjà définis
+        # IMPORTANT: Préserver les valeurs existantes si les nouvelles sont vides
+        def get_value(key, default=""):
+            """Retourne la nouvelle valeur ou l'existante si la nouvelle est vide"""
+            new_val = user_data.get(key, "")
+            if new_val and str(new_val).strip():
+                return new_val
+            return existing_info.get(key, default)
+
         updated_data = {
-            "nom": user_data.get("nom", ""),
-            "prenom": user_data.get("prenom", ""),
-            "telephone": user_data.get("telephone", ""),
-            "courriel": user_data.get("courriel", ""),
-            "neq": user_data.get("neq", ""),
-            "tps": user_data.get("tps", ""),
-            "tvq": user_data.get("tvq", ""),
-            "equipes": user_data.get("equipes", []),
-            "niveau_actuel": user_data.get("niveau_actuel", 1),
+            "nom": get_value("nom"),
+            "prenom": get_value("prenom"),
+            "telephone": get_value("telephone"),
+            "courriel": get_value("courriel"),
+            "neq": get_value("neq"),
+            "tps": get_value("tps"),
+            "tvq": get_value("tvq"),
+            "equipes": user_data.get("equipes") if user_data.get("equipes") else existing_info.get("equipes", []),
+            "niveau_actuel": user_data.get("niveau_actuel", existing_info.get("niveau_actuel", 1)),
             "last_updated": datetime.now().isoformat()
         }
+
+        # Préserver le grade s'il existe
+        if existing_info.get("grade"):
+            updated_data["grade"] = existing_info.get("grade")
 
         # Une fois onboarding_completed = true, il ne peut JAMAIS redevenir false
         if existing_info.get("onboarding_completed") == True:
@@ -9177,19 +9422,117 @@ async def save_gqp_to_queue(
         raise HTTPException(status_code=500, detail=f"Erreur sauvegarde GQP: {e}")
 
 
+@app.post("/delete-gqp-from-queue")
+def delete_gqp_from_queue(
+    username: str = Body(...),
+    gqp_id: str = Body(...)
+):
+    """Supprimer un GQP de la file d'attente"""
+    try:
+        queue_file = f"{base_cloud}/gqp/{username}/gqp_a_envoyer.json"
+
+        if not os.path.exists(queue_file):
+            return {"success": True, "message": "Queue vide"}
+
+        with open(queue_file, "r", encoding="utf-8") as f:
+            queue = json.load(f)
+
+        # Trouver et supprimer le GQP
+        original_length = len(queue)
+        queue = [gqp for gqp in queue if str(gqp.get('id', '')) != str(gqp_id)]
+
+        if len(queue) < original_length:
+            # Sauvegarder la queue mise à jour
+            with open(queue_file, "w", encoding="utf-8") as f:
+                json.dump(queue, f, ensure_ascii=False, indent=2)
+
+            print(f"[OK] GQP {gqp_id} supprimé de la queue pour {username}")
+            return {"success": True, "message": "GQP supprimé"}
+        else:
+            return {"success": True, "message": "GQP non trouvé dans la queue"}
+
+    except Exception as e:
+        print(f"[ERROR] Erreur suppression GQP de queue: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur suppression GQP: {e}")
+
+
 @app.get("/get-gqp-images/{username}/{gqp_id}/{filename}")
 def get_gqp_image(username: str, gqp_id: str, filename: str):
     """Récupérer une image stockée pour un GQP"""
     try:
         image_path = f"{base_cloud}/gqp_images/{username}/{gqp_id}/{filename}"
-        
+
         if not os.path.exists(image_path):
             raise HTTPException(status_code=404, detail="Image non trouvée")
-        
+
         return FileResponse(image_path)
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur récupération image: {e}")
+
+
+@app.get("/gqp-view/{username}/{gqp_id}")
+def view_gqp_html(username: str, gqp_id: str):
+    """Afficher le GQP HTML (avec support vidéos)"""
+    try:
+        # Chemin vers le fichier HTML
+        html_path = f"{base_cloud}/gqp/{username}/gqp_{gqp_id}/index.html"
+
+        if not os.path.exists(html_path):
+            # Fallback: peut-être un ancien GQP PDF
+            raise HTTPException(status_code=404, detail="GQP non trouvé")
+
+        # Lire le HTML
+        with open(html_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
+
+        # Injecter les styles de scrollbar discret si pas déjà présent
+        scrollbar_styles = """
+        <style id="qwota-scrollbar-override">
+            /* Scrollbar personnalisée discrète - injectée dynamiquement */
+            ::-webkit-scrollbar {
+                width: 6px !important;
+                height: 6px !important;
+            }
+            ::-webkit-scrollbar-track {
+                background: transparent !important;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: rgba(100, 116, 139, 0.4) !important;
+                border-radius: 3px !important;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: rgba(100, 116, 139, 0.6) !important;
+            }
+            html, body {
+                scrollbar-width: thin;
+                scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
+            }
+            /* Lightbox nav en avant-plan */
+            .lightbox-nav {
+                z-index: 10010 !important;
+            }
+            .lightbox-content {
+                max-width: 60vw !important;
+                z-index: 1 !important;
+            }
+            .lightbox-content img, .lightbox-content video {
+                max-width: 60vw !important;
+            }
+        </style>
+        """
+
+        # Injecter avant </head> si pas déjà présent
+        if "qwota-scrollbar-override" not in html_content:
+            html_content = html_content.replace("</head>", scrollbar_styles + "\n</head>")
+
+        return HTMLResponse(content=html_content, status_code=200)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[GQP-VIEW] Erreur: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur affichage GQP: {e}")
 
 
 @app.get("/get-gqp-queue/{username}")
@@ -9952,39 +10295,75 @@ async def save_soumission_to_queue(data: dict = Body(...)):
         else:
             queue = []
 
-        # Créer un ID unique pour cette soumission
-        soumission_id = str(uuid.uuid4())
+        # Vérifier si c'est une mise à jour d'une soumission existante
+        existing_id = data.get("soumission_id")
+        is_update = False
 
-        # Créer l'entrée
-        soumission_entry = {
-            "id": soumission_id,
-            "num": data.get("num"),
-            "nom": data.get("nom"),
-            "prenom": data.get("prenom"),
-            "telephone": data.get("telephone"),
-            "courriel": data.get("courriel"),
-            "date": data.get("date"),
-            "temps": data.get("temps"),
-            "date2": data.get("date2"),
-            "prix": data.get("prix"),
-            "adresse": data.get("adresse"),
-            "endroit": data.get("endroit"),
-            "item": data.get("item"),
-            "produit": data.get("produit"),
-            "part": data.get("part"),
-            "payer_par": data.get("payer_par"),
-            "date_creation": datetime.now().isoformat(),
-            "status": "pending"
-        }
+        if existing_id:
+            # Mode mise à jour: chercher et mettre à jour la soumission existante
+            for i, soum in enumerate(queue):
+                if soum.get("id") == existing_id:
+                    # Mettre à jour les données
+                    queue[i] = {
+                        "id": existing_id,  # Garder le même ID
+                        "num": data.get("num"),
+                        "nom": data.get("nom"),
+                        "prenom": data.get("prenom"),
+                        "telephone": data.get("telephone"),
+                        "courriel": data.get("courriel"),
+                        "date": data.get("date"),
+                        "temps": data.get("temps"),
+                        "date2": data.get("date2"),
+                        "prix": data.get("prix"),
+                        "adresse": data.get("adresse"),
+                        "endroit": data.get("endroit"),
+                        "item": data.get("item"),
+                        "produit": data.get("produit"),
+                        "part": data.get("part"),
+                        "payer_par": data.get("payer_par"),
+                        "date_creation": soum.get("date_creation", datetime.now().isoformat()),  # Garder date originale
+                        "date_modification": datetime.now().isoformat(),
+                        "status": "pending"
+                    }
+                    is_update = True
+                    print(f"[UPDATE] Soumission mise à jour: {existing_id}")
+                    break
 
-        queue.append(soumission_entry)
+        if not is_update:
+            # Créer un ID unique pour cette nouvelle soumission
+            soumission_id = str(uuid.uuid4())
+
+            # Créer l'entrée
+            soumission_entry = {
+                "id": soumission_id,
+                "num": data.get("num"),
+                "nom": data.get("nom"),
+                "prenom": data.get("prenom"),
+                "telephone": data.get("telephone"),
+                "courriel": data.get("courriel"),
+                "date": data.get("date"),
+                "temps": data.get("temps"),
+                "date2": data.get("date2"),
+                "prix": data.get("prix"),
+                "adresse": data.get("adresse"),
+                "endroit": data.get("endroit"),
+                "item": data.get("item"),
+                "produit": data.get("produit"),
+                "part": data.get("part"),
+                "payer_par": data.get("payer_par"),
+                "date_creation": datetime.now().isoformat(),
+                "status": "pending"
+            }
+
+            queue.append(soumission_entry)
+            existing_id = soumission_id
+            print(f"[OK] Nouvelle soumission sauvegardée en queue: {soumission_id}")
 
         # Sauvegarder
         with open(queue_file, "w", encoding="utf-8") as f:
             json.dump(queue, f, ensure_ascii=False, indent=2)
 
-        print(f"[OK] Soumission sauvegardée en queue: {soumission_id}")
-        return {"success": True, "soumission_id": soumission_entry["id"]}
+        return {"success": True, "soumission_id": existing_id, "updated": is_update}
 
     except Exception as e:
         print(f"[ERROR] Erreur sauvegarde soumission: {e}")

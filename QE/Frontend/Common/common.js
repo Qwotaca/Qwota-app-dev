@@ -4,40 +4,10 @@
  */
 
 // ==========================================
-// DÉSACTIVATION DU STORAGE LOCAL
+// DÉSACTIVATION DU SERVICE WORKER ET CACHE
 // ==========================================
 (function() {
   'use strict';
-
-  // Créer un mock storage qui ne sauvegarde rien
-  const mockStorage = {
-    getItem: function() { return null; },
-    setItem: function() {},
-    removeItem: function() {},
-    clear: function() {},
-    key: function() { return null; },
-    length: 0
-  };
-
-  // Remplacer localStorage par le mock
-  try {
-    Object.defineProperty(window, 'localStorage', {
-      get: function() { return mockStorage; },
-      configurable: false
-    });
-  } catch(e) {
-    console.warn('[STORAGE] Impossible de désactiver localStorage:', e);
-  }
-
-  // Remplacer sessionStorage par le mock
-  try {
-    Object.defineProperty(window, 'sessionStorage', {
-      get: function() { return mockStorage; },
-      configurable: false
-    });
-  } catch(e) {
-    console.warn('[STORAGE] Impossible de désactiver sessionStorage:', e);
-  }
 
   // Bloquer Service Workers
   if ('serviceWorker' in navigator) {
@@ -63,7 +33,7 @@
     }
   }
 
-  console.log('[STORAGE DISABLED] localStorage, sessionStorage, service workers et cache sont désactivés');
+  console.log('[STORAGE] Service workers et cache API désactivés (localStorage conservé pour username)');
 })();
 
 // Variables globales - éviter la redéclaration
@@ -83,9 +53,19 @@ var canEditParameters = window.canEditParameters;
 var systemInitialized = window.systemInitialized;
 
 // Éviter la redéclaration si déjà définie
-// Note: localStorage est désactivé, username sera toujours "demo" par défaut
+// Charger le username depuis l'URL en priorité, sinon localStorage
 if (typeof window.username === 'undefined') {
-  window.username = "demo"; // Pas de localStorage, valeur par défaut
+  const urlParams = new URLSearchParams(window.location.search);
+  const usernameFromUrl = urlParams.get('user');
+
+  if (usernameFromUrl) {
+    // Username passé en paramètre URL - l'utiliser et le sauvegarder
+    window.username = usernameFromUrl;
+    localStorage.setItem('username', usernameFromUrl);
+  } else {
+    // Sinon utiliser localStorage
+    window.username = localStorage.getItem('username') || "demo";
+  }
 }
 
 // Référence locale pour compatibilité
@@ -126,7 +106,7 @@ if (!username || username === "demo") {
 // Seulement pour les entrepreneurs - direction et coach sont exemptés
 const currentPath = window.location.pathname;
 const exemptedPaths = ['/login', '/onboarding', '/connect-google', '/oauth2callback', '/connect-gmail', '/gmail-oauth2callback'];
-if (!exemptedPaths.includes(currentPath)) {
+if (!exemptedPaths.includes(currentPath) && username && username !== 'demo') {
   // Récupérer le rôle pour déterminer si l'onboarding est requis
   fetch(`/api/me/${username}`)
     .then(res => res.json())
@@ -200,6 +180,13 @@ function setupUserPermissions() {
  */
 async function fetchUserRole(username) {
   // console.log('[DEBUG] Début fetchUserRole pour:', username);
+
+  // Ne pas appeler l'API si le username est invalide ou "demo"
+  if (!username || username === 'demo') {
+    console.warn('[WARN] Username invalide pour fetchUserRole:', username);
+    return;
+  }
+
   try {
     // console.log('📡 Appel API /api/me/' + username + '...');
     const response = await fetch(`/api/me/${username}`);

@@ -195,10 +195,17 @@
       -webkit-overscroll-behavior: none;
     }
 
-    /* Conteneur principal de l'app */
+    /* Conteneur principal de l'app - cache par defaut pendant le chargement */
     #app-container {
       display: flex;
       min-height: 100vh;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    /* Quand le chargement est termine */
+    #app-container.loaded {
+      opacity: 1;
     }
 
     /* ================================================================
@@ -1494,6 +1501,50 @@
       box-shadow: 0 2px 6px rgba(251, 191, 36, 0.6) !important;
     }
 
+    /* GAMIFICATION DISABLED - Désactiver tous les contours de grade sur l'avatar */
+    .account-avatar[class*="grade-"] {
+      border: none !important;
+      box-shadow: none !important;
+    }
+    .account-avatar[class*="grade-"]::after {
+      display: none !important;
+    }
+
+    /* =================================================================
+       TEMPORAIRE - Photo de profil agrandie et espacement réduit
+       À RETIRER PLUS TARD
+       ================================================================= */
+    .account-avatar {
+      width: 38px !important;
+      height: 38px !important;
+      min-width: 38px !important;
+      min-height: 38px !important;
+      margin-left: 0 !important;
+      margin-right: 4px !important;
+    }
+    .account-btn {
+      gap: 6px !important;
+      padding-left: 8px !important;
+      padding-right: 10px !important;
+    }
+    /* TEMPORAIRE - Cacher le badge de grade dans le dropdown */
+    .dropdown-grade-badge-img {
+      display: none !important;
+    }
+    /* TEMPORAIRE - Réduire la largeur du bouton header */
+    .account-btn {
+      width: auto !important;
+      min-width: 200px !important;
+      max-width: fit-content !important;
+      gap: 6px !important;
+      padding-left: 12px !important;
+      padding-right: 12px !important;
+    }
+    .account-info-wrapper {
+      flex: 0 1 auto !important;
+    }
+    /* FIN TEMPORAIRE */
+
     /* Bannière classique avec extrémités coupées */
     .stats-photo-level-banner {
       position: absolute;
@@ -2751,10 +2802,10 @@
       font-weight: 600;
     }
 
-    /* Masquer sur desktop */
+    /* Afficher sur desktop aussi */
     @media (min-width: 769px) {
       #loading-overlay {
-        display: none;
+        display: flex;
       }
     }
 
@@ -3190,7 +3241,7 @@
 
       <!-- Texte -->
       <h2 class="loading-title">Chargement de Qwota</h2>
-      <p class="loading-subtitle">Préparation de votre espace de travail...</p>
+      <p id="loading-current-page" class="loading-subtitle">Preparation de votre espace de travail...</p>
 
       <!-- Barre de progression -->
       <div class="loading-progress-container">
@@ -3199,11 +3250,12 @@
         </div>
         <div id="loading-progress-text" class="loading-progress-text">0%</div>
       </div>
+
     </div>
   </div>
 
-  <!-- Container principal de l'app -->
-  <div id="app-container">
+  <!-- Container principal de l'app - style inline pour garantir invisibilite immediate -->
+  <div id="app-container" style="opacity: 0;">
 
     <!-- Sidebar - Style Qwota Lite -->
     <aside class="sidebar expanded">
@@ -3251,7 +3303,7 @@
             <span class="nav-label">La Centrale</span>
             <span class="tooltip">La Centrale</span>
           </a>
-          <a href="#/gamification" class="nav-item" data-page="gamification">
+          <a href="#/gamification" class="nav-item" data-page="gamification" style="display: none;">
             <span class="nav-icon">
               <i class="fas fa-trophy"></i>
             </span>
@@ -3357,12 +3409,12 @@
             </div>
             <div class="account-meta-row">
               <div class="account-role" id="account-role">Entrepreneur</div>
-              <div class="account-level">
+              <div class="account-level" style="display: none;">
                 <i class="fas fa-star"></i>
                 <span id="account-level-text">Niv. 1</span>
               </div>
             </div>
-            <div class="account-xp-bar">
+            <div class="account-xp-bar" style="display: none;">
               <div class="account-xp-fill" id="account-xp-fill" style="width: 0%"></div>
             </div>
           </div>
@@ -3380,7 +3432,7 @@
           </div>
 
           <!-- Boutons -->
-          <button class="dropdown-item stats-item" onclick="openStatsModal()">
+          <button class="dropdown-item stats-item" onclick="openStatsModal()" style="display: none;">
             <i class="fas fa-chart-line"></i>
             <span>Statistiques</span>
             <i class="fas fa-lock dropdown-lock-icon"></i>
@@ -3437,7 +3489,8 @@
 
       <!-- DESKTOP & MOBILE: Iframes multiples pour navigation instantanée (une par page) -->
       <!-- Les iframes sont préchargées au lancement et restent en mémoire -->
-      <iframe id="iframe-dashboard" class="page-iframe" src="/dashboard" style="display: block;"></iframe>
+      <iframe id="iframe-guide" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-dashboard" class="page-iframe" src="" style="display: none;"></iframe>
       <iframe id="iframe-rpo" class="page-iframe" src="" style="display: none;"></iframe>
       <iframe id="iframe-travaux" class="page-iframe" src="" style="display: none;"></iframe>
       <iframe id="iframe-outils" class="page-iframe" src="" style="display: none;"></iframe>
@@ -3815,24 +3868,20 @@
         const paramsItem = document.querySelector('.dropdown-item.params-item');
 
         if (pageName === 'guide') {
+          // Bloquer le menu quand on est sur le guide
           menuItems.forEach(item => {
             item.style.pointerEvents = 'none';
             item.style.opacity = '0.5';
             item.style.cursor = 'not-allowed';
-            item.style.position = 'relative';
           });
-
-          // Bloquer aussi les items du dropdown et ajouter les cadenas
           if (statsItem) {
             statsItem.style.pointerEvents = 'none';
             statsItem.style.opacity = '0.5';
-            statsItem.style.cursor = 'not-allowed';
             statsItem.classList.add('locked-guide');
           }
           if (paramsItem) {
             paramsItem.style.pointerEvents = 'none';
             paramsItem.style.opacity = '0.5';
-            paramsItem.style.cursor = 'not-allowed';
             paramsItem.classList.add('locked-guide');
           }
         } else {
@@ -3840,20 +3889,15 @@
             item.style.pointerEvents = '';
             item.style.opacity = '';
             item.style.cursor = '';
-            item.style.position = '';
           });
-
-          // Débloquer les items du dropdown et retirer les cadenas
           if (statsItem) {
             statsItem.style.pointerEvents = '';
             statsItem.style.opacity = '';
-            statsItem.style.cursor = '';
             statsItem.classList.remove('locked-guide');
           }
           if (paramsItem) {
             paramsItem.style.pointerEvents = '';
             paramsItem.style.opacity = '';
-            paramsItem.style.cursor = '';
             paramsItem.classList.remove('locked-guide');
           }
         }
@@ -3867,17 +3911,42 @@
         // Afficher l'iframe correspondante
         const targetIframe = document.getElementById(`iframe-${pageName}`);
         if (targetIframe) {
-          console.log(`[APPPC] Navigation vers ${pageName} - src actuel: "${targetIframe.src}"`);
+          // Utiliser getAttribute pour avoir la vraie valeur de l'attribut HTML (pas la propriete resolue)
+          const srcAttr = targetIframe.getAttribute('src');
+          console.log(`[APPPC] Navigation vers ${pageName} - src attr: "${srcAttr}", src prop: "${targetIframe.src}"`);
 
-          // Si l'iframe n'a pas encore de src (chargement à la demande), la charger
-          if (!targetIframe.src || targetIframe.src === window.location.href || targetIframe.src === '') {
-            console.log(`[APPPC] ⏳ Chargement initial de ${pageName}: ${url}`);
+          // Si l'iframe n'a pas encore de src (chargement a la demande), la charger
+          // Verifier l'attribut HTML car la propriete .src retourne toujours une URL absolue
+          const needsLoading = !srcAttr || srcAttr === '' || srcAttr === 'about:blank';
+
+          // SPECIAL: Si on navigue vers soumissions ou calcul et qu'il y a des données, forcer le reload
+          const hasCalcData = sessionStorage.getItem('submissionData') || sessionStorage.getItem('soumissionData') || sessionStorage.getItem('calcClientData') || localStorage.getItem('recuperationClient');
+          const forceReloadSoumissions = pageName === 'soumissions' && hasCalcData && !needsLoading;
+          const forceReloadCalcul = (pageName === 'calcul' || pageName === 'calculateur') && hasCalcData && !needsLoading;
+          const forceReload = forceReloadSoumissions || forceReloadCalcul;
+
+          if (needsLoading || forceReload) {
+            if (forceReload) {
+              console.log(`[APPPC] 🔄 Rechargement forcé de soumissions (données calculateur détectées)`);
+              // Afficher un spinner de chargement
+              targetIframe.style.opacity = '0.5';
+            } else {
+              console.log(`[APPPC] Chargement initial de ${pageName}: ${url}`);
+            }
             targetIframe.src = url;
 
             // Sur mobile, injecter CSS pour cacher les scrollbars quand l'iframe est chargée
             if (window.innerWidth <= 768) {
               targetIframe.addEventListener('load', function() {
                 hideScrollbarsInIframe(targetIframe);
+              });
+            }
+
+            // Retirer l'opacité une fois chargé
+            if (forceReload) {
+              targetIframe.addEventListener('load', function onLoad() {
+                targetIframe.style.opacity = '1';
+                targetIframe.removeEventListener('load', onLoad);
               });
             }
           } else {
@@ -3926,7 +3995,15 @@
         // Gerer les changements de hash
         window.addEventListener('hashchange', () => {
           const page = location.hash.slice(2) || 'dashboard';
+          console.log('[APPPC] Hashchange détecté, page:', page);
           this.loadPage(page);
+          // Forcer la mise à jour de l'icône après un court délai
+          setTimeout(() => {
+            if (typeof setActiveNavIcon === 'function') {
+              console.log('[APPPC] Mise à jour icône pour:', page);
+              setActiveNavIcon(page);
+            }
+          }, 100);
         });
 
         // Gerer les clics sur les liens du menu
@@ -3984,12 +4061,21 @@
 
         checkGuideAndLoadInitialPage();
 
-        // Écouter les messages de connexion Gmail (pour popup)
+        // Écouter les messages de connexion Gmail (pour popup) et reload-gqp
         window.addEventListener('message', (event) => {
           if (event.data && event.data.type === 'gmail_connected') {
             console.log('[APPPC] Gmail connected via postMessage');
             this.loadPage('connection');
             location.hash = '#/connection';
+          }
+          // Recharger l'iframe GQP quand les équipes sont modifiées
+          if (event.data && event.data.type === 'reload-gqp') {
+            console.log('[APPPC] Rechargement de l\'iframe GQP demandé');
+            const gqpIframe = document.getElementById('iframe-gqp');
+            if (gqpIframe && gqpIframe.src) {
+              gqpIframe.src = gqpIframe.src;
+              console.log('[APPPC] iframe GQP rechargée');
+            }
           }
         });
 
@@ -4398,7 +4484,7 @@
         const entrepreneurResponse = await fetch('/api/entrepreneurs');
         if (entrepreneurResponse.ok) {
           const entrepreneurs = await entrepreneurResponse.json();
-          const currentEntrepreneur = entrepreneurs.find(e => e.username === username);
+          const currentEntrepreneur = entrepreneurs.find(e => e.login_username === username || e.username === username);
 
           if (currentEntrepreneur) {
             // CA Actuel
@@ -4820,6 +4906,9 @@
         'travaux': 2,
         'dashboard': 3,
         'outils': 4,
+        'calcul': 4,        // Calcul fait partie de Outils
+        'calculateur': 4,   // Alias pour calcul
+        'soumissions': 4,   // Soumissions fait partie de Outils
         'gestions': 5
       };
 
@@ -4877,12 +4966,57 @@
 
       console.log('[LAUNCH] Qwota SPA initialized');
 
+      // Variable globale pour savoir si le guide est complete
+      window.guideIsCompleted = null; // sera defini apres verification API
+
+      // Fonction pour demarrer le prechargement (appelee seulement si guide complete)
+      async function startPreloading() {
+        const username = window.username || localStorage.getItem('username');
+        if (!username) {
+          console.log('[PRELOAD] Pas de username, skip prechargement');
+          return;
+        }
+
+        // Verifier si le guide est complete
+        try {
+          const response = await fetch(`/api/guide-progress/${username}`);
+          if (response.ok) {
+            const guideData = await response.json();
+            window.guideIsCompleted = guideData.completed;
+
+            if (!guideData.completed) {
+              console.log('[PRELOAD] Guide non complete - pas de prechargement');
+              // Cacher l ecran de chargement et afficher l app
+              const loadingOverlay = document.getElementById('loading-overlay');
+              const appContainer = document.getElementById('app-container');
+              if (loadingOverlay) {
+                loadingOverlay.classList.add('hidden');
+              }
+              if (appContainer) {
+                appContainer.classList.add('loaded');
+                appContainer.style.opacity = '1';
+              }
+              return; // Ne pas precharger si guide pas complete
+            }
+          }
+        } catch (error) {
+          console.error('[PRELOAD] Erreur verification guide:', error);
+        }
+
+        console.log('[PRELOAD] Guide complete - demarrage du prechargement');
+        doPreloadPages();
+      }
+
+      // Fonction qui fait le prechargement reel
+      function doPreloadPages() {
       // DESKTOP: Précharger les pages principales en chargeant les iframes en arrière-plan
       if (window.innerWidth > 768) {
-        console.log('[DESKTOP] 🚀 DÉMARRAGE DU PRÉCHARGEMENT DE TOUTES LES PAGES');
+        console.log('[DESKTOP] DEMARRAGE DU PRECHARGEMENT DE TOUTES LES PAGES');
         let loadedPages = 0;
 
-        // Fonction pour mettre à jour la barre de progression
+        // Le contenu est deja cache via CSS (opacity: 0)
+
+        // Fonction pour mettre a jour la barre de progression
         const updateLoadingProgress = (loaded, total) => {
           const percentage = Math.round((loaded / total) * 100);
           const progressFill = document.getElementById('loading-progress-fill');
@@ -4894,22 +5028,30 @@
           }
         };
 
-        // Fonction pour masquer l'écran de chargement
+        // Fonction pour masquer l'ecran de chargement
         const hideLoadingScreen = () => {
           const loadingOverlay = document.getElementById('loading-overlay');
+          const appContainer = document.getElementById('app-container');
+
           if (loadingOverlay) {
-            console.log('[DESKTOP] 🎉 Masquage de l\'écran de chargement');
-            setTimeout(() => {
-              loadingOverlay.classList.add('hidden');
-            }, 500); // Petit délai pour voir 100%
+            console.log('[DESKTOP] Masquage de l ecran de chargement');
+            // Ajouter la classe hidden qui fait le fade out de l'overlay
+            loadingOverlay.classList.add('hidden');
+
+            // Afficher tout le contenu en meme temps
+            if (appContainer) {
+              appContainer.classList.add('loaded');
+              // Style inline prioritaire - doit etre change directement
+              appContainer.style.opacity = '1';
+            }
           }
         };
 
-        // Pages à précharger sur desktop (celles qui n'ont pas déjà de src)
+        // Pages a precharger sur desktop - Dashboard en premier!
         const pagesToPreload = [
+          { id: 'dashboard', url: '/dashboard', name: 'Dashboard' },
           { id: 'calcul', url: '/calcul', name: 'Calculateur' },
-          { id: 'calculateur', url: '/calcul', name: 'Calculateur (alias)' },
-          { id: 'connection', url: '/connection', name: 'Connection' },
+          { id: 'connection', url: '/connection', name: 'Parametres' },
           { id: 'soumissions', url: '/soumissions', name: 'Soumissions' },
           { id: 'gqp', url: '/gqp', name: 'GQP' },
           { id: 'travaux', url: '/travaux', name: 'Travaux' },
@@ -4917,7 +5059,7 @@
           { id: 'rpo', url: '/rpo', name: 'RPO' },
           { id: 'centralevue', url: '/centralevue', name: 'Centrale Vue' },
           { id: 'gamification', url: '/gamification', name: 'Gamification' },
-          { id: 'gestionemployes', url: '/gestionemployes', name: 'Gestion Employés' },
+          { id: 'gestionemployes', url: '/gestionemployes', name: 'Gestion Employes' },
           { id: 'facturationqe', url: '/facturationqe', name: 'Facturation QE' },
           { id: 'avis', url: '/avis', name: 'Avis' },
           { id: 'centrale', url: '/centrale', name: 'Centrale' },
@@ -4934,11 +5076,11 @@
           if (iframe) {
             console.log(`[DESKTOP] ⏳ Chargement (${index + 1}/${totalPages}): ${page.name} (${page.url})`);
 
-            // Écouter l'événement load de l'iframe
+            // Ecouter l'evenement load de l'iframe
             iframe.addEventListener('load', function onLoad() {
               loadedPages++;
               updateLoadingProgress(loadedPages, totalPages);
-              console.log(`[DESKTOP] ✅ Page préchargée (${loadedPages}/${totalPages}): ${page.name}`);
+              console.log(`[DESKTOP] Page prechargee (${loadedPages}/${totalPages}): ${page.name}`);
 
               // Quand toutes les pages sont chargées
               if (loadedPages === totalPages) {
@@ -4956,12 +5098,12 @@
         });
       }
 
-      // MOBILE UNIQUEMENT: Précharger les pages principales et cacher les scrollbars
+      // MOBILE UNIQUEMENT: Precharger les pages principales et cacher les scrollbars
       if (window.innerWidth <= 768) {
-        console.log('[MOBILE] 🚀 DÉMARRAGE DU PRÉCHARGEMENT DE TOUTES LES PAGES');
+        console.log('[MOBILE] DEMARRAGE DU PRECHARGEMENT DE TOUTES LES PAGES');
         let loadedPages = 0;
 
-        // Fonction pour mettre à jour la barre de progression
+        // Fonction pour mettre a jour la barre de progression
         const updateLoadingProgress = (loaded, total) => {
           const percentage = Math.round((loaded / total) * 100);
           const progressFill = document.getElementById('loading-progress-fill');
@@ -4973,14 +5115,14 @@
           }
         };
 
-        // Fonction pour masquer l'écran de chargement
+        // Fonction pour masquer l'ecran de chargement
         const hideLoadingScreen = () => {
           const loadingOverlay = document.getElementById('loading-overlay');
           if (loadingOverlay) {
-            console.log('[MOBILE] 🎉 Masquage de l\'écran de chargement');
+            console.log('[MOBILE] Masquage de l ecran de chargement');
             setTimeout(() => {
               loadingOverlay.classList.add('hidden');
-            }, 500); // Petit délai pour voir 100%
+            }, 300);
           }
         };
 
@@ -5009,19 +5151,19 @@
         const totalPages = 1 + pagesToPreload.length;
         console.log(`[MOBILE] 📋 Total de pages à précharger: ${totalPages} (dashboard + ${pagesToPreload.length} autres)`);
 
-        // Dashboard en premier (page par défaut)
+        // Dashboard en premier (page par defaut)
         const dashboardIframe = document.getElementById('iframe-dashboard');
         if (dashboardIframe) {
-          console.log('[MOBILE] ⏳ Chargement de: dashboard');
+          console.log('[MOBILE] Chargement de: Dashboard');
           dashboardIframe.src = '/dashboard';
           dashboardIframe.style.display = 'block';
           dashboardIframe.addEventListener('load', function() {
             hideScrollbarsInIframe(dashboardIframe);
             loadedPages++;
             updateLoadingProgress(loadedPages, totalPages);
-            console.log(`[MOBILE] ✅ Page chargée (${loadedPages}/${totalPages}): dashboard`);
+            console.log(`[MOBILE] Page chargee (${loadedPages}/${totalPages}): Dashboard`);
             if (loadedPages === totalPages) {
-              console.log('[MOBILE] 🎉 TOUTES LES PAGES SONT PRÉCHARGÉES ET PRÊTES!');
+              console.log('[MOBILE] TOUTES LES PAGES SONT PRECHARGEES ET PRETES!');
               hideLoadingScreen();
             }
           });
@@ -5030,13 +5172,13 @@
         pagesToPreload.forEach((page, index) => {
           const iframe = document.getElementById(page.id);
           if (iframe) {
-            console.log(`[MOBILE] ⏳ Chargement (${index + 1}/${pagesToPreload.length}): ${page.name} (${page.url})`);
+            console.log(`[MOBILE] Chargement (${index + 1}/${pagesToPreload.length}): ${page.name} (${page.url})`);
             iframe.src = page.url;
             iframe.addEventListener('load', function() {
               hideScrollbarsInIframe(iframe);
               loadedPages++;
               updateLoadingProgress(loadedPages, totalPages);
-              console.log(`[MOBILE] ✅ Page chargée (${loadedPages}/${totalPages}): ${page.name}`);
+              console.log(`[MOBILE] Page chargee (${loadedPages}/${totalPages}): ${page.name}`);
 
               // Quand toutes les pages sont chargées
               if (loadedPages === totalPages) {
@@ -5045,10 +5187,14 @@
               }
             });
           } else {
-            console.error(`[MOBILE] ❌ Iframe non trouvée: ${page.id}`);
+            console.error(`[MOBILE] Iframe non trouvee: ${page.id}`);
           }
         });
       }
+      } // Fin de doPreloadPages()
+
+      // Appeler startPreloading au lieu de precharger directement
+      startPreloading();
 
       // ===== SWIPE NAVIGATION SUR MOBILE AVEC ANIMATION FLUIDE =====
       if (window.innerWidth <= 768) {

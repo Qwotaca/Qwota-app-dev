@@ -67,16 +67,18 @@
     }
 
     // Bloquer Service Workers AVANT qu'il ne s'enregistre
-    if ('serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator && navigator.serviceWorker) {
       // D'abord désenregistrer tous les SW existants
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for(let registration of registrations) {
-          registration.unregister();
-          console.log('[STORAGE] Service Worker désenregistré:', registration.scope);
-        }
-      }).catch(function(e) {
-        console.warn('[STORAGE] Erreur désenregistrement SW:', e);
-      });
+      if (navigator.serviceWorker.getRegistrations) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+            console.log('[STORAGE] Service Worker désenregistré:', registration.scope);
+          }
+        }).catch(function(e) {
+          console.warn('[STORAGE] Erreur désenregistrement SW:', e);
+        });
+      }
 
       // Ensuite bloquer complètement l'accès
       try {
@@ -879,8 +881,14 @@ async function performLogin(username, password, rememberMe) {
     const data = await res.json();
 
     if (res.ok) {
+      // Nettoyer complètement le localStorage avant de sauvegarder les nouvelles infos
+      localStorage.clear();
+
       localStorage.setItem("username", username);
       localStorage.setItem("userRole", data.role);
+
+      // IMPORTANT: Mettre à jour window.username immédiatement pour les scripts déjà chargés
+      window.username = username;
 
       // Sauvegarder les données si "Se souvenir de moi" est coché
       if (rememberMe) {
@@ -902,18 +910,19 @@ async function performLogin(username, password, rememberMe) {
 
         if (!onboardingData.completed) {
           // Première connexion - rediriger vers onboarding
-          window.location.href = "/onboarding";
+          window.location.href = `/onboarding?user=${encodeURIComponent(username)}`;
           return;
         }
 
         // Onboarding complété - redirection vers apppc (responsive mobile et desktop)
-        window.location.href = "/apppc"; // Application SPA responsive pour mobile et PC
+        // Passer le username en paramètre pour garantir qu'il soit disponible immédiatement
+        window.location.href = `/apppc?user=${encodeURIComponent(username)}`; // Application SPA responsive pour mobile et PC
       } else if (data.role === "coach") {
-        window.location.href = "/parametrecoach";
+        window.location.href = `/parametrecoach?user=${encodeURIComponent(username)}`;
       } else if (data.role === "direction") {
-        window.location.href = "/apppcdirection"; // Rediriger direction vers interface admin
+        window.location.href = `/apppcdirection?user=${encodeURIComponent(username)}`; // Rediriger direction vers interface admin
       } else if (data.role === "support") {
-        window.location.href = "/support-admin"; // Rediriger support vers admin support
+        window.location.href = `/support-admin?user=${encodeURIComponent(username)}`; // Rediriger support vers admin support
       } else {
         message.textContent = "Rôle inconnu: " + data.role;
       }

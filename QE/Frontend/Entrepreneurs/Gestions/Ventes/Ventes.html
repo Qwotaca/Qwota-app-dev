@@ -22,30 +22,7 @@
 
   <!-- Script Service Worker -->
   <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      // Ne pas enregistrer le SW sur localhost (mode dev)
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        console.log('[DEV] Service Worker désactivé sur localhost');
-        // Désenregistrer le SW s'il existe déjà
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for(let registration of registrations) {
-            registration.unregister();
-            console.log('[DEV] Service Worker désenregistré');
-          }
-        });
-        return;
-      }
-
-      // DISABLED - navigator.serviceWorker.register('/sw.js')
-        .then((registration) => {
-          console.log('SW registered: ', registration);
-        })
-        .catch((registrationError) => {
-          console.log('SW registration failed: ', registrationError);
-        });
-    });
-  }
+  /* Service Worker disabled */
   </script>
   
   <script src="https://cdn.tailwindcss.com"></script>
@@ -289,31 +266,43 @@
       </div>
 
       <!-- Modal Clients perdus -->
-      <div id="clients-perdus-modal" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none;" onclick="if(event.target === this) document.getElementById('clients-perdus-modal').style.display='none';">
-        <div class="status-card p-6 max-w-4xl w-full mx-4" style="max-height: 90vh; overflow-y: auto;">
+      <div id="clients-perdus-modal" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none;" onclick="if(event.target === this) closeClientsPerdusModal();">
+        <div class="status-card p-6 max-w-5xl w-full mx-4" style="max-height: 90vh; overflow-y: auto;">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-xl font-bold" style="color: var(--text-light);">
               <i class="fas fa-user-times mr-2" style="color: #ef4444;"></i>
               Clients perdus
             </h3>
-            <button onclick="document.getElementById('clients-perdus-modal').style.display='none'; event.stopPropagation();" type="button" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; cursor: pointer; border: none;">
+            <button onclick="closeClientsPerdusModal(); event.stopPropagation();" type="button" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; cursor: pointer; border: none;">
               <i class="fas fa-times"></i>
             </button>
+          </div>
+
+          <!-- Barre de recherche -->
+          <div class="mb-4">
+            <div class="relative">
+              <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: var(--text-gray);"></i>
+              <input type="text" id="perdus-search" placeholder="Rechercher par nom, téléphone, adresse..."
+                class="w-full pl-10 pr-4 py-2 rounded-lg"
+                style="background: var(--bg-tertiary); border: 1px solid var(--border-dark); color: var(--text-light); padding-left: 2.5rem !important;"
+                oninput="filtrerClientsPerdus(this.value)">
+            </div>
           </div>
 
           <div class="table-container">
             <table class="modern-table" style="table-layout: fixed; width: 100%;">
               <thead>
                 <tr>
-                  <th style="width: 25%; padding: 1rem;">Nom</th>
-                  <th style="width: 20%; padding: 1rem;">Téléphone</th>
-                  <th style="width: 40%; padding: 1rem;">Adresse</th>
-                  <th style="width: 15%; padding: 1rem;">Prix</th>
+                  <th style="width: 22%; padding: 1rem;">Nom</th>
+                  <th style="width: 18%; padding: 1rem;">Téléphone</th>
+                  <th style="width: 30%; padding: 1rem;">Adresse</th>
+                  <th style="width: 12%; padding: 1rem;">Prix</th>
+                  <th style="width: 18%; padding: 1rem; text-align: center;">Actions</th>
                 </tr>
               </thead>
               <tbody id="perdus-modal-tbody">
                 <tr>
-                  <td colspan="4" class="empty-state">
+                  <td colspan="5" class="empty-state">
                     <i class="fas fa-user-times" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
                     <p style="font-size: 1rem;">Aucun client perdu</p>
                   </td>
@@ -479,6 +468,28 @@
     </div>
   </div>
 
+  <!-- Modal confirmation Annulation client accepté -->
+  <div id="confirmAnnulationModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
+    <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+      <div class="mb-6">
+        <h3 class="text-xl font-bold mb-2" style="color: var(--text-light);">
+          <i class="fas fa-exclamation-triangle mr-2" style="color: #ef4444;"></i>
+          Confirmer l'annulation
+        </h3>
+        <p style="color: var(--text-gray);">Êtes-vous sûr de vouloir annuler ce client ? Il sera déplacé vers les clients perdus.</p>
+      </div>
+
+      <div class="flex space-x-3">
+        <button onclick="confirmAnnulerClient()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: #ef4444; color: white;">
+          Oui
+        </button>
+        <button onclick="closeConfirmAnnulationModal()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: rgba(148, 163, 184, 0.2); color: var(--text-light);">
+          Non
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal confirmation suppression prospect -->
   <div id="confirmDeleteProspectModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
     <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
@@ -517,6 +528,28 @@
           Oui
         </button>
         <button onclick="closeConfirmDeletePerduModal()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: rgba(148, 163, 184, 0.2); color: var(--text-light);">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal confirmation récupération client perdu -->
+  <div id="confirmRecupererModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
+    <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+      <div class="mb-6">
+        <h3 class="text-xl font-bold mb-2" style="color: var(--text-light);">
+          <i class="fas fa-undo mr-2" style="color: #10b981;"></i>
+          Récupérer ce client ?
+        </h3>
+        <p id="confirmRecupererText" style="color: var(--text-gray);">Vous allez être redirigé vers la page soumission pour renvoyer une nouvelle soumission à ce client.</p>
+      </div>
+
+      <div class="flex space-x-3">
+        <button onclick="confirmRecupererClientPerdu()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: #10b981; color: white;">
+          Oui
+        </button>
+        <button onclick="closeConfirmRecupererModal()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: rgba(148, 163, 184, 0.2); color: var(--text-light);">
           Annuler
         </button>
       </div>
@@ -574,6 +607,7 @@
 
       perdusModalOpen = true;
       modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden'; // Bloquer le scroll en arrière-plan
       chargerClientsPerdus();
     }
 
@@ -583,37 +617,206 @@
 
       perdusModalOpen = false;
       modal.style.display = 'none';
+      document.body.style.overflow = ''; // Rétablir le scroll
     }
+
+    // Variable globale pour stocker les clients perdus
+    let allClientsPerdus = [];
 
     async function chargerClientsPerdus() {
       try {
         const response = await fetch(`${window.location.origin}/clients-perdus/${window.username}`);
-        const clientsPerdus = await response.json();
+        allClientsPerdus = await response.json();
 
-        const tbody = document.getElementById('perdus-modal-tbody');
-        if (!tbody) return;
-
-        if (!clientsPerdus || clientsPerdus.length === 0) {
-          tbody.innerHTML = `
-            <tr>
-              <td colspan="4" class="empty-state">
-                <i class="fas fa-user-times" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
-                <p style="font-size: 1rem;">Aucun client perdu</p>
-              </td>
-            </tr>
-          `;
-        } else {
-          tbody.innerHTML = clientsPerdus.map(client => `
-            <tr>
-              <td style="padding: 1rem;">${client.prenom || ''} ${client.nom || ''}</td>
-              <td style="padding: 1rem;">${client.telephone || ''}</td>
-              <td style="padding: 1rem;">${client.adresse || ''}</td>
-              <td style="padding: 1rem;">${client.prix || ''}</td>
-            </tr>
-          `).join('');
-        }
+        afficherClientsPerdus(allClientsPerdus);
       } catch (error) {
         console.error('Erreur chargement clients perdus:', error);
+      }
+    }
+
+    function afficherClientsPerdus(clientsPerdus) {
+      const tbody = document.getElementById('perdus-modal-tbody');
+      if (!tbody) return;
+
+      if (!clientsPerdus || clientsPerdus.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="empty-state">
+              <i class="fas fa-user-times" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
+              <p style="font-size: 1rem;">Aucun client perdu</p>
+            </td>
+          </tr>
+        `;
+      } else {
+        tbody.innerHTML = clientsPerdus.map((client, index) => {
+          const clientId = client.id || `${client.prenom || client.clientPrenom}_${client.nom || client.clientNom}_${client.telephone}`;
+          // Supporter les deux formats de nom: prenom/nom ou clientPrenom/clientNom
+          const prenom = client.prenom || client.clientPrenom || '';
+          const nom = client.nom || client.clientNom || '';
+          const nomComplet = `${prenom} ${nom}`.trim() || 'N/A';
+          return `
+          <tr>
+            <td style="padding: 1rem;">${nomComplet}</td>
+            <td style="padding: 1rem;">${client.telephone || '-'}</td>
+            <td style="padding: 1rem;">${client.adresse || '-'}</td>
+            <td style="padding: 1rem;">${client.prix || '-'}</td>
+            <td style="padding: 0.75rem;">
+              <div style="display: flex; gap: 8px; justify-content: center;">
+                <button onclick="recupererClientPerdu('${clientId}')" title="Récupérer" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(16, 185, 129, 0.3)'" onmouseout="this.style.background='rgba(16, 185, 129, 0.15)'">
+                  <i class="fas fa-undo"></i>
+                </button>
+                <button onclick="supprimerClientPerdu('${prenom}', '${nom}', '${client.telephone || ''}')" title="Supprimer" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.15)'">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `}).join('');
+      }
+    }
+
+    function filtrerClientsPerdus(searchTerm) {
+      if (!searchTerm || searchTerm.trim() === '') {
+        afficherClientsPerdus(allClientsPerdus);
+        return;
+      }
+
+      const term = searchTerm.toLowerCase().trim();
+      const filtered = allClientsPerdus.filter(client => {
+        const prenom = client.prenom || client.clientPrenom || '';
+        const nomClient = client.nom || client.clientNom || '';
+        const nom = `${prenom} ${nomClient}`.toLowerCase();
+        const telephone = (client.telephone || '').toLowerCase();
+        const adresse = (client.adresse || '').toLowerCase();
+        const prix = (client.prix || '').toString().toLowerCase();
+        return nom.includes(term) || telephone.includes(term) || adresse.includes(term) || prix.includes(term);
+      });
+
+      afficherClientsPerdus(filtered);
+    }
+
+    // Variable pour stocker l'ID du client à récupérer
+    let clientIdToRecuperer = null;
+
+    // Récupérer un client perdu (ouvre le modal de confirmation)
+    function recupererClientPerdu(clientId) {
+      // Trouver le client dans la liste
+      const client = allClientsPerdus.find(c => {
+        const prenom = c.prenom || c.clientPrenom || '';
+        const nom = c.nom || c.clientNom || '';
+        const id = c.id || `${prenom}_${nom}_${c.telephone}`;
+        return id === clientId;
+      });
+
+      if (!client) {
+        alert('Client non trouvé');
+        return;
+      }
+
+      // Stocker l'ID pour la confirmation
+      clientIdToRecuperer = clientId;
+
+      // Afficher le nom dans le modal
+      const prenom = client.prenom || client.clientPrenom || '';
+      const nom = client.nom || client.clientNom || '';
+      const clientNom = `${prenom} ${nom}`.trim() || 'ce client';
+      document.getElementById('confirmRecupererText').textContent = `Voulez-vous récupérer ${clientNom} ? Vous serez redirigé vers la page soumission pour renvoyer une nouvelle soumission.`;
+      document.getElementById('confirmRecupererModal').style.display = 'flex';
+    }
+
+    // Fermer le modal de récupération
+    window.closeConfirmRecupererModal = function() {
+      document.getElementById('confirmRecupererModal').style.display = 'none';
+      clientIdToRecuperer = null;
+    }
+
+    // Confirmer la récupération du client perdu
+    window.confirmRecupererClientPerdu = async function() {
+      if (!clientIdToRecuperer) return;
+
+      const clientId = clientIdToRecuperer;
+
+      // Trouver le client
+      const client = allClientsPerdus.find(c => {
+        const prenom = c.prenom || c.clientPrenom || '';
+        const nom = c.nom || c.clientNom || '';
+        const id = c.id || `${prenom}_${nom}_${c.telephone}`;
+        return id === clientId;
+      });
+
+      if (!client) {
+        closeConfirmRecupererModal();
+        alert('Client non trouvé');
+        return;
+      }
+
+      try {
+        // Retirer de clients perdus
+        const response = await fetch(`${window.location.origin}/retirer-client-perdu`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: window.username,
+            clientOriginalId: clientId
+          })
+        });
+
+        if (!response.ok) throw new Error('Erreur lors de la récupération');
+
+        // Stocker les infos du client pour pré-remplir la soumission
+        const clientData = {
+          prenom: client.prenom || client.clientPrenom || '',
+          nom: client.nom || client.clientNom || '',
+          telephone: client.telephone || '',
+          adresse: client.adresse || '',
+          courriel: client.courriel || client.email || '',
+          prix: client.prix || ''
+        };
+        localStorage.setItem('recuperationClient', JSON.stringify(clientData));
+
+        // Fermer les modals
+        closeConfirmRecupererModal();
+        closeClientsPerdusModal();
+
+        // Rediriger vers la page de soumission via le routeur parent (même logique que calcul.html)
+        if (window.parent && window.parent !== window) {
+          // On est dans un iframe - utiliser le hash du parent pour déclencher le routeur
+          window.parent.location.hash = '#/soumissions';
+        } else {
+          // Fallback si pas dans un iframe
+          window.location.href = '/soumissions';
+        }
+
+      } catch (error) {
+        console.error('Erreur récupération client:', error);
+        alert('Erreur lors de la récupération du client');
+      }
+    }
+
+    // Supprimer définitivement un client perdu
+    async function supprimerClientPerdu(prenom, nom, telephone) {
+      if (!confirm(`Voulez-vous supprimer définitivement ${prenom} ${nom} de la liste des clients perdus ?`)) return;
+
+      try {
+        const response = await fetch(`${window.location.origin}/supprimer-client-perdu`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: window.username,
+            prenom: prenom,
+            nom: nom,
+            telephone: telephone
+          })
+        });
+
+        if (!response.ok) throw new Error('Erreur lors de la suppression');
+
+        // Recharger la liste
+        await chargerClientsPerdus();
+
+      } catch (error) {
+        console.error('Erreur suppression client perdu:', error);
+        alert('Erreur lors de la suppression');
       }
     }
   </script>
@@ -752,6 +955,28 @@
     localStorage.removeItem("qwotaCredentials");
     localStorage.removeItem("rememberMe");
     window.location.href = "/login";
+  }
+
+  // Fonction pour parser un prix en format français (ex: "2 555,00 $" -> 2555.00)
+  function parsePrixFrancais(prixStr) {
+    if (!prixStr) return 0;
+    // Convertir en string si ce n'est pas déjà le cas
+    let str = String(prixStr);
+    // Supprimer le symbole $ et les espaces de fin
+    str = str.replace(/\s*\$\s*$/, '');
+    // Supprimer tous les espaces (séparateurs de milliers)
+    str = str.replace(/\s/g, '');
+    // Remplacer la virgule française par un point pour les décimales
+    str = str.replace(',', '.');
+    // Parser le nombre
+    const num = parseFloat(str);
+    return isNaN(num) ? 0 : num;
+  }
+
+  // Fonction pour formater un prix en format français (ex: 2555.00 -> "2 555,00")
+  function formatPrixFrancais(prix) {
+    const num = typeof prix === 'number' ? prix : parsePrixFrancais(prix);
+    return num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   // Fonction pour mettre à jour la date - EXACT COPY de newgqp.html
@@ -917,7 +1142,7 @@
     soumissionsAttente.forEach((client, index) => {
       const clientId = `attente-${index}`;
       const nomComplet = `${client.prenom || client.clientPrenom || ''} ${client.nom || client.clientNom || ''}`.trim();
-      const prix = client.prix ? parseFloat(client.prix).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' $' : '-';
+      const prix = client.prix ? formatPrixFrancais(client.prix) + ' $' : '-';
 
       clientsData[clientId] = {
         nom: nomComplet,
@@ -969,7 +1194,7 @@
     soumissionsSignees.forEach((client, index) => {
       const clientId = `accepter-${index}`;
       const nomComplet = `${client.prenom || client.clientPrenom || ''} ${client.nom || client.clientNom || ''}`.trim();
-      const prix = client.prix ? parseFloat(client.prix).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' $' : '-';
+      const prix = client.prix ? formatPrixFrancais(client.prix) + ' $' : '-';
 
       clientsData[clientId] = {
         nom: nomComplet,
@@ -1032,7 +1257,7 @@
     travauxACompleter.forEach((client, index) => {
       const clientId = `completer-${index}`;
       const nomComplet = `${client.prenom || client.clientPrenom || ''} ${client.nom || client.clientNom || ''}`.trim();
-      const prix = client.prix ? parseFloat(client.prix).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' $' : '-';
+      const prix = client.prix ? formatPrixFrancais(client.prix) + ' $' : '-';
 
       clientsData[clientId] = {
         nom: nomComplet,
@@ -1048,7 +1273,7 @@
         hasProjetCalcul: clientAProjet(nomComplet)
       };
 
-      const prixAffichage = client.prix ? parseFloat(client.prix).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00';
+      const prixAffichage = client.prix ? formatPrixFrancais(client.prix) : '0,00';
       const ville = client.adresse && client.adresse.includes(',') ? client.adresse.split(',')[1].trim() : (client.adresse || '');
 
       const cardHtml = `
@@ -1104,7 +1329,7 @@
     travauxCompletes.forEach((client, index) => {
       const clientId = `completes-${index}`;
       const nomComplet = `${client.prenom || client.clientPrenom || ''} ${client.nom || client.clientNom || ''}`.trim();
-      const prix = client.prix ? parseFloat(client.prix).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' $' : '-';
+      const prix = client.prix ? formatPrixFrancais(client.prix) + ' $' : '-';
 
       clientsData[clientId] = {
         nom: nomComplet,
@@ -1264,6 +1489,9 @@
   window.showClientInfo = function(clientId) {
     // S'assurer que les modals existent (pour app-shell)
     ensureModalsExist();
+
+    console.log('[DEBUG] showClientInfo appelé avec clientId:', clientId);
+    console.log('[DEBUG] clientId.startsWith("accepter-"):', clientId.startsWith('accepter-'));
 
     // Attendre que le DOM soit complètement chargé dans app-shell
     setTimeout(() => {
@@ -1431,12 +1659,18 @@
         ` : ''}
 
         ${clientId.startsWith('accepter-') ? `
-        <!-- Bouton Production terminée pour clients acceptés uniquement -->
-        <div class="border-t pt-4 mt-4 flex justify-center" style="border-color: var(--border-dark);">
-          <button onclick="terminerProduction('${clientId}')" class="btn-primary px-6 py-3 rounded-lg flex items-center justify-center space-x-2" style="background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: 600; min-width: 200px;">
-            <i class="fas fa-check-circle"></i>
-            <span>Production terminée</span>
-          </button>
+        <!-- Boutons pour clients acceptés -->
+        <div class="border-t pt-4 mt-4" style="border-color: var(--border-dark);">
+          <div style="display: flex; flex-direction: row; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <button onclick="terminerProduction('${clientId}')" class="btn-primary px-5 py-3 rounded-lg flex items-center justify-center space-x-2" style="background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: 600;">
+              <i class="fas fa-check-circle"></i>
+              <span>Production terminée</span>
+            </button>
+            <button onclick="annulerClient('${clientId}')" class="btn-primary px-5 py-3 rounded-lg flex items-center justify-center space-x-2" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; font-weight: 600;">
+              <i class="fas fa-times-circle"></i>
+              <span>Annulation</span>
+            </button>
+          </div>
         </div>
         ` : ''}
       </div>
@@ -1532,6 +1766,78 @@
       console.error('[ERROR] Erreur:', error);
       closeConfirmPerduModal();
       alert('Erreur lors du marquage comme perdu');
+    }
+  }
+
+  // Variables globales pour stocker l'ID du client à annuler
+  let clientIdToAnnuler = null;
+
+  // Fonction pour annuler un client accepté (ouvre le modal)
+  window.annulerClient = function(clientId) {
+    clientIdToAnnuler = clientId;
+    document.getElementById('confirmAnnulationModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  // Fermer le modal de confirmation annulation
+  window.closeConfirmAnnulationModal = function() {
+    document.getElementById('confirmAnnulationModal').style.display = 'none';
+    document.body.style.overflow = '';
+    clientIdToAnnuler = null;
+  }
+
+  // Confirmer l'annulation du client
+  window.confirmAnnulerClient = async function() {
+    if (!clientIdToAnnuler) return;
+
+    try {
+      const clientId = clientIdToAnnuler;
+      console.log(`[ANNULATION] Annuler client: ${clientId}`);
+
+      // Extraire l'index depuis l'ID (format: "accepter-0", "accepter-1", etc.)
+      const index = parseInt(clientId.split('-')[1]);
+      const client = soumissionsSignees[index];
+
+      if (!client) {
+        throw new Error('Client introuvable');
+      }
+
+      const clientNom = `${client.prenom || client.clientPrenom || ''} ${client.nom || client.clientNom || ''}`.trim();
+
+      // Appeler le backend pour annuler (marquer comme perdu depuis accepté)
+      const response = await fetch(`${window.location.origin}/annuler-client-accepte`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: window.username,
+          id: client.id,
+          prenom: client.prenom || client.clientPrenom,
+          nom: client.nom || client.clientNom,
+          telephone: client.telephone || client.phone,
+          prix: client.prix,
+          adresse: client.adresse,
+          pdfUrl: client.pdfUrl || client.pdf_url,
+          date_soumission: client.date_soumission || client.created_at || client.date
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de l\'annulation');
+      }
+
+      console.log(`[OK] Client ${clientNom} annulé et déplacé vers clients perdus`);
+
+      // Fermer les modals
+      closeConfirmAnnulationModal();
+      closeClientInfo();
+
+      // Recharger les données
+      await chargerSoumissionsSignees();
+
+    } catch (error) {
+      console.error('[ERROR] Erreur:', error);
+      closeConfirmAnnulationModal();
+      alert('Erreur lors de l\'annulation');
     }
   }
 
@@ -1824,20 +2130,61 @@
   // Variables globales pour stocker l'index du client perdu à supprimer
   let clientPerduIndexToDelete = null;
 
+  // Variables pour stocker les infos du client à supprimer
+  let clientPerduToDelete = { prenom: null, nom: null, telephone: null };
+
   // Fonction pour supprimer définitivement un client perdu (ouvre le modal)
-  window.supprimerClientPerdu = function(index) {
-    if (!window.clientsPerdusData || !window.clientsPerdusData[index]) {
-      console.error('Client introuvable');
+  window.supprimerClientPerdu = function(prenom, nom, telephone) {
+    if (!prenom && !nom && !telephone) {
+      console.error('Informations client manquantes');
       return;
     }
 
-    const client = window.clientsPerdusData[index];
-    const clientNom = `${client.prenom || ''} ${client.nom || ''}`.trim() || 'Client';
+    const clientNom = `${prenom || ''} ${nom || ''}`.trim() || 'Client';
 
-    clientPerduIndexToDelete = index;
+    // Stocker les infos pour la confirmation
+    clientPerduToDelete = { prenom, nom, telephone };
+
+    // Afficher le modal de confirmation
     document.getElementById('confirmDeletePerduText').textContent = `Êtes-vous sûr de vouloir supprimer définitivement ${clientNom} des clients perdus ?`;
     document.getElementById('confirmDeletePerduModal').style.display = 'flex';
-    document.body.style.overflow = 'hidden';
+  }
+
+  // Confirmer la suppression du client perdu
+  window.confirmDeleteClientPerdu = async function() {
+    const { prenom, nom, telephone } = clientPerduToDelete;
+    if (!prenom && !nom && !telephone) return;
+
+    try {
+      const response = await fetch(`${window.location.origin}/supprimer-client-perdu`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: window.username,
+          prenom: prenom,
+          nom: nom,
+          telephone: telephone
+        })
+      });
+
+      if (!response.ok) throw new Error('Erreur lors de la suppression');
+
+      const clientNom = `${prenom || ''} ${nom || ''}`.trim() || 'Client';
+      console.log(`[OK] Client ${clientNom} supprimé définitivement`);
+
+      // Fermer le modal
+      closeConfirmDeletePerduModal();
+
+      // Recharger la liste des clients perdus
+      if (typeof chargerClientsPerdus === 'function') {
+        await chargerClientsPerdus();
+      }
+
+    } catch (error) {
+      console.error('[ERROR] Erreur suppression:', error);
+      closeConfirmDeletePerduModal();
+      alert('Erreur lors de la suppression du client perdu');
+    }
   }
 
   // Fermer le modal de confirmation suppression client perdu
@@ -1894,9 +2241,9 @@
 
   // Fonction pour fermer le modal des clients perdus
   window.closeClientsPerdusModal = function() {
-    const modal = document.getElementById('clientsPerdusModal');
+    const modal = document.getElementById('clients-perdus-modal');
     if (modal) {
-      modal.remove();
+      modal.style.display = 'none';
       // Réactiver le scroll
       document.body.style.overflow = '';
     }
@@ -2165,7 +2512,7 @@
     filtered.forEach((client, index) => {
       const originalIndex = soumissionsAttente.indexOf(client);
       const clientId = `attente-${originalIndex}`;
-      const prix = client.prix ? parseFloat(client.prix).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00';
+      const prix = client.prix ? formatPrixFrancais(client.prix) : '0,00';
       const ville = client.adresse && client.adresse.includes(',') ? client.adresse.split(',')[1].trim() : (client.adresse || '');
 
       const cardHtml = `
@@ -2223,7 +2570,7 @@
     filtered.forEach(client => {
       const originalIndex = soumissionsSignees.indexOf(client);
       const clientId = `accepter-${originalIndex}`;
-      const prix = client.prix ? parseFloat(client.prix).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00';
+      const prix = client.prix ? formatPrixFrancais(client.prix) : '0,00';
       const ville = client.adresse && client.adresse.includes(',') ? client.adresse.split(',')[1].trim() : (client.adresse || '');
 
       const cardHtml = `
@@ -2281,7 +2628,7 @@
     filtered.forEach(client => {
       const originalIndex = travauxACompleter.indexOf(client);
       const clientId = `completer-${originalIndex}`;
-      const prix = client.prix ? parseFloat(client.prix).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00';
+      const prix = client.prix ? formatPrixFrancais(client.prix) : '0,00';
       const ville = client.adresse && client.adresse.includes(',') ? client.adresse.split(',')[1].trim() : (client.adresse || '');
 
       const cardHtml = `
@@ -2732,36 +3079,48 @@
   window.commencerEstimation = function(prospectId) {
     console.log("[LAUNCH] Début commencerEstimation, prospectId:", prospectId);
     console.log("[DATA] prospectsData disponible:", prospectsData);
-    
+
     const prospect = prospectsData[prospectId];
     if (!prospect) {
       console.error("[ERROR] Prospect introuvable pour ID:", prospectId);
       return;
     }
-    
+
     console.log("[OK] Prospect trouvé:", prospect);
-    
+
     // Stocker les données du prospect dans submissionData (même système que calcul utilise)
     const submissionData = {
       prenom: prospect.prenom,
       nom: prospect.nom,
       telephone: prospect.telephone,
       adresse: prospect.adresse || '',
+      courriel: prospect.courriel || prospect.email || '',
       fromProspect: true // Flag pour bypasser validation d'adresse dans calcul et creer_soumission
-      // Pas de courriel car il n'y en a pas dans calcul non plus
     };
-    
+
     console.log("💾 Données à stocker:", submissionData);
     sessionStorage.setItem('submissionData', JSON.stringify(submissionData));
-    
+
     // Vérifier que les données ont bien été stockées
     const verification = sessionStorage.getItem('submissionData');
     console.log("[DEBUG] Vérification stockage:", verification);
-    
-    console.log("🔄 Redirection vers /calcul...");
-    
-    // Rediriger vers la page calcul
-    window.location.href = '/calcul';
+
+    console.log("🔄 Redirection vers /calculateur via routeur parent...");
+
+    // Fermer tous les modals ouverts (modal dynamique de prospects et autres)
+    document.querySelectorAll('.fixed.inset-0').forEach(modal => {
+      modal.remove();
+    });
+    document.body.style.overflow = ''; // Rétablir le scroll
+
+    // Rediriger vers la page calculateur via le routeur parent (même logique que récupération client)
+    if (window.parent && window.parent !== window) {
+      // On est dans un iframe - utiliser le hash du parent pour déclencher le routeur
+      window.parent.location.hash = '#/calculateur';
+    } else {
+      // Fallback si pas dans un iframe
+      window.location.href = '/calculateur';
+    }
   }
 
   // Variables globales pour stocker l'ID du prospect à supprimer

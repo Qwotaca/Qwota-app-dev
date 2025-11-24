@@ -11027,8 +11027,24 @@ def get_manifest():
 
 @app.get("/sw.js")
 def get_service_worker():
-    with open("static/sw.js", "r", encoding="utf-8") as f:
-        sw_content = f.read()
+    # Service worker auto-destructeur - se désinstalle automatiquement
+    sw_content = """
+// Service Worker auto-destructeur
+// Se désinstalle automatiquement pour éviter les problèmes de cache
+self.addEventListener('install', function(e) {
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', function(e) {
+    self.registration.unregister()
+        .then(function() {
+            return self.clients.matchAll();
+        })
+        .then(function(clients) {
+            clients.forEach(client => client.navigate(client.url));
+        });
+});
+"""
     return Response(
         content=sw_content,
         media_type="application/javascript",

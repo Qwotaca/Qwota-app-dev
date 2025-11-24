@@ -5,14 +5,14 @@ const path = require('path');
 // CONFIGURATION
 // ============================================
 
-// URL de production (ton domaine principal)
-const PRODUCTION_URL = 'https://qwota.ca';
+// URL de production (Render)
+const PRODUCTION_URL = 'https://qwota-app-dev.onrender.com';
 
 // URL de développement - LOCALHOST pour tests locaux
 const DEVELOPMENT_URL = 'http://localhost:8080';
 
 // Mode: 'production' ou 'development'
-const MODE = 'development'; // Mode DEVELOPMENT pour les tests locaux avec localhost:8000
+const MODE = 'production'; // Mode PRODUCTION pour l'application en ligne
 
 // URL de base du serveur
 const BASE_URL = MODE === 'production' ? PRODUCTION_URL : DEVELOPMENT_URL;

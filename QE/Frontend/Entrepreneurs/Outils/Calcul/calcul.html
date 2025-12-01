@@ -139,18 +139,22 @@
         </div>
       </div>
       <div class="box-body">
+        <p id="clientInfoValidationMessage" class="text-sm mb-4" style="color: #e57373;">
+          <i class="fas fa-exclamation-circle mr-1"></i>
+          Veuillez remplir les informations client
+        </p>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-2">
               <i class="fas fa-user mr-2" style="color: #60a5fa;"></i>Prénom
             </label>
-            <input type="text" id="clientPrenom" class="input-field" placeholder="Prénom">
+            <input type="text" id="clientPrenom" class="input-field" placeholder="Prénom" style="border-right: 2px solid #e57373 !important;" oninput="this.style.setProperty('border-right-color', this.value.trim() ? '#4caf50' : '#e57373', 'important'); setTimeout(() => updateClientValidationMessage(), 0);">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-2">
               <i class="fas fa-user mr-2" style="color: var(--primary-purple);"></i>Nom
             </label>
-            <input type="text" id="clientNom" class="input-field" placeholder="Nom">
+            <input type="text" id="clientNom" class="input-field" placeholder="Nom" style="border-right: 2px solid #e57373 !important;" oninput="this.style.setProperty('border-right-color', this.value.trim() ? '#4caf50' : '#e57373', 'important'); setTimeout(() => updateClientValidationMessage(), 0);">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-2">
@@ -166,13 +170,15 @@
                    spellcheck="false"
                    readonly
                    onfocus="this.removeAttribute('readonly');"
-                   data-form-type="other">
+                   oninput="this.style.setProperty('border-right-color', this.value.trim() ? '#4caf50' : '#e57373', 'important'); setTimeout(() => updateClientValidationMessage(), 0);"
+                   data-form-type="other"
+                   style="border-right: 2px solid #e57373 !important;">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-2">
               <i class="fas fa-phone mr-2" style="color: var(--primary-orange);"></i>Téléphone
             </label>
-            <input type="tel" id="clientPhone" class="input-field" placeholder="000-000-0000" maxlength="12">
+            <input type="tel" id="clientPhone" class="input-field" placeholder="000-000-0000" maxlength="12" style="border-right: 2px solid #e57373 !important;" oninput="this.style.setProperty('border-right-color', this.value.trim() ? '#4caf50' : '#e57373', 'important'); setTimeout(() => updateClientValidationMessage(), 0);">
           </div>
         </div>
 
@@ -3177,6 +3183,93 @@
       }
     }
 
+    // Fonction pour mettre à jour la bordure d'un champ client
+    function updateClientFieldBorder(field) {
+      if (!field) return;
+      const value = field.value.trim();
+      // Simplement vérifier si le champ n'est pas vide
+      const isValid = value !== '';
+
+      field.style.setProperty('border-right-color', isValid ? '#4caf50' : '#e57373', 'important');
+
+      // Mettre à jour le message de validation
+      updateClientValidationMessage();
+    }
+
+    // Fonction pour vérifier si un champ a une bordure verte (comme soumission.html)
+    function hasGreenBorderCalc(element) {
+      if (!element) return false;
+      // D'abord vérifier le style inline (plus fiable)
+      const inlineStyle = element.style.borderRightColor;
+      if (inlineStyle) {
+        if (inlineStyle.includes('4caf50') || inlineStyle.includes('76, 175, 80') || inlineStyle === 'rgb(76, 175, 80)') {
+          return true;
+        }
+        if (inlineStyle.includes('e57373') || inlineStyle.includes('229, 115, 115') || inlineStyle === 'rgb(229, 115, 115)') {
+          return false;
+        }
+      }
+      // Fallback sur getComputedStyle
+      const borderColor = getComputedStyle(element).borderRightColor;
+      const match = borderColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+      if (match) {
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        return g > r && g > b;
+      }
+      return false;
+    }
+
+    // Fonction pour afficher/cacher le message de validation client
+    function updateClientValidationMessage() {
+      const validationMessage = document.getElementById('clientInfoValidationMessage');
+      if (!validationMessage) return;
+
+      const clientPrenomField = document.getElementById('clientPrenom');
+      const clientNomField = document.getElementById('clientNom');
+      const clientAddressField = document.getElementById('clientAddress');
+      const clientPhoneField = document.getElementById('clientPhone');
+
+      // Vérifier si tous les champs ont une bordure verte
+      const allValid = hasGreenBorderCalc(clientPrenomField) &&
+                       hasGreenBorderCalc(clientNomField) &&
+                       hasGreenBorderCalc(clientAddressField) &&
+                       hasGreenBorderCalc(clientPhoneField);
+
+      if (allValid) {
+        validationMessage.style.display = 'none';
+        // Activer les boutons
+        enableCompleterButtons();
+      } else {
+        validationMessage.style.display = 'block';
+        // Désactiver les boutons
+        disableCompleterButtons();
+      }
+    }
+
+    // Fonction pour activer les boutons de complétion
+    function enableCompleterButtons() {
+      const buttons = document.querySelectorAll('.completer-soumission-btn, .envoyer-estimation-btn');
+      buttons.forEach(btn => {
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+        btn.style.pointerEvents = 'auto';
+        btn.disabled = false;
+      });
+    }
+
+    // Fonction pour désactiver les boutons de complétion
+    function disableCompleterButtons() {
+      const buttons = document.querySelectorAll('.completer-soumission-btn, .envoyer-estimation-btn');
+      buttons.forEach(btn => {
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+        btn.style.pointerEvents = 'none';
+        btn.disabled = true;
+      });
+    }
+
     // Ajouter des écouteurs d'événements sur les champs
     document.addEventListener('DOMContentLoaded', function() {
       const fields = ['clientPrenom', 'clientNom', 'clientAddress', 'clientPhone'];
@@ -3184,8 +3277,16 @@
       fields.forEach(fieldId => {
         const field = document.getElementById(fieldId);
         if (field) {
-          field.addEventListener('input', validateCompleterButton);
-          field.addEventListener('change', validateCompleterButton);
+          field.addEventListener('input', function() {
+            validateCompleterButton();
+            updateClientFieldBorder(this);
+          });
+          field.addEventListener('change', function() {
+            validateCompleterButton();
+            updateClientFieldBorder(this);
+          });
+          // Mise à jour initiale de la bordure
+          updateClientFieldBorder(field);
         }
       });
 
@@ -3200,8 +3301,16 @@
       fields.forEach(fieldId => {
         const field = document.getElementById(fieldId);
         if (field) {
-          field.addEventListener('input', validateCompleterButton);
-          field.addEventListener('change', validateCompleterButton);
+          field.addEventListener('input', function() {
+            validateCompleterButton();
+            updateClientFieldBorder(this);
+          });
+          field.addEventListener('change', function() {
+            validateCompleterButton();
+            updateClientFieldBorder(this);
+          });
+          // Mise à jour initiale de la bordure
+          updateClientFieldBorder(field);
         }
       });
 
@@ -12633,21 +12742,35 @@ function initializeApp() {
         
         if (clientPrenomField && prospect.prenom) {
           clientPrenomField.value = prospect.prenom;
+          clientPrenomField.style.setProperty('border-right-color', '#4caf50', 'important');
           console.log('[OK] Prénom défini:', prospect.prenom);
         }
         if (clientNomField && prospect.nom) {
           clientNomField.value = prospect.nom;
-                  }
+          clientNomField.style.setProperty('border-right-color', '#4caf50', 'important');
+        }
         if (clientAddressField && prospect.adresse) {
           clientAddressField.value = prospect.adresse;
+          clientAddressField.style.setProperty('border-right-color', '#4caf50', 'important');
           console.log('[OK] Adresse définie:', prospect.adresse);
         }
         if (clientPhoneField && prospect.telephone) {
           clientPhoneField.value = prospect.telephone;
+          clientPhoneField.style.setProperty('border-right-color', '#4caf50', 'important');
           console.log('[OK] Téléphone défini:', prospect.telephone);
         }
-        
-        console.log('[OK] Pré-remplissage terminé');
+
+        // Mettre à jour le message de validation client et activer les boutons
+        setTimeout(() => {
+          if (typeof updateClientValidationMessage === 'function') {
+            updateClientValidationMessage();
+          }
+          if (typeof validateCompleterButton === 'function') {
+            validateCompleterButton();
+          }
+        }, 100);
+
+        console.log('[OK] Pré-remplissage terminé avec bordures vertes');
 
         // NE PAS nettoyer sessionStorage ici - il sera utilisé pour bypasser la validation d'adresse
         // sessionStorage.removeItem('submissionData'); // Sera nettoyé après "Compléter la soumission"
@@ -18269,24 +18392,50 @@ function initializeApp() {
       adresse: adresse,
       telephone: telephone
     }));
-    
+
     // Remplir automatiquement les champs du formulaire client
     const clientPrenomField = document.getElementById('clientPrenom');
     const clientNomField = document.getElementById('clientNom');
     const clientAddressField = document.getElementById('clientAddress');
     const clientPhoneField = document.getElementById('clientPhone');
-    
-    if (clientPrenomField) clientPrenomField.value = prenom;
-    if (clientNomField) clientNomField.value = nom;
-    if (clientAddressField) clientAddressField.value = adresse;
-    if (clientPhoneField) clientPhoneField.value = telephone;
-    
+
+    if (clientPrenomField) {
+      clientPrenomField.value = prenom;
+      // Mettre la bordure en vert si rempli
+      if (prenom && prenom.trim()) {
+        clientPrenomField.style.setProperty('border-right-color', '#4caf50', 'important');
+      }
+    }
+    if (clientNomField) {
+      clientNomField.value = nom;
+      if (nom && nom.trim()) {
+        clientNomField.style.setProperty('border-right-color', '#4caf50', 'important');
+      }
+    }
+    if (clientAddressField) {
+      clientAddressField.value = adresse;
+      if (adresse && adresse.trim()) {
+        clientAddressField.style.setProperty('border-right-color', '#4caf50', 'important');
+      }
+    }
+    if (clientPhoneField) {
+      clientPhoneField.value = telephone;
+      if (telephone && telephone.trim()) {
+        clientPhoneField.style.setProperty('border-right-color', '#4caf50', 'important');
+      }
+    }
+
+    // Mettre à jour le message de validation si la fonction existe
+    if (typeof updateClientInfoValidation === 'function') {
+      updateClientInfoValidation();
+    }
+
     // Ajouter une indication visuelle dans le header
     const calculatorHeader = document.querySelector('.glass-card h1');
     if (calculatorHeader) {
       calculatorHeader.innerHTML = `Calculateur d'Estimation <span class="text-sm text-blue-600">(pour ${prenom} ${nom})</span>`;
     }
-    
+
     // Faire défiler vers les tabs pour commencer le calcul
     document.querySelector('.tab-spacing').scrollIntoView({ behavior: 'smooth' });
   }
@@ -19166,6 +19315,14 @@ function initializeApp() {
 
         const fullAddress = `${streetNumber} ${route}, ${city}, ${province} ${postalCode}`;
         input.value = fullAddress.trim();
+
+        // Mettre la bordure en vert quand une adresse Google est sélectionnée
+        input.style.setProperty('border-right-color', '#4caf50', 'important');
+
+        // Mettre à jour le message de validation
+        if (typeof updateClientValidationMessage === 'function') {
+          updateClientValidationMessage();
+        }
       });
     };
   </script>

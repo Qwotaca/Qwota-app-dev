@@ -138,14 +138,15 @@
                     </label>
                     <div class="relative">
                       <div class="relative">
-                        <input type="text" 
-                               id="clientSearchGQP" 
-                               placeholder="Tapez pour rechercher un client..." 
-                               class="modern-input w-full pr-8" 
-                               autocomplete="off" 
+                        <input type="text"
+                               id="clientSearchGQP"
+                               placeholder="Tapez pour rechercher un client..."
+                               class="modern-input w-full pr-8"
+                               autocomplete="off"
                                oninput="rechercherClientsGQP(this.value)"
                                onclick="event.stopPropagation(); ouvrirMenuGQP()"
-                               onfocus="ouvrirMenuGQP()">
+                               onfocus="ouvrirMenuGQP()"
+                               style="border-right: 2px solid #e57373 !important;">
                         <i class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none" style="color: var(--text-gray);"></i>
                       </div>
                       <!-- Menu déroulant -->
@@ -162,7 +163,7 @@
                       Choisir une équipe
                     </label>
                     <div class="relative">
-                      <div class="modern-dropdown" id="equipeToggle">
+                      <div class="modern-dropdown" id="equipeToggle" style="border-right: 2px solid #e57373 !important;">
                         <span class="placeholder" style="color: var(--text-gray);">Choisissez une équipe</span>
                         <i class="fas fa-chevron-down" style="color: var(--text-gray);"></i>
                       </div>
@@ -183,8 +184,9 @@
                   Heure du projet
                 </label>
                 <div class="relative">
-                  <input type="text" name="heure" id="heure" autocomplete="off" 
-                         class="modern-input pr-10" placeholder="3,00 h">
+                  <input type="text" name="heure" id="heure" autocomplete="off"
+                         class="modern-input pr-10" placeholder="3,00 h"
+                         style="border-right: 2px solid #e57373 !important;">
                   <span class="absolute right-3 top-1/2 transform -translate-y-1/2 font-medium" style="color: var(--text-gray);">h</span>
                 </div>
               </div>
@@ -196,8 +198,9 @@
                   Budget
                 </label>
                 <div class="relative">
-                  <input type="text" name="montant" id="montant" autocomplete="off" 
-                         class="modern-input pr-16" placeholder="2 500,00 $">
+                  <input type="text" name="montant" id="montant" autocomplete="off"
+                         class="modern-input pr-16" placeholder="2 500,00 $"
+                         style="border-right: 2px solid #e57373 !important;">
                   <span class="absolute right-3 top-1/2 transform -translate-y-1/2 font-medium" style="color: var(--text-gray);">$</span>
                 </div>
               </div>
@@ -209,7 +212,7 @@
                 <i class="fas fa-photo-video mr-2 text-indigo-500"></i>
                 Images et vidéos du projet (max 16)
               </label>
-              <div class="upload-zone" id="dropzone">
+              <div class="upload-zone" id="dropzone" style="border-right: 2px solid #e57373 !important;">
                 <div class="mb-4">
                   <i class="fas fa-cloud-upload-alt text-4xl text-blue-500 mb-4"></i>
                   <p class="text-lg font-medium" style="color: var(--text-light);">
@@ -260,7 +263,7 @@
                 <!-- Textarea -->
                 <textarea name="etapes" id="etapes"
                           class="modern-textarea"
-                          style="resize: none; height: 550px; padding-top: 75px !important;"
+                          style="resize: none; height: 550px; padding-top: 75px !important; border-right: 2px solid #e57373 !important;"
                           placeholder="Étape 1 : "></textarea>
               </div>
             </div>
@@ -268,16 +271,22 @@
         </div>
 
         <!-- Boutons d'action -->
-        <div class="flex justify-end space-x-4 mt-8 pt-6" style="border-top: 1px solid var(--border-dark);">
-          <button type="button" class="btn-secondary px-6 py-2" id="voirPDFBtn" disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
-            Voir GQP
-          </button>
-          <button type="submit" id="generateButton" class="btn-primary px-6 py-2 flex items-center gap-2" disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
-            <span id="btnText">Envoyer à l'équipe</span>
-            <span id="btnSpinner" class="hidden absolute inset-0 flex items-center justify-center">
-              <span class="w-5 h-5 border-2 border-white border-t-black rounded-full animate-spin"></span>
-            </span>
-          </button>
+        <div class="flex flex-col items-end mt-8 pt-6" style="border-top: 1px solid var(--border-dark); gap: 0.5rem;">
+          <p id="gqpValidationMessage" class="text-sm" style="color: #e57373;">
+            <i class="fas fa-exclamation-circle mr-1"></i>
+            Veuillez remplir tous les champs obligatoires
+          </p>
+          <div class="flex space-x-4">
+            <button type="button" class="btn-secondary px-6 py-2" id="voirPDFBtn" disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
+              Voir GQP
+            </button>
+            <button type="submit" id="generateButton" class="btn-primary px-6 py-2 flex items-center gap-2" disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
+              <span id="btnText">Envoyer à l'équipe</span>
+              <span id="btnSpinner" class="hidden absolute inset-0 flex items-center justify-center">
+                <span class="w-5 h-5 border-2 border-white border-t-black rounded-full animate-spin"></span>
+              </span>
+            </button>
+          </div>
         </div>
       </form>
         </div>
@@ -397,22 +406,94 @@
   let selectedImages = [];
   let maxImages = 16;
   let selectedEquipe = null;
+  let selectedSoumission = null; // Pour stocker le client sélectionné
   let currentStep = 1;
   let allFiles = [];
   let isAutoFilledFromTable = false; // Pour détecter si on vient d'un auto-fill
   let currentGqpId = null; // Pour stocker l'ID du GQP en cours
 
-  // Fonction de validation des champs requis (étapes, montant, heure)
+  // Fonction helper pour vérifier si un élément a une bordure verte
+  function hasGreenBorderGQP(element) {
+    if (!element) return false;
+
+    // D'abord vérifier le style inline (plus fiable car c'est ce qu'on définit)
+    const inlineStyle = element.style.borderRightColor;
+    if (inlineStyle) {
+      // #4caf50 ou rgb(76, 175, 80) = vert
+      if (inlineStyle.includes('4caf50') || inlineStyle.includes('76, 175, 80') || inlineStyle === 'rgb(76, 175, 80)') {
+        return true;
+      }
+      // #e57373 ou rgb(229, 115, 115) = rouge
+      if (inlineStyle.includes('e57373') || inlineStyle.includes('229, 115, 115') || inlineStyle === 'rgb(229, 115, 115)') {
+        return false;
+      }
+    }
+
+    // Fallback sur getComputedStyle
+    const borderColor = getComputedStyle(element).borderRightColor;
+    const match = borderColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (match) {
+      const r = parseInt(match[1]);
+      const g = parseInt(match[2]);
+      const b = parseInt(match[3]);
+      return g > r && g > b;
+    }
+    return false;
+  }
+
+  // Fonction pour mettre à jour la bordure d'un champ
+  function updateFieldBorder(element, isValid) {
+    if (!element) return;
+    element.style.setProperty('border-right-color', isValid ? '#4caf50' : '#e57373', 'important');
+  }
+
+  // Fonction de validation des champs requis (client, équipe si assigner, heure, budget, images, étapes)
   function validateRequiredFields() {
     const etapes = document.getElementById('etapes');
     const montant = document.getElementById('montant');
     const heure = document.getElementById('heure');
+    const clientSearch = document.getElementById('clientSearchGQP');
+    const equipeToggle = document.getElementById('equipeToggle');
+    const dropzone = document.getElementById('dropzone');
     const voirPDFBtn = document.getElementById('voirPDFBtn');
     const generateButton = document.getElementById('generateButton');
+    const validationMessage = document.getElementById('gqpValidationMessage');
 
-    const isValid = etapes.value.trim() !== '' &&
-                    montant.value.trim() !== '' &&
-                    heure.value.trim() !== '';
+    // Vérifier si "Assigner" est sélectionné
+    const isAssignMode = document.getElementById('assign-to-team')?.checked;
+    const teamContainer = document.getElementById('team-selection-container');
+
+    // Valider chaque champ et mettre à jour sa bordure
+    const clientValid = clientSearch && clientSearch.value.trim() !== '' && typeof selectedSoumission !== 'undefined' && selectedSoumission !== null;
+    updateFieldBorder(clientSearch, clientValid);
+
+    const heureValid = heure && heure.value.trim() !== '';
+    updateFieldBorder(heure, heureValid);
+
+    const montantValid = montant && montant.value.trim() !== '';
+    updateFieldBorder(montant, montantValid);
+
+    const etapesValid = etapes && etapes.value.trim() !== '';
+    updateFieldBorder(etapes, etapesValid);
+
+    // Vérifier images/vidéos (minimum 1)
+    const hasFiles = allFiles && allFiles.length > 0;
+    updateFieldBorder(dropzone, hasFiles);
+
+    // Vérifier équipe seulement si en mode "Assigner"
+    let equipeValid = true;
+    if (isAssignMode && teamContainer && !teamContainer.classList.contains('hidden')) {
+      equipeValid = selectedEquipe !== null;
+      updateFieldBorder(equipeToggle, equipeValid);
+    } else {
+      // Si pas en mode assigner, mettre bordure par défaut
+      if (equipeToggle) {
+        equipeToggle.style.setProperty('border-right', '2px solid var(--border-dark)', 'important');
+      }
+    }
+
+    // Validation globale
+    const isValid = clientValid && heureValid && montantValid && etapesValid && hasFiles && equipeValid;
 
     if (isValid) {
       voirPDFBtn.disabled = false;
@@ -423,6 +504,7 @@
       generateButton.style.opacity = '1';
       generateButton.style.cursor = 'pointer';
       generateButton.style.pointerEvents = 'auto';
+      if (validationMessage) validationMessage.style.display = 'none';
     } else {
       voirPDFBtn.disabled = true;
       voirPDFBtn.style.opacity = '0.5';
@@ -432,6 +514,7 @@
       generateButton.style.opacity = '0.5';
       generateButton.style.cursor = 'not-allowed';
       generateButton.style.pointerEvents = 'none';
+      if (validationMessage) validationMessage.style.display = 'block';
     }
   }
 
@@ -453,10 +536,20 @@
     const etapes = document.getElementById('etapes');
     const montant = document.getElementById('montant');
     const heure = document.getElementById('heure');
+    const clientSearch = document.getElementById('clientSearchGQP');
 
     if (etapes) etapes.addEventListener('input', validateRequiredFields);
     if (montant) montant.addEventListener('input', validateRequiredFields);
     if (heure) heure.addEventListener('input', validateRequiredFields);
+    if (clientSearch) {
+      clientSearch.addEventListener('input', function() {
+        // Si le texte est effacé, réinitialiser la sélection
+        if (this.value.trim() === '') {
+          selectedSoumission = null;
+        }
+        validateRequiredFields();
+      });
+    }
 
     // Validation initiale
     validateRequiredFields();
@@ -733,6 +826,9 @@
       }
       preview.appendChild(mediaDiv);
     });
+
+    // Valider les champs après mise à jour des images
+    validateRequiredFields();
   }
 
   // Suppression d'une image
@@ -1049,6 +1145,9 @@
         numero_soumission: numeroSoumission
       };
     }
+
+    // Valider les champs après sélection du client
+    validateRequiredFields();
   }
 
   // Ancienne fonction loadTravauxACompleter remplacée par chargerClientsGQP
@@ -1140,7 +1239,7 @@
     
     function updateUI() {
       console.log('🔄 UpdateUI appelé - assignToTeam.checked:', assignToTeam.checked);
-      
+
       if (assignToTeam.checked) {
         teamSelectionContainer.classList.remove('hidden');
         teamSelectionContainer.style.display = 'block';
@@ -1163,6 +1262,8 @@
         selectedEquipe = null;
         console.log('[OK] Sélection équipe masquée');
       }
+      // Revalider les champs après changement de mode
+      validateRequiredFields();
     }
     
     // Test direct des éléments
@@ -1544,6 +1645,9 @@
     const equipeMenu = document.getElementById('equipeMenu');
     if (equipeMenu) equipeMenu.classList.add('hidden');
     if (toggle) toggle.classList.remove('active');
+
+    // Valider les champs après sélection
+    validateRequiredFields();
   }
 
   // Configuration du formulaire

@@ -168,7 +168,11 @@ function createMobileCards(section) {
 // Fonction pour charger les sections depuis l'API
 async function loadSections() {
   try {
-    const response = await fetch('/api/centrale/sections');
+    // Déterminer le type de centrale (coach ou entrepreneur)
+    const centraleType = window.centraleType || 'entrepreneur';
+    console.log('Chargement des sections pour type:', centraleType);
+
+    const response = await fetch(`/api/centrale/sections?type=${centraleType}`);
     if (response.ok) {
       const data = await response.json();
       sections = data.sections || [];
@@ -209,6 +213,136 @@ function showErrorState() {
     </div>
   `;
 }
+
+// ================================================================
+// FILE VIEWER
+// ================================================================
+
+function openFileViewer(fileUrl, fileName) {
+  const modal = document.getElementById('viewerModal');
+  const content = document.getElementById('viewerContent');
+  const overlay = document.getElementById('viewerOverlay');
+
+  if (!modal || !content) {
+    console.error('Modal viewer non trouvé');
+    return;
+  }
+
+  // Bloquer le scroll du body
+  document.body.style.overflow = 'hidden';
+
+  // Clear previous content
+  content.innerHTML = '';
+
+  // Déterminer le type de fichier par extension
+  const ext = fileName.split('.').pop().toLowerCase();
+
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) {
+    // Image
+    const img = document.createElement('img');
+    img.src = fileUrl;
+    img.style.maxWidth = '100%';
+    img.style.maxHeight = '85vh';
+    img.style.objectFit = 'contain';
+    content.appendChild(img);
+  } else if (['pdf'].includes(ext)) {
+    // PDF
+    const iframe = document.createElement('iframe');
+    iframe.src = fileUrl;
+    iframe.style.width = '100%';
+    iframe.style.height = '85vh';
+    iframe.style.border = 'none';
+    content.appendChild(iframe);
+  } else if (['mp4', 'webm', 'ogg'].includes(ext)) {
+    // Video
+    const video = document.createElement('video');
+    video.controls = true;
+    video.style.maxWidth = '100%';
+    video.style.maxHeight = '85vh';
+    video.style.objectFit = 'contain';
+    const source = document.createElement('source');
+    source.src = fileUrl;
+    source.type = `video/${ext}`;
+    video.appendChild(source);
+    content.appendChild(video);
+  } else if (['mp3', 'wav', 'ogg'].includes(ext)) {
+    // Audio
+    const audio = document.createElement('audio');
+    audio.controls = true;
+    audio.style.width = '100%';
+    audio.style.maxWidth = '600px';
+    const source = document.createElement('source');
+    source.src = fileUrl;
+    source.type = `audio/${ext}`;
+    audio.appendChild(source);
+    content.appendChild(audio);
+  } else {
+    // Generic file
+    content.innerHTML = `
+      <div style="text-align: center; padding: 2rem;">
+        <i class="fas fa-file" style="font-size: 3rem; color: var(--text-gray); margin-bottom: 1rem;"></i>
+        <p style="color: var(--text-primary); font-size: 1.125rem; margin-bottom: 0.5rem;">${fileName}</p>
+        <p style="color: var(--text-gray); font-size: 0.875rem;">Aperçu non disponible</p>
+        <a href="${fileUrl}" download class="btn-primary" style="display: inline-block; margin-top: 1rem; text-decoration: none;">
+          <i class="fas fa-download mr-2"></i>
+          Télécharger
+        </a>
+      </div>
+    `;
+  }
+
+  // Afficher le modal et l'overlay
+  modal.classList.remove('hidden');
+  if (overlay) {
+    overlay.style.display = 'block';
+  }
+}
+
+function closeFileViewer() {
+  const modal = document.getElementById('viewerModal');
+  const overlay = document.getElementById('viewerOverlay');
+
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+  if (overlay) {
+    overlay.style.display = 'none';
+  }
+
+  // Rétablir le scroll du body
+  document.body.style.overflow = '';
+}
+
+// Event listeners pour le viewer
+document.addEventListener('DOMContentLoaded', () => {
+  const closeBtn = document.getElementById('viewerClose');
+  const overlay = document.getElementById('viewerOverlay');
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeFileViewer);
+  }
+
+  if (overlay) {
+    overlay.addEventListener('click', closeFileViewer);
+  }
+
+  // Fermer avec Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeFileViewer();
+    }
+  });
+});
+
+// ================================================================
+// INITIALIZATION
+// ================================================================
+
+// Fonction exposée pour recharger les sections (appelée depuis centralevue.html)
+window.loadCentraleSections = function() {
+  console.log('Rechargement des sections, type:', window.centraleType);
+  loadSections();
+};
 
 // Charger les sections au chargement de la page
 document.addEventListener('DOMContentLoaded', () => {

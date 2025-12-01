@@ -61,16 +61,32 @@ def get_clients_facturation_qe(username: str):
             if client_email not in blacklisted_emails:
                 clients_filtres.append(soumission)
 
-        print(f"[get_clients_facturation_qe] {username}: {len(clients_filtres)} clients (sur {len(soumissions)} total)")
+        # 3.5. Dé-duplication par numéro de soumission
+        seen_nums = set()
+        clients_uniques = []
+        for client in clients_filtres:
+            num = client.get("numSoumission", "") or client.get("num", "")
+            if num and num not in seen_nums:
+                seen_nums.add(num)
+                clients_uniques.append(client)
+            elif not num:
+                clients_uniques.append(client)
+
+        clients_filtres = clients_uniques
+        print(f"[get_clients_facturation_qe] {username}: {len(clients_filtres)} clients uniques (sur {len(soumissions)} total)")
 
         # 4. Enrichir chaque client avec ses statuts de paiement et mapper les champs
         clients_enrichis = []
         for client in clients_filtres:
             # Mapper les champs aux noms attendus par l'interface
+            num_soumission = client.get('numSoumission', client.get('num', ''))
             client_enrichi = {
-                'num': client.get('numSoumission', client.get('num', '')),  # Utiliser numSoumission en priorité
+                'num': num_soumission,  # Utiliser numSoumission en priorité
+                'numeroSoumission': num_soumission,  # Alias pour compatibilité frontend
                 'prenom': client.get('clientPrenom', ''),
                 'nom': client.get('clientNom', ''),
+                'clientPrenom': client.get('clientPrenom', ''),  # Garder aussi le nom original
+                'clientNom': client.get('clientNom', ''),  # Garder aussi le nom original
                 'email': client.get('courriel', ''),
                 'telephone': client.get('telephone', ''),
                 'adresse': client.get('adresse', ''),
@@ -79,12 +95,13 @@ def get_clients_facturation_qe(username: str):
                 'date': client.get('date', ''),
                 'id': client.get('id', ''),
                 'original_id': client.get('original_id', ''),
-                'numSoumission': client.get('numSoumission', '')
+                'numSoumission': num_soumission
             }
             
             # Récupérer les statuts de paiement depuis les fichiers de statuts
-            numero_soumission = client.get("num", "")
+            numero_soumission = num_soumission  # Utiliser num_soumission déjà calculé
             statuts = get_statuts_client_facturation_qe(username, numero_soumission)
+            print(f"[DEBUG STATUTS] {numero_soumission}: statutAutresPaiements={statuts.get('statutAutresPaiements')}, autresPaiements={statuts.get('autresPaiements')}")
             client_enrichi.update(statuts)
             
             # Ajouter les détails de paiement depuis le fichier statuts
@@ -110,7 +127,9 @@ def get_clients_facturation_qe(username: str):
                                         client_enrichi["autresPaiements"] = statuts_client["autresPaiements"]
                 except Exception as e:
                     print(f"[WARN] Erreur lecture détails paiement pour {numero_soumission}: {e}")
-            
+
+            # Log final pour debug
+            print(f"[DEBUG FINAL] {numero_soumission}: statutAutresPaiements={client_enrichi.get('statutAutresPaiements')}, autresPaiements={client_enrichi.get('autresPaiements')}")
             clients_enrichis.append(client_enrichi)
         
         return clients_enrichis
@@ -148,7 +167,9 @@ def get_statuts_client_facturation_qe(username: str, numero_soumission: str):
             
             tous_statuts = json.loads(content)
             statuts_client = tous_statuts.get(numero_soumission, statuts_defaut)
-            
+
+        # Debug: afficher ce qui est retourné
+        print(f"[API get_statuts_client] {numero_soumission}: autresPaiements={statuts_client.get('autresPaiements')}")
         return statuts_client
         
     except Exception as e:
@@ -200,7 +221,7 @@ def update_statut_client_facturation_qe(username: str, numero_soumission: str, t
             
             # Sauvegarder les détails du dépôt
             if details_paiement:
-                print(f"💾 Sauvegarde détails dépôt: {details_paiement}")
+                print(f"[SAVE] Sauvegarde details depot: {details_paiement}")
                 if not "depot" in tous_statuts[numero_soumission]:
                     tous_statuts[numero_soumission]["depot"] = {}
                 
@@ -226,7 +247,7 @@ def update_statut_client_facturation_qe(username: str, numero_soumission: str, t
             
             # Sauvegarder les détails du paiement final
             if details_paiement:
-                print(f"💾 Sauvegarde détails paiement final: {details_paiement}")
+                print(f"[SAVE] Sauvegarde details paiement final: {details_paiement}")
                 if not "paiementFinal" in tous_statuts[numero_soumission]:
                     tous_statuts[numero_soumission]["paiementFinal"] = {}
                 
@@ -252,7 +273,7 @@ def update_statut_client_facturation_qe(username: str, numero_soumission: str, t
 
             # Sauvegarder les détails des autres paiements (ARRAY pour permettre plusieurs paiements)
             if details_paiement:
-                print(f"💾 Sauvegarde détails autres paiements: {details_paiement}")
+                print(f"[SAVE] Sauvegarde details autres paiements: {details_paiement}")
 
                 # Initialiser autresPaiements comme array s'il n'existe pas
                 if not "autresPaiements" in tous_statuts[numero_soumission]:
@@ -281,8 +302,20 @@ def update_statut_client_facturation_qe(username: str, numero_soumission: str, t
                     nouveau_autre_paiement["numeroCheque"] = details_paiement.get("numeroCheque")
 
                 # Ajouter le type de paiement autres (paiement_partiel ou un_seul_paiement)
-                if details_paiement.get("typePaiementAutres"):
-                    nouveau_autre_paiement["typePaiementAutres"] = details_paiement.get("typePaiementAutres")
+                # FALLBACK BACKEND: Si typePaiementAutres n'est pas fourni, le déduire automatiquement
+                type_paiement_autres = details_paiement.get("typePaiementAutres")
+                if not type_paiement_autres:
+                    # Déduire le type selon le statut du dépôt
+                    statut_depot_actuel = tous_statuts[numero_soumission].get("statutDepot", "non_envoye")
+                    if statut_depot_actuel == "non_envoye":
+                        type_paiement_autres = "un_seul_paiement"
+                        print(f"[FALLBACK BACKEND] typePaiementAutres déduit: un_seul_paiement (pas de dépôt)")
+                    else:
+                        type_paiement_autres = "paiement_partiel"
+                        print(f"[FALLBACK BACKEND] typePaiementAutres déduit: paiement_partiel (dépôt existe)")
+
+                if type_paiement_autres:
+                    nouveau_autre_paiement["typePaiementAutres"] = type_paiement_autres
 
                 # Ajouter le nouveau paiement au tableau
                 tous_statuts[numero_soumission]["autresPaiements"].append(nouveau_autre_paiement)
@@ -312,11 +345,25 @@ def get_status_columns_facturation_qe(username: str):
     """
     try:
         clients = get_clients_facturation_qe(username)
-        
+
+        # Dé-duplication par numéro de soumission
+        seen_nums = set()
+        clients_uniques = []
+        for client in clients:
+            num = client.get("num", "") or client.get("numSoumission", "")
+            if num and num not in seen_nums:
+                seen_nums.add(num)
+                clients_uniques.append(client)
+            elif not num:
+                clients_uniques.append(client)
+
+        clients = clients_uniques
+        print(f"[get_status_columns] {username}: {len(clients)} clients uniques")
+
         urgentes = []
         en_traitement = []
         traitees = []
-        
+
         for client in clients:
             statut_depot = client.get("statutDepot", "non_envoye")
             statut_paiement_final = client.get("statutPaiementFinal")
@@ -324,6 +371,17 @@ def get_status_columns_facturation_qe(username: str):
 
             # Vérifier si il y a des autres paiements
             a_autres_paiements = isinstance(autres_paiements, list) and len(autres_paiements) > 0
+
+            # Vérifier si un paiement a été refusé
+            depot_refuse = statut_depot == "refuse"
+            paiement_final_refuse = statut_paiement_final == "refuse"
+            autres_refuses = any(p.get("statut") == "refuse" for p in autres_paiements) if a_autres_paiements else False
+            a_paiement_refuse = depot_refuse or paiement_final_refuse or autres_refuses
+
+            # Si un paiement est refusé, mettre dans urgentes
+            if a_paiement_refuse:
+                urgentes.append(client)
+                continue
 
             # Logique de répartition
             # Si pas de dépôt ET pas d'autres paiements, n'apparaît dans aucune colonne
@@ -341,14 +399,23 @@ def get_status_columns_facturation_qe(username: str):
             autres_en_traitement = any(p.get("statut") == "traitement" for p in autres_paiements) if a_autres_paiements else False
 
             # Déterminer la colonne
-            if (statut_depot == "traite" and
-                (statut_paiement_final == "traite" or statut_paiement_final is None) and
-                autres_paiements_tous_traites):
-                # Tout terminé -> Traitées
+            # Un dépôt est considéré "traité" si son statut est "traite"
+            depot_completement_traite = statut_depot == "traite"
+            paiement_final_traite = statut_paiement_final == "traite"
+
+            # LOGIQUE: Un client est "Traité" SEULEMENT si:
+            # 1. Paiement final est traité (statut = "traite") ET tous autres paiements traités
+            # 2. OU cas "un seul paiement" où tous les autres paiements sont traités (pas de dépôt)
+
+            if paiement_final_traite and autres_paiements_tous_traites:
+                # Paiement final traité -> Traitées
+                traitees.append(client)
+            elif (statut_depot == "non_envoye" and a_autres_paiements and autres_paiements_tous_traites):
+                # Cas "un seul paiement" traité -> Traitées
                 traitees.append(client)
             else:
                 # Tous les autres cas -> En traitement
-                # Cela inclut: dépôt en traitement, autres paiements en traitement, ou un seul paiement en traitement
+                # Inclut: dépôt traité mais en attente paiement final
                 en_traitement.append(client)
         
         return {
@@ -466,7 +533,7 @@ def envoyer_au_comptable_facturation_qe(username: str, numero_soumission: str, t
             print(f"[MONEY] [envoyer_au_comptable_facturation_qe] Détails paiement: {details_paiement}")
         
         # Mettre à jour le statut ET les détails
-        print(f"🔄 Appel update_statut_client_facturation_qe...")
+        print(f"[UPDATE] Appel update_statut_client_facturation_qe...")
         result = update_statut_client_facturation_qe(username, numero_soumission, type_paiement, nouveau_statut, details_paiement)
         print(f"[OK] Statut mis à jour avec succès: {result}")
         
@@ -477,14 +544,14 @@ def envoyer_au_comptable_facturation_qe(username: str, numero_soumission: str, t
             "message": f"{type_paiement.title()} envoyé au comptable pour {numero_soumission}",
             "statuts": result
         }
-        print(f"📤 Réponse préparée: {response_data}")
+        print(f"[RESPONSE] Reponse preparee: {response_data}")
         
         return response_data
         
     except Exception as e:
         print(f"[ERROR] [ERREUR envoyer_au_comptable_facturation_qe] {e}")
         import traceback
-        print(f"📍 Traceback: {traceback.format_exc()}")
+        print(f"[TRACE] Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -576,3 +643,58 @@ def get_clients_count_facturation_qe(username: str):
     except Exception as e:
         print(f"[ERREUR get_clients_count_facturation_qe] {e}")
         return {"total_clients": 0, "username": username}
+
+
+def get_facturations_a_traiter_count_direction():
+    """
+    Compte le nombre total de paiements à traiter pour la direction/comptable
+    (statut 'traitement' ou 'attente_comptable' pour dépôt ou paiement final)
+    Parcourt tous les entrepreneurs
+    """
+    try:
+        statuts_dir = Path("data/facturation_qe_statuts")
+        total_count = 0
+        print(f"[DEBUG] Recherche dans: {statuts_dir.absolute()}")
+
+        if not statuts_dir.exists():
+            print(f"[DEBUG] Dossier n'existe pas: {statuts_dir}")
+            return {"count": 0}
+
+        # Parcourir tous les dossiers d'entrepreneurs
+        for user_dir in statuts_dir.iterdir():
+            if user_dir.is_dir():
+                statuts_file = user_dir / "statuts_clients.json"
+                if statuts_file.exists():
+                    try:
+                        with open(statuts_file, "r", encoding="utf-8") as f:
+                            statuts = json.load(f)
+
+                        for num_soumission, data in statuts.items():
+                            # Vérifier si dépôt est à traiter (traitement ou attente_comptable)
+                            statut_depot = data.get("statutDepot", "")
+                            if statut_depot in ["traitement", "attente_comptable"]:
+                                total_count += 1
+                                continue  # Ne pas compter deux fois le même client
+
+                            # Vérifier si paiement final est à traiter
+                            statut_paiement_final = data.get("statutPaiementFinal", "")
+                            if statut_paiement_final in ["traitement", "attente_comptable"]:
+                                total_count += 1
+                                continue
+
+                            # Vérifier les autres paiements
+                            autres_paiements = data.get("autresPaiements", [])
+                            for paiement in autres_paiements:
+                                if paiement.get("statut") in ["traitement", "attente_comptable"]:
+                                    total_count += 1
+                                    break  # Ne pas compter deux fois le même client
+
+                    except Exception as e:
+                        print(f"[ERREUR] Lecture statuts {user_dir.name}: {e}")
+                        continue
+
+        return {"count": total_count}
+
+    except Exception as e:
+        print(f"[ERREUR get_facturations_a_traiter_count_direction] {e}")
+        return {"count": 0}

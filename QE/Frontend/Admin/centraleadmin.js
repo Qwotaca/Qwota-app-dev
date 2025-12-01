@@ -17,7 +17,7 @@ const AVAILABLE_ICONS = [
   'user-tie', 'users', 'user-friends', 'user-cog', 'user-shield', 'id-card',
   'building', 'city', 'industry', 'store', 'warehouse', 'home',
   'briefcase', 'business-time', 'handshake', 'project-diagram', 'sitemap', 'stream',
-  'chart-line', 'chart-bar', 'chart-pie', 'chart-area', 'analytics', 'poll',
+  'chart-line', 'chart-bar', 'chart-pie', 'chart-area', 'poll',
   'bullhorn', 'ad', 'broadcast-tower', 'bullseye', 'flag', 'rocket',
   'envelope', 'envelope-open', 'inbox', 'paper-plane', 'mail-bulk', 'at',
   'phone', 'phone-alt', 'mobile-alt', 'fax', 'comments', 'comment-dots',
@@ -40,6 +40,14 @@ let currentSelectedIcon = 'folder';
 let currentLinkData = null;
 let currentColumnSectionId = null;
 let currentSelectedColumnType = '';
+let currentCentraleType = 'coach'; // Type de centrale actuellement géré (coach ou entrepreneur)
+
+// Helper function pour ajouter le type aux requêtes
+function addTypeParam(url) {
+  if (!url) return url;
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}type=${currentCentraleType}`;
+}
 
 // DOM Elements
 const sectionsContainer = document.getElementById('sections-container');
@@ -74,9 +82,8 @@ const linkSave = document.getElementById('linkSave');
 const linkCancel = document.getElementById('linkCancel');
 
 // Viewer
-const viewerOverlay = document.getElementById('viewerOverlay');
-const viewerModal = document.getElementById('viewerModal');
-const viewerContent = document.getElementById('viewerContent');
+const viewerModal = document.getElementById('centraleViewerModal');
+const viewerContent = document.getElementById('centraleViewerContent');
 const closeViewer = document.getElementById('closeViewer');
 
 // ================================================================
@@ -143,7 +150,7 @@ async function createNewSection() {
   };
 
   try {
-    const response = await fetch('/api/centrale/sections', {
+    const response = await fetch(addTypeParam('/api/centrale/sections'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newSection)
@@ -168,7 +175,7 @@ async function updateSectionTitle(sectionId, newTitle) {
   section.title = newTitle;
 
   try {
-    await fetch('/api/centrale/sections', {
+    await fetch(addTypeParam('/api/centrale/sections'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(section)
@@ -185,7 +192,7 @@ async function updateSectionIcon(sectionId, newIcon) {
   section.icon = newIcon;
 
   try {
-    await fetch('/api/centrale/sections', {
+    await fetch(addTypeParam('/api/centrale/sections'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(section)
@@ -204,11 +211,15 @@ function openIconModal(sectionId) {
   currentSelectedIcon = section.icon;
   renderIconGrid();
 
+  // Bloquer le scroll du body
+  document.body.style.overflow = 'hidden';
   sectionModal.style.display = 'flex';
 }
 
 function closeIconModal() {
   sectionModal.style.display = 'none';
+  // Rétablir le scroll du body
+  document.body.style.overflow = '';
   currentEditingSectionId = null;
   currentSelectedIcon = 'folder';
 }
@@ -257,7 +268,7 @@ async function deleteSection(sectionId) {
   if (!confirmed) return;
 
   try {
-    const response = await fetch(`/api/centrale/sections/${sectionId}`, {
+    const response = await fetch(addTypeParam(`/api/centrale/sections/${sectionId}`), {
       method: 'DELETE'
     });
 
@@ -274,6 +285,9 @@ function openColumnModal(sectionId) {
   currentColumnSectionId = sectionId;
   currentSelectedColumnType = '';
 
+  // Bloquer le scroll du body
+  document.body.style.overflow = 'hidden';
+
   // Reset selection
   document.querySelectorAll('.column-type-card').forEach(card => {
     card.classList.remove('selected');
@@ -284,6 +298,8 @@ function openColumnModal(sectionId) {
 
 function closeColumnModal() {
   columnModal.style.display = 'none';
+  // Rétablir le scroll du body
+  document.body.style.overflow = '';
   currentColumnSectionId = null;
   currentSelectedColumnType = '';
 }
@@ -316,18 +332,33 @@ async function saveColumn() {
   const section = sections.find(s => s.id === currentColumnSectionId);
   if (!section) return;
 
+  const newColumnIndex = section.columns.length;
   section.columns.push({ name: defaultName, type });
 
   try {
-    await fetch('/api/centrale/sections', {
+    await fetch(addTypeParam('/api/centrale/sections'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(section)
     });
     renderSections();
     closeColumnModal();
+
+    // Auto-focus sur le nom de la nouvelle colonne
+    setTimeout(() => {
+      const sectionCard = document.querySelector(`#tbody-${currentColumnSectionId}`)?.closest('.box');
+      if (sectionCard) {
+        const headerInputs = sectionCard.querySelectorAll('thead input[type="text"]');
+        const newColInput = headerInputs[newColumnIndex];
+        if (newColInput) {
+          newColInput.focus();
+          newColInput.select();
+        }
+      }
+    }, 50);
   } catch (error) {
     console.error('Erreur:', error);
+    await showAlert('Erreur lors de l\'ajout de la colonne');
   }
 }
 
@@ -338,7 +369,7 @@ async function updateColumnName(sectionId, columnIndex, newName) {
   section.columns[columnIndex].name = newName;
 
   try {
-    await fetch('/api/centrale/sections', {
+    await fetch(addTypeParam('/api/centrale/sections'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(section)
@@ -365,7 +396,7 @@ async function deleteColumn(sectionId, columnIndex) {
   });
 
   try {
-    await fetch('/api/centrale/sections', {
+    await fetch(addTypeParam('/api/centrale/sections'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(section)
@@ -470,11 +501,48 @@ function createSectionCard(section) {
   leftContainer.appendChild(iconWrapper);
   leftContainer.appendChild(titleInput);
 
-  const deleteBtn = document.createElement('button');
-  deleteBtn.className = 'delete-section-btn';
-  deleteBtn.style.cssText = `
-    width: 40px;
-    height: 40px;
+  // Conteneur droite: actions + boutons
+  const rightContainer = document.createElement('div');
+  rightContainer.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  `;
+
+  // Bouton d'ajout de colonne (icône uniquement)
+  const addColumnBtn = document.createElement('button');
+  addColumnBtn.style.cssText = `
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: rgba(96, 165, 250, 0.1);
+    border: 1px solid rgba(96, 165, 250, 0.3);
+    color: var(--primary-blue);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  `;
+  addColumnBtn.innerHTML = '<i class="fas fa-columns"></i>';
+  addColumnBtn.title = 'Ajouter une colonne';
+  addColumnBtn.addEventListener('mouseenter', () => {
+    addColumnBtn.style.background = 'rgba(96, 165, 250, 0.2)';
+    addColumnBtn.style.borderColor = 'var(--primary-blue)';
+    addColumnBtn.style.transform = 'scale(1.05)';
+  });
+  addColumnBtn.addEventListener('mouseleave', () => {
+    addColumnBtn.style.background = 'rgba(96, 165, 250, 0.1)';
+    addColumnBtn.style.borderColor = 'rgba(96, 165, 250, 0.3)';
+    addColumnBtn.style.transform = 'scale(1)';
+  });
+  addColumnBtn.addEventListener('click', () => openColumnModal(section.id));
+
+  // Bouton de suppression de la section (icône uniquement)
+  const deleteSectionBtn = document.createElement('button');
+  deleteSectionBtn.style.cssText = `
+    width: 48px;
+    height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -484,43 +552,23 @@ function createSectionCard(section) {
     color: #ef4444;
     cursor: pointer;
     transition: all 0.2s ease;
-    margin-left: 1rem;
   `;
-  deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-  deleteBtn.addEventListener('mouseenter', () => {
-    deleteBtn.style.background = 'rgba(239, 68, 68, 0.2)';
-    deleteBtn.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+  deleteSectionBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+  deleteSectionBtn.title = 'Supprimer la section';
+  deleteSectionBtn.addEventListener('mouseenter', () => {
+    deleteSectionBtn.style.background = 'rgba(239, 68, 68, 0.2)';
+    deleteSectionBtn.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+    deleteSectionBtn.style.transform = 'scale(1.05)';
   });
-  deleteBtn.addEventListener('mouseleave', () => {
-    deleteBtn.style.background = 'rgba(239, 68, 68, 0.1)';
-    deleteBtn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+  deleteSectionBtn.addEventListener('mouseleave', () => {
+    deleteSectionBtn.style.background = 'rgba(239, 68, 68, 0.1)';
+    deleteSectionBtn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+    deleteSectionBtn.style.transform = 'scale(1)';
   });
-  deleteBtn.addEventListener('click', () => deleteSection(section.id));
-
-  leftContainer.appendChild(deleteBtn);
-
-  // Conteneur droite: actions + boutons
-  const rightContainer = document.createElement('div');
-  rightContainer.style.cssText = `
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  `;
-
-  const addColumnBtn = document.createElement('button');
-  addColumnBtn.className = 'btn-secondary';
-  addColumnBtn.style.height = '48px';
-  addColumnBtn.innerHTML = '<i class="fas fa-columns mr-2"></i>Ajouter une colonne';
-  addColumnBtn.addEventListener('click', () => openColumnModal(section.id));
-
-  const addRowBtn = document.createElement('button');
-  addRowBtn.className = 'btn-secondary';
-  addRowBtn.style.height = '48px';
-  addRowBtn.innerHTML = '<i class="fas fa-plus mr-2"></i>Ajouter une ligne';
-  addRowBtn.addEventListener('click', () => addRow(section.id));
+  deleteSectionBtn.addEventListener('click', () => deleteSection(section.id));
 
   rightContainer.appendChild(addColumnBtn);
-  rightContainer.appendChild(addRowBtn);
+  rightContainer.appendChild(deleteSectionBtn);
 
   header.appendChild(leftContainer);
   header.appendChild(rightContainer);
@@ -545,7 +593,7 @@ function createSectionCard(section) {
 
   // Colonne Élément (toujours présente, éditable)
   const thElement = document.createElement('th');
-  thElement.style.padding = '0.5rem 1rem';
+  thElement.style.padding = '0.5rem 0rem 0.5rem 1rem';
 
   const inputElement = document.createElement('input');
   inputElement.type = 'text';
@@ -591,7 +639,7 @@ function createSectionCard(section) {
   // Colonnes dynamiques (éditables)
   section.columns.slice(1).forEach((col, index) => {
     const th = document.createElement('th');
-    th.style.padding = '0.5rem 1rem';
+    th.style.padding = '0.5rem 0rem 0.5rem 1rem';
     th.style.position = 'relative';
 
     const columnWrapper = document.createElement('div');
@@ -640,10 +688,11 @@ function createSectionCard(section) {
     });
 
     const deleteColBtn = document.createElement('button');
+    deleteColBtn.className = 'delete-col-btn';
     deleteColBtn.style.cssText = `
       width: 28px;
       height: 28px;
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
       border-radius: 6px;
@@ -668,15 +717,22 @@ function createSectionCard(section) {
     });
     deleteColBtn.addEventListener('click', () => deleteColumn(section.id, index + 1));
 
+    // Afficher le bouton de suppression au hover du th
+    th.addEventListener('mouseenter', () => {
+      deleteColBtn.style.display = 'flex';
+    });
+    th.addEventListener('mouseleave', () => {
+      deleteColBtn.style.display = 'none';
+    });
+
     columnWrapper.appendChild(input);
     columnWrapper.appendChild(deleteColBtn);
     th.appendChild(columnWrapper);
     headerRow.appendChild(th);
   });
 
-  // Colonne Action
+  // Colonne Action (vide, juste pour les boutons de suppression)
   const thAction = document.createElement('th');
-  thAction.textContent = 'Action';
   thAction.style.cssText = `
     width: 80px;
     min-width: 80px;
@@ -708,6 +764,57 @@ function createSectionCard(section) {
     tbody.appendChild(emptyRow);
   }
 
+  // Ajouter la ligne avec le bouton "Ajouter une ligne"
+  const addRowTr = document.createElement('tr');
+  addRowTr.className = 'add-row-tr';
+  const addRowTd = document.createElement('td');
+  addRowTd.colSpan = section.columns.length + 1;
+  addRowTd.style.cssText = `
+    padding: 0;
+    border: none;
+  `;
+
+  const addRowContainer = document.createElement('div');
+  addRowContainer.style.cssText = `
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid rgba(71, 85, 105, 0.3);
+    background: rgba(30, 41, 59, 0.2);
+  `;
+
+  const addRowBtn = document.createElement('button');
+  addRowBtn.className = 'add-row-btn';
+  addRowBtn.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+  `;
+  addRowBtn.innerHTML = '<i class="fas fa-plus"></i><span>Ajouter une ligne</span>';
+  addRowBtn.addEventListener('mouseenter', () => {
+    addRowBtn.style.background = 'rgba(96, 165, 250, 0.1)';
+    addRowBtn.style.color = 'var(--primary-blue)';
+  });
+  addRowBtn.addEventListener('mouseleave', () => {
+    addRowBtn.style.background = 'transparent';
+    addRowBtn.style.color = 'var(--text-secondary)';
+  });
+  addRowBtn.addEventListener('click', () => addRow(section.id));
+
+  addRowContainer.appendChild(addRowBtn);
+  addRowTd.appendChild(addRowContainer);
+  addRowTr.appendChild(addRowTd);
+  tbody.appendChild(addRowTr);
+
   table.appendChild(tbody);
   tableWrapper.appendChild(table);
   tableContainer.appendChild(tableWrapper);
@@ -725,6 +832,7 @@ function createTableRow(section, row) {
 
   // Colonne Élément
   const tdElement = document.createElement('td');
+  tdElement.style.padding = '0.5rem 0rem 0.5rem 1rem';
   const elementInput = document.createElement('input');
   elementInput.type = 'text';
   elementInput.className = 'input-field';
@@ -737,6 +845,7 @@ function createTableRow(section, row) {
   // Colonnes dynamiques
   section.columns.slice(1).forEach(col => {
     const td = document.createElement('td');
+    td.style.padding = '0.5rem 0rem 0.5rem 1rem';
 
     switch (col.type) {
       case COLUMN_TYPES.FICHIER:
@@ -916,7 +1025,7 @@ function createFileIcon(file, sectionId, rowId, container) {
     if (!confirmed) return;
 
     try {
-      await fetch(`/api/centrale/files/${sectionId}/${rowId}/${file.name}`, {
+      await fetch(addTypeParam(`/api/centrale/files/${sectionId}/${rowId}/${file.name}`), {
         method: 'DELETE'
       });
       iconWrapper.remove();
@@ -952,7 +1061,7 @@ async function addRow(sectionId) {
   };
 
   try {
-    const response = await fetch(`/api/centrale/sections/${sectionId}/rows`, {
+    const response = await fetch(addTypeParam(`/api/centrale/sections/${sectionId}/rows`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newRow)
@@ -962,9 +1071,28 @@ async function addRow(sectionId) {
       const data = await response.json();
       section.rows.push(data.row);
       renderSections();
+
+      // Auto-focus sur le champ élément de la nouvelle ligne avec animation
+      setTimeout(() => {
+        const newRowEl = document.querySelector(`tr[data-row-id="${newRow.id}"]`);
+        if (newRowEl) {
+          newRowEl.classList.add('new-row');
+          const elementInput = newRowEl.querySelector('input[type="text"]');
+          if (elementInput) {
+            elementInput.focus();
+            elementInput.select();
+          }
+
+          // Retirer la classe après l'animation
+          setTimeout(() => {
+            newRowEl.classList.remove('new-row');
+          }, 300);
+        }
+      }, 50);
     }
   } catch (error) {
     console.error('Erreur:', error);
+    await showAlert('Erreur lors de l\'ajout de la ligne');
   }
 }
 
@@ -973,7 +1101,7 @@ async function deleteRow(sectionId, rowId) {
   if (!confirmed) return;
 
   try {
-    const response = await fetch(`/api/centrale/sections/${sectionId}/rows/${rowId}`, {
+    const response = await fetch(addTypeParam(`/api/centrale/sections/${sectionId}/rows/${rowId}`), {
       method: 'DELETE'
     });
 
@@ -986,6 +1114,7 @@ async function deleteRow(sectionId, rowId) {
     }
   } catch (error) {
     console.error('Erreur:', error);
+    await showAlert('Erreur lors de la suppression de la ligne');
   }
 }
 
@@ -1012,7 +1141,7 @@ async function saveRowData(sectionId, rowId) {
   });
 
   try {
-    await fetch(`/api/centrale/sections/${sectionId}/rows/${rowId}`, {
+    await fetch(addTypeParam(`/api/centrale/sections/${sectionId}/rows/${rowId}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(rowData)
@@ -1038,7 +1167,7 @@ async function handleFileUpload(e, sectionId, rowId, container) {
     formData.append('file', file);
 
     try {
-      const response = await fetch(`/api/centrale/files/${sectionId}/${rowId}`, {
+      const response = await fetch(addTypeParam(`/api/centrale/files/${sectionId}/${rowId}`), {
         method: 'POST',
         body: formData
       });
@@ -1072,19 +1201,23 @@ function openFileViewer(url) {
   if (['png', 'jpg', 'jpeg', 'gif'].includes(ext)) {
     const img = document.createElement('img');
     img.src = url;
+    img.style.maxWidth = '100%';
+    img.style.maxHeight = '85vh';
+    img.style.objectFit = 'contain';
     viewerContent.appendChild(img);
   } else {
     const iframe = document.createElement('iframe');
     iframe.src = url;
+    iframe.style.width = '100%';
+    iframe.style.height = '85vh';
+    iframe.style.border = 'none';
     viewerContent.appendChild(iframe);
   }
 
-  viewerOverlay.style.display = 'block';
-  viewerModal.style.display = 'block';
+  viewerModal.style.display = 'flex';
 }
 
 function closeFileViewer() {
-  viewerOverlay.style.display = 'none';
   viewerModal.style.display = 'none';
   viewerContent.innerHTML = '';
 }
@@ -1105,7 +1238,7 @@ async function saveLinkData() {
   }
 
   try {
-    await fetch(`/api/centrale/sections/${currentLinkData.sectionId}/rows/${currentLinkData.rowId}/link`, {
+    await fetch(addTypeParam(`/api/centrale/sections/${currentLinkData.sectionId}/rows/${currentLinkData.rowId}/link`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1138,7 +1271,8 @@ async function saveLinkData() {
 
 async function loadSections() {
   try {
-    const response = await fetch('/api/centrale/sections');
+    console.log('Chargement sections pour type:', currentCentraleType);
+    const response = await fetch(addTypeParam('/api/centrale/sections'));
     if (response.ok) {
       const data = await response.json();
       sections = data.sections || [];
@@ -1180,6 +1314,43 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// Double-click pour sélectionner et sauvegarder immédiatement
+document.addEventListener('dblclick', (e) => {
+  const card = e.target.closest('.column-type-card');
+  if (card && columnModal.style.display === 'flex') {
+    currentSelectedColumnType = card.dataset.type;
+    saveColumn();
+  }
+});
+
+// Support clavier pour le modal de colonnes
+document.addEventListener('keydown', (e) => {
+  if (columnModal.style.display === 'flex') {
+    // Enter pour confirmer
+    if (e.key === 'Enter' && currentSelectedColumnType) {
+      e.preventDefault();
+      saveColumn();
+    }
+    // Escape pour annuler
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeColumnModal();
+    }
+    // Touches 1-4 pour sélection rapide
+    const types = ['fichier', 'numero', 'texte', 'lien'];
+    const index = parseInt(e.key) - 1;
+    if (index >= 0 && index < types.length) {
+      e.preventDefault();
+      document.querySelectorAll('.column-type-card').forEach(c => {
+        c.classList.remove('selected');
+      });
+      const cards = document.querySelectorAll('.column-type-card');
+      cards[index].classList.add('selected');
+      currentSelectedColumnType = types[index];
+    }
+  }
+});
+
 // Modal lien
 linkSave.addEventListener('click', saveLinkData);
 linkCancel.addEventListener('click', () => {
@@ -1189,7 +1360,9 @@ linkCancel.addEventListener('click', () => {
 
 // Viewer
 closeViewer.addEventListener('click', closeFileViewer);
-viewerOverlay.addEventListener('click', closeFileViewer);
+viewerModal.addEventListener('click', (e) => {
+  if (e.target === viewerModal) closeFileViewer();
+});
 
 sectionModal.addEventListener('click', (e) => {
   if (e.target === sectionModal) closeIconModal();
@@ -1207,9 +1380,45 @@ linkModal.addEventListener('click', (e) => {
 });
 
 // ================================================================
+// SÉLECTEUR DE TYPE DE CENTRALE
+// ================================================================
+
+function switchCentraleType(type) {
+  currentCentraleType = type;
+
+  // Mettre à jour l'apparence des boutons
+  const coachBtn = document.getElementById('select-coach-centrale');
+  const entrepreneurBtn = document.getElementById('select-entrepreneur-centrale');
+  const currentName = document.getElementById('current-centrale-name');
+
+  if (type === 'coach') {
+    coachBtn.className = 'btn-primary';
+    entrepreneurBtn.className = 'btn-secondary';
+    currentName.textContent = 'Centrale Coach';
+  } else {
+    coachBtn.className = 'btn-secondary';
+    entrepreneurBtn.className = 'btn-primary';
+    currentName.textContent = 'Centrale Entrepreneur';
+  }
+
+  // Recharger les sections
+  loadSections();
+}
+
+// ================================================================
 // INITIALIZATION
 // ================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Event listeners pour les boutons de sélection
+  document.getElementById('select-coach-centrale').addEventListener('click', () => {
+    switchCentraleType('coach');
+  });
+
+  document.getElementById('select-entrepreneur-centrale').addEventListener('click', () => {
+    switchCentraleType('entrepreneur');
+  });
+
+  // Charger les sections pour le type par défaut (coach)
   loadSections();
 });

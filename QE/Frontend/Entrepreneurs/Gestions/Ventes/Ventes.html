@@ -35,6 +35,38 @@
     // username, userRole, canEditParameters sont disponibles globalement
   </script>
 
+  <!-- ANTI-FLASH: Détection coach AVANT le rendu du body -->
+  <script>
+    (function() {
+      const userRole = localStorage.getItem('userRole');
+      const isCoach = userRole === 'coach';
+      const urlParams = new URLSearchParams(window.location.search);
+      const hasUserParam = urlParams.get('user');
+
+      if (isCoach && !hasUserParam) {
+        // Injecter le CSS immédiatement pour cacher le contenu et afficher le sélecteur
+        const style = document.createElement('style');
+        style.id = 'coach-anti-flash-css';
+        style.textContent = `
+          .main-content {
+            opacity: 0 !important;
+            pointer-events: none !important;
+          }
+          #coach-selector-backdrop {
+            display: block !important;
+            opacity: 1 !important;
+            pointer-events: all !important;
+          }
+          #coach-entrepreneur-selector {
+            display: block !important;
+            opacity: 1 !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    })();
+  </script>
+
   <!-- CSS uniquement pour le menu latéral -->
   <link rel="stylesheet" href="/base.css" />
 
@@ -43,11 +75,511 @@
 
   <!-- Styles spécifiques à Ventes -->
   <link rel="stylesheet" href="/Ventes.css">
+
+  <!-- Fix pour les modals dans les iframes -->
+  <style>
+    /* Forcer tous les modals à être fixés par rapport au viewport */
+    .modal-overlay, .modal-overlay-opaque, .modal, [class*="modal"] {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      z-index: 9999 !important;
+    }
+
+    .modal-content, .modal-dialog, [class*="modal-content"], [class*="modal-dialog"] {
+      position: fixed !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      max-height: 90vh !important;
+      overflow-y: auto !important;
+      z-index: 10000 !important;
+    }
+
+    /* ============================================
+       COACH SELECTOR - CENTERED STATE (initial)
+       ============================================ */
+    #coach-entrepreneur-selector {
+      position: fixed !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) scale(1);
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%);
+      backdrop-filter: blur(20px);
+      border: 2px solid var(--border-dark);
+      border-radius: 24px;
+      padding: 2.5rem 3rem;
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5), 0 0 100px rgba(139, 92, 246, 0.1);
+      z-index: 10001 !important;
+      display: none;
+      min-width: 450px;
+      max-width: 550px;
+      transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #coach-entrepreneur-selector.visible {
+      display: block !important;
+    }
+
+    /* ============================================
+       COACH SELECTOR - HEADER STATE (after selection)
+       ============================================ */
+    #coach-entrepreneur-selector.in-header {
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      transform: translate(0, 0) scale(1);
+      border-radius: 0;
+      padding: 0.75rem 2rem;
+      min-width: 100%;
+      max-width: 100%;
+      border: none;
+      border-bottom: 2px solid var(--border-dark);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    #coach-entrepreneur-selector .selector-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      transition: all 0.4s ease;
+    }
+
+    #coach-entrepreneur-selector.in-header .selector-container {
+      flex-direction: row;
+      max-width: 1400px;
+      gap: 1rem;
+    }
+
+    /* Titre centré */
+    #coach-entrepreneur-selector .selector-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-light);
+      text-align: center;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      opacity: 1;
+      transition: all 0.4s ease;
+    }
+
+    #coach-entrepreneur-selector .selector-title i {
+      color: var(--primary-blue);
+    }
+
+    #coach-entrepreneur-selector.in-header .selector-title {
+      display: none;
+    }
+
+    /* Sous-titre */
+    #coach-entrepreneur-selector .selector-subtitle {
+      font-size: 0.9rem;
+      color: var(--text-gray);
+      text-align: center;
+      margin-bottom: 1rem;
+      opacity: 1;
+      transition: all 0.4s ease;
+    }
+
+    #coach-entrepreneur-selector.in-header .selector-subtitle {
+      display: none;
+    }
+
+    /* ============================================
+       PAGE IDENTITY - Titre de page stylisé
+       ============================================ */
+    .page-identity {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .page-icon {
+      width: 70px;
+      height: 70px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .page-icon::before {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 23px;
+      background: inherit;
+      opacity: 0.4;
+      z-index: -1;
+    }
+
+    .page-icon i {
+      font-size: 32px;
+      color: #1e293b;
+    }
+
+    .page-name {
+      font-size: 1.75rem;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+
+    /* Cacher l'identité de page quand en mode header */
+    #coach-entrepreneur-selector.in-header .page-identity {
+      display: none;
+    }
+
+    #coach-entrepreneur-selector .selector-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-light);
+      font-weight: 600;
+      font-size: 14px;
+      white-space: nowrap;
+      opacity: 0;
+      transition: all 0.4s ease;
+    }
+
+    #coach-entrepreneur-selector.in-header .selector-label {
+      opacity: 1;
+    }
+
+    #coach-entrepreneur-selector .selector-label i {
+      color: var(--primary-blue);
+      font-size: 18px;
+    }
+
+    /* ============================================
+       OVERLAY BACKDROP
+       ============================================ */
+    #coach-selector-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      z-index: 10000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    #coach-selector-backdrop.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    body.coach-mode.has-selection #coach-selector-backdrop {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* ============================================
+       DROPDOWN - Mode centré (par défaut)
+       ============================================ */
+    .coach-dropdown {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+      transition: all 0.4s ease;
+    }
+
+    #coach-entrepreneur-selector.in-header .coach-dropdown {
+      flex: 1;
+      max-width: 450px;
+    }
+
+    .coach-dropdown-toggle {
+      background: rgba(23, 32, 51, 0.8);
+      border: 2px solid var(--border-dark);
+      border-radius: 16px;
+      padding: 14px 20px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: var(--text-light);
+      font-size: 15px;
+      gap: 0.5rem;
+    }
+
+    #coach-entrepreneur-selector.in-header .coach-dropdown-toggle {
+      height: 44px;
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+    }
+
+    #coach-entrepreneur-selector.in-header .coach-dropdown-toggle:hover {
+      border-color: var(--primary-blue);
+      background: rgba(23, 32, 51, 1);
+    }
+
+    #coach-entrepreneur-selector.in-header .coach-dropdown-toggle.active {
+      border-color: var(--primary-blue);
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+    }
+
+    .coach-dropdown-toggle:hover {
+      border-color: var(--primary-blue);
+      background: rgba(23, 32, 51, 1);
+    }
+
+    .coach-dropdown-toggle.active {
+      border-color: var(--primary-blue);
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+    }
+
+    .coach-dropdown-toggle .placeholder {
+      color: var(--text-gray);
+      flex: 1;
+    }
+
+    .coach-dropdown-toggle .selected-text {
+      color: var(--text-light);
+      font-weight: 500;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .coach-dropdown-toggle .selected-text i {
+      color: var(--primary-green);
+    }
+
+    .coach-dropdown-toggle .chevron {
+      color: var(--text-gray);
+      transition: transform 0.3s ease;
+      font-size: 12px;
+    }
+
+    .coach-dropdown-toggle.active .chevron {
+      transform: rotate(180deg);
+    }
+
+    .coach-dropdown-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      background: var(--bg-card);
+      border: 2px solid var(--border-dark);
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+      z-index: 10000;
+      max-height: 320px;
+      overflow-y: auto;
+      opacity: 0;
+      transform: translateY(-10px);
+      pointer-events: none;
+      transition: all 0.3s ease;
+    }
+
+    .coach-dropdown-menu.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: all;
+    }
+
+    .coach-dropdown-option {
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 14px;
+      color: var(--text-light);
+      border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .coach-dropdown-option:hover {
+      background: rgba(59, 130, 246, 0.15);
+    }
+
+    .coach-dropdown-option:last-child {
+      border-bottom: none;
+    }
+
+    .coach-dropdown-option i {
+      color: var(--primary-green);
+      font-size: 16px;
+    }
+
+    .coach-dropdown-option-disabled {
+      padding: 12px 16px;
+      color: var(--text-gray);
+      font-style: italic;
+      cursor: default;
+      text-align: center;
+    }
+
+    /* ============================================
+       BODY STATES FOR COACH MODE
+       ============================================ */
+    body.coach-mode {
+      padding-top: 0 !important;
+    }
+
+    body.coach-mode.has-selection {
+      padding-top: 60px !important;
+    }
+
+    /* ============================================
+       MAIN CONTENT - Hidden until selection
+       ============================================ */
+    body.coach-mode .main-content {
+      opacity: 0;
+      transform: translateY(30px);
+      pointer-events: none;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body.coach-mode.has-selection .main-content {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: all;
+    }
+
+    /* Pour mobile overlay et autres éléments directs du body */
+    body.coach-mode > .mobile-overlay,
+    body.coach-mode > div:not(#coach-entrepreneur-selector):not(.mobile-overlay) {
+      margin-top: 0 !important;
+    }
+
+    /* Scrollbar personnalisée pour le dropdown */
+    .coach-dropdown-menu::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .coach-dropdown-menu::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 10px;
+    }
+
+    .coach-dropdown-menu::-webkit-scrollbar-thumb {
+      background: var(--primary-blue);
+      border-radius: 10px;
+    }
+
+    .coach-dropdown-menu::-webkit-scrollbar-thumb:hover {
+      background: #60a5fa;
+    }
+
+    /* Forcer les colonnes du tbody à respecter les largeurs du thead */
+    .modern-table {
+      table-layout: fixed !important;
+      width: 100% !important;
+    }
+
+    .modern-table tbody tr td:nth-child(1) { width: 20%; }
+    .modern-table tbody tr td:nth-child(2) { width: 15%; }
+    .modern-table tbody tr td:nth-child(3) { width: 35%; }
+    .modern-table tbody tr td:nth-child(4) { width: 15%; }
+    .modern-table tbody tr td:nth-child(5) { width: 15%; }
+
+    .modern-table td {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Scroll dans les tbody comme dans employés */
+    .modern-table tbody {
+      display: block;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .modern-table thead,
+    .modern-table tbody tr {
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+    }
+
+    .modern-table thead {
+      width: calc(100% - 3px);
+    }
+
+    /* Scrollbar personnalisée pour tbody */
+    .modern-table tbody::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    .modern-table tbody::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+    }
+
+    .modern-table tbody::-webkit-scrollbar-thumb {
+      background: var(--primary-blue);
+      border-radius: 10px;
+    }
+
+    .modern-table tbody::-webkit-scrollbar-thumb:hover {
+      background: #60a5fa;
+    }
+  </style>
 </head>
 <body class="min-h-screen" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: var(--text-light); overflow-x: hidden; margin: 0; padding: 0;">
 
   <!-- Mobile overlay for sidebar -->
   <div class="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+  <!-- Backdrop pour le sélecteur coach (état centré) -->
+  <div id="coach-selector-backdrop"></div>
+
+  <!-- Sélecteur d'entrepreneur (visible uniquement pour les coaches) -->
+  <div id="coach-entrepreneur-selector">
+    <!-- Titre de la page avec icône Ventes -->
+    <div class="page-identity">
+      <div class="page-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3), 0 0 40px rgba(139, 92, 246, 0.15);">
+        <i class="fas fa-chart-line"></i>
+      </div>
+      <div class="page-name" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #a78bfa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Ventes</div>
+    </div>
+
+    <!-- Titre et sous-titre (visibles uniquement en mode centré) -->
+    <div class="selector-title">
+      <i class="fas fa-user-tie"></i>
+      Sélectionnez un entrepreneur
+    </div>
+    <div class="selector-subtitle">Choisissez l'entrepreneur dont vous souhaitez consulter les ventes</div>
+
+    <div class="selector-container">
+      <div class="selector-label">
+        <i class="fas fa-user-tie"></i>
+        <span>Entrepreneur:</span>
+      </div>
+      <div class="coach-dropdown">
+        <div class="coach-dropdown-toggle" id="coach-dropdown-toggle">
+          <span class="placeholder">-- Sélectionner un entrepreneur --</span>
+          <i class="fas fa-chevron-down chevron"></i>
+        </div>
+        <div class="coach-dropdown-menu" id="coach-dropdown-menu">
+          <!-- Options chargées dynamiquement -->
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Section en développement (CACHÉE) -->
   <div class="main-content w-full hidden" style="width: 100%; padding: 2rem;">
@@ -103,7 +635,7 @@
             </div>
             <h2 class="box-header-title" style="margin: 0;">Clients potentiels</h2>
           </div>
-          <button onclick="ouvrirModalProspect()" class="btn-primary" style="display: flex; align-items: center; gap: 0.5rem;">
+          <button id="add-prospect-btn" onclick="ouvrirModalProspect()" class="btn-primary" style="display: flex; align-items: center; gap: 0.5rem;">
             <i class="fas fa-plus"></i>
             <span>Ajouter un client potentiel</span>
           </button>
@@ -951,6 +1483,171 @@
   <script src="/common.js"></script>
 
   <script>
+  // Gestion du sélecteur d'entrepreneur pour les coaches
+  (function() {
+    // Vérifier si l'utilisateur est un coach
+    const userRole = localStorage.getItem('userRole');
+    const isCoach = userRole === 'coach';
+
+    if (isCoach) {
+      // Ajouter la classe coach-mode au body pour ajuster le padding
+      document.body.classList.add('coach-mode');
+
+      // Afficher le sélecteur avec la classe visible
+      const selector = document.getElementById('coach-entrepreneur-selector');
+      if (selector) {
+        selector.classList.add('visible');
+      }
+
+      // Charger la liste des entrepreneurs
+      loadEntrepreneursForCoach();
+
+      // Gérer le toggle du dropdown
+      const dropdownToggle = document.getElementById('coach-dropdown-toggle');
+      const dropdownMenu = document.getElementById('coach-dropdown-menu');
+
+      if (dropdownToggle && dropdownMenu) {
+        dropdownToggle.addEventListener('click', function(e) {
+          e.stopPropagation();
+          this.classList.toggle('active');
+          dropdownMenu.classList.toggle('show');
+        });
+
+        // Fermer le dropdown en cliquant ailleurs
+        document.addEventListener('click', function(e) {
+          if (!dropdownToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
+            dropdownToggle.classList.remove('active');
+            dropdownMenu.classList.remove('show');
+          }
+        });
+      }
+    }
+
+    // Fonction pour sélectionner un entrepreneur
+    function selectEntrepreneur(username) {
+      const dropdownToggle = document.getElementById('coach-dropdown-toggle');
+      const dropdownMenu = document.getElementById('coach-dropdown-menu');
+      const selector = document.getElementById('coach-entrepreneur-selector');
+      const backdrop = document.getElementById('coach-selector-backdrop');
+
+      if (dropdownToggle) {
+        // Mettre à jour l'affichage
+        dropdownToggle.innerHTML = `
+          <span class="selected-text">
+            <i class="fas fa-user-circle"></i>
+            ${username}
+          </span>
+          <i class="fas fa-chevron-down chevron"></i>
+        `;
+
+        // Fermer le menu
+        dropdownToggle.classList.remove('active');
+        if (dropdownMenu) {
+          dropdownMenu.classList.remove('show');
+        }
+
+        // Transition vers le mode header
+        if (selector) {
+          selector.classList.add('in-header');
+        }
+        if (backdrop) {
+          backdrop.classList.remove('visible');
+        }
+
+        // Révéler le contenu principal
+        document.body.classList.add('has-selection');
+
+        // Retirer le CSS anti-flash
+        const antiFlashCss = document.getElementById('coach-anti-flash-css');
+        if (antiFlashCss) {
+          antiFlashCss.remove();
+        }
+
+        // Charger les données de l'entrepreneur sans recharger la page
+        window.username = username;
+
+        // Recharger uniquement les données dans les tableaux
+        if (typeof chargerProspects === 'function') {
+          chargerProspects();
+        }
+        if (typeof initialiserDonnees === 'function') {
+          initialiserDonnees();
+        }
+
+        // Mettre à jour l'état du bouton "Ajouter un client potentiel"
+        if (typeof updateAddProspectButtonState === 'function') {
+          updateAddProspectButtonState();
+        }
+      }
+    }
+
+    // Fonction pour charger la liste des entrepreneurs
+    async function loadEntrepreneursForCoach() {
+      try {
+        const response = await fetch(`/api/users/entrepreneurs?coach_username=${username}`);
+        const data = await response.json();
+
+        const menu = document.getElementById('coach-dropdown-menu');
+        const toggle = document.getElementById('coach-dropdown-toggle');
+        if (!menu) return;
+
+        // Vider le menu
+        menu.innerHTML = '';
+
+        if (data.entrepreneurs && data.entrepreneurs.length > 0) {
+          data.entrepreneurs.forEach(entrepreneur => {
+            const option = document.createElement('div');
+            option.className = 'coach-dropdown-option';
+            option.innerHTML = `
+              <i class="fas fa-user-circle"></i>
+              <span>${entrepreneur.username}</span>
+            `;
+            option.onclick = () => selectEntrepreneur(entrepreneur.username);
+            menu.appendChild(option);
+          });
+
+          // Si un entrepreneur est sélectionné via URL, le charger automatiquement
+          const urlParams = new URLSearchParams(window.location.search);
+          const selectedUser = urlParams.get('user');
+          if (selectedUser) {
+            // Mettre à jour l'affichage du dropdown
+            if (toggle) {
+              toggle.innerHTML = `
+                <span class="selected-text">
+                  <i class="fas fa-user-circle"></i>
+                  ${selectedUser}
+                </span>
+                <i class="fas fa-chevron-down chevron"></i>
+              `;
+            }
+
+            // Charger automatiquement les données de cet entrepreneur
+            window.username = selectedUser;
+            setTimeout(() => {
+              if (typeof chargerProspects === 'function') {
+                chargerProspects();
+              }
+              if (typeof initialiserDonnees === 'function') {
+                initialiserDonnees();
+              }
+              // Mettre à jour l'état du bouton "Ajouter un client potentiel"
+              if (typeof updateAddProspectButtonState === 'function') {
+                updateAddProspectButtonState();
+              }
+            }, 500);
+          }
+        } else {
+          const option = document.createElement('div');
+          option.className = 'coach-dropdown-option-disabled';
+          option.textContent = 'Aucun entrepreneur trouvé';
+          menu.appendChild(option);
+        }
+      } catch (error) {
+        console.error('Erreur chargement entrepreneurs:', error);
+      }
+    }
+  })();
+
   // Fonction logout - EXACT COPY from newgqp
   window.logout = function() {
     localStorage.removeItem("qwotaCredentials");
@@ -3149,7 +3846,7 @@
         <div class="flex space-x-3 pt-6 mt-6" style="border-top: 1px solid var(--border-dark);">
           <button onclick="commencerEstimation('${prospect.id}')" class="btn-primary px-4 py-2 rounded-lg flex items-center justify-center space-x-2">
             <i class="fas fa-calculator"></i>
-            <span class="hide-mobile">Commencer l'</span><span>Estimation</span>
+            <span class="hide-mobile">Commencer l'estimation</span><span class="show-mobile">Estimation</span>
           </button>
           <button onclick="document.body.style.overflow = ''; this.closest('.fixed').remove()" class="btn-secondary px-4 py-2 rounded-lg">
             Fermer
@@ -3349,12 +4046,57 @@
     }
   }
 
+  // Fonction pour gérer l'état du bouton "Ajouter un client potentiel" pour les coaches
+  function updateAddProspectButtonState() {
+    const userRole = localStorage.getItem('userRole');
+    const currentUsername = localStorage.getItem('username');
+
+    if (userRole === 'coach') {
+      const addProspectBtn = document.getElementById('add-prospect-btn');
+      if (addProspectBtn) {
+        // Vérifier si un entrepreneur est chargé via window.username
+        const isViewingEntrepreneur = window.username && window.username !== currentUsername;
+
+        if (isViewingEntrepreneur) {
+          // Activer le bouton
+          addProspectBtn.disabled = false;
+          addProspectBtn.style.opacity = '1';
+          addProspectBtn.style.cursor = 'pointer';
+          addProspectBtn.style.transform = '';
+          addProspectBtn.style.pointerEvents = '';
+          addProspectBtn.onclick = () => ouvrirModalProspect();
+        } else {
+          // Désactiver le bouton
+          addProspectBtn.disabled = true;
+          addProspectBtn.style.opacity = '0.5';
+          addProspectBtn.style.cursor = 'not-allowed';
+          addProspectBtn.style.transform = 'none';
+          addProspectBtn.style.pointerEvents = 'none';
+          addProspectBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          };
+        }
+      }
+    }
+  }
+
   // Démarrer le chargement dès que le DOM est prêt
   document.addEventListener('DOMContentLoaded', function() {
     updateCurrentDate(); // Mettre à jour la date
+
+    // Mettre à jour immédiatement l'état du bouton (il sera grisé par défaut pour les coaches)
+    updateAddProspectButtonState();
+
     setTimeout(initialiserDonnees, 200); // Charger les données avec délai (comme dashboard)
     setTimeout(chargerProspects, 200); // Charger les prospects avec délai (comme dashboard)
     setTimeout(setupSearchListeners, 300); // Configurer les recherches après le chargement
+
+    // Re-vérifier l'état du bouton après que l'entrepreneur soit chargé (si un URL param existe)
+    setTimeout(() => {
+      updateAddProspectButtonState();
+    }, 550); // Juste après le chargement de l'entrepreneur (500ms)
 
     // Ajouter le bouton Clients perdus s'il n'existe pas déjà
     setTimeout(() => {

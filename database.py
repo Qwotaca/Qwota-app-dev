@@ -65,9 +65,45 @@ def init_database():
                 last_login TEXT,
                 is_active INTEGER DEFAULT 1,
                 onboarding_completed INTEGER DEFAULT 0,
-                videos_completed INTEGER DEFAULT 0
+                videos_completed INTEGER DEFAULT 0,
+                prenom TEXT,
+                nom TEXT,
+                telephone TEXT,
+                adresse TEXT,
+                photo_url TEXT
             )
         ''')
+
+        # Ajouter les colonnes manquantes si elles n'existent pas (pour les bases existantes)
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN prenom TEXT")
+        except sqlite3.OperationalError:
+            pass  # La colonne existe déjà
+
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN nom TEXT")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN telephone TEXT")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN adresse TEXT")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN photo_url TEXT")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN coach_id INTEGER")
+        except sqlite3.OperationalError:
+            pass
 
         # Table de progression du guide vidéo
         cursor.execute('''
@@ -170,10 +206,14 @@ def create_user(username: str, password: str, role: str, email: Optional[str] = 
             hashed_pw = hash_password(password)
             created_at = datetime.now().isoformat()
 
+            # Si aucun email fourni, générer un email par défaut basé sur le username
+            if not email:
+                email = f"{username}@qwota.local"
+
             cursor.execute('''
                 INSERT INTO users (username, password_hash, role, email, created_at, is_active)
                 VALUES (?, ?, ?, ?, ?, 1)
-            ''', (username, hashed_pw, role, email or '', created_at))
+            ''', (username, hashed_pw, role, email, created_at))
 
             conn.commit()
 
@@ -256,7 +296,7 @@ def list_all_users() -> List[Dict]:
             cursor = conn.cursor()
 
             cursor.execute('''
-                SELECT id, username, role, email, created_at, last_login
+                SELECT id, username, role, email, created_at, last_login, coach_id
                 FROM users
                 WHERE is_active = 1
                 ORDER BY created_at DESC

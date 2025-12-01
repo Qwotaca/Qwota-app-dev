@@ -1,0 +1,1859 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Facturation QE - Direction</title>
+
+  <!-- PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#1f2937">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Feuille de style principale - Thème Dark -->
+  <link rel="stylesheet" href="/base.css">
+
+  <style>
+    /* Container principal */
+    .validation-container {
+      width: 100%;
+      padding: 2rem;
+    }
+
+    /* Header */
+    .page-header {
+      margin-bottom: 2rem;
+    }
+
+    .page-title {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-light);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .page-title i {
+      color: var(--primary-blue);
+    }
+
+    .page-subtitle {
+      font-size: 1rem;
+      color: var(--text-gray);
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 2rem;
+      margin-bottom: 2rem;
+      border-bottom: 2px solid rgba(71, 85, 105, 0.3);
+    }
+
+    .tab {
+      padding: 0.75rem 1.5rem;
+      background: transparent;
+      border: none;
+      color: var(--text-gray);
+      font-weight: 600;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .tab:hover {
+      color: var(--text-light);
+    }
+
+    .tab.active {
+      color: #60a5fa;
+    }
+
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Table */
+    .table-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-dark);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: var(--shadow-dark-medium);
+      max-height: none !important;
+      height: 850px !important;
+    }
+
+    .table-header {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(51, 65, 85, 0.8) 100%);
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border-dark);
+    }
+
+    .table-header h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-light);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .table-body {
+      padding: 1.5rem;
+      box-sizing: border-box;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-gray);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 2px solid var(--border-dark);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+      transition: background-color 0.2s ease;
+    }
+
+    tbody tr:hover {
+      background-color: rgba(59, 130, 246, 0.05);
+    }
+
+    tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    tbody td {
+      padding: 1rem;
+      font-size: 0.875rem;
+      color: var(--text-light);
+    }
+
+    /* Badges */
+    .entrepreneur-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.375rem 0.75rem;
+      background: rgba(96, 165, 250, 0.1);
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      border-radius: 8px;
+      color: var(--primary-blue);
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .entrepreneur-badge i {
+      font-size: 0.75rem;
+    }
+
+    /* Type badges */
+    .type-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .type-badge.depot {
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+    }
+
+    .type-badge.paiement-final {
+      background: rgba(34, 197, 94, 0.15);
+      color: #22c55e;
+    }
+
+    .type-badge.autres {
+      background: rgba(168, 85, 247, 0.15);
+      color: #a855f7;
+    }
+
+    /* Boutons d'action */
+    .action-buttons {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-validate {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.5rem 1rem;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-validate:hover {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .btn-refuse {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.5rem 1rem;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-refuse:hover {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .btn-view {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.5rem 1rem;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-view:hover {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.5rem 1rem;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+      transform: translateY(-2px);
+    }
+
+    /* Empty state */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--text-gray);
+      width: 100%;
+      min-height: 200px;
+    }
+
+    .empty-state i {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+
+    .empty-state p {
+      font-size: 1.125rem;
+    }
+
+    /* Loading state */
+    .loading-shimmer {
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .validation-container {
+        padding: 1rem;
+      }
+
+      .page-title {
+        font-size: 1.5rem;
+      }
+
+      table {
+        font-size: 0.8rem;
+      }
+
+      thead th, tbody td {
+        padding: 0.5rem;
+      }
+
+      .action-buttons {
+        flex-direction: column;
+      }
+
+      .btn-validate, .btn-refuse, .btn-view {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
+    /* ============================================
+       MODAL DÉTAILS TRAITEMENT - DIRECTION
+       ============================================ */
+    .modal-details-traitement {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-details-backdrop {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+    }
+
+    .modal-details-content {
+      position: relative;
+      background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 20px;
+      width: 90%;
+      max-width: 700px;
+      max-height: 85vh;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      animation: modalSlideIn 0.3s ease-out;
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .modal-details-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.25rem 1.5rem;
+      background: rgba(15, 23, 42, 0.5);
+      border-bottom: 1px solid #94a3b81a;
+    }
+
+    .modal-header-title {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .modal-header-title i {
+      font-size: 1.5rem;
+      color: var(--text-light);
+    }
+
+    .modal-header-title h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-light);
+    }
+
+    .modal-close-btn {
+      background: rgba(239, 68, 68, 0.2);
+      border: none;
+      border-radius: 10px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #f87171;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close-btn:hover {
+      background: rgba(239, 68, 68, 0.4);
+      transform: scale(1.1);
+    }
+
+    .modal-details-body {
+      padding: 1.5rem;
+      overflow-y: auto;
+      max-height: calc(85vh - 160px);
+    }
+
+    /* Sections du modal */
+    .modal-section {
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(148, 163, 184, 0.1);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .modal-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .modal-section-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .modal-section-title i {
+      font-size: 1rem;
+    }
+
+    .modal-info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+    }
+
+    .modal-info-row:not(:last-child) {
+      border-bottom: 1px dashed rgba(148, 163, 184, 0.1);
+    }
+
+    .modal-info-label {
+      color: #64748b;
+      font-size: 0.875rem;
+    }
+
+    .modal-info-value {
+      color: var(--text-light);
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .modal-info-value.highlight {
+      color: #22c55e;
+      font-weight: 600;
+    }
+
+    .modal-info-value.warning {
+      color: #fb923c;
+    }
+
+    /* Lien cliquable */
+    .modal-link {
+      color: #60a5fa;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.2s ease;
+    }
+
+    .modal-link:hover {
+      color: #93c5fd;
+      text-decoration: underline;
+    }
+
+    /* Bouton voir soumission */
+    .modal-voir-soumission {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, rgba(96, 165, 250, 0.2) 0%, rgba(59, 130, 246, 0.15) 100%);
+      border: 1px solid rgba(96, 165, 250, 0.4);
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      color: #60a5fa;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .modal-voir-soumission:hover {
+      background: linear-gradient(135deg, rgba(96, 165, 250, 0.3) 0%, rgba(59, 130, 246, 0.25) 100%);
+      transform: translateY(-1px);
+    }
+
+    .modal-details-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      padding: 1rem 1.5rem;
+      background: rgba(15, 23, 42, 0.5);
+      border-top: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .modal-details-footer .btn {
+      padding: 0.625rem 1.25rem;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .modal-details-footer .btn-refuser {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+      border: none !important;
+      color: white !important;
+    }
+
+    .modal-details-footer .btn-refuser:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
+
+    .modal-details-footer .btn-accepter {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
+      border: none !important;
+      color: white !important;
+    }
+
+    .modal-details-footer .btn-accepter:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+    }
+
+    /* Modal Soumission PDF */
+    .modal-soumission {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 100001;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+    }
+
+    .modal-soumission.active {
+      display: flex;
+    }
+
+    .modal-soumission-content {
+      background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 20px;
+      width: 95%;
+      max-width: 1000px;
+      max-height: 90vh;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-soumission-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      background: rgba(15, 23, 42, 0.5);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .modal-soumission-header h3 {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--text-light);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .modal-soumission-body {
+      padding: 1rem;
+      height: 70vh;
+    }
+
+    .modal-footer {
+      padding: 1.5rem;
+      border-top: 1px solid var(--border-dark);
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+    }
+
+    /* ============================================
+       OVERLAY DE CHARGEMENT - DIRECTION
+       ============================================ */
+    .loading-overlay-direction {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      z-index: 999999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .loading-overlay-direction.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .loading-overlay-direction .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(59, 130, 246, 0.2);
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .loading-overlay-direction .loading-text {
+      margin-top: 1rem;
+      color: var(--text-light);
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Toast Success */
+    .toast-success-direction {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(34, 197, 94, 0.4);
+      z-index: 999999;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transform: translateX(150%);
+      transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+
+    .toast-success-direction.active {
+      transform: translateX(0);
+    }
+
+    .toast-success-direction i {
+      font-size: 1.25rem;
+    }
+
+    .toast-success-direction .toast-content h4 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .toast-success-direction .toast-content p {
+      margin: 0.25rem 0 0 0;
+      font-size: 0.8rem;
+      opacity: 0.9;
+    }
+
+    /* ============================================
+       MODAL REFUS AVEC RAISON
+       ============================================ */
+    .modal-refus {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 100000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-refus-backdrop {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+    }
+
+    .modal-refus-content {
+      position: relative;
+      background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 20px;
+      width: 90%;
+      max-width: 500px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px rgba(239, 68, 68, 0.1);
+      animation: modalSlideIn 0.3s ease-out;
+    }
+
+    .modal-refus-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.25rem 1.5rem;
+      background: rgba(239, 68, 68, 0.1);
+      border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .modal-refus-body {
+      padding: 1.5rem;
+    }
+
+    .modal-refus-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      padding: 1rem 1.5rem;
+      background: rgba(15, 23, 42, 0.5);
+      border-top: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .btn-annuler {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      background: rgba(100, 116, 139, 0.2);
+      border: 1px solid rgba(100, 116, 139, 0.3);
+      border-radius: 10px;
+      color: var(--text-gray);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-annuler:hover {
+      background: rgba(100, 116, 139, 0.3);
+      color: var(--text-light);
+    }
+
+    .btn-confirmer-refus {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-confirmer-refus:hover {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-confirmer-refus:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen" style="margin: 0; padding: 0; background: var(--bg-dark);">
+
+  <!-- Overlay de chargement -->
+  <div id="loadingOverlayDirection" class="loading-overlay-direction">
+    <div class="spinner"></div>
+    <div class="loading-text">Traitement en cours...</div>
+  </div>
+
+  <!-- Toast de succès -->
+  <div id="toastSuccessDirection" class="toast-success-direction">
+    <i class="fas fa-check-circle"></i>
+    <div class="toast-content">
+      <h4 id="toastTitle">Succès</h4>
+      <p id="toastMessage">Paiement traité avec succès</p>
+    </div>
+  </div>
+
+  <div class="validation-container">
+    <!-- Header -->
+    <div class="mb-10" style="margin-top: 2rem;">
+      <div class="relative">
+        <h1 class="text-4xl font-bold mb-3">
+          Facturation QE
+        </h1>
+        <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        <div class="flex items-center justify-between mt-6">
+          <p class="text-xl font-medium" style="color: var(--text-gray);">Validez ou refusez les paiements en attente de traitement</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('general')" data-tab="general">
+        <i class="fas fa-file-invoice-dollar" style="margin-right: 0.5rem;"></i>Général
+      </button>
+      <button class="tab" onclick="switchTab('historique')" data-tab="historique">
+        <i class="fas fa-history" style="margin-right: 0.5rem;"></i>Historique
+      </button>
+    </div>
+
+    <!-- Vue Général -->
+    <div id="general-view" class="tab-content active">
+    <!-- Layout 2 colonnes -->
+    <div style="display: flex; gap: 1.5rem; align-items: stretch; height: 850px;">
+
+      <!-- Colonne gauche: Table principale -->
+      <div class="table-container" style="flex: 1; height: 850px; display: flex; flex-direction: column;">
+        <div class="table-header" style="flex-shrink: 0;">
+          <h2>
+            <i class="fas fa-list"></i>
+            Paiements en attente de traitement
+          </h2>
+        </div>
+        <div class="table-body" style="flex: 1; min-height: 0; overflow-y: auto;">
+          <div id="loading-state" class="empty-state loading-shimmer" style="height: 100%;">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Chargement des paiements...</p>
+          </div>
+          <div id="empty-state" class="empty-state" style="display: none; height: 100%;">
+            <i class="fas fa-check-circle"></i>
+            <p>Aucun paiement en attente de traitement</p>
+          </div>
+          <table id="payments-table" style="display: none; width: 100%;">
+            <thead>
+              <tr>
+                <th>Entrepreneur</th>
+                <th>Client</th>
+                <th>N° Soumission</th>
+                <th>Type</th>
+                <th>Montant</th>
+                <th>Date</th>
+                <th style="text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="payments-tbody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Colonne droite: Stats + 5 derniers traités -->
+      <div style="width: 340px; height: 850px; display: flex; flex-direction: column; gap: 0.75rem;">
+
+        <!-- Total en traitement -->
+        <div style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: 10px; padding: 0.875rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+          <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center;">
+            <i class="fas fa-file-invoice-dollar" style="color: #60a5fa; font-size: 0.9rem;"></i>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-size: 0.7rem; font-weight: 500; color: var(--text-gray); text-transform: uppercase; letter-spacing: 0.3px;">Total en traitement</div>
+            <div id="stat-total" style="font-size: 1.25rem; font-weight: 700; color: var(--text-light); margin-top: 1px;">0</div>
+          </div>
+        </div>
+
+        <!-- Section Par type -->
+        <div style="font-size: 0.7rem; font-weight: 600; color: var(--text-gray); text-transform: uppercase; letter-spacing: 0.5px; padding-left: 0.25rem; margin-top: 0.5rem;">
+          <i class="fas fa-chart-pie" style="margin-right: 0.4rem; color: #60a5fa;"></i>Par type de paiement
+        </div>
+
+        <!-- Cards par type -->
+        <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem;">
+          <!-- Dépôts -->
+          <div style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: 10px; padding: 0.875rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(245, 158, 11, 0.15); display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-hand-holding-dollar" style="color: #f59e0b; font-size: 0.9rem;"></i>
+            </div>
+            <div style="flex: 1;">
+              <div style="font-size: 0.7rem; font-weight: 500; color: var(--text-gray); text-transform: uppercase; letter-spacing: 0.3px;">Dépôts</div>
+              <div id="stat-depots" style="font-size: 1.25rem; font-weight: 700; color: var(--text-light); margin-top: 1px;">0</div>
+            </div>
+          </div>
+
+          <!-- Paiements finaux -->
+          <div style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: 10px; padding: 0.875rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(34, 197, 94, 0.15); display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-check-circle" style="color: #22c55e; font-size: 0.9rem;"></i>
+            </div>
+            <div style="flex: 1;">
+              <div style="font-size: 0.7rem; font-weight: 500; color: var(--text-gray); text-transform: uppercase; letter-spacing: 0.3px;">Paiements finaux</div>
+              <div id="stat-paiements-finaux" style="font-size: 1.25rem; font-weight: 700; color: var(--text-light); margin-top: 1px;">0</div>
+            </div>
+          </div>
+
+          <!-- Autres paiements -->
+          <div style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: 10px; padding: 0.875rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(168, 85, 247, 0.15); display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-plus-circle" style="color: #a855f7; font-size: 0.9rem;"></i>
+            </div>
+            <div style="flex: 1;">
+              <div style="font-size: 0.7rem; font-weight: 500; color: var(--text-gray); text-transform: uppercase; letter-spacing: 0.3px;">Autres paiements</div>
+              <div id="stat-autres" style="font-size: 1.25rem; font-weight: 700; color: var(--text-light); margin-top: 1px;">0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Historique récent -->
+        <div style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: 10px; overflow: hidden; flex: 1; display: flex; flex-direction: column; margin-top: 0.5rem;">
+          <!-- Header -->
+          <div style="padding: 0.875rem 1rem; border-bottom: 1px solid var(--border-dark); display: flex; align-items: center; gap: 0.75rem;">
+            <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(96, 165, 250, 0.15); display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-history" style="color: #60a5fa; font-size: 0.8rem;"></i>
+            </div>
+            <div>
+              <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-light);">Historique</div>
+              <div style="font-size: 0.65rem; color: var(--text-gray);">5 dernières actions</div>
+            </div>
+          </div>
+          <!-- Liste -->
+          <div id="derniers-traites" style="padding: 0.5rem; flex: 1; overflow-y: auto;">
+            <div style="color: var(--text-gray); font-size: 0.8rem; text-align: center; padding: 1rem;">
+              <i class="fas fa-spinner fa-spin" style="margin-right: 0.5rem;"></i>Chargement...
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    </div>
+
+    <!-- Vue Historique -->
+    <div id="historique-view" class="tab-content">
+      <div class="table-container" style="height: auto; max-height: 800px;">
+        <div class="table-header">
+          <h2>
+            <i class="fas fa-history"></i>
+            Historique complet des traitements
+          </h2>
+        </div>
+        <div class="table-body" style="overflow-y: auto; max-height: 700px;">
+          <div id="historique-loading" class="empty-state loading-shimmer">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Chargement de l'historique...</p>
+          </div>
+          <div id="historique-empty" class="empty-state" style="display: none;">
+            <i class="fas fa-inbox"></i>
+            <p>Aucun historique disponible</p>
+          </div>
+          <table id="historique-table" style="display: none; width: 100%;">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Entrepreneur</th>
+                <th>Client</th>
+                <th>N° Soumission</th>
+                <th>Type</th>
+                <th>Montant</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+            <tbody id="historique-tbody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Détails Traitement Direction -->
+  <div id="modalDetailsTraitement" class="modal-details-traitement" style="display: none;">
+    <div class="modal-details-backdrop" onclick="fermerModal()"></div>
+    <div class="modal-details-content">
+      <div class="modal-details-header">
+        <div class="modal-header-title">
+          <i class="fas fa-file-invoice-dollar"></i>
+          <h2>Détails du paiement</h2>
+        </div>
+        <button class="modal-close-btn" onclick="fermerModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-details-body" id="modalDetailsBody">
+        <!-- Contenu dynamique -->
+      </div>
+
+      <div class="modal-details-footer">
+        <button class="btn btn-primary btn-refuser" onclick="refuserPaiement()">
+          <i class="fas fa-times mr-2"></i>Refuser
+        </button>
+        <button class="btn btn-primary btn-accepter" onclick="validerPaiement()">
+          <i class="fas fa-check mr-2"></i>Valider
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Refus avec Raison -->
+  <div id="modalRefus" class="modal-refus" style="display: none;">
+    <div class="modal-refus-backdrop" onclick="fermerModalRefus()"></div>
+    <div class="modal-refus-content">
+      <div class="modal-refus-header">
+        <div class="modal-header-title">
+          <i class="fas fa-times-circle" style="color: #ef4444;"></i>
+          <h2>Refuser le paiement</h2>
+        </div>
+        <button class="modal-close-btn" onclick="fermerModalRefus()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-refus-body">
+        <p style="color: var(--text-gray); margin-bottom: 1rem;">
+          Veuillez indiquer la raison du refus. Cette information sera transmise à l'entrepreneur.
+        </p>
+        <div class="form-group">
+          <label for="raisonRefus" style="color: var(--text-light); font-weight: 500; margin-bottom: 0.5rem; display: block;">
+            Raison du refus <span style="color: #ef4444;">*</span>
+          </label>
+          <textarea
+            id="raisonRefus"
+            placeholder="Ex: Montant incorrect, justificatif manquant, etc."
+            rows="4"
+            style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-dark); background: rgba(15, 23, 42, 0.5); color: var(--text-light); font-size: 0.9rem; resize: vertical;"
+          ></textarea>
+        </div>
+      </div>
+      <div class="modal-refus-footer">
+        <button class="btn-annuler" onclick="fermerModalRefus()">
+          <i class="fas fa-arrow-left"></i> Annuler
+        </button>
+        <button class="btn-confirmer-refus" onclick="confirmerRefus()">
+          <i class="fas fa-times"></i> Confirmer le refus
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Soumission PDF -->
+  <div id="soumissionModal" class="modal-soumission">
+    <div class="modal-soumission-content">
+      <div class="modal-soumission-header">
+        <h3><i class="fas fa-file-pdf"></i> Soumission</h3>
+        <button class="modal-close-btn" onclick="fermerSoumissionModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-soumission-body" id="soumissionContent">
+        <!-- PDF sera affiché ici -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Variables globales
+    let currentPayment = null;
+    let allPayments = [];
+
+    // Fonction pour formater le statut de façon lisible
+    function formaterStatut(statut, type = null) {
+      // Pour le dépôt (côté direction)
+      if (type === 'depot') {
+        if (statut === 'traite_attente_final' || statut === 'traite') {
+          return 'Dépôt traité';
+        }
+        if (statut === 'attente_comptable') {
+          return 'À valider'; // En attente de validation direction
+        }
+        if (statut === 'traitement') {
+          return 'En attente coach'; // Coach n'a pas encore validé
+        }
+      }
+      // Pour le paiement final (côté direction)
+      if (type === 'paiement_final') {
+        if (statut === 'traite') {
+          return 'Traité';
+        }
+        if (statut === 'attente_comptable') {
+          return 'À valider'; // En attente de validation direction
+        }
+        if (statut === 'traitement') {
+          return 'À traiter'; // En attente que le coach valide
+        }
+      }
+      // Fallback générique
+      const statutsMap = {
+        'traitement': 'À traiter',
+        'attente_comptable': 'À valider',
+        'traite': 'Traité',
+        'traite_attente_final': 'Dépôt traité',
+        'refuse': 'Refusé',
+        'non_envoye': 'Non envoyé'
+      };
+      return statutsMap[statut] || statut || 'N/A';
+    }
+
+    // Fonction pour changer de tab
+    function switchTab(tabName) {
+      // Update tabs
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+      // Update views
+      document.querySelectorAll('.tab-content').forEach(v => v.classList.remove('active'));
+      document.getElementById(`${tabName}-view`).classList.add('active');
+
+      // Charger les données si historique
+      if (tabName === 'historique') {
+        chargerHistorique();
+      }
+    }
+
+    // Charger les paiements en traitement pour tous les entrepreneurs
+    async function chargerPaiementsEnTraitement() {
+      try {
+        const response = await fetch('/api/comptable/facturation-en-traitement/liste');
+
+        if (!response.ok) {
+          throw new Error('Erreur lors du chargement');
+        }
+
+        const data = await response.json();
+        allPayments = data.paiements || [];
+
+        // Mettre à jour les stats
+        document.getElementById('stat-total').textContent = allPayments.length;
+        document.getElementById('stat-depots').textContent = allPayments.filter(p => p.type === 'depot').length;
+        document.getElementById('stat-paiements-finaux').textContent = allPayments.filter(p => p.type === 'paiement_final').length;
+        document.getElementById('stat-autres').textContent = allPayments.filter(p => p.type === 'autres_paiements').length;
+
+        // Afficher le tableau
+        afficherPaiements(allPayments);
+
+      } catch (error) {
+        console.error('[Direction Facturation] Erreur:', error);
+        document.getElementById('loading-state').style.display = 'none';
+        document.getElementById('empty-state').style.display = 'flex';
+      }
+    }
+
+    // Afficher les paiements dans le tableau
+    function afficherPaiements(paiements) {
+      const loadingState = document.getElementById('loading-state');
+      const emptyState = document.getElementById('empty-state');
+      const table = document.getElementById('payments-table');
+      const tbody = document.getElementById('payments-tbody');
+
+      loadingState.style.display = 'none';
+
+      if (paiements.length === 0) {
+        emptyState.style.display = 'flex';
+        table.style.display = 'none';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      table.style.display = 'table';
+
+      tbody.innerHTML = paiements.map(p => {
+        const typeClass = p.type === 'depot' ? 'depot' : (p.type === 'paiement_final' ? 'paiement-final' : 'autres');
+        let typeLabel = p.type === 'depot' ? 'Dépôt' : (p.type === 'paiement_final' ? 'Paiement final' : 'Autre');
+        // Pour les autres paiements, afficher le type spécifique
+        if (p.type === 'autres_paiements') {
+          // FALLBACK: Si typePaiementAutres est absent, déduire selon statutDepot
+          let typeAutres = p.typePaiementAutres;
+          if (!typeAutres) {
+            const statutDepot = p.statutDepot || 'non_envoye';
+            typeAutres = (statutDepot === 'non_envoye') ? 'un_seul_paiement' : 'paiement_partiel';
+          }
+          typeLabel = typeAutres === 'un_seul_paiement' ? 'Un seul paiement' : 'Paiement partiel';
+        }
+
+        // Photo de l'entrepreneur (comme dans coach_validation_employes)
+        const photoHtml = p.entrepreneurPhoto
+          ? `<img src="${p.entrepreneurPhoto}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(59, 130, 246, 0.3);">`
+          : `<div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.75rem;">${p.entrepreneur ? p.entrepreneur.charAt(0).toUpperCase() : '?'}</div>`;
+
+        return `
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                ${photoHtml}
+                <span style="font-weight: 500; color: var(--text-light);">${p.entrepreneur || 'N/A'}</span>
+              </div>
+            </td>
+            <td>${p.client || 'N/A'}</td>
+            <td style="font-weight: 600; color: #60a5fa;">${p.numeroSoumission || 'N/A'}</td>
+            <td>
+              <span class="type-badge ${typeClass}">
+                ${typeLabel}
+              </span>
+            </td>
+            <td style="font-weight: 600;">${p.montant || '0,00 $'}</td>
+            <td style="color: var(--text-gray);">${p.date || 'N/A'}</td>
+            <td>
+              <div class="action-buttons" style="justify-content: center;">
+                <button class="btn-primary" onclick='ouvrirDetails(${JSON.stringify(p).replace(/'/g, "\\'")})'>
+                  <i class="fas fa-search"></i> Vérifier
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Ouvrir le modal de détails avec toutes les informations
+    async function ouvrirDetails(paiement) {
+      currentPayment = paiement;
+      console.log('[Direction] Ouverture modal pour:', paiement);
+
+      const modalBody = document.getElementById('modalDetailsBody');
+
+      // Récupérer les données complètes depuis l'API
+      let detailsComplets = {};
+      try {
+        const responseStatuts = await fetch(`/api/facturationqe/client/${paiement.entrepreneurUsername}/${paiement.numeroSoumission}/statuts`);
+        if (responseStatuts.ok) {
+          detailsComplets = await responseStatuts.json();
+          console.log('[Direction] Détails statuts:', detailsComplets);
+        }
+      } catch (error) {
+        console.error('[Direction] Erreur récupération données:', error);
+      }
+
+      let contentHTML = '';
+
+      // Section Entrepreneur
+      const entrepreneurPhotoHtml = paiement.entrepreneurPhoto
+        ? `<img src="${paiement.entrepreneurPhoto}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(59, 130, 246, 0.3);">`
+        : `<div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.75rem;">${paiement.entrepreneur ? paiement.entrepreneur.charAt(0).toUpperCase() : '?'}</div>`;
+
+      contentHTML += `
+        <div class="modal-section">
+          <div class="modal-section-title">
+            <i class="fas fa-hard-hat" style="color: #3b82f6;"></i>
+            Entrepreneur
+          </div>
+          <div class="modal-info-row">
+            <span class="modal-info-label">Entrepreneur</span>
+            <span class="modal-info-value" style="display: flex; align-items: center; gap: 0.5rem;">
+              ${entrepreneurPhotoHtml}
+              ${paiement.entrepreneur || 'N/A'}
+            </span>
+          </div>
+        </div>
+      `;
+
+      // Section Client
+      contentHTML += `
+        <div class="modal-section">
+          <div class="modal-section-title">
+            <i class="fas fa-user" style="color: #60a5fa;"></i>
+            Informations client
+          </div>
+          <div class="modal-info-row">
+            <span class="modal-info-label">Nom complet</span>
+            <span class="modal-info-value">${paiement.client || 'Client inconnu'}</span>
+          </div>
+          <div class="modal-info-row">
+            <span class="modal-info-label">N° Soumission</span>
+            <span class="modal-info-value" style="color: #60a5fa;">${paiement.numeroSoumission || 'N/A'}</span>
+          </div>
+          ${paiement.telephone ? `
+          <div class="modal-info-row">
+            <span class="modal-info-label">Téléphone</span>
+            <span class="modal-info-value">${paiement.telephone}</span>
+          </div>` : ''}
+          ${paiement.adresse ? `
+          <div class="modal-info-row">
+            <span class="modal-info-label">Adresse</span>
+            <span class="modal-info-value">${paiement.adresse}</span>
+          </div>` : ''}
+          ${paiement.totalTravaux ? `
+          <div class="modal-info-row">
+            <span class="modal-info-label">Total travaux</span>
+            <span class="modal-info-value highlight">${paiement.totalTravaux}</span>
+          </div>` : ''}
+          <div class="modal-info-row">
+            <span class="modal-info-label">Soumission</span>
+            <button class="modal-voir-soumission" onclick="ouvrirSoumission('${paiement.entrepreneurUsername}', '${paiement.numeroSoumission}')">
+              <i class="fas fa-file-alt"></i>
+              Voir la soumission
+            </button>
+          </div>
+        </div>
+      `;
+
+      // Afficher UNIQUEMENT la section correspondant au type de paiement cliqué
+      const typePaiement = paiement.type;
+      console.log('[Direction] Type de paiement:', typePaiement);
+
+      // Section Dépôt - seulement si c'est le type cliqué
+      if (typePaiement === 'depot' && detailsComplets.depot) {
+        const depot = detailsComplets.depot;
+        contentHTML += `
+          <div class="modal-section">
+            <div class="modal-section-title">
+              <i class="fas fa-piggy-bank" style="color: #22c55e;"></i>
+              Dépôt
+            </div>
+            <div class="modal-info-row">
+              <span class="modal-info-label">Montant</span>
+              <span class="modal-info-value highlight">${depot.montant || 'N/A'}</span>
+            </div>
+            <div class="modal-info-row">
+              <span class="modal-info-label">Date</span>
+              <span class="modal-info-value">${depot.date || 'N/A'}</span>
+            </div>
+            <div class="modal-info-row">
+              <span class="modal-info-label">Méthode</span>
+              <span class="modal-info-value">${depot.methode || 'N/A'}</span>
+            </div>
+            <div class="modal-info-row">
+              <span class="modal-info-label">Statut</span>
+              <span class="modal-info-value warning">${formaterStatut(depot.statut, 'depot')}</span>
+            </div>
+            ${depot.lienVirement ? `
+            <div class="modal-info-row">
+              <span class="modal-info-label">Lien virement</span>
+              <a href="${depot.lienVirement.startsWith('http') ? depot.lienVirement : 'https://' + depot.lienVirement}" target="_blank" class="modal-link">
+                <i class="fas fa-external-link-alt"></i>
+                ${depot.lienVirement}
+              </a>
+            </div>` : ''}
+          </div>
+        `;
+      }
+
+      // Section Paiement Final - seulement si c'est le type cliqué
+      if (typePaiement === 'paiement_final' && detailsComplets.paiementFinal && detailsComplets.paiementFinal.montant) {
+        const pf = detailsComplets.paiementFinal;
+        contentHTML += `
+          <div class="modal-section">
+            <div class="modal-section-title">
+              <i class="fas fa-credit-card" style="color: #a855f7;"></i>
+              Paiement Final
+            </div>
+            <div class="modal-info-row">
+              <span class="modal-info-label">Montant</span>
+              <span class="modal-info-value highlight">${pf.montant || 'N/A'}</span>
+            </div>
+            <div class="modal-info-row">
+              <span class="modal-info-label">Date</span>
+              <span class="modal-info-value">${pf.date || 'N/A'}</span>
+            </div>
+            <div class="modal-info-row">
+              <span class="modal-info-label">Méthode</span>
+              <span class="modal-info-value">${pf.methode || 'N/A'}</span>
+            </div>
+            <div class="modal-info-row">
+              <span class="modal-info-label">Statut</span>
+              <span class="modal-info-value warning">${formaterStatut(pf.statut, 'paiement_final')}</span>
+            </div>
+            ${pf.lienVirement ? `
+            <div class="modal-info-row">
+              <span class="modal-info-label">Lien virement</span>
+              <a href="${pf.lienVirement.startsWith('http') ? pf.lienVirement : 'https://' + pf.lienVirement}" target="_blank" class="modal-link">
+                <i class="fas fa-external-link-alt"></i>
+                ${pf.lienVirement}
+              </a>
+            </div>` : ''}
+          </div>
+        `;
+      }
+
+      // Section Autres Paiements - seulement si c'est le type cliqué (paiement partiel ou un seul paiement)
+      if (typePaiement === 'autres_paiements' && detailsComplets.autresPaiements && detailsComplets.autresPaiements.length > 0) {
+        // Trouver le paiement spécifique qui est en attente_comptable
+        const paiementsEnAttente = detailsComplets.autresPaiements.filter(ap => ap.statut === 'attente_comptable');
+        const paiementsAAfficher = paiementsEnAttente.length > 0 ? paiementsEnAttente : detailsComplets.autresPaiements;
+
+        paiementsAAfficher.forEach((ap, index) => {
+          // FALLBACK: Si typePaiementAutres est absent, déduire selon statutDepot
+          let typeAutres = ap.typePaiementAutres;
+          if (!typeAutres) {
+            const statutDepot = detailsComplets.statutDepot || 'non_envoye';
+            typeAutres = (statutDepot === 'non_envoye') ? 'un_seul_paiement' : 'paiement_partiel';
+            console.log('[FALLBACK DIRECTION] typePaiementAutres déduit:', typeAutres, '(statutDepot:', statutDepot, ')');
+          }
+          const typePaiementLabel = typeAutres === 'un_seul_paiement' ? 'Paiement complet' : `Paiement partiel ${index + 1}`;
+          contentHTML += `
+            <div class="modal-section">
+              <div class="modal-section-title">
+                <i class="fas fa-coins" style="color: #fbbf24;"></i>
+                ${typePaiementLabel}
+              </div>
+              <div class="modal-info-row">
+                <span class="modal-info-label">Montant</span>
+                <span class="modal-info-value highlight">${ap.montant || 'N/A'}</span>
+              </div>
+              <div class="modal-info-row">
+                <span class="modal-info-label">Date</span>
+                <span class="modal-info-value">${ap.date || 'N/A'}</span>
+              </div>
+              <div class="modal-info-row">
+                <span class="modal-info-label">Méthode</span>
+                <span class="modal-info-value">${ap.methode || 'N/A'}</span>
+              </div>
+              <div class="modal-info-row">
+                <span class="modal-info-label">Statut</span>
+                <span class="modal-info-value warning">${formaterStatut(ap.statut, 'autres')}</span>
+              </div>
+              ${ap.lienVirement ? `
+              <div class="modal-info-row">
+                <span class="modal-info-label">Lien virement</span>
+                <a href="${ap.lienVirement.startsWith('http') ? ap.lienVirement : 'https://' + ap.lienVirement}" target="_blank" class="modal-link">
+                  <i class="fas fa-external-link-alt"></i>
+                  ${ap.lienVirement}
+                </a>
+              </div>` : ''}
+            </div>
+          `;
+        });
+      }
+
+      modalBody.innerHTML = contentHTML;
+
+      // Afficher le modal et bloquer le scroll de la page
+      document.getElementById('modalDetailsTraitement').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      // Bloquer aussi le scroll du parent si dans un iframe
+      if (window.parent && window.parent !== window) {
+        try {
+          window.parent.document.body.style.overflow = 'hidden';
+          window.parent.document.documentElement.style.overflow = 'hidden';
+        } catch(e) {}
+      }
+    }
+
+    // Ouvrir la soumission PDF
+    async function ouvrirSoumission(username, numeroSoumission) {
+      try {
+        const response = await fetch(`/soumissions_signees_facturation_qe/${username}`);
+        if (response.ok) {
+          const clients = await response.json();
+          const client = clients.find(c => c.num === numeroSoumission);
+          if (client && client.pdfUrl) {
+            const modal = document.getElementById('soumissionModal');
+            const content = document.getElementById('soumissionContent');
+            content.innerHTML = `
+              <div style="width: 100%; height: 100%; background: #1a1a1a; border-radius: 8px; overflow: auto;">
+                <iframe src="${client.pdfUrl}"
+                        type="application/pdf"
+                        style="width: 100%; height: 100%; border: none; display: block;">
+                  <p style="padding: 20px; color: var(--text-light);">
+                    Impossible d'afficher le PDF.
+                    <a href="${client.pdfUrl}" target="_blank" style="color: #3b82f6; text-decoration: underline;">
+                      Cliquez ici pour l'ouvrir dans un nouvel onglet
+                    </a>
+                  </p>
+                </iframe>
+              </div>
+            `;
+            modal.classList.add('active');
+          } else {
+            alert('Aucune soumission PDF disponible pour ce client');
+          }
+        }
+      } catch (error) {
+        console.error('[Direction] Erreur récupération soumission:', error);
+        alert('Erreur lors de la récupération de la soumission');
+      }
+    }
+
+    // Fermer le modal soumission
+    function fermerSoumissionModal() {
+      document.getElementById('soumissionModal').classList.remove('active');
+    }
+
+    // Fermer le modal
+    function fermerModal() {
+      document.getElementById('modalDetailsTraitement').style.display = 'none';
+      // Restaurer le scroll
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      // Restaurer aussi le scroll du parent si dans un iframe
+      if (window.parent && window.parent !== window) {
+        try {
+          window.parent.document.body.style.overflow = '';
+          window.parent.document.documentElement.style.overflow = '';
+        } catch(e) {}
+      }
+      currentPayment = null;
+    }
+
+    // Valider un paiement
+    async function validerPaiement() {
+      if (!currentPayment) return;
+      await traiterPaiement(currentPayment, 'valider');
+      fermerModal();
+    }
+
+    // Refuser un paiement - ouvrir le popup de raison
+    function refuserPaiement() {
+      if (!currentPayment) return;
+      // Ouvrir le modal de refus avec raison
+      document.getElementById('modalRefus').style.display = 'flex';
+      document.getElementById('raisonRefus').value = '';
+      document.getElementById('raisonRefus').focus();
+    }
+
+    // Fermer le modal de refus
+    function fermerModalRefus() {
+      document.getElementById('modalRefus').style.display = 'none';
+      document.getElementById('raisonRefus').value = '';
+    }
+
+    // Confirmer le refus avec la raison
+    async function confirmerRefus() {
+      const raison = document.getElementById('raisonRefus').value.trim();
+
+      if (!raison) {
+        alert('Veuillez indiquer une raison pour le refus.');
+        document.getElementById('raisonRefus').focus();
+        return;
+      }
+
+      // Fermer le modal de refus
+      fermerModalRefus();
+      // Fermer le modal de détails
+      fermerModal();
+
+      // Traiter le refus avec la raison
+      await traiterPaiement(currentPayment, 'refuser', raison);
+    }
+
+    // Valider directement depuis le tableau
+    async function validerDirectement(paiement) {
+      await traiterPaiement(paiement, 'valider');
+    }
+
+    // Refuser directement depuis le tableau
+    async function refuserDirectement(paiement) {
+      await traiterPaiement(paiement, 'refuser');
+    }
+
+    // Afficher l'overlay de chargement
+    function showLoadingOverlay(message = 'Traitement en cours...') {
+      const overlay = document.getElementById('loadingOverlayDirection');
+      const textEl = overlay.querySelector('.loading-text');
+      if (textEl) textEl.textContent = message;
+      overlay.classList.add('active');
+    }
+
+    // Cacher l'overlay de chargement
+    function hideLoadingOverlay() {
+      const overlay = document.getElementById('loadingOverlayDirection');
+      overlay.classList.remove('active');
+    }
+
+    // Afficher le toast de succès
+    function showSuccessToast(title, message) {
+      const toast = document.getElementById('toastSuccessDirection');
+      const titleEl = document.getElementById('toastTitle');
+      const messageEl = document.getElementById('toastMessage');
+
+      if (titleEl) titleEl.textContent = title;
+      if (messageEl) messageEl.textContent = message;
+
+      toast.classList.add('active');
+
+      setTimeout(() => {
+        toast.classList.remove('active');
+      }, 3500);
+    }
+
+    // Traiter un paiement (valider ou refuser)
+    async function traiterPaiement(paiement, action, raison = null) {
+      // Afficher l'overlay de chargement
+      const loadingText = action === 'valider' ? 'Validation en cours...' : 'Refus en cours...';
+      showLoadingOverlay(loadingText);
+
+      try {
+        const endpoint = action === 'valider'
+          ? `/api/comptable/facturation/${paiement.entrepreneurUsername}/${paiement.numeroSoumission}/valider`
+          : `/api/comptable/facturation/${paiement.entrepreneurUsername}/${paiement.numeroSoumission}/refuser`;
+
+        // Pour les autres_paiements, inclure l'index
+        const requestBody = { type: paiement.type };
+        if (paiement.type === 'autres_paiements' && paiement.index !== undefined) {
+          requestBody.index = paiement.index;
+        }
+
+        // Ajouter la raison si c'est un refus
+        if (action === 'refuser' && raison) {
+          requestBody.raison = raison;
+        }
+
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+          throw new Error('Erreur lors du traitement');
+        }
+
+        // Rafraîchir la liste
+        await chargerPaiementsEnTraitement();
+        await chargerDerniersTraites();
+
+        // Notifier le parent
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ type: 'updateFacturationBadge' }, '*');
+        }
+
+        // Cacher l'overlay et afficher le toast de succès
+        hideLoadingOverlay();
+        const toastTitle = action === 'valider' ? 'Validé' : 'Refusé';
+        const toastMessage = action === 'valider'
+          ? 'Le paiement a été validé avec succès.'
+          : 'Le paiement a été refusé.';
+        showSuccessToast(toastTitle, toastMessage);
+
+      } catch (error) {
+        console.error('[Direction Facturation] Erreur traitement:', error);
+        hideLoadingOverlay();
+        alert('Erreur lors du traitement du paiement');
+      }
+    }
+
+    // Charger les 5 derniers traités
+    async function chargerDerniersTraites() {
+      try {
+        const response = await fetch('/api/comptable/facturation/historique?limit=5');
+
+        if (!response.ok) {
+          throw new Error('Erreur lors du chargement');
+        }
+
+        const data = await response.json();
+        const historique = data.historique || [];
+
+        const container = document.getElementById('derniers-traites');
+
+        if (historique.length === 0) {
+          container.innerHTML = `
+            <div style="color: var(--text-gray); font-size: 0.8rem; text-align: center; padding: 1rem;">
+              Aucun historique
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = historique.map(h => {
+          const statusColor = h.statut === 'valide' ? '#22c55e' : '#ef4444';
+          const statusIcon = h.statut === 'valide' ? 'check-circle' : 'times-circle';
+
+          return `
+            <div style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(71, 85, 105, 0.2); display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fas fa-${statusIcon}" style="color: ${statusColor}; font-size: 0.75rem;"></i>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 0.75rem; color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${h.entrepreneur} - ${h.numeroSoumission}</div>
+                <div style="font-size: 0.65rem; color: var(--text-gray);">${h.date || ''}</div>
+              </div>
+              <div style="font-size: 0.7rem; font-weight: 600; color: ${statusColor};">${h.montant}</div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (error) {
+        console.error('[Direction Facturation] Erreur historique:', error);
+      }
+    }
+
+    // Charger l'historique complet
+    async function chargerHistorique() {
+      try {
+        const loadingEl = document.getElementById('historique-loading');
+        const emptyEl = document.getElementById('historique-empty');
+        const tableEl = document.getElementById('historique-table');
+        const tbodyEl = document.getElementById('historique-tbody');
+
+        loadingEl.style.display = 'flex';
+        emptyEl.style.display = 'none';
+        tableEl.style.display = 'none';
+
+        const response = await fetch('/api/comptable/facturation/historique?limit=100');
+
+        if (!response.ok) {
+          throw new Error('Erreur lors du chargement');
+        }
+
+        const data = await response.json();
+        const historique = data.historique || [];
+
+        loadingEl.style.display = 'none';
+
+        if (historique.length === 0) {
+          emptyEl.style.display = 'flex';
+          return;
+        }
+
+        tableEl.style.display = 'table';
+
+        tbodyEl.innerHTML = historique.map(h => {
+          const statusColor = h.statut === 'valide' ? '#22c55e' : '#ef4444';
+          const statusText = h.statut === 'valide' ? 'Traité' : 'Refusé';
+          const typeClass = h.type === 'depot' ? 'depot' : (h.type === 'paiement_final' ? 'paiement-final' : 'autres');
+          const typeLabel = h.type === 'depot' ? 'Dépôt' : (h.type === 'paiement_final' ? 'Paiement final' : 'Autre');
+
+          // Avatar avec initiale
+          const initialeHtml = `<div style="width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.7rem;">${h.entrepreneur ? h.entrepreneur.charAt(0).toUpperCase() : '?'}</div>`;
+
+          return `
+            <tr>
+              <td style="color: var(--text-gray);">${h.date || 'N/A'}</td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  ${initialeHtml}
+                  <span style="font-weight: 500; color: var(--text-light);">${h.entrepreneur || 'N/A'}</span>
+                </div>
+              </td>
+              <td>${h.client || 'N/A'}</td>
+              <td style="font-weight: 600; color: #60a5fa;">${h.numeroSoumission || 'N/A'}</td>
+              <td>
+                <span class="type-badge ${typeClass}">
+                  ${typeLabel}
+                </span>
+              </td>
+              <td style="font-weight: 600;">${h.montant || '0,00 $'}</td>
+              <td>
+                <span style="color: ${statusColor}; font-weight: 600;">
+                  <i class="fas fa-${h.statut === 'valide' ? 'check-circle' : 'times-circle'}" style="margin-right: 0.25rem;"></i>
+                  ${statusText}
+                </span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+      } catch (error) {
+        console.error('[Direction Facturation] Erreur historique complet:', error);
+        document.getElementById('historique-loading').style.display = 'none';
+        document.getElementById('historique-empty').style.display = 'flex';
+      }
+    }
+
+    // Initialisation
+    document.addEventListener('DOMContentLoaded', () => {
+      chargerPaiementsEnTraitement();
+      chargerDerniersTraites();
+    });
+
+    // Fermer modal avec Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        fermerModal();
+      }
+    });
+
+    // Fermer modal soumission en cliquant à l'extérieur
+    document.getElementById('soumissionModal').addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal-soumission')) {
+        fermerSoumissionModal();
+      }
+    });
+  </script>
+
+</body>
+</html>

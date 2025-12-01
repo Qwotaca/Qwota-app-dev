@@ -336,20 +336,24 @@ function updateActiveMenuItem(currentPath) {
  */
 async function loadProfilePhoto() {
   try {
+    console.log('[DEBUG] Chargement photo pour:', username);
     const response = await fetch(`/api/get-profile-photo/${username}`);
+    console.log('[DEBUG] Réponse API:', response.ok, response.status);
     if (!response.ok) return null;
 
     const result = await response.json();
+    console.log('[DEBUG] Résultat JSON:', result);
     const profilePhotoUrl = result.photoUrl;
 
     if (profilePhotoUrl) {
-      // console.log('[OK] Photo de profil trouvée:', profilePhotoUrl);
+      console.log('[OK] Photo de profil trouvée:', profilePhotoUrl);
       return profilePhotoUrl;
     }
 
+    console.log('[DEBUG] Pas de photoUrl dans le résultat');
     return null;
   } catch (error) {
-    // console.error('[ERROR] Erreur chargement photo de profil:', error);
+    console.error('[ERROR] Erreur chargement photo de profil:', error);
     return null;
   }
 }
@@ -359,21 +363,36 @@ async function loadProfilePhoto() {
  */
 function updateAccountDisplay() {
   setTimeout(async () => {
-    // console.log('[DEBUG] Mise à jour des comptes utilisateur...');
+    console.log('[DEBUG] Mise à jour des comptes utilisateur...');
 
     // Charger la photo de profil
     const profilePhotoUrl = await loadProfilePhoto();
-    
+    console.log('[DEBUG] profilePhotoUrl reçu:', profilePhotoUrl);
+
+    // Récupérer les informations utilisateur (prénom, nom)
+    let displayName = username;
+    try {
+      const userResponse = await fetch(`/api/me/${username}`);
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        if (userData.prenom && userData.nom) {
+          displayName = `${userData.prenom} ${userData.nom}`;
+        }
+      }
+    } catch (error) {
+      console.error('[ERROR] Erreur récupération nom/prénom:', error);
+    }
+
     // Mettre à jour les éléments mobiles
     const mobileUsernameDisplay = document.getElementById("mobile-username-display");
     const mobileRoleDisplay = document.getElementById("mobile-role-display");
     const mobileAccountUsername = document.getElementById("mobile-account-username");
-    
+
     if (mobileUsernameDisplay && username) {
-      mobileUsernameDisplay.textContent = username;
-      // console.log('[OK] Mobile username mis à jour:', username);
+      mobileUsernameDisplay.textContent = displayName;
+      // console.log('[OK] Mobile username mis à jour:', displayName);
     }
-    
+
     if (mobileRoleDisplay && window.userRole) {
       const roleText = window.userRole === 'direction' ? 'Direction' :
                      window.userRole === 'entrepreneur' ? 'Entrepreneur' :
@@ -383,55 +402,56 @@ function updateAccountDisplay() {
       mobileRoleDisplay.textContent = roleText;
       // console.log('[OK] Mobile role mis à jour:', roleText);
     }
-    
+
     // Mettre à jour l'icône créée par common.js
     if (mobileAccountUsername && username && window.userRole) {
       const roleText = window.userRole === 'direction' ? 'Direction' :
                      window.userRole === 'entrepreneur' ? 'Entrepreneur' :
                      window.userRole === 'coach' ? 'Coach' :
                      window.userRole;
-      
+
       // Créer le HTML avec nom et rôle sur des lignes séparées
       mobileAccountUsername.innerHTML = `
 <div style="font-size:1rem; font-weight:600; color:var(--text-light);">
-  ${username}
+  ${displayName}
 </div>
 <div style="font-size:0.875rem; color:var(--text-gray); font-weight:normal;">
   ${roleText}
 </div>
       `;
-      // console.log('[OK] Mobile account username mis à jour:', `${username} + ${roleText}`);
+      // console.log('[OK] Mobile account username mis à jour:', `${displayName} + ${roleText}`);
     }
-    
+
     // Mettre à jour les éléments desktop (juste le nom, apppc.html gère le rôle)
     const desktopAccountUsername = document.getElementById("account-username");
 
     if (desktopAccountUsername && username) {
-      desktopAccountUsername.textContent = username;
-      // console.log('[OK] Desktop account username mis à jour:', username);
+      desktopAccountUsername.textContent = displayName;
+      // console.log('[OK] Desktop account username mis à jour:', displayName);
     }
 
     // Mettre à jour les avatars/photos de profil
     if (profilePhotoUrl) {
-      // console.log('🖼️ Mise à jour des avatars avec la photo de profil');
+      console.log('🖼️ Mise à jour des avatars avec la photo de profil');
 
       // Mobile profile icon
       const mobileProfileIcon = document.querySelector('.mobile-profile-icon');
       if (mobileProfileIcon) {
         mobileProfileIcon.innerHTML = `<img src="${profilePhotoUrl}" alt="Photo de profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-        // console.log('[OK] Mobile profile icon mis à jour');
+        console.log('[OK] Mobile profile icon mis à jour');
       }
 
       // Desktop account avatar (dans le bouton header)
       const avatarContainer = document.querySelector('.account-avatar');
+      console.log('[DEBUG] avatarContainer trouvé:', avatarContainer);
       if (avatarContainer) {
         // Remplacer le contenu par une image
         avatarContainer.innerHTML = `<img src="${profilePhotoUrl}" alt="Photo de profil">`;
         avatarContainer.classList.add('has-photo');
-        // console.log('[OK] Desktop account avatar mis à jour');
+        console.log('[OK] Desktop account avatar mis à jour avec innerHTML:', avatarContainer.innerHTML);
       }
     } else {
-      // console.log('ℹ️ Aucune photo de profil - utilisation des icônes par défaut');
+      console.log('ℹ️ Aucune photo de profil - utilisation des icônes par défaut');
       // Retirer la classe "has-photo" et remettre l'icône
       const avatarContainer = document.querySelector('.account-avatar');
       if (avatarContainer) {

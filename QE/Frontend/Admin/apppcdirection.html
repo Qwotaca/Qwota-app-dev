@@ -2704,6 +2704,30 @@
         display: none !important;
       }
     }
+
+    /* ================================================================
+       BADGE DE NOTIFICATION EMPLOYÉS
+       ================================================================ */
+    .notification-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      border-radius: 10px;
+    }
+
+    /* Ajuster la position pour le sidebar réduit */
+    .sidebar:not(.expanded) .notification-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+    }
   </style>
 </head>
 <body class="sidebar-expanded">
@@ -2765,10 +2789,35 @@
           </a>
           <a href="#/centraleadmin" class="nav-item" data-page="centraleadmin">
             <span class="nav-icon">
-              <i class="fas fa-folder-open"></i>
+              <i class="fas fa-building"></i>
             </span>
             <span class="nav-label">La Centrale</span>
             <span class="tooltip">La Centrale</span>
+          </a>
+        </div>
+
+        <!-- Section Gestion -->
+        <div class="nav-section">
+          <div class="nav-section-title">Gestion</div>
+          <a href="#/employes" class="nav-item" data-page="employes">
+            <span class="nav-icon">
+              <i class="fas fa-users"></i>
+            </span>
+            <span class="nav-label" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+              <span>Employés</span>
+              <span id="employes-notification-badge" class="notification-badge" style="display: none; margin-left: auto;">0</span>
+            </span>
+            <span class="tooltip">Employés</span>
+          </a>
+          <a href="#/facturation" class="nav-item" data-page="facturation">
+            <span class="nav-icon">
+              <i class="fas fa-file-invoice-dollar"></i>
+            </span>
+            <span class="nav-label" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+              <span>Facturation</span>
+              <span id="facturation-notification-badge" class="notification-badge" style="display: none; margin-left: auto;">0</span>
+            </span>
+            <span class="tooltip">Facturation</span>
           </a>
         </div>
       </nav>
@@ -2880,6 +2929,7 @@
       <iframe id="iframe-centrale" class="page-iframe-mobile" src="" style="display: none;"></iframe>
       <iframe id="iframe-dashboardcoach" class="page-iframe-mobile" src="" style="display: none;"></iframe>
       <iframe id="iframe-parametrecoach" class="page-iframe-mobile" src="" style="display: none;"></iframe>
+      <iframe id="iframe-employes" class="page-iframe-mobile" src="" style="display: none;"></iframe>
     </main>
 
     <!-- Chat Support (PC uniquement) -->
@@ -3197,7 +3247,9 @@
       routes: {
         'parametreadmin': '/parametreadmin',
         'badgeassignment': '/badge_assignment',
-        'centraleadmin': '/centraleadmin'
+        'centraleadmin': '/centraleadmin',
+        'employes': '/coach_validation_employes',
+        'facturation': '/direction_facturation'
       },
 
       // Charger une page (différent pour PC et mobile)
@@ -3325,6 +3377,16 @@
             this.loadPage('connection');
             location.hash = '#/connection';
           }
+          // Écouter les messages de mise à jour du badge employés
+          if (event.data && event.data.type === 'updateEmployesBadge') {
+            console.log('[APPPC Direction] Mise à jour badge employés via postMessage');
+            loadEmployesEnAttenteCount();
+          }
+          // Écouter les messages de mise à jour du badge inactivations comptable
+          if (event.data && event.data.type === 'updateInactivationsComptableBadge') {
+            console.log('[APPPC Direction] Mise à jour badge inactivations via postMessage');
+            loadEmployesEnAttenteCount(); // Le badge employés inclut aussi les inactivations côté Direction
+          }
         });
 
         // Vérifier périodiquement localStorage pour détection de connexion Gmail (pour PWA)
@@ -3394,6 +3456,19 @@
     function toggleAccountDropdown() {
       const dropdown = document.getElementById('account-dropdown');
       dropdown.classList.toggle('show');
+    }
+
+    // Toggle section Gestion
+    function toggleGestionSection() {
+      const content = document.getElementById('gestion-content');
+      const chevron = document.getElementById('gestion-chevron');
+      if (content.style.display === 'none') {
+        content.style.display = 'block';
+        chevron.style.transform = 'rotate(180deg)';
+      } else {
+        content.style.display = 'none';
+        chevron.style.transform = 'rotate(0deg)';
+      }
     }
 
     // Toggle sidebar mobile
@@ -4153,6 +4228,75 @@
       // Cette fonction reste pour compatibilité mais ne fait rien
     }
 
+    // Fonction pour charger le compteur d'employés en attente comptable (pour direction)
+    // Inclut les validations, inactivations ET réactivations en attente
+    async function loadEmployesEnAttenteCount() {
+      try {
+        // Charger les trois compteurs en parallèle
+        const [responseEmployes, responseInactivations, responseReactivations] = await Promise.all([
+          fetch('/api/comptable/employes-en-attente/count'),
+          fetch('/api/comptable/inactivations-en-attente/count'),
+          fetch('/api/comptable/reactivations-en-attente/count')
+        ]);
+
+        let totalCount = 0;
+
+        if (responseEmployes.ok) {
+          const dataEmployes = await responseEmployes.json();
+          totalCount += dataEmployes.count || 0;
+        }
+
+        if (responseInactivations.ok) {
+          const dataInactivations = await responseInactivations.json();
+          totalCount += dataInactivations.count || 0;
+        }
+
+        if (responseReactivations.ok) {
+          const dataReactivations = await responseReactivations.json();
+          totalCount += dataReactivations.count || 0;
+        }
+
+        const badge = document.getElementById('employes-notification-badge');
+
+        if (badge) {
+          if (totalCount > 0) {
+            badge.textContent = totalCount;
+            badge.style.display = 'inline-flex';
+          } else {
+            badge.style.display = 'none';
+          }
+        }
+      } catch (error) {
+        console.error('Erreur chargement compteur employés:', error);
+      }
+    }
+
+    // Fonction pour charger le compteur de facturations en attente (pour direction)
+    // Utilise l'API existante /api/comptable/facturation-en-traitement/liste et compte les paiements
+    async function loadFacturationEnAttenteCount() {
+      try {
+        const response = await fetch('/api/comptable/facturation-en-traitement/liste');
+
+        if (response.ok) {
+          const data = await response.json();
+          const count = data.paiements ? data.paiements.length : 0;
+
+          const badge = document.getElementById('facturation-notification-badge');
+
+          if (badge) {
+            if (count > 0) {
+              badge.textContent = count;
+              badge.style.display = 'inline-flex';
+            } else {
+              badge.style.display = 'none';
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Erreur chargement compteur facturation:', error);
+      }
+    }
+
     // ================================================================
     // INITIALISATION
     // ================================================================
@@ -4161,6 +4305,16 @@
       router.init();
       loadUserInfo();
       initMenuTooltips();
+
+      // Charger le compteur d'employés en attente pour la direction
+      loadEmployesEnAttenteCount();
+      // Recharger toutes les 30 secondes
+      setInterval(loadEmployesEnAttenteCount, 30000);
+
+      // Charger le compteur de facturations en attente pour la direction
+      loadFacturationEnAttenteCount();
+      // Recharger toutes les 30 secondes
+      setInterval(loadFacturationEnAttenteCount, 30000);
 
       console.log('[LAUNCH] Qwota SPA initialized');
 

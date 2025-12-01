@@ -31,34 +31,339 @@
 
   <!-- Feuille de style principale - Thème Dark Organisé -->
   <link rel="stylesheet" href="/base.css">
-  
+
   <!-- Styles specifiques a la page Dashboard User -->
   <link rel="stylesheet" href="/dashboard_user.css">
+
+  <style>
+    /* Styles pour les en-têtes de colonnes triables */
+    .sortable-header {
+      transition: background-color 0.2s ease;
+      position: relative;
+    }
+    .sortable-header.active {
+      background-color: rgba(96, 165, 250, 0.15) !important;
+    }
+    /* Cellules de la colonne active (clic) */
+    #classementTable td.active-column {
+      background-color: rgba(96, 165, 250, 0.08);
+    }
+    /* Cellules de la colonne survolée (hover) */
+    #classementTable th.hover-column,
+    #classementTable td.hover-column {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    /* Barre de sélection entrepreneur pour coaches */
+    #coach-entrepreneur-selector {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%);
+      backdrop-filter: blur(10px);
+      border-bottom: 2px solid var(--border-dark);
+      padding: 0.75rem 2rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      z-index: 10001 !important;
+      display: none;
+    }
+
+    #coach-entrepreneur-selector.visible {
+      display: block !important;
+    }
+
+    #coach-entrepreneur-selector .selector-container {
+      max-width: 1400px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    #coach-entrepreneur-selector .selector-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-light);
+      font-weight: 600;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    #coach-entrepreneur-selector .selector-label i {
+      color: var(--primary-blue);
+      font-size: 18px;
+    }
+
+    .coach-dropdown {
+      position: relative;
+      flex: 1;
+      max-width: 450px;
+    }
+
+    .coach-dropdown-toggle {
+      background: rgba(23, 32, 51, 0.8);
+      border: 2px solid var(--border-dark);
+      border-radius: 12px;
+      padding: 10px 16px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: var(--text-light);
+      font-size: 14px;
+      gap: 0.5rem;
+    }
+
+    .coach-dropdown-toggle:hover {
+      border-color: var(--primary-blue);
+      background: rgba(23, 32, 51, 1);
+    }
+
+    .coach-dropdown-toggle.active {
+      border-color: var(--primary-blue);
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+    }
+
+    .coach-dropdown-toggle .placeholder {
+      color: var(--text-gray);
+      flex: 1;
+    }
+
+    .coach-dropdown-toggle .selected-text {
+      color: var(--text-light);
+      font-weight: 500;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .coach-dropdown-toggle .selected-text i {
+      color: var(--primary-green);
+    }
+
+    .coach-dropdown-toggle .chevron {
+      color: var(--text-gray);
+      transition: transform 0.3s ease;
+      font-size: 12px;
+    }
+
+    .coach-dropdown-toggle.active .chevron {
+      transform: rotate(180deg);
+    }
+
+    .coach-dropdown-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      background: var(--bg-card);
+      border: 2px solid var(--border-dark);
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+      z-index: 10000;
+      max-height: 320px;
+      overflow-y: auto;
+      opacity: 0;
+      transform: translateY(-10px);
+      pointer-events: none;
+      transition: all 0.3s ease;
+    }
+
+    .coach-dropdown-menu.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: all;
+    }
+
+    .coach-dropdown-option {
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 14px;
+      color: var(--text-light);
+      border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .coach-dropdown-option:hover {
+      background: rgba(59, 130, 246, 0.15);
+    }
+
+    .coach-dropdown-option:last-child {
+      border-bottom: none;
+    }
+
+    .coach-dropdown-option i {
+      color: var(--primary-green);
+      font-size: 16px;
+    }
+
+    .coach-dropdown-option-disabled {
+      padding: 12px 16px;
+      color: var(--text-gray);
+      font-style: italic;
+      cursor: default;
+      text-align: center;
+    }
+
+    body.coach-mode {
+      padding-top: 60px !important;
+    }
+
+    body.coach-mode .main-content {
+      padding-top: 2rem !important;
+    }
+
+    body.coach-mode > .mobile-overlay,
+    body.coach-mode > div:not(#coach-entrepreneur-selector):not(.mobile-overlay) {
+      margin-top: 0 !important;
+    }
+
+    .coach-dropdown-menu::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .coach-dropdown-menu::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 10px;
+    }
+
+    .coach-dropdown-menu::-webkit-scrollbar-thumb {
+      background: var(--primary-blue);
+      border-radius: 10px;
+    }
+
+    .coach-dropdown-menu::-webkit-scrollbar-thumb:hover {
+      background: #60a5fa;
+    }
+  </style>
 </head>
 <body class="min-h-screen" style="margin: 0; padding: 0;">
-  
-  <!-- Contenu principal -->
-  <div class="main-content w-full" style="width: 100%; padding: 2rem;">
-    <div class="w-full">
 
-    <!-- Header -->
-    <div class="mb-10 mt-5 md:mt-0">
-      <div class="relative">
-        <h1 class="text-4xl font-bold mb-3">
-          Tableau de Bord
-        </h1>
-<span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
-        <div class="flex items-center justify-between">
-          <p class="text-xl font-medium">
-            <span>Vue d'ensemble de votre activité commerciale</span>
-          </p>
-          <div class="text-sm flex items-center date-display-container">
-            <i class="fas fa-calendar-alt mr-2"></i>
-            <span id="currentDate">Aujourd'hui</span>
+  <!-- Sélecteur de dashboard (visible uniquement pour les coaches) -->
+  <div id="coach-entrepreneur-selector">
+    <div class="selector-container">
+      <!-- First Dropdown: Dashboard Type -->
+      <div class="selector-label">
+        <i class="fas fa-building"></i>
+        <span>Dashboard:</span>
+      </div>
+      <div class="coach-dropdown" style="min-width: 220px;">
+        <div class="coach-dropdown-toggle" id="dashboard-type-toggle">
+          <span class="selected-text">
+            <i class="fas fa-user-shield"></i>
+            Mon Dashboard
+          </span>
+          <i class="fas fa-chevron-down chevron"></i>
+        </div>
+        <div class="coach-dropdown-menu" id="dashboard-type-menu">
+          <div class="coach-dropdown-option" data-type="coach">
+            <i class="fas fa-user-shield"></i>
+            <span>Mon Dashboard</span>
+          </div>
+          <div class="coach-dropdown-option" data-type="par-coach">
+            <i class="fas fa-chalkboard-teacher"></i>
+            <span>Dashboard par Coach</span>
+          </div>
+          <div class="coach-dropdown-option" data-type="entrepreneur">
+            <i class="fas fa-users"></i>
+            <span>Dashboard par Entrepreneur</span>
+          </div>
+          <div class="coach-dropdown-option" data-type="qualite-etudiants">
+            <i class="fas fa-graduation-cap"></i>
+            <span>Dashboard Qualité Étudiants</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Second Dropdown: Coach Selector (conditionally visible) -->
+      <div id="coach-selector-wrapper" style="display: none;">
+        <div class="selector-label">
+          <i class="fas fa-chalkboard-teacher"></i>
+          <span>Coach:</span>
+        </div>
+        <div class="coach-dropdown">
+          <div class="coach-dropdown-toggle" id="coach-selector-toggle">
+            <span class="placeholder">-- Sélectionner un coach --</span>
+            <i class="fas fa-chevron-down chevron"></i>
+          </div>
+          <div class="coach-dropdown-menu" id="coach-selector-menu">
+            <!-- Options chargées dynamiquement -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Third Dropdown: Entrepreneur Selector (conditionally visible) -->
+      <div id="entrepreneur-selector-wrapper" style="display: none;">
+        <div class="selector-label">
+          <i class="fas fa-user-tie"></i>
+          <span>Entrepreneur:</span>
+        </div>
+        <div class="coach-dropdown">
+          <div class="coach-dropdown-toggle" id="coach-dropdown-toggle">
+            <span class="placeholder">-- Sélectionner un entrepreneur --</span>
+            <i class="fas fa-chevron-down chevron"></i>
+          </div>
+          <div class="coach-dropdown-menu" id="coach-dropdown-menu">
+            <!-- Options chargées dynamiquement -->
           </div>
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Contenu principal -->
+  <div class="main-content w-full" style="width: 100%; padding: 2rem;">
+    <div class="w-full">
+
+    <!-- Message "En développement" pour Dashboard Coach -->
+    <div id="coach-dev-message" style="display: none;">
+      <div class="mb-10 mt-5 md:mt-0">
+        <div class="relative">
+          <h1 class="text-4xl font-bold mb-3">
+            Dashboard Coach
+          </h1>
+          <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        </div>
+      </div>
+
+      <div style="background: var(--bg-card); border-radius: 16px; padding: 3rem; text-align: center; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+        <i class="fas fa-tools" style="font-size: 4rem; color: var(--primary-blue); margin-bottom: 1.5rem;"></i>
+        <h2 style="font-size: 1.5rem; font-weight: 600; color: var(--text-light); margin-bottom: 1rem;">
+          En développement
+        </h2>
+        <p style="color: var(--text-gray); font-size: 1rem;">
+          Le dashboard coach sera bientôt disponible.
+        </p>
+      </div>
+    </div>
+
+    <!-- Contenu principal du dashboard (entrepreneur) -->
+    <div id="entrepreneur-dashboard-content">
+      <!-- Header -->
+      <div class="mb-10 mt-5 md:mt-0">
+        <div class="relative">
+          <h1 class="text-4xl font-bold mb-3">
+            Tableau de Bord
+          </h1>
+  <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+          <div class="flex items-center justify-between">
+            <p class="text-xl font-medium">
+              <span>Vue d'ensemble de votre activité commerciale</span>
+            </p>
+            <div class="text-sm flex items-center date-display-container">
+              <i class="fas fa-calendar-alt mr-2"></i>
+              <span id="currentDate">Aujourd'hui</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
     <!-- Top Status Cards -->
     <div class="status-cards-grid grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -123,9 +428,15 @@
           </div>
         </div>
 
-        <div class="text-center">
-          <div id="travauxEnCours" class="text-2xl font-bold text-green-600 animated-number mb-1">0 $</div>
-          <div class="text-xs text-gray-500 uppercase">Chiffre d'affaire</div>
+        <div class="flex justify-center gap-8">
+          <div class="text-center">
+            <div id="travauxEnCours" class="text-2xl font-bold text-green-600 animated-number mb-1">0 $</div>
+            <div class="text-xs text-gray-500 uppercase">Chiffre d'affaire</div>
+          </div>
+          <div class="text-center">
+            <div id="montantProduit" class="text-2xl font-bold text-blue-600 animated-number mb-1">0 $</div>
+            <div class="text-xs text-gray-500 uppercase">Montant produit</div>
+          </div>
         </div>
       </div>
 
@@ -252,50 +563,33 @@
 
     <!-- Classement Section -->
     <div class="chart-container p-8 mb-8">
-      <!-- Titre -->
-      <h2 class="text-2xl font-bold mb-2">Classement</h2>
-
-      <!-- Sous-titre -->
-      <p class="mb-4" style="color: var(--text-gray);">Comparaison des entrepreneurs</p>
-
-      <!-- Filtres et tri -->
-      <div class="flex items-center justify-end mb-4 classement-filters-row">
-        <!-- Filtres par groupe (cachés pour l'instant) -->
-        <div class="flex gap-2 items-center" style="display: none;">
-          <span class="text-sm" style="color: var(--text-gray);">Groupes:</span>
-          <button class="classement-group-btn active" data-group="tous" style="padding: 6px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; transition: all 0.2s; color: var(--text-light);">
-            Tous les entrepreneurs
+      <!-- Titre avec bouton Période -->
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="text-2xl font-bold">Classement</h2>
+        <div class="custom-select" id="periodeSelect" style="width: auto; min-width: 180px;">
+          <button class="custom-select-button" id="periodeBtn" style="min-height: 40px; padding: 8px 14px;">
+            <span class="custom-select-text" id="periodeBtnText">
+              <i class="fas fa-calendar-alt mr-2"></i>Toute l'année
+            </span>
+            <i class="fas fa-chevron-down custom-select-arrow"></i>
           </button>
-          <button class="classement-group-btn" data-group="recrues" style="padding: 6px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; transition: all 0.2s; color: var(--text-light);">
-            Entrepreneurs recrues
-          </button>
-          <button class="classement-group-btn" data-group="seniors" style="padding: 6px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; transition: all 0.2s; color: var(--text-light);">
-            Entrepreneurs seniors
-          </button>
-        </div>
-
-        <!-- Trier par -->
-        <div class="flex gap-2 items-center">
-          <span class="text-sm" style="color: var(--text-gray);">Trier par:</span>
-          <div class="relative">
-            <div id="classement-sort-dropdown" class="modern-dropdown">
-              <span id="classement-sort-selected-text" style="color: var(--text-light);">CA Actuel</span>
-              <i class="fas fa-chevron-down" style="color: var(--text-gray);"></i>
-            </div>
-            <div id="classement-sort-dropdown-menu" class="modern-dropdown-menu">
-              <div class="dropdown-option selected" data-value="ca">CA Actuel</div>
-              <div class="dropdown-option" data-value="signees">Contrat signé</div>
-              <div class="dropdown-option" data-value="etoiles">Satisfaction</div>
-              <div class="dropdown-option" data-value="contrat">Contrat moyen</div>
-              <div class="dropdown-option" data-value="marketing">Taux marketing</div>
-              <div class="dropdown-option" data-value="vente">Taux de vente</div>
-              <div class="dropdown-option" data-value="prod">Prod/h</div>
-              <div class="dropdown-option" data-value="pap">H de PÀP</div>
-            </div>
+          <div class="custom-select-dropdown" id="periodeDropdown">
+            <div class="custom-select-option" data-periode="annee">Toute l'année</div>
+            <div class="custom-select-option" data-periode="90">90 derniers jours</div>
+            <div class="custom-select-option" data-periode="30">30 derniers jours</div>
+            <div class="custom-select-option" data-periode="14">14 derniers jours</div>
+            <div class="custom-select-option" data-periode="semaine">Cette semaine</div>
           </div>
         </div>
       </div>
 
+      <!-- Sous-titre avec message "Cette semaine" à droite -->
+      <div class="flex justify-between items-center mb-4">
+        <p style="color: var(--text-gray);">Comparaison des entrepreneurs</p>
+        <span id="semaineInfo" class="text-xs hidden" style="color: #f59e0b;"><i class="fas fa-exclamation-triangle mr-1"></i></span>
+      </div>
+
+      <!-- Filtres et tri -->
       <!-- Ligne séparatrice -->
       <div class="mb-6" style="border-bottom: 1px solid var(--border-dark);"></div>
 
@@ -311,19 +605,19 @@
 
       <!-- Version Desktop - Tableau -->
       <div class="classement-table-container overflow-x-auto">
-        <table class="w-full">
+        <table class="w-full" id="classementTable">
           <thead>
             <tr class="border-b" style="border-color: var(--border-dark);">
               <th class="text-center py-4 px-4 text-sm font-semibold" style="color: var(--text-light);">Rang</th>
               <th class="text-left py-4 px-4 text-sm font-semibold" style="color: var(--text-light);">Entrepreneur</th>
-              <th class="text-right py-4 px-4 text-sm font-semibold" style="color: var(--text-light);">CA Actuel</th>
-              <th class="text-right py-4 px-4 text-sm font-semibold" style="color: var(--text-light);">Contrat signé</th>
-              <th class="text-right py-4 px-4 text-sm font-semibold" style="color: var(--text-light);">Contrat moy.</th>
-              <th class="text-right py-4 px-4 text-sm font-semibold" style="color: #6b7280; opacity: 0.5;">Taux mktg</th>
-              <th class="text-right py-4 px-4 text-sm font-semibold" style="color: var(--text-light);">Taux de vente</th>
-              <th class="text-right py-4 px-4 text-sm font-semibold" style="color: #6b7280; opacity: 0.5;">Prod/h</th>
-              <th class="text-right py-4 px-4 text-sm font-semibold" style="color: #6b7280; opacity: 0.5;">H de PÀP</th>
-              <th class="text-right py-4 px-4 text-sm font-semibold" style="color: var(--text-light);">Satisfaction</th>
+              <th class="text-left py-4 px-4 text-sm font-semibold sortable-header active" data-sort="ca" style="color: var(--text-light); cursor: pointer;">CA Actuel</th>
+              <th class="text-left py-4 px-4 text-sm font-semibold sortable-header" data-sort="signees" style="color: var(--text-light); cursor: pointer;">Contrat signé</th>
+              <th class="text-left py-4 px-4 text-sm font-semibold sortable-header" data-sort="contrat" style="color: var(--text-light); cursor: pointer;">Contrat moy.</th>
+              <th class="text-left py-4 px-4 text-sm font-semibold sortable-header" data-sort="marketing" style="color: #6b7280; opacity: 0.5; cursor: pointer;">Taux mktg</th>
+              <th class="text-left py-4 px-4 text-sm font-semibold sortable-header" data-sort="vente" style="color: var(--text-light); cursor: pointer;">Taux de vente</th>
+              <th class="text-left py-4 px-4 text-sm font-semibold sortable-header" data-sort="prod" style="color: #6b7280; opacity: 0.5; cursor: pointer;">Prod/h</th>
+              <th class="text-left py-4 px-4 text-sm font-semibold sortable-header" data-sort="pap" style="color: #6b7280; opacity: 0.5; cursor: pointer;">H de PÀP</th>
+              <th class="text-left py-4 px-4 text-sm font-semibold sortable-header" data-sort="etoiles" style="color: var(--text-light); cursor: pointer;">Satisfaction</th>
             </tr>
           </thead>
           <tbody id="classementTableBody">
@@ -891,21 +1185,37 @@
       console.error('Username non défini');
       return;
     }
-    
+
     try {
+      // Déterminer si on doit charger les données de l'équipe (Mon Dashboard pour coach)
+      const userRole = localStorage.getItem('userRole');
+      const isCoach = userRole === 'coach';
+      const isMonDashboard = window.dashboardType === 'coach';
+      const isDashboardParCoach = window.dashboardType === 'par-coach';
+      const isDashboardQualiteEtudiants = window.dashboardType === 'qualite-etudiants';
+
+      // Pour "Dashboard Qualité Étudiants", ajouter le paramètre ?all_teams=true
+      // Pour "Mon Dashboard" d'un coach ou "Dashboard par Coach", ajouter le paramètre ?team=true
+      let teamParam = '';
+      if (isDashboardQualiteEtudiants) {
+        teamParam = '?all_teams=true';
+      } else if ((isCoach && isMonDashboard) || isDashboardParCoach) {
+        teamParam = '?team=true';
+      }
+
       // Charger toutes les données en parallèle
       const [soumissionsRes, soumissionsSigneesRes, ventesAttenteRes, clientsPerdusRes, ventesProduitRes, travauxEnCoursRes, chiffreAffairesRes, panierMoyenRes, montantSigneRes, montantNonProduitRes, rpoRes] = await Promise.all([
-        fetch(`/api/soumissions/count/${username}`),
-        fetch(`/api/soumissions/signees/total/${username}`),
-        fetch(`/api/ventes/attente/count/${username}`),
-        fetch(`/api/clients-perdus/count/${username}`),
-        fetch(`/api/ventes/produit/count/${username}`),
-        fetch(`/api/travaux-en-cours/count/${username}`),
-        fetch(`/api/chiffre-affaires/${username}`),
-        fetch(`/api/panier-moyen/${username}`),
-        fetch(`/api/chiffre-affaires-signes/${username}`),
-        fetch(`/api/montant-non-produit/${username}`),
-        fetch(`/api/rpo/${username}`)
+        fetch(`/api/soumissions/count/${username}${teamParam}`),
+        fetch(`/api/soumissions/signees/total/${username}${teamParam}`),
+        fetch(`/api/ventes/attente/count/${username}${teamParam}`),
+        fetch(`/api/clients-perdus/count/${username}${teamParam}`),
+        fetch(`/api/ventes/produit/count/${username}${teamParam}`),
+        fetch(`/api/travaux-en-cours/count/${username}${teamParam}`),
+        fetch(`/api/chiffre-affaires/${username}${teamParam}`),
+        fetch(`/api/panier-moyen/${username}${teamParam}`),
+        fetch(`/api/chiffre-affaires-signes/${username}${teamParam}`),
+        fetch(`/api/montant-non-produit/${username}${teamParam}`),
+        fetch(`/api/rpo/${username}${teamParam}`)
       ]);
 
       // Extraire les données
@@ -1006,7 +1316,7 @@
 
       // Afficher les nouvelles métriques financières
       animateNumber('montantSigne', montantSigneNum, false, true);
-      animateNumber('montantProduit', chiffreAffairesNum, false, true);
+      // montantProduit reste à 0 (non lié à une route pour l'instant)
       animateNumber('montantNonProduit', montantNonProduitNum, false, true);
 
       // Contrat moyen = Actuel (montant signé) / Signées (nombre de soumissions signées)
@@ -1605,53 +1915,126 @@
     // CLASSEMENT - FONCTIONS
     // ================================================================
 
+    let currentSortColumn = 'ca'; // Colonne de tri par défaut
+
     function setupClassementDropdown() {
-      const dropdown = document.getElementById('classement-sort-dropdown');
-      const menu = document.getElementById('classement-sort-dropdown-menu');
-      const selectedText = document.getElementById('classement-sort-selected-text');
+      // Nouveau système: clic sur les en-têtes de colonnes
+      const headers = document.querySelectorAll('.sortable-header');
 
-      if (!dropdown || !menu) return;
+      headers.forEach(header => {
+        if (header.dataset.listenerAttached) return;
+        header.dataset.listenerAttached = "true";
 
-      // S'assurer que le dropdown est fermé au chargement
-      menu.classList.remove('show');
+        // Événement clic pour trier
+        header.addEventListener('click', function() {
+          const sortBy = this.getAttribute('data-sort');
 
-      // Ajouter les listeners une seule fois
-      if (dropdown.dataset.listenerAttached) return;
-      dropdown.dataset.listenerAttached = "true";
+          // Retirer active de tous les headers
+          headers.forEach(h => h.classList.remove('active'));
 
-      // Toggle dropdown
-      dropdown.addEventListener('click', function(e) {
-        e.stopPropagation();
-        menu.classList.toggle('show');
-      });
+          // Ajouter active au header cliqué
+          this.classList.add('active');
 
-      // Fermer dropdown au clic extérieur
-      document.addEventListener('click', function() {
-        menu.classList.remove('show');
-      });
-
-      // Gérer la sélection
-      menu.querySelectorAll('.dropdown-option').forEach(option => {
-        option.addEventListener('click', function(e) {
-          e.stopPropagation();
-
-          // Retirer selected de toutes les options
-          menu.querySelectorAll('.dropdown-option').forEach(opt => {
-            opt.classList.remove('selected');
-          });
-
-          // Ajouter selected à l'option cliquée
-          this.classList.add('selected');
-
-          // Mettre à jour le texte
-          selectedText.textContent = this.textContent;
-
-          // Fermer le menu
-          menu.classList.remove('show');
+          // Sauvegarder la colonne active
+          currentSortColumn = sortBy;
 
           // Trier le tableau
-          const sortBy = this.getAttribute('data-value');
           sortClassement(sortBy);
+        });
+
+        // Événement hover - mouseenter
+        header.addEventListener('mouseenter', function() {
+          const columnName = this.getAttribute('data-sort');
+          // Ajouter hover-column au header
+          this.classList.add('hover-column');
+          // Ajouter hover-column à toutes les cellules de cette colonne
+          document.querySelectorAll(`#classementTable td[data-column="${columnName}"]`).forEach(td => {
+            td.classList.add('hover-column');
+          });
+        });
+
+        // Événement hover - mouseleave
+        header.addEventListener('mouseleave', function() {
+          const columnName = this.getAttribute('data-sort');
+          // Retirer hover-column du header
+          this.classList.remove('hover-column');
+          // Retirer hover-column de toutes les cellules de cette colonne
+          document.querySelectorAll(`#classementTable td[data-column="${columnName}"]`).forEach(td => {
+            td.classList.remove('hover-column');
+          });
+        });
+      });
+    }
+
+    // Période sélectionnée (par défaut: toute l'année)
+    let currentPeriode = 'annee';
+
+    function setupPeriodeDropdown() {
+      const periodeSelect = document.getElementById('periodeSelect');
+      const periodeBtn = document.getElementById('periodeBtn');
+      const periodeBtnText = document.getElementById('periodeBtnText');
+      const semaineInfo = document.getElementById('semaineInfo');
+      const options = document.querySelectorAll('.custom-select-option');
+
+      if (!periodeSelect || !periodeBtn) return;
+
+      // Toggle dropdown avec la classe .open
+      periodeBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        periodeSelect.classList.toggle('open');
+      });
+
+      // Fermer dropdown si clic ailleurs
+      document.addEventListener('click', function(e) {
+        if (!periodeSelect.contains(e.target)) {
+          periodeSelect.classList.remove('open');
+        }
+      });
+
+      // Options du dropdown
+      options.forEach(option => {
+        option.addEventListener('click', function() {
+          const periode = this.getAttribute('data-periode');
+          currentPeriode = periode;
+
+          // Mettre à jour le texte du bouton
+          const textes = {
+            'annee': "Toute l'année",
+            '90': '90 derniers jours',
+            '30': '30 derniers jours',
+            '14': '14 derniers jours',
+            'semaine': 'Cette semaine'
+          };
+          periodeBtnText.innerHTML = `<i class="fas fa-calendar-alt mr-2"></i>${textes[periode]}`;
+
+          // Afficher/masquer le message "Cette semaine"
+          if (periode === 'semaine') {
+            const today = new Date();
+            const dayOfWeek = today.getDay(); // 0 = dimanche, 1 = lundi, etc.
+
+            // Calculer le lundi de cette semaine
+            const monday = new Date(today);
+            const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+            monday.setDate(today.getDate() - daysFromMonday);
+
+            // Nombre de jours depuis lundi (inclus)
+            const joursDepuisLundi = daysFromMonday + 1;
+
+            // Formater la date du lundi
+            const dateOptions = { day: 'numeric', month: 'long' };
+            const lundiFormate = monday.toLocaleDateString('fr-CA', dateOptions);
+
+            semaineInfo.innerHTML = `<i class="fas fa-exclamation-triangle mr-1"></i>Semaine à partir du lundi le ${lundiFormate} (${joursDepuisLundi} jour${joursDepuisLundi > 1 ? 's' : ''})`;
+            semaineInfo.classList.remove('hidden');
+          } else {
+            semaineInfo.classList.add('hidden');
+          }
+
+          // Fermer dropdown
+          periodeSelect.classList.remove('open');
+
+          // TODO: Recharger les données du classement avec la nouvelle période
+          // loadClassement(periode);
         });
       });
     }
@@ -1814,14 +2197,14 @@
                 <span class="font-semibold" style="color: var(--text-light);">${entrepreneur.username}</span>
               </div>
             </td>
-            <td class="py-4 px-4 text-right font-bold text-green-600">${entrepreneur.ca_actuel.toLocaleString()} $</td>
-            <td class="py-4 px-4 text-right font-bold" style="color: var(--text-light);">${entrepreneur.soumissions_signees || 0}</td>
-            <td class="py-4 px-4 text-right" style="color: var(--text-light);">${entrepreneur.contrat_moyen.toLocaleString()} $</td>
-            <td class="py-4 px-4 text-right" style="color: #6b7280; opacity: 0.5;">${Math.round(entrepreneur.taux_marketing * 10) / 10}%</td>
-            <td class="py-4 px-4 text-right" style="color: var(--text-light);">${Math.round(entrepreneur.taux_vente * 10) / 10}%</td>
-            <td class="py-4 px-4 text-right" style="color: #6b7280; opacity: 0.5;">${(entrepreneur.prod_horaire || 0).toLocaleString()} $/h</td>
-            <td class="py-4 px-4 text-right" style="color: #6b7280; opacity: 0.5;">${(entrepreneur.heures_pap || 0).toFixed(1)} h</td>
-            <td class="py-4 px-4 text-right">
+            <td class="py-4 px-4 text-left font-bold text-green-600 ${currentSortColumn === 'ca' ? 'active-column' : ''}" data-column="ca">${entrepreneur.ca_actuel.toLocaleString()} $</td>
+            <td class="py-4 px-4 text-left font-bold ${currentSortColumn === 'signees' ? 'active-column' : ''}" data-column="signees" style="color: var(--text-light);">${entrepreneur.soumissions_signees || 0}</td>
+            <td class="py-4 px-4 text-left ${currentSortColumn === 'contrat' ? 'active-column' : ''}" data-column="contrat" style="color: var(--text-light);">${entrepreneur.contrat_moyen.toLocaleString()} $</td>
+            <td class="py-4 px-4 text-left ${currentSortColumn === 'marketing' ? 'active-column' : ''}" data-column="marketing" style="color: #6b7280; opacity: 0.5;">${Math.round(entrepreneur.taux_marketing * 10) / 10}%</td>
+            <td class="py-4 px-4 text-left ${currentSortColumn === 'vente' ? 'active-column' : ''}" data-column="vente" style="color: var(--text-light);">${Math.round(entrepreneur.taux_vente * 10) / 10}%</td>
+            <td class="py-4 px-4 text-left ${currentSortColumn === 'prod' ? 'active-column' : ''}" data-column="prod" style="color: #6b7280; opacity: 0.5;">${(entrepreneur.prod_horaire || 0).toLocaleString()} $/h</td>
+            <td class="py-4 px-4 text-left ${currentSortColumn === 'pap' ? 'active-column' : ''}" data-column="pap" style="color: #6b7280; opacity: 0.5;">${(entrepreneur.heures_pap || 0).toFixed(1)} h</td>
+            <td class="py-4 px-4 text-left ${currentSortColumn === 'etoiles' ? 'active-column' : ''}" data-column="etoiles">
               <span class="text-yellow-500">
                 <i class="fas fa-star"></i> ${entrepreneur.etoiles.toFixed(1)}
               </span>
@@ -2592,6 +2975,7 @@
     // initChart(); // Désactivé - remplacé par le tableau de classement
     setupClassementDropdown();
     setupClassementGroupDropdown();
+    setupPeriodeDropdown();
     setTimeout(loadDashboardData, 200);
     setTimeout(loadClassementData, 300);
   });
@@ -2936,6 +3320,384 @@
   </div>
 </div>
 
+    </div>
+    <!-- Fin du contenu entrepreneur -->
+
+    </div>
+  </div>
+
+<script>
+// Gestion du sélecteur de dashboard pour les coaches
+(function() {
+  const userRole = localStorage.getItem('userRole');
+  const isCoach = userRole === 'coach';
+
+  // Variable pour suivre le type de dashboard sélectionné
+  window.dashboardType = 'coach';
+
+  if (isCoach) {
+    document.body.classList.add('coach-mode');
+
+    const selector = document.getElementById('coach-entrepreneur-selector');
+    if (selector) {
+      selector.classList.add('visible');
+    }
+
+    // Par défaut, afficher le contenu du dashboard pour "Mon Dashboard"
+    const coachDevMessage = document.getElementById('coach-dev-message');
+    const entrepreneurDashboardContent = document.getElementById('entrepreneur-dashboard-content');
+    if (coachDevMessage) {
+      coachDevMessage.style.display = 'none';
+    }
+    if (entrepreneurDashboardContent) {
+      entrepreneurDashboardContent.style.display = 'block';
+    }
+
+    // Gérer le dropdown de type de dashboard
+    const dashboardTypeToggle = document.getElementById('dashboard-type-toggle');
+    const dashboardTypeMenu = document.getElementById('dashboard-type-menu');
+
+    if (dashboardTypeToggle && dashboardTypeMenu) {
+      // Ouvrir/fermer le dropdown de type
+      dashboardTypeToggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        this.classList.toggle('active');
+        dashboardTypeMenu.classList.toggle('show');
+      });
+
+      // Gérer le choix du type de dashboard
+      dashboardTypeMenu.querySelectorAll('.coach-dropdown-option').forEach(option => {
+        option.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const type = this.getAttribute('data-type');
+          selectDashboardType(type);
+        });
+      });
+
+      // Fermer le dropdown en cliquant ailleurs
+      document.addEventListener('click', function(e) {
+        if (!dashboardTypeToggle.contains(e.target) && !dashboardTypeMenu.contains(e.target)) {
+          dashboardTypeToggle.classList.remove('active');
+          dashboardTypeMenu.classList.remove('show');
+        }
+      });
+    }
+
+    // Gérer le dropdown de coach
+    const coachSelectorToggle = document.getElementById('coach-selector-toggle');
+    const coachSelectorMenu = document.getElementById('coach-selector-menu');
+
+    if (coachSelectorToggle && coachSelectorMenu) {
+      coachSelectorToggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        this.classList.toggle('active');
+        coachSelectorMenu.classList.toggle('show');
+      });
+
+      document.addEventListener('click', function(e) {
+        if (!coachSelectorToggle.contains(e.target) && !coachSelectorMenu.contains(e.target)) {
+          coachSelectorToggle.classList.remove('active');
+          coachSelectorMenu.classList.remove('show');
+        }
+      });
+    }
+
+    // Gérer le dropdown d'entrepreneur
+    const dropdownToggle = document.getElementById('coach-dropdown-toggle');
+    const dropdownMenu = document.getElementById('coach-dropdown-menu');
+
+    if (dropdownToggle && dropdownMenu) {
+      dropdownToggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        this.classList.toggle('active');
+        dropdownMenu.classList.toggle('show');
+      });
+
+      document.addEventListener('click', function(e) {
+        if (!dropdownToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
+          dropdownToggle.classList.remove('active');
+          dropdownMenu.classList.remove('show');
+        }
+      });
+    }
+  }
+
+  function selectDashboardType(type) {
+    const dashboardTypeToggle = document.getElementById('dashboard-type-toggle');
+    const dashboardTypeMenu = document.getElementById('dashboard-type-menu');
+    const coachSelectorWrapper = document.getElementById('coach-selector-wrapper');
+    const entrepreneurSelectorWrapper = document.getElementById('entrepreneur-selector-wrapper');
+    const coachDevMessage = document.getElementById('coach-dev-message');
+    const entrepreneurDashboardContent = document.getElementById('entrepreneur-dashboard-content');
+
+    // Configuration pour chaque type de dashboard
+    const dashboardConfig = {
+      'equipe': {
+        icon: 'fas fa-users-cog',
+        label: 'Dashboard par Équipe',
+        showCoachSelector: false,
+        showEntrepreneurSelector: false,
+        showDevMessage: true
+      },
+      'par-coach': {
+        icon: 'fas fa-chalkboard-teacher',
+        label: 'Dashboard par Coach',
+        showCoachSelector: true,
+        showEntrepreneurSelector: false,
+        showDevMessage: false
+      },
+      'coach': {
+        icon: 'fas fa-user-shield',
+        label: 'Mon Dashboard',
+        showCoachSelector: false,
+        showEntrepreneurSelector: false,
+        showDevMessage: false
+      },
+      'entrepreneur': {
+        icon: 'fas fa-users',
+        label: 'Dashboard par Entrepreneur',
+        showCoachSelector: false,
+        showEntrepreneurSelector: true,
+        showDevMessage: false
+      },
+      'qualite-etudiants': {
+        icon: 'fas fa-graduation-cap',
+        label: 'Dashboard Qualité Étudiants',
+        showCoachSelector: false,
+        showEntrepreneurSelector: false,
+        showDevMessage: false
+      }
+    };
+
+    const config = dashboardConfig[type];
+    if (!config) return;
+
+    // Mettre à jour le toggle avec le bon label et icône
+    dashboardTypeToggle.innerHTML = `
+      <span class="selected-text">
+        <i class="${config.icon}"></i>
+        ${config.label}
+      </span>
+      <i class="fas fa-chevron-down chevron"></i>
+    `;
+
+    window.dashboardType = type;
+
+    // Gérer l'affichage du sélecteur de coach
+    if (coachSelectorWrapper) {
+      if (config.showCoachSelector) {
+        coachSelectorWrapper.style.display = 'flex';
+        coachSelectorWrapper.style.alignItems = 'center';
+        coachSelectorWrapper.style.gap = '1rem';
+
+        // Charger la liste des coachs
+        if (type === 'par-coach') {
+          loadCoaches();
+        }
+      } else {
+        coachSelectorWrapper.style.display = 'none';
+      }
+    }
+
+    // Gérer l'affichage du sélecteur d'entrepreneur
+    if (entrepreneurSelectorWrapper) {
+      if (config.showEntrepreneurSelector) {
+        entrepreneurSelectorWrapper.style.display = 'flex';
+        entrepreneurSelectorWrapper.style.alignItems = 'center';
+        entrepreneurSelectorWrapper.style.gap = '1rem';
+
+        // Charger les entrepreneurs si c'est le dashboard entrepreneur
+        if (type === 'entrepreneur') {
+          if (window.username) {
+            loadEntrepreneursForCoach();
+          } else {
+            setTimeout(() => {
+              if (window.username) {
+                loadEntrepreneursForCoach();
+              }
+            }, 100);
+          }
+        }
+      } else {
+        entrepreneurSelectorWrapper.style.display = 'none';
+      }
+    }
+
+    // Gérer l'affichage du contenu
+    if (config.showDevMessage) {
+      // Afficher le message "En développement"
+      if (coachDevMessage) {
+        coachDevMessage.style.display = 'block';
+      }
+      if (entrepreneurDashboardContent) {
+        entrepreneurDashboardContent.style.display = 'none';
+      }
+    } else {
+      // Afficher le contenu entrepreneur
+      if (coachDevMessage) {
+        coachDevMessage.style.display = 'none';
+      }
+      if (entrepreneurDashboardContent) {
+        entrepreneurDashboardContent.style.display = 'block';
+      }
+
+      // Recharger les données si on affiche le contenu
+      if (typeof loadDashboardData === 'function') {
+        loadDashboardData();
+      }
+    }
+
+    console.log(`${config.label} sélectionné`);
+
+    // Fermer le menu
+    dashboardTypeToggle.classList.remove('active');
+    dashboardTypeMenu.classList.remove('show');
+  }
+
+  function selectEntrepreneur(username) {
+    const dropdownToggle = document.getElementById('coach-dropdown-toggle');
+    const dropdownMenu = document.getElementById('coach-dropdown-menu');
+
+    if (dropdownToggle) {
+      dropdownToggle.innerHTML = `
+        <span class="selected-text">
+          <i class="fas fa-user-circle"></i>
+          ${username}
+        </span>
+        <i class="fas fa-chevron-down chevron"></i>
+      `;
+
+      dropdownToggle.classList.remove('active');
+      if (dropdownMenu) {
+        dropdownMenu.classList.remove('show');
+      }
+
+      window.username = username;
+
+      // Recharger les données du dashboard pour cet entrepreneur
+      if (typeof loadDashboardData === 'function') {
+        loadDashboardData();
+      }
+    }
+  }
+
+  // Fonction pour charger la liste des coachs
+  async function loadCoaches() {
+    try {
+      const response = await fetch('/api/users/coaches');
+      const data = await response.json();
+
+      const menu = document.getElementById('coach-selector-menu');
+      const toggle = document.getElementById('coach-selector-toggle');
+      if (!menu) return;
+
+      menu.innerHTML = '';
+
+      if (data.coaches && data.coaches.length > 0) {
+        data.coaches.forEach(coach => {
+          const option = document.createElement('div');
+          option.className = 'coach-dropdown-option';
+          option.innerHTML = `
+            <i class="fas fa-chalkboard-teacher"></i>
+            <span>${coach.username}</span>
+          `;
+          option.onclick = () => selectCoach(coach.username);
+          menu.appendChild(option);
+        });
+      } else {
+        const option = document.createElement('div');
+        option.className = 'coach-dropdown-option-disabled';
+        option.textContent = 'Aucun coach trouvé';
+        menu.appendChild(option);
+      }
+    } catch (error) {
+      console.error('Erreur chargement coachs:', error);
+    }
+  }
+
+  // Fonction pour sélectionner un coach
+  function selectCoach(coachUsername) {
+    const toggle = document.getElementById('coach-selector-toggle');
+    toggle.innerHTML = `
+      <span class="selected-text">
+        <i class="fas fa-chalkboard-teacher"></i>
+        ${coachUsername}
+      </span>
+      <i class="fas fa-chevron-down chevron"></i>
+    `;
+
+    // Fermer le menu
+    document.getElementById('coach-selector-menu').classList.remove('show');
+    toggle.classList.remove('active');
+
+    // Charger le dashboard du coach avec team=true
+    window.selectedCoach = coachUsername;
+    window.username = coachUsername;
+
+    if (typeof loadDashboardData === 'function') {
+      loadDashboardData();
+    }
+  }
+
+  async function loadEntrepreneursForCoach() {
+    try {
+      if (!window.username) {
+        console.error('Username non défini');
+        return;
+      }
+      const response = await fetch(`/api/users/entrepreneurs?coach_username=${window.username}`);
+      const data = await response.json();
+
+      const menu = document.getElementById('coach-dropdown-menu');
+      const toggle = document.getElementById('coach-dropdown-toggle');
+      if (!menu) return;
+
+      menu.innerHTML = '';
+
+      if (data.entrepreneurs && data.entrepreneurs.length > 0) {
+        data.entrepreneurs.forEach(entrepreneur => {
+          const option = document.createElement('div');
+          option.className = 'coach-dropdown-option';
+          option.innerHTML = `
+            <i class="fas fa-user-circle"></i>
+            <span>${entrepreneur.username}</span>
+          `;
+          option.onclick = () => selectEntrepreneur(entrepreneur.username);
+          menu.appendChild(option);
+        });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const selectedUser = urlParams.get('user');
+        if (selectedUser) {
+          if (toggle) {
+            toggle.innerHTML = `
+              <span class="selected-text">
+                <i class="fas fa-user-circle"></i>
+                ${selectedUser}
+              </span>
+              <i class="fas fa-chevron-down chevron"></i>
+            `;
+          }
+
+          window.username = selectedUser;
+          setTimeout(() => {
+            if (typeof loadDashboardData === 'function') {
+              loadDashboardData();
+            }
+          }, 500);
+        }
+      } else {
+        const option = document.createElement('div');
+        option.className = 'coach-dropdown-option-disabled';
+        option.textContent = 'Aucun entrepreneur trouvé';
+        menu.appendChild(option);
+      }
+    } catch (error) {
+      console.error('Erreur chargement entrepreneurs:', error);
+    }
+  }
+})();
+</script>
 
 </body>
 </html>

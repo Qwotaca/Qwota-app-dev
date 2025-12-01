@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Paramètres - Coach</title>
+
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#1f2937">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Feuille de style principale - Thème Dark -->
+  <link rel="stylesheet" href="/base.css">
+
+  <style>
+    .profile-container {
+      width: 100%;
+    }
+
+    .profile-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow-dark-medium);
+      border: 1px solid var(--border-dark);
+    }
+
+    .profile-header {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      margin-bottom: 2rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--border-dark);
+    }
+
+    .profile-photo-wrapper {
+      position: relative;
+      width: 120px;
+      height: 120px;
+    }
+
+    .profile-photo {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--primary-blue);
+      background: var(--bg-darker);
+    }
+
+    .profile-photo-placeholder {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-blue) 0%, #1e40af 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      color: white;
+      font-weight: 600;
+      border: 3px solid var(--primary-blue);
+    }
+
+    .photo-upload-btn {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      background: var(--primary-blue);
+      color: white;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: 3px solid var(--bg-card);
+      transition: all 0.3s ease;
+    }
+
+    .photo-upload-btn:hover {
+      background: #1e40af;
+      transform: scale(1.1);
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-light);
+      margin-bottom: 0.5rem;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: rgba(15, 23, 42, 0.6);
+      border: 2px solid var(--border-dark);
+      border-radius: 8px;
+      color: var(--text-light);
+      font-size: 0.875rem;
+      transition: all 0.3s ease;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary-blue);
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+    }
+
+    .form-input:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .save-btn {
+      background: linear-gradient(135deg, var(--primary-blue) 0%, #1e40af 100%);
+      color: white;
+      padding: 0.75rem 2rem;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .save-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(96, 165, 250, 0.4);
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-light);
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Photo Menu Dropdown */
+    #photo-menu-dropdown {
+      position: absolute;
+      bottom: -10px;
+      left: 100%;
+      margin-left: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-dark);
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      z-index: 1000;
+      min-width: 260px;
+    }
+
+    #photo-menu-dropdown.hidden {
+      display: none;
+    }
+
+    #photo-menu-dropdown button {
+      width: 100%;
+      text-align: left;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.2s ease;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--text-light);
+    }
+
+    #photo-menu-dropdown button:hover {
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    #photo-menu-dropdown button:not(:last-child) {
+      border-bottom: 1px solid var(--border-dark);
+    }
+
+    /* Modal styles */
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.8);
+    }
+
+    .modal.hidden {
+      display: none;
+    }
+
+    .modal-content {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 2rem;
+      width: 90%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    #photo-editor-canvas {
+      border: 1px solid var(--border-dark);
+      border-radius: 50%;
+      cursor: move;
+      background: #000;
+    }
+
+    @media (max-width: 768px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .profile-header {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+
+    /* Google Places Autocomplete Styling - Dark Theme */
+    /* Conteneur principal des suggestions Google */
+    .pac-container {
+      background: #1e293b !important;
+      border: 1px solid rgb(71, 85, 105) !important;
+      border-radius: 12px !important;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4) !important;
+      margin-top: 4px !important;
+      z-index: 50 !important;
+    }
+
+    /* Items individuels des suggestions */
+    .pac-item {
+      background: #1e293b !important;
+      color: #e2e8f0 !important;
+      border-top: 1px solid rgb(71, 85, 105) !important;
+      padding: 12px 16px !important;
+      font-size: 14px !important;
+      cursor: pointer !important;
+      transition: background-color 0.2s ease !important;
+    }
+
+    /* Premier item sans bordure du haut */
+    .pac-item:first-child {
+      border-top: none !important;
+      border-top-left-radius: 12px !important;
+      border-top-right-radius: 12px !important;
+    }
+
+    /* Dernier item avec coins arrondis */
+    .pac-item:last-child {
+      border-bottom-left-radius: 12px !important;
+      border-bottom-right-radius: 12px !important;
+    }
+
+    /* Hover sur les suggestions */
+    .pac-item:hover,
+    .pac-item-selected {
+      background: #3b82f6 !important;
+      color: white !important;
+    }
+
+    /* Masquer l'icône de localisation */
+    .pac-icon {
+      display: none !important;
+    }
+
+    /* Texte de l'adresse principale */
+    .pac-item-query {
+      color: #e2e8f0 !important;
+      font-weight: 600 !important;
+    }
+
+    /* Texte secondaire (ville, province) */
+    .pac-matched {
+      color: #94a3b8 !important;
+      font-weight: 400 !important;
+    }
+
+    /* Séparateur entre adresse principale et secondaire */
+    .pac-item-query .pac-matched {
+      color: #3b82f6 !important;
+      font-weight: 600 !important;
+    }
+
+    /* Hover sur les éléments de texte */
+    .pac-item:hover .pac-item-query,
+    .pac-item-selected .pac-item-query {
+      color: white !important;
+    }
+
+    .pac-item:hover .pac-matched,
+    .pac-item-selected .pac-matched {
+      color: white !important;
+    }
+
+    /* Logo Google en bas */
+    .pac-logo::after {
+      background: #1e293b !important;
+      border-top: 1px solid rgb(71, 85, 105) !important;
+    }
+
+    /* Container au-dessus du modal */
+    .pac-container.pac-logo {
+      border-bottom-left-radius: 12px !important;
+      border-bottom-right-radius: 12px !important;
+    }
+
+    /* Limiter à 3 suggestions maximum */
+    .pac-item:nth-child(n+4) {
+      display: none !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen" style="margin: 0; padding: 0;">
+
+  <!-- Contenu principal -->
+  <div class="main-content w-full" style="width: 100%; padding: 2rem;">
+    <div class="profile-container">
+
+    <!-- Header -->
+    <div class="mb-10 mt-5 md:mt-0">
+      <div class="relative">
+        <h1 class="text-4xl font-bold mb-3">
+          Paramètres du Profil
+        </h1>
+        <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        <div class="flex items-center justify-between">
+          <p class="text-xl font-medium">
+            <span>Gérer vos informations personnelles</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Carte de profil -->
+    <div class="profile-card">
+      <div class="profile-header">
+        <div class="profile-photo-wrapper">
+          <div id="profile-photo-display" class="relative">
+            <div style="width: 120px; height: 120px; border-radius: 50%; overflow: hidden; border: 4px solid var(--primary-blue); display: flex; align-items: center; justify-content: center; background: var(--bg-dark);">
+              <img id="profile-photo-image" src="" alt="Photo de profil" class="w-full h-full object-cover hidden" />
+              <div id="profile-photo-placeholder" class="flex flex-col items-center justify-center">
+                <i class="fas fa-user text-5xl" style="color: var(--text-gray);"></i>
+              </div>
+            </div>
+            <button id="photo-menu-btn" class="absolute bottom-0 right-0 w-10 h-10 rounded-full flex items-center justify-center" style="background: var(--primary-blue); color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+              <i class="fas fa-camera"></i>
+            </button>
+
+            <!-- Menu dropdown pour la photo -->
+            <div id="photo-menu-dropdown" class="hidden">
+              <button id="camera-photo-option">
+                <i class="fas fa-camera" style="color: var(--primary-green);"></i>
+                <span>Prendre une photo</span>
+              </button>
+              <button id="upload-photo-option">
+                <i class="fas fa-upload" style="color: var(--primary-blue);"></i>
+                <span>Modifier photo de profil</span>
+              </button>
+              <button id="delete-photo-option" style="color: var(--primary-red);">
+                <i class="fas fa-trash"></i>
+                <span>Supprimer photo de profil</span>
+              </button>
+            </div>
+          </div>
+
+          <input type="file" id="profile-photo-input" accept="image/*" class="hidden" />
+          <input type="file" id="camera-capture-input" accept="image/*" capture="environment" class="hidden" />
+        </div>
+        <div style="flex: 1; display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <h2 class="text-2xl font-bold mb-2" id="profileName">Coach</h2>
+            <p class="text-gray-400" id="profileEmail">coach@qwota.ca</p>
+            <span class="inline-block mt-2 px-3 py-1 bg-blue-900/30 text-blue-400 rounded-full text-sm font-medium">
+              <i class="fas fa-user-shield mr-1"></i> Coach
+            </span>
+          </div>
+          <button id="editBtn" class="btn-primary" type="button" onclick="toggleEditMode()">
+            <i class="fas fa-edit"></i>
+            Modifier
+          </button>
+        </div>
+      </div>
+
+      <div class="section-title">
+        <i class="fas fa-user"></i>
+        Informations Personnelles
+      </div>
+
+      <form id="profileForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="prenom">
+              <i class="fas fa-user mr-1"></i> Prénom
+            </label>
+            <input type="text" id="prenom" class="form-input" placeholder="Votre prénom" disabled />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="nom">
+              <i class="fas fa-user mr-1"></i> Nom
+            </label>
+            <input type="text" id="nom" class="form-input" placeholder="Votre nom" disabled />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="telephone">
+              <i class="fas fa-phone mr-1"></i> Téléphone
+            </label>
+            <input type="tel" id="telephone" class="form-input" placeholder="514-029-2001" maxlength="12" disabled />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="courriel">
+              <i class="fas fa-envelope mr-1"></i> Courriel
+            </label>
+            <input type="email" id="courriel" class="form-input" placeholder="votre@courriel.com" disabled />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="adresse">
+              <i class="fas fa-map-marker-alt mr-1"></i> Adresse
+            </label>
+            <input type="text"
+                   id="adresse"
+                   class="form-input"
+                   placeholder="123 Rue Exemple, Ville, Province, Code Postal"
+                   autocomplete="new-password"
+                   autocorrect="off"
+                   autocapitalize="off"
+                   spellcheck="false"
+                   readonly
+                   onfocus="this.removeAttribute('readonly');"
+                   data-form-type="other"
+                   disabled />
+          </div>
+
+          <div class="form-group">
+            <!-- Colonne vide pour garder l'alignement -->
+          </div>
+        </div>
+      </form>
+    </div>
+
+    </div>
+  </div>
+
+  <!-- Modal d'édition de photo de profil -->
+  <div id="photo-editor-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-semibold" style="color: var(--text-light);">Modifier la photo de profil</h3>
+        <button id="close-editor-btn" class="text-2xl" style="color: var(--text-gray);">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="flex flex-col items-center gap-4">
+        <!-- Canvas pour l'édition -->
+        <div class="relative">
+          <canvas id="photo-editor-canvas" width="300" height="300" style="max-width: 100%;"></canvas>
+        </div>
+
+        <!-- Contrôle de zoom -->
+        <div class="w-full">
+          <label class="text-sm mb-2 block" style="color: var(--text-gray);">
+            <i class="fas fa-search-plus mr-2"></i>
+            Zoom
+          </label>
+          <input type="range" id="zoom-slider" min="1" max="3" step="0.1" value="1" class="w-full" />
+        </div>
+
+        <!-- Boutons d'action -->
+        <div class="flex gap-3 w-full">
+          <button id="cancel-editor-btn" class="btn-secondary flex-1">Annuler</button>
+          <button id="save-editor-btn" class="btn-primary flex-1">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de choix caméra -->
+  <div id="camera-choice-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-semibold" style="color: var(--text-light);">Prendre une photo</h3>
+        <button id="close-choice-modal-btn" class="text-2xl" style="color: var(--text-gray);">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <p class="text-sm mb-6" style="color: var(--text-gray);">
+        Choisissez comment vous souhaitez prendre votre photo
+      </p>
+
+      <div class="grid grid-cols-1 gap-4">
+        <!-- Option Caméra PC -->
+        <button id="use-pc-camera-btn" class="p-6 rounded-lg border-2 transition-all hover:border-blue-500" style="background: var(--bg-dark); border-color: var(--border-dark);">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background: rgba(59, 130, 246, 0.2);">
+              <i class="fas fa-desktop text-2xl" style="color: var(--primary-blue);"></i>
+            </div>
+            <div class="text-left">
+              <h4 class="font-semibold mb-1" style="color: var(--text-light);">Caméra PC</h4>
+              <p class="text-sm" style="color: var(--text-gray);">Utiliser la webcam de votre ordinateur</p>
+            </div>
+          </div>
+        </button>
+
+        <!-- Option Mobile avec QR -->
+        <button id="use-mobile-qr-btn" class="p-6 rounded-lg border-2 transition-all hover:border-blue-500" style="background: var(--bg-dark); border-color: var(--border-dark);">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background: rgba(34, 197, 94, 0.2);">
+              <i class="fas fa-mobile-alt text-2xl" style="color: var(--primary-green);"></i>
+            </div>
+            <div class="text-left">
+              <h4 class="font-semibold mb-1" style="color: var(--text-light);">Mobile (QR Code)</h4>
+              <p class="text-sm" style="color: var(--text-gray);">Scanner un QR code avec votre téléphone</p>
+            </div>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de caméra PC -->
+  <div id="camera-modal" class="modal hidden">
+    <div class="w-full h-full flex flex-col items-center justify-center p-4">
+      <div class="w-full max-w-lg">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-semibold" style="color: var(--text-light);">Caméra PC</h3>
+          <button id="close-camera-btn" class="text-2xl" style="color: var(--text-gray);">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div class="relative rounded-lg overflow-hidden" style="background: #000;">
+          <video id="camera-video" autoplay playsinline class="w-full" style="max-height: 60vh;"></video>
+          <canvas id="camera-canvas" class="hidden"></canvas>
+        </div>
+
+        <div class="flex gap-3 mt-4">
+          <button id="cancel-camera-btn" class="btn-secondary flex-1">Annuler</button>
+          <button id="capture-photo-btn" class="btn-primary flex-1">
+            <i class="fas fa-camera mr-2"></i>Capturer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal QR Code Mobile -->
+  <div id="qr-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-semibold" style="color: var(--text-light);">Scanner le QR Code</h3>
+        <button id="close-qr-modal-btn" class="text-2xl" style="color: var(--text-gray);">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="text-center">
+        <p class="text-sm mb-6" style="color: var(--text-gray);">
+          Scannez ce QR code avec votre téléphone pour prendre une photo
+        </p>
+
+        <div id="qrcode-container" class="flex justify-center mb-6 p-4 rounded-lg" style="background: white;">
+          <!-- Le QR code sera généré ici -->
+        </div>
+
+        <div class="flex items-center justify-center gap-2 mb-4">
+          <p class="text-sm" style="color: var(--text-gray);" id="qr-status-text">
+            En attente de la photo...
+          </p>
+        </div>
+
+        <button id="cancel-qr-btn" class="btn-secondary w-full">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de confirmation de suppression de photo -->
+  <div id="delete-photo-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="flex flex-col items-center gap-4">
+        <div class="w-16 h-16 rounded-full flex items-center justify-center" style="background: rgba(239, 68, 68, 0.2);">
+          <i class="fas fa-exclamation-triangle text-3xl" style="color: var(--primary-red);"></i>
+        </div>
+        <h3 class="text-xl font-semibold text-center" style="color: var(--text-light);">Supprimer la photo de profil</h3>
+        <p class="text-center" style="color: var(--text-gray);">
+          Êtes-vous sûr de vouloir supprimer votre photo de profil ? Cette action ne peut pas être annulée.
+        </p>
+        <div class="flex gap-3 w-full mt-4">
+          <button id="cancel-delete-photo-btn" class="btn-secondary flex-1">Annuler</button>
+          <button id="confirm-delete-photo-btn" class="flex-1 px-4 py-2 rounded-lg font-semibold transition-colors" style="background: var(--primary-red); color: white;">
+            <i class="fas fa-trash mr-2"></i>Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Fonction pour afficher les notifications (style calcul)
+    function showNotification(message, type = 'success') {
+      const notificationEl = document.createElement('div');
+      notificationEl.textContent = type === 'success' ? '✓ ' + message : '✗ ' + message;
+      notificationEl.style.cssText = `position:fixed;top:10px;right:10px;background:${type === 'success' ? '#5271ff' : '#ef4444'};color:white;padding:12px 20px;border-radius:8px;font-size:14px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);`;
+      document.body.appendChild(notificationEl);
+      setTimeout(() => notificationEl.remove(), 2000);
+    }
+  </script>
+
+  <script>
+    let currentUsername = null;
+    let profilePhotoUrl = null;
+    let isEditMode = false;
+
+    // Toggle du mode édition
+    function toggleEditMode() {
+      isEditMode = !isEditMode;
+      const btn = document.getElementById('editBtn');
+      const inputs = document.querySelectorAll('#profileForm input');
+
+      if (isEditMode) {
+        // Activer le mode édition
+        inputs.forEach(input => input.disabled = false);
+        btn.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+        btn.onclick = saveProfile;
+      } else {
+        // Désactiver le mode édition
+        inputs.forEach(input => input.disabled = true);
+        btn.innerHTML = '<i class="fas fa-edit"></i> Modifier';
+        btn.onclick = toggleEditMode;
+      }
+    }
+
+    // Sauvegarder le profil
+    async function saveProfile() {
+      const profileData = {
+        username: currentUsername,
+        prenom: document.getElementById('prenom').value.trim(),
+        nom: document.getElementById('nom').value.trim(),
+        telephone: document.getElementById('telephone').value.trim(),
+        email: document.getElementById('courriel').value.trim(),
+        adresse: document.getElementById('adresse').value.trim()
+      };
+
+      try {
+        const response = await fetch('/api/profile/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(profileData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showNotification('Profil mis à jour avec succès', 'success');
+          await loadProfile(); // Recharger pour mettre à jour l'affichage
+
+          // Revenir en mode lecture - désactiver les inputs et changer le bouton
+          const btn = document.getElementById('editBtn');
+          const inputs = document.querySelectorAll('#profileForm input');
+          inputs.forEach(input => input.disabled = true);
+          btn.innerHTML = '<i class="fas fa-edit"></i> Modifier';
+          btn.onclick = toggleEditMode;
+          isEditMode = false;
+        } else {
+          showNotification('Erreur: ' + data.error, 'error');
+        }
+      } catch (error) {
+        console.error('Erreur mise à jour profil:', error);
+        showNotification('Erreur lors de la mise à jour', 'error');
+      }
+    }
+
+    // Charger les informations du profil
+    async function loadProfile() {
+      try {
+        currentUsername = localStorage.getItem('username');
+
+        if (!currentUsername) {
+          console.error('Aucun utilisateur connecté');
+          return;
+        }
+
+        const response = await fetch(`/api/profile/${currentUsername}`);
+        const data = await response.json();
+
+        if (data.success) {
+          const profile = data.profile;
+
+          // Mettre à jour les champs
+          document.getElementById('prenom').value = profile.prenom || '';
+          document.getElementById('nom').value = profile.nom || '';
+          document.getElementById('telephone').value = profile.telephone || '';
+          document.getElementById('courriel').value = profile.email || '';
+          document.getElementById('adresse').value = profile.adresse || '';
+
+          // Mettre à jour le header
+          const fullName = [profile.prenom, profile.nom].filter(Boolean).join(' ') || 'Coach';
+          document.getElementById('profileName').textContent = fullName;
+          document.getElementById('profileEmail').textContent = profile.email || 'coach@qwota.ca';
+
+          // Mettre à jour la photo
+          if (profile.photo_url) {
+            profilePhotoUrl = profile.photo_url;
+            const img = document.getElementById('profile-photo-image');
+            const placeholder = document.getElementById('profile-photo-placeholder');
+            img.src = profile.photo_url;
+            img.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+          }
+        }
+      } catch (error) {
+        console.error('Erreur chargement profil:', error);
+      }
+    }
+
+    // Charger le profil au démarrage
+    loadProfile();
+  </script>
+
+  <script>
+    // ===========================================
+    // GESTION PHOTO DE PROFIL (style connect_agenda)
+    // ===========================================
+
+    const photoInput = document.getElementById("profile-photo-input");
+    const cameraInput = document.getElementById("camera-capture-input");
+    const photoMenuBtn = document.getElementById("photo-menu-btn");
+    const photoMenuDropdown = document.getElementById("photo-menu-dropdown");
+    const uploadPhotoOption = document.getElementById("upload-photo-option");
+    const cameraPhotoOption = document.getElementById("camera-photo-option");
+    const deletePhotoOption = document.getElementById("delete-photo-option");
+    const profilePhotoImage = document.getElementById("profile-photo-image");
+    const profilePhotoPlaceholder = document.getElementById("profile-photo-placeholder");
+
+    // Modal et éditeur
+    const editorModal = document.getElementById("photo-editor-modal");
+    const closeEditorBtn = document.getElementById("close-editor-btn");
+    const cancelEditorBtn = document.getElementById("cancel-editor-btn");
+    const saveEditorBtn = document.getElementById("save-editor-btn");
+    const canvas = document.getElementById("photo-editor-canvas");
+    const ctx = canvas.getContext("2d");
+    const zoomSlider = document.getElementById("zoom-slider");
+
+    // Modals
+    const cameraChoiceModal = document.getElementById("camera-choice-modal");
+    const closeChoiceModalBtn = document.getElementById("close-choice-modal-btn");
+    const usePcCameraBtn = document.getElementById("use-pc-camera-btn");
+    const useMobileQrBtn = document.getElementById("use-mobile-qr-btn");
+
+    const cameraModal = document.getElementById("camera-modal");
+    const closeCameraBtn = document.getElementById("close-camera-btn");
+    const cancelCameraBtn = document.getElementById("cancel-camera-btn");
+    const capturePhotoBtn = document.getElementById("capture-photo-btn");
+    const cameraVideo = document.getElementById("camera-video");
+    const cameraCanvas = document.getElementById("camera-canvas");
+
+    const qrModal = document.getElementById("qr-modal");
+    const closeQrModalBtn = document.getElementById("close-qr-modal-btn");
+    const cancelQrBtn = document.getElementById("cancel-qr-btn");
+
+    const deletePhotoModal = document.getElementById("delete-photo-modal");
+    const cancelDeletePhotoBtn = document.getElementById("cancel-delete-photo-btn");
+    const confirmDeletePhotoBtn = document.getElementById("confirm-delete-photo-btn");
+
+    let currentImage = null;
+    let zoom = 1;
+    let offsetX = 0;
+    let offsetY = 0;
+    let isDragging = false;
+    let startX, startY;
+    let stream = null;
+
+    // Toggle menu photo
+    photoMenuBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      photoMenuDropdown.classList.toggle("hidden");
+    });
+
+    // Fermer le menu en cliquant ailleurs
+    document.addEventListener("click", () => {
+      photoMenuDropdown.classList.add("hidden");
+    });
+
+    // Option: Prendre une photo
+    cameraPhotoOption.addEventListener("click", () => {
+      photoMenuDropdown.classList.add("hidden");
+      cameraChoiceModal.classList.remove("hidden");
+    });
+
+    // Option: Modifier photo
+    uploadPhotoOption.addEventListener("click", () => {
+      photoMenuDropdown.classList.add("hidden");
+      photoInput.click();
+    });
+
+    // Option: Supprimer photo
+    deletePhotoOption.addEventListener("click", () => {
+      photoMenuDropdown.classList.add("hidden");
+      deletePhotoModal.classList.remove("hidden");
+    });
+
+    // Upload photo depuis galerie
+    photoInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          currentImage = new Image();
+          currentImage.onload = () => {
+            openEditor();
+          };
+          currentImage.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Choisir caméra PC
+    usePcCameraBtn.addEventListener("click", async () => {
+      cameraChoiceModal.classList.add("hidden");
+      cameraModal.classList.remove("hidden");
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+        cameraVideo.srcObject = stream;
+      } catch (error) {
+        showNotification("Impossible d'accéder à la caméra", "error");
+        cameraModal.classList.add("hidden");
+      }
+    });
+
+    // Choisir QR Code mobile
+    useMobileQrBtn.addEventListener("click", () => {
+      cameraChoiceModal.classList.add("hidden");
+      qrModal.classList.remove("hidden");
+
+      // Générer QR code
+      const qrContainer = document.getElementById("qrcode-container");
+      qrContainer.innerHTML = "";
+      const qrUrl = window.location.origin + "/mobile-photo-upload?session=" + Date.now();
+      new QRCode(qrContainer, {
+        text: qrUrl,
+        width: 200,
+        height: 200
+      });
+    });
+
+    // Capturer photo depuis webcam
+    capturePhotoBtn.addEventListener("click", () => {
+      const videoCanvas = document.createElement("canvas");
+      videoCanvas.width = cameraVideo.videoWidth;
+      videoCanvas.height = cameraVideo.videoHeight;
+      const videoCtx = videoCanvas.getContext("2d");
+      videoCtx.drawImage(cameraVideo, 0, 0);
+
+      currentImage = new Image();
+      currentImage.onload = () => {
+        stopCamera();
+        cameraModal.classList.add("hidden");
+        openEditor();
+      };
+      currentImage.src = videoCanvas.toDataURL();
+    });
+
+    // Fermer caméra
+    function stopCamera() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+    }
+
+    closeCameraBtn.addEventListener("click", () => {
+      stopCamera();
+      cameraModal.classList.add("hidden");
+    });
+
+    cancelCameraBtn.addEventListener("click", () => {
+      stopCamera();
+      cameraModal.classList.add("hidden");
+    });
+
+    // Fermer modals
+    closeChoiceModalBtn.addEventListener("click", () => {
+      cameraChoiceModal.classList.add("hidden");
+    });
+
+    closeQrModalBtn.addEventListener("click", () => {
+      qrModal.classList.add("hidden");
+    });
+
+    cancelQrBtn.addEventListener("click", () => {
+      qrModal.classList.add("hidden");
+    });
+
+    // Ouvrir l'éditeur
+    function openEditor() {
+      editorModal.classList.remove("hidden");
+      zoom = 1;
+      offsetX = 0;
+      offsetY = 0;
+      zoomSlider.value = 1;
+      drawCanvas();
+    }
+
+    // Dessiner sur le canvas
+    function drawCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const imgRatio = currentImage.width / currentImage.height;
+      const canvasRatio = 1; // Circulaire
+
+      let drawWidth, drawHeight;
+      if (imgRatio > canvasRatio) {
+        drawHeight = canvas.height * zoom;
+        drawWidth = drawHeight * imgRatio;
+      } else {
+        drawWidth = canvas.width * zoom;
+        drawHeight = drawWidth / imgRatio;
+      }
+
+      const x = (canvas.width - drawWidth) / 2 + offsetX;
+      const y = (canvas.height - drawHeight) / 2 + offsetY;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(currentImage, x, y, drawWidth, drawHeight);
+      ctx.restore();
+    }
+
+    // Zoom slider
+    zoomSlider.addEventListener("input", (e) => {
+      zoom = parseFloat(e.target.value);
+      drawCanvas();
+    });
+
+    // Drag sur le canvas
+    canvas.addEventListener("mousedown", (e) => {
+      isDragging = true;
+      startX = e.offsetX;
+      startY = e.offsetY;
+    });
+
+    canvas.addEventListener("mousemove", (e) => {
+      if (isDragging) {
+        const dx = e.offsetX - startX;
+        const dy = e.offsetY - startY;
+        offsetX += dx;
+        offsetY += dy;
+        startX = e.offsetX;
+        startY = e.offsetY;
+        drawCanvas();
+      }
+    });
+
+    canvas.addEventListener("mouseup", () => {
+      isDragging = false;
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+      isDragging = false;
+    });
+
+    // Annuler l'édition
+    closeEditorBtn.addEventListener("click", () => {
+      editorModal.classList.add("hidden");
+    });
+
+    cancelEditorBtn.addEventListener("click", () => {
+      editorModal.classList.add("hidden");
+    });
+
+    // Sauvegarder la photo
+    saveEditorBtn.addEventListener("click", async () => {
+      canvas.toBlob(async (blob) => {
+        const formData = new FormData();
+        formData.append("photo", blob, "profile.jpg");
+        formData.append("username", currentUsername);
+
+        try {
+          const response = await fetch("/api/profile/upload-photo", {
+            method: "POST",
+            body: formData
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            profilePhotoImage.src = data.photo_url + "?t=" + Date.now();
+            profilePhotoImage.classList.remove("hidden");
+            profilePhotoPlaceholder.classList.add("hidden");
+
+            showNotification("Photo mise à jour avec succès", "success");
+            editorModal.classList.add("hidden");
+
+            // Update header if in iframe
+            if (window.parent && window.parent.document) {
+              try {
+                const headerPhoto = window.parent.document.querySelector('.header-user-photo');
+                if (headerPhoto) {
+                  headerPhoto.src = data.photo_url + '?t=' + Date.now();
+                }
+              } catch(e) {
+                console.log('Cannot update parent header photo');
+              }
+            }
+          } else {
+            showNotification("Erreur lors de l'upload", "error");
+          }
+        } catch (error) {
+          showNotification("Erreur lors de l'upload", "error");
+        }
+      }, "image/jpeg", 0.9);
+    });
+
+    // Supprimer la photo
+    confirmDeletePhotoBtn.addEventListener("click", async () => {
+      try {
+        const response = await fetch("/api/profile/delete-photo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: currentUsername })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          profilePhotoImage.classList.add("hidden");
+          profilePhotoPlaceholder.classList.remove("hidden");
+          showNotification("Photo supprimée", "success");
+          deletePhotoModal.classList.add("hidden");
+        } else {
+          showNotification("Erreur lors de la suppression", "error");
+        }
+      } catch (error) {
+        showNotification("Erreur lors de la suppression", "error");
+      }
+    });
+
+    cancelDeletePhotoBtn.addEventListener("click", () => {
+      deletePhotoModal.classList.add("hidden");
+    });
+  </script>
+
+  <script>
+    // ===========================================
+    // FORMATAGE AUTOMATIQUE DU TÉLÉPHONE (000-000-0000)
+    // ===========================================
+    const telephoneInput = document.getElementById('telephone');
+
+    if (telephoneInput) {
+      telephoneInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, ''); // Garder seulement les chiffres
+        let formattedValue = '';
+
+        if (value.length > 0) {
+          formattedValue = value.substring(0, 3);
+        }
+        if (value.length >= 4) {
+          formattedValue += '-' + value.substring(3, 6);
+        }
+        if (value.length >= 7) {
+          formattedValue += '-' + value.substring(6, 10);
+        }
+
+        e.target.value = formattedValue;
+      });
+
+      telephoneInput.addEventListener('keydown', function(e) {
+        // Si l'utilisateur appuie sur Backspace ou Delete
+        if (e.key === 'Backspace' || e.key === 'Delete') {
+          const cursorPos = e.target.selectionStart;
+          const value = e.target.value;
+
+          // Si on supprime un tiret, supprimer aussi le chiffre avant
+          if (cursorPos > 0 && value[cursorPos - 1] === '-') {
+            e.preventDefault();
+            const newValue = value.substring(0, cursorPos - 2) + value.substring(cursorPos);
+            e.target.value = newValue;
+            e.target.setSelectionRange(cursorPos - 2, cursorPos - 2);
+
+            // Re-déclencher l'événement input pour reformater
+            const inputEvent = new Event('input', { bubbles: true });
+            e.target.dispatchEvent(inputEvent);
+          }
+        }
+      });
+    }
+  </script>
+
+  <!-- Google Maps Autocomplete pour adresse -->
+  <script>
+    // Variable globale pour tracker si une adresse Google a été sélectionnée
+    window.googleAddressSelected = false;
+
+    window.initAddressAutocomplete = function() {
+      const input = document.getElementById('adresse');
+      if (!input) return;
+
+      // Forcer la désactivation de l'autocomplete navigateur
+      input.setAttribute('autocomplete', 'new-password');
+      input.setAttribute('autocorrect', 'off');
+      input.setAttribute('autocapitalize', 'off');
+      input.setAttribute('spellcheck', 'false');
+
+      const autocomplete = new google.maps.places.Autocomplete(input, {
+        types: ['address'],
+        componentRestrictions: { country: 'ca' }
+      });
+
+      // Repositionner le dropdown Google pour qu'il s'aligne avec le champ input sur mobile
+      function repositionGoogleDropdown() {
+        const pacContainer = document.querySelector('.pac-container');
+        if (pacContainer && window.innerWidth <= 768) {
+          const inputRect = input.getBoundingClientRect();
+          pacContainer.style.left = inputRect.left + 'px';
+          pacContainer.style.width = inputRect.width + 'px';
+          pacContainer.style.maxWidth = inputRect.width + 'px';
+        }
+      }
+
+      // Observer pour détecter l'apparition du dropdown
+      const observer = new MutationObserver(() => {
+        repositionGoogleDropdown();
+      });
+
+      // Observer les changements sur le body pour détecter le dropdown
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+
+      // Repositionner aussi sur input et focus
+      input.addEventListener('input', () => {
+        window.googleAddressSelected = false;
+        // Réappliquer les attributs anti-autocomplete
+        input.setAttribute('autocomplete', 'new-password');
+        setTimeout(repositionGoogleDropdown, 50);
+      });
+
+      input.addEventListener('focus', () => {
+        input.setAttribute('autocomplete', 'new-password');
+        input.removeAttribute('readonly');
+        setTimeout(repositionGoogleDropdown, 50);
+      });
+
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry) {
+          console.log("Adresse invalide");
+          window.googleAddressSelected = false;
+          return;
+        }
+
+        // Marquer qu'une adresse Google a été sélectionnée
+        window.googleAddressSelected = true;
+
+        const components = place.address_components;
+        let streetNumber = '';
+        let route = '';
+        let city = '';
+        let province = '';
+        let postalCode = '';
+
+        components.forEach(component => {
+          const types = component.types;
+
+          if (types.includes('street_number')) {
+            streetNumber = component.long_name;
+          }
+          if (types.includes('route')) {
+            route = component.long_name;
+          }
+          if (types.includes('locality')) {
+            city = component.long_name;
+          }
+          if (types.includes('administrative_area_level_1')) {
+            province = component.short_name;
+          }
+          if (types.includes('postal_code')) {
+            postalCode = component.long_name;
+          }
+        });
+
+        const fullAddress = `${streetNumber} ${route}, ${city}, ${province} ${postalCode}`;
+        input.value = fullAddress.trim();
+      });
+    };
+  </script>
+
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAZDi-RMHDdA4l-4sv_5H8GhsUAYXV4DVE&libraries=places&callback=initAddressAutocomplete&language=fr&region=CA"
+    async
+    defer
+  ></script>
+
+</body>
+</html>

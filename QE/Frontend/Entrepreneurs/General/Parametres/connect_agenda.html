@@ -551,7 +551,7 @@
       </div>
 
       <!-- Mes informations -->
-      <div class="box mt-6">
+      <div id="mes-informations-section" class="box mt-6">
         <div class="box-header">
           <div class="flex items-center gap-3">
             <div class="box-header-icon" style="background: linear-gradient(135deg, rgb(59, 130, 246), rgb(59, 130, 246));">
@@ -616,6 +616,14 @@
             <div class="h-px mt-2" style="background: var(--border-dark);"></div>
           </div>
 
+          <!-- Message si information entreprise vide -->
+          <div id="business-empty-warning" class="mb-4 p-3 rounded-lg" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); display: none;">
+            <p class="text-sm flex items-center gap-2" style="color: #f59e0b;">
+              <i class="fas fa-exclamation-triangle"></i>
+              Veuillez remplir les informations entreprise pour compléter votre profil.
+            </p>
+          </div>
+
           <!-- NEQ + TPS + TVQ (même ligne) -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -636,6 +644,14 @@
                 class="w-full border rounded p-2 shadow-sm info-field"
                 placeholder="Numéro TVQ" disabled>
             </div>
+          </div>
+
+          <!-- Message si documents vides -->
+          <div id="documents-empty-warning" class="mb-4 p-3 rounded-lg" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); display: none;">
+            <p class="text-sm flex items-center gap-2" style="color: #f59e0b;">
+              <i class="fas fa-exclamation-triangle"></i>
+              Veuillez téléverser les documents requis pour compléter votre profil.
+            </p>
           </div>
 
           <!-- Spécimen chèque -->
@@ -3072,6 +3088,28 @@ async function loadInfos(bust = false) {
 
   const previewLinks = document.querySelectorAll(".file-preview-link");
   previewLinks.forEach(link => link.style.pointerEvents = "none");
+
+  // Afficher les avertissements si les données sont vides
+  updateEmptyWarnings(result.data, result.files);
+}
+
+// Fonction pour mettre à jour les avertissements de données vides
+function updateEmptyWarnings(data, files) {
+  // Vérifier si l'information entreprise est vide (NEQ, TPS, TVQ)
+  const businessWarning = document.getElementById('business-empty-warning');
+  if (businessWarning) {
+    const hasBusinessInfo = (data?.neq && data.neq.trim()) ||
+                            (data?.tps && data.tps.trim()) ||
+                            (data?.tvq && data.tvq.trim());
+    businessWarning.style.display = hasBusinessInfo ? 'none' : 'block';
+  }
+
+  // Vérifier si les documents sont vides (specimen, betonel, integration)
+  const documentsWarning = document.getElementById('documents-empty-warning');
+  if (documentsWarning) {
+    const hasDocuments = files && (files.specimen || files.betonel || files.integration);
+    documentsWarning.style.display = hasDocuments ? 'none' : 'block';
+  }
 }
 window.addEventListener("DOMContentLoaded", () => loadInfos());
 
@@ -4127,9 +4165,8 @@ function scrollToSection(section) {
     case 'business':
     case 'documents':
       // Personal, Business et Documents sont tous dans la section "Mes informations"
-      // Cibler la carte entière pour voir le titre de la section
-      const editBtn = document.querySelector('[onclick="toggleEditInfo()"]');
-      targetElement = editBtn ? editBtn.closest('.card') : null;
+      // Utiliser directement l'ID de la section
+      targetElement = document.getElementById('mes-informations-section');
       console.log('[SCROLL] Recherche section "Mes informations", élément trouvé:', !!targetElement);
       break;
     case 'signature':

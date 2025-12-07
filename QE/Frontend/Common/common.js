@@ -63,8 +63,14 @@ if (typeof window.username === 'undefined') {
     window.username = usernameFromUrl;
     localStorage.setItem('username', usernameFromUrl);
   } else {
-    // Sinon utiliser localStorage
-    window.username = localStorage.getItem('username') || "demo";
+    // Pour les coaches: NE PAS définir window.username s'il n'y a pas de paramètre ?user=
+    // Ils doivent sélectionner un entrepreneur d'abord
+    const userRole = localStorage.getItem('userRole');
+    if (userRole !== 'coach') {
+      // Pour les entrepreneurs et admins: utiliser localStorage normalement
+      window.username = localStorage.getItem('username') || "demo";
+    }
+    // Pour les coaches sans ?user=, window.username reste undefined
   }
 }
 
@@ -169,10 +175,14 @@ function initCommonSystem() {
  * Configure les permissions utilisateur
  */
 function setupUserPermissions() {
-  // console.log('[FIX] Configuration des permissions pour:', username);
+  // Pour les coaches, utiliser leur propre username depuis localStorage (pas window.username qui est l'entrepreneur sélectionné)
+  const userRole = localStorage.getItem('userRole');
+  const usernameToUse = (userRole === 'coach') ? localStorage.getItem('username') : username;
+
+  // console.log('[FIX] Configuration des permissions pour:', usernameToUse);
 
   // Récupérer le rôle depuis l'API
-  fetchUserRole(username);
+  fetchUserRole(usernameToUse);
 }
 
 /**
@@ -561,3 +571,7 @@ async function applyGradeBorderToHeader(username) {
     console.error('Erreur lors de l\'application du contour de grade:', error);
   }
 }
+
+// ==========================================
+// FONCTION COMMUNE POUR CHARGER LES ENTREPRENEURS
+// ==========================================

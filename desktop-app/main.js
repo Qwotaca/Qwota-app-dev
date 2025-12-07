@@ -27,6 +27,12 @@ let pageCache = {}; // Cache pour les pages préchargées
 
 // Fonction pour précharger toutes les pages principales en arrière-plan
 function preloadAllPages() {
+  // Vérifier que mainWindow existe et n'est pas détruite
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    console.log('[ELECTRON] ⚠️  Impossible de précharger: mainWindow non disponible');
+    return;
+  }
+
   const baseUrl = serverConfig.url.replace('/login', '');
 
   const pagesToPreload = [
@@ -57,6 +63,12 @@ function preloadAllPages() {
   }
 
   pagesToPreload.forEach((pagePath, index) => {
+    // Vérifier à nouveau que mainWindow existe avant chaque création de view
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      console.log('[ELECTRON] ⚠️  Arrêt du préchargement: mainWindow fermée');
+      return;
+    }
+
     const view = new BrowserView({
       webPreferences: {
         nodeIntegration: false,

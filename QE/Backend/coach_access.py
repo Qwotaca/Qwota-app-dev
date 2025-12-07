@@ -1,6 +1,7 @@
 coach_entrepreneurs = {
     "coach1": ["jdupont", "mathis"],
     "coach01": ["mathis", "admin"],
+    "coach2": ["fboucher", "mathis"],
 }
 
 def get_entrepreneurs_for_coach(coach_username: str):

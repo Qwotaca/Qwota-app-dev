@@ -314,12 +314,7 @@ def coach_parametres_file():
 @app.get("/coach_dashboard", include_in_schema=False)
 def coach_dashboard_file():
     """Page dashboard pour les coachs"""
-    return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Admin", "coach_dashboard.html"))
-
-@app.get("/coach_rpo", include_in_schema=False)
-def coach_rpo_file():
-    """Page RPO pour les coachs"""
-    return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Admin", "coach_rpo.html"))
+    return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Coach", "coach_dashboard.html"))
 
 @app.get("/coach_central", include_in_schema=False)
 def coach_central_file():
@@ -345,6 +340,16 @@ def direction_facturation_file():
 def coach_inactivation_employes_file():
     """Page des demandes d'inactivation pour le coach"""
     return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Admin", "coach_inactivation_employes.html"))
+
+@app.get("/coach_mon_equipe", include_in_schema=False)
+def coach_mon_equipe_file():
+    """Page Mon équipe pour les coachs"""
+    return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Coach", "mon_equipe_coach.html"))
+
+@app.get("/coach_rpo", include_in_schema=False)
+def coach_rpo_file():
+    """Page RPO pour les coachs"""
+    return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Coach", "coach_rpo.html"))
 
 @app.get("/entrepreneur_centralevue", include_in_schema=False)
 def entrepreneur_centralevue_file():
@@ -889,62 +894,68 @@ def list_users_route():
 @app.get("/api/entrepreneurs")
 def get_entrepreneurs_list_api():
     """Retourne tous les utilisateurs avec le rôle entrepreneur ou beta avec leurs stats dashboard"""
-    print("[DEBUG] [CLASSEMENT] Chargement des entrepreneurs...", flush=True)
-    entrepreneurs = []
+    try:
+        print("[DEBUG] [CLASSEMENT] Chargement des entrepreneurs...", flush=True)
+        entrepreneurs = []
 
-    # Récupérer tous les utilisateurs de la base de données
-    all_users = list_all_users()
+        # Récupérer tous les utilisateurs de la base de données
+        all_users = list_all_users()
 
-    for user_data in all_users:
-        username = user_data.get("username", "")
-        role = user_data.get("role", "")
-        if role in ["entrepreneur", "beta"]:
-            try:
-                # Calculer les stats dashboard pour cet entrepreneur
-                stats = calculate_dashboard_stats(username)
-
-                # Charger le prénom et nom depuis user_info.json
-                prenom = ""
-                nom = ""
-                info_file = os.path.join(base_cloud, "signatures", username, "user_info.json")
+        for user_data in all_users:
+            username = user_data.get("username", "")
+            role = user_data.get("role", "")
+            if role in ["entrepreneur", "beta"]:
                 try:
-                    if os.path.exists(info_file):
-                        with open(info_file, 'r', encoding='utf-8') as f:
-                            user_info = json.load(f)
-                            prenom = user_info.get("prenom", "")
-                            nom = user_info.get("nom", "")
+                    # Calculer les stats dashboard pour cet entrepreneur
+                    stats = calculate_dashboard_stats(username)
+
+                    # Charger le prénom et nom depuis user_info.json
+                    prenom = ""
+                    nom = ""
+                    info_file = os.path.join(base_cloud, "signatures", username, "user_info.json")
+                    try:
+                        if os.path.exists(info_file):
+                            with open(info_file, 'r', encoding='utf-8') as f:
+                                user_info = json.load(f)
+                                prenom = user_info.get("prenom", "")
+                                nom = user_info.get("nom", "")
+                    except Exception as e:
+                        print(f"[WARNING] Erreur lecture user_info pour {username}: {e}", flush=True)
+
+                    # Créer le nom complet: "Prénom Nom" ou username si pas d'info
+                    nom_complet = f"{prenom} {nom}".strip() if (prenom or nom) else username
+
+                    print(f"[CLASSEMENT] {username} -> {nom_complet} - Stats OK", flush=True)
+
+                    entrepreneur_data = {
+                        "username": nom_complet,  # Afficher le nom complet au lieu du username
+                        "login_username": username,  # Username de connexion pour les photos de profil
+                        "role": role,
+                        "ca_actuel": stats["chiffre_affaires"]["ca_actuel"],
+                        "objectif": stats["chiffre_affaires"]["objectif"],
+                        "etoiles": stats["satisfaction"]["etoiles_moyennes"],
+                        "satisfactions": stats["satisfaction"]["nombre_avis"],
+                        "plaintes": stats["satisfaction"]["plaintes_actuel"],
+                        "contrat_moyen": stats["metriques"]["contrat_moyen"],
+                        "soumissions_signees": stats["status_soumissions"]["signees"],
+                        "taux_marketing": stats["metriques"]["taux_marketing"],
+                        "taux_vente": stats["metriques"]["taux_vente"],
+                        "prod_horaire": stats["metriques"]["prod_horaire"]
+                    }
+
+                    print(f"   [DATA] Donnees ajoutees pour: {nom_complet}", flush=True)
+                    entrepreneurs.append(entrepreneur_data)
                 except Exception as e:
-                    print(f"[WARNING] Erreur lecture user_info pour {username}: {e}", flush=True)
+                    print(f"[ERROR] Erreur traitement entrepreneur {username}: {str(e)[:100]}", flush=True)
+                    continue
 
-                # Créer le nom complet: "Prénom Nom" ou username si pas d'info
-                nom_complet = f"{prenom} {nom}".strip() if (prenom or nom) else username
-
-                print(f"[CLASSEMENT] {username} -> {nom_complet} - Stats OK", flush=True)
-
-                entrepreneur_data = {
-                    "username": nom_complet,  # Afficher le nom complet au lieu du username
-                    "login_username": username,  # Username de connexion pour les photos de profil
-                    "role": role,
-                    "ca_actuel": stats["chiffre_affaires"]["ca_actuel"],
-                    "objectif": stats["chiffre_affaires"]["objectif"],
-                    "etoiles": stats["satisfaction"]["etoiles_moyennes"],
-                    "satisfactions": stats["satisfaction"]["nombre_avis"],
-                    "plaintes": stats["satisfaction"]["plaintes_actuel"],
-                    "contrat_moyen": stats["metriques"]["contrat_moyen"],
-                    "soumissions_signees": stats["status_soumissions"]["signees"],
-                    "taux_marketing": stats["metriques"]["taux_marketing"],
-                    "taux_vente": stats["metriques"]["taux_vente"],
-                    "prod_horaire": stats["metriques"]["prod_horaire"]
-                }
-
-                print(f"   [DATA] Donnees ajoutees pour: {nom_complet}", flush=True)
-                entrepreneurs.append(entrepreneur_data)
-            except Exception as e:
-                print(f"[ERROR] Erreur traitement entrepreneur {username}: {str(e)[:100]}", flush=True)
-                continue
-
-    print(f"[OK] [CLASSEMENT] Total entrepreneurs: {len(entrepreneurs)}", flush=True)
-    return entrepreneurs
+        print(f"[OK] [CLASSEMENT] Total entrepreneurs: {len(entrepreneurs)}", flush=True)
+        return entrepreneurs
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"[ERROR] FATAL dans /api/entrepreneurs: {error_detail}", flush=True)
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
 
 
 # ================================================================
@@ -5429,6 +5440,564 @@ def api_get_entrepreneurs(coach_username: str):
         raise HTTPException(status_code=404, detail="Coach non trouvé ou aucun entrepreneur associé")
     return entrepreneurs
 
+@app.get("/api/coach/{coach_username}/equipe")
+def api_get_coach_equipe(coach_username: str):
+    """API pour récupérer les entrepreneurs d'un coach avec leurs informations détaillées"""
+    entrepreneur_usernames = get_entrepreneurs_for_coach(coach_username)
+    if not entrepreneur_usernames:
+        return {"entrepreneurs": [], "stats": {"total": 0, "totalVentes": 0, "totalSoumissions": 0}}
+
+    entrepreneurs_data = []
+    total_ventes = 0
+    total_soumissions = 0
+
+    for username in entrepreneur_usernames:
+        # Charger les infos utilisateur
+        user_info_path = os.path.join(base_cloud, "signatures", username, "user_info.json")
+        user_info = {}
+        if os.path.exists(user_info_path):
+            try:
+                with open(user_info_path, "r", encoding="utf-8") as f:
+                    user_info = json.load(f)
+            except:
+                pass
+
+        # Charger les ventes
+        ventes_path = os.path.join(base_cloud, "ventes", username, "ventes.json")
+        ventes = []
+        if os.path.exists(ventes_path):
+            try:
+                with open(ventes_path, "r", encoding="utf-8") as f:
+                    ventes = json.load(f)
+            except:
+                pass
+
+        # Charger les soumissions
+        soumissions_path = os.path.join(base_cloud, "soumissions_completes", username, "soumissions.json")
+        soumissions = []
+        if os.path.exists(soumissions_path):
+            try:
+                with open(soumissions_path, "r", encoding="utf-8") as f:
+                    soumissions = json.load(f)
+            except:
+                pass
+
+        # Calculer le total des ventes
+        montant_ventes = 0
+        for v in ventes:
+            try:
+                montant_str = str(v.get("montant", "0")).replace("$", "").replace(",", ".").replace(" ", "").strip()
+                montant_ventes += float(montant_str)
+            except:
+                pass
+
+        total_ventes += montant_ventes
+        total_soumissions += len(soumissions)
+
+        # Photo de profil
+        photo_url = f"/static/profile_photos/{username}.jpg"
+        photo_path = os.path.join(BASE_DIR, "static", "profile_photos", f"{username}.jpg")
+        if not os.path.exists(photo_path):
+            photo_url = None
+
+        entrepreneurs_data.append({
+            "username": username,
+            "prenom": user_info.get("prenom", username.capitalize()),
+            "nom": user_info.get("nom", ""),
+            "courriel": user_info.get("courriel", ""),
+            "telephone": user_info.get("telephone", ""),
+            "grade": user_info.get("grade", "junior"),
+            "photo": photo_url,
+            "stats": {
+                "ventes": montant_ventes,
+                "soumissions": len(soumissions),
+                "employes": len(user_info.get("equipes", [])) if isinstance(user_info.get("equipes"), list) else 0
+            }
+        })
+
+    return {
+        "entrepreneurs": entrepreneurs_data,
+        "stats": {
+            "total": len(entrepreneurs_data),
+            "totalVentes": total_ventes,
+            "totalSoumissions": total_soumissions
+        }
+    }
+
+@app.get("/api/coach/{coach_username}/equipe/dashboard")
+def api_get_coach_equipe_dashboard(coach_username: str, period: str = "all"):
+    """
+    API pour récupérer toutes les statistiques complètes de l'équipe d'un coach
+    Similaire au dashboard entrepreneur mais pour toute l'équipe avec filtrage par période
+
+    Périodes supportées: today, week, month, year, all
+    """
+    from datetime import datetime, timedelta, timezone
+
+    # Définir les dates de début/fin selon la période
+    now = datetime.now(timezone.utc)
+    start_date = None
+
+    if period == "today":
+        start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif period == "week":
+        start_date = now - timedelta(days=7)
+    elif period == "month":
+        start_date = now - timedelta(days=30)
+    elif period == "year":
+        start_date = now - timedelta(days=365)
+    # else: period == "all" -> start_date = None
+
+    entrepreneur_usernames = get_entrepreneurs_for_coach(coach_username)
+    if not entrepreneur_usernames:
+        return {
+            "entrepreneurs": [],
+            "team_stats": {
+                "total_entrepreneurs": 0,
+                "total_ca": 0,
+                "ca_moyen": 0,
+                "estimation_moyenne": 0,
+                "heures_pap_semaine": 0,
+                "taux_vente_moyen": 0,
+                "prod_horaire_moyen": 0,
+                "pourcentage_objectif": 0,
+                "total_signees": 0,
+                "total_en_attente": 0,
+                "total_perdus": 0,
+                "total_employes_actifs": 0,
+                "total_employes_candidats": 0,
+                "total_employes_inactifs": 0,
+                "moyenne_etoiles": 0,
+                "total_avis": 0,
+                "contrat_moyen": 0
+            }
+        }
+
+    entrepreneurs_data = []
+
+    # Stats d'équipe globales
+    team_total_ca = 0
+    team_total_montant_produit = 0
+    team_total_paiements_recoltes = 0
+    team_total_signees = 0
+    team_total_attente = 0
+    team_total_perdus = 0
+    team_total_employes_actifs = 0
+    team_total_employes_candidats = 0
+    team_total_employes_inactifs = 0
+    team_total_etoiles = 0
+    team_total_avis = 0
+    team_total_estimations = 0
+    team_estimation_count = 0
+    team_total_heures_pap = 0
+    team_total_prod_horaire = 0
+    team_total_pourcentage_objectif = 0
+    team_prod_horaire_count = 0
+    team_pourcentage_count = 0
+
+    for username in entrepreneur_usernames:
+        # 1. Charger user_info
+        user_info_path = os.path.join(base_cloud, "signatures", username, "user_info.json")
+        user_info = {}
+        if os.path.exists(user_info_path):
+            try:
+                with open(user_info_path, "r", encoding="utf-8") as f:
+                    user_info = json.load(f)
+            except:
+                pass
+
+        # 2. Photo de profil
+        photo_url = f"/static/profile_photos/{username}.jpg"
+        photo_path = os.path.join(BASE_DIR, "static", "profile_photos", f"{username}.jpg")
+        if not os.path.exists(photo_path):
+            photo_url = None
+
+        # 3. CHIFFRE D'AFFAIRES avec filtrage par période
+        ca_actuel = 0.0
+
+        # Ventes acceptées
+        acceptees_path = os.path.join(base_cloud, "ventes_acceptees", username, "ventes.json")
+        if os.path.exists(acceptees_path):
+            try:
+                with open(acceptees_path, 'r', encoding='utf-8') as f:
+                    acceptees = json.load(f)
+                    for v in acceptees:
+                        # Vérifier la période si nécessaire
+                        if start_date:
+                            date_str = v.get("date", "")
+                            try:
+                                date_obj = datetime.fromisoformat(date_str)
+                                if date_obj.tzinfo is None:
+                                    date_obj = date_obj.replace(tzinfo=timezone.utc)
+                                if date_obj < start_date:
+                                    continue
+                            except:
+                                pass
+
+                        prix_str = str(v.get("prix", "0"))
+                        prix_str = prix_str.replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
+                        try:
+                            ca_actuel += float(prix_str)
+                        except:
+                            continue
+            except:
+                pass
+
+        # Ventes produit (montant_produit séparé)
+        montant_produit = 0.0
+        produit_path = os.path.join(base_cloud, "ventes_produit", username, "ventes.json")
+        if os.path.exists(produit_path):
+            try:
+                with open(produit_path, 'r', encoding='utf-8') as f:
+                    produit = json.load(f)
+                    for v in produit:
+                        if start_date:
+                            date_str = v.get("date", "")
+                            try:
+                                date_obj = datetime.fromisoformat(date_str)
+                                if date_obj.tzinfo is None:
+                                    date_obj = date_obj.replace(tzinfo=timezone.utc)
+                                if date_obj < start_date:
+                                    continue
+                            except:
+                                pass
+
+                        prix_str = str(v.get("prix", "0"))
+                        prix_str = prix_str.replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
+                        try:
+                            prix = float(prix_str)
+                            montant_produit += prix
+                            ca_actuel += prix
+                        except:
+                            continue
+            except:
+                pass
+
+        team_total_montant_produit += montant_produit
+
+        # 4. STATUS SOUMISSIONS avec filtrage par période
+        signees_count = 0
+        attente_count = 0
+        perdus_count = 0
+
+        signees_path = os.path.join(base_cloud, "soumissions_signees", username, "soumissions.json")
+        if os.path.exists(signees_path):
+            try:
+                with open(signees_path, 'r', encoding='utf-8') as f:
+                    signees = json.load(f)
+                    for s in signees:
+                        if start_date:
+                            date_str = s.get("date", "")
+                            try:
+                                date_obj = datetime.fromisoformat(date_str)
+                                if date_obj.tzinfo is None:
+                                    date_obj = date_obj.replace(tzinfo=timezone.utc)
+                                if date_obj < start_date:
+                                    continue
+                            except:
+                                pass
+                        signees_count += 1
+            except:
+                pass
+
+        attente_path = os.path.join(base_cloud, "ventes_attente", username, "ventes.json")
+        if os.path.exists(attente_path):
+            try:
+                with open(attente_path, 'r', encoding='utf-8') as f:
+                    attente = json.load(f)
+                    for a in attente:
+                        if start_date:
+                            date_str = a.get("date", "")
+                            try:
+                                date_obj = datetime.fromisoformat(date_str)
+                                if date_obj.tzinfo is None:
+                                    date_obj = date_obj.replace(tzinfo=timezone.utc)
+                                if date_obj < start_date:
+                                    continue
+                            except:
+                                pass
+                        attente_count += 1
+            except:
+                pass
+
+        perdus_path = os.path.join(base_cloud, "clients_perdus", username, "clients_perdus.json")
+        if os.path.exists(perdus_path):
+            try:
+                with open(perdus_path, 'r', encoding='utf-8') as f:
+                    perdus = json.load(f)
+                    for p in perdus:
+                        if start_date:
+                            date_str = p.get("date", "")
+                            try:
+                                date_obj = datetime.fromisoformat(date_str)
+                                if date_obj.tzinfo is None:
+                                    date_obj = date_obj.replace(tzinfo=timezone.utc)
+                                if date_obj < start_date:
+                                    continue
+                            except:
+                                pass
+                        perdus_count += 1
+            except:
+                pass
+
+        # 5. SATISFACTION (AVIS)
+        etoiles_moyennes = 0.0
+        nombre_avis = 0
+        reviews_path = os.path.join(base_cloud, "reviews", username, "reviews.json")
+        if os.path.exists(reviews_path):
+            try:
+                with open(reviews_path, 'r', encoding='utf-8') as f:
+                    reviews = json.load(f)
+                    valid_reviews = []
+                    for r in reviews:
+                        if start_date:
+                            date_str = r.get("date", "")
+                            try:
+                                date_obj = datetime.fromisoformat(date_str)
+                                if date_obj.tzinfo is None:
+                                    date_obj = date_obj.replace(tzinfo=timezone.utc)
+                                if date_obj < start_date:
+                                    continue
+                            except:
+                                pass
+                        valid_reviews.append(r)
+
+                    if valid_reviews:
+                        total_etoiles = sum(float(r.get("rating", 0)) for r in valid_reviews)
+                        nombre_avis = len(valid_reviews)
+                        etoiles_moyennes = round(total_etoiles / nombre_avis, 1) if nombre_avis > 0 else 0.0
+                        team_total_etoiles += total_etoiles
+                        team_total_avis += nombre_avis
+            except:
+                pass
+
+        # 6. EMPLOYÉS (actifs, candidats, inactifs)
+        employes_actifs = 0
+        employes_candidats = 0
+        employes_inactifs = 0
+
+        actifs_path = os.path.join(base_cloud, "employes", username, "actifs.json")
+        if os.path.exists(actifs_path):
+            try:
+                with open(actifs_path, 'r', encoding='utf-8') as f:
+                    actifs = json.load(f)
+                    employes_actifs = len(actifs)
+            except:
+                pass
+
+        candidats_path = os.path.join(base_cloud, "employes", username, "candidats.json")
+        if os.path.exists(candidats_path):
+            try:
+                with open(candidats_path, 'r', encoding='utf-8') as f:
+                    candidats = json.load(f)
+                    employes_candidats = len(candidats)
+            except:
+                pass
+
+        inactifs_path = os.path.join(base_cloud, "employes", username, "inactifs.json")
+        if os.path.exists(inactifs_path):
+            try:
+                with open(inactifs_path, 'r', encoding='utf-8') as f:
+                    inactifs = json.load(f)
+                    employes_inactifs = len(inactifs)
+            except:
+                pass
+
+        # 7. MÉTRIQUES
+        contrat_moyen = round(ca_actuel / signees_count, 2) if signees_count > 0 else 0
+        total_potentiel = signees_count + attente_count + perdus_count
+        taux_vente = round((signees_count / total_potentiel) * 100, 2) if total_potentiel > 0 else 0
+
+        # 8. OBJECTIF et POURCENTAGE depuis RPO
+        objectif = 0
+        pourcentage_objectif = 0
+        prod_horaire = 0
+        taux_marketing = 0
+        heures_pap_semaine = 0
+
+        try:
+            from QE.Backend.rpo import load_user_rpo_data
+            rpo_data = load_user_rpo_data(username)
+            annual = rpo_data.get("annual", {})
+            objectif = round(float(annual.get("objectif_ca", 0)), 2)
+            if objectif > 0:
+                pourcentage_objectif = round((ca_actuel / objectif) * 100, 2)
+            prod_horaire = round(float(annual.get("prod_horaire", 0)), 2)
+            taux_marketing = round(float(annual.get("mktg_reel", 0)), 2)
+            heures_pap_semaine = round(float(annual.get("pap_semaine", 0)), 2)
+        except:
+            pass
+
+        # 9. ESTIMATIONS (soumissions complètes)
+        estimation_total = 0
+        estimation_count = 0
+        completes_path = os.path.join(base_cloud, "soumissions_completes", username, "soumissions.json")
+        if os.path.exists(completes_path):
+            try:
+                with open(completes_path, 'r', encoding='utf-8') as f:
+                    completes = json.load(f)
+                    for s in completes:
+                        if start_date:
+                            date_str = s.get("date", "")
+                            try:
+                                date_obj = datetime.fromisoformat(date_str)
+                                if date_obj.tzinfo is None:
+                                    date_obj = date_obj.replace(tzinfo=timezone.utc)
+                                if date_obj < start_date:
+                                    continue
+                            except:
+                                pass
+                        prix_str = str(s.get("prix", "0"))
+                        prix_str = prix_str.replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
+                        try:
+                            estimation_total += float(prix_str)
+                            estimation_count += 1
+                        except:
+                            continue
+            except:
+                pass
+
+        # 8. PAIEMENTS RÉCOLTÉS (facturation)
+        paiements_recoltes = 0.0
+        facturation_statuts_path = os.path.join("data", "facturation_qe_statuts", username, "statuts.json")
+        if os.path.exists(facturation_statuts_path):
+            try:
+                with open(facturation_statuts_path, 'r', encoding='utf-8') as f:
+                    statuts = json.load(f)
+                    for num_soumission, client_statuts in statuts.items():
+                        # Vérifier si traité ou en attente comptable
+                        statut_client = client_statuts.get("statutClient", "")
+
+                        # Dépôt traité
+                        if client_statuts.get("statutDepot") in ["traite", "traite_attente_final", "attente_comptable"]:
+                            depot_details = client_statuts.get("depot", {})
+                            montant_str = str(depot_details.get("montant", "0,00 $"))
+                            montant_str = montant_str.replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
+                            try:
+                                paiements_recoltes += float(montant_str)
+                            except:
+                                pass
+
+                        # Paiement final traité
+                        if client_statuts.get("statutPaiementFinal") in ["traite", "attente_comptable"]:
+                            pf_details = client_statuts.get("paiementFinal", {})
+                            montant_str = str(pf_details.get("montant", "0,00 $"))
+                            montant_str = montant_str.replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
+                            try:
+                                paiements_recoltes += float(montant_str)
+                            except:
+                                pass
+
+                        # Autres paiements traités
+                        autres_paiements = client_statuts.get("autresPaiements", [])
+                        if isinstance(autres_paiements, list):
+                            for ap in autres_paiements:
+                                if ap.get("statut") in ["traite", "attente_comptable"]:
+                                    montant_str = str(ap.get("montant", "0,00 $"))
+                                    montant_str = montant_str.replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
+                                    try:
+                                        paiements_recoltes += float(montant_str)
+                                    except:
+                                        pass
+            except:
+                pass
+
+        team_total_paiements_recoltes += paiements_recoltes
+
+        # Ajouter aux stats d'équipe
+        team_total_ca += ca_actuel
+        team_total_signees += signees_count
+        team_total_attente += attente_count
+        team_total_perdus += perdus_count
+        team_total_employes_actifs += employes_actifs
+        team_total_employes_candidats += employes_candidats
+        team_total_employes_inactifs += employes_inactifs
+        team_total_estimations += estimation_total
+        team_estimation_count += estimation_count
+        team_total_heures_pap += heures_pap_semaine
+        if prod_horaire > 0:
+            team_total_prod_horaire += prod_horaire
+            team_prod_horaire_count += 1
+        if pourcentage_objectif > 0:
+            team_total_pourcentage_objectif += pourcentage_objectif
+            team_pourcentage_count += 1
+
+        entrepreneurs_data.append({
+            "username": username,
+            "prenom": user_info.get("prenom", username.capitalize()),
+            "nom": user_info.get("nom", ""),
+            "courriel": user_info.get("courriel", ""),
+            "telephone": user_info.get("telephone", ""),
+            "grade": user_info.get("grade", "junior"),
+            "photo": photo_url,
+            "chiffre_affaires": {
+                "objectif": objectif,
+                "ca_actuel": round(ca_actuel, 2),
+                "pourcentage": pourcentage_objectif
+            },
+            "status_soumissions": {
+                "signees": signees_count,
+                "en_attente": attente_count,
+                "perdus": perdus_count
+            },
+            "satisfaction": {
+                "etoiles_moyennes": etoiles_moyennes,
+                "nombre_avis": nombre_avis
+            },
+            "employes": {
+                "actifs": employes_actifs,
+                "candidats": employes_candidats,
+                "inactifs": employes_inactifs,
+                "total": employes_actifs + employes_candidats + employes_inactifs
+            },
+            "metriques": {
+                "contrat_moyen": contrat_moyen,
+                "taux_vente": taux_vente,
+                "prod_horaire": prod_horaire,
+                "taux_marketing": taux_marketing
+            }
+        })
+
+    # Calculer les moyennes d'équipe
+    nb_entrepreneurs = len(entrepreneurs_data)
+    moyenne_etoiles_equipe = round(team_total_etoiles / team_total_avis, 1) if team_total_avis > 0 else 0.0
+    contrat_moyen_equipe = round(team_total_ca / team_total_signees, 2) if team_total_signees > 0 else 0
+    total_potentiel_equipe = team_total_signees + team_total_attente + team_total_perdus
+    taux_vente_moyen_equipe = round((team_total_signees / total_potentiel_equipe) * 100, 2) if total_potentiel_equipe > 0 else 0
+
+    # Nouvelles moyennes d'équipe
+    ca_moyen_equipe = round(team_total_ca / nb_entrepreneurs, 2) if nb_entrepreneurs > 0 else 0
+    estimation_moyenne_equipe = round(team_total_estimations / team_estimation_count, 2) if team_estimation_count > 0 else 0
+    heures_pap_moyenne_equipe = round(team_total_heures_pap / nb_entrepreneurs, 2) if nb_entrepreneurs > 0 else 0
+    prod_horaire_moyen_equipe = round(team_total_prod_horaire / team_prod_horaire_count, 2) if team_prod_horaire_count > 0 else 0
+    pourcentage_objectif_moyen_equipe = round(team_total_pourcentage_objectif / team_pourcentage_count, 2) if team_pourcentage_count > 0 else 0
+
+    return {
+        "entrepreneurs": entrepreneurs_data,
+        "team_stats": {
+            "total_entrepreneurs": nb_entrepreneurs,
+            "total_ca": round(team_total_ca, 2),
+            "ca_moyen": ca_moyen_equipe,
+            "montant_produit": round(team_total_montant_produit, 2),
+            "paiements_recoltes": round(team_total_paiements_recoltes, 2),
+            "estimation_moyenne": estimation_moyenne_equipe,
+            "heures_pap_semaine": heures_pap_moyenne_equipe,
+            "taux_vente_moyen": taux_vente_moyen_equipe,
+            "prod_horaire_moyen": prod_horaire_moyen_equipe,
+            "pourcentage_objectif": pourcentage_objectif_moyen_equipe,
+            "total_signees": team_total_signees,
+            "total_en_attente": team_total_attente,
+            "total_perdus": team_total_perdus,
+            "total_employes_actifs": team_total_employes_actifs,
+            "total_employes_candidats": team_total_employes_candidats,
+            "total_employes_inactifs": team_total_employes_inactifs,
+            "moyenne_etoiles": moyenne_etoiles_equipe,
+            "total_avis": team_total_avis,
+            "contrat_moyen": contrat_moyen_equipe
+        },
+        "period": period
+    }
+
 def load_submissions_for_entrepreneur(username: str, start_date: datetime, end_date: datetime, signed: bool = False):
     dossier = "soumissions_signees" if signed else "soumissions_completes"
     fichier = f"{base_cloud}/{dossier}/{username}/soumissions.json"
@@ -8573,38 +9142,101 @@ def get_soumissions_signees_facturation_qe(username: str):
     """
     Endpoint spécifique pour la facturation QE avec gestion des bannissements
     Lit directement depuis soumissions_signees (historique de tous les clients qui ont signé)
+
+    Si username est un coach, agrège les soumissions de tous ses entrepreneurs
     """
     try:
-        # 1. Charger les soumissions signées (historique permanent)
-        fichier_signees = f"{base_cloud}/soumissions_signees/{username}/soumissions.json"
+        # Vérifier si c'est un coach
+        from QE.Backend.coach_access import get_entrepreneurs_for_coach
+        import sqlite3
 
-        if not os.path.exists(fichier_signees):
-            return []
+        is_coach = False
+        try:
+            db_path = os.path.join("data", "qwota.db")
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT role FROM users WHERE username = ?", (username,))
+            role_row = cursor.fetchone()
+            conn.close()
 
-        with open(fichier_signees, "r", encoding="utf-8") as f:
-            content = f.read().strip()
-            if not content:
+            if role_row and role_row[0] == 'coach':
+                is_coach = True
+                print(f"[soumissions_signees_facturation_qe] {username} est un COACH")
+        except Exception as e:
+            print(f"[soumissions_signees_facturation_qe] Erreur vérification rôle: {e}")
+
+        all_soumissions = []
+
+        # Si c'est un coach, charger les soumissions de tous ses entrepreneurs
+        if is_coach:
+            entrepreneurs = get_entrepreneurs_for_coach(username)
+            print(f"[soumissions_signees_facturation_qe] Coach {username} a {len(entrepreneurs)} entrepreneurs: {entrepreneurs}")
+
+            for entrepreneur in entrepreneurs:
+                # 1. Charger les soumissions signées de cet entrepreneur
+                fichier_signees = f"{base_cloud}/soumissions_signees/{entrepreneur}/soumissions.json"
+
+                if not os.path.exists(fichier_signees):
+                    continue
+
+                with open(fichier_signees, "r", encoding="utf-8") as f:
+                    content = f.read().strip()
+                    if not content:
+                        continue
+                    soumissions = json.loads(content)
+
+                # 2. Charger la blacklist spécifique à la facturation QE de cet entrepreneur
+                blacklist_file = f"{base_cloud}/blacklist/{entrepreneur}_facturation_qe.json"
+                blacklisted_clients = []
+                if os.path.exists(blacklist_file):
+                    with open(blacklist_file, "r", encoding="utf-8") as f:
+                        blacklisted_clients = json.load(f)
+
+                # 3. Filtrer les clients bannis
+                blacklisted_emails = {client.get("email", "").lower() for client in blacklisted_clients}
+
+                for soumission in soumissions:
+                    client_email = soumission.get("email", "").lower()
+                    if client_email not in blacklisted_emails:
+                        # Ajouter le username de l'entrepreneur pour traçabilité
+                        soumission['entrepreneur_username'] = entrepreneur
+                        all_soumissions.append(soumission)
+
+            print(f"[soumissions_signees_facturation_qe] Coach {username}: {len(all_soumissions)} soumissions au total")
+            return all_soumissions
+
+        else:
+            # Entrepreneur - comportement normal
+            # 1. Charger les soumissions signées (historique permanent)
+            fichier_signees = f"{base_cloud}/soumissions_signees/{username}/soumissions.json"
+
+            if not os.path.exists(fichier_signees):
                 return []
-            soumissions = json.loads(content)
 
-        # 2. Charger la blacklist spécifique à la facturation QE
-        blacklist_file = f"{base_cloud}/blacklist/{username}_facturation_qe.json"
-        blacklisted_clients = []
-        if os.path.exists(blacklist_file):
-            with open(blacklist_file, "r", encoding="utf-8") as f:
-                blacklisted_clients = json.load(f)
+            with open(fichier_signees, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if not content:
+                    return []
+                soumissions = json.loads(content)
 
-        # 3. Filtrer les clients bannis
-        blacklisted_emails = {client.get("email", "").lower() for client in blacklisted_clients}
+            # 2. Charger la blacklist spécifique à la facturation QE
+            blacklist_file = f"{base_cloud}/blacklist/{username}_facturation_qe.json"
+            blacklisted_clients = []
+            if os.path.exists(blacklist_file):
+                with open(blacklist_file, "r", encoding="utf-8") as f:
+                    blacklisted_clients = json.load(f)
 
-        soumissions_filtrees = []
-        for soumission in soumissions:
-            client_email = soumission.get("email", "").lower()
-            if client_email not in blacklisted_emails:
-                soumissions_filtrees.append(soumission)
+            # 3. Filtrer les clients bannis
+            blacklisted_emails = {client.get("email", "").lower() for client in blacklisted_clients}
 
-        print(f"[BAN] Facturation QE {username}: {len(soumissions)} total, {len(soumissions_filtrees)} après filtrage")
-        return soumissions_filtrees
+            soumissions_filtrees = []
+            for soumission in soumissions:
+                client_email = soumission.get("email", "").lower()
+                if client_email not in blacklisted_emails:
+                    soumissions_filtrees.append(soumission)
+
+            print(f"[BAN] Facturation QE {username}: {len(soumissions)} total, {len(soumissions_filtrees)} après filtrage")
+            return soumissions_filtrees
 
     except Exception as e:
         print(f"[ERROR] Erreur facturation QE pour {username}: {e}")
@@ -9401,8 +10033,27 @@ async def ajouter_employe(username: str, employe_data: NouvelEmploye):
 
 # Activer un employé (met en attente de validation coach)
 @app.post("/api/employes/{username}/activer/{employe_id}")
-async def activer_employe(username: str, employe_id: str, employe_data: EmployeActif):
-    """Met l'employé en attente de validation avec toutes ses informations complétées"""
+async def activer_employe(
+    username: str,
+    employe_id: str,
+    nom: str = Form(...),
+    nas: str = Form(...),
+    genre: str = Form(...),
+    adresse: str = Form(...),
+    appartement: str = Form(""),
+    ville: str = Form(...),
+    codePostal: str = Form(...),
+    telephone: str = Form(...),
+    courriel: str = Form(...),
+    datePremiere: str = Form(...),
+    posteService: str = Form(...),
+    tauxHoraire: float = Form(...),
+    dateNaissance: str = Form(...),
+    specimen: UploadFile = File(None),
+    certificat: UploadFile = File(None),
+    carte: UploadFile = File(None)
+):
+    """Met l'employé en attente de validation avec toutes ses informations complétées et ses documents"""
     try:
         # Charger les employés nouveaux
         employes_nouveaux = load_employes(username, "nouveaux")
@@ -9419,21 +10070,55 @@ async def activer_employe(username: str, employe_id: str, employe_data: EmployeA
 
         # Mettre à jour l'employé avec toutes les informations ET le statut "En attente de validation"
         employe_trouve.update({
-            "nom": employe_data.nom,
-            "nas": employe_data.nas,
-            "genre": employe_data.genre,
-            "adresse": employe_data.adresse,
-            "appartement": employe_data.appartement or "-",
-            "ville": employe_data.ville,
-            "codePostal": employe_data.codePostal,
-            "telephone": employe_data.telephone,
-            "courriel": employe_data.courriel,
-            "datePremiere": employe_data.datePremiere,
-            "posteService": employe_data.posteService,
-            "tauxHoraire": employe_data.tauxHoraire,
+            "nom": nom,
+            "nas": nas,
+            "genre": genre,
+            "adresse": adresse,
+            "appartement": appartement or "-",
+            "ville": ville,
+            "codePostal": codePostal,
+            "telephone": telephone,
+            "courriel": courriel,
+            "datePremiere": datePremiere,
+            "posteService": posteService,
+            "departement": "0",
+            "tauxHoraire": tauxHoraire,
+            "dateNaissance": dateNaissance,
             "dateActivation": datetime.now().strftime("%Y-%m-%d"),
             "statut": "En attente de validation"
         })
+
+        # Créer le répertoire pour les documents de l'employé s'il n'existe pas
+        employe_dir = os.path.join(os.path.dirname(__file__), "data", "employes", username, employe_id)
+        os.makedirs(employe_dir, exist_ok=True)
+
+        # Sauvegarder les fichiers si fournis
+        if specimen and specimen.filename:
+            file_ext = os.path.splitext(specimen.filename)[1]
+            file_path = os.path.join(employe_dir, f"specimen{file_ext}")
+            with open(file_path, "wb") as f:
+                content = await specimen.read()
+                f.write(content)
+            employe_trouve["specimen"] = f"specimen{file_ext}"
+            print(f"[INFO] Spécimen sauvegardé: {file_path}")
+
+        if certificat and certificat.filename:
+            file_ext = os.path.splitext(certificat.filename)[1]
+            file_path = os.path.join(employe_dir, f"certificat{file_ext}")
+            with open(file_path, "wb") as f:
+                content = await certificat.read()
+                f.write(content)
+            employe_trouve["certificat"] = f"certificat{file_ext}"
+            print(f"[INFO] Certificat sauvegardé: {file_path}")
+
+        if carte and carte.filename:
+            file_ext = os.path.splitext(carte.filename)[1]
+            file_path = os.path.join(employe_dir, f"carte{file_ext}")
+            with open(file_path, "wb") as f:
+                content = await carte.read()
+                f.write(content)
+            employe_trouve["carte"] = f"carte{file_ext}"
+            print(f"[INFO] Carte assurance maladie sauvegardée: {file_path}")
 
         # Sauvegarder dans nouveaux.json (l'employé reste là)
         if save_employes(username, "nouveaux", employes_nouveaux):
@@ -9442,6 +10127,7 @@ async def activer_employe(username: str, employe_id: str, employe_data: EmployeA
             raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
 
     except Exception as e:
+        print(f"[ERROR] Erreur dans activer_employe: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Valider un employé (coach seulement) - change le statut vers "En attente comptable"
@@ -9506,6 +10192,12 @@ async def valider_employe_comptable(username: str, employe_id: str):
         # Changer le statut à "Actif" et déplacer vers actifs
         employe_a_valider["statut"] = "Actif"
         employe_a_valider["date_validation_comptable"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # Effacer la conversation de refus si elle existe
+        employe_a_valider.pop("conversation_refus", None)
+        employe_a_valider.pop("motif_refus_comptable", None)
+        employe_a_valider.pop("date_refus_comptable", None)
+        employe_a_valider.pop("motif_refus_coach", None)
+        employe_a_valider.pop("date_refus_coach", None)
         employes_actifs.append(employe_a_valider)
 
         # Sauvegarder les deux listes
@@ -9517,17 +10209,448 @@ async def valider_employe_comptable(username: str, employe_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Compter les employés en attente de validation pour un coach (activations + inactivations)
-@app.get("/api/coach/employes-en-attente/count")
-async def count_employes_en_attente():
-    """Compte le nombre total d'employés en attente de validation pour tous les entrepreneurs (activations + inactivations)"""
+# Refuser un employé (coach ou comptable) - remet au statut "Refusé"
+@app.post("/api/employes/{username}/refuser/{employe_id}")
+async def refuser_employe(username: str, employe_id: str, request: Request):
+    """Refuse un employé en attente de validation (action coach ou comptable)"""
     try:
-        total_activations = 0
-        total_inactivations = 0
+        # Récupérer la raison du refus
+        try:
+            body = await request.json()
+            motif_refus = body.get("motif_refus", "Aucune raison spécifiée")
+        except:
+            motif_refus = "Aucune raison spécifiée"
+
+        # Charger les employés nouveaux
+        employes_nouveaux = load_employes(username, "nouveaux")
+
+        # Trouver l'employé à refuser
+        employe_trouve = False
+
+        for employe in employes_nouveaux:
+            if employe.get("id") == employe_id:
+                statut_actuel = employe.get("statut", "")
+
+                # Coach refuse: statut "En attente de validation" -> "Refusé par coach"
+                if statut_actuel == "En attente de validation":
+                    employe["statut"] = "Refusé par coach"
+                    employe["date_refus_coach"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    employe["motif_refus_coach"] = motif_refus
+                    employe_trouve = True
+                # Comptable refuse: statut "En attente comptable" ou "En attente de validation comptable" -> "Refusé par comptable"
+                elif statut_actuel in ["En attente comptable", "En attente de validation comptable"]:
+                    employe["statut"] = "Refusé par comptable"
+                    employe["date_refus_comptable"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    employe["motif_refus_comptable"] = motif_refus
+                    employe_trouve = True
+                else:
+                    raise HTTPException(status_code=400, detail=f"L'employé n'est pas en attente de validation (statut: {statut_actuel})")
+                break
+
+        if not employe_trouve:
+            raise HTTPException(status_code=404, detail="Employé non trouvé")
+
+        # Sauvegarder la liste
+        if save_employes(username, "nouveaux", employes_nouveaux):
+            return {"success": True, "message": "Employé refusé"}
+        else:
+            raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ========== CONVERSATION DE REFUS EMPLOYÉ ==========
+
+# Récupérer la conversation de refus pour un employé
+@app.get("/api/employes/{username}/refus-conversation/{employe_id}")
+async def get_refus_conversation(username: str, employe_id: str):
+    """Récupère la conversation de refus pour un employé"""
+    try:
+        # Chercher dans nouveaux et actifs
+        employes_nouveaux = load_employes(username, "nouveaux")
+        employes_actifs = load_employes(username, "actifs")
+
+        employe = None
+        for emp in employes_nouveaux + employes_actifs:
+            if emp.get("id") == employe_id:
+                employe = emp
+                break
+
+        if not employe:
+            raise HTTPException(status_code=404, detail="Employé non trouvé")
+
+        # Récupérer la conversation existante ou créer avec le motif initial
+        conversation = employe.get("conversation_refus", [])
+
+        # Si pas de conversation mais un motif de refus existe, créer le premier message
+        if not conversation:
+            motif = employe.get("motif_refus_coach") or employe.get("motif_refus_comptable") or employe.get("motif_refus_modification") or employe.get("motif_refus_inactivation") or employe.get("motif_refus_reactivation")
+            date = employe.get("date_refus_coach") or employe.get("date_refus_comptable") or employe.get("date_refus_modification") or employe.get("date_refus_inactivation") or employe.get("date_refus_reactivation")
+
+            if motif:
+                conversation = [{
+                    "de": "comptable",
+                    "message": motif,
+                    "date": date or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }]
+
+        return {"conversation": conversation, "employeNom": employe.get("nom", "")}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Ajouter un message à la conversation de refus
+@app.post("/api/employes/{username}/refus-conversation/{employe_id}/message")
+async def add_refus_message(username: str, employe_id: str, request: Request):
+    """Ajoute un message à la conversation de refus"""
+    try:
+        body = await request.json()
+        message = body.get("message", "").strip()
+        de = body.get("de", "entrepreneur")
+
+        if not message:
+            raise HTTPException(status_code=400, detail="Message vide")
+
+        # Chercher dans nouveaux et actifs
+        employes_nouveaux = load_employes(username, "nouveaux")
+        employes_actifs = load_employes(username, "actifs")
+
+        employe_trouve = False
+        source = None
+
+        # Chercher dans nouveaux
+        for i, emp in enumerate(employes_nouveaux):
+            if emp.get("id") == employe_id:
+                if "conversation_refus" not in employes_nouveaux[i]:
+                    # Initialiser avec le motif existant
+                    motif = emp.get("motif_refus_coach") or emp.get("motif_refus_comptable")
+                    date = emp.get("date_refus_coach") or emp.get("date_refus_comptable")
+                    if motif:
+                        employes_nouveaux[i]["conversation_refus"] = [{
+                            "de": "comptable",
+                            "message": motif,
+                            "date": date or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        }]
+                    else:
+                        employes_nouveaux[i]["conversation_refus"] = []
+
+                employes_nouveaux[i]["conversation_refus"].append({
+                    "de": de,
+                    "message": message,
+                    "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "lu": False  # Non lu par défaut
+                })
+                employe_trouve = True
+                source = "nouveaux"
+                break
+
+        # Si pas trouvé dans nouveaux, chercher dans actifs
+        if not employe_trouve:
+            for i, emp in enumerate(employes_actifs):
+                if emp.get("id") == employe_id:
+                    if "conversation_refus" not in employes_actifs[i]:
+                        # Initialiser avec le motif existant
+                        motif = emp.get("motif_refus_modification") or emp.get("motif_refus_inactivation") or emp.get("motif_refus_reactivation")
+                        date = emp.get("date_refus_modification") or emp.get("date_refus_inactivation") or emp.get("date_refus_reactivation")
+                        if motif:
+                            employes_actifs[i]["conversation_refus"] = [{
+                                "de": "comptable",
+                                "message": motif,
+                                "date": date or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            }]
+                        else:
+                            employes_actifs[i]["conversation_refus"] = []
+
+                    employes_actifs[i]["conversation_refus"].append({
+                        "de": de,
+                        "message": message,
+                        "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "lu": False  # Non lu par défaut
+                    })
+                    employe_trouve = True
+                    source = "actifs"
+                    break
+
+        if not employe_trouve:
+            raise HTTPException(status_code=404, detail="Employé non trouvé")
+
+        # Sauvegarder
+        if source == "nouveaux":
+            save_employes(username, "nouveaux", employes_nouveaux)
+        else:
+            save_employes(username, "actifs", employes_actifs)
+
+        return {"success": True, "message": "Message ajouté"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Compter les messages non lus dans une conversation de refus
+@app.get("/api/refus-conversation/unread-counts/{username}")
+async def get_refus_unread_counts_unified(username: str):
+    """Récupère le nombre de messages non lus pour chaque employé refusé"""
+    try:
+        unread_counts = {}  # {employe_id: count}
+
+        # Vérifier les employés avec statut "Refusé par coach" ou "Refusé par comptable"
+        employes_nouveaux = load_employes(username, "nouveaux")
+        employes_actifs = load_employes(username, "actifs")
+
+        for employe in employes_nouveaux + employes_actifs:
+            statut = employe.get("statut", "")
+            if statut in ["Refusé par coach", "Refusé par comptable"]:
+                employe_id = employe.get("id")
+                conversation = employe.get("conversation_refus", [])
+
+                # Compter TOUS les messages non lus (peu importe qui les a envoyés)
+                unread_count = 0
+                for msg in conversation:
+                    if not msg.get("lu", False):
+                        unread_count += 1
+
+                if unread_count > 0:
+                    unread_counts[employe_id] = unread_count
+
+        return {"success": True, "unread_counts": unread_counts}
+    except Exception as e:
+        print(f"Erreur lors du comptage des messages non lus: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Marquer TOUS les messages comme lus dans une conversation
+@app.post("/api/refus-conversation/{username}/{employe_id}/mark-all-read")
+async def mark_all_refus_messages_read(username: str, employe_id: str):
+    """Marque TOUS les messages de la conversation comme lus"""
+    try:
+        # Chercher dans nouveaux et actifs
+        employes_nouveaux = load_employes(username, "nouveaux")
+        employes_actifs = load_employes(username, "actifs")
+
+        employe_trouve = False
+        source = None
+
+        # Chercher dans nouveaux
+        for i, emp in enumerate(employes_nouveaux):
+            if emp.get("id") == employe_id:
+                conversation = employes_nouveaux[i].get("conversation_refus", [])
+                for msg in conversation:
+                    msg["lu"] = True
+                employe_trouve = True
+                source = "nouveaux"
+                break
+
+        # Si pas trouvé dans nouveaux, chercher dans actifs
+        if not employe_trouve:
+            for i, emp in enumerate(employes_actifs):
+                if emp.get("id") == employe_id:
+                    conversation = employes_actifs[i].get("conversation_refus", [])
+                    for msg in conversation:
+                        msg["lu"] = True
+                    employe_trouve = True
+                    source = "actifs"
+                    break
+
+        if not employe_trouve:
+            raise HTTPException(status_code=404, detail="Employé non trouvé")
+
+        # Sauvegarder
+        if source == "nouveaux":
+            save_employes(username, "nouveaux", employes_nouveaux)
+        else:
+            save_employes(username, "actifs", employes_actifs)
+
+        return {"success": True, "message": "Messages marqués comme lus"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Compter le total de messages non lus pour tous les entrepreneurs (pour le coach)
+@app.get("/api/coach/refus-unread-total")
+async def get_coach_refus_unread_total():
+    """Compte le total de messages non lus dans toutes les conversations de refus pour le coach"""
+    try:
+        total_unread = 0
         employes_dir = os.path.join(base_cloud, "employes")
 
         if not os.path.exists(employes_dir):
-            return {"success": True, "count": 0, "activations": 0, "inactivations": 0}
+            return {"success": True, "total": 0}
+
+        # Parcourir tous les dossiers d'entrepreneurs
+        for username in os.listdir(employes_dir):
+            user_path = os.path.join(employes_dir, username)
+            if os.path.isdir(user_path):
+                employes_nouveaux = load_employes(username, "nouveaux")
+                employes_actifs = load_employes(username, "actifs")
+
+                for employe in employes_nouveaux + employes_actifs:
+                    statut = employe.get("statut", "")
+                    if statut in ["Refusé par coach", "Refusé par comptable"]:
+                        conversation = employe.get("conversation_refus", [])
+
+                        for msg in conversation:
+                            if not msg.get("lu", False):
+                                total_unread += 1
+
+        return {"success": True, "total": total_unread}
+    except Exception as e:
+        print(f"Erreur lors du comptage total des messages non lus: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Récupérer tous les messages de refus pour le comptable
+@app.get("/api/comptable/messages-refus-employes")
+async def get_messages_refus_employes():
+    """Récupère toutes les conversations de refus avec réponses d'entrepreneurs"""
+    try:
+        messages = []
+        employes_dir = os.path.join(base_cloud, "employes")
+
+        if not os.path.exists(employes_dir):
+            return {"messages": []}
+
+        # Parcourir tous les entrepreneurs
+        for username in os.listdir(employes_dir):
+            user_path = os.path.join(employes_dir, username)
+            if not os.path.isdir(user_path):
+                continue
+
+            # Chercher dans nouveaux et actifs
+            for fichier in ["nouveaux", "actifs"]:
+                file_path = os.path.join(user_path, f"{fichier}.json")
+                if not os.path.exists(file_path):
+                    continue
+
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        employes = json.load(f)
+                except:
+                    continue
+
+                for employe in employes:
+                    conversation = employe.get("conversation_refus", [])
+
+                    # Inclure si l'employé est refusé et a une conversation
+                    statut = employe.get("statut", "")
+                    est_refuse = "refusé" in statut.lower() or "Refusé" in statut
+
+                    if est_refuse and conversation:
+                        # Trouver s'il y a des réponses de l'entrepreneur
+                        messages_entrepreneur = [m for m in conversation if m.get("de") == "entrepreneur"]
+
+                        # Ajouter si conversation existe (même sans réponse entrepreneur)
+                        dernier_update = conversation[-1].get("date") if conversation else ""
+
+                        messages.append({
+                            "entrepreneur": username,
+                            "employeId": employe.get("id"),
+                            "employeNom": employe.get("nom", ""),
+                            "statut": statut,
+                            "conversation": conversation,
+                            "dernierUpdate": dernier_update,
+                            "nombreReponsesEntrepreneur": len(messages_entrepreneur),
+                            # Informations complètes de l'employé
+                            "employe": {
+                                "nom": employe.get("nom", ""),
+                                "genre": employe.get("genre", ""),
+                                "courriel": employe.get("courriel", ""),
+                                "telephone": employe.get("telephone", ""),
+                                "poste": employe.get("poste", ""),
+                                "nas": employe.get("nas", ""),
+                                "adresse": employe.get("adresse", ""),
+                                "appartement": employe.get("appartement", ""),
+                                "ville": employe.get("ville", ""),
+                                "codePostal": employe.get("codePostal", ""),
+                                "datePremiere": employe.get("datePremiere", ""),
+                                "posteService": employe.get("posteService", ""),
+                                "tauxHoraire": employe.get("tauxHoraire", ""),
+                                "dateCandidature": employe.get("dateCandidature", ""),
+                                "motif_refus_coach": employe.get("motif_refus_coach", ""),
+                                "motif_refus_comptable": employe.get("motif_refus_comptable", ""),
+                                "date_refus_coach": employe.get("date_refus_coach", ""),
+                                "date_refus_comptable": employe.get("date_refus_comptable", "")
+                            }
+                        })
+
+        # Trier par date de dernière mise à jour (les plus récents d'abord)
+        messages.sort(key=lambda x: x.get("dernierUpdate", ""), reverse=True)
+
+        return {"messages": messages}
+
+    except Exception as e:
+        print(f"[ERROR] get_messages_refus_employes: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Supprimer un employé nouveau (annuler après refus)
+@app.delete("/api/employes/{username}/supprimer-nouveau/{employe_id}")
+async def supprimer_employe_nouveau(username: str, employe_id: str):
+    """Supprime un employé de la liste des nouveaux (utilisé après un refus)"""
+    try:
+        employes_nouveaux = load_employes(username, "nouveaux")
+
+        # Trouver et supprimer l'employé
+        employe_trouve = False
+        for i, employe in enumerate(employes_nouveaux):
+            if employe.get("id") == employe_id:
+                employes_nouveaux.pop(i)
+                employe_trouve = True
+                break
+
+        if not employe_trouve:
+            raise HTTPException(status_code=404, detail="Employé non trouvé")
+
+        # Sauvegarder la liste mise à jour
+        if save_employes(username, "nouveaux", employes_nouveaux):
+            return {"success": True, "message": "Employé supprimé avec succès"}
+        else:
+            raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Servir les documents des employés
+@app.get("/api/employes/{username}/documents/{employe_id}/{filename}")
+async def get_employe_document(username: str, employe_id: str, filename: str):
+    """Sert les documents (specimen, certificat, carte) d'un employé"""
+    try:
+        file_path = os.path.join(os.path.dirname(__file__), "data", "employes", username, employe_id, filename)
+
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Document non trouvé")
+
+        # Déterminer le type MIME basé sur l'extension
+        ext = os.path.splitext(filename)[1].lower()
+        media_types = {
+            '.pdf': 'application/pdf',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.gif': 'image/gif'
+        }
+        media_type = media_types.get(ext, 'application/octet-stream')
+
+        return FileResponse(file_path, media_type=media_type)
+    except Exception as e:
+        print(f"[ERROR] Erreur lors de la récupération du document: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Compter les employés en attente de validation pour un coach (activations + inactivations)
+@app.get("/api/coach/employes-en-attente/count")
+async def count_employes_en_attente():
+    """Compte le nombre total d'employés en attente de validation pour tous les entrepreneurs (activations + inactivations + modifications)"""
+    try:
+        total_activations = 0
+        total_inactivations = 0
+        total_modifications = 0
+        employes_dir = os.path.join(base_cloud, "employes")
+
+        if not os.path.exists(employes_dir):
+            return {"success": True, "count": 0, "activations": 0, "inactivations": 0, "modifications": 0}
 
         # Parcourir tous les dossiers d'entrepreneurs
         for username in os.listdir(employes_dir):
@@ -9545,10 +10668,48 @@ async def count_employes_en_attente():
                     if inact.get("statut") == "Inactivation en attente de validation":
                         total_inactivations += 1
 
-        total = total_activations + total_inactivations
-        return {"success": True, "count": total, "activations": total_activations, "inactivations": total_inactivations}
+                # Compter les modifications en attente de validation coach
+                employes_actifs = load_employes(username, "actifs")
+                for employe in employes_actifs:
+                    if employe.get("statut") == "Modification en attente de validation":
+                        total_modifications += 1
+
+        total = total_activations + total_inactivations + total_modifications
+        return {"success": True, "count": total, "activations": total_activations, "inactivations": total_inactivations, "modifications": total_modifications}
     except Exception as e:
         print(f"Erreur lors du comptage des employés en attente: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Compter les employés refusés par coach (en attente de réponse entrepreneur)
+@app.get("/api/coach/employes-refuses-coach/count")
+async def count_employes_refuses_coach():
+    """Compte le nombre total d'employés refusés par le coach en attente de réponse de l'entrepreneur"""
+    try:
+        total_refuses = 0
+        employes_dir = os.path.join(base_cloud, "employes")
+
+        if not os.path.exists(employes_dir):
+            return {"success": True, "count": 0}
+
+        # Parcourir tous les dossiers d'entrepreneurs
+        for username in os.listdir(employes_dir):
+            user_path = os.path.join(employes_dir, username)
+            if os.path.isdir(user_path):
+                # Compter les employés avec statut "Refusé par coach" dans nouveaux
+                employes_nouveaux = load_employes(username, "nouveaux")
+                for employe in employes_nouveaux:
+                    if employe.get("statut") == "Refusé par coach":
+                        total_refuses += 1
+
+                # Compter aussi dans actifs (au cas où)
+                employes_actifs = load_employes(username, "actifs")
+                for employe in employes_actifs:
+                    if employe.get("statut") == "Refusé par coach":
+                        total_refuses += 1
+
+        return {"success": True, "count": total_refuses}
+    except Exception as e:
+        print(f"Erreur lors du comptage des employés refusés par coach: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Lister tous les employés en attente de validation pour un coach (activations + inactivations)
@@ -9576,6 +10737,7 @@ async def liste_employes_en_attente():
                         # Ajouter le username de l'entrepreneur
                         employe_avec_info = employe.copy()
                         employe_avec_info["entrepreneur"] = username
+                        employe_avec_info["entrepreneurUsername"] = username
                         employe_avec_info["requestType"] = "activation"
                         employes_en_attente.append(employe_avec_info)
 
@@ -9585,12 +10747,58 @@ async def liste_employes_en_attente():
                     if inact.get("statut") == "Inactivation en attente de validation":
                         inact_avec_info = inact.copy()
                         inact_avec_info["entrepreneur"] = username
+                        inact_avec_info["entrepreneurUsername"] = username
                         inact_avec_info["requestType"] = "inactivation"
                         inactivations_en_attente.append(inact_avec_info)
 
         return {"success": True, "employes": employes_en_attente, "inactivations": inactivations_en_attente}
     except Exception as e:
         print(f"Erreur lors du chargement de la liste des employés en attente: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Lister toutes les modifications en attente de validation pour un coach
+@app.get("/api/coach/modifications-en-attente/liste")
+async def liste_modifications_en_attente():
+    """Liste toutes les modifications d'employés en attente de validation coach"""
+    try:
+        modifications_en_attente = []
+        employes_dir = os.path.join(base_cloud, "employes")
+
+        if not os.path.exists(employes_dir):
+            return {"success": True, "modifications": []}
+
+        # Parcourir tous les dossiers d'entrepreneurs
+        for username in os.listdir(employes_dir):
+            user_path = os.path.join(employes_dir, username)
+            if os.path.isdir(user_path):
+                # Charger les employés actifs avec statut "Modification en attente de validation"
+                employes_actifs = load_employes(username, "actifs")
+                modifications = load_modifications(username)
+
+                for employe in employes_actifs:
+                    if employe.get("statut") == "Modification en attente de validation":
+                        # Trouver les données de modification correspondantes
+                        modif_data = None
+                        for m in modifications:
+                            if m.get("employe_id") == employe.get("id"):
+                                modif_data = m
+                                break
+
+                        modif_avec_info = employe.copy()
+                        modif_avec_info["entrepreneur"] = username
+                        modif_avec_info["entrepreneurUsername"] = username
+                        modif_avec_info["requestType"] = "modification"
+
+                        # Ajouter les données anciennes/nouvelles si disponibles
+                        if modif_data:
+                            modif_avec_info["anciennes_donnees"] = modif_data.get("anciennes_donnees", {})
+                            modif_avec_info["nouvelles_donnees"] = modif_data.get("nouvelles_donnees", {})
+
+                        modifications_en_attente.append(modif_avec_info)
+
+        return {"success": True, "modifications": modifications_en_attente}
+    except Exception as e:
+        print(f"Erreur lors du chargement de la liste des modifications en attente: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Compter les facturations en traitement pour un coach
@@ -9616,12 +10824,28 @@ async def count_facturation_en_traitement():
 
                     entrepreneur_count = 0
                     for num_soumission, client_statuts in statuts.items():
+                        # Vérifier si le client a un paiement refusé (urgent)
+                        # Si oui, ne pas compter ses paiements "traitement" car il est dans la colonne Urgent
+                        statut_depot = client_statuts.get("statutDepot")
+                        statut_paiement_final = client_statuts.get("statutPaiementFinal")
+                        autres_paiements = client_statuts.get("autresPaiements", [])
+
+                        # Vérifier si un paiement est refusé
+                        depot_refuse = statut_depot == "refuse"
+                        paiement_final_refuse = statut_paiement_final == "refuse"
+                        autres_refuses = any(p.get("statut") == "refuse" for p in autres_paiements) if isinstance(autres_paiements, list) else False
+                        a_paiement_refuse = depot_refuse or paiement_final_refuse or autres_refuses
+
+                        # Si le client a un paiement refusé, ne pas compter (il est dans Urgent)
+                        if a_paiement_refuse:
+                            continue
+
                         # Compter depot en traitement
-                        if client_statuts.get("statutDepot") == "traitement":
+                        if statut_depot == "traitement":
                             entrepreneur_count += 1
                             total_count += 1
                         # Compter paiement final en traitement
-                        if client_statuts.get("statutPaiementFinal") == "traitement":
+                        if statut_paiement_final == "traitement":
                             entrepreneur_count += 1
                             total_count += 1
                         # Compter autres paiements en traitement
@@ -9814,6 +11038,369 @@ async def refuser_facturation_coach(username: str, numero_soumission: str, reque
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================
+# ENDPOINTS COACH - GESTION TÂCHES RPO
+# ============================================
+
+@app.get("/api/coach/tasks")
+async def get_coach_tasks(coach_username: str):
+    """Récupère toutes les tâches d'un coach depuis son fichier tasks.json"""
+    try:
+        tasks_dir = os.path.join("data", "coach_tasks")
+        tasks_file = os.path.join(tasks_dir, f"{coach_username}_tasks.json")
+
+        if not os.path.exists(tasks_file):
+            return {"success": True, "tasks": []}
+
+        with open(tasks_file, "r", encoding="utf-8") as f:
+            tasks = json.load(f)
+
+        return {"success": True, "tasks": tasks}
+    except Exception as e:
+        print(f"Erreur lors de la récupération des tâches: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/coach/tasks")
+async def save_coach_task(request: Request):
+    """Sauvegarde ou met à jour une tâche pour un coach"""
+    try:
+        data = await request.json()
+        coach_username = data.get("coach_username")
+        task = data.get("task")
+
+        if not coach_username or not task:
+            raise HTTPException(status_code=400, detail="coach_username et task requis")
+
+        tasks_dir = os.path.join("data", "coach_tasks")
+        os.makedirs(tasks_dir, exist_ok=True)
+        tasks_file = os.path.join(tasks_dir, f"{coach_username}_tasks.json")
+
+        # Charger les tâches existantes
+        tasks = []
+        if os.path.exists(tasks_file):
+            with open(tasks_file, "r", encoding="utf-8") as f:
+                tasks = json.load(f)
+
+        # Si task_id existe, mettre à jour, sinon créer
+        task_id = task.get("id")
+        if task_id:
+            # Mise à jour
+            task_found = False
+            for i, t in enumerate(tasks):
+                if t.get("id") == task_id:
+                    tasks[i] = task
+                    task_found = True
+                    break
+            if not task_found:
+                tasks.append(task)
+        else:
+            # Nouvelle tâche - générer un ID
+            import uuid
+            task["id"] = str(uuid.uuid4())
+            tasks.append(task)
+
+        # Sauvegarder
+        with open(tasks_file, "w", encoding="utf-8") as f:
+            json.dump(tasks, f, ensure_ascii=False, indent=2)
+
+        return {"success": True, "task": task}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erreur lors de la sauvegarde de la tâche: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/coach/tasks")
+async def delete_coach_task(request: Request):
+    """Supprime une tâche pour un coach"""
+    try:
+        data = await request.json()
+        coach_username = data.get("coach_username")
+        task_id = data.get("task_id")
+
+        if not coach_username or not task_id:
+            raise HTTPException(status_code=400, detail="coach_username et task_id requis")
+
+        tasks_dir = os.path.join("data", "coach_tasks")
+        tasks_file = os.path.join(tasks_dir, f"{coach_username}_tasks.json")
+
+        if not os.path.exists(tasks_file):
+            return {"success": True, "message": "Aucune tâche à supprimer"}
+
+        # Charger les tâches
+        with open(tasks_file, "r", encoding="utf-8") as f:
+            tasks = json.load(f)
+
+        # Filtrer pour supprimer la tâche
+        tasks = [t for t in tasks if t.get("id") != task_id]
+
+        # Sauvegarder
+        with open(tasks_file, "w", encoding="utf-8") as f:
+            json.dump(tasks, f, ensure_ascii=False, indent=2)
+
+        return {"success": True, "message": "Tâche supprimée"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erreur lors de la suppression de la tâche: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================
+# ENDPOINTS COACH - PROBLÈMES HEBDOMADAIRES (RPO)
+# ============================================
+
+@app.get("/api/coach/weekly-problem")
+async def get_weekly_problem(coach_username: str, week: str):
+    """Récupère le problème hebdomadaire pour un coach et une semaine donnée"""
+    try:
+        problems_dir = os.path.join("data", "coach_weekly_problems")
+        os.makedirs(problems_dir, exist_ok=True)
+
+        problems_file = os.path.join(problems_dir, f"{coach_username}_problems.json")
+
+        if not os.path.exists(problems_file):
+            return {"success": True, "problem": None}
+
+        with open(problems_file, "r", encoding="utf-8") as f:
+            all_problems = json.load(f)
+
+        # Trouver le problème pour la semaine spécifiée
+        problem = next((p for p in all_problems if p.get("week") == week), None)
+
+        return {"success": True, "problem": problem}
+    except Exception as e:
+        print(f"Erreur lors de la récupération du problème hebdomadaire: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/coach/weekly-problem")
+async def save_weekly_problem(request: Request):
+    """Sauvegarde ou met à jour le problème hebdomadaire pour un coach"""
+    try:
+        data = await request.json()
+        coach_username = data.get("coach_username")
+        week = data.get("week")
+        description = data.get("description", "")
+        impact = data.get("impact", "")
+        solution = data.get("solution", "")
+
+        if not coach_username or not week:
+            raise HTTPException(status_code=400, detail="coach_username et week sont requis")
+
+        problems_dir = os.path.join("data", "coach_weekly_problems")
+        os.makedirs(problems_dir, exist_ok=True)
+
+        problems_file = os.path.join(problems_dir, f"{coach_username}_problems.json")
+
+        # Charger les problèmes existants ou créer un nouveau fichier
+        if os.path.exists(problems_file):
+            with open(problems_file, "r", encoding="utf-8") as f:
+                all_problems = json.load(f)
+        else:
+            all_problems = []
+
+        # Chercher si un problème existe déjà pour cette semaine
+        existing_index = next((i for i, p in enumerate(all_problems) if p.get("week") == week), None)
+
+        problem_data = {
+            "week": week,
+            "description": description,
+            "impact": impact,
+            "solution": solution,
+            "updated_at": datetime.now().isoformat()
+        }
+
+        if existing_index is not None:
+            # Mettre à jour le problème existant
+            all_problems[existing_index] = problem_data
+        else:
+            # Ajouter un nouveau problème
+            problem_data["created_at"] = datetime.now().isoformat()
+            all_problems.append(problem_data)
+
+        # Sauvegarder
+        with open(problems_file, "w", encoding="utf-8") as f:
+            json.dump(all_problems, f, ensure_ascii=False, indent=2)
+
+        return {"success": True, "message": "Problème hebdomadaire sauvegardé"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erreur lors de la sauvegarde du problème hebdomadaire: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/coach/macro-micro-problem")
+async def save_macro_micro_problem(request: Request):
+    """Sauvegarde MACRO, MICRO et Problème pour un coach et une semaine"""
+    try:
+        data = await request.json()
+        coach_username = data.get("coach_username")
+        week = data.get("week")
+        macro = data.get("macro", "")
+        micro = data.get("micro", "")
+        problem = data.get("problem", "")
+
+        if not coach_username:
+            raise HTTPException(status_code=400, detail="coach_username est requis")
+        if not week:
+            raise HTTPException(status_code=400, detail="week est requis")
+
+        data_dir = os.path.join("data", "coach_macro_micro")
+        os.makedirs(data_dir, exist_ok=True)
+
+        data_file = os.path.join(data_dir, f"{coach_username}_{week}.json")
+
+        save_data = {
+            "coach_username": coach_username,
+            "week": week,
+            "macro": macro,
+            "micro": micro,
+            "problem": problem,
+            "updated_at": datetime.now().isoformat()
+        }
+
+        # Sauvegarder
+        with open(data_file, "w", encoding="utf-8") as f:
+            json.dump(save_data, f, ensure_ascii=False, indent=2)
+
+        return {"success": True, "message": "MACRO/MICRO/Problème sauvegardés"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erreur lors de la sauvegarde MACRO/MICRO/Problème: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/coach/macro-micro-problem")
+async def get_macro_micro_problem(coach_username: str, week: str):
+    """Récupère MACRO, MICRO et Problème pour un coach et une semaine"""
+    try:
+        data_dir = os.path.join("data", "coach_macro_micro")
+        data_file = os.path.join(data_dir, f"{coach_username}_{week}.json")
+
+        if not os.path.exists(data_file):
+            return {"macro": "", "micro": "", "problem": ""}
+
+        with open(data_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        return data
+    except Exception as e:
+        print(f"Erreur lors de la récupération MACRO/MICRO/Problème: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/coach/weekly-entrepreneur-data")
+async def get_weekly_entrepreneur_data(coach_username: str, week: str):
+    """Récupère les données hebdomadaires des entrepreneurs pour un coach et une semaine"""
+    try:
+        data_dir = os.path.join("data", "coach_weekly_entrepreneur_data")
+        os.makedirs(data_dir, exist_ok=True)
+
+        data_file = os.path.join(data_dir, f"{coach_username}_{week}.json")
+
+        if not os.path.exists(data_file):
+            return {"success": True, "entries": []}
+
+        with open(data_file, "r", encoding="utf-8") as f:
+            entries = json.load(f)
+
+        return {"success": True, "entries": entries}
+    except Exception as e:
+        print(f"Erreur lors de la récupération des données hebdomadaires: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/coach/weekly-entrepreneur-data")
+async def save_weekly_entrepreneur_data(request: Request):
+    """Sauvegarde ou met à jour une entrée hebdomadaire entrepreneur"""
+    try:
+        data = await request.json()
+        coach_username = data.get("coach_username")
+        week = data.get("week")
+        entry_id = data.get("id")
+
+        if not coach_username or not week:
+            raise HTTPException(status_code=400, detail="coach_username et week sont requis")
+
+        data_dir = os.path.join("data", "coach_weekly_entrepreneur_data")
+        os.makedirs(data_dir, exist_ok=True)
+
+        data_file = os.path.join(data_dir, f"{coach_username}_{week}.json")
+
+        # Charger les entrées existantes ou créer un nouveau fichier
+        if os.path.exists(data_file):
+            with open(data_file, "r", encoding="utf-8") as f:
+                entries = json.load(f)
+        else:
+            entries = []
+
+        # Chercher si une entrée existe déjà avec cet ID
+        existing_index = next((i for i, e in enumerate(entries) if e.get("id") == entry_id), None)
+
+        entry_data = {
+            "id": entry_id,
+            "date": data.get("date", ""),
+            "objectif": data.get("objectif", ""),
+            "probleme": data.get("probleme", ""),
+            "racine": data.get("racine", ""),
+            "source": data.get("source", ""),
+            "coaching": data.get("coaching", ""),
+            "plan": data.get("plan", ""),
+            "updated_at": datetime.now().isoformat()
+        }
+
+        if existing_index is not None:
+            # Mettre à jour l'entrée existante
+            entries[existing_index] = entry_data
+        else:
+            # Ajouter une nouvelle entrée
+            entry_data["created_at"] = datetime.now().isoformat()
+            entries.append(entry_data)
+
+        # Sauvegarder
+        with open(data_file, "w", encoding="utf-8") as f:
+            json.dump(entries, f, ensure_ascii=False, indent=2)
+
+        return {"success": True, "message": "Entrée hebdomadaire sauvegardée"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erreur lors de la sauvegarde de l'entrée hebdomadaire: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/coach/weekly-entrepreneur-data")
+async def delete_weekly_entrepreneur_data(request: Request):
+    """Supprime une entrée hebdomadaire entrepreneur"""
+    try:
+        data = await request.json()
+        coach_username = data.get("coach_username")
+        week = data.get("week")
+        entry_id = data.get("entry_id")
+
+        if not coach_username or not week or not entry_id:
+            raise HTTPException(status_code=400, detail="coach_username, week et entry_id sont requis")
+
+        data_dir = os.path.join("data", "coach_weekly_entrepreneur_data")
+        data_file = os.path.join(data_dir, f"{coach_username}_{week}.json")
+
+        if not os.path.exists(data_file):
+            return {"success": True, "message": "Aucune donnée à supprimer"}
+
+        # Charger les entrées existantes
+        with open(data_file, "r", encoding="utf-8") as f:
+            entries = json.load(f)
+
+        # Filtrer pour retirer l'entrée à supprimer
+        entries = [e for e in entries if e.get("id") != entry_id]
+
+        # Sauvegarder
+        with open(data_file, "w", encoding="utf-8") as f:
+            json.dump(entries, f, ensure_ascii=False, indent=2)
+
+        return {"success": True, "message": "Entrée supprimée"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erreur lors de la suppression de l'entrée: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================
 # ENDPOINTS COMPTABLE/DIRECTION - FACTURATION QE
 # ============================================
 
@@ -9837,6 +11424,20 @@ async def liste_facturation_en_traitement_comptable():
 
         if not os.path.exists(statuts_dir):
             return {"success": True, "paiements": []}
+
+        # Charger l'historique pour exclure les paiements déjà validés
+        historique_file = os.path.join("data", "facturation_qe_historique", "historique.json")
+        historique_set = set()
+        if os.path.exists(historique_file):
+            try:
+                with open(historique_file, "r", encoding="utf-8") as f:
+                    historique = json.load(f)
+                # Créer un set de clés uniques (username, numeroSoumission, type) pour les paiements dans l'historique
+                for h in historique:
+                    key = (h.get("entrepreneurUsername"), h.get("numeroSoumission"), h.get("type"))
+                    historique_set.add(key)
+            except:
+                pass
 
         # Parcourir tous les dossiers d'entrepreneurs
         for username in os.listdir(statuts_dir):
@@ -9913,37 +11514,41 @@ async def liste_facturation_en_traitement_comptable():
 
                         # Depot en attente_comptable (validé par coach, en attente de direction)
                         if client_statuts.get("statutDepot") == "attente_comptable":
-                            depot_details = client_statuts.get("depot", {})
-                            paiements_en_traitement.append({
-                                "entrepreneur": entrepreneur_nom,
-                                "entrepreneurUsername": username,
-                                "entrepreneurPhoto": entrepreneur_photo,
-                                "client": client_nom,
-                                "numeroSoumission": num_soumission,
-                                "type": "depot",
-                                "montant": depot_details.get("montant", "0,00 $"),
-                                "date": depot_details.get("date", ""),
-                                "methode": depot_details.get("methode", ""),
-                                "lienVirement": depot_details.get("lienVirement", ""),
-                                "dateMiseAJour": client_statuts.get("dateMiseAJour")
-                            })
+                            # Vérifier si ce paiement n'est pas déjà dans l'historique (validé par direction)
+                            if (username, num_soumission, "depot") not in historique_set:
+                                depot_details = client_statuts.get("depot", {})
+                                paiements_en_traitement.append({
+                                    "entrepreneur": entrepreneur_nom,
+                                    "entrepreneurUsername": username,
+                                    "entrepreneurPhoto": entrepreneur_photo,
+                                    "client": client_nom,
+                                    "numeroSoumission": num_soumission,
+                                    "type": "depot",
+                                    "montant": depot_details.get("montant", "0,00 $"),
+                                    "date": depot_details.get("date", ""),
+                                    "methode": depot_details.get("methode", ""),
+                                    "lienVirement": depot_details.get("lienVirement", ""),
+                                    "dateMiseAJour": client_statuts.get("dateMiseAJour")
+                                })
 
                         # Paiement final en attente_comptable
                         if client_statuts.get("statutPaiementFinal") == "attente_comptable":
-                            pf_details = client_statuts.get("paiementFinal", {})
-                            paiements_en_traitement.append({
-                                "entrepreneur": entrepreneur_nom,
-                                "entrepreneurUsername": username,
-                                "entrepreneurPhoto": entrepreneur_photo,
-                                "client": client_nom,
-                                "numeroSoumission": num_soumission,
-                                "type": "paiement_final",
-                                "montant": pf_details.get("montant", "0,00 $"),
-                                "date": pf_details.get("date", ""),
-                                "methode": pf_details.get("methode", ""),
-                                "lienVirement": pf_details.get("lienVirement", ""),
-                                "dateMiseAJour": client_statuts.get("dateMiseAJour")
-                            })
+                            # Vérifier si ce paiement n'est pas déjà dans l'historique (validé par direction)
+                            if (username, num_soumission, "paiement_final") not in historique_set:
+                                pf_details = client_statuts.get("paiementFinal", {})
+                                paiements_en_traitement.append({
+                                    "entrepreneur": entrepreneur_nom,
+                                    "entrepreneurUsername": username,
+                                    "entrepreneurPhoto": entrepreneur_photo,
+                                    "client": client_nom,
+                                    "numeroSoumission": num_soumission,
+                                    "type": "paiement_final",
+                                    "montant": pf_details.get("montant", "0,00 $"),
+                                    "date": pf_details.get("date", ""),
+                                    "methode": pf_details.get("methode", ""),
+                                    "lienVirement": pf_details.get("lienVirement", ""),
+                                    "dateMiseAJour": client_statuts.get("dateMiseAJour")
+                                })
 
                         # Autres paiements en attente_comptable
                         if client_statuts.get("statutAutresPaiements") == "attente_comptable":
@@ -9951,26 +11556,28 @@ async def liste_facturation_en_traitement_comptable():
                             statut_depot = client_statuts.get("statutDepot", "non_envoye")
                             for idx, ap in enumerate(autres):
                                 if ap.get("statut") == "attente_comptable":
-                                    # Déduire typePaiementAutres si absent
-                                    type_paiement = ap.get("typePaiementAutres", "")
-                                    if not type_paiement:
-                                        type_paiement = "un_seul_paiement" if statut_depot == "non_envoye" else "paiement_partiel"
-                                    paiements_en_traitement.append({
-                                        "entrepreneur": entrepreneur_nom,
-                                        "entrepreneurUsername": username,
-                                        "entrepreneurPhoto": entrepreneur_photo,
-                                        "client": client_nom,
-                                        "numeroSoumission": num_soumission,
-                                        "type": "autres_paiements",
-                                        "index": idx,
-                                        "montant": ap.get("montant", "0,00 $"),
-                                        "date": ap.get("date", ""),
-                                        "methode": ap.get("methode", ""),
-                                        "lienVirement": ap.get("lienVirement", ""),
-                                        "typePaiementAutres": type_paiement,
-                                        "statutDepot": statut_depot,
-                                        "dateMiseAJour": client_statuts.get("dateMiseAJour")
-                                    })
+                                    # Vérifier si ce paiement n'est pas déjà dans l'historique (validé par direction)
+                                    if (username, num_soumission, "autres_paiements") not in historique_set:
+                                        # Déduire typePaiementAutres si absent
+                                        type_paiement = ap.get("typePaiementAutres", "")
+                                        if not type_paiement:
+                                            type_paiement = "un_seul_paiement" if statut_depot == "non_envoye" else "paiement_partiel"
+                                        paiements_en_traitement.append({
+                                            "entrepreneur": entrepreneur_nom,
+                                            "entrepreneurUsername": username,
+                                            "entrepreneurPhoto": entrepreneur_photo,
+                                            "client": client_nom,
+                                            "numeroSoumission": num_soumission,
+                                            "type": "autres_paiements",
+                                            "index": idx,
+                                            "montant": ap.get("montant", "0,00 $"),
+                                            "date": ap.get("date", ""),
+                                            "methode": ap.get("methode", ""),
+                                            "lienVirement": ap.get("lienVirement", ""),
+                                            "typePaiementAutres": type_paiement,
+                                            "statutDepot": statut_depot,
+                                            "dateMiseAJour": client_statuts.get("dateMiseAJour")
+                                        })
 
         return {"success": True, "paiements": paiements_en_traitement}
     except Exception as e:
@@ -9980,9 +11587,8 @@ async def liste_facturation_en_traitement_comptable():
 @app.post("/api/comptable/facturation/{username}/{numero_soumission}/valider")
 async def valider_facturation_comptable(username: str, numero_soumission: str, request: Request):
     """Direction/Comptable valide un paiement:
-    - Dépôt: passe en 'traite_attente_final' (en attente du paiement final)
-    - Paiement final: passe en 'traite' (complètement traité)
-    - Autres paiements: passe en 'traite'
+    - Reste en 'attente_comptable' (validation direction seulement)
+    - Sera marqué 'traité' seulement quand déplacé dans une période QBO
     """
     try:
         data = await request.json()
@@ -9999,40 +11605,36 @@ async def valider_facturation_comptable(username: str, numero_soumission: str, r
             raise HTTPException(status_code=404, detail="Soumission non trouvée")
 
         message = "Paiement validé avec succès"
-        statut_historique = "valide"  # Pour l'historique, on garde toujours "valide" pour les validations
 
-        # Mettre à jour le statut selon le type
+        # Supprimer les infos de refus mais garder le statut attente_comptable
         if type_paiement == "depot":
-            # Dépôt validé: en attente du paiement final
-            statuts[numero_soumission]["statutDepot"] = "traite_attente_final"
-            statuts[numero_soumission]["dateDepot"] = datetime.now().isoformat()
+            # Rester en attente_comptable (ne pas changer à traite_attente_final)
+            # Juste supprimer les infos de refus
             if "depot" in statuts[numero_soumission]:
-                statuts[numero_soumission]["depot"]["statut"] = "traite_attente_final"
-            message = "Dépôt validé - En attente du paiement final"
+                if "refus" in statuts[numero_soumission]["depot"]:
+                    del statuts[numero_soumission]["depot"]["refus"]
+            # Supprimer aussi l'objet refus au niveau racine
+            if "refus" in statuts[numero_soumission]:
+                del statuts[numero_soumission]["refus"]
+            message = "Dépôt validé - En attente de rapprochement QBO"
         elif type_paiement == "paiement_final":
-            # Paiement final validé: client complètement traité
-            statuts[numero_soumission]["statutPaiementFinal"] = "traite"
-            statuts[numero_soumission]["datePaiementFinal"] = datetime.now().isoformat()
+            # Rester en attente_comptable (ne pas changer à traite)
+            # Juste supprimer les infos de refus
             if "paiementFinal" in statuts[numero_soumission]:
-                statuts[numero_soumission]["paiementFinal"]["statut"] = "traite"
-            # Marquer tout le client comme traité
-            statuts[numero_soumission]["statutClient"] = "traite"
-            statuts[numero_soumission]["dateTraitement"] = datetime.now().isoformat()
-            message = "Paiement final validé - Client complètement traité"
+                if "refus" in statuts[numero_soumission]["paiementFinal"]:
+                    del statuts[numero_soumission]["paiementFinal"]["refus"]
+            # Supprimer aussi l'objet refus au niveau racine
+            if "refus" in statuts[numero_soumission]:
+                del statuts[numero_soumission]["refus"]
+            message = "Paiement final validé - En attente de rapprochement QBO"
         elif type_paiement == "autres_paiements":
             index = data.get("index", 0)
             if "autresPaiements" in statuts[numero_soumission] and len(statuts[numero_soumission]["autresPaiements"]) > index:
-                statuts[numero_soumission]["autresPaiements"][index]["statut"] = "traite"
-            # Vérifier si tous les autres paiements sont traités
-            all_traite = all(ap.get("statut") == "traite" for ap in statuts[numero_soumission].get("autresPaiements", []))
-            if all_traite:
-                statuts[numero_soumission]["statutAutresPaiements"] = "traite"
-                statuts[numero_soumission]["dateAutresPaiements"] = datetime.now().isoformat()
-                # Marquer tout le client comme traité si pas de paiement final en attente
-                if statuts[numero_soumission].get("statutPaiementFinal") in [None, "traite"]:
-                    statuts[numero_soumission]["statutClient"] = "traite"
-                    statuts[numero_soumission]["dateTraitement"] = datetime.now().isoformat()
-            message = "Paiement validé"
+                # Rester en attente_comptable (ne pas changer à traite)
+                # Juste supprimer les infos de refus
+                if "refus" in statuts[numero_soumission]["autresPaiements"][index]:
+                    del statuts[numero_soumission]["autresPaiements"][index]["refus"]
+            message = "Paiement validé - En attente de rapprochement QBO"
 
         statuts[numero_soumission]["dateMiseAJour"] = datetime.now().isoformat()
 
@@ -10040,8 +11642,8 @@ async def valider_facturation_comptable(username: str, numero_soumission: str, r
         with open(statuts_file, "w", encoding="utf-8") as f:
             json.dump(statuts, f, ensure_ascii=False, indent=2)
 
-        # Ajouter à l'historique
-        await ajouter_historique_facturation(username, numero_soumission, type_paiement, statut_historique, statuts[numero_soumission])
+        # Ajouter à l'historique avec statut "attente_comptable" pour affichage dans Rapprochement QBO
+        await ajouter_historique_facturation(username, numero_soumission, type_paiement, "attente_comptable", statuts[numero_soumission])
 
         return {"success": True, "message": message}
     except HTTPException:
@@ -10192,6 +11794,67 @@ async def renvoyer_paiement_en_traitement(username: str, numero_soumission: str,
         print(f"Erreur lors du renvoi en traitement: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/facturationqe/client/{username}/{numero_soumission}/message")
+async def envoyer_message_conversation(username: str, numero_soumission: str, request: Request):
+    """Entrepreneur envoie un message dans la conversation (sans changer le statut)"""
+    try:
+        data = await request.json()
+        type_paiement = data.get("type", "depot")
+        message = data.get("message", "")
+        index = data.get("index", 0)
+
+        if not message:
+            raise HTTPException(status_code=400, detail="Le message ne peut pas être vide")
+
+        statuts_file = os.path.join("data", "facturation_qe_statuts", username, "statuts_clients.json")
+        if not os.path.exists(statuts_file):
+            raise HTTPException(status_code=404, detail="Fichier de statuts non trouvé")
+
+        with open(statuts_file, "r", encoding="utf-8") as f:
+            statuts = json.load(f)
+
+        if numero_soumission not in statuts:
+            raise HTTPException(status_code=404, detail="Soumission non trouvée")
+
+        # Message à ajouter à la conversation (peut être de "entrepreneur" ou "comptable")
+        expediteur = data.get("de", "entrepreneur")  # Utiliser le paramètre envoyé ou "entrepreneur" par défaut
+        nouveau_message = {
+            "de": expediteur,
+            "message": message,
+            "date": datetime.now().isoformat()
+        }
+
+        # Ajouter le message à la conversation au niveau racine si elle existe
+        if "refus" in statuts[numero_soumission] and "conversation" in statuts[numero_soumission]["refus"]:
+            statuts[numero_soumission]["refus"]["conversation"].append(nouveau_message)
+
+        # Ajouter aussi dans le sous-objet de paiement correspondant
+        if type_paiement == "depot":
+            if "depot" in statuts[numero_soumission]:
+                if "refus" in statuts[numero_soumission]["depot"] and "conversation" in statuts[numero_soumission]["depot"]["refus"]:
+                    statuts[numero_soumission]["depot"]["refus"]["conversation"].append(nouveau_message)
+        elif type_paiement == "paiement_final":
+            if "paiementFinal" in statuts[numero_soumission]:
+                if "refus" in statuts[numero_soumission]["paiementFinal"] and "conversation" in statuts[numero_soumission]["paiementFinal"]["refus"]:
+                    statuts[numero_soumission]["paiementFinal"]["refus"]["conversation"].append(nouveau_message)
+        elif type_paiement == "autres_paiements":
+            if "autresPaiements" in statuts[numero_soumission] and len(statuts[numero_soumission]["autresPaiements"]) > index:
+                if "refus" in statuts[numero_soumission]["autresPaiements"][index] and "conversation" in statuts[numero_soumission]["autresPaiements"][index]["refus"]:
+                    statuts[numero_soumission]["autresPaiements"][index]["refus"]["conversation"].append(nouveau_message)
+
+        statuts[numero_soumission]["dateMiseAJour"] = datetime.now().isoformat()
+
+        # Sauvegarder
+        with open(statuts_file, "w", encoding="utf-8") as f:
+            json.dump(statuts, f, ensure_ascii=False, indent=2)
+
+        return {"success": True, "message": "Message envoyé"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erreur lors de l'envoi du message: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 async def ajouter_historique_facturation(username: str, numero_soumission: str, type_paiement: str, statut: str, client_statuts: dict):
     """Ajoute une entrée à l'historique de facturation"""
     try:
@@ -10205,8 +11868,9 @@ async def ajouter_historique_facturation(username: str, numero_soumission: str, 
             with open(historique_file, "r", encoding="utf-8") as f:
                 historique = json.load(f)
 
-        # Récupérer le nom de l'entrepreneur
+        # Récupérer le nom et la photo de l'entrepreneur
         entrepreneur_nom = username
+        entrepreneur_photo = None
         try:
             user_info = get_user_info(username)
             if user_info and user_info.get("success"):
@@ -10215,8 +11879,21 @@ async def ajouter_historique_facturation(username: str, numero_soumission: str, 
                 nom = data.get("nom", "")
                 if prenom or nom:
                     entrepreneur_nom = f"{prenom} {nom}".strip()
+                # Récupérer la photo de profil
+                files = user_info.get("files", {})
+                entrepreneur_photo = files.get("profile_photo")
         except:
             pass
+
+        # Si pas de photo via get_user_info, chercher manuellement
+        if not entrepreneur_photo:
+            import glob as glob_module
+            user_dir = os.path.join(base_cloud, "signatures", username)
+            pattern = os.path.join(user_dir, "profile_photo*.*")
+            matching_files = glob_module.glob(pattern)
+            if matching_files:
+                filename = os.path.basename(matching_files[0])
+                entrepreneur_photo = f"/api/get-file/{username}/{filename}"
 
         # Récupérer le nom du client depuis les différentes sources
         client_nom = "Client inconnu"
@@ -10252,25 +11929,31 @@ async def ajouter_historique_facturation(username: str, numero_soumission: str, 
                 except:
                     pass
 
-        # Récupérer le montant selon le type
+        # Récupérer le montant et le lien virement selon le type
         montant = "0,00 $"
+        lien_virement = ""
         if type_paiement == "depot":
             montant = client_statuts.get("depot", {}).get("montant", "0,00 $")
+            lien_virement = client_statuts.get("depot", {}).get("lienVirement", "")
         elif type_paiement == "paiement_final":
             montant = client_statuts.get("paiementFinal", {}).get("montant", "0,00 $")
+            lien_virement = client_statuts.get("paiementFinal", {}).get("lienVirement", "")
         elif type_paiement == "autres_paiements":
             autres = client_statuts.get("autresPaiements", [])
             if autres:
                 montant = autres[-1].get("montant", "0,00 $")
+                lien_virement = autres[-1].get("lienVirement", "")
 
         # Ajouter l'entrée
         historique.insert(0, {
             "entrepreneur": entrepreneur_nom,
             "entrepreneurUsername": username,
+            "entrepreneurPhoto": entrepreneur_photo,
             "client": client_nom,
             "numeroSoumission": numero_soumission,
             "type": type_paiement,
             "montant": montant,
+            "lienVirement": lien_virement,
             "statut": statut,
             "date": datetime.now().strftime("%d/%m/%Y %H:%M")
         })
@@ -10285,7 +11968,7 @@ async def ajouter_historique_facturation(username: str, numero_soumission: str, 
 
 @app.get("/api/comptable/facturation/historique")
 async def get_historique_facturation(limit: int = 100):
-    """Récupère l'historique des facturations traitées"""
+    """Récupère l'historique des facturations validées et traitées (sans les refusés)"""
     try:
         historique_file = os.path.join("data", "facturation_qe_historique", "historique.json")
 
@@ -10295,35 +11978,273 @@ async def get_historique_facturation(limit: int = 100):
         with open(historique_file, "r", encoding="utf-8") as f:
             historique = json.load(f)
 
-        return {"success": True, "historique": historique[:limit]}
+        # Filtrer pour exclure les paiements refusés (statut "refuse")
+        # Inclure les paiements "attente_comptable" (validés par direction) et "valide" (traités)
+        historique_valides = [h for h in historique if h.get("statut") != "refuse"]
+
+        return {"success": True, "historique": historique_valides[:limit]}
     except Exception as e:
         print(f"Erreur lors de la récupération de l'historique: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/comptable/facturation/periodes")
+async def save_periodes_facturation(data: dict):
+    """Sauvegarde les périodes de paiements ET marque les paiements comme 'traité'"""
+    try:
+        periodes_dir = os.path.join("data", "facturation_qe_periodes")
+        os.makedirs(periodes_dir, exist_ok=True)
+        periodes_file = os.path.join(periodes_dir, "periodes.json")
+
+        periodes = data.get("periodes", {})
+
+        # Sauvegarder les périodes
+        with open(periodes_file, "w", encoding="utf-8") as f:
+            json.dump(periodes, f, ensure_ascii=False, indent=2)
+
+        # Marquer tous les paiements dans les périodes comme "traité"
+        for periode_id, paiements in periodes.items():
+            for paiement in paiements:
+                username = paiement.get("entrepreneurUsername")
+                numero_soumission = paiement.get("numeroSoumission")
+                type_paiement = paiement.get("type")
+
+                if not username or not numero_soumission or not type_paiement:
+                    continue
+
+                # Charger le fichier de statuts de l'entrepreneur
+                statuts_file = os.path.join("data", "facturation_qe_statuts", username, "statuts_clients.json")
+                if not os.path.exists(statuts_file):
+                    continue
+
+                with open(statuts_file, "r", encoding="utf-8") as f:
+                    statuts = json.load(f)
+
+                if numero_soumission not in statuts:
+                    continue
+
+                # Mettre à jour le statut selon le type
+                if type_paiement == "depot":
+                    statuts[numero_soumission]["statutDepot"] = "traite_attente_final"
+                    if "depot" in statuts[numero_soumission]:
+                        statuts[numero_soumission]["depot"]["statut"] = "traite_attente_final"
+                elif type_paiement == "paiement_final":
+                    statuts[numero_soumission]["statutPaiementFinal"] = "traite"
+                    if "paiementFinal" in statuts[numero_soumission]:
+                        statuts[numero_soumission]["paiementFinal"]["statut"] = "traite"
+                    statuts[numero_soumission]["statutClient"] = "traite"
+                    statuts[numero_soumission]["dateTraitement"] = datetime.now().isoformat()
+                elif type_paiement == "autres_paiements":
+                    index = paiement.get("index", 0)
+                    if "autresPaiements" in statuts[numero_soumission] and len(statuts[numero_soumission]["autresPaiements"]) > index:
+                        statuts[numero_soumission]["autresPaiements"][index]["statut"] = "traite"
+
+                statuts[numero_soumission]["dateMiseAJour"] = datetime.now().isoformat()
+
+                # Sauvegarder les statuts modifiés
+                with open(statuts_file, "w", encoding="utf-8") as f:
+                    json.dump(statuts, f, ensure_ascii=False, indent=2)
+
+        return {"success": True, "message": "Périodes sauvegardées avec succès"}
+    except Exception as e:
+        print(f"Erreur lors de la sauvegarde des périodes: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/comptable/facturation/periodes")
+async def get_periodes_facturation():
+    """Récupère les périodes de paiements sauvegardées"""
+    try:
+        periodes_file = os.path.join("data", "facturation_qe_periodes", "periodes.json")
+
+        if not os.path.exists(periodes_file):
+            return {"success": True, "periodes": {}}
+
+        with open(periodes_file, "r", encoding="utf-8") as f:
+            periodes = json.load(f)
+
+        return {"success": True, "periodes": periodes}
+    except Exception as e:
+        print(f"Erreur lors de la récupération des périodes: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/comptable/messages-en-attente")
+async def get_messages_en_attente():
+    """Récupère tous les messages en attente de réponse de la comptable"""
+    try:
+        messages = []
+        statuts_dir = os.path.join("data", "facturation_qe_statuts")
+
+        if not os.path.exists(statuts_dir):
+            return {"success": True, "messages": []}
+
+        # Parcourir tous les entrepreneurs
+        for username in os.listdir(statuts_dir):
+            user_path = os.path.join(statuts_dir, username)
+            if os.path.isdir(user_path):
+                statuts_file = os.path.join(user_path, "statuts_clients.json")
+
+                if os.path.exists(statuts_file):
+                    with open(statuts_file, "r", encoding="utf-8") as f:
+                        statuts = json.load(f)
+
+                    # Récupérer les infos de l'entrepreneur (nom complet et photo)
+                    entrepreneur_nom_complet = username
+                    entrepreneur_photo = None
+                    try:
+                        user_info = get_user_info(username)
+                        if user_info and user_info.get("success"):
+                            data = user_info.get("data", {})
+                            prenom = data.get("prenom", "")
+                            nom = data.get("nom", "")
+                            if prenom or nom:
+                                entrepreneur_nom_complet = f"{prenom} {nom}".strip()
+                            # Récupérer la photo de profil
+                            files = user_info.get("files", {})
+                            entrepreneur_photo = files.get("profile_photo")
+                        if not entrepreneur_photo:
+                            # Chercher manuellement
+                            user_dir = os.path.join(base_cloud, "signatures", username)
+                            pattern = os.path.join(user_dir, "profile_photo*.*")
+                            matching = glob.glob(pattern)
+                            if matching:
+                                entrepreneur_photo = f"/api/get-file/{username}/{os.path.basename(matching[0])}"
+                    except Exception as e:
+                        print(f"[WARN] Impossible de récupérer infos entrepreneur {username}: {e}")
+
+                    for numero, data in statuts.items():
+                        # Vérifier s'il y a un refus avec conversation
+                        refus = data.get("refus") or (data.get("depot", {}).get("refus"))
+                        if refus and refus.get("conversation"):
+                            conversation = refus["conversation"]
+                            # Vérifier si le dernier message est de l'entrepreneur
+                            if conversation and conversation[-1].get("de") == "entrepreneur":
+                                # Compter les messages non lus de l'entrepreneur
+                                messages_non_lus = 0
+                                for msg in reversed(conversation):
+                                    if msg.get("de") == "entrepreneur":
+                                        messages_non_lus += 1
+                                    else:
+                                        break
+
+                                # Récupérer les infos du client depuis ventes_acceptees
+                                client_info = {}
+                                try:
+                                    # D'abord essayer ventes_acceptees
+                                    ventes_file = os.path.join(base_cloud, "ventes_acceptees", username, "ventes.json")
+                                    if os.path.exists(ventes_file):
+                                        with open(ventes_file, "r", encoding="utf-8") as vf:
+                                            ventes = json.load(vf)
+                                        for vente in ventes:
+                                            if vente.get("num") == numero:
+                                                client_info = {
+                                                    "clientNom": vente.get("clientNom", ""),
+                                                    "clientPrenom": vente.get("clientPrenom", ""),
+                                                    "adresse": vente.get("adresse", ""),
+                                                    "telephone": vente.get("telephone", ""),
+                                                    "courriel": vente.get("courriel", ""),
+                                                    "prix": vente.get("prix", "")
+                                                }
+                                                break
+                                    # Si pas trouvé, essayer soumissions_completes
+                                    if not client_info.get("clientNom") and not client_info.get("clientPrenom"):
+                                        soum_file = os.path.join(base_cloud, "soumissions_completes", username, "soumissions.json")
+                                        if os.path.exists(soum_file):
+                                            with open(soum_file, "r", encoding="utf-8") as sf:
+                                                soumissions = json.load(sf)
+                                            for soum in soumissions:
+                                                if soum.get("num") == numero:
+                                                    client_info = {
+                                                        "clientNom": soum.get("nom", ""),
+                                                        "clientPrenom": soum.get("prenom", ""),
+                                                        "adresse": soum.get("adresse", ""),
+                                                        "telephone": soum.get("telephone", ""),
+                                                        "courriel": soum.get("courriel", ""),
+                                                        "prix": soum.get("prix", "")
+                                                    }
+                                                    break
+                                except Exception as ce:
+                                    print(f"[WARN] Erreur récup infos client {numero}: {ce}")
+
+                                # Récupérer les infos de paiement (depot)
+                                paiement_info = data.get("depot", {})
+
+                                messages.append({
+                                    "entrepreneur": username,
+                                    "entrepreneurNomComplet": entrepreneur_nom_complet,
+                                    "entrepreneurPhoto": entrepreneur_photo,
+                                    "numeroSoumission": numero,
+                                    "dernierMessage": conversation[-1].get("message", "")[:100],
+                                    "date": conversation[-1].get("date"),
+                                    "nombreMessages": messages_non_lus,
+                                    "clientInfo": client_info,
+                                    "paiementInfo": paiement_info
+                                })
+
+        # Trier par date (plus récent en premier)
+        messages.sort(key=lambda x: x.get("date", ""), reverse=True)
+
+        return {"success": True, "messages": messages}
+    except Exception as e:
+        print(f"Erreur lors de la récupération des messages en attente: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/facturationqe/client/{username}/{numero_soumission}/conversation")
+async def get_conversation_refus(username: str, numero_soumission: str):
+    """Récupère la conversation de refus d'un client"""
+    try:
+        statuts_file = os.path.join("data", "facturation_qe_statuts", username, "statuts_clients.json")
+
+        if not os.path.exists(statuts_file):
+            raise HTTPException(status_code=404, detail="Statuts non trouvés")
+
+        with open(statuts_file, "r", encoding="utf-8") as f:
+            statuts = json.load(f)
+
+        if numero_soumission not in statuts:
+            raise HTTPException(status_code=404, detail="Soumission non trouvée")
+
+        data = statuts[numero_soumission]
+        refus = data.get("refus") or (data.get("depot", {}).get("refus"))
+
+        if not refus:
+            return {"success": True, "conversation": []}
+
+        return {"success": True, "conversation": refus.get("conversation", [])}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erreur lors de la récupération de la conversation: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Compter les employés en attente comptable
 @app.get("/api/comptable/employes-en-attente/count")
 async def count_employes_en_attente_comptable():
-    """Compte le nombre total d'employés en attente de validation comptable"""
+    """Compte le nombre total d'employés en attente de validation comptable (activations + modifications)"""
     try:
-        total_en_attente = 0
+        total_activations = 0
+        total_modifications = 0
         employes_dir = os.path.join(base_cloud, "employes")
 
         if not os.path.exists(employes_dir):
-            return {"success": True, "count": 0}
+            return {"success": True, "count": 0, "activations": 0, "modifications": 0}
 
         # Parcourir tous les dossiers d'entrepreneurs
         for username in os.listdir(employes_dir):
             user_path = os.path.join(employes_dir, username)
             if os.path.isdir(user_path):
-                # Charger les nouveaux employés
+                # Charger les nouveaux employés (activations)
                 employes_nouveaux = load_employes(username, "nouveaux")
-
-                # Compter ceux en attente comptable
                 for employe in employes_nouveaux:
                     if employe.get("statut") == "En attente comptable":
-                        total_en_attente += 1
+                        total_activations += 1
 
-        return {"success": True, "count": total_en_attente}
+                # Charger les employés actifs (modifications en attente comptable)
+                employes_actifs = load_employes(username, "actifs")
+                for employe in employes_actifs:
+                    if employe.get("statut") == "Modification en attente comptable":
+                        total_modifications += 1
+
+        total = total_activations + total_modifications
+        return {"success": True, "count": total, "activations": total_activations, "modifications": total_modifications}
     except Exception as e:
         print(f"Erreur lors du comptage des employés en attente comptable: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -10388,6 +12309,79 @@ async def liste_employes_en_attente_comptable():
         return {"success": True, "employes": employes_en_attente}
     except Exception as e:
         print(f"Erreur lors du chargement de la liste des employés en attente comptable: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Lister toutes les modifications en attente de validation comptable
+@app.get("/api/comptable/modifications-en-attente/liste")
+async def liste_modifications_en_attente_comptable():
+    """Liste toutes les modifications d'employés en attente de validation comptable"""
+    try:
+        modifications_en_attente = []
+        employes_dir = os.path.join(base_cloud, "employes")
+
+        if not os.path.exists(employes_dir):
+            return {"success": True, "modifications": []}
+
+        # Parcourir tous les dossiers d'entrepreneurs
+        for username in os.listdir(employes_dir):
+            user_path = os.path.join(employes_dir, username)
+            if os.path.isdir(user_path):
+                # Charger les employés actifs avec statut "Modification en attente comptable"
+                employes_actifs = load_employes(username, "actifs")
+                modifications = load_modifications(username)
+
+                for employe in employes_actifs:
+                    if employe.get("statut") == "Modification en attente comptable":
+                        # Récupérer les infos de l'entrepreneur
+                        entrepreneur_nom_complet = username
+                        photo_profil = None
+
+                        try:
+                            user_info = get_user_info(username)
+                            if user_info and user_info.get("success"):
+                                data = user_info.get("data", {})
+                                prenom = data.get("prenom", "")
+                                nom = data.get("nom", "")
+                                if prenom or nom:
+                                    entrepreneur_nom_complet = f"{prenom} {nom}".strip()
+                                files = user_info.get("files", {})
+                                photo_profil = files.get("profile_photo")
+                        except:
+                            pass
+
+                        # Si pas de photo via get_user_info, chercher manuellement
+                        if not photo_profil:
+                            import glob as glob_module
+                            user_dir = os.path.join(base_cloud, "signatures", username)
+                            pattern = os.path.join(user_dir, f"profile_photo*.*")
+                            matching_files = glob_module.glob(pattern)
+                            if matching_files:
+                                filename = os.path.basename(matching_files[0])
+                                photo_profil = f"/api/get-file/{username}/{filename}"
+
+                        # Trouver les données de modification correspondantes
+                        modif_data = None
+                        for m in modifications:
+                            if m.get("employe_id") == employe.get("id"):
+                                modif_data = m
+                                break
+
+                        modif_avec_info = employe.copy()
+                        modif_avec_info["entrepreneur"] = entrepreneur_nom_complet
+                        modif_avec_info["entrepreneurUsername"] = username
+                        modif_avec_info["entrepreneurPhoto"] = photo_profil
+                        modif_avec_info["requestType"] = "modification"
+
+                        # Ajouter les données anciennes/nouvelles si disponibles
+                        if modif_data:
+                            modif_avec_info["anciennes_donnees"] = modif_data.get("anciennes_donnees", {})
+                            modif_avec_info["nouvelles_donnees"] = modif_data.get("nouvelles_donnees", {})
+
+                        modifications_en_attente.append(modif_avec_info)
+
+        return {"success": True, "modifications": modifications_en_attente}
+    except Exception as e:
+        print(f"Erreur lors du chargement de la liste des modifications en attente comptable: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Stats globales des employés pour comptable/direction
@@ -10701,7 +12695,300 @@ async def modifier_employe(username: str, employe_id: str, employe_data: Employe
             return {"success": True, "message": "Employé modifié avec succès"}
         else:
             raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
-        
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Helpers pour les modifications en attente
+def load_modifications(username: str):
+    """Charge les modifications en attente pour un utilisateur"""
+    filepath = os.path.join(base_cloud, "employes", username, "modifications.json")
+    if os.path.exists(filepath):
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
+
+def save_modifications(username: str, modifications: list):
+    """Sauvegarde les modifications en attente"""
+    filepath = os.path.join(base_cloud, "employes", username, "modifications.json")
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(modifications, f, indent=2, ensure_ascii=False)
+    return True
+
+# Demande de modification d'un employé (avec validation coach/direction)
+@app.post("/api/employes/{username}/demande-modification/{employe_id}")
+async def demande_modification_employe(
+    username: str,
+    employe_id: str,
+    nom: str = Form(...),
+    nas: str = Form(...),
+    genre: str = Form(...),
+    adresse: str = Form(...),
+    appartement: str = Form(""),
+    ville: str = Form(...),
+    codePostal: str = Form(...),
+    telephone: str = Form(...),
+    courriel: str = Form(...),
+    datePremiere: str = Form(...),
+    posteService: str = Form(...),
+    tauxHoraire: str = Form(...),
+    dateNaissance: str = Form(...),
+    specimenCheque: UploadFile = File(None),
+    certificatSecurite: UploadFile = File(None),
+    carteAssurance: UploadFile = File(None)
+):
+    """Demande de modification d'un employé - stocke les nouvelles données en attente, l'employé reste actif"""
+    try:
+        employes_actifs = load_employes(username, "actifs")
+
+        # Trouver l'employé à modifier
+        employe_trouve = None
+        employe_index = None
+        for i, employe in enumerate(employes_actifs):
+            if employe.get("id") == employe_id:
+                employe_trouve = employe
+                employe_index = i
+                break
+
+        if employe_trouve is None:
+            raise HTTPException(status_code=404, detail="Employé non trouvé")
+
+        # Créer le dossier pour les documents
+        employe_folder = os.path.join("data", "employes", username, employe_id)
+        os.makedirs(employe_folder, exist_ok=True)
+
+        # Sauvegarder les nouveaux fichiers s'ils sont fournis
+        nouveaux_documents = {}
+
+        if specimenCheque and specimenCheque.filename:
+            specimen_path = os.path.join(employe_folder, f"specimen_cheque_{specimenCheque.filename}")
+            with open(specimen_path, "wb") as f:
+                f.write(await specimenCheque.read())
+            nouveaux_documents["specimenCheque"] = f"specimen_cheque_{specimenCheque.filename}"
+
+        if certificatSecurite and certificatSecurite.filename:
+            certificat_path = os.path.join(employe_folder, f"certificat_securite_{certificatSecurite.filename}")
+            with open(certificat_path, "wb") as f:
+                f.write(await certificatSecurite.read())
+            nouveaux_documents["certificatSecurite"] = f"certificat_securite_{certificatSecurite.filename}"
+
+        if carteAssurance and carteAssurance.filename:
+            carte_path = os.path.join(employe_folder, f"carte_assurance_{carteAssurance.filename}")
+            with open(carte_path, "wb") as f:
+                f.write(await carteAssurance.read())
+            nouveaux_documents["carteAssurance"] = f"carte_assurance_{carteAssurance.filename}"
+
+        # Stocker les anciennes données (données actuelles de l'employé)
+        anciennes_donnees = {
+            "nom": employe_trouve.get("nom"),
+            "nas": employe_trouve.get("nas"),
+            "genre": employe_trouve.get("genre"),
+            "adresse": employe_trouve.get("adresse"),
+            "appartement": employe_trouve.get("appartement"),
+            "ville": employe_trouve.get("ville"),
+            "codePostal": employe_trouve.get("codePostal"),
+            "telephone": employe_trouve.get("telephone"),
+            "courriel": employe_trouve.get("courriel"),
+            "datePremiere": employe_trouve.get("datePremiere"),
+            "posteService": employe_trouve.get("posteService"),
+            "departement": employe_trouve.get("departement"),
+            "tauxHoraire": employe_trouve.get("tauxHoraire"),
+            "dateNaissance": employe_trouve.get("dateNaissance"),
+            "specimenCheque": employe_trouve.get("specimenCheque"),
+            "certificatSecurite": employe_trouve.get("certificatSecurite"),
+            "carteAssurance": employe_trouve.get("carteAssurance")
+        }
+
+        # Stocker les nouvelles données demandées
+        nouvelles_donnees = {
+            "nom": nom,
+            "nas": nas,
+            "genre": genre,
+            "adresse": adresse,
+            "appartement": appartement or "-",
+            "ville": ville,
+            "codePostal": codePostal,
+            "telephone": telephone,
+            "courriel": courriel,
+            "datePremiere": datePremiere,
+            "posteService": posteService,
+            "departement": employe_trouve.get("departement", "0"),
+            "tauxHoraire": tauxHoraire,
+            "dateNaissance": dateNaissance,
+            "specimenCheque": nouveaux_documents.get("specimenCheque") or employe_trouve.get("specimenCheque"),
+            "certificatSecurite": nouveaux_documents.get("certificatSecurite") or employe_trouve.get("certificatSecurite"),
+            "carteAssurance": nouveaux_documents.get("carteAssurance") or employe_trouve.get("carteAssurance")
+        }
+
+        # Créer l'objet de modification en attente
+        modification = {
+            "id": employe_id,
+            "employe_id": employe_id,
+            "anciennes_donnees": anciennes_donnees,
+            "nouvelles_donnees": nouvelles_donnees,
+            "statut": "Modification en attente de validation",
+            "date_demande": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        # Charger les modifications existantes et ajouter la nouvelle
+        modifications = load_modifications(username)
+        # Supprimer toute modification existante pour cet employé
+        modifications = [m for m in modifications if m.get("employe_id") != employe_id]
+        modifications.append(modification)
+
+        # Mettre à jour le statut de l'employé dans actifs (mais garder ses données actuelles)
+        employes_actifs[employe_index]["statut"] = "Modification en attente de validation"
+        employes_actifs[employe_index]["anciennes_donnees"] = anciennes_donnees
+        employes_actifs[employe_index]["nouvelles_donnees"] = nouvelles_donnees
+        employes_actifs[employe_index]["date_demande_modification"] = modification["date_demande"]
+
+        if save_modifications(username, modifications) and save_employes(username, "actifs", employes_actifs):
+            return {"success": True, "message": "Demande de modification envoyée pour validation"}
+        else:
+            raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Valider une modification d'employé (coach) - passe en attente comptable
+@app.post("/api/employes/{username}/valider-modification/{employe_id}")
+async def valider_modification_employe(username: str, employe_id: str):
+    """Valide la modification par le coach - passe en attente comptable"""
+    try:
+        employes_actifs = load_employes(username, "actifs")
+        modifications = load_modifications(username)
+
+        # Trouver l'employé
+        employe_trouve = False
+        for i, employe in enumerate(employes_actifs):
+            if employe.get("id") == employe_id:
+                # Passer au statut "en attente comptable"
+                employes_actifs[i]["statut"] = "Modification en attente comptable"
+                employes_actifs[i]["date_validation_coach_modification"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                employe_trouve = True
+                break
+
+        # Mettre à jour aussi dans le fichier modifications
+        for i, modif in enumerate(modifications):
+            if modif.get("employe_id") == employe_id:
+                modifications[i]["statut"] = "Modification en attente comptable"
+                modifications[i]["date_validation_coach"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                break
+
+        if not employe_trouve:
+            raise HTTPException(status_code=404, detail="Employé non trouvé")
+
+        if save_employes(username, "actifs", employes_actifs) and save_modifications(username, modifications):
+            return {"success": True, "message": "Modification validée par le coach, en attente comptable"}
+        else:
+            raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Valider une modification d'employé (comptable) - applique les modifications
+@app.post("/api/employes/{username}/valider-modification-comptable/{employe_id}")
+async def valider_modification_comptable(username: str, employe_id: str):
+    """Valide la modification par le comptable - applique les nouvelles données"""
+    try:
+        employes_actifs = load_employes(username, "actifs")
+        modifications = load_modifications(username)
+
+        # Trouver l'employé et appliquer les nouvelles données
+        employe_trouve = False
+        for i, employe in enumerate(employes_actifs):
+            if employe.get("id") == employe_id:
+                nouvelles = employe.get("nouvelles_donnees", {})
+                if nouvelles:
+                    # Appliquer les nouvelles données (incluant les documents)
+                    employes_actifs[i].update({
+                        "nom": nouvelles.get("nom", employe.get("nom")),
+                        "nas": nouvelles.get("nas", employe.get("nas")),
+                        "genre": nouvelles.get("genre", employe.get("genre")),
+                        "adresse": nouvelles.get("adresse", employe.get("adresse")),
+                        "appartement": nouvelles.get("appartement", employe.get("appartement")),
+                        "ville": nouvelles.get("ville", employe.get("ville")),
+                        "codePostal": nouvelles.get("codePostal", employe.get("codePostal")),
+                        "telephone": nouvelles.get("telephone", employe.get("telephone")),
+                        "courriel": nouvelles.get("courriel", employe.get("courriel")),
+                        "datePremiere": nouvelles.get("datePremiere", employe.get("datePremiere")),
+                        "posteService": nouvelles.get("posteService", employe.get("posteService")),
+                        "tauxHoraire": nouvelles.get("tauxHoraire", employe.get("tauxHoraire")),
+                        "specimenCheque": nouvelles.get("specimenCheque", employe.get("specimenCheque")),
+                        "certificatSecurite": nouvelles.get("certificatSecurite", employe.get("certificatSecurite")),
+                        "carteAssurance": nouvelles.get("carteAssurance", employe.get("carteAssurance"))
+                    })
+
+                # Nettoyer et remettre en statut Actif
+                employes_actifs[i]["statut"] = "Actif"
+                employes_actifs[i].pop("anciennes_donnees", None)
+                employes_actifs[i].pop("nouvelles_donnees", None)
+                employes_actifs[i].pop("date_demande_modification", None)
+                employes_actifs[i].pop("date_validation_coach_modification", None)
+                # Effacer la conversation de refus si elle existe
+                employes_actifs[i].pop("conversation_refus", None)
+                employes_actifs[i].pop("motif_refus_comptable", None)
+                employes_actifs[i].pop("date_refus_comptable", None)
+                employes_actifs[i]["date_modification"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                employe_trouve = True
+                break
+
+        # Supprimer la modification du fichier modifications
+        modifications = [m for m in modifications if m.get("employe_id") != employe_id]
+
+        if not employe_trouve:
+            raise HTTPException(status_code=404, detail="Employé non trouvé")
+
+        if save_employes(username, "actifs", employes_actifs) and save_modifications(username, modifications):
+            return {"success": True, "message": "Modification validée et appliquée avec succès"}
+        else:
+            raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Refuser une modification d'employé (coach ou comptable)
+@app.post("/api/employes/{username}/refuser-modification/{employe_id}")
+async def refuser_modification_employe(username: str, employe_id: str, request: Request):
+    """Refuse la modification - l'employé reste avec ses données actuelles"""
+    try:
+        # Récupérer la raison du refus
+        try:
+            body = await request.json()
+            motif_refus = body.get("motif_refus", "Aucune raison spécifiée")
+        except:
+            motif_refus = "Aucune raison spécifiée"
+
+        employes_actifs = load_employes(username, "actifs")
+        modifications = load_modifications(username)
+
+        # Trouver l'employé et nettoyer les données de modification
+        employe_trouve = False
+        for i, employe in enumerate(employes_actifs):
+            if employe.get("id") == employe_id:
+                # Nettoyer les données de modification et remettre en statut Refusé
+                employes_actifs[i]["statut"] = "Modification refusée"
+                employes_actifs[i]["motif_refus_modification"] = motif_refus
+                employes_actifs[i]["date_refus_modification"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                employes_actifs[i].pop("anciennes_donnees", None)
+                employes_actifs[i].pop("nouvelles_donnees", None)
+                employes_actifs[i].pop("date_demande_modification", None)
+                employes_actifs[i].pop("date_validation_coach_modification", None)
+                employe_trouve = True
+                break
+
+        # Supprimer la modification du fichier modifications
+        modifications = [m for m in modifications if m.get("employe_id") != employe_id]
+
+        if not employe_trouve:
+            raise HTTPException(status_code=404, detail="Employé non trouvé")
+
+        if save_employes(username, "actifs", employes_actifs) and save_modifications(username, modifications):
+            return {"success": True, "message": "Modification refusée"}
+        else:
+            raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -10902,11 +13189,22 @@ async def valider_inactivation_coach(username: str, employe_id: str):
 
 # Refuser une inactivation (coach ou comptable)
 @app.post("/api/employes/{username}/refuser-inactivation/{employe_id}")
-async def refuser_inactivation(username: str, employe_id: str):
+async def refuser_inactivation(username: str, employe_id: str, request: Request):
     """Refuse une demande d'inactivation et la supprime"""
     try:
+        print(f"[DEBUG] Refuser inactivation: username={username}, employe_id={employe_id}")
+        # Récupérer la raison du refus
+        try:
+            body = await request.json()
+            motif_refus = body.get("motif_refus", "Aucune raison spécifiée")
+            print(f"[DEBUG] Motif refus reçu: {motif_refus}")
+        except Exception as e:
+            print(f"[DEBUG] Erreur parsing JSON: {e}")
+            motif_refus = "Aucune raison spécifiée"
+
         inactivations = load_inactivations(username)
         employes_actifs = load_employes(username, "actifs")
+        print(f"[DEBUG] Inactivations trouvées: {len(inactivations)}, Actifs: {len(employes_actifs)}")
 
         # Trouver et supprimer la demande
         inactivations_restantes = []
@@ -10915,29 +13213,42 @@ async def refuser_inactivation(username: str, employe_id: str):
         for inact in inactivations:
             if inact.get("id") == employe_id:
                 trouve = True
+                print(f"[DEBUG] Inactivation trouvée pour {employe_id}")
             else:
                 inactivations_restantes.append(inact)
 
         if not trouve:
+            print(f"[DEBUG] Inactivation NON trouvée pour {employe_id}")
             raise HTTPException(status_code=404, detail="Demande d'inactivation non trouvée")
 
-        # Remettre le statut de l'employé à "Actif" dans actifs.json
+        # Remettre le statut de l'employé avec info de refus dans actifs.json
+        employe_trouve = False
         for i, employe in enumerate(employes_actifs):
             if employe.get("id") == employe_id:
-                employes_actifs[i]["statut"] = "Actif"
+                employes_actifs[i]["statut"] = "Actif"  # Remettre en Actif, pas "Fin d'emploi refusée"
+                employes_actifs[i]["motif_refus_inactivation"] = motif_refus
+                employes_actifs[i]["date_refus_inactivation"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 # Supprimer les champs de date d'inactivation si présents
                 employes_actifs[i].pop("date_demande_inactivation", None)
                 employes_actifs[i].pop("date_validation_coach_inactivation", None)
+                employe_trouve = True
+                print(f"[DEBUG] Employé trouvé et mis à jour: {employe_id}")
                 break
 
+        if not employe_trouve:
+            print(f"[DEBUG] Employé NON trouvé dans actifs pour {employe_id}")
+
         if save_inactivations(username, inactivations_restantes) and save_employes(username, "actifs", employes_actifs):
+            print(f"[DEBUG] Sauvegarde réussie")
             return {"success": True, "message": "Demande d'inactivation refusée"}
         else:
+            print(f"[DEBUG] Erreur sauvegarde")
             raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
 
     except HTTPException:
         raise
     except Exception as e:
+        print(f"[ERROR] Exception: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Valider une inactivation (comptable/direction) - déplace de actifs vers inactifs
@@ -11021,30 +13332,49 @@ async def get_reactivation_data(username: str, employe_id: str):
 async def valider_reactivation_coach(username: str, employe_id: str):
     """Le coach valide une demande de réactivation et la passe en attente comptable"""
     try:
-        inactifs = load_employes(username, "inactifs")
-
-        # Trouver l'employé inactif avec demande de réactivation
-        employe_trouve = False
         date_validation = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        employe_trouve = False
+        source_file = None
 
+        # Chercher dans inactifs d'abord
+        inactifs = load_employes(username, "inactifs")
         for employe in inactifs:
             if employe.get("id") == employe_id:
-                # Vérifier qu'il est bien en attente de validation de réactivation
                 if employe.get("statut") != "Réactivation en attente de validation":
                     raise HTTPException(status_code=400, detail="L'employé n'est pas en attente de validation de réactivation")
-                # Changer le statut à "en attente comptable"
                 employe["statut"] = "Réactivation en attente comptable"
                 employe["date_validation_coach_reactivation"] = date_validation
                 employe_trouve = True
+                source_file = "inactifs"
                 break
 
+        # Si pas trouvé, chercher dans termines
         if not employe_trouve:
-            raise HTTPException(status_code=404, detail="Employé non trouvé dans les inactifs")
+            termines = load_employes(username, "termines")
+            for employe in termines:
+                if employe.get("id") == employe_id:
+                    if employe.get("statut") != "Réactivation en attente de validation":
+                        raise HTTPException(status_code=400, detail="L'employé n'est pas en attente de validation de réactivation")
+                    employe["statut"] = "Réactivation en attente comptable"
+                    employe["date_validation_coach_reactivation"] = date_validation
+                    employe_trouve = True
+                    source_file = "termines"
+                    break
 
-        if save_employes(username, "inactifs", inactifs):
-            return {"success": True, "message": "Réactivation validée par le coach, en attente de validation comptable"}
+        if not employe_trouve:
+            raise HTTPException(status_code=404, detail="Employé non trouvé dans les inactifs ou terminés")
+
+        # Sauvegarder dans le bon fichier
+        if source_file == "inactifs":
+            if save_employes(username, "inactifs", inactifs):
+                return {"success": True, "message": "Réactivation validée par le coach, en attente de validation comptable"}
+            else:
+                raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
         else:
-            raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
+            if save_employes(username, "termines", termines):
+                return {"success": True, "message": "Réactivation validée par le coach, en attente de validation comptable"}
+            else:
+                raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
 
     except HTTPException:
         raise
@@ -11056,31 +13386,51 @@ async def valider_reactivation_coach(username: str, employe_id: str):
 async def refuser_reactivation_coach(username: str, employe_id: str):
     """Le coach refuse une demande de réactivation"""
     try:
-        inactifs = load_employes(username, "inactifs")
-
-        # Trouver l'employé et annuler la demande de réactivation
         employe_trouve = False
+        source_file = None
 
+        # Chercher dans inactifs d'abord
+        inactifs = load_employes(username, "inactifs")
         for employe in inactifs:
             if employe.get("id") == employe_id:
-                # Vérifier qu'il est bien en attente de validation de réactivation
                 if employe.get("statut") not in ["Réactivation en attente de validation", "Réactivation en attente comptable"]:
                     raise HTTPException(status_code=400, detail="L'employé n'a pas de demande de réactivation en cours")
-                # Remettre le statut à Inactif
                 employe["statut"] = "Inactif"
-                # Supprimer les champs de réactivation
                 employe.pop("date_demande_reactivation", None)
                 employe.pop("date_validation_coach_reactivation", None)
                 employe_trouve = True
+                source_file = "inactifs"
                 break
 
+        # Si pas trouvé, chercher dans termines
         if not employe_trouve:
-            raise HTTPException(status_code=404, detail="Employé non trouvé dans les inactifs")
+            termines = load_employes(username, "termines")
+            for employe in termines:
+                if employe.get("id") == employe_id:
+                    if employe.get("statut") not in ["Réactivation en attente de validation", "Réactivation en attente comptable"]:
+                        raise HTTPException(status_code=400, detail="L'employé n'a pas de demande de réactivation en cours")
+                    # Remettre le statut à "Terminé par comptable"
+                    employe["statut"] = "Terminé par comptable"
+                    employe.pop("date_demande_reactivation", None)
+                    employe.pop("date_validation_coach_reactivation", None)
+                    employe_trouve = True
+                    source_file = "termines"
+                    break
 
-        if save_employes(username, "inactifs", inactifs):
-            return {"success": True, "message": "Demande de réactivation refusée"}
+        if not employe_trouve:
+            raise HTTPException(status_code=404, detail="Employé non trouvé dans les inactifs ou terminés")
+
+        # Sauvegarder dans le bon fichier
+        if source_file == "inactifs":
+            if save_employes(username, "inactifs", inactifs):
+                return {"success": True, "message": "Demande de réactivation refusée"}
+            else:
+                raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
         else:
-            raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
+            if save_employes(username, "termines", termines):
+                return {"success": True, "message": "Demande de réactivation refusée"}
+            else:
+                raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
 
     except HTTPException:
         raise
@@ -11317,14 +13667,28 @@ def save_reactivations(username, reactivations):
     return True
 
 # Modèle Pydantic pour la demande de réactivation
-class DemandeReactivation(BaseModel):
-    motif: str
-    justificatif: str = ""
-
 # Demander la réactivation d'un employé (entrepreneur)
 @app.post("/api/employes/{username}/demande-reactivation/{employe_id}")
-async def demander_reactivation(username: str, employe_id: str, data: DemandeReactivation):
-    """L'entrepreneur demande la réactivation d'un employé inactif"""
+async def demander_reactivation(
+    username: str,
+    employe_id: str,
+    nom: str = Form(...),
+    genre: str = Form(...),
+    nas: str = Form(...),
+    courriel: str = Form(...),
+    telephone: str = Form(...),
+    poste: str = Form(...),
+    tauxHoraire: str = Form(...),
+    datePremiere: str = Form(...),
+    adresse: str = Form(...),
+    ville: str = Form(...),
+    codePostal: str = Form(...),
+    dateNaissance: str = Form(...),
+    specimenCheque: UploadFile = File(None),
+    certificatSecurite: UploadFile = File(None),
+    carteAssurance: UploadFile = File(None)
+):
+    """L'entrepreneur demande la réactivation d'un employé inactif avec nouveaux documents"""
     try:
         employes_inactifs = load_employes(username, "inactifs")
         employes_termines = load_employes(username, "termines")
@@ -11352,13 +13716,58 @@ async def demander_reactivation(username: str, employe_id: str, data: DemandeRea
                     break
 
         if not employe_trouve:
-            raise HTTPException(status_code=404, detail="Employé non trouvé dans les inactifs")
+            raise HTTPException(status_code=404, detail="Employé non trouvé dans les inactifs ou terminés")
+
+        # Créer le répertoire pour les documents de l'employé s'il n'existe pas
+        employe_dir = os.path.join(os.path.dirname(__file__), "data", "employes", username, employe_id)
+        os.makedirs(employe_dir, exist_ok=True)
+
+        # Sauvegarder les fichiers
+        if specimenCheque and specimenCheque.filename:
+            file_ext = os.path.splitext(specimenCheque.filename)[1]
+            file_path = os.path.join(employe_dir, f"specimen{file_ext}")
+            with open(file_path, "wb") as f:
+                content = await specimenCheque.read()
+                f.write(content)
+            employe_trouve["specimenCheque"] = f"specimen{file_ext}"
+            print(f"[INFO] Spécimen chèque réactivation sauvegardé: {file_path}")
+
+        if certificatSecurite and certificatSecurite.filename:
+            file_ext = os.path.splitext(certificatSecurite.filename)[1]
+            file_path = os.path.join(employe_dir, f"certificat{file_ext}")
+            with open(file_path, "wb") as f:
+                content = await certificatSecurite.read()
+                f.write(content)
+            employe_trouve["certificatSecurite"] = f"certificat{file_ext}"
+            print(f"[INFO] Certificat sécurité réactivation sauvegardé: {file_path}")
+
+        if carteAssurance and carteAssurance.filename:
+            file_ext = os.path.splitext(carteAssurance.filename)[1]
+            file_path = os.path.join(employe_dir, f"carte{file_ext}")
+            with open(file_path, "wb") as f:
+                content = await carteAssurance.read()
+                f.write(content)
+            employe_trouve["carteAssurance"] = f"carte{file_ext}"
+            print(f"[INFO] Carte assurance réactivation sauvegardée: {file_path}")
+
+        # Mettre à jour les données de l'employé avec les nouvelles valeurs
+        employe_trouve["nom"] = nom
+        employe_trouve["genre"] = genre
+        employe_trouve["nas"] = nas
+        employe_trouve["courriel"] = courriel
+        employe_trouve["telephone"] = telephone
+        employe_trouve["poste"] = poste
+        employe_trouve["departement"] = employe_trouve.get("departement", "0")
+        employe_trouve["tauxHoraire"] = tauxHoraire
+        employe_trouve["datePremiere"] = datePremiere
+        employe_trouve["adresse"] = adresse
+        employe_trouve["ville"] = ville
+        employe_trouve["codePostal"] = codePostal
+        employe_trouve["dateNaissance"] = dateNaissance
 
         # Créer la demande de réactivation
         employe_trouve["statut"] = "Réactivation en attente de validation"
         employe_trouve["date_demande_reactivation"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        employe_trouve["motif_reactivation"] = data.motif
-        employe_trouve["justificatif_reactivation"] = data.justificatif
         employe_trouve["source_reactivation"] = source
 
         reactivations.append(employe_trouve)
@@ -11369,8 +13778,6 @@ async def demander_reactivation(username: str, employe_id: str, data: DemandeRea
                 if employe.get("id") == employe_id:
                     employes_inactifs[i]["statut"] = "Réactivation en attente de validation"
                     employes_inactifs[i]["date_demande_reactivation"] = employe_trouve["date_demande_reactivation"]
-                    employes_inactifs[i]["motif_reactivation"] = data.motif
-                    employes_inactifs[i]["justificatif_reactivation"] = data.justificatif
                     break
             save_employes(username, "inactifs", employes_inactifs)
         else:
@@ -11378,8 +13785,6 @@ async def demander_reactivation(username: str, employe_id: str, data: DemandeRea
                 if employe.get("id") == employe_id:
                     employes_termines[i]["statut"] = "Réactivation en attente de validation"
                     employes_termines[i]["date_demande_reactivation"] = employe_trouve["date_demande_reactivation"]
-                    employes_termines[i]["motif_reactivation"] = data.motif
-                    employes_termines[i]["justificatif_reactivation"] = data.justificatif
                     break
             save_employes(username, "termines", employes_termines)
 
@@ -11569,6 +13974,7 @@ async def count_reactivations_en_attente_comptable():
     try:
         count = 0
         employes_dir = os.path.join(base_cloud, "employes")
+        ids_comptes = set()
 
         if not os.path.exists(employes_dir):
             return {"success": True, "count": 0}
@@ -11576,10 +13982,20 @@ async def count_reactivations_en_attente_comptable():
         for username in os.listdir(employes_dir):
             user_path = os.path.join(employes_dir, username)
             if os.path.isdir(user_path):
+                # D'abord compter dans reactivations.json
                 reactivations = load_reactivations(username)
                 for react in reactivations:
                     if react.get("statut") == "Réactivation en attente comptable":
                         count += 1
+                        ids_comptes.add(react.get("id"))
+
+                # Fallback: compter aussi dans inactifs.json et termines.json
+                for source in ["inactifs", "termines"]:
+                    employes_source = load_employes(username, source)
+                    for emp in employes_source:
+                        if emp.get("statut") == "Réactivation en attente comptable" and emp.get("id") not in ids_comptes:
+                            count += 1
+                            ids_comptes.add(emp.get("id"))
 
         return {"success": True, "count": count}
     except Exception as e:
@@ -11593,6 +14009,7 @@ async def get_reactivations_en_attente_comptable():
     try:
         reactivations_en_attente = []
         employes_dir = os.path.join(base_cloud, "employes")
+        ids_deja_ajoutes = set()
 
         if not os.path.exists(employes_dir):
             return {"reactivations": []}
@@ -11616,6 +14033,7 @@ async def get_reactivations_en_attente_comptable():
                 # Utiliser l'URL de l'API pour la photo de profil
                 photo_profil = f"/api/get-file/{username}/profile_photo_{username}.png"
 
+                # D'abord vérifier dans reactivations.json
                 reactivations = load_reactivations(username)
                 for react in reactivations:
                     if react.get("statut") == "Réactivation en attente comptable":
@@ -11624,11 +14042,190 @@ async def get_reactivations_en_attente_comptable():
                         react_info["entrepreneurUsername"] = username
                         react_info["entrepreneurPhoto"] = photo_profil
                         reactivations_en_attente.append(react_info)
+                        ids_deja_ajoutes.add(react.get("id"))
+                        # Debug: afficher les documents
+                        print(f"[DEBUG REACTIVATION] {react.get('nom')}: specimen={react.get('specimenCheque')}, certificat={react.get('certificatSecurite')}, carte={react.get('carteAssurance')}")
+
+                # Fallback: vérifier aussi dans inactifs.json et termines.json
+                # en cas de désynchronisation des fichiers
+                for source in ["inactifs", "termines"]:
+                    employes_source = load_employes(username, source)
+                    for emp in employes_source:
+                        if emp.get("statut") == "Réactivation en attente comptable" and emp.get("id") not in ids_deja_ajoutes:
+                            emp_info = emp.copy()
+                            emp_info["entrepreneur"] = entrepreneur_nom_complet
+                            emp_info["entrepreneurUsername"] = username
+                            emp_info["entrepreneurPhoto"] = photo_profil
+                            emp_info["source_reactivation"] = source
+
+                            # Récupérer les documents depuis reactivations.json car ils n'existent pas dans inactifs/termines
+                            for react in reactivations:
+                                if react.get("id") == emp.get("id"):
+                                    if react.get("specimenCheque"):
+                                        emp_info["specimenCheque"] = react.get("specimenCheque")
+                                    if react.get("certificatSecurite"):
+                                        emp_info["certificatSecurite"] = react.get("certificatSecurite")
+                                    if react.get("carteAssurance"):
+                                        emp_info["carteAssurance"] = react.get("carteAssurance")
+                                    # Récupérer aussi les nouvelles données modifiées
+                                    if react.get("tauxHoraire"):
+                                        emp_info["tauxHoraire"] = react.get("tauxHoraire")
+                                    if react.get("datePremiere"):
+                                        emp_info["datePremiere"] = react.get("datePremiere")
+                                    print(f"[DEBUG] Documents récupérés depuis reactivations.json pour {emp.get('nom')}: specimen={react.get('specimenCheque')}")
+                                    break
+
+                            reactivations_en_attente.append(emp_info)
+                            ids_deja_ajoutes.add(emp.get("id"))
 
         return {"reactivations": reactivations_en_attente}
     except Exception as e:
         print(f"Erreur liste reactivations comptable: {e}")
         return {"reactivations": [], "error": str(e)}
+
+# Récupérer tous les employés actifs et terminés de tous les entrepreneurs (pour la Direction)
+@app.get("/api/direction/tous-employes")
+async def get_tous_employes_direction():
+    """Retourne tous les employés actifs et terminés de tous les entrepreneurs"""
+    try:
+        tous_actifs = []
+        tous_termines = []
+        employes_dir = os.path.join(base_cloud, "employes")
+
+        if not os.path.exists(employes_dir):
+            return {"actifs": [], "termines": []}
+
+        for username in os.listdir(employes_dir):
+            user_path = os.path.join(employes_dir, username)
+            if os.path.isdir(user_path):
+                # Récupérer les infos de l'entrepreneur
+                entrepreneur_nom_complet = username
+                try:
+                    user_info = get_user_info(username)
+                    if user_info and user_info.get("success"):
+                        data = user_info.get("data", {})
+                        prenom = data.get("prenom", "")
+                        nom = data.get("nom", "")
+                        if prenom or nom:
+                            entrepreneur_nom_complet = f"{prenom} {nom}".strip()
+                except:
+                    pass
+
+                photo_profil = f"/api/get-file/{username}/profile_photo_{username}.png"
+
+                # Charger les actifs (tous ceux dans actifs.json sont considérés actifs)
+                actifs = load_employes(username, "actifs")
+                for emp in actifs:
+                    emp_info = emp.copy()
+                    emp_info["entrepreneur"] = entrepreneur_nom_complet
+                    emp_info["entrepreneurUsername"] = username
+                    emp_info["entrepreneurPhoto"] = photo_profil
+                    tous_actifs.append(emp_info)
+
+                # Charger les terminés/inactifs
+                termines = load_employes(username, "termines")
+                for emp in termines:
+                    emp_info = emp.copy()
+                    emp_info["entrepreneur"] = entrepreneur_nom_complet
+                    emp_info["entrepreneurUsername"] = username
+                    emp_info["entrepreneurPhoto"] = photo_profil
+                    tous_termines.append(emp_info)
+
+                # Aussi les inactifs (qui sont vraiment inactifs, pas en attente)
+                inactifs = load_employes(username, "inactifs")
+                for emp in inactifs:
+                    statut = emp.get("statut", "").lower()
+                    if "attente" not in statut and emp.get("id") not in [t.get("id") for t in tous_termines]:
+                        emp_info = emp.copy()
+                        emp_info["entrepreneur"] = entrepreneur_nom_complet
+                        emp_info["entrepreneurUsername"] = username
+                        emp_info["entrepreneurPhoto"] = photo_profil
+                        tous_termines.append(emp_info)
+
+        return {"actifs": tous_actifs, "termines": tous_termines}
+    except Exception as e:
+        print(f"Erreur get tous employes direction: {e}")
+        return {"actifs": [], "termines": [], "error": str(e)}
+
+# Mettre fin à l'emploi de plusieurs employés (comptable/direction)
+@app.post("/api/comptable/fin-emploi-multiple")
+async def fin_emploi_multiple(request: Request):
+    """Mettre fin à l'emploi de plusieurs employés avec un message commun"""
+    try:
+        body = await request.json()
+        employes_list = body.get("employes", [])
+        motif = body.get("motif", "Non spécifié")
+        justificatif = body.get("justificatif", "")
+
+        if not employes_list:
+            raise HTTPException(status_code=400, detail="Aucun employé sélectionné")
+
+        count_succes = 0
+        errors = []
+
+        for emp_data in employes_list:
+            try:
+                emp_id = emp_data.get("id")
+                entrepreneur_username = emp_data.get("entrepreneurUsername")
+
+                if not emp_id or not entrepreneur_username:
+                    errors.append(f"Données manquantes pour un employé")
+                    continue
+
+                # Charger les employés actifs de cet entrepreneur
+                actifs = load_employes(entrepreneur_username, "actifs")
+                termines = load_employes(entrepreneur_username, "termines")
+
+                # Trouver l'employé
+                employe_a_terminer = None
+                actifs_restants = []
+
+                for emp in actifs:
+                    if emp.get("id") == emp_id:
+                        employe_a_terminer = emp.copy()
+                    else:
+                        actifs_restants.append(emp)
+
+                if not employe_a_terminer:
+                    errors.append(f"Employé {emp_data.get('nom', emp_id)} non trouvé dans les actifs")
+                    continue
+
+                # Mettre à jour les infos de l'employé
+                employe_a_terminer["statut"] = "Terminé par comptable"
+                employe_a_terminer["motif_inactivation"] = motif
+                employe_a_terminer["justificatif_inactivation"] = justificatif if justificatif else "Fin d'emploi par la comptabilité"
+                employe_a_terminer["date_fin_emploi"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                employe_a_terminer["date_inactivation"] = datetime.now().strftime("%Y-%m-%d")
+
+                # Ajouter aux terminés
+                termines.append(employe_a_terminer)
+
+                # Sauvegarder
+                save_employes(entrepreneur_username, "actifs", actifs_restants)
+                save_employes(entrepreneur_username, "termines", termines)
+
+                count_succes += 1
+
+            except Exception as emp_error:
+                errors.append(f"Erreur pour {emp_data.get('nom', 'inconnu')}: {str(emp_error)}")
+
+        if count_succes == 0:
+            raise HTTPException(status_code=500, detail=f"Aucun employé n'a pu être terminé. Erreurs: {', '.join(errors)}")
+
+        return {
+            "success": True,
+            "count": count_succes,
+            "message": f"{count_succes} employé(s) mis en fin d'emploi",
+            "errors": errors if errors else None
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erreur fin emploi multiple: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Valider une réactivation par le comptable/direction (remet dans actifs)
 @app.post("/api/comptable/reactivations/valider/{username}/{employe_id}")
@@ -11657,6 +14254,10 @@ async def valider_reactivation_comptable(username: str, employe_id: str):
         employe_a_reactiver["statut"] = "Actif"
         employe_a_reactiver["date_reactivation"] = datetime.now().strftime("%Y-%m-%d")
         employe_a_reactiver["date_validation_comptable_reactivation"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # Effacer la conversation de refus si elle existe
+        employe_a_reactiver.pop("conversation_refus", None)
+        employe_a_reactiver.pop("motif_refus_comptable", None)
+        employe_a_reactiver.pop("date_refus_comptable", None)
 
         # Ajouter aux actifs
         employes_actifs.append(employe_a_reactiver)
@@ -11683,9 +14284,16 @@ async def valider_reactivation_comptable(username: str, employe_id: str):
 
 # Refuser une réactivation par le comptable/direction
 @app.post("/api/comptable/reactivations/refuser/{username}/{employe_id}")
-async def refuser_reactivation_comptable(username: str, employe_id: str):
+async def refuser_reactivation_comptable(username: str, employe_id: str, request: Request):
     """Le comptable/direction refuse une réactivation"""
     try:
+        # Récupérer la raison du refus
+        try:
+            body = await request.json()
+            motif_refus = body.get("motif_refus", "Aucune raison spécifiée")
+        except:
+            motif_refus = "Aucune raison spécifiée"
+
         reactivations = load_reactivations(username)
         source = None
 
@@ -11700,12 +14308,14 @@ async def refuser_reactivation_comptable(username: str, employe_id: str):
         if len(reactivations_restantes) == len(reactivations):
             raise HTTPException(status_code=404, detail="Demande de réactivation non trouvée")
 
-        # Remettre le statut normal dans le fichier source
+        # Remettre le statut avec info de refus dans le fichier source
         if source == "inactifs":
             employes_inactifs = load_employes(username, "inactifs")
             for i, employe in enumerate(employes_inactifs):
                 if employe.get("id") == employe_id:
-                    employes_inactifs[i]["statut"] = "Inactif"
+                    employes_inactifs[i]["statut"] = "Réactivation refusée"
+                    employes_inactifs[i]["motif_refus_reactivation"] = motif_refus
+                    employes_inactifs[i]["date_refus_reactivation"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     employes_inactifs[i].pop("date_demande_reactivation", None)
                     employes_inactifs[i].pop("date_validation_coach_reactivation", None)
                     break
@@ -11714,7 +14324,9 @@ async def refuser_reactivation_comptable(username: str, employe_id: str):
             employes_termines = load_employes(username, "termines")
             for i, employe in enumerate(employes_termines):
                 if employe.get("id") == employe_id:
-                    employes_termines[i]["statut"] = "Terminé"
+                    employes_termines[i]["statut"] = "Réactivation refusée"
+                    employes_termines[i]["motif_refus_reactivation"] = motif_refus
+                    employes_termines[i]["date_refus_reactivation"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     employes_termines[i].pop("date_demande_reactivation", None)
                     employes_termines[i].pop("date_validation_coach_reactivation", None)
                     break
@@ -11995,7 +14607,8 @@ def get_user_info(username: str):
         file_status = {}
         for file_key in ["specimen", "betonel", "integration", "profile_photo"]:
             import glob
-            pattern = os.path.join(user_dir, f"{file_key}.*")
+            # Pattern plus générique pour matcher profile_photo.*, profile_photo_*, etc.
+            pattern = os.path.join(user_dir, f"{file_key}*.*")
             matching_files = glob.glob(pattern)
             file_status[f"{file_key}_exists"] = len(matching_files) > 0
             if matching_files:

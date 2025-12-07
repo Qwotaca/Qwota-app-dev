@@ -2325,7 +2325,7 @@
       height: 60px;
       background: #60a5fa;
       border-radius: 50%;
-      display: flex;
+      display: none !important;
       align-items: center;
       justify-content: center;
       cursor: pointer;
@@ -2818,12 +2818,18 @@
             <span class="nav-label">Dashboard</span>
             <span class="tooltip">Dashboard</span>
           </a>
-          <a href="#/rpo" class="nav-item locked-for-entrepreneur" data-page="rpo">
+          <a href="#/mon_equipe" class="nav-item" data-page="mon_equipe">
             <span class="nav-icon">
-              <i class="fas fa-calendar-alt"></i>
+              <i class="fas fa-users"></i>
+            </span>
+            <span class="nav-label">Mon Équipe</span>
+            <span class="tooltip">Mon Équipe</span>
+          </a>
+          <a href="#/coach_rpo" class="nav-item" data-page="coach_rpo">
+            <span class="nav-icon">
+              <i class="fas fa-calendar-check"></i>
             </span>
             <span class="nav-label">RPO</span>
-            <i class="fas fa-lock nav-lock-icon"></i>
             <span class="tooltip">RPO</span>
           </a>
           <a href="#/central" class="nav-item" data-page="central">
@@ -2838,6 +2844,14 @@
         <!-- Section Gestion -->
         <div class="nav-section">
           <div class="nav-section-title">Gestion Entrepreneur</div>
+          <a href="#/rpo" class="nav-item locked-for-entrepreneur" data-page="rpo">
+            <span class="nav-icon">
+              <i class="fas fa-calendar-alt"></i>
+            </span>
+            <span class="nav-label" style="text-decoration: line-through;">RPO</span>
+            <i class="fas fa-lock nav-lock-icon"></i>
+            <span class="tooltip">RPO</span>
+          </a>
           <a href="#/travaux" class="nav-item" data-page="travaux">
             <span class="nav-icon">
               <i class="fas fa-chart-line"></i>
@@ -3052,12 +3066,13 @@
       <iframe id="iframe-employes" class="page-iframe-mobile" src="" style="display: none;"></iframe>
     </main>
 
-    <!-- Chat Support (PC uniquement) -->
-    <!-- Bouton flottant -->
-    <div id="chat-support-btn" onclick="toggleChatWindow()">
+    <!-- Chat Support (PC uniquement) - DISABLED FOR COACHES -->
+    <!-- Bouton flottant
+    <div id="chat-support-btn" onclick="toggleChatWindow()" style="display: none;">
       <i class="fas fa-comments"></i>
       <span id="chat-notification-badge">0</span>
     </div>
+    -->
 
     <!-- Fenêtre de chat -->
     <div id="chat-support-window">
@@ -3370,6 +3385,8 @@
         'centraleadmin': '/centraleadmin',
         'parametres': '/coach_parametres',
         'dashboard': '/dashboard',
+        'mon_equipe': '/coach_mon_equipe',
+        'coach_rpo': '/coach_rpo',
         'rpo': '/coach_rpo',
         'central': '/centralevue',
         'calculateur': '/calcul',
@@ -3387,11 +3404,20 @@
 
       // Charger une page (différent pour PC et mobile)
       loadPage(pageName) {
-        const url = this.routes[pageName];
+        let url = this.routes[pageName];
 
         if (!url) {
           console.error(`[APPPC] Route non trouvee pour: ${pageName}`);
           return;
+        }
+
+        // Ajouter le paramètre user à l'URL si nécessaire
+        const urlParams = new URLSearchParams(window.location.search);
+        const userParam = urlParams.get('user');
+        if (userParam && !url.includes('?')) {
+          url += `?user=${userParam}`;
+        } else if (userParam) {
+          url += `&user=${userParam}`;
         }
 
         console.log(`[APPPC] Navigation vers ${pageName}`);
@@ -3658,15 +3684,11 @@
         });
       });
 
-      // Charger le compteur d'employés en attente pour les coaches
+      // Charger le compteur d'employés en attente pour les coaches au démarrage
       loadEmployesEnAttenteCount();
-      // Recharger toutes les 30 secondes
-      setInterval(loadEmployesEnAttenteCount, 30000);
 
-      // Charger le compteur de facturations en traitement pour les coaches
+      // Charger le compteur de facturations en traitement pour les coaches au démarrage
       loadFacturationEnTraitementCount();
-      // Recharger toutes les 30 secondes
-      setInterval(loadFacturationEnTraitementCount, 30000);
 
     });
 
@@ -3681,10 +3703,10 @@
           return;
         }
 
-        // Charger les trois compteurs en parallèle
-        const [responseEmployes, responseInactivations, responseReactivations] = await Promise.all([
+        // Charger les compteurs en parallèle
+        // Note: /api/coach/employes-en-attente/count inclut déjà les activations, inactivations et modifications
+        const [responseEmployes, responseReactivations] = await Promise.all([
           fetch('/api/coach/employes-en-attente/count'),
-          fetch('/api/coach/inactivations-en-attente/count'),
           fetch('/api/coach/reactivations-en-attente/count')
         ]);
 
@@ -3692,17 +3714,20 @@
 
         if (responseEmployes.ok) {
           const dataEmployes = await responseEmployes.json();
+          // Ce count inclut activations + inactivations + modifications
           totalCount += dataEmployes.count || 0;
-        }
-
-        if (responseInactivations.ok) {
-          const dataInactivations = await responseInactivations.json();
-          totalCount += dataInactivations.count || 0;
         }
 
         if (responseReactivations.ok) {
           const dataReactivations = await responseReactivations.json();
           totalCount += dataReactivations.count || 0;
+        }
+
+        // Compter les messages non lus pour tous les entrepreneurs
+        const responseRefusUnread = await fetch('/api/coach/refus-unread-total');
+        if (responseRefusUnread.ok) {
+          const dataRefusUnread = await responseRefusUnread.json();
+          totalCount += dataRefusUnread.total || 0;
         }
 
         const badge = document.getElementById('employes-notification-badge');
@@ -5126,10 +5151,13 @@
           const username = window.username || localStorage.getItem('username');
           if (username) {
             try {
+              const badge = document.getElementById('chat-notification-badge');
+              // Ne pas exécuter si le badge n'existe pas (pas de chat pour les coaches)
+              if (!badge) return;
+
               const response = await fetch(`/api/support/unread-count/${username}`);
               if (response.ok) {
                 const data = await response.json();
-                const badge = document.getElementById('chat-notification-badge');
                 if (data.count > 0) {
                   badge.textContent = data.count;
                   badge.classList.add('show');
@@ -5138,7 +5166,7 @@
                 }
               }
             } catch (error) {
-              console.error('[CHAT] Erreur vérification notifications:', error);
+              // Silencieux si pas de badge de chat
             }
           }
         }

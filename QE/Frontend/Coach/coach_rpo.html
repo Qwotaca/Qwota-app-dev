@@ -1,0 +1,2282 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>RPO - Coach Qwota</title>
+
+  <!-- PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#1f2937">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icones PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Feuille de style principale - Theme Dark -->
+  <link rel="stylesheet" href="/base.css">
+
+<style>
+/* Main content */
+.main-content {
+  padding: 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+#main-content {
+  padding: 2rem;
+}
+
+/* Animations fade-in */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+/* Header de la page - Style Dashboard */
+.page-header {
+  margin-bottom: 2.5rem;
+}
+
+.page-header h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--text-light);
+  margin-bottom: 0.75rem;
+  position: relative;
+  display: inline-block;
+}
+
+.page-header .title-underline {
+  position: absolute;
+  bottom: -0.5rem;
+  left: 0;
+  width: 5rem;
+  height: 0.25rem;
+  background: linear-gradient(to right, #3b82f6, #60a5fa);
+  border-radius: 9999px;
+}
+
+.page-header .header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-right: 0 !important;
+  padding: 0 !important;
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+.page-header p {
+  color: var(--text-gray);
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .page-header h1 {
+    font-size: 1.875rem;
+  }
+
+  .page-header p {
+    font-size: 1rem;
+  }
+}
+
+/* Onglets Navigation */
+.tab-spacing {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.btn-primary, .btn-secondary {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6, #60a5fa);
+  color: white;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+}
+
+.btn-secondary {
+  background: rgba(51, 65, 85, 0.5);
+  color: var(--text-gray);
+  border: 2px solid rgba(51, 65, 85, 0.8);
+}
+
+.btn-secondary:hover {
+  background: rgba(51, 65, 85, 0.7);
+  border-color: rgba(96, 165, 250, 0.5);
+  color: var(--text-light);
+}
+
+/* Pages content */
+.page-content {
+  display: none;
+}
+
+.page-content.active {
+  display: block;
+}
+
+/* To-Do List Styles */
+.todo-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.todo-column {
+  background: var(--bg-card);
+  border: 1px solid rgba(51, 65, 85, 0.5);
+  border-radius: 1rem;
+  height: 600px;
+  display: flex;
+  flex-direction: column;
+}
+
+.todo-column-tasks {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+  padding-right: 0.5rem;
+}
+
+/* Scrollbar discret */
+.todo-column-tasks::-webkit-scrollbar {
+  width: 6px;
+}
+
+.todo-column-tasks::-webkit-scrollbar-track {
+  background: rgba(51, 65, 85, 0.2);
+  border-radius: 3px;
+}
+
+.todo-column-tasks::-webkit-scrollbar-thumb {
+  background: rgba(96, 165, 250, 0.3);
+  border-radius: 3px;
+}
+
+.todo-column-tasks::-webkit-scrollbar-thumb:hover {
+  background: rgba(96, 165, 250, 0.5);
+}
+
+.todo-column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid rgba(51, 65, 85, 0.5);
+}
+
+.todo-column-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.todo-item {
+  background: rgba(51, 65, 85, 0.3);
+  border: 1px solid rgba(51, 65, 85, 0.6);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  cursor: move;
+  transition: all 0.3s ease;
+}
+
+.todo-item:hover {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: rgba(96, 165, 250, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.todo-item-title {
+  font-weight: 600;
+  color: var(--text-light);
+  margin-bottom: 0.5rem;
+}
+
+.todo-item-meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.875rem;
+  color: var(--text-gray);
+}
+
+.todo-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-propulsion {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.badge-facturation {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.btn-add-task {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(96, 165, 250, 0.1);
+  border: 2px dashed rgba(96, 165, 250, 0.3);
+  border-radius: 0.75rem;
+  color: var(--primary-blue);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-add-task:hover {
+  background: rgba(96, 165, 250, 0.2);
+  border-color: rgba(96, 165, 250, 0.5);
+}
+
+/* Table Styles - Modern Table (from base.css) */
+.table-container-rpo {
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-dark);
+  border: 1px solid var(--border-dark);
+  margin-top: 1rem;
+}
+
+/* Tbody scrollable avec header fixe */
+.modern-table tbody {
+  display: block;
+  height: 600px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.modern-table thead,
+.modern-table tbody tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+/* Scroll bar styling - 3px sur tbody uniquement */
+.modern-table tbody::-webkit-scrollbar {
+  width: 3px;
+}
+
+.modern-table tbody::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modern-table tbody::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.5);
+  border-radius: 1px;
+}
+
+.modern-table tbody::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.7);
+}
+
+/* Modern Table Styling - Dark Theme */
+.modern-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: transparent;
+}
+
+.modern-table thead {
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+}
+
+.modern-table th {
+  padding: 1rem 1.5rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  color: var(--text-gray);
+  border-bottom: 2px solid var(--border-dark);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #263140;
+}
+
+.modern-table th:first-child {
+  border-top-left-radius: 12px;
+}
+
+.modern-table th:last-child {
+  border-top-right-radius: 12px;
+}
+
+.modern-table tbody tr {
+  transition: all 0.2s ease;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+.modern-table tbody tr:hover {
+  background: rgba(59, 130, 246, 0.1);
+  transform: translateY(-1px);
+}
+
+.modern-table td {
+  padding: 1.25rem 1.5rem;
+  font-size: 0.875rem;
+  color: var(--text-gray);
+  vertical-align: top;
+}
+
+.modern-table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 12px;
+}
+
+.modern-table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 12px;
+}
+
+/* Modal Styles */
+.modal-header {
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  border-bottom: 2px solid rgba(51, 65, 85, 0.5);
+  padding: 1.5rem 0;
+  margin: 0 0 1rem 0;
+  z-index: 10;
+}
+
+.modal-body {
+  padding: 0rem 0rem;
+  overflow-y: auto;
+  max-height: calc(90vh - 180px);
+}
+
+.modal-footer {
+  position: sticky;
+  bottom: 0;
+  background: var(--bg-card);
+  border-top: 2px solid rgba(51, 65, 85, 0.5);
+  padding: 1.5rem 0;
+  margin: 1rem 0 0 0;
+  z-index: 10;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.modal-footer button {
+  width: auto;
+  padding: 0.75rem 1.5rem;
+}
+
+/* Dashboard Calendar Styles */
+.dashboard-calendar-container {
+  position: relative;
+  width: 100%;
+}
+
+.dashboard-date-display {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(51, 65, 85, 0.3);
+  border: 1px solid rgba(51, 65, 85, 0.6);
+  border-radius: 0.5rem;
+  color: var(--text-light);
+  cursor: pointer;
+  padding-right: 2.5rem;
+  transition: all 0.2s ease;
+}
+
+.dashboard-date-display:hover {
+  border-color: rgba(96, 165, 250, 0.5);
+}
+
+.dashboard-date-icon {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-gray);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 3;
+}
+
+.dashboard-date-icon:hover {
+  color: var(--primary-blue);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.dashboard-calendar {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--bg-card);
+  border: 2px solid rgba(51, 65, 85, 0.5);
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  min-width: 280px;
+}
+
+.dashboard-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+.dashboard-calendar-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-light);
+  text-align: center;
+  flex: 1;
+}
+
+.dashboard-calendar-nav {
+  background: none;
+  border: none;
+  color: var(--text-gray);
+  cursor: pointer;
+  padding: 0.375rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.dashboard-calendar-nav:hover {
+  background: var(--primary-blue);
+  color: white;
+  transform: scale(1.1);
+}
+
+.dashboard-calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.125rem;
+  margin-bottom: 0.375rem;
+}
+
+.dashboard-calendar-weekdays span {
+  text-align: center;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--text-gray);
+  padding: 0.25rem 0;
+  text-transform: uppercase;
+}
+
+.dashboard-calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.125rem;
+}
+
+.dashboard-calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-light);
+  background: transparent;
+  border: 1px solid transparent;
+  min-height: 32px;
+}
+
+.dashboard-calendar-day:hover {
+  background: var(--primary-blue);
+  color: white;
+  transform: scale(1.1);
+}
+
+.dashboard-calendar-day.selected {
+  background: var(--primary-blue);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
+}
+
+.dashboard-calendar-day.today {
+  background: rgba(96, 165, 250, 0.2);
+  border-color: var(--primary-blue);
+  font-weight: 600;
+}
+
+.dashboard-calendar-day.today:hover {
+  background: var(--primary-blue);
+  color: white;
+}
+
+.dashboard-calendar-day.other-month {
+  color: var(--text-gray);
+  opacity: 0.4;
+}
+
+.dashboard-calendar-day.other-month:hover {
+  background: rgba(148, 163, 184, 0.1);
+  transform: none;
+}
+
+.hidden {
+  display: none;
+}
+
+/* Disabled textarea styling */
+textarea:disabled,
+input:disabled,
+select:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  background: rgba(51, 65, 85, 0.2) !important;
+}
+
+/* Read-only table styling */
+.table-readonly {
+  opacity: 0.7;
+  pointer-events: none;
+}
+</style>
+
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" data-role="coach" class="sidebar fixed top-0 left-0 z-40 md:translate-x-0 -translate-x-full transition-transform duration-300"></aside>
+
+  <!-- Contenu principal -->
+  <main id="main-content" class="pt-20 md:pt-6 w-full" style="width: 100%; padding: 2rem;">
+
+    <!-- Header de la page -->
+    <div class="page-header fade-in-up">
+      <h1 class="text-4xl font-bold mb-3">
+        RPO Coach
+        <div class="title-underline"></div>
+      </h1>
+
+      <div class="header-content mt-4">
+        <p>Gestion du Rapport de Production Opérationnelle</p>
+      </div>
+    </div>
+
+    <!-- Navigation Onglets -->
+    <div class="mb-8 fade-in-up" style="animation-delay: 0.1s; position: relative; z-index: 10000; pointer-events: auto;">
+      <div class="tab-spacing">
+        <button id="todolist-tab" class="btn-primary" onclick="showPage('todolist')">
+          <i class="fas fa-tasks mr-2"></i>To-Do List
+        </button>
+        <button id="rpo-tab" class="btn-secondary" onclick="showPage('rpo')">
+          <i class="fas fa-chart-line mr-2"></i>RPO - Coach
+        </button>
+        <button id="stats-tab" class="btn-secondary" onclick="showPage('stats')">
+          <i class="fas fa-chart-bar mr-2"></i>Statistiques
+        </button>
+      </div>
+    </div>
+
+    <!-- Page To-Do List -->
+    <div id="todolist" class="page-content active fade-in-up" style="animation-delay: 0.2s;">
+
+      <!-- 3 Colonnes pour les tâches -->
+      <div class="todo-columns">
+
+        <!-- Colonne Urgent -->
+        <div class="todo-column">
+          <div class="box-header">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <div class="box-header-icon" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                <i class="fas fa-exclamation-circle"></i>
+              </div>
+              <h3 class="box-header-title">Urgent</h3>
+            </div>
+            <span class="todo-badge badge-propulsion" id="urgent-count">0</span>
+          </div>
+          <div class="box-body" style="flex: 1; overflow-y: auto;">
+            <div id="urgent-tasks"></div>
+          </div>
+          <div style="padding: 1rem; border-top: 1px solid rgba(51, 65, 85, 0.5);">
+            <button class="btn-add-task" onclick="openTaskModal('urgent')" style="width: 100%;">
+              <i class="fas fa-plus mr-2"></i>Ajouter une tâche
+            </button>
+          </div>
+        </div>
+
+        <!-- Colonne Important -->
+        <div class="todo-column">
+          <div class="box-header">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <div class="box-header-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <i class="fas fa-star"></i>
+              </div>
+              <h3 class="box-header-title">Important</h3>
+            </div>
+            <span class="todo-badge badge-propulsion" id="important-count">0</span>
+          </div>
+          <div class="box-body" style="flex: 1; overflow-y: auto;">
+            <div id="important-tasks"></div>
+          </div>
+          <div style="padding: 1rem; border-top: 1px solid rgba(51, 65, 85, 0.5);">
+            <button class="btn-add-task" onclick="openTaskModal('important')" style="width: 100%;">
+              <i class="fas fa-plus mr-2"></i>Ajouter une tâche
+            </button>
+          </div>
+        </div>
+
+        <!-- Colonne Ce qui s'en vient -->
+        <div class="todo-column">
+          <div class="box-header">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <div class="box-header-icon" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);">
+                <i class="fas fa-clock"></i>
+              </div>
+              <h3 class="box-header-title">Ce qui s'en vient</h3>
+            </div>
+            <span class="todo-badge badge-propulsion" id="upcoming-count">0</span>
+          </div>
+          <div class="box-body" style="flex: 1; overflow-y: auto;">
+            <div id="upcoming-tasks"></div>
+          </div>
+          <div style="padding: 1rem; border-top: 1px solid rgba(51, 65, 85, 0.5);">
+            <button class="btn-add-task" onclick="openTaskModal('upcoming')" style="width: 100%;">
+              <i class="fas fa-plus mr-2"></i>Ajouter une tâche
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Tableau Responsabilités & Vision → Objectifs -->
+      <div style="background: var(--bg-card); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 1rem; margin-top: 2rem;">
+        <div class="box-header">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+              <i class="fas fa-table"></i>
+            </div>
+            <h3 class="box-header-title">Responsabilités & Vision → Objectifs</h3>
+          </div>
+        </div>
+
+        <div class="box-body">
+          <!-- Barre de recherche et filtres -->
+          <div class="search-container" style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+            <!-- Champ de recherche -->
+            <div style="position: relative; flex: 1; min-width: 250px; max-width: 350px;">
+              <i class="fas fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-gray); font-size: 0.9rem; z-index: 1;"></i>
+              <input type="text" id="table-search" placeholder="Rechercher une tâche..." oninput="filterTasks()" class="search-field-input" style="
+                width: 100%;
+                padding: 12px 16px 12px 42px;
+                border: 2px solid var(--border-dark);
+                border-radius: 12px;
+                background: var(--bg-card);
+                color: var(--text-light);
+                font-size: 0.9rem;
+                min-height: 48px;
+                transition: all 0.3s ease;
+                outline: none;
+              ">
+            </div>
+
+            <!-- Dropdown personnalisé pour le tri -->
+            <div style="min-width: 240px; position: relative;">
+              <div class="dropdown-secondary" id="sort-filter-dropdown" onclick="toggleSortFilterDropdown()" style="width: 100% !important;">
+                <span id="sort-filter-selected">Plus récente</span>
+                <i class="fas fa-chevron-down" style="margin-left: auto; font-size: 0.75rem; color: var(--text-gray); transition: transform 0.2s ease;"></i>
+              </div>
+              <div class="dropdown-secondary-menu" id="sort-filter-menu">
+                <div class="dropdown-secondary-option selected" onclick="selectSortFilter('recent', 'Plus récente')">Plus récente</div>
+                <div class="dropdown-secondary-option" onclick="selectSortFilter('oldest', 'Moins récente')">Moins récente</div>
+                <div class="dropdown-secondary-option" onclick="selectSortFilter('title-asc', 'Titre (A-Z)')">Titre (A-Z)</div>
+                <div class="dropdown-secondary-option" onclick="selectSortFilter('title-desc', 'Titre (Z-A)')">Titre (Z-A)</div>
+                <div class="dropdown-secondary-option" onclick="selectSortFilter('date-asc', 'Date (croissante)')">Date (croissante)</div>
+                <div class="dropdown-secondary-option" onclick="selectSortFilter('date-desc', 'Date (décroissante)')">Date (décroissante)</div>
+              </div>
+              <input type="hidden" id="sort-select" value="recent">
+            </div>
+          </div>
+
+          <div class="table-container-rpo">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Tâches</th>
+                  <th>Attribué à</th>
+                  <th>Catégorie</th>
+                  <th>Date</th>
+                  <th>Détails</th>
+                  <th style="width: 100px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tasks-table-body">
+                <!-- Les tâches seront ajoutées ici dynamiquement -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Page RPO - Coach -->
+    <div id="rpo" class="page-content fade-in-up" style="animation-delay: 0.2s;">
+
+      <!-- Section MACRO / MICRO / Problème -->
+      <div style="background: var(--bg-card); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 1rem; margin-bottom: 2rem;">
+        <div class="box-header">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+              <i class="fas fa-clipboard-check"></i>
+            </div>
+            <h3 class="box-header-title">Résumé hebdomadaire</h3>
+          </div>
+          <button id="resume-edit-btn" onclick="toggleResumeEditMode()" class="btn-secondary">
+            <i class="fas fa-edit mr-2"></i>Modifier
+          </button>
+        </div>
+
+        <div class="box-body">
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+            <!-- MACRO -->
+            <div>
+              <label style="display: block; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">
+                <i class="fas fa-chart-line mr-2"></i>MACRO
+              </label>
+              <textarea id="macro-content" rows="4" disabled
+                style="width: 100%; padding: 0.75rem; background: rgba(51, 65, 85, 0.3); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 0.5rem; color: var(--text-light); resize: none; font-size: 0.875rem;"
+                placeholder="MACRO..."></textarea>
+            </div>
+
+            <!-- MICRO -->
+            <div>
+              <label style="display: block; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">
+                <i class="fas fa-tasks mr-2"></i>MICRO
+              </label>
+              <textarea id="micro-content" rows="4" disabled
+                style="width: 100%; padding: 0.75rem; background: rgba(51, 65, 85, 0.3); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 0.5rem; color: var(--text-light); resize: none; font-size: 0.875rem;"
+                placeholder="MICRO..."></textarea>
+            </div>
+
+            <!-- Problème -->
+            <div>
+              <label style="display: block; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">
+                <i class="fas fa-exclamation-triangle mr-2" style="color: #f59e0b;"></i>Problème
+              </label>
+              <textarea id="problem-content" rows="4" disabled
+                style="width: 100%; padding: 0.75rem; background: rgba(51, 65, 85, 0.3); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 0.5rem; color: var(--text-light); resize: none; font-size: 0.875rem;"
+                placeholder="Problème..."></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section MICRO - Tableau hebdomadaire -->
+      <div style="background: var(--bg-card); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 1rem;">
+        <!-- Titre et dropdown sur la même ligne -->
+        <div class="box-header">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);">
+              <i class="fas fa-users"></i>
+            </div>
+            <h3 class="box-header-title">Suivi hebdomadaire des entrepreneurs</h3>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <!-- Dropdown personnalisé pour la sélection de semaine -->
+            <div class="dropdown-secondary" id="week-dropdown" onclick="toggleWeekDropdown()" style="position: relative;">
+              <span id="week-dropdown-text">Semaine 1 - 2026</span>
+              <i class="fas fa-chevron-down" style="color: var(--text-gray); font-size: 0.75rem;"></i>
+              <div class="dropdown-secondary-menu" id="week-dropdown-menu" style="display: none;">
+                <!-- Les options seront ajoutées dynamiquement par JavaScript -->
+              </div>
+            </div>
+
+            <button id="suivi-edit-btn" onclick="toggleSuiviEditMode()" class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+              <i class="fas fa-edit mr-2"></i>Modifier
+            </button>
+          </div>
+        </div>
+
+        <div class="box-body">
+          <!-- Tableau -->
+          <div class="table-container-rpo" id="suivi-table-container">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Atteint son objectif?</th>
+                  <th>Problème de la semaine</th>
+                  <th>Racine du problème</th>
+                  <th>Source du problème</th>
+                  <th>Type de coaching</th>
+                  <th>Plan de match cette semaine</th>
+                </tr>
+              </thead>
+              <tbody id="weekly-entrepreneur-table-body">
+                <!-- Les données seront ajoutées ici dynamiquement -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Bouton Ajouter une entrée - masqué par défaut -->
+          <div id="add-entry-container" style="display: none; justify-content: flex-end; margin-top: 1rem;">
+            <button onclick="openEntrepreneurWeeklyModal()" class="btn-primary">
+              <i class="fas fa-plus mr-2"></i>Ajouter une entrée hebdomadaire
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Page Statistiques -->
+    <div id="stats" class="page-content fade-in-up" style="animation-delay: 0.2s;">
+      <div style="background: var(--bg-card); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 1rem; padding: 2rem;">
+        <h2 class="text-2xl font-bold mb-4" style="color: var(--text-light);">
+          <i class="fas fa-chart-bar mr-2"></i>Statistiques
+        </h2>
+        <p style="color: var(--text-gray);">Cette section sera implémentée ultérieurement.</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal pour créer/modifier une tâche -->
+  <div id="task-modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 99999; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-card); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 1rem; padding: 0rem 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;">
+
+      <!-- Header Sticky -->
+      <div class="modal-header">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h3 class="text-2xl font-bold" style="color: var(--text-light);">
+            <i class="fas fa-plus-circle mr-2"></i><span id="modal-title">Nouvelle tâche</span>
+          </h3>
+          <button onclick="closeTaskModal()" style="color: var(--text-gray); font-size: 1.5rem; cursor: pointer; background: none; border: none;">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Body Scrollable -->
+      <div class="modal-body">
+        <form id="task-form" onsubmit="saveTask(event)">
+
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">
+              <i class="fas fa-heading mr-2"></i>Titre de la tâche
+            </label>
+            <input type="text" id="task-title" required
+              style="width: 100%; padding: 0.75rem; background: rgba(51, 65, 85, 0.3); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 0.5rem; color: var(--text-light);"
+              placeholder="Ex: Réserver le chalet">
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">
+              <i class="fas fa-user mr-2"></i>Attribué à
+            </label>
+            <input type="text" id="task-assigned"
+              style="width: 100%; padding: 0.75rem; background: rgba(51, 65, 85, 0.3); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 0.5rem; color: var(--text-light);"
+              placeholder="Nom de la personne">
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">
+              <i class="fas fa-tag mr-2"></i>Catégorie
+            </label>
+            <select id="task-category">
+              <option value="propulsion">Propulsion</option>
+              <option value="facturation">Facturation</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">
+              <i class="fas fa-calendar mr-2"></i>Date
+            </label>
+            <div class="dashboard-calendar-container">
+              <input type="text" id="task-date" class="dashboard-date-display" readonly placeholder="Sélectionner une date" onclick="openTaskCalendar()">
+              <i class="fas fa-calendar dashboard-date-icon" onclick="toggleTaskCalendar()"></i>
+              <div class="dashboard-calendar hidden" id="taskCalendar">
+                <div class="dashboard-calendar-header">
+                  <button type="button" class="dashboard-calendar-nav" onclick="changeTaskMonth(-1)">
+                    <i class="fas fa-chevron-left"></i>
+                  </button>
+                  <span class="dashboard-calendar-title" id="taskCalendarTitle">Mars 2024</span>
+                  <button type="button" class="dashboard-calendar-nav" onclick="changeTaskMonth(1)">
+                    <i class="fas fa-chevron-right"></i>
+                  </button>
+                </div>
+                <div class="dashboard-calendar-weekdays">
+                  <span>Dim</span><span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span>
+                </div>
+                <div class="dashboard-calendar-days" id="taskCalendarDays"></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">
+              <i class="fas fa-align-left mr-2"></i>Détails
+            </label>
+            <textarea id="task-details" rows="3"
+              style="width: 100%; padding: 0.75rem; background: rgba(51, 65, 85, 0.3); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 0.5rem; color: var(--text-light); resize: vertical;"
+              placeholder="Détails de la tâche..."></textarea>
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">
+              <i class="fas fa-layer-group mr-2"></i>Priorité
+            </label>
+            <select id="task-priority">
+              <option value="urgent">Urgent</option>
+              <option value="important">Important</option>
+              <option value="upcoming">Ce qui s'en vient</option>
+            </select>
+          </div>
+
+          <input type="hidden" id="task-id">
+
+        </form>
+      </div>
+
+      <!-- Footer Sticky -->
+      <div class="modal-footer">
+        <button type="button" onclick="closeTaskModal()" class="btn-secondary">
+          <i class="fas fa-times mr-2"></i>Annuler
+        </button>
+        <button type="submit" form="task-form" class="btn-primary">
+          <i class="fas fa-save mr-2"></i>Enregistrer
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal pour ajouter/modifier une entrée hebdomadaire entrepreneur -->
+  <div id="entrepreneur-weekly-modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 99999; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-card); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 1rem; padding: 0rem 2rem; max-width: 800px; width: 90%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;">
+
+      <!-- Header Sticky -->
+      <div class="modal-header">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h3 class="text-2xl font-bold" style="color: var(--text-light);">
+            <i class="fas fa-user-edit mr-2"></i><span id="modal-entrepreneur-title">Nouvelle entrée hebdomadaire</span>
+          </h3>
+          <button onclick="closeEntrepreneurWeeklyModal()" style="color: var(--text-gray); font-size: 1.5rem; cursor: pointer; background: none; border: none;">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Body Scrollable -->
+      <div class="modal-body">
+        <form id="entrepreneur-weekly-form" onsubmit="saveEntrepreneurWeekly(event)">
+
+          <!-- Date -->
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">
+              <i class="fas fa-calendar mr-2"></i>Date
+            </label>
+            <input type="date" id="ew-date" required
+              style="width: 100%; padding: 0.75rem; background: rgba(51, 65, 85, 0.3); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 0.5rem; color: var(--text-light);">
+          </div>
+
+          <!-- Atteint son objectif -->
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">
+              <i class="fas fa-bullseye mr-2"></i>Atteint son objectif?
+            </label>
+            <select id="ew-objectif"
+              style="width: 100%; padding: 0.75rem; background: rgba(51, 65, 85, 0.3); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 0.5rem; color: var(--text-light);">
+              <option value="Oui">Oui</option>
+              <option value="Non">Non</option>
+              <option value="Partiellement">Partiellement</option>
+            </select>
+          </div>
+
+          <!-- Problème de la semaine -->
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">
+              <i class="fas fa-exclamation-circle mr-2"></i>Problème de la semaine
+            </label>
+            <textarea id="ew-probleme" rows="2"
+              style="width: 100%; padding: 0.75rem; background: rgba(51, 65, 85, 0.3); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 0.5rem; color: var(--text-light); resize: vertical;"
+              placeholder="Ex: Manque de leads qualifiés"></textarea>
+          </div>
+
+          <!-- Racine du problème -->
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">
+              <i class="fas fa-search mr-2"></i>Racine du problème
+            </label>
+            <textarea id="ew-racine" rows="2"
+              style="width: 100%; padding: 0.75rem; background: rgba(51, 65, 85, 0.3); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 0.5rem; color: var(--text-light); resize: vertical;"
+              placeholder="Ex: Manque de prospection régulière"></textarea>
+          </div>
+
+          <!-- Source du problème -->
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">
+              <i class="fas fa-project-diagram mr-2"></i>Source du problème
+            </label>
+            <input type="text" id="ew-source"
+              style="width: 100%; padding: 0.75rem; background: rgba(51, 65, 85, 0.3); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 0.5rem; color: var(--text-light);"
+              placeholder="Ex: ENGAGEMENT, CONFIANCE, COMPÉTENCE, PARESSE">
+          </div>
+
+          <!-- Type de coaching -->
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">
+              <i class="fas fa-chalkboard-teacher mr-2"></i>Type de coaching
+            </label>
+            <select id="ew-coaching"
+              style="width: 100%; padding: 0.75rem; background: rgba(51, 65, 85, 0.3); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 0.5rem; color: var(--text-light);">
+              <option value="Directif">Directif</option>
+              <option value="Coaching">Coaching</option>
+              <option value="Support">Support</option>
+              <option value="Directif/Coaching">Directif/Coaching</option>
+              <option value="Coaching/Support">Coaching/Support</option>
+            </select>
+          </div>
+
+          <!-- Plan de match cette semaine -->
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">
+              <i class="fas fa-tasks mr-2"></i>Plan de match cette semaine
+            </label>
+            <textarea id="ew-plan" rows="3"
+              style="width: 100%; padding: 0.75rem; background: rgba(51, 65, 85, 0.3); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 0.5rem; color: var(--text-light); resize: vertical;"
+              placeholder="Actions concrètes pour la semaine..."></textarea>
+          </div>
+
+          <input type="hidden" id="ew-id">
+
+        </form>
+      </div>
+
+      <!-- Footer Sticky -->
+      <div class="modal-footer">
+        <button type="button" onclick="closeEntrepreneurWeeklyModal()" class="btn-secondary">
+          <i class="fas fa-times mr-2"></i>Annuler
+        </button>
+        <button type="submit" form="entrepreneur-weekly-form" class="btn-primary">
+          <i class="fas fa-save mr-2"></i>Enregistrer
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+// Variables globales
+let coachUsername = '';
+let currentPage = 'todolist';
+
+// ==================== CALENDRIER DASHBOARD ====================
+let taskCurrentDate = new Date();
+let taskSelectedDate = null;
+
+const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+// Ouvrir/fermer le calendrier
+window.toggleTaskCalendar = function() {
+  const calendar = document.getElementById('taskCalendar');
+  if (calendar.classList.contains('hidden')) {
+    calendar.classList.remove('hidden');
+    renderTaskCalendar();
+  } else {
+    calendar.classList.add('hidden');
+  }
+};
+
+window.openTaskCalendar = function() {
+  const calendar = document.getElementById('taskCalendar');
+  if (calendar.classList.contains('hidden')) {
+    calendar.classList.remove('hidden');
+    renderTaskCalendar();
+  }
+};
+
+// Changer de mois
+window.changeTaskMonth = function(direction) {
+  taskCurrentDate.setMonth(taskCurrentDate.getMonth() + direction);
+  renderTaskCalendar();
+};
+
+// Générer le calendrier
+function renderTaskCalendar() {
+  const calendarDays = document.getElementById('taskCalendarDays');
+  const calendarTitle = document.getElementById('taskCalendarTitle');
+
+  if (!calendarDays || !calendarTitle) return;
+
+  calendarTitle.textContent = `${monthNames[taskCurrentDate.getMonth()]} ${taskCurrentDate.getFullYear()}`;
+
+  const firstDay = new Date(taskCurrentDate.getFullYear(), taskCurrentDate.getMonth(), 1);
+  const lastDay = new Date(taskCurrentDate.getFullYear(), taskCurrentDate.getMonth() + 1, 0);
+  const firstDayOfWeek = firstDay.getDay();
+  const today = new Date();
+
+  calendarDays.innerHTML = '';
+
+  // Jours du mois précédent
+  for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+    const prevDate = new Date(firstDay);
+    prevDate.setDate(prevDate.getDate() - (i + 1));
+    const dayElement = createTaskDayElement(prevDate, true, today);
+    calendarDays.appendChild(dayElement);
+  }
+
+  // Jours du mois actuel
+  for (let day = 1; day <= lastDay.getDate(); day++) {
+    const date = new Date(taskCurrentDate.getFullYear(), taskCurrentDate.getMonth(), day);
+    const dayElement = createTaskDayElement(date, false, today);
+    calendarDays.appendChild(dayElement);
+  }
+
+  // Jours du mois suivant
+  const totalCells = calendarDays.children.length;
+  const remainingCells = 42 - totalCells;
+  for (let day = 1; day <= remainingCells; day++) {
+    const nextDate = new Date(taskCurrentDate.getFullYear(), taskCurrentDate.getMonth() + 1, day);
+    const dayElement = createTaskDayElement(nextDate, true, today);
+    calendarDays.appendChild(dayElement);
+  }
+}
+
+// Créer un élément jour
+function createTaskDayElement(date, isOtherMonth, today) {
+  const dayElement = document.createElement('div');
+  dayElement.className = 'dashboard-calendar-day';
+  dayElement.textContent = date.getDate();
+
+  if (isOtherMonth) {
+    dayElement.classList.add('other-month');
+  }
+
+  if (date.toDateString() === today.toDateString()) {
+    dayElement.classList.add('today');
+  }
+
+  const currentInput = document.getElementById('task-date');
+  if (currentInput && currentInput.value) {
+    const inputDate = parseTaskDisplayDate(currentInput.value);
+    if (inputDate && date.toDateString() === inputDate.toDateString()) {
+      dayElement.classList.add('selected');
+    }
+  }
+
+  dayElement.addEventListener('click', function() {
+    selectTaskDate(date);
+  });
+
+  return dayElement;
+}
+
+// Sélectionner une date
+function selectTaskDate(date) {
+  const input = document.getElementById('task-date');
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const formattedDateDisplay = `${day}/${month}/${year}`;
+  const formattedDateISO = `${year}-${month}-${day}`;
+
+  input.value = formattedDateISO; // Format ISO pour stockage
+  input.setAttribute('data-display', formattedDateDisplay); // Format français pour affichage
+  taskSelectedDate = date;
+
+  document.getElementById('taskCalendar').classList.add('hidden');
+  console.log('[CALENDAR] Date sélectionnée:', formattedDateISO);
+}
+
+// Parser une date d'affichage
+function parseTaskDisplayDate(dateStr) {
+  if (!dateStr) return null;
+  // Format ISO YYYY-MM-DD
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+  return null;
+}
+
+// Fermer le calendrier si on clique ailleurs
+document.addEventListener('click', function(e) {
+  const calendar = document.getElementById('taskCalendar');
+  const container = e.target.closest('.dashboard-calendar-container');
+
+  if (calendar && !calendar.classList.contains('hidden') && !container) {
+    calendar.classList.add('hidden');
+  }
+});
+
+// ==================== FIN CALENDRIER ====================
+
+// ==================== DROPDOWN PERSONNALISÉ POUR LE TRI ====================
+
+// Toggle dropdown
+window.toggleSortFilterDropdown = function() {
+  const dropdown = document.getElementById('sort-filter-dropdown');
+  const menu = document.getElementById('sort-filter-menu');
+
+  dropdown.classList.toggle('active');
+  menu.classList.toggle('show');
+};
+
+// Sélectionner une option de tri
+window.selectSortFilter = function(value, label) {
+  // Mettre à jour le texte affiché
+  document.getElementById('sort-filter-selected').textContent = label;
+
+  // Mettre à jour le champ caché
+  document.getElementById('sort-select').value = value;
+
+  // Mettre à jour la classe selected
+  document.querySelectorAll('#sort-filter-menu .dropdown-secondary-option').forEach(opt => {
+    opt.classList.remove('selected');
+  });
+  event.target.classList.add('selected');
+
+  // Fermer le dropdown
+  document.getElementById('sort-filter-dropdown').classList.remove('active');
+  document.getElementById('sort-filter-menu').classList.remove('show');
+
+  // Appliquer le tri
+  sortTasks();
+};
+
+// Fermer le dropdown si on clique ailleurs
+document.addEventListener('click', function(e) {
+  const dropdown = document.getElementById('sort-filter-dropdown');
+  const menu = document.getElementById('sort-filter-menu');
+
+  if (dropdown && menu && !e.target.closest('#sort-filter-dropdown') && !e.target.closest('#sort-filter-menu')) {
+    dropdown.classList.remove('active');
+    menu.classList.remove('show');
+  }
+});
+
+// ==================== FIN DROPDOWN ====================
+
+// Fonction pour changer de page/onglet
+function showPage(pageName) {
+  console.log('[RPO COACH] Changement de page vers:', pageName);
+
+  // Masquer toutes les pages
+  document.querySelectorAll('.page-content').forEach(page => {
+    page.classList.remove('active');
+  });
+
+  // Réinitialiser tous les boutons à secondaire
+  document.querySelectorAll('.tab-spacing button').forEach(btn => {
+    btn.classList.remove('btn-primary');
+    btn.classList.add('btn-secondary');
+  });
+
+  // Afficher la page sélectionnée
+  const selectedPage = document.getElementById(pageName);
+  if (selectedPage) {
+    selectedPage.classList.add('active');
+  }
+
+  // Mettre le bouton correspondant en primary
+  const selectedBtn = document.getElementById(pageName + '-tab');
+  if (selectedBtn) {
+    selectedBtn.classList.remove('btn-secondary');
+    selectedBtn.classList.add('btn-primary');
+  }
+
+  currentPage = pageName;
+}
+
+// Récupérer le username depuis l'URL
+document.addEventListener('DOMContentLoaded', async function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  coachUsername = urlParams.get('user') || '';
+
+  console.log('[RPO COACH] Chargement de la page RPO pour:', coachUsername);
+
+  // Charger la sidebar
+  if (typeof loadSidebar === 'function') {
+    loadSidebar();
+  }
+
+  // Afficher la première page par défaut
+  showPage('todolist');
+
+  // Charger les tâches au démarrage
+  loadTasks();
+});
+
+// ==================== GESTION DES TÂCHES ====================
+
+let tasks = [];
+
+// Ouvrir le modal pour créer/modifier une tâche
+function openTaskModal(priority = 'urgent', taskId = null) {
+  const modal = document.getElementById('task-modal');
+  const form = document.getElementById('task-form');
+
+  // Réinitialiser le formulaire
+  form.reset();
+  document.getElementById('task-priority').value = priority;
+
+  if (taskId) {
+    // Mode édition
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      document.getElementById('modal-title').textContent = 'Modifier la tâche';
+      document.getElementById('task-id').value = task.id;
+      document.getElementById('task-title').value = task.title;
+      document.getElementById('task-assigned').value = task.assigned || '';
+      document.getElementById('task-category').value = task.category;
+      document.getElementById('task-date').value = task.date || '';
+      document.getElementById('task-details').value = task.details || '';
+      document.getElementById('task-priority').value = task.priority;
+    }
+  } else {
+    // Mode création
+    document.getElementById('modal-title').textContent = 'Nouvelle tâche';
+    document.getElementById('task-id').value = '';
+  }
+
+  modal.style.display = 'flex';
+}
+
+// Fermer le modal
+function closeTaskModal() {
+  document.getElementById('task-modal').style.display = 'none';
+}
+
+// Sauvegarder une tâche
+async function saveTask(event) {
+  event.preventDefault();
+
+  const taskId = document.getElementById('task-id').value;
+  const task = {
+    id: taskId || Date.now().toString(),
+    title: document.getElementById('task-title').value,
+    assigned: document.getElementById('task-assigned').value,
+    category: document.getElementById('task-category').value,
+    date: document.getElementById('task-date').value,
+    details: document.getElementById('task-details').value,
+    priority: document.getElementById('task-priority').value,
+    created_at: taskId ? (tasks.find(t => t.id === taskId)?.created_at || new Date().toISOString()) : new Date().toISOString()
+  };
+
+  try {
+    const response = await fetch('/api/coach/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        coach_username: coachUsername,
+        task: task
+      })
+    });
+
+    if (response.ok) {
+      console.log('[TASK] Tâche sauvegardée:', task);
+      closeTaskModal();
+      await loadTasks();
+    } else {
+      console.error('[TASK] Erreur lors de la sauvegarde');
+    }
+  } catch (error) {
+    console.error('[TASK] Erreur:', error);
+  }
+}
+
+// Charger toutes les tâches
+async function loadTasks() {
+  try {
+    const response = await fetch(`/api/coach/tasks?coach_username=${coachUsername}`);
+    if (response.ok) {
+      const data = await response.json();
+      tasks = data.tasks || [];
+      renderTasks();
+    }
+  } catch (error) {
+    console.error('[TASK] Erreur chargement:', error);
+    tasks = [];
+    renderTasks();
+  }
+}
+
+// Afficher les tâches dans l'interface
+function renderTasks() {
+  // Vider les colonnes
+  document.getElementById('urgent-tasks').innerHTML = '';
+  document.getElementById('important-tasks').innerHTML = '';
+  document.getElementById('upcoming-tasks').innerHTML = '';
+
+  // Compter les tâches par priorité
+  const counts = { urgent: 0, important: 0, upcoming: 0 };
+
+  // Afficher les tâches dans les colonnes
+  tasks.forEach(task => {
+    const taskEl = createTaskElement(task);
+    const container = document.getElementById(`${task.priority}-tasks`);
+    if (container) {
+      container.appendChild(taskEl);
+      counts[task.priority]++;
+    }
+  });
+
+  // Afficher "Aucune tâche" si une colonne est vide
+  ['urgent', 'important', 'upcoming'].forEach(priority => {
+    const container = document.getElementById(`${priority}-tasks`);
+    if (counts[priority] === 0) {
+      const emptyState = document.createElement('div');
+      emptyState.className = 'empty-state';
+      emptyState.innerHTML = `
+        <i class="fas fa-clipboard-list"></i>
+        <p>Aucune tâche présentement</p>
+      `;
+      container.appendChild(emptyState);
+    }
+  });
+
+  // Mettre à jour les compteurs
+  document.getElementById('urgent-count').textContent = counts.urgent;
+  document.getElementById('important-count').textContent = counts.important;
+  document.getElementById('upcoming-count').textContent = counts.upcoming;
+
+  // Afficher dans le tableau
+  renderTasksTable();
+}
+
+// Créer un élément de tâche pour les colonnes
+function createTaskElement(task) {
+  const div = document.createElement('div');
+  div.className = 'todo-item';
+  div.draggable = true;
+  div.dataset.taskId = task.id;
+
+  const badgeClass = task.category === 'propulsion' ? 'badge-propulsion' : 'badge-facturation';
+
+  div.innerHTML = `
+    <div class="todo-item-title">${task.title}</div>
+    <div class="todo-item-meta">
+      ${task.assigned ? `<span><i class="fas fa-user mr-1"></i>${task.assigned}</span>` : ''}
+      <span class="todo-badge ${badgeClass}">${task.category === 'propulsion' ? 'Propulsion' : 'Facturation'}</span>
+      ${task.date ? `<span><i class="fas fa-calendar mr-1"></i>${formatDate(task.date)}</span>` : ''}
+    </div>
+    <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem;">
+      <button onclick="openTaskModal('${task.priority}', '${task.id}')" style="padding: 0.25rem 0.75rem; background: rgba(96, 165, 250, 0.2); border: 1px solid rgba(96, 165, 250, 0.3); border-radius: 0.5rem; color: #60a5fa; cursor: pointer; font-size: 0.75rem;">
+        <i class="fas fa-edit"></i> Modifier
+      </button>
+      <button onclick="deleteTask('${task.id}')" style="padding: 0.25rem 0.75rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 0.5rem; color: #ef4444; cursor: pointer; font-size: 0.75rem;">
+        <i class="fas fa-trash"></i> Supprimer
+      </button>
+    </div>
+  `;
+
+  return div;
+}
+
+// Afficher les tâches dans le tableau
+function renderTasksTable(tasksToRender = null) {
+  const tbody = document.getElementById('tasks-table-body');
+  tbody.innerHTML = '';
+
+  const displayTasks = tasksToRender || tasks;
+
+  if (displayTasks.length === 0) {
+    // Afficher l'état vide
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td colspan="6" class="empty-state">
+        <i class="fas fa-clipboard-list"></i>
+        <p>Aucune tâche présentement</p>
+      </td>
+    `;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  displayTasks.forEach(task => {
+    const tr = document.createElement('tr');
+    const badgeClass = task.category === 'propulsion' ? 'badge-propulsion' : 'badge-facturation';
+
+    tr.innerHTML = `
+      <td style="font-weight: 600; color: var(--text-light);">${task.title}</td>
+      <td>${task.assigned || '-'}</td>
+      <td><span class="todo-badge ${badgeClass}">${task.category === 'propulsion' ? 'Propulsion' : 'Facturation'}</span></td>
+      <td>${task.date ? formatDate(task.date) : '-'}</td>
+      <td>${task.details || '-'}</td>
+      <td>
+        <button onclick="openTaskModal('${task.priority}', '${task.id}')" style="padding: 0.5rem; background: rgba(96, 165, 250, 0.2); border: 1px solid rgba(96, 165, 250, 0.3); border-radius: 0.5rem; color: #60a5fa; cursor: pointer; margin-right: 0.25rem;">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button onclick="deleteTask('${task.id}')" style="padding: 0.5rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 0.5rem; color: #ef4444; cursor: pointer;">
+          <i class="fas fa-trash"></i>
+        </button>
+      </td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+// Filtrer les tâches
+function filterTasks() {
+  const searchQuery = document.getElementById('table-search').value.toLowerCase();
+
+  let filtered = tasks.filter(task => {
+    // Filtre de recherche
+    const matchesSearch = task.title.toLowerCase().includes(searchQuery) ||
+                          (task.assigned && task.assigned.toLowerCase().includes(searchQuery)) ||
+                          (task.details && task.details.toLowerCase().includes(searchQuery));
+
+    return matchesSearch;
+  });
+
+  // Appliquer le tri actuel
+  const sortValue = document.getElementById('sort-select').value;
+  filtered = applySorting(filtered, sortValue);
+
+  renderTasksTable(filtered);
+}
+
+// Trier les tâches
+function sortTasks() {
+  filterTasks(); // Réappliquer les filtres avec le nouveau tri
+}
+
+// Appliquer le tri aux tâches
+function applySorting(tasksArray, sortValue) {
+  const sorted = [...tasksArray];
+
+  switch(sortValue) {
+    case 'recent':
+      sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      break;
+    case 'oldest':
+      sorted.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      break;
+    case 'title-asc':
+      sorted.sort((a, b) => a.title.localeCompare(b.title));
+      break;
+    case 'title-desc':
+      sorted.sort((a, b) => b.title.localeCompare(a.title));
+      break;
+    case 'date-asc':
+      sorted.sort((a, b) => {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(a.date) - new Date(b.date);
+      });
+      break;
+    case 'date-desc':
+      sorted.sort((a, b) => {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(b.date) - new Date(a.date);
+      });
+      break;
+    default:
+      sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  }
+
+  return sorted;
+}
+
+// Supprimer une tâche
+async function deleteTask(taskId) {
+  if (!confirm('Êtes-vous sûr de vouloir supprimer cette tâche ?')) return;
+
+  try {
+    const response = await fetch('/api/coach/tasks', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        coach_username: coachUsername,
+        task_id: taskId
+      })
+    });
+
+    if (response.ok) {
+      console.log('[TASK] Tâche supprimée');
+      await loadTasks();
+    }
+  } catch (error) {
+    console.error('[TASK] Erreur suppression:', error);
+  }
+}
+
+// Formater une date
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  const options = { day: 'numeric', month: 'long', year: 'numeric' };
+  return date.toLocaleDateString('fr-CA', options);
+}
+
+// ==================== GESTION DES PROBLÈMES HEBDOMADAIRES ====================
+
+// Initialiser la semaine actuelle
+function initWeekSelector() {
+  const weekSelector = document.getElementById('week-selector');
+  if (!weekSelector) return;
+
+  // Définir la semaine actuelle par défaut
+  const today = new Date();
+  const year = today.getFullYear();
+  const weekNumber = getWeekNumber(today);
+  weekSelector.value = `${year}-W${String(weekNumber).padStart(2, '0')}`;
+
+  // Charger les données de la semaine actuelle
+  loadWeeklyProblem();
+}
+
+// Obtenir le numéro de semaine
+function getWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+// Charger le problème de la semaine
+async function loadWeeklyProblem() {
+  const weekSelector = document.getElementById('week-selector');
+  const weekValue = weekSelector.value; // Format: "2024-W12"
+
+  if (!weekValue) return;
+
+  try {
+    const response = await fetch(`/api/coach/weekly-problem?coach_username=${coachUsername}&week=${weekValue}`);
+    if (response.ok) {
+      const data = await response.json();
+
+      if (data.success && data.problem) {
+        document.getElementById('problem-description').value = data.problem.description || '';
+        document.getElementById('problem-impact').value = data.problem.impact || '';
+        document.getElementById('problem-solution').value = data.problem.solution || '';
+        console.log('[RPO] Problème chargé pour la semaine:', weekValue);
+      } else {
+        // Vider les champs si aucune donnée
+        document.getElementById('problem-description').value = '';
+        document.getElementById('problem-impact').value = '';
+        document.getElementById('problem-solution').value = '';
+        console.log('[RPO] Aucun problème enregistré pour la semaine:', weekValue);
+      }
+    }
+  } catch (error) {
+    console.error('[RPO] Erreur chargement problème:', error);
+  }
+}
+
+// Sauvegarder le problème de la semaine
+async function saveWeeklyProblem() {
+  const weekSelector = document.getElementById('week-selector');
+  const weekValue = weekSelector.value;
+
+  if (!weekValue) {
+    alert('Veuillez sélectionner une semaine');
+    return;
+  }
+
+  const problemData = {
+    coach_username: coachUsername,
+    week: weekValue,
+    description: document.getElementById('problem-description').value,
+    impact: document.getElementById('problem-impact').value,
+    solution: document.getElementById('problem-solution').value
+  };
+
+  try {
+    const response = await fetch('/api/coach/weekly-problem', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(problemData)
+    });
+
+    if (response.ok) {
+      console.log('[RPO] Problème sauvegardé pour la semaine:', weekValue);
+      alert('Problème de la semaine enregistré avec succès!');
+    } else {
+      console.error('[RPO] Erreur lors de la sauvegarde');
+      alert('Erreur lors de la sauvegarde');
+    }
+  } catch (error) {
+    console.error('[RPO] Erreur:', error);
+    alert('Erreur lors de la sauvegarde');
+  }
+}
+
+// Toggle edit mode pour Résumé hebdomadaire
+let isResumeEditMode = false;
+
+function toggleResumeEditMode() {
+  isResumeEditMode = !isResumeEditMode;
+  const btn = document.getElementById('resume-edit-btn');
+  const macroField = document.getElementById('macro-content');
+  const microField = document.getElementById('micro-content');
+  const problemField = document.getElementById('problem-content');
+
+  if (isResumeEditMode) {
+    // Mode édition: activer les champs
+    macroField.disabled = false;
+    microField.disabled = false;
+    problemField.disabled = false;
+
+    btn.innerHTML = '<i class="fas fa-save mr-2"></i>Enregistrer';
+    btn.classList.remove('btn-secondary');
+    btn.classList.add('btn-primary');
+    btn.onclick = saveResumeAndToggle;
+  } else {
+    // Mode lecture: désactiver les champs
+    macroField.disabled = true;
+    microField.disabled = true;
+    problemField.disabled = true;
+
+    btn.innerHTML = '<i class="fas fa-edit mr-2"></i>Modifier';
+    btn.classList.remove('btn-primary');
+    btn.classList.add('btn-secondary');
+    btn.onclick = toggleResumeEditMode;
+  }
+}
+
+// Sauvegarder et retourner en mode lecture
+async function saveResumeAndToggle() {
+  await saveMacroMicroProblem();
+  // Retourner en mode lecture après la sauvegarde
+  setTimeout(() => {
+    isResumeEditMode = true; // Set to true so toggle will set to false
+    toggleResumeEditMode();
+  }, 2000);
+}
+
+// Sauvegarder MACRO, MICRO et Problème
+async function saveMacroMicroProblem() {
+  const button = document.getElementById('resume-edit-btn');
+  const originalText = button.innerHTML;
+
+  // Désactiver le bouton et changer l'apparence
+  button.disabled = true;
+  button.style.opacity = '0.6';
+  button.style.cursor = 'not-allowed';
+  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Enregistrement...';
+
+  const data = {
+    coach_username: coachUsername,
+    week: selectedWeekValue,
+    macro: document.getElementById('macro-content').value,
+    micro: document.getElementById('micro-content').value,
+    problem: document.getElementById('problem-content').value
+  };
+
+  try {
+    // Délai minimum pour afficher le spinner
+    const [response] = await Promise.all([
+      fetch('/api/coach/macro-micro-problem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }),
+      new Promise(resolve => setTimeout(resolve, 500)) // Délai minimum de 500ms
+    ]);
+
+    if (response.ok) {
+      console.log('[RPO] MACRO/MICRO/Problème sauvegardés pour la semaine:', selectedWeekValue);
+      button.innerHTML = '<i class="fas fa-check mr-2"></i>Enregistré!';
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+        button.style.opacity = '1';
+        button.style.cursor = 'pointer';
+      }, 2000);
+    } else {
+      throw new Error('Erreur lors de la sauvegarde');
+    }
+  } catch (error) {
+    console.error('[RPO] Erreur:', error);
+    alert('Erreur lors de la sauvegarde');
+    button.innerHTML = originalText;
+    button.disabled = false;
+    button.style.opacity = '1';
+    button.style.cursor = 'pointer';
+  }
+}
+
+// Charger MACRO, MICRO et Problème pour la semaine sélectionnée
+async function loadMacroMicroProblem() {
+  if (!selectedWeekValue) {
+    console.log('[RPO] Aucune semaine sélectionnée');
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/coach/macro-micro-problem?coach_username=${coachUsername}&week=${selectedWeekValue}`);
+    if (response.ok) {
+      const data = await response.json();
+      console.log('[RPO] Données MACRO/MICRO/Problème chargées pour la semaine:', selectedWeekValue, data);
+
+      // Remplir les champs avec les données
+      document.getElementById('macro-content').value = data.macro || '';
+      document.getElementById('micro-content').value = data.micro || '';
+      document.getElementById('problem-content').value = data.problem || '';
+    } else {
+      console.log('[RPO] Aucune donnée pour cette semaine');
+      // Vider les champs
+      document.getElementById('macro-content').value = '';
+      document.getElementById('micro-content').value = '';
+      document.getElementById('problem-content').value = '';
+    }
+  } catch (error) {
+    console.error('[RPO] Erreur lors du chargement:', error);
+    // Vider les champs en cas d'erreur
+    document.getElementById('macro-content').value = '';
+    document.getElementById('micro-content').value = '';
+    document.getElementById('problem-content').value = '';
+  }
+}
+
+// Charger le sélecteur de semaine au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+  // Attendre un court instant pour s'assurer que tout est chargé
+  setTimeout(() => {
+    initWeekSelector();
+    initWeekSelectorTable();
+  }, 500);
+});
+
+// ==================== GESTION RPO HEBDOMADAIRE ENTREPRENEURS ====================
+
+let entrepreneurWeeklyData = [];
+
+// Variable globale pour stocker la semaine sélectionnée
+let selectedWeekValue = '';
+
+// Initialiser le sélecteur de semaine du tableau (custom dropdown)
+function initWeekSelectorTable() {
+  const weekDropdownMenu = document.getElementById('week-dropdown-menu');
+  const weekDropdownText = document.getElementById('week-dropdown-text');
+  if (!weekDropdownMenu || !weekDropdownText) return;
+
+  // Générer toutes les semaines de 2026
+  const year = 2026;
+  const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+                      'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
+  // Commencer au premier lundi de 2026
+  let currentDate = new Date(year, 0, 1); // 1er janvier 2026
+  const dayOfWeek = currentDate.getDay();
+  // Aller au premier lundi (jour 1)
+  if (dayOfWeek !== 1) {
+    const daysUntilMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
+    currentDate.setDate(currentDate.getDate() + daysUntilMonday);
+  }
+
+  // Créer les options pour toutes les semaines de 2026
+  weekDropdownMenu.innerHTML = '';
+  let weekNumber = 1;
+  let firstWeekValue = '';
+  let firstWeekLabel = '';
+
+  while (currentDate.getFullYear() === year) {
+    const monday = new Date(currentDate);
+    const sunday = new Date(currentDate);
+    sunday.setDate(sunday.getDate() + 6);
+
+    // Format: "4 juin - 10 juin"
+    const mondayDay = monday.getDate();
+    const mondayMonth = monthNames[monday.getMonth()];
+    const sundayDay = sunday.getDate();
+    const sundayMonth = monthNames[sunday.getMonth()];
+
+    let weekLabel;
+    if (monday.getMonth() === sunday.getMonth()) {
+      // Même mois: "4 juin - 10 juin"
+      weekLabel = `${mondayDay} ${mondayMonth} - ${sundayDay} ${mondayMonth}`;
+    } else {
+      // Mois différents: "30 juin - 6 juillet"
+      weekLabel = `${mondayDay} ${mondayMonth} - ${sundayDay} ${sundayMonth}`;
+    }
+
+    const weekValue = `${year}-W${String(weekNumber).padStart(2, '0')}`;
+
+    // Stocker la première semaine
+    if (weekNumber === 1) {
+      firstWeekValue = weekValue;
+      firstWeekLabel = weekLabel;
+    }
+
+    const option = document.createElement('div');
+    option.className = 'dropdown-secondary-option';
+    option.textContent = weekLabel;
+    option.onclick = () => selectWeek(weekValue, weekLabel);
+    weekDropdownMenu.appendChild(option);
+
+    // Passer à la semaine suivante
+    currentDate.setDate(currentDate.getDate() + 7);
+    weekNumber++;
+  }
+
+  // Sélectionner la première semaine de 2026 par défaut
+  selectedWeekValue = firstWeekValue;
+  weekDropdownText.textContent = firstWeekLabel;
+
+  // Charger les données de la semaine sélectionnée (tableau ET MACRO/MICRO/Problème)
+  loadWeeklyEntrepreneurData();
+  loadMacroMicroProblem();
+
+  // Initialiser l'état read-only pour le tableau
+  const tableContainer = document.getElementById('suivi-table-container');
+  if (tableContainer) {
+    tableContainer.classList.add('table-readonly');
+  }
+}
+
+// Toggle le dropdown de semaine
+function toggleWeekDropdown() {
+  const dropdown = document.getElementById('week-dropdown');
+  const menu = document.getElementById('week-dropdown-menu');
+
+  // Toggle la classe active et le menu
+  dropdown.classList.toggle('active');
+  if (menu.style.display === 'none' || menu.style.display === '') {
+    menu.style.display = 'block';
+    menu.classList.add('show');
+  } else {
+    menu.style.display = 'none';
+    menu.classList.remove('show');
+  }
+}
+
+// Sélectionner une semaine dans le dropdown
+function selectWeek(weekValue, weekLabel) {
+  selectedWeekValue = weekValue;
+  document.getElementById('week-dropdown-text').textContent = weekLabel;
+
+  // Fermer le dropdown
+  const dropdown = document.getElementById('week-dropdown');
+  const menu = document.getElementById('week-dropdown-menu');
+  dropdown.classList.remove('active');
+  menu.style.display = 'none';
+  menu.classList.remove('show');
+
+  // Charger les données de la semaine sélectionnée (tableau ET MACRO/MICRO/Problème)
+  loadWeeklyEntrepreneurData();
+  loadMacroMicroProblem();
+}
+
+// Fermer le dropdown si on clique ailleurs
+document.addEventListener('click', function(event) {
+  const dropdown = document.getElementById('week-dropdown');
+  if (dropdown && !dropdown.contains(event.target)) {
+    const menu = document.getElementById('week-dropdown-menu');
+    dropdown.classList.remove('active');
+    if (menu) {
+      menu.style.display = 'none';
+      menu.classList.remove('show');
+    }
+  }
+});
+
+// Toggle edit mode pour Suivi hebdomadaire
+let isSuiviEditMode = false;
+
+function toggleSuiviEditMode() {
+  isSuiviEditMode = !isSuiviEditMode;
+  const btn = document.getElementById('suivi-edit-btn');
+  const tableContainer = document.getElementById('suivi-table-container');
+  const addEntryContainer = document.getElementById('add-entry-container');
+
+  if (isSuiviEditMode) {
+    // Mode édition: activer l'ajout d'entrées
+    tableContainer.classList.remove('table-readonly');
+    addEntryContainer.style.display = 'flex';
+
+    btn.innerHTML = '<i class="fas fa-check mr-2"></i>Terminer';
+    btn.classList.remove('btn-secondary');
+    btn.classList.add('btn-primary');
+  } else {
+    // Mode lecture: désactiver l'ajout
+    tableContainer.classList.add('table-readonly');
+    addEntryContainer.style.display = 'none';
+
+    btn.innerHTML = '<i class="fas fa-edit mr-2"></i>Modifier';
+    btn.classList.remove('btn-primary');
+    btn.classList.add('btn-secondary');
+  }
+}
+
+// Charger les données hebdomadaires des entrepreneurs
+async function loadWeeklyEntrepreneurData() {
+  const weekValue = selectedWeekValue;
+
+  if (!weekValue) return;
+
+  try {
+    const response = await fetch(`/api/coach/weekly-entrepreneur-data?coach_username=${coachUsername}&week=${weekValue}`);
+    if (response.ok) {
+      const data = await response.json();
+      entrepreneurWeeklyData = data.entries || [];
+      renderEntrepreneurWeeklyTable();
+      console.log('[RPO] Données hebdomadaires chargées pour la semaine:', weekValue);
+    }
+  } catch (error) {
+    console.error('[RPO] Erreur chargement données hebdomadaires:', error);
+    entrepreneurWeeklyData = [];
+    renderEntrepreneurWeeklyTable();
+  }
+}
+
+// Afficher le tableau
+function renderEntrepreneurWeeklyTable() {
+  const tbody = document.getElementById('weekly-entrepreneur-table-body');
+  tbody.innerHTML = '';
+
+  if (entrepreneurWeeklyData.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td colspan="7" class="empty-state">
+        <i class="fas fa-users"></i>
+        <p>Aucune entrée pour cette semaine</p>
+      </td>
+    `;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  entrepreneurWeeklyData.forEach(entry => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${entry.date || '-'}</td>
+      <td>${entry.objectif || '-'}</td>
+      <td>${entry.probleme || '-'}</td>
+      <td>${entry.racine || '-'}</td>
+      <td>${entry.source || '-'}</td>
+      <td>${entry.coaching || '-'}</td>
+      <td>${entry.plan || '-'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// Ouvrir le modal
+function openEntrepreneurWeeklyModal(entryId = null) {
+  const modal = document.getElementById('entrepreneur-weekly-modal');
+  const form = document.getElementById('entrepreneur-weekly-form');
+
+  form.reset();
+
+  if (entryId) {
+    // Mode édition
+    const entry = entrepreneurWeeklyData.find(e => e.id === entryId);
+    if (entry) {
+      document.getElementById('modal-entrepreneur-title').textContent = 'Modifier l\'entrée';
+      document.getElementById('ew-id').value = entry.id;
+      document.getElementById('ew-date').value = entry.date || '';
+      document.getElementById('ew-entrepreneur').value = entry.entrepreneur || '';
+      document.getElementById('ew-objectif').value = entry.objectif || 'Non';
+      document.getElementById('ew-probleme').value = entry.probleme || '';
+      document.getElementById('ew-racine').value = entry.racine || '';
+      document.getElementById('ew-source').value = entry.source || '';
+      document.getElementById('ew-coaching').value = entry.coaching || 'Coaching';
+      document.getElementById('ew-plan').value = entry.plan || '';
+    }
+  } else {
+    // Mode création
+    document.getElementById('modal-entrepreneur-title').textContent = 'Nouvelle entrée hebdomadaire';
+    document.getElementById('ew-id').value = '';
+
+    // Pré-remplir la date avec la semaine sélectionnée
+    const weekSelector = document.getElementById('week-selector-table');
+    if (weekSelector.value) {
+      const weekValue = weekSelector.value; // Format: "2024-W12"
+      const [year, week] = weekValue.split('-W');
+      const date = getDateFromWeek(parseInt(year), parseInt(week));
+      document.getElementById('ew-date').value = date.toISOString().split('T')[0];
+    }
+  }
+
+  modal.style.display = 'flex';
+}
+
+// Fermer le modal
+function closeEntrepreneurWeeklyModal() {
+  document.getElementById('entrepreneur-weekly-modal').style.display = 'none';
+}
+
+// Sauvegarder une entrée
+async function saveEntrepreneurWeekly(event) {
+  event.preventDefault();
+
+  // Récupérer le bouton submit du formulaire
+  const submitButton = document.querySelector('#entrepreneur-weekly-form + .modal-footer .btn-primary');
+  const originalText = submitButton.innerHTML;
+
+  // Désactiver le bouton et changer l'apparence
+  submitButton.disabled = true;
+  submitButton.style.opacity = '0.6';
+  submitButton.style.cursor = 'not-allowed';
+  submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Enregistrement...';
+
+  const weekValue = selectedWeekValue;
+
+  const entryId = document.getElementById('ew-id').value;
+  const entryData = {
+    id: entryId || Date.now().toString(),
+    coach_username: coachUsername,
+    week: weekValue,
+    date: document.getElementById('ew-date').value,
+    objectif: document.getElementById('ew-objectif').value,
+    probleme: document.getElementById('ew-probleme').value,
+    racine: document.getElementById('ew-racine').value,
+    source: document.getElementById('ew-source').value,
+    coaching: document.getElementById('ew-coaching').value,
+    plan: document.getElementById('ew-plan').value
+  };
+
+  try {
+    const response = await fetch('/api/coach/weekly-entrepreneur-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entryData)
+    });
+
+    if (response.ok) {
+      console.log('[RPO] Entrée hebdomadaire sauvegardée');
+      submitButton.innerHTML = '<i class="fas fa-check mr-2"></i>Enregistré!';
+      setTimeout(() => {
+        closeEntrepreneurWeeklyModal();
+        loadWeeklyEntrepreneurData();
+        // Réactiver le bouton
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
+        submitButton.style.opacity = '1';
+        submitButton.style.cursor = 'pointer';
+      }, 1000);
+    } else {
+      throw new Error('Erreur lors de la sauvegarde');
+    }
+  } catch (error) {
+    console.error('[RPO] Erreur:', error);
+    alert('Erreur lors de la sauvegarde');
+    submitButton.innerHTML = originalText;
+    submitButton.disabled = false;
+    submitButton.style.opacity = '1';
+    submitButton.style.cursor = 'pointer';
+  }
+}
+
+// Supprimer une entrée
+async function deleteEntrepreneurWeekly(entryId) {
+  if (!confirm('Êtes-vous sûr de vouloir supprimer cette entrée ?')) return;
+
+  const weekSelector = document.getElementById('week-selector-table');
+  const weekValue = weekSelector.value;
+
+  try {
+    const response = await fetch('/api/coach/weekly-entrepreneur-data', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        coach_username: coachUsername,
+        week: weekValue,
+        entry_id: entryId
+      })
+    });
+
+    if (response.ok) {
+      console.log('[RPO] Entrée supprimée');
+      await loadWeeklyEntrepreneurData();
+    }
+  } catch (error) {
+    console.error('[RPO] Erreur suppression:', error);
+  }
+}
+
+// Obtenir la date du lundi d'une semaine ISO
+function getDateFromWeek(year, week) {
+  const jan4 = new Date(year, 0, 4);
+  const jan4Day = jan4.getDay() || 7;
+  const weekStart = new Date(jan4);
+  weekStart.setDate(jan4.getDate() - jan4Day + 1 + (week - 1) * 7);
+  return weekStart;
+}
+
+</script>
+
+</body>
+</html>

@@ -69,9 +69,16 @@
       const userRole = localStorage.getItem('userRole');
       const isCoach = userRole === 'coach';
       const urlParams = new URLSearchParams(window.location.search);
-      const hasUserParam = urlParams.get('user');
+      const userParam = urlParams.get('user');
 
-      if (isCoach && !hasUserParam) {
+      // Détecter si le paramètre user est un coach (basé sur coach_access.py)
+      const coachUsernames = ['coach1', 'coach01', 'coach2'];
+      const userParamIsCoach = userParam && coachUsernames.includes(userParam);
+
+      // Afficher le sélecteur si:
+      // 1. userRole === 'coach' ET pas de paramètre user
+      // 2. OU le paramètre user est un coach (ex: ?user=coach2)
+      if (isCoach && (!userParam || userParamIsCoach)) {
         // Injecter le CSS immédiatement pour cacher le contenu et afficher le sélecteur
         const style = document.createElement('style');
         style.id = 'coach-anti-flash-css';
@@ -100,9 +107,27 @@
     // Ces variables sont maintenant gérées par common.js
     // username, userRole, canEditParameters sont disponibles globalement
 
+    // Fonction pour vérifier si un username est un coach (basé sur coach_access.py)
+    function isCoachUsername(username) {
+      const coachUsernames = ['coach1', 'coach01', 'coach2', 'coach3'];
+      return coachUsernames.includes(username);
+    }
+
     // Fonction utilitaire pour récupérer le username de manière robuste
-    // Priorité: URL param > window.username (common.js) > sessionStorage > localStorage
+    // En mode coach: utilise window.username (entrepreneur sélectionné)
+    // En mode entrepreneur: utilise URL param puis fallback
     function getFacturationUsername() {
+      // Si window.username est défini ET différent du URL param, c'est qu'un entrepreneur a été sélectionné par le coach
+      if (window.username) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlUser = urlParams.get('user');
+        // Si URL param est un coach ET qu'un username est défini, utiliser le username sélectionné
+        if (urlUser && isCoachUsername(urlUser) && window.username !== urlUser) {
+          console.log('[COACH] Utilisation du username sélectionné:', window.username);
+          return window.username;
+        }
+      }
+      // Sinon, comportement normal
       const urlParams = new URLSearchParams(window.location.search);
       return urlParams.get('user') || window.username || sessionStorage.getItem('username') || localStorage.getItem('username') || 'demo';
     }
@@ -2068,28 +2093,28 @@
         facturationsTraitement = [];
         facturationsTraitees = [];
         
-        // Traiter chaque colonne
+        // Traiter chaque colonne - NOUVEAU: traiter chaque paiement individuellement
         if (data.urgentes && data.urgentes.clients) {
-          data.urgentes.clients.forEach(client => {
-            const clientData = transformerClientPourStatus(client, 'urgente');
-            facturationsUrgentes.push(clientData);
-            console.log('🚨 Client ajouté en urgente:', clientData);
+          data.urgentes.clients.forEach(payment => {
+            const paymentData = transformerPaiementPourStatus(payment, 'urgente');
+            facturationsUrgentes.push(paymentData);
+            console.log('🚨 Paiement ajouté en urgente:', paymentData);
           });
         }
-        
+
         if (data.en_traitement && data.en_traitement.clients) {
-          data.en_traitement.clients.forEach(client => {
-            const clientData = transformerClientPourStatus(client, 'traitement');
-            facturationsTraitement.push(clientData);
-            console.log('⚙️ Client ajouté en traitement:', clientData);
+          data.en_traitement.clients.forEach(payment => {
+            const paymentData = transformerPaiementPourStatus(payment, 'traitement');
+            facturationsTraitement.push(paymentData);
+            console.log('⚙️ Paiement ajouté en traitement:', paymentData);
           });
         }
-        
+
         if (data.traitees && data.traitees.clients) {
-          data.traitees.clients.forEach(client => {
-            const clientData = transformerClientPourStatus(client, 'traitees');
-            facturationsTraitees.push(clientData);
-            console.log('[OK] Client ajouté en traité:', clientData);
+          data.traitees.clients.forEach(payment => {
+            const paymentData = transformerPaiementPourStatus(payment, 'traitees');
+            facturationsTraitees.push(paymentData);
+            console.log('[OK] Paiement ajouté en traité:', paymentData);
           });
         }
         
@@ -2125,6 +2150,93 @@
         // Fallback vers les données locales
         await utiliserDonneesTestStatusFallback();
       }
+    }
+
+    // Fonction pour transformer un PAIEMENT API en format status (un paiement = une carte)
+    function transformerPaiementPourStatus(payment, typeColonne) {
+      const numeroSoumission = payment.num || payment.numeroSoumission;
+      const typePaiement = payment.typePaiement || 'depot'; // "depot", "paiement_final", "autre_paiement_N"
+      const montant = payment.montant || '0,00 $';
+      const statutPaiement = payment.statutPaiement || 'traitement';
+
+      // Déterminer le label selon le type de paiement
+      let label = '';
+      let icon = 'fa-dollar-sign';
+
+      if (typePaiement === 'depot') {
+        label = 'Dépôt';
+        icon = 'fa-piggy-bank';
+      } else if (typePaiement === 'paiement_final') {
+        label = 'Paiement final';
+        icon = 'fa-credit-card';
+      } else if (typePaiement.startsWith('autre_paiement_')) {
+        // Extraire le numéro du paiement partiel
+        const numero = typePaiement.replace('autre_paiement_', '');
+        const typePaiementAutres = payment.typePaiementAutres || 'paiement_partiel';
+
+        if (typePaiementAutres === 'un_seul_paiement') {
+          label = 'Paiement complet';
+          icon = 'fa-dollar-sign';
+        } else {
+          label = `Paiement partiel ${numero}`;
+          icon = 'fa-coins';
+        }
+      }
+
+      // Déterminer le statut textuel selon statutPaiement
+      const userRole = localStorage.getItem('userRole');
+      let statusText = '';
+      if (statutPaiement === 'refuse') {
+        statusText = 'à retraiter';
+      } else if (statutPaiement === 'traite' || statutPaiement === 'traite_attente_final') {
+        statusText = 'traité';
+      } else if (statutPaiement === 'attente_comptable') {
+        // Pour coach: "en traitement comptable", pour entrepreneur: "en traitement"
+        statusText = (userRole === 'coach') ? 'en traitement comptable' : 'en traitement';
+      } else if (statutPaiement === 'traitement') {
+        statusText = 'en traitement';
+      } else if (statutPaiement === 'envoye') {
+        statusText = 'envoyé';
+      }
+
+      // Vérifier si c'est un paiement refusé
+      const aRefus = statutPaiement === 'refuse';
+
+      return {
+        numeroSoumission: numeroSoumission,
+        clientPrenom: payment.prenom || payment.clientPrenom,
+        clientNom: payment.nom || payment.clientNom,
+        montantPaiement: montant,
+        totalTravaux: payment.total_travaux || payment.prix || '0,00 $',
+        typePaiement: typePaiement,
+        typePaiementLabel: label,
+        typePaiementIcon: icon,
+        methodePaiement: payment.methode || '',
+        dateDepot: payment.date || '',
+        statut: statutPaiement,
+        statutPaiement: statutPaiement,
+
+        // Nouveau format simplifié: une seule ligne de description
+        description: `${label} ${statusText} (${montant})`,
+
+        // Les anciens champs ne sont plus utilisés mais gardés pour compatibilité
+        statusDepot: null,
+        statusPaiementFinal: null,
+        statutDepot: payment.statutDepot || 'non_envoye',
+        statutPaiementFinal: payment.statutPaiementFinal || null,
+        statutAutresPaiements: payment.statutAutresPaiements || null,
+        autresPaiements: payment.autresPaiements || [],
+        paiementsPartiels: [],
+        paiementsUnSeul: [],
+        hideTopPrice: true, // Toujours cacher le prix en haut car on l'affiche dans la description
+
+        // Infos de refus
+        aRefus: aRefus,
+        refus: payment.refus || null,
+        depotRefuse: aRefus && typePaiement === 'depot',
+        paiementFinalRefuse: aRefus && typePaiement === 'paiement_final',
+        autresRefuses: aRefus && typePaiement.startsWith('autre_paiement_')
+      };
     }
 
     // Fonction pour transformer un client API en format status
@@ -2277,6 +2389,29 @@
         return result;
       }
 
+      // PRIORITÉ: Gestion des paiements refusés EN PREMIER
+      const depotRefuseCheck = statutDepot === 'refuse';
+      const paiementFinalRefuseCheck = statutPaiementFinal === 'refuse';
+      const autresPaiementsRefuses = autresPaiements.filter(p => p.statut === 'refuse');
+      const hasAutresPaiementsRefuses = autresPaiementsRefuses.length > 0;
+
+      if (depotRefuseCheck) {
+        result.single = `Dépôt à retraiter (${montantDepot})`;
+        result.hideTopPrice = true;
+        return result;
+      } else if (paiementFinalRefuseCheck) {
+        result.single = `Paiement final à retraiter (${montantPaiementFinal})`;
+        result.hideTopPrice = true;
+        return result;
+      } else if (hasAutresPaiementsRefuses) {
+        result.paiementsPartiels = autresPaiementsRefuses.map((p, index) => ({
+          texte: `Paiement partiel ${index + 1} à retraiter (${p.montant || '0,00 $'})`,
+          numero: index + 1
+        }));
+        result.hideTopPrice = true;
+        return result;
+      }
+
       // Logique de statut avec affichage séparé pour depot et paiement final
       if (statutDepot === 'non_envoye') {
         result.single = 'En attente du dépôt';
@@ -2315,21 +2450,24 @@
           result.hideTopPrice = true;
         }
       } else if (statutDepot === 'attente_comptable') {
-        // Dépôt validé par le coach - pour l'entrepreneur, on affiche juste "en traitement"
+        // Dépôt validé par le coach - pour l'entrepreneur afficher "en traitement", pour le coach afficher "en traitement comptable"
+        const userRole = localStorage.getItem('userRole');
+        const texteTraitement = (userRole === 'coach') ? 'en traitement comptable' : 'en traitement';
+
         if (statutPaiementFinal === 'attente_comptable') {
-          // Les deux paiements sont validés par coach - afficher comme "en traitement"
-          result.depot = `Dépôt en traitement (${montantDepot})`;
-          result.paiementFinal = `Paiement final en traitement (${montantPaiementFinal})`;
+          // Les deux paiements sont validés par coach
+          result.depot = `Dépôt ${texteTraitement} (${montantDepot})`;
+          result.paiementFinal = `Paiement final ${texteTraitement} (${montantPaiementFinal})`;
         } else if (statutPaiementFinal === 'traitement') {
           // Dépôt validé, paiement final soumis - afficher les deux
-          result.depot = `Dépôt en traitement (${montantDepot})`;
+          result.depot = `Dépôt ${texteTraitement} (${montantDepot})`;
           result.paiementFinal = `Paiement final en traitement (${montantPaiementFinal})`;
         } else if (statutPaiementFinal === 'traite') {
           // Dépôt en attente comptable mais paiement final traité
-          result.depot = `Dépôt en traitement (${montantDepot})`;
+          result.depot = `Dépôt ${texteTraitement} (${montantDepot})`;
           result.paiementFinal = `Paiement final traité (${montantPaiementFinal})`;
         } else {
-          result.single = `Dépôt en traitement (${montantDepot})`;
+          result.single = `Dépôt ${texteTraitement} (${montantDepot})`;
         }
         result.hideTopPrice = true;
       } else if (statutDepot === 'traite_attente_final') {
@@ -2366,7 +2504,10 @@
           result.paiementFinal = `Paiement final à traiter (${montantPaiementFinal})`;
           result.hideTopPrice = true;
         } else if (statutPaiementFinal === 'attente_comptable') {
-          // Paiement final validé par coach - pour l'entrepreneur, afficher juste "en traitement"
+          // Paiement final validé par coach - pour l'entrepreneur afficher "en traitement", pour le coach afficher "en traitement comptable"
+          const userRole = localStorage.getItem('userRole');
+          const texteTraitement = (userRole === 'coach') ? 'en traitement comptable' : 'en traitement';
+
           result.depot = `Dépôt traité (${montantDepot})`;
           // Ajouter les paiements partiels traités s'il y en a
           if (hasAutresPaiementsTraites) {
@@ -2375,7 +2516,7 @@
               numero: index + 1
             }));
           }
-          result.paiementFinal = `Paiement final en traitement (${montantPaiementFinal})`;
+          result.paiementFinal = `Paiement final ${texteTraitement} (${montantPaiementFinal})`;
           result.hideTopPrice = true;
         } else if (hasUnSeulPaiementEnTraitement) {
           // Un seul paiement en traitement
@@ -2478,8 +2619,30 @@
         }
       }
 
+      // Gestion des paiements refusés - afficher quel paiement doit être retraité
       if (!result.single && !result.depot && !result.paiementFinal) {
-        result.single = 'État indéterminé';
+        // Vérifier si un paiement a été refusé
+        const depotRefuse = statutDepot === 'refuse';
+        const paiementFinalRefuse = statutPaiementFinal === 'refuse';
+        const autresPaiementsRefuses = autresPaiements.filter(p => p.statut === 'refuse');
+        const hasAutresPaiementsRefuses = autresPaiementsRefuses.length > 0;
+
+        if (depotRefuse) {
+          result.single = `Dépôt à retraiter (${montantDepot})`;
+          result.hideTopPrice = true;
+        } else if (paiementFinalRefuse) {
+          result.single = `Paiement final à retraiter (${montantPaiementFinal})`;
+          result.hideTopPrice = true;
+        } else if (hasAutresPaiementsRefuses) {
+          // Afficher chaque paiement partiel refusé
+          result.paiementsPartiels = autresPaiementsRefuses.map((p, index) => ({
+            texte: `Paiement partiel ${index + 1} à retraiter (${p.montant || '0,00 $'})`,
+            numero: index + 1
+          }));
+          result.hideTopPrice = true;
+        } else {
+          result.single = 'État indéterminé';
+        }
       }
 
       return result;
@@ -2624,7 +2787,7 @@
         traitees: facturationsTraitees.length
       });
 
-      peuplerSection('urgente-content', facturationsUrgentes, 'Urgent', 'rgba(248, 113, 113, 0.2)', '#f87171', true);
+      peuplerSection('urgente-content', facturationsUrgentes, 'Urgent', 'rgba(248, 113, 113, 0.2)', '#f87171', false);
       peuplerSection('traitement-content', facturationsTraitement, 'En cours', 'rgba(251, 146, 60, 0.2)', '#fb923c', false);
       peuplerSection('traitees-content', facturationsTraitees, 'Traité', 'rgba(16, 185, 129, 0.2)', 'rgb(16, 185, 129)', false);
 
@@ -2668,59 +2831,32 @@
           aRefus: facturation.aRefus
         });
 
-        // Pour les entrepreneurs dans la section urgente avec un refus: bouton "Lire"
-        if (isUrgenteSection && facturation.aRefus && !isCoach) {
+        // Pour les entrepreneurs ET coaches dans la section urgente avec un refus: bouton "Lire"
+        if (isUrgenteSection && facturation.aRefus) {
           statusBadgeHTML = `<button class="btn btn-danger text-xs px-3 py-1 rounded-full cursor-pointer transition-all"
              style="background-color: #ef4444 !important; border-color: #ef4444 !important; color: white;"
              onclick="event.stopPropagation(); ouvrirModalRefusEntrepreneur('${facturation.numeroSoumission}', ${JSON.stringify(facturation).replace(/"/g, '&quot;')})">
              <i class="fas fa-envelope-open-text mr-1"></i>Lire
            </button>`;
         } else if (isCoach && isTraitementSection) {
-          // Vérifier s'il y a des paiements en "traitement" (encore à valider par le coach)
-          const hasDepotEnTraitement = facturation.statutDepot === 'traitement';
-          const hasPaiementFinalEnTraitement = facturation.statutPaiementFinal === 'traitement';
-          // Vérifier les autres paiements: via tableau, via statutAutresPaiements, ou via statut "non_envoye" pour dépôt avec autresPaiements
-          const autresPaiementsArray = facturation.autresPaiements || [];
-          const hasAutresEnTraitement = (autresPaiementsArray.length > 0 && autresPaiementsArray.some(p => p.statut === 'traitement')) ||
-                                        facturation.statutAutresPaiements === 'traitement';
-          const hasPaiementsATraiter = hasDepotEnTraitement || hasPaiementFinalEnTraitement || hasAutresEnTraitement;
-          console.log('[DEBUG A TRAITER DETAIL]', facturation.numeroSoumission, {
-            hasDepotEnTraitement, hasPaiementFinalEnTraitement, hasAutresEnTraitement, hasPaiementsATraiter,
-            statutAutresPaiements: facturation.statutAutresPaiements,
-            autresPaiementsLength: autresPaiementsArray.length,
-            autresPaiementsStatuts: autresPaiementsArray.map(p => p.statut)
-          });
+          // Logique simplifiée: chaque carte = un paiement unique
+          // Utiliser facturation.statutPaiement pour déterminer le badge
+          const statutPaiement = facturation.statutPaiement || facturation.statut;
 
-          // Vérifier si TOUS les paiements sont en attente_comptable (rien à traiter pour le coach)
-          const isDepotAttenteComptable = facturation.statutDepot === 'attente_comptable';
-          const isPaiementFinalAttenteComptable = facturation.statutPaiementFinal === 'attente_comptable';
-          // Vérifier les autres paiements en attente_comptable
-          const isAutresPaiementsAttenteComptable = facturation.statutAutresPaiements === 'attente_comptable' ||
-                                                    (autresPaiementsArray.length > 0 && autresPaiementsArray.some(p => p.statut === 'attente_comptable'));
-          const allEnAttenteComptable = (isDepotAttenteComptable || !facturation.statutDepot || facturation.statutDepot === 'traite_attente_final' || facturation.statutDepot === 'traite' || facturation.statutDepot === 'non_envoye') &&
-                                        (isPaiementFinalAttenteComptable || !facturation.statutPaiementFinal || facturation.statutPaiementFinal === 'traite') &&
-                                        !hasAutresEnTraitement;
-
-          // Vérifier si le dépôt est traite_attente_final sans autres paiements en traitement
-          const isDepotTraiteAttenteFinal = facturation.statutDepot === 'traite_attente_final';
-          const isEnAttentePaymentFinal = isDepotTraiteAttenteFinal && !hasPaiementFinalEnTraitement && !hasAutresEnTraitement;
-
-          if (hasPaiementsATraiter) {
-            // S'il y a encore des paiements en "traitement", afficher le bouton "À traiter"
+          if (statutPaiement === 'traitement') {
+            // Paiement en traitement - afficher le bouton "À traiter"
             statusBadgeHTML = `<button class="btn btn-primary btn-a-traiter text-xs px-3 py-1 rounded-full cursor-pointer transition-all"
                style="background-color: #f59e0b !important; border-color: #f59e0b !important;"
                onclick="event.stopPropagation(); ouvrirDetailsTraitement('${facturation.numeroSoumission}', ${JSON.stringify(facturation).replace(/"/g, '&quot;')})">
                <i class="fas fa-tasks mr-1"></i>À traiter
              </button>`;
-          } else if (allEnAttenteComptable && (isDepotAttenteComptable || isPaiementFinalAttenteComptable || isAutresPaiementsAttenteComptable)) {
-            // Tous les paiements sont déjà validés et en attente du comptable
+          } else if (statutPaiement === 'attente_comptable') {
+            // Paiement validé par coach, en attente comptable
             statusBadgeHTML = `<span class="text-xs px-3 py-1" style="color: #f59e0b; font-weight: 500;">
                <i class="fas fa-spinner fa-spin mr-1"></i>En traitement comptable
              </span>`;
-          } else if (isEnAttentePaymentFinal) {
-            // Dépôt traité, en attente du paiement final - ne pas afficher de bouton À traiter
-            statusBadgeHTML = '';
           } else {
+            // Autres statuts (traite, etc.)
             statusBadgeHTML = '';
           }
         } else {
@@ -2751,37 +2887,41 @@
               })()}
               
               ${(() => {
-                // Afficher les statuts séparés si disponibles
+                // NOUVEAU: Afficher UNE SEULE ligne avec le type et le montant du paiement
                 let statusHTML = '';
 
-                // Afficher dépôt séparé si disponible - alignement du texte
-                if (facturation.statusDepot) {
-                  statusHTML += `<p class="mb-1" style="display: flex; align-items: center; font-weight: normal;"><i class="fas fa-piggy-bank" style="width: 18px; font-size: 14px;"></i>${facturation.statusDepot}</p>`;
-                }
+                if (facturation.typePaiementLabel && facturation.description) {
+                  const icon = facturation.typePaiementIcon || 'fa-dollar-sign';
+                  statusHTML += `<p class="mb-1" style="display: flex; align-items: center; font-weight: normal;"><i class="fas ${icon}" style="width: 18px; font-size: 14px;"></i>${facturation.description}</p>`;
+                } else {
+                  // Fallback pour ancienne structure (si transformerClientPourStatus encore utilisé)
+                  // Afficher dépôt séparé si disponible - alignement du texte
+                  if (facturation.statusDepot) {
+                    statusHTML += `<p class="mb-1" style="display: flex; align-items: center; font-weight: normal;"><i class="fas fa-piggy-bank" style="width: 18px; font-size: 14px;"></i>${facturation.statusDepot}</p>`;
+                  }
 
-                // Afficher chaque paiement partiel sur une ligne séparée (ENTRE dépôt et paiement final)
-                if (facturation.paiementsPartiels && facturation.paiementsPartiels.length > 0) {
-                  facturation.paiementsPartiels.forEach(pp => {
-                    statusHTML += `<p class="mb-1" style="display: flex; align-items: center; font-weight: normal;"><i class="fas fa-coins" style="width: 18px; font-size: 14px;"></i>${pp.texte}</p>`;
-                  });
-                }
+                  // Afficher chaque paiement partiel sur une ligne séparée (ENTRE dépôt et paiement final)
+                  if (facturation.paiementsPartiels && facturation.paiementsPartiels.length > 0) {
+                    facturation.paiementsPartiels.forEach(pp => {
+                      statusHTML += `<p class="mb-1" style="display: flex; align-items: center; font-weight: normal;"><i class="fas fa-coins" style="width: 18px; font-size: 14px;"></i>${pp.texte}</p>`;
+                    });
+                  }
 
-                // Afficher paiement final séparé si disponible - alignement du texte (APRÈS les paiements partiels)
-                if (facturation.statusPaiementFinal) {
-                  statusHTML += `<p class="mb-1" style="display: flex; align-items: center; font-weight: normal;"><i class="fas fa-credit-card" style="width: 18px; font-size: 14px;"></i>${facturation.statusPaiementFinal}</p>`;
-                }
+                  // Afficher paiement final séparé si disponible - alignement du texte (APRÈS les paiements partiels)
+                  if (facturation.statusPaiementFinal) {
+                    statusHTML += `<p class="mb-1" style="display: flex; align-items: center; font-weight: normal;"><i class="fas fa-credit-card" style="width: 18px; font-size: 14px;"></i>${facturation.statusPaiementFinal}</p>`;
+                  }
 
-                // Afficher chaque "un seul paiement" sur une ligne séparée
-                if (facturation.paiementsUnSeul && facturation.paiementsUnSeul.length > 0) {
-                  facturation.paiementsUnSeul.forEach(usp => {
-                    statusHTML += `<p class="mb-1" style="display: flex; align-items: center; font-weight: normal;"><i class="fas fa-dollar-sign" style="width: 18px; font-size: 14px;"></i>${usp.texte}</p>`;
-                  });
+                  // Afficher chaque "un seul paiement" sur une ligne séparée
+                  if (facturation.paiementsUnSeul && facturation.paiementsUnSeul.length > 0) {
+                    facturation.paiementsUnSeul.forEach(usp => {
+                      statusHTML += `<p class="mb-1" style="display: flex; align-items: center; font-weight: normal;"><i class="fas fa-dollar-sign" style="width: 18px; font-size: 14px;"></i>${usp.texte}</p>`;
+                    });
+                  }
                 }
 
                 return statusHTML;
               })()}
-              
-              ${facturation.description ? `<p class="mb-1 text-xs font-medium" style="color: var(--text-light);"><i class="fas fa-info-circle mr-2"></i>${facturation.description}</p>` : ''}
             </div>
           </div>
         `;
@@ -5071,12 +5211,30 @@
       // Vérifier les paramètres URL pour déterminer quelle page afficher
       const urlParams = new URLSearchParams(window.location.search);
       const pageParam = urlParams.get('page');
-      const isCoachMode = urlParams.has('user');
+      const userParam = urlParams.get('user');
 
-      // Si page=status est explicitement demandé, ou si mode coach, afficher page2
-      const shouldShowStatus = pageParam === 'status' || isCoachMode;
-      console.log('[INIT] Mode coach:', isCoachMode, '| Page param:', pageParam, '| Show Status:', shouldShowStatus);
+      // Vérifier si on est un coach
+      const userRole = localStorage.getItem('userRole');
+      const isCoach = userRole === 'coach';
+
+      // Détecter si le paramètre user est un coach ou un entrepreneur
+      const userParamIsCoach = userParam && isCoachUsername(userParam);
+
+      // Mode coach = userRole est 'coach' ET (pas de paramètre user OU paramètre user est un coach)
+      const isCoachModeWithoutSelection = isCoach && (!userParam || userParamIsCoach);
+
+      // Si page=status est explicitement demandé, ou si on a un paramètre user, afficher page2
+      const shouldShowStatus = pageParam === 'status' || urlParams.has('user');
+      console.log('[INIT] Mode coach sans sélection:', isCoachModeWithoutSelection, '| Page param:', pageParam, '| Show Status:', shouldShowStatus);
       showPage(shouldShowStatus ? 'page2' : 'page1');
+
+      if (isCoachModeWithoutSelection) {
+        console.log('[INIT] Mode coach détecté - Les données seront chargées après la sélection d\'entrepreneur');
+        // Ne pas charger les données maintenant, elles seront chargées par selectEntrepreneur
+        // Seulement initialiser le menu déroulant de sélection client
+        initClientSelect();
+        return;
+      }
 
       // Initialiser le menu déroulant de sélection client
       initClientSelect();
@@ -10619,6 +10777,12 @@
     if (isCoach) {
       document.body.classList.add('coach-mode');
 
+      // Sauvegarder le username du coach pour les appels API ultérieurs
+      // Car selectEntrepreneur() va écraser localStorage avec l'entrepreneur
+      const coachUsername = localStorage.getItem('username') || window.username;
+      window.coachUsername = coachUsername;
+      console.log('[COACH] Username du coach initial:', coachUsername);
+
       const selector = document.getElementById('coach-entrepreneur-selector');
       if (selector) {
         selector.classList.add('visible');
@@ -10645,7 +10809,7 @@
       }
     }
 
-    function selectEntrepreneur(username) {
+    async function selectEntrepreneur(username) {
       const dropdownToggle = document.getElementById('coach-dropdown-toggle');
       const dropdownMenu = document.getElementById('coach-dropdown-menu');
       const selector = document.getElementById('coach-entrepreneur-selector');
@@ -10729,34 +10893,94 @@
         const boutonEnvoiContainer = document.getElementById('boutonEnvoiContainer');
         if (boutonEnvoiContainer) boutonEnvoiContainer.style.display = 'none';
 
-        // Mettre à jour le username
+        // Mettre à jour le username pour l'entrepreneur sélectionné
         window.username = username;
+        // IMPORTANT: Mettre à jour aussi sessionStorage et localStorage
+        // pour que getFacturationUsername() retourne le bon entrepreneur
+        sessionStorage.setItem('username', username);
+        localStorage.setItem('username', username);
+        console.log('[COACH] Username mis à jour vers:', username);
 
-        // Recharger les facturations du nouvel entrepreneur
-        if (typeof chargerFacturationsColonnes === 'function') {
-          chargerFacturationsColonnes();
+        // Initialiser le menu déroulant de sélection client
+        if (typeof initClientSelect === 'function') {
+          initClientSelect();
+        }
+
+        // Recharger les clients facturation depuis l'API
+        console.log('[COACH] Chargement des clients facturation pour:', username);
+        if (typeof chargerClientsDepuisAPI === 'function') {
+          await chargerClientsDepuisAPI();
+        }
+
+        // Charger les clients depuis les soumissions (pour l'ancien système)
+        if (typeof chargerClients === 'function') {
+          await chargerClients();
+        }
+
+        // Charger toutes les facturations depuis l'API
+        console.log('[COACH] Chargement des facturations pour:', username);
+        if (typeof chargerFacturationsDepuisAPI === 'function') {
+          await chargerFacturationsDepuisAPI();
         }
 
         // Recharger les colonnes Status automatiquement
         if (typeof utiliserDonneesTestStatus === 'function') {
           console.log('🔄 Rechargement automatique des colonnes Status pour:', username);
-          utiliserDonneesTestStatus();
+          await utiliserDonneesTestStatus();
+        }
+
+        // Recharger les facturations du nouvel entrepreneur (après avoir chargé les données)
+        if (typeof chargerFacturationsColonnes === 'function') {
+          chargerFacturationsColonnes();
         }
       }
     }
 
     async function loadEntrepreneursForCoach() {
       try {
-        // Récupérer le username de manière robuste (URL, window.username, ou localStorage)
-        const urlParams = new URLSearchParams(window.location.search);
-        const currentUsername = urlParams.get('user') || window.username || localStorage.getItem('username');
+        // IMPORTANT: Utiliser le username du coach sauvegardé
+        // On le récupère depuis window.coachUsername (sauvegardé au premier chargement)
+        let coachUsername = window.coachUsername;
 
-        if (!currentUsername || currentUsername === 'demo') {
-          console.error('Username non disponible pour loadEntrepreneursForCoach');
+        if (!coachUsername) {
+          // Première fois : déterminer le username du coach
+          // 1. Vérifier le localStorage
+          coachUsername = localStorage.getItem('username');
+
+          // 2. Si le localStorage contient un entrepreneur (pas un coach), chercher ailleurs
+          if (coachUsername && !isCoachUsername(coachUsername)) {
+            // Le localStorage contient un entrepreneur sélectionné précédemment
+            // Chercher le coach dans window.username (common.js) ou dans l'URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const userParam = urlParams.get('user');
+
+            // Si l'URL contient un coach, l'utiliser
+            if (userParam && isCoachUsername(userParam)) {
+              coachUsername = userParam;
+            } else if (window.username && isCoachUsername(window.username)) {
+              // Sinon utiliser window.username si c'est un coach
+              coachUsername = window.username;
+            } else {
+              // Cas problématique : on ne peut pas déterminer le coach
+              console.error('[COACH] Impossible de déterminer le username du coach');
+              console.error('[COACH] localStorage:', localStorage.getItem('username'));
+              console.error('[COACH] window.username:', window.username);
+              console.error('[COACH] URL user param:', userParam);
+              return;
+            }
+          }
+
+          window.coachUsername = coachUsername;
+          console.log('[COACH] Username du coach sauvegardé:', coachUsername);
+        }
+
+        if (!coachUsername || coachUsername === 'demo' || !isCoachUsername(coachUsername)) {
+          console.error('[COACH] Username invalide pour loadEntrepreneursForCoach:', coachUsername);
           return;
         }
 
-        const response = await fetch(`/api/users/entrepreneurs?coach_username=${currentUsername}`);
+        console.log('[COACH] Chargement entrepreneurs pour coach:', coachUsername);
+        const response = await fetch(`/api/users/entrepreneurs?coach_username=${coachUsername}`);
         const data = await response.json();
 
         // Charger aussi la liste des facturations en traitement pour avoir le count par entrepreneur
@@ -10864,25 +11088,18 @@
             }
           }
 
+          // Vérifier si un entrepreneur est déjà sélectionné via URL
           const urlParams = new URLSearchParams(window.location.search);
           const selectedUser = urlParams.get('user');
-          if (selectedUser) {
-            if (toggle) {
-              toggle.innerHTML = `
-                <span class="selected-text">
-                  <i class="fas fa-user-circle"></i>
-                  ${selectedUser}
-                </span>
-                <i class="fas fa-chevron-down chevron"></i>
-              `;
-            }
 
-            window.username = selectedUser;
-            setTimeout(() => {
-              if (typeof chargerFacturationsColonnes === 'function') {
-                chargerFacturationsColonnes();
-              }
-            }, 500);
+          // IMPORTANT: Seulement sélectionner si c'est un entrepreneur, pas un coach
+          if (selectedUser && !isCoachUsername(selectedUser)) {
+            // Un entrepreneur est sélectionné via URL - le marquer comme sélectionné
+            console.log('[COACH] Entrepreneur détecté dans URL:', selectedUser);
+            selectEntrepreneur(selectedUser);
+          } else if (!selectedUser || isCoachUsername(selectedUser)) {
+            // Pas de sélection OU le paramètre user est un coach - ne pas auto-sélectionner
+            console.log('[COACH] Attente de sélection manuelle (user param:', selectedUser, ')');
           }
         } else {
           const option = document.createElement('div');
@@ -10916,10 +11133,10 @@
       </div>
 
       <div class="modal-details-footer">
-        <button class="btn btn-primary btn-refuser" id="btnRefuser" onclick="refuserDepuisModal()">
+        <button class="btn btn-secondary" id="btnRefuser" onclick="refuserDepuisModal()">
           <i class="fas fa-times mr-2"></i>Refuser
         </button>
-        <button class="btn btn-primary btn-accepter" id="btnAccepter" onclick="accepterDepuisModal()">
+        <button class="btn btn-primary" id="btnAccepter" onclick="accepterDepuisModal()">
           <i class="fas fa-check mr-2"></i>Accepter
         </button>
       </div>
@@ -11093,33 +11310,39 @@
           <!-- Info client dynamique -->
         </div>
 
+        <!-- Section états de tous les paiements -->
+        <div class="refus-paiements-container" id="refusPaiementsContainer">
+          <!-- États de paiements dynamiques -->
+        </div>
+
         <div class="refus-conversation-container">
           <h4 style="color: var(--text-light); margin-bottom: 0.75rem; font-size: 0.9rem;">
-            <i class="fas fa-comments mr-2"></i>Historique des échanges
+            <i class="fas fa-comments mr-2"></i>Conversation
           </h4>
           <div class="refus-conversation" id="refusConversation">
             <!-- Messages dynamiques -->
           </div>
-        </div>
 
-        <div class="form-group" style="margin-top: 1rem;">
-          <label for="reponseEntrepreneur" style="color: var(--text-light); font-weight: 500; margin-bottom: 0.5rem; display: block;">
-            Votre réponse
-          </label>
-          <textarea
-            id="reponseEntrepreneur"
-            placeholder="Écrivez votre réponse ici... (Ex: J'ai corrigé le mot de passe du virement, etc.)"
-            rows="3"
-            style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-dark); background: rgba(15, 23, 42, 0.5); color: var(--text-light); font-size: 0.9rem; resize: vertical;"
-          ></textarea>
+          <!-- Zone de saisie style chat -->
+          <div class="chat-input-container">
+            <textarea
+              id="reponseEntrepreneur"
+              placeholder="Votre message..."
+              rows="1"
+              class="chat-textarea"
+            ></textarea>
+            <button class="btn-envoyer-chat" onclick="envoyerMessageRefus()" title="Envoyer le message">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
         </div>
       </div>
       <div class="modal-refus-footer">
-        <button class="btn-annuler-entrepreneur" onclick="fermerModalRefusEntrepreneur()">
+        <button class="btn btn-secondary" onclick="fermerModalRefusEntrepreneur()">
           <i class="fas fa-times"></i> Fermer
         </button>
-        <button class="btn-renvoyer-traitement" onclick="renvoyerEnTraitement()">
-          <i class="fas fa-paper-plane"></i> Renvoyer en traitement
+        <button class="btn btn-primary" onclick="renvoyerEnTraitement()">
+          <i class="fas fa-check-circle"></i> Renvoyer en traitement
         </button>
       </div>
     </div>
@@ -11212,6 +11435,78 @@
       color: var(--text-light);
     }
 
+    /* Container pour les états de paiements dans le modal refus */
+    .refus-paiements-container {
+      background: rgba(15, 23, 42, 0.3);
+      border: 1px solid var(--border-dark);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .refus-paiements-container h4 {
+      color: var(--text-light);
+      margin-bottom: 0.75rem;
+      font-size: 0.9rem;
+    }
+
+    .refus-paiement-section {
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 8px;
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .refus-paiement-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .refus-paiement-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    .refus-paiement-header i {
+      font-size: 0.9rem;
+    }
+
+    .refus-paiement-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.25rem 0;
+      font-size: 0.8rem;
+    }
+
+    .refus-paiement-label {
+      color: var(--text-gray);
+    }
+
+    .refus-paiement-value {
+      color: var(--text-light);
+      font-weight: 500;
+    }
+
+    .refus-paiement-value.highlight {
+      color: rgb(16, 185, 129);
+    }
+
+    .refus-paiement-value.warning {
+      color: #f59e0b;
+    }
+
+    .refus-paiement-value.danger {
+      color: #ef4444;
+    }
+
+    .refus-paiement-value.success {
+      color: rgb(16, 185, 129);
+    }
+
     .refus-conversation-container {
       background: rgba(15, 23, 42, 0.3);
       border: 1px solid var(--border-dark);
@@ -11220,47 +11515,94 @@
     }
 
     .refus-conversation {
-      max-height: 200px;
+      max-height: 250px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+    }
+
+    .refus-conversation::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .refus-conversation::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .refus-conversation::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.3);
+      border-radius: 2px;
     }
 
     .message-bubble {
-      padding: 0.75rem 1rem;
-      border-radius: 12px;
-      max-width: 85%;
-      font-size: 0.875rem;
-      line-height: 1.4;
+      padding: 0.625rem 0.875rem;
+      border-radius: 18px;
+      max-width: 80%;
+      font-size: 0.85rem;
+      line-height: 1.45;
+      position: relative;
     }
 
     .message-bubble.from-coach,
     .message-bubble.from-comptable {
-      background: rgba(239, 68, 68, 0.15);
-      border: 1px solid rgba(239, 68, 68, 0.3);
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.15) 100%);
       color: var(--text-light);
       align-self: flex-start;
+      border-bottom-left-radius: 4px;
     }
 
     .message-bubble.from-entrepreneur {
-      background: rgba(59, 130, 246, 0.15);
-      border: 1px solid rgba(59, 130, 246, 0.3);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.15) 100%);
       color: var(--text-light);
       align-self: flex-end;
+      border-bottom-right-radius: 4px;
     }
 
     .message-bubble .message-meta {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       color: var(--text-gray);
-      margin-bottom: 0.25rem;
+      margin-bottom: 0.2rem;
+      opacity: 0.8;
     }
 
     .message-bubble .message-text {
       color: var(--text-light);
+      word-wrap: break-word;
+    }
+
+    .conversation-message {
+      padding: 0.625rem 0.875rem;
+      border-radius: 18px;
+      max-width: 80%;
+      font-size: 0.85rem;
+      line-height: 1.45;
+    }
+
+    .conversation-message.entrepreneur {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.15) 100%);
+      color: var(--text-light);
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .conversation-message .message-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.7rem;
+      color: var(--text-gray);
+      margin-bottom: 0.2rem;
+      opacity: 0.8;
+    }
+
+    .conversation-message .message-content {
+      color: var(--text-light);
+      word-wrap: break-word;
     }
 
     .btn-annuler-entrepreneur {
@@ -11281,6 +11623,67 @@
     .btn-annuler-entrepreneur:hover {
       background: rgba(100, 116, 139, 0.3);
       color: var(--text-light);
+    }
+
+    /* Zone de saisie style chat - design minimaliste */
+    .chat-input-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      background: rgba(30, 41, 59, 0.4);
+      border-radius: 20px;
+      border: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .chat-textarea {
+      flex: 1;
+      padding: 0.5rem 0;
+      border: none;
+      background: transparent;
+      color: var(--text-light);
+      font-size: 0.9rem;
+      font-family: inherit;
+      resize: none;
+      min-height: 24px;
+      max-height: 80px;
+      line-height: 1.5;
+      outline: none;
+    }
+
+    .chat-textarea::placeholder {
+      color: var(--text-gray);
+      opacity: 0.7;
+    }
+
+    .btn-envoyer-chat {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .btn-envoyer-chat:hover {
+      color: #10b981;
+      transform: scale(1.1);
+    }
+
+    .btn-envoyer-chat:active {
+      transform: scale(0.95);
+      color: #059669;
+    }
+
+    .btn-envoyer-chat i {
+      font-size: 1rem;
     }
 
     .btn-renvoyer-traitement {
@@ -11441,6 +11844,66 @@
 
     .modal-section-title i {
       font-size: 1rem;
+    }
+
+    /* Row pour titre + boutons */
+    .modal-section-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .modal-section-title-row .modal-section-title {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    /* Boutons Refuser/Accepter inline */
+    .section-action-btns {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-section-refuser,
+    .btn-section-accepter {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.35rem 0.75rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-section-refuser {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+    }
+
+    .btn-section-refuser:hover {
+      background: rgba(239, 68, 68, 0.25);
+    }
+
+    .btn-section-accepter {
+      background: rgba(16, 185, 129, 0.15);
+      color: rgb(16, 185, 129);
+    }
+
+    .btn-section-accepter:hover {
+      background: rgba(16, 185, 129, 0.25);
+    }
+
+    .btn-section-refuser:disabled,
+    .btn-section-accepter:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
 
     .modal-info-row {
@@ -11615,9 +12078,14 @@
     window.ouvrirDetailsTraitement = async function(numeroSoumission, facturationData) {
       console.log('[MODAL] Ouverture modal pour:', numeroSoumission, facturationData);
 
+      // NOUVEAU: Filtrer pour n'afficher QUE le paiement cliqué
+      const typePaiementClique = facturationData.typePaiement || 'depot';
+      console.log('[MODAL] Type de paiement cliqué:', typePaiementClique);
+
       currentTraitementData = {
         numeroSoumission: numeroSoumission,
-        facturation: facturationData
+        facturation: facturationData,
+        typePaiementClique: typePaiementClique
       };
 
       // Récupérer les données complètes depuis l'API
@@ -11690,14 +12158,16 @@
         </div>
       `;
 
-      // Section Dépôt si présent
-      if (detailsComplets.depot) {
+      // Section Dépôt si présent ET si c'est le paiement cliqué
+      if (detailsComplets.depot && typePaiementClique === 'depot') {
         const depot = detailsComplets.depot;
         contentHTML += `
           <div class="modal-section">
-            <div class="modal-section-title">
-              <i class="fas fa-piggy-bank" style="color: rgb(16, 185, 129);"></i>
-              Dépôt
+            <div class="modal-section-title-row">
+              <div class="modal-section-title">
+                <i class="fas fa-piggy-bank" style="color: rgb(16, 185, 129);"></i>
+                Dépôt
+              </div>
             </div>
             <div class="modal-info-row">
               <span class="modal-info-label">Montant</span>
@@ -11727,61 +12197,72 @@
         `;
       }
 
-      // Section Autres Paiements si présent (ENTRE dépôt et paiement final)
+      // Section Autres Paiements si présent ET si c'est le paiement cliqué (ENTRE dépôt et paiement final)
       if (detailsComplets.autresPaiements && detailsComplets.autresPaiements.length > 0) {
         detailsComplets.autresPaiements.forEach((ap, index) => {
-          // FALLBACK: Si typePaiementAutres est absent, déduire selon statutDepot
-          let typeAutres = ap.typePaiementAutres;
-          if (!typeAutres) {
-            // Si pas de dépôt, c'est un seul paiement
-            const statutDepot = detailsComplets.statutDepot || 'non_envoye';
-            typeAutres = (statutDepot === 'non_envoye') ? 'un_seul_paiement' : 'paiement_partiel';
-            console.log('[FALLBACK MODAL] typePaiementAutres déduit:', typeAutres, '(statutDepot:', statutDepot, ')');
+          // Vérifier si c'est le paiement cliqué (ex: autre_paiement_1, autre_paiement_2)
+          const indexDansType = typePaiementClique.startsWith('autre_paiement_') ?
+            parseInt(typePaiementClique.replace('autre_paiement_', '')) : null;
+
+          // N'afficher que si c'est le paiement cliqué
+          if (indexDansType !== null && indexDansType === index + 1) {
+            // FALLBACK: Si typePaiementAutres est absent, déduire selon statutDepot
+            let typeAutres = ap.typePaiementAutres;
+            if (!typeAutres) {
+              // Si pas de dépôt, c'est un seul paiement
+              const statutDepot = detailsComplets.statutDepot || 'non_envoye';
+              typeAutres = (statutDepot === 'non_envoye') ? 'un_seul_paiement' : 'paiement_partiel';
+              console.log('[FALLBACK MODAL] typePaiementAutres déduit:', typeAutres, '(statutDepot:', statutDepot, ')');
+            }
+            const typePaiement = typeAutres === 'un_seul_paiement' ? 'Paiement complet' : `Paiement partiel ${index + 1}`;
+            contentHTML += `
+              <div class="modal-section">
+                <div class="modal-section-title-row">
+                  <div class="modal-section-title">
+                    <i class="fas fa-coins" style="color: #fbbf24;"></i>
+                    ${typePaiement}
+                  </div>
+                </div>
+                <div class="modal-info-row">
+                  <span class="modal-info-label">Montant</span>
+                  <span class="modal-info-value highlight">${ap.montant || 'N/A'}</span>
+                </div>
+                <div class="modal-info-row">
+                  <span class="modal-info-label">Date</span>
+                  <span class="modal-info-value">${ap.date || 'N/A'}</span>
+                </div>
+                <div class="modal-info-row">
+                  <span class="modal-info-label">Méthode</span>
+                  <span class="modal-info-value">${ap.methode || 'N/A'}</span>
+                </div>
+                <div class="modal-info-row">
+                  <span class="modal-info-label">Statut</span>
+                  <span class="modal-info-value warning">${formaterStatutModal(ap.statut, 'autres')}</span>
+                </div>
+                ${ap.lienVirement ? `
+                <div class="modal-info-row">
+                  <span class="modal-info-label">Lien virement</span>
+                  <a href="${ap.lienVirement.startsWith('http') ? ap.lienVirement : 'https://' + ap.lienVirement}" target="_blank" class="modal-link">
+                    <i class="fas fa-external-link-alt"></i>
+                    ${ap.lienVirement}
+                  </a>
+                </div>` : ''}
+              </div>
+            `;
           }
-          const typePaiement = typeAutres === 'un_seul_paiement' ? 'Paiement complet' : `Paiement partiel ${index + 1}`;
-          contentHTML += `
-            <div class="modal-section">
-              <div class="modal-section-title">
-                <i class="fas fa-coins" style="color: #fbbf24;"></i>
-                ${typePaiement}
-              </div>
-              <div class="modal-info-row">
-                <span class="modal-info-label">Montant</span>
-                <span class="modal-info-value highlight">${ap.montant || 'N/A'}</span>
-              </div>
-              <div class="modal-info-row">
-                <span class="modal-info-label">Date</span>
-                <span class="modal-info-value">${ap.date || 'N/A'}</span>
-              </div>
-              <div class="modal-info-row">
-                <span class="modal-info-label">Méthode</span>
-                <span class="modal-info-value">${ap.methode || 'N/A'}</span>
-              </div>
-              <div class="modal-info-row">
-                <span class="modal-info-label">Statut</span>
-                <span class="modal-info-value warning">${formaterStatutModal(ap.statut, 'autres')}</span>
-              </div>
-              ${ap.lienVirement ? `
-              <div class="modal-info-row">
-                <span class="modal-info-label">Lien virement</span>
-                <a href="${ap.lienVirement.startsWith('http') ? ap.lienVirement : 'https://' + ap.lienVirement}" target="_blank" class="modal-link">
-                  <i class="fas fa-external-link-alt"></i>
-                  ${ap.lienVirement}
-                </a>
-              </div>` : ''}
-            </div>
-          `;
         });
       }
 
-      // Section Paiement Final si présent (APRÈS les paiements partiels)
-      if (detailsComplets.paiementFinal && detailsComplets.paiementFinal.montant) {
+      // Section Paiement Final si présent ET si c'est le paiement cliqué (APRÈS les paiements partiels)
+      if (detailsComplets.paiementFinal && detailsComplets.paiementFinal.montant && typePaiementClique === 'paiement_final') {
         const pf = detailsComplets.paiementFinal;
         contentHTML += `
           <div class="modal-section">
-            <div class="modal-section-title">
-              <i class="fas fa-credit-card" style="color: #a855f7;"></i>
-              Paiement Final
+            <div class="modal-section-title-row">
+              <div class="modal-section-title">
+                <i class="fas fa-credit-card" style="color: #a855f7;"></i>
+                Paiement Final
+              </div>
             </div>
             <div class="modal-info-row">
               <span class="modal-info-label">Montant</span>
@@ -11912,6 +12393,7 @@
       if (!currentTraitementData) return;
 
       const numeroSoumission = currentTraitementData.numeroSoumission;
+      const typePaiementClique = currentTraitementData.typePaiementClique;
       const username = getFacturationUsername();
       const userRole = localStorage.getItem('userRole');
 
@@ -11922,39 +12404,20 @@
       btnAccepter.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Validation en cours...';
 
       try {
-        // Récupérer les statuts actuels pour savoir quels paiements sont en traitement
-        const statutsResponse = await fetch(`/api/facturationqe/client/${username}/${numeroSoumission}/statuts`);
-        if (!statutsResponse.ok) {
-          throw new Error('Impossible de récupérer les statuts');
-        }
-        const statuts = await statutsResponse.json();
-
-        // Collecter tous les types de paiements en "traitement"
-        const paiementsATraiter = [];
-
-        if (statuts.depot && statuts.depot.statut === 'traitement') {
-          paiementsATraiter.push('depot');
-        }
-        if (statuts.paiementFinal && statuts.paiementFinal.statut === 'traitement') {
-          paiementsATraiter.push('paiement_final');
-        }
-        if (statuts.autresPaiements && statuts.autresPaiements.length > 0) {
-          statuts.autresPaiements.forEach((ap, index) => {
-            if (ap.statut === 'traitement') {
-              // Format: {type: 'autres_paiements', index: X} pour le backend
-              paiementsATraiter.push({ type: 'autres_paiements', index: index });
-            }
-          });
+        // Déterminer quel paiement accepter basé sur typePaiementClique
+        let bodyData;
+        if (typePaiementClique === 'depot') {
+          bodyData = { type: 'depot' };
+        } else if (typePaiementClique === 'paiement_final') {
+          bodyData = { type: 'paiement_final' };
+        } else if (typePaiementClique.startsWith('autre_paiement_')) {
+          const index = parseInt(typePaiementClique.replace('autre_paiement_', '')) - 1;
+          bodyData = { type: 'autres_paiements', index: index };
+        } else {
+          throw new Error('Type de paiement invalide');
         }
 
-        if (paiementsATraiter.length === 0) {
-          btnAccepter.disabled = false;
-          btnAccepter.innerHTML = originalBtnContent;
-          alert('Aucun paiement à valider');
-          return;
-        }
-
-        // Envoyer chaque paiement vers attente_comptable
+        // Envoyer le paiement vers attente_comptable
         let apiUrl;
         if (userRole === 'coach') {
           apiUrl = `/api/coach/facturation/${username}/${numeroSoumission}/valider`;
@@ -11962,43 +12425,16 @@
           apiUrl = `/api/facturationqe/client/${username}/${numeroSoumission}/traiter`;
         }
 
-        // Valider chaque paiement en traitement
-        let successCount = 0;
-        for (const paiement of paiementsATraiter) {
-          // Gérer les deux formats: string (depot, paiement_final) ou objet {type, index} (autres_paiements)
-          let bodyData;
-          if (typeof paiement === 'string') {
-            bodyData = { type: paiement };
-          } else {
-            // Format objet pour autres_paiements avec index
-            bodyData = { type: paiement.type, index: paiement.index };
-          }
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyData)
+        });
 
-          const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(bodyData)
-          });
-          if (response.ok) {
-            successCount++;
-          }
-        }
-
-        if (successCount > 0) {
+        if (response.ok) {
           // Afficher succès sur le bouton
           btnAccepter.innerHTML = '<i class="fas fa-check mr-2"></i>Validé!';
           btnAccepter.style.background = 'linear-gradient(135deg, rgb(16, 185, 129) 0%, rgb(5, 150, 105) 100%)';
-
-          // Mettre à jour la carte visuellement (changer le bouton "À traiter" en spinner)
-          const carteClient = document.querySelector(`[data-numero="${numeroSoumission}"]`);
-          if (carteClient) {
-            const btnATraiter = carteClient.querySelector('.btn-a-traiter');
-            if (btnATraiter) {
-              btnATraiter.outerHTML = `<span class="text-xs px-3 py-1" style="color: #f59e0b; font-weight: 500;">
-                <i class="fas fa-spinner fa-spin mr-1"></i>En traitement comptable
-              </span>`;
-            }
-          }
 
           // Attendre un peu pour montrer le succès
           await new Promise(resolve => setTimeout(resolve, 800));
@@ -12007,13 +12443,18 @@
           fermerModalDetailsTraitement();
 
           // Rafraîchir les données
-          if (typeof chargerDonneesPage2 === 'function') {
-            await chargerDonneesPage2();
+          if (typeof utiliserDonneesTestStatus === 'function') {
+            await utiliserDonneesTestStatus();
+          }
+
+          // Recharger les badges du sélecteur entrepreneur si on est un coach
+          if (userRole === 'coach' && typeof loadEntrepreneursForCoach === 'function') {
+            loadEntrepreneursForCoach();
           }
         } else {
           btnAccepter.disabled = false;
           btnAccepter.innerHTML = originalBtnContent;
-          alert('Erreur: Impossible de valider les paiements');
+          alert('Erreur: Impossible de valider le paiement');
         }
       } catch (error) {
         console.error('[MODAL] Erreur accepter:', error);
@@ -12039,6 +12480,104 @@
       document.getElementById('raisonRefusCoach').value = '';
     };
 
+    // Variable pour stocker le type de paiement en cours de refus
+    let currentRefusingType = null;
+    let currentRefusingIndex = null;
+
+    // Accepter un type de paiement spécifique (depot, paiement_final, autres_paiements)
+    window.accepterPaiementType = async function(typePaiement, index = 0) {
+      if (!currentTraitementData) return;
+
+      const numeroSoumission = currentTraitementData.numeroSoumission;
+      const username = getFacturationUsername();
+      const userRole = localStorage.getItem('userRole');
+
+      // Trouver le bouton cliqué et ajouter le spinner
+      const allBtns = document.querySelectorAll('.btn-section-accepter');
+      let btn = null;
+      allBtns.forEach(b => {
+        if (b.onclick && b.onclick.toString().includes(typePaiement)) {
+          btn = b;
+        }
+      });
+      // Fallback: utiliser event.target si possible
+      if (!btn) btn = event.target.closest('.btn-section-accepter');
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      }
+
+      try {
+        let apiUrl;
+        if (userRole === 'coach') {
+          apiUrl = `/api/coach/facturation/${username}/${numeroSoumission}/valider`;
+        } else {
+          apiUrl = `/api/facturationqe/client/${username}/${numeroSoumission}/traiter`;
+        }
+
+        const bodyData = typePaiement === 'autres_paiements'
+          ? { type: typePaiement, index: index }
+          : { type: typePaiement };
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyData)
+        });
+
+        if (response.ok) {
+          if (btn) {
+            btn.innerHTML = '<i class="fas fa-check"></i>';
+            btn.style.background = 'rgba(16, 185, 129, 0.5)';
+          }
+
+          // Attendre un peu pour montrer le succès
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          // Rafraîchir les données
+          if (typeof utiliserDonneesTestStatus === 'function') {
+            await utiliserDonneesTestStatus();
+          }
+
+          // Recharger les badges du sélecteur entrepreneur si on est un coach
+          if (userRole === 'coach' && typeof loadEntrepreneursForCoach === 'function') {
+            loadEntrepreneursForCoach();
+          }
+
+          // Fermer le modal
+          fermerModalDetailsTraitement();
+        } else {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i> Accepter';
+          }
+          alert('Erreur: Impossible de valider le paiement');
+        }
+      } catch (error) {
+        console.error('[MODAL] Erreur accepterPaiementType:', error);
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-check"></i> Accepter';
+        }
+        alert('Erreur lors de l\'acceptation');
+      }
+    };
+
+    // Refuser un type de paiement spécifique - ouvrir le popup de raison
+    window.refuserPaiementType = function(typePaiement, index = 0) {
+      if (!currentTraitementData) return;
+
+      // Stocker le type et l'index pour la confirmation
+      currentRefusingType = typePaiement;
+      currentRefusingIndex = index;
+
+      // Ouvrir le modal de refus avec raison
+      document.getElementById('modalRefusCoach').style.display = 'flex';
+      document.getElementById('raisonRefusCoach').value = '';
+      document.getElementById('raisonRefusCoach').focus();
+    };
+
     // Confirmer le refus avec la raison (Coach)
     window.confirmerRefusCoach = async function() {
       const raison = document.getElementById('raisonRefusCoach').value.trim();
@@ -12052,43 +12591,54 @@
       if (!currentTraitementData) return;
 
       const numeroSoumission = currentTraitementData.numeroSoumission;
+      const typePaiementClique = currentTraitementData.typePaiementClique;
       const username = getFacturationUsername();
       const userRole = localStorage.getItem('userRole');
-
-      // Déterminer le type de paiement depuis currentTraitementData
-      const typePaiement = currentTraitementData.facturation?.type || 'depot';
 
       try {
         // Fermer le modal de refus
         fermerModalRefusCoach();
 
+        // Déterminer quel paiement refuser et construire le body
+        let bodyData;
+        if (typePaiementClique === 'depot') {
+          bodyData = { type: 'depot', raison: raison };
+        } else if (typePaiementClique === 'paiement_final') {
+          bodyData = { type: 'paiement_final', raison: raison };
+        } else if (typePaiementClique.startsWith('autre_paiement_')) {
+          const index = parseInt(typePaiementClique.replace('autre_paiement_', '')) - 1;
+          bodyData = { type: 'autres_paiements', raison: raison, index: index };
+        } else {
+          throw new Error('Type de paiement invalide');
+        }
+
         // Déterminer quelle API appeler selon le rôle
         let apiUrl;
         if (userRole === 'coach') {
-          // Coach: utiliser la route coach pour refuser
           apiUrl = `/api/coach/facturation/${username}/${numeroSoumission}/refuser`;
         } else {
-          // Entrepreneur ou autre
           apiUrl = `/api/facturationqe/client/${username}/${numeroSoumission}/refuser`;
         }
 
         const response = await fetch(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: typePaiement, raison: raison })
+          body: JSON.stringify(bodyData)
         });
 
         if (response.ok) {
           // Fermer le modal de détails
           fermerModalDetailsTraitement();
 
-          // Rafraîchir les données
-          if (typeof chargerDonneesPage2 === 'function') {
-            await chargerDonneesPage2();
+          // Rafraîchir les données - utiliser utiliserDonneesTestStatus qui transforme les données correctement
+          if (typeof utiliserDonneesTestStatus === 'function') {
+            await utiliserDonneesTestStatus();
           }
 
-          // Notification de succès
-          alert('Paiement refusé!');
+          // Recharger les badges du sélecteur entrepreneur si on est un coach
+          if (userRole === 'coach' && typeof loadEntrepreneursForCoach === 'function') {
+            loadEntrepreneursForCoach();
+          }
         } else {
           const error = await response.json();
           alert('Erreur: ' + (error.detail || 'Impossible de refuser le paiement'));
@@ -12107,7 +12657,7 @@
     let currentRefusData = null;
 
     // Ouvrir le modal de refus entrepreneur
-    window.ouvrirModalRefusEntrepreneur = function(numeroSoumission, facturation) {
+    window.ouvrirModalRefusEntrepreneur = async function(numeroSoumission, facturation) {
       console.log('[MODAL REFUS ENTREPRENEUR] Ouverture pour:', numeroSoumission, facturation);
       currentRefusData = { numeroSoumission, facturation };
 
@@ -12119,6 +12669,117 @@
         <p><strong>N° Soumission:</strong> ${numeroSoumission}</p>
         <p><strong>Montant:</strong> ${facturation.montantPaiement || '0,00 $'}</p>
       `;
+
+      // Récupérer tous les états de paiements via l'API
+      const paiementsContainer = document.getElementById('refusPaiementsContainer');
+      const username = getFacturationUsername();
+
+      try {
+        const responseStatuts = await fetch(`/api/facturationqe/client/${username}/${numeroSoumission}/statuts`);
+        if (responseStatuts.ok) {
+          const statuts = await responseStatuts.json();
+          console.log('[MODAL REFUS] Statuts récupérés:', statuts);
+
+          // Fonction pour formater le statut avec couleur
+          const formaterStatutPaiement = (statut) => {
+            const statutsMap = {
+              'non_envoye': { text: 'Non envoyé', class: '' },
+              'traitement': { text: 'En traitement', class: 'warning' },
+              'attente_comptable': { text: 'Chez comptable', class: 'warning' },
+              'traite_attente_final': { text: 'Traité', class: 'success' },
+              'refuse': { text: 'Refusé', class: 'danger' },
+              'valide': { text: 'Validé', class: 'success' }
+            };
+            return statutsMap[statut] || { text: statut || 'N/A', class: '' };
+          };
+
+          let paiementsHTML = `<h4><i class="fas fa-file-invoice-dollar mr-2"></i>États des paiements</h4>`;
+
+          // Section Dépôt
+          if (statuts.depot) {
+            const depot = statuts.depot;
+            const statutInfo = formaterStatutPaiement(depot.statut);
+            paiementsHTML += `
+              <div class="refus-paiement-section">
+                <div class="refus-paiement-header">
+                  <i class="fas fa-piggy-bank" style="color: rgb(16, 185, 129);"></i>
+                  <span style="color: var(--text-light);">Dépôt</span>
+                </div>
+                <div class="refus-paiement-row">
+                  <span class="refus-paiement-label">Montant</span>
+                  <span class="refus-paiement-value highlight">${depot.montant || 'N/A'}</span>
+                </div>
+                <div class="refus-paiement-row">
+                  <span class="refus-paiement-label">Statut</span>
+                  <span class="refus-paiement-value ${statutInfo.class}">${statutInfo.text}</span>
+                </div>
+              </div>
+            `;
+          }
+
+          // Section Autres Paiements
+          if (statuts.autresPaiements && statuts.autresPaiements.length > 0) {
+            statuts.autresPaiements.forEach((ap, index) => {
+              const statutInfo = formaterStatutPaiement(ap.statut);
+              let typeAutres = ap.typePaiementAutres;
+              if (!typeAutres) {
+                const statutDepot = statuts.statutDepot || 'non_envoye';
+                typeAutres = (statutDepot === 'non_envoye') ? 'un_seul_paiement' : 'paiement_partiel';
+              }
+              const typePaiement = typeAutres === 'un_seul_paiement' ? 'Paiement complet' : `Paiement partiel ${index + 1}`;
+
+              paiementsHTML += `
+                <div class="refus-paiement-section">
+                  <div class="refus-paiement-header">
+                    <i class="fas fa-money-check-alt" style="color: #60a5fa;"></i>
+                    <span style="color: var(--text-light);">${typePaiement}</span>
+                  </div>
+                  <div class="refus-paiement-row">
+                    <span class="refus-paiement-label">Montant</span>
+                    <span class="refus-paiement-value highlight">${ap.montant || 'N/A'}</span>
+                  </div>
+                  <div class="refus-paiement-row">
+                    <span class="refus-paiement-label">Statut</span>
+                    <span class="refus-paiement-value ${statutInfo.class}">${statutInfo.text}</span>
+                  </div>
+                </div>
+              `;
+            });
+          }
+
+          // Section Paiement Final
+          if (statuts.paiementFinal) {
+            const pf = statuts.paiementFinal;
+            const statutInfo = formaterStatutPaiement(pf.statut);
+            paiementsHTML += `
+              <div class="refus-paiement-section">
+                <div class="refus-paiement-header">
+                  <i class="fas fa-flag-checkered" style="color: #a78bfa;"></i>
+                  <span style="color: var(--text-light);">Paiement Final</span>
+                </div>
+                <div class="refus-paiement-row">
+                  <span class="refus-paiement-label">Montant</span>
+                  <span class="refus-paiement-value highlight">${pf.montant || 'N/A'}</span>
+                </div>
+                <div class="refus-paiement-row">
+                  <span class="refus-paiement-label">Statut</span>
+                  <span class="refus-paiement-value ${statutInfo.class}">${statutInfo.text}</span>
+                </div>
+              </div>
+            `;
+          }
+
+          paiementsContainer.innerHTML = paiementsHTML;
+          paiementsContainer.style.display = 'block';
+        } else {
+          paiementsContainer.innerHTML = '';
+          paiementsContainer.style.display = 'none';
+        }
+      } catch (error) {
+        console.error('[MODAL REFUS] Erreur récupération statuts:', error);
+        paiementsContainer.innerHTML = '';
+        paiementsContainer.style.display = 'none';
+      }
 
       // Remplir la conversation
       const conversationDiv = document.getElementById('refusConversation');
@@ -12166,6 +12827,10 @@
 
       // Ouvrir le modal
       document.getElementById('modalRefusEntrepreneur').style.display = 'flex';
+
+      // Bloquer le scroll en arrière-plan
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
     };
 
     // Fermer le modal de refus entrepreneur
@@ -12173,13 +12838,24 @@
       document.getElementById('modalRefusEntrepreneur').style.display = 'none';
       document.getElementById('reponseEntrepreneur').value = '';
       currentRefusData = null;
+
+      // Restaurer le scroll
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
     };
 
     // Renvoyer en traitement avec la réponse
-    window.renvoyerEnTraitement = async function() {
+    // Envoyer un message dans la conversation (sans changer le statut)
+    window.envoyerMessageRefus = async function() {
       if (!currentRefusData) return;
 
       const reponse = document.getElementById('reponseEntrepreneur').value.trim();
+
+      if (!reponse) {
+        alert('Veuillez écrire un message avant d\'envoyer.');
+        document.getElementById('reponseEntrepreneur').focus();
+        return;
+      }
 
       const numeroSoumission = currentRefusData.numeroSoumission;
       const facturation = currentRefusData.facturation;
@@ -12194,6 +12870,71 @@
       } else if (facturation.paiementFinalRefuse) {
         typePaiement = 'paiement_final';
       } else if (facturation.autresRefuses) {
+        typePaiement = 'autres_paiements';
+        const autresPaiements = facturation.autresPaiements || [];
+        index = autresPaiements.findIndex(p => p.statut === 'refuse');
+        if (index === -1) index = 0;
+      }
+
+      try {
+        const response = await fetch(`/api/facturationqe/client/${username}/${numeroSoumission}/message`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: typePaiement,
+            message: reponse,
+            index: index
+          })
+        });
+
+        if (response.ok) {
+          // Vider le textarea
+          document.getElementById('reponseEntrepreneur').value = '';
+
+          // Ajouter le message à la conversation affichée
+          const conversationContainer = document.getElementById('refusConversation');
+          const newMessageHTML = `
+            <div class="conversation-message entrepreneur">
+              <div class="message-header">
+                <span class="message-author">Vous</span>
+                <span class="message-date">${new Date().toLocaleString('fr-CA')}</span>
+              </div>
+              <div class="message-content">${reponse}</div>
+            </div>
+          `;
+          conversationContainer.insertAdjacentHTML('beforeend', newMessageHTML);
+
+          // Scroll vers le bas de la conversation
+          conversationContainer.scrollTop = conversationContainer.scrollHeight;
+        } else {
+          const error = await response.json();
+          alert('Erreur: ' + (error.detail || 'Impossible d\'envoyer le message'));
+        }
+      } catch (error) {
+        console.error('[MODAL ENTREPRENEUR] Erreur envoi message:', error);
+        alert('Erreur lors de l\'envoi du message');
+      }
+    };
+
+    window.renvoyerEnTraitement = async function() {
+      if (!currentRefusData) return;
+
+      const reponse = document.getElementById('reponseEntrepreneur').value.trim();
+
+      const numeroSoumission = currentRefusData.numeroSoumission;
+      const facturation = currentRefusData.facturation;
+      const username = getFacturationUsername();
+
+      // Déterminer le type de paiement refusé
+      let typePaiement = 'depot';
+      let index = 0;
+
+      // Vérifier les statuts réels des paiements
+      if (facturation.statutDepot === 'refuse' || facturation.depotRefuse) {
+        typePaiement = 'depot';
+      } else if (facturation.statutPaiementFinal === 'refuse' || facturation.paiementFinalRefuse) {
+        typePaiement = 'paiement_final';
+      } else if (facturation.statutAutresPaiements === 'refuse' || facturation.autresRefuses) {
         typePaiement = 'autres_paiements';
         // Trouver l'index du paiement refusé
         const autresPaiements = facturation.autresPaiements || [];
@@ -12216,13 +12957,10 @@
           // Fermer le modal
           fermerModalRefusEntrepreneur();
 
-          // Rafraîchir les données
-          if (typeof chargerDonneesPage2 === 'function') {
-            await chargerDonneesPage2();
+          // Rafraîchir les données - utiliser utiliserDonneesTestStatus qui transforme les données correctement
+          if (typeof utiliserDonneesTestStatus === 'function') {
+            await utiliserDonneesTestStatus();
           }
-
-          // Notification de succès
-          alert('Paiement renvoyé en traitement avec succès!');
         } else {
           const error = await response.json();
           alert('Erreur: ' + (error.detail || 'Impossible de renvoyer le paiement'));

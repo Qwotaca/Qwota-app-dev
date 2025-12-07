@@ -214,20 +214,12 @@
     </div>
   </div>
 
-  <!-- Main Content -->
-  <div class="w-full" style="width: 100%; padding: 2rem;">
-
-    <!-- Header -->
-    <div class="mb-10">
-      <div class="relative">
-        <h1 class="text-4xl font-bold mb-3">
-          Dashboard
-        </h1>
-        <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
-      </div>
-    </div>
-
-  </div>
+  <!-- Main Content - iframe pour charger le dashboard_user.html -->
+  <iframe
+    id="dashboard-iframe"
+    src="/dashboard"
+    style="width: 100%; height: calc(100vh - 60px); border: none; display: block; position: absolute; top: 60px; left: 0; right: 0; bottom: 0;"
+  ></iframe>
 
   <script>
     // Initialiser le type de dashboard (par défaut: coach)
@@ -236,6 +228,40 @@
     // Gérer le sélecteur de type de dashboard
     const dashboardTypeToggle = document.getElementById('dashboard-type-toggle');
     const dashboardTypeMenu = document.getElementById('dashboard-type-menu');
+    const dashboardIframe = document.getElementById('dashboard-iframe');
+
+    // Vérifier les paramètres URL au chargement
+    const urlParams = new URLSearchParams(window.location.search);
+    const dashboardType = urlParams.get('type');
+    const selectedUser = urlParams.get('user');
+
+    // Si des paramètres sont fournis, les appliquer
+    if (dashboardType || selectedUser) {
+      let iframeSrc = '/dashboard';
+      const params = new URLSearchParams();
+
+      if (selectedUser) {
+        params.append('user', selectedUser);
+      }
+
+      if (params.toString()) {
+        iframeSrc += '?' + params.toString();
+      }
+
+      dashboardIframe.src = iframeSrc;
+
+      // Mettre à jour le sélecteur pour refléter le type
+      if (dashboardType === 'entrepreneur') {
+        dashboardTypeToggle.innerHTML = `
+          <span class="selected-text">
+            <i class="fas fa-users"></i>
+            Dashboard Entrepreneur
+          </span>
+          <i class="fas fa-chevron-down chevron"></i>
+        `;
+        window.dashboardType = 'entrepreneur';
+      }
+    }
 
     if (dashboardTypeToggle && dashboardTypeMenu) {
       // Ouvrir/fermer le dropdown
@@ -279,6 +305,7 @@
         `;
 
         window.dashboardType = 'coach';
+        dashboardIframe.src = '/dashboard';
         console.log('Dashboard Coach sélectionné');
 
       } else if (type === 'entrepreneur') {
@@ -292,6 +319,7 @@
         `;
 
         window.dashboardType = 'entrepreneur';
+        dashboardIframe.src = '/dashboard';
         console.log('Dashboard Entrepreneur sélectionné');
       }
 

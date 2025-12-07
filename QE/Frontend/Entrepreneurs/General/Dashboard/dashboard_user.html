@@ -257,16 +257,12 @@
       <div class="coach-dropdown" style="min-width: 220px;">
         <div class="coach-dropdown-toggle" id="dashboard-type-toggle">
           <span class="selected-text">
-            <i class="fas fa-user-shield"></i>
-            Mon Dashboard
+            <i class="fas fa-graduation-cap"></i>
+            Dashboard Qualité Étudiants
           </span>
           <i class="fas fa-chevron-down chevron"></i>
         </div>
         <div class="coach-dropdown-menu" id="dashboard-type-menu">
-          <div class="coach-dropdown-option" data-type="coach">
-            <i class="fas fa-user-shield"></i>
-            <span>Mon Dashboard</span>
-          </div>
           <div class="coach-dropdown-option" data-type="par-coach">
             <i class="fas fa-chalkboard-teacher"></i>
             <span>Dashboard par Coach</span>
@@ -1187,19 +1183,18 @@
     }
 
     try {
-      // Déterminer si on doit charger les données de l'équipe (Mon Dashboard pour coach)
+      // Déterminer si on doit charger les données de l'équipe
       const userRole = localStorage.getItem('userRole');
       const isCoach = userRole === 'coach';
-      const isMonDashboard = window.dashboardType === 'coach';
       const isDashboardParCoach = window.dashboardType === 'par-coach';
       const isDashboardQualiteEtudiants = window.dashboardType === 'qualite-etudiants';
 
       // Pour "Dashboard Qualité Étudiants", ajouter le paramètre ?all_teams=true
-      // Pour "Mon Dashboard" d'un coach ou "Dashboard par Coach", ajouter le paramètre ?team=true
+      // Pour "Dashboard par Coach", ajouter le paramètre ?team=true
       let teamParam = '';
       if (isDashboardQualiteEtudiants) {
         teamParam = '?all_teams=true';
-      } else if ((isCoach && isMonDashboard) || isDashboardParCoach) {
+      } else if (isDashboardParCoach) {
         teamParam = '?team=true';
       }
 
@@ -3333,7 +3328,7 @@
   const isCoach = userRole === 'coach';
 
   // Variable pour suivre le type de dashboard sélectionné
-  window.dashboardType = 'coach';
+  window.dashboardType = 'qualite-etudiants';
 
   if (isCoach) {
     document.body.classList.add('coach-mode');
@@ -3343,7 +3338,7 @@
       selector.classList.add('visible');
     }
 
-    // Par défaut, afficher le contenu du dashboard pour "Mon Dashboard"
+    // Par défaut, afficher le contenu du dashboard pour "Dashboard Qualité Étudiants"
     const coachDevMessage = document.getElementById('coach-dev-message');
     const entrepreneurDashboardContent = document.getElementById('entrepreneur-dashboard-content');
     if (coachDevMessage) {
@@ -3420,6 +3415,30 @@
         }
       });
     }
+
+    // Vérifier si on vient de "Mon équipe" avec un entrepreneur pré-sélectionné
+    const viewEntrepreneurUsername = sessionStorage.getItem('viewEntrepreneurUsername');
+    console.log('🔍 Vérification viewEntrepreneurUsername:', viewEntrepreneurUsername);
+    console.log('🔍 isCoach:', isCoach);
+    console.log('🔍 Tout le sessionStorage:', sessionStorage);
+
+    if (viewEntrepreneurUsername) {
+      console.log('🎯 Entrepreneur pré-sélectionné depuis Mon Équipe:', viewEntrepreneurUsername);
+
+      // Sélectionner automatiquement "Dashboard par Entrepreneur"
+      setTimeout(() => {
+        console.log('⏰ Timeout 1: Sélection du type dashboard entrepreneur');
+        selectDashboardType('entrepreneur');
+
+        // Attendre que les entrepreneurs soient chargés, puis sélectionner l'entrepreneur
+        setTimeout(() => {
+          console.log('⏰ Timeout 2: Sélection de l\'entrepreneur', viewEntrepreneurUsername);
+          selectEntrepreneur(viewEntrepreneurUsername);
+          // Nettoyer le sessionStorage
+          sessionStorage.removeItem('viewEntrepreneurUsername');
+        }, 1000);
+      }, 500);
+    }
   }
 
   function selectDashboardType(type) {
@@ -3443,13 +3462,6 @@
         icon: 'fas fa-chalkboard-teacher',
         label: 'Dashboard par Coach',
         showCoachSelector: true,
-        showEntrepreneurSelector: false,
-        showDevMessage: false
-      },
-      'coach': {
-        icon: 'fas fa-user-shield',
-        label: 'Mon Dashboard',
-        showCoachSelector: false,
         showEntrepreneurSelector: false,
         showDevMessage: false
       },
@@ -3542,7 +3554,8 @@
       }
 
       // Recharger les données si on affiche le contenu
-      if (typeof loadDashboardData === 'function') {
+      // SAUF pour le type 'entrepreneur' car loadDashboardData() sera appelé après le chargement des entrepreneurs
+      if (typeof loadDashboardData === 'function' && type !== 'entrepreneur') {
         loadDashboardData();
       }
     }
@@ -3641,11 +3654,17 @@
 
   async function loadEntrepreneursForCoach() {
     try {
-      if (!window.username) {
-        console.error('Username non défini');
+      // Récupérer le username du COACH depuis l'URL (pas window.username qui peut être un entrepreneur)
+      const urlParams = new URLSearchParams(window.location.search);
+      const coachUsername = urlParams.get('user');
+
+      if (!coachUsername) {
+        console.error('Coach username non défini dans URL');
         return;
       }
-      const response = await fetch(`/api/users/entrepreneurs?coach_username=${window.username}`);
+
+      console.log('🔍 Chargement des entrepreneurs pour le coach:', coachUsername);
+      const response = await fetch(`/api/users/entrepreneurs?coach_username=${coachUsername}`);
       const data = await response.json();
 
       const menu = document.getElementById('coach-dropdown-menu');
@@ -3666,26 +3685,34 @@
           menu.appendChild(option);
         });
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const selectedUser = urlParams.get('user');
-        if (selectedUser) {
-          if (toggle) {
+        // Vérifier si un entrepreneur est pré-sélectionné depuis sessionStorage
+        const viewEntrepreneurUsername = sessionStorage.getItem('viewEntrepreneurUsername');
+        let entrepreneurToSelect = null;
+
+        if (viewEntrepreneurUsername && data.entrepreneurs.some(e => e.username === viewEntrepreneurUsername)) {
+          // Si on vient de "Mon équipe", sélectionner l'entrepreneur demandé
+          entrepreneurToSelect = viewEntrepreneurUsername;
+          console.log('✅ Sélection depuis sessionStorage:', entrepreneurToSelect);
+
+          if (entrepreneurToSelect && toggle) {
             toggle.innerHTML = `
               <span class="selected-text">
                 <i class="fas fa-user-circle"></i>
-                ${selectedUser}
+                ${entrepreneurToSelect}
               </span>
               <i class="fas fa-chevron-down chevron"></i>
             `;
-          }
 
-          window.username = selectedUser;
-          setTimeout(() => {
-            if (typeof loadDashboardData === 'function') {
-              loadDashboardData();
-            }
-          }, 500);
+            window.username = entrepreneurToSelect;
+            setTimeout(() => {
+              if (typeof loadDashboardData === 'function') {
+                loadDashboardData();
+              }
+            }, 500);
+          }
         }
+        // DÉSACTIVÉ: Ne pas auto-sélectionner le premier entrepreneur
+        // Laisser le placeholder "-- Sélectionner un entrepreneur --"
       } else {
         const option = document.createElement('div');
         option.className = 'coach-dropdown-option-disabled';

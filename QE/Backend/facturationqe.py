@@ -340,8 +340,8 @@ def update_statut_client_facturation_qe(username: str, numero_soumission: str, t
 
 def get_status_columns_facturation_qe(username: str):
     """
-    Organise les clients dans les colonnes de statut (Urgente, En traitement, Traitées)
-    selon leur état de paiement
+    Organise les PAIEMENTS (non les clients) dans les colonnes de statut
+    Chaque paiement (dépôt, paiement final, autres) est une entrée séparée
     """
     try:
         clients = get_clients_facturation_qe(username)
@@ -365,66 +365,89 @@ def get_status_columns_facturation_qe(username: str):
         traitees = []
 
         for client in clients:
+            numero_soumission = client.get("num", "") or client.get("numSoumission", "")
+            client_nom = client.get("clientNom", "")
+            client_prenom = client.get("clientPrenom", "")
+
             statut_depot = client.get("statutDepot", "non_envoye")
             statut_paiement_final = client.get("statutPaiementFinal")
             autres_paiements = client.get("autresPaiements", [])
+            depot_data = client.get("depot", {})
+            paiement_final_data = client.get("paiementFinal", {})
 
-            # Vérifier si il y a des autres paiements
-            a_autres_paiements = isinstance(autres_paiements, list) and len(autres_paiements) > 0
+            # 1. TRAITER LE DÉPÔT (si existe)
+            if statut_depot and statut_depot != "non_envoye":
+                paiement_depot = {
+                    **client,  # Copier toutes les infos du client
+                    "typePaiement": "depot",
+                    "montant": depot_data.get("montant", ""),
+                    "date": depot_data.get("date", ""),
+                    "methode": depot_data.get("methode", ""),
+                    "statutPaiement": statut_depot,
+                    "lienVirement": depot_data.get("lienVirement", ""),
+                }
 
-            # Vérifier si un paiement a été refusé
-            depot_refuse = statut_depot == "refuse"
-            paiement_final_refuse = statut_paiement_final == "refuse"
-            autres_refuses = any(p.get("statut") == "refuse" for p in autres_paiements) if a_autres_paiements else False
-            a_paiement_refuse = depot_refuse or paiement_final_refuse or autres_refuses
+                # Placer dans la bonne colonne selon le statut
+                if statut_depot == "refuse":
+                    urgentes.append(paiement_depot)
+                elif statut_depot == "traite" or statut_depot == "traite_attente_final":
+                    traitees.append(paiement_depot)
+                elif statut_depot == "traitement" or statut_depot == "attente_comptable":
+                    en_traitement.append(paiement_depot)
 
-            # Si un paiement est refusé, mettre dans urgentes
-            if a_paiement_refuse:
-                urgentes.append(client)
-                continue
+            # 2. TRAITER LE PAIEMENT FINAL (si existe)
+            if statut_paiement_final:
+                paiement_final = {
+                    **client,  # Copier toutes les infos du client
+                    "typePaiement": "paiement_final",
+                    "montant": paiement_final_data.get("montant", ""),
+                    "date": paiement_final_data.get("date", ""),
+                    "methode": paiement_final_data.get("methode", ""),
+                    "statutPaiement": statut_paiement_final,
+                    "lienVirement": paiement_final_data.get("lienVirement", ""),
+                }
 
-            # Logique de répartition
-            # Si pas de dépôt ET pas d'autres paiements, n'apparaît dans aucune colonne
-            if statut_depot == "non_envoye" and not a_autres_paiements:
-                continue
+                # Placer dans la bonne colonne selon le statut
+                if statut_paiement_final == "refuse":
+                    urgentes.append(paiement_final)
+                elif statut_paiement_final == "traite":
+                    traitees.append(paiement_final)
+                elif statut_paiement_final == "traitement" or statut_paiement_final == "attente_comptable":
+                    en_traitement.append(paiement_final)
 
-            # Vérifier si tous les autres paiements sont traités
-            autres_paiements_tous_traites = True
-            if a_autres_paiements:
-                autres_paiements_tous_traites = all(p.get("statut") == "traite" for p in autres_paiements)
+            # 3. TRAITER LES AUTRES PAIEMENTS (si existent)
+            if isinstance(autres_paiements, list):
+                for idx, autre_paiement in enumerate(autres_paiements):
+                    statut_autre = autre_paiement.get("statut", "")
+                    if statut_autre:
+                        paiement_autre = {
+                            **client,  # Copier toutes les infos du client
+                            "typePaiement": f"autre_paiement_{idx + 1}",
+                            "montant": autre_paiement.get("montant", ""),
+                            "date": autre_paiement.get("date", ""),
+                            "methode": autre_paiement.get("methode", ""),
+                            "statutPaiement": statut_autre,
+                            "lienVirement": autre_paiement.get("lienVirement", ""),
+                            "typePaiementAutres": autre_paiement.get("typePaiementAutres", ""),
+                        }
 
-            # Vérifier si au moins un paiement est en traitement
-            depot_en_traitement = statut_depot == "traitement"
-            paiement_final_en_traitement = statut_paiement_final == "traitement"
-            autres_en_traitement = any(p.get("statut") == "traitement" for p in autres_paiements) if a_autres_paiements else False
+                        # Placer dans la bonne colonne selon le statut
+                        if statut_autre == "refuse":
+                            urgentes.append(paiement_autre)
+                        elif statut_autre == "traite":
+                            traitees.append(paiement_autre)
+                        elif statut_autre == "traitement" or statut_autre == "attente_comptable":
+                            en_traitement.append(paiement_autre)
 
-            # Déterminer la colonne
-            # Un dépôt est considéré "traité" si son statut est "traite"
-            depot_completement_traite = statut_depot == "traite"
-            paiement_final_traite = statut_paiement_final == "traite"
+        print(f"[get_status_columns] Paiements répartis - Urgentes: {len(urgentes)}, En traitement: {len(en_traitement)}, Traitées: {len(traitees)}")
 
-            # LOGIQUE: Un client est "Traité" SEULEMENT si:
-            # 1. Paiement final est traité (statut = "traite") ET tous autres paiements traités
-            # 2. OU cas "un seul paiement" où tous les autres paiements sont traités (pas de dépôt)
-
-            if paiement_final_traite and autres_paiements_tous_traites:
-                # Paiement final traité -> Traitées
-                traitees.append(client)
-            elif (statut_depot == "non_envoye" and a_autres_paiements and autres_paiements_tous_traites):
-                # Cas "un seul paiement" traité -> Traitées
-                traitees.append(client)
-            else:
-                # Tous les autres cas -> En traitement
-                # Inclut: dépôt traité mais en attente paiement final
-                en_traitement.append(client)
-        
         return {
             "urgentes": {
                 "count": len(urgentes),
-                "clients": urgentes
+                "clients": urgentes  # Contient maintenant des paiements, pas des clients
             },
             "en_traitement": {
-                "count": len(en_traitement), 
+                "count": len(en_traitement),
                 "clients": en_traitement
             },
             "traitees": {
@@ -432,7 +455,7 @@ def get_status_columns_facturation_qe(username: str):
                 "clients": traitees
             }
         }
-        
+
     except Exception as e:
         print(f"[ERREUR get_status_columns_facturation_qe] {e}")
         return {

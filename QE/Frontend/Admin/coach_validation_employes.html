@@ -852,6 +852,123 @@
         bottom: 2rem;
       }
     }
+
+    /* Custom Calendar */
+    .custom-calendar {
+      position: absolute;
+      width: 280px;
+      top: 100%;
+      margin-top: 4px;
+      left: 0;
+      background: #1a2332;
+      border: 2px solid var(--border-dark);
+      border-radius: 8px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      padding: 16px;
+      z-index: 9999 !important;
+    }
+
+    .custom-calendar.hidden {
+      display: none;
+    }
+
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .calendar-month-year {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-light);
+    }
+
+    .calendar-nav-btn {
+      background: #172033 !important;
+      color: #60a5fa !important;
+      border: 2px solid var(--border-dark) !important;
+      width: 30px !important;
+      height: 30px !important;
+      border-radius: 50% !important;
+      cursor: pointer !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 16px !important;
+      padding: 0 !important;
+      transition: all 0.2s ease !important;
+    }
+
+    .calendar-nav-btn:hover {
+      background: #3b82f6 !important;
+      color: white !important;
+      border-color: #3b82f6 !important;
+    }
+
+    .calendar-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+
+    .calendar-weekday {
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-gray);
+      padding: 4px 0;
+    }
+
+    .calendar-days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+
+    .calendar-day {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      color: var(--text-light);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: transparent;
+      border: 1px solid transparent;
+    }
+
+    .calendar-day:hover:not(.disabled):not(.other-month) {
+      background: rgba(59, 130, 246, 0.1);
+      border-color: #60a5fa;
+    }
+
+    .calendar-day.selected {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .calendar-day.today {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+      border: 1px solid #60a5fa;
+      font-weight: 600;
+    }
+
+    .calendar-day.disabled {
+      color: var(--text-gray);
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .calendar-day.other-month {
+      opacity: 0.3;
+      color: var(--text-gray);
+    }
   </style>
 </head>
 
@@ -1026,25 +1143,40 @@
 
         <!-- Table Employés Actifs -->
         <div class="table-container" style="display: flex; flex-direction: column;">
-          <div class="table-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div class="table-header" style="display: flex; flex-direction: column; gap: 1rem;">
             <h2>
               <i class="fas fa-user-check" style="color: #10b981;"></i>
               Employés actifs
               <span id="compteur-tous-actifs" style="font-size: 0.8rem; color: var(--text-gray); font-weight: 400; margin-left: 0.5rem;">(0)</span>
             </h2>
-            <div style="position: relative; min-width: 200px; max-width: 280px;">
-              <i class="fas fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-gray); font-size: 0.9rem; z-index: 1;"></i>
-              <input type="text" id="tous-actifs-search" placeholder="Rechercher..." oninput="filterTousActifs()" class="search-field-input" style="
-                width: 100%;
-                padding: 12px 16px 12px 42px;
-                border: 2px solid var(--border-dark);
-                border-radius: 12px;
-                background: var(--bg-card);
-                color: var(--text-light);
-                font-size: 0.9rem;
-                min-height: 48px;
-                outline: none;
-              ">
+            <!-- Filtres -->
+            <div style="display: flex; gap: 0.75rem; align-items: end; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 200px;">
+                <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Recherche</label>
+                <input type="text" id="tous-actifs-search" placeholder="Nom, entrepreneur, poste..." onkeyup="filterTousActifs()" class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light); height: 48px;">
+              </div>
+              <div style="min-width: 170px;">
+                <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Date début</label>
+                <div class="custom-date-container" style="position: relative;">
+                  <input type="text" id="filter-date-start-actifs" class="w-full p-2 text-sm rounded-lg cursor-pointer" placeholder="Sélectionner une date" readonly autocomplete="off" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light); height: 48px;">
+                  <div class="custom-calendar hidden" id="calendar-filter-date-start-actifs">
+                    <!-- Calendar content will be generated here -->
+                  </div>
+                </div>
+              </div>
+              <div style="min-width: 170px;">
+                <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Date fin</label>
+                <div class="custom-date-container" style="position: relative;">
+                  <input type="text" id="filter-date-end-actifs" class="w-full p-2 text-sm rounded-lg cursor-pointer" placeholder="Sélectionner une date" readonly autocomplete="off" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light); height: 48px;">
+                  <div class="custom-calendar hidden" id="calendar-filter-date-end-actifs">
+                    <!-- Calendar content will be generated here -->
+                  </div>
+                </div>
+              </div>
+              <button onclick="resetFiltersActifs()" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 0.5rem 1rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s; height: 48px;">
+                <i class="fas fa-times"></i>
+                Réinitialiser
+              </button>
             </div>
           </div>
           <div class="table-body" style="max-height: 400px; overflow-y: auto;">
@@ -1074,25 +1206,40 @@
 
         <!-- Table Employés Terminés -->
         <div class="table-container" style="display: flex; flex-direction: column;">
-          <div class="table-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div class="table-header" style="display: flex; flex-direction: column; gap: 1rem;">
             <h2>
               <i class="fas fa-user-times" style="color: #ef4444;"></i>
               Employés terminés
               <span id="compteur-tous-termines" style="font-size: 0.8rem; color: var(--text-gray); font-weight: 400; margin-left: 0.5rem;">(0)</span>
             </h2>
-            <div style="position: relative; min-width: 200px; max-width: 280px;">
-              <i class="fas fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-gray); font-size: 0.9rem; z-index: 1;"></i>
-              <input type="text" id="tous-termines-search" placeholder="Rechercher..." oninput="filterTousTermines()" class="search-field-input" style="
-                width: 100%;
-                padding: 12px 16px 12px 42px;
-                border: 2px solid var(--border-dark);
-                border-radius: 12px;
-                background: var(--bg-card);
-                color: var(--text-light);
-                font-size: 0.9rem;
-                min-height: 48px;
-                outline: none;
-              ">
+            <!-- Filtres -->
+            <div style="display: flex; gap: 0.75rem; align-items: end; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 200px;">
+                <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Recherche</label>
+                <input type="text" id="tous-termines-search" placeholder="Nom, entrepreneur, poste, motif..." onkeyup="filterTousTermines()" class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light); height: 48px;">
+              </div>
+              <div style="min-width: 170px;">
+                <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Date début</label>
+                <div class="custom-date-container" style="position: relative;">
+                  <input type="text" id="filter-date-start-termines" class="w-full p-2 text-sm rounded-lg cursor-pointer" placeholder="Sélectionner une date" readonly autocomplete="off" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light); height: 48px;">
+                  <div class="custom-calendar hidden" id="calendar-filter-date-start-termines">
+                    <!-- Calendar content will be generated here -->
+                  </div>
+                </div>
+              </div>
+              <div style="min-width: 170px;">
+                <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Date fin</label>
+                <div class="custom-date-container" style="position: relative;">
+                  <input type="text" id="filter-date-end-termines" class="w-full p-2 text-sm rounded-lg cursor-pointer" placeholder="Sélectionner une date" readonly autocomplete="off" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light); height: 48px;">
+                  <div class="custom-calendar hidden" id="calendar-filter-date-end-termines">
+                    <!-- Calendar content will be generated here -->
+                  </div>
+                </div>
+              </div>
+              <button onclick="resetFiltersTermines()" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 0.5rem 1rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s; height: 48px;">
+                <i class="fas fa-times"></i>
+                Réinitialiser
+              </button>
             </div>
           </div>
           <div class="table-body" style="max-height: 400px; overflow-y: auto;">
@@ -2344,13 +2491,36 @@
     // Filtrer les employés actifs
     function filterTousActifs() {
       const searchValue = document.getElementById('tous-actifs-search').value.toLowerCase().trim();
+      const dateStartStr = document.getElementById('filter-date-start-actifs').value;
+      const dateEndStr = document.getElementById('filter-date-end-actifs').value;
+
+      const dateStart = parseDate(dateStartStr);
+      const dateEnd = parseDate(dateEndStr);
 
       const filtered = tousActifsData.filter(emp => {
-        if (!searchValue) return true;
-        const entrepreneur = (emp.entrepreneur || '').toLowerCase();
-        const nom = (emp.nom || '').toLowerCase();
-        const poste = (emp.poste || emp.posteService || '').toLowerCase();
-        return entrepreneur.includes(searchValue) || nom.includes(searchValue) || poste.includes(searchValue);
+        // Filtre par recherche
+        if (searchValue) {
+          const entrepreneur = (emp.entrepreneur || '').toLowerCase();
+          const nom = (emp.nom || '').toLowerCase();
+          const poste = (emp.poste || emp.posteService || '').toLowerCase();
+          if (!entrepreneur.includes(searchValue) && !nom.includes(searchValue) && !poste.includes(searchValue)) {
+            return false;
+          }
+        }
+
+        // Filtre par date d'activation
+        if (dateStart || dateEnd) {
+          const empDateStr = emp.date_activation || emp.dateActivation;
+          if (!empDateStr) return false;
+
+          const empDate = parseDate(empDateStr);
+          if (!empDate) return false;
+
+          if (dateStart && empDate < dateStart) return false;
+          if (dateEnd && empDate > dateEnd) return false;
+        }
+
+        return true;
       });
 
       displayTousActifs(filtered);
@@ -2359,14 +2529,38 @@
     // Filtrer les employés terminés
     function filterTousTermines() {
       const searchValue = document.getElementById('tous-termines-search').value.toLowerCase().trim();
+      const dateStartStr = document.getElementById('filter-date-start-termines').value;
+      const dateEndStr = document.getElementById('filter-date-end-termines').value;
+
+      const dateStart = parseDate(dateStartStr);
+      const dateEnd = parseDate(dateEndStr);
 
       const filtered = tousTerminesData.filter(emp => {
-        if (!searchValue) return true;
-        const entrepreneur = (emp.entrepreneur || '').toLowerCase();
-        const nom = (emp.nom || '').toLowerCase();
-        const poste = (emp.poste || emp.posteService || '').toLowerCase();
-        const motif = (emp.motif_inactivation || '').toLowerCase();
-        return entrepreneur.includes(searchValue) || nom.includes(searchValue) || poste.includes(searchValue) || motif.includes(searchValue);
+        // Filtre par recherche
+        if (searchValue) {
+          const entrepreneur = (emp.entrepreneur || '').toLowerCase();
+          const nom = (emp.nom || '').toLowerCase();
+          const poste = (emp.poste || emp.posteService || '').toLowerCase();
+          const motif = (emp.motif_inactivation || '').toLowerCase();
+          if (!entrepreneur.includes(searchValue) && !nom.includes(searchValue) &&
+              !poste.includes(searchValue) && !motif.includes(searchValue)) {
+            return false;
+          }
+        }
+
+        // Filtre par date de fin
+        if (dateStart || dateEnd) {
+          const empDateStr = emp.date_inactivation || emp.dateInactivation;
+          if (!empDateStr) return false;
+
+          const empDate = parseDate(empDateStr);
+          if (!empDate) return false;
+
+          if (dateStart && empDate < dateStart) return false;
+          if (dateEnd && empDate > dateEnd) return false;
+        }
+
+        return true;
       });
 
       displayTousTermines(filtered);
@@ -4072,7 +4266,215 @@
       if (closeViewer) {
         closeViewer.addEventListener('click', fermerDocumentViewer);
       }
+
+      // Initialiser les calendriers
+      if (document.getElementById('filter-date-start-actifs')) {
+        new CustomCalendar('filter-date-start-actifs', 'calendar-filter-date-start-actifs', filterTousActifs);
+      }
+      if (document.getElementById('filter-date-end-actifs')) {
+        new CustomCalendar('filter-date-end-actifs', 'calendar-filter-date-end-actifs', filterTousActifs);
+      }
+      if (document.getElementById('filter-date-start-termines')) {
+        new CustomCalendar('filter-date-start-termines', 'calendar-filter-date-start-termines', filterTousTermines);
+      }
+      if (document.getElementById('filter-date-end-termines')) {
+        new CustomCalendar('filter-date-end-termines', 'calendar-filter-date-end-termines', filterTousTermines);
+      }
     });
+
+    // Classe CustomCalendar
+    class CustomCalendar {
+      static instances = [];
+
+      constructor(inputId, calendarId, onChangeCallback) {
+        this.inputElement = document.getElementById(inputId);
+        this.calendarElement = document.getElementById(calendarId);
+        this.onChangeCallback = onChangeCallback;
+        this.currentDate = new Date();
+        this.selectedDate = null;
+        this.inputElement.value = '';
+
+        this.monthNames = [
+          'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+          'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+        ];
+
+        this.dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+
+        CustomCalendar.instances.push(this);
+        this.init();
+      }
+
+      init() {
+        this.inputElement.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.showCalendar();
+        });
+
+        document.addEventListener('click', (e) => {
+          if (!this.calendarElement.contains(e.target) && e.target !== this.inputElement) {
+            this.hideCalendar();
+          }
+        });
+      }
+
+      showCalendar() {
+        CustomCalendar.instances.forEach(instance => {
+          if (instance !== this) {
+            instance.hideCalendar();
+          }
+        });
+
+        this.calendarElement.classList.remove('hidden');
+        this.calendarElement.style.setProperty('display', 'block', 'important');
+        this.renderCalendar();
+      }
+
+      hideCalendar() {
+        this.calendarElement.classList.add('hidden');
+      }
+
+      renderCalendar() {
+        const year = this.currentDate.getFullYear();
+        const month = this.currentDate.getMonth();
+
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const prevLastDay = new Date(year, month, 0);
+
+        const firstDayWeek = firstDay.getDay();
+        const lastDateMonth = lastDay.getDate();
+        const prevLastDateMonth = prevLastDay.getDate();
+
+        let calendarHTML = `
+          <div class="calendar-header">
+            <button class="calendar-nav-btn" onclick="event.stopPropagation(); this.closest('.custom-calendar').__calendar.prevMonth()">‹</button>
+            <div class="calendar-month-year">${this.monthNames[month]} ${year}</div>
+            <button class="calendar-nav-btn" onclick="event.stopPropagation(); this.closest('.custom-calendar').__calendar.nextMonth()">›</button>
+          </div>
+          <div class="calendar-weekdays">
+        `;
+
+        this.dayNames.forEach(day => {
+          calendarHTML += `<div class="calendar-weekday">${day}</div>`;
+        });
+
+        calendarHTML += '</div><div class="calendar-days">';
+
+        for (let i = firstDayWeek - 1; i >= 0; i--) {
+          const day = prevLastDateMonth - i;
+          calendarHTML += `<div class="calendar-day other-month">${day}</div>`;
+        }
+
+        const today = new Date();
+        for (let day = 1; day <= lastDateMonth; day++) {
+          const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+          const isSelected = this.selectedDate && day === this.selectedDate.getDate() &&
+                            month === this.selectedDate.getMonth() && year === this.selectedDate.getFullYear();
+
+          let classes = 'calendar-day';
+          if (isToday) classes += ' today';
+          if (isSelected) classes += ' selected';
+
+          calendarHTML += `<div class="${classes}" onclick="event.stopPropagation(); this.closest('.custom-calendar').__calendar.selectDate(${year}, ${month}, ${day})">${day}</div>`;
+        }
+
+        const remainingDays = 42 - (firstDayWeek + lastDateMonth);
+        for (let day = 1; day <= remainingDays; day++) {
+          calendarHTML += `<div class="calendar-day other-month">${day}</div>`;
+        }
+
+        calendarHTML += '</div>';
+        this.calendarElement.innerHTML = calendarHTML;
+        this.calendarElement.__calendar = this;
+      }
+
+      prevMonth() {
+        this.currentDate.setMonth(this.currentDate.getMonth() - 1);
+        this.renderCalendar();
+      }
+
+      nextMonth() {
+        this.currentDate.setMonth(this.currentDate.getMonth() + 1);
+        this.renderCalendar();
+      }
+
+      selectDate(year, month, day) {
+        this.selectedDate = new Date(year, month, day);
+        const formattedDate = this.formatDate(this.selectedDate);
+        this.inputElement.value = formattedDate;
+        this.hideCalendar();
+        if (this.onChangeCallback) {
+          this.onChangeCallback();
+        }
+      }
+
+      formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${day}/${month}/${year}`;
+      }
+
+      parseDate(dateStr) {
+        if (!dateStr) return null;
+        const parts = dateStr.split('/');
+        if (parts.length !== 3) return null;
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const year = parseInt(parts[2], 10);
+        return new Date(year, month, day);
+      }
+
+      reset() {
+        this.selectedDate = null;
+        this.inputElement.value = '';
+        this.currentDate = new Date();
+      }
+    }
+
+    // Fonction helper pour parser les dates DD/MM/YYYY
+    function parseDate(dateStr) {
+      if (!dateStr) return null;
+      const parts = dateStr.split('/');
+      if (parts.length !== 3) return null;
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+      return new Date(year, month, day);
+    }
+
+    // Fonction de réinitialisation des filtres actifs
+    function resetFiltersActifs() {
+      document.getElementById('tous-actifs-search').value = '';
+      document.getElementById('filter-date-start-actifs').value = '';
+      document.getElementById('filter-date-end-actifs').value = '';
+
+      CustomCalendar.instances.forEach(instance => {
+        if (instance.inputElement.id === 'filter-date-start-actifs' ||
+            instance.inputElement.id === 'filter-date-end-actifs') {
+          instance.reset();
+        }
+      });
+
+      filterTousActifs();
+    }
+
+    // Fonction de réinitialisation des filtres terminés
+    function resetFiltersTermines() {
+      document.getElementById('tous-termines-search').value = '';
+      document.getElementById('filter-date-start-termines').value = '';
+      document.getElementById('filter-date-end-termines').value = '';
+
+      CustomCalendar.instances.forEach(instance => {
+        if (instance.inputElement.id === 'filter-date-start-termines' ||
+            instance.inputElement.id === 'filter-date-end-termines') {
+          instance.reset();
+        }
+      });
+
+      filterTousTermines();
+    }
   </script>
 
   <!-- Modal viewer (centraleadmin style) -->

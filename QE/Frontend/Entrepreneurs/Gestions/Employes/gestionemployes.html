@@ -1930,6 +1930,19 @@
           </select>
         </div>
 
+        <!-- Date de fin d'emploi -->
+        <div class="mb-4">
+          <label for="dateFinEmploi" class="block mb-2" style="color: var(--text-light); font-weight: 500;">
+            Date de fin d'emploi <span style="color: #ef4444;">*</span>
+          </label>
+          <div class="custom-date-container" style="position: relative;">
+            <input type="text" id="dateFinEmploi" class="form-input w-full cursor-pointer" placeholder="Sélectionner une date" readonly autocomplete="off" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-light); padding: 0.75rem; border-radius: 8px;">
+            <div class="custom-calendar hidden" id="calendar-date-fin-emploi">
+              <!-- Calendar content will be generated here -->
+            </div>
+          </div>
+        </div>
+
         <!-- Justificatif -->
         <div class="mb-4">
           <label for="justificatifFinEmploi" class="block mb-2" style="color: var(--text-light); font-weight: 500;">
@@ -5591,11 +5604,17 @@
       if (!employeFinEmploiActuel) return;
 
       const motif = document.getElementById('motifFinEmploi').value;
+      const dateFinEmploi = document.getElementById('dateFinEmploi').value;
       const justificatif = document.getElementById('justificatifFinEmploi').value;
       const justificatifLength = justificatif.trim().length;
 
       if (!motif) {
         showNotification('Veuillez sélectionner un motif de fin d\'emploi', 'error');
+        return;
+      }
+
+      if (!dateFinEmploi) {
+        showNotification('Veuillez sélectionner une date de fin d\'emploi', 'error');
         return;
       }
 
@@ -5619,6 +5638,7 @@
           },
           body: JSON.stringify({
             motif: motif,
+            dateFinEmploi: dateFinEmploi,
             justificatif: justificatif
           })
         });
@@ -5640,9 +5660,18 @@
     function fermerModalFinEmploi() {
       document.getElementById('modalFinEmploi').style.display = 'none';
       document.getElementById('motifFinEmploi').value = '';
+      document.getElementById('dateFinEmploi').value = '';
       document.getElementById('justificatifFinEmploi').value = '';
       document.getElementById('justificatifCounter').style.display = 'none';
       document.getElementById('justificatifRequis').style.display = 'none';
+
+      // Réinitialiser le calendrier
+      CustomCalendarGE.instances.forEach(instance => {
+        if (instance.inputElement.id === 'dateFinEmploi') {
+          instance.reset();
+        }
+      });
+
       employeFinEmploiActuel = null;
       document.body.style.overflow = 'auto';
     }
@@ -9893,6 +9922,11 @@
     }
     if (document.getElementById('filter-date-end-termines-ge')) {
       new CustomCalendarGE('filter-date-end-termines-ge', 'calendar-filter-date-end-termines-ge', applyFiltersTermines);
+    }
+
+    // Initialiser le calendrier pour la date de fin d'emploi
+    if (document.getElementById('dateFinEmploi')) {
+      new CustomCalendarGE('dateFinEmploi', 'calendar-date-fin-emploi');
     }
   });
 

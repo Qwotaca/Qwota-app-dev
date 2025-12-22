@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Suivi Coach - Admin</title>
+
+  <!-- PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#1f2937">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Feuille de style principale -->
+  <link rel="stylesheet" href="/base.css">
+
+  <!-- Coach Selector Stylesheet -->
+  <link rel="stylesheet" href="/entrepreneur-selector.css">
+</head>
+
+<body class="min-h-screen">
+
+  <!-- Backdrop pour le sélecteur (fond noir semi-transparent) -->
+  <div id="coach-selector-backdrop"></div>
+
+  <!-- Sélecteur de coach (visible pour direction) -->
+  <div id="coach-entrepreneur-selector">
+    <!-- Titre de la page avec icône -->
+    <div class="page-identity">
+      <div class="page-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3), 0 0 40px rgba(139, 92, 246, 0.15);">
+        <i class="fas fa-user-graduate"></i>
+      </div>
+      <div class="page-name" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #a78bfa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Suivi Coach</div>
+    </div>
+
+    <!-- Titre et sous-titre (visibles uniquement en mode centré) -->
+    <div class="selector-title">
+      <i class="fas fa-user-graduate"></i>
+      Sélectionnez un coach
+    </div>
+    <div class="selector-subtitle">Choisissez le coach dont vous souhaitez consulter le suivi</div>
+
+    <div class="selector-container">
+      <div class="selector-label">
+        <i class="fas fa-user-graduate"></i>
+        <span>Coach:</span>
+      </div>
+      <div class="coach-dropdown">
+        <div class="coach-dropdown-toggle" id="coach-dropdown-toggle">
+          <input type="text" class="search-input" id="search-input" placeholder="Rechercher..." autocomplete="off" style="display: none;">
+          <span class="placeholder">-- Sélectionner un coach --</span>
+          <i class="fas fa-chevron-down chevron"></i>
+        </div>
+        <div class="coach-dropdown-menu" id="coach-dropdown-menu"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div id="main-content" class="w-full" style="padding: 2rem;">
+
+    <!-- Header -->
+    <div class="mb-10">
+      <div class="relative">
+        <h1 class="text-4xl font-bold mb-3">
+          Suivi Coach
+        </h1>
+        <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        <div class="flex items-center justify-between mt-6">
+          <p class="text-xl font-medium">Gestion et suivi des performances du coach sélectionné</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="empty-state" style="padding: 4rem 2rem; text-align: center;">
+      <i class="fas fa-user-graduate" style="font-size: 3rem; color: var(--text-gray); margin-bottom: 1rem;"></i>
+      <p style="color: var(--text-secondary); font-size: 1.125rem;">En développement</p>
+      <p style="color: var(--text-gray); font-size: 0.875rem; margin-top: 0.5rem;">Le contenu de cette page sera ajouté prochainement.</p>
+    </div>
+  </div>
+
+  <script>
+    // ============================================
+    // COACH SELECTOR - Pour la page Suivi Coach
+    // Charge les COACHES pour que la direction puisse sélectionner
+    // ============================================
+
+    (function() {
+      'use strict';
+
+      document.addEventListener('DOMContentLoaded', function() {
+        initCoachSelector();
+      });
+
+      function initCoachSelector() {
+        const userRole = localStorage.getItem('userRole');
+
+        // Only show selector for direction users
+        if (userRole !== 'direction') {
+          return;
+        }
+
+        // Add coach-mode class to body
+        document.body.classList.add('coach-mode');
+
+        // Get DOM elements
+        const selector = document.getElementById('coach-entrepreneur-selector');
+        const backdrop = document.getElementById('coach-selector-backdrop');
+        const dropdownToggle = document.getElementById('coach-dropdown-toggle');
+        const dropdownMenu = document.getElementById('coach-dropdown-menu');
+        const searchInput = document.getElementById('search-input');
+
+        if (!selector || !dropdownToggle || !dropdownMenu) {
+          console.error('[SUIVI COACH] Selector elements not found');
+          return;
+        }
+
+        // Show selector and backdrop
+        selector.classList.add('visible');
+        if (backdrop) {
+          backdrop.classList.add('visible');
+        }
+
+        // Load coaches
+        loadCoaches();
+
+        // Setup event listeners
+        setupCoachSelectorListeners(dropdownToggle, dropdownMenu, searchInput, selector, backdrop);
+      }
+
+      // ============================================
+      // LOAD COACHES
+      // ============================================
+      async function loadCoaches() {
+        try {
+          const response = await fetch('/api/users/coaches');
+          const data = await response.json();
+
+          if (data.success && data.coaches) {
+            console.log('[SUIVI COACH] Coaches chargés:', data.coaches.length);
+            populateCoachDropdown(data.coaches);
+          } else {
+            showNoCoaches();
+          }
+        } catch (error) {
+          console.error('[SUIVI COACH] Erreur chargement coaches:', error);
+          showNoCoaches();
+        }
+      }
+
+      // ============================================
+      // POPULATE DROPDOWN
+      // ============================================
+      function populateCoachDropdown(coaches) {
+        const dropdownMenu = document.getElementById('coach-dropdown-menu');
+
+        if (coaches.length === 0) {
+          showNoCoaches();
+          return;
+        }
+
+        dropdownMenu.innerHTML = '';
+
+        coaches.forEach(coach => {
+          const option = document.createElement('div');
+          option.className = 'coach-dropdown-option';
+          option.dataset.username = coach.username;
+
+          const displayName = coach.prenom && coach.nom
+            ? `${coach.prenom} ${coach.nom} (${coach.username})`
+            : coach.username;
+
+          option.innerHTML = `
+            <span>
+              <i class="fas fa-user-graduate"></i>
+              <span>${displayName}</span>
+            </span>
+          `;
+
+          option.addEventListener('click', function() {
+            selectCoach(coach.username);
+          });
+
+          dropdownMenu.appendChild(option);
+        });
+      }
+
+      // ============================================
+      // SHOW NO COACHES MESSAGE
+      // ============================================
+      function showNoCoaches() {
+        const dropdownMenu = document.getElementById('coach-dropdown-menu');
+        dropdownMenu.innerHTML = `
+          <div class="coach-dropdown-option-disabled">
+            Aucun coach trouvé
+          </div>
+        `;
+      }
+
+      // ============================================
+      // SELECT COACH
+      // ============================================
+      function selectCoach(username) {
+        const dropdownToggle = document.getElementById('coach-dropdown-toggle');
+        const dropdownMenu = document.getElementById('coach-dropdown-menu');
+        const searchInput = document.getElementById('search-input');
+        const selector = document.getElementById('coach-entrepreneur-selector');
+        const backdrop = document.getElementById('coach-selector-backdrop');
+
+        console.log('[SUIVI COACH] Coach sélectionné:', username);
+
+        // Set the selected coach username globally
+        window.selectedCoachUsername = username;
+        window.username = username;
+
+        // Update toggle display
+        let textElement = dropdownToggle.querySelector('.placeholder, .selected-text');
+        if (textElement) {
+          textElement.innerHTML = `<i class="fas fa-check-circle"></i> ${username}`;
+          textElement.classList.remove('placeholder');
+          textElement.classList.add('selected-text');
+          textElement.style.display = 'flex';
+        }
+
+        // Hide search input and show selected text
+        if (searchInput) {
+          searchInput.style.display = 'none';
+          searchInput.value = '';
+        }
+
+        // Close dropdown
+        dropdownToggle.classList.remove('active');
+        dropdownMenu.classList.remove('show');
+        if (searchInput) {
+          searchInput.blur();
+        }
+
+        // Move selector to header
+        selector.classList.add('in-header');
+        document.body.classList.add('has-selection');
+
+        // Hide backdrop
+        if (backdrop) {
+          backdrop.classList.remove('visible');
+        }
+
+        // Load data for selected coach (à implémenter plus tard)
+        console.log('[SUIVI COACH] Chargement des données pour:', username);
+      }
+
+      // ============================================
+      // SETUP EVENT LISTENERS
+      // ============================================
+      function setupCoachSelectorListeners(dropdownToggle, dropdownMenu, searchInput, selector, backdrop) {
+        // Dropdown toggle click
+        dropdownToggle.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const isOpening = !this.classList.contains('active');
+
+          this.classList.toggle('active');
+          dropdownMenu.classList.toggle('show');
+
+          const placeholderEl = dropdownToggle.querySelector('.placeholder, .selected-text');
+
+          if (isOpening && searchInput) {
+            if (placeholderEl) {
+              placeholderEl.style.display = 'none';
+            }
+            searchInput.style.display = '';
+            searchInput.style.removeProperty('display');
+            searchInput.value = '';
+            searchInput.focus();
+          } else if (searchInput) {
+            searchInput.style.display = 'none';
+            searchInput.value = '';
+            searchInput.blur();
+
+            if (placeholderEl) {
+              placeholderEl.style.display = 'flex';
+            }
+
+            const allOptions = dropdownMenu.querySelectorAll('.coach-dropdown-option');
+            allOptions.forEach(opt => opt.style.removeProperty('display'));
+
+            const noResultsMsg = dropdownMenu.querySelector('.no-results-message');
+            if (noResultsMsg) {
+              noResultsMsg.style.display = 'none';
+            }
+          }
+        });
+
+        // Search input
+        if (searchInput) {
+          searchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const allOptions = dropdownMenu.querySelectorAll('.coach-dropdown-option');
+            let visibleCount = 0;
+
+            allOptions.forEach(option => {
+              const text = option.querySelector('span span')?.textContent?.toLowerCase() || '';
+              if (searchTerm === '' || text.includes(searchTerm)) {
+                option.style.display = 'flex';
+                visibleCount++;
+              } else {
+                option.style.display = 'none';
+              }
+            });
+
+            // Show/hide "no results" message
+            let noResultsMsg = dropdownMenu.querySelector('.no-results-message');
+
+            if (visibleCount === 0 && searchTerm !== '') {
+              if (!noResultsMsg) {
+                noResultsMsg = document.createElement('div');
+                noResultsMsg.className = 'coach-dropdown-option-disabled no-results-message';
+                noResultsMsg.textContent = 'Aucun coach trouvé...';
+                dropdownMenu.appendChild(noResultsMsg);
+              }
+              noResultsMsg.style.display = 'block';
+            } else if (noResultsMsg) {
+              noResultsMsg.style.display = 'none';
+            }
+          });
+
+          searchInput.addEventListener('click', function(e) {
+            e.stopPropagation();
+          });
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+          if (!selector.contains(e.target)) {
+            dropdownToggle.classList.remove('active');
+            dropdownMenu.classList.remove('show');
+
+            if (searchInput) {
+              searchInput.style.display = 'none';
+              searchInput.value = '';
+              searchInput.blur();
+
+              const placeholderEl = dropdownToggle.querySelector('.placeholder, .selected-text');
+              if (placeholderEl) {
+                placeholderEl.style.display = 'flex';
+              }
+
+              const allOptions = dropdownMenu.querySelectorAll('.coach-dropdown-option');
+              allOptions.forEach(opt => opt.style.removeProperty('display'));
+
+              const noResultsMsg = dropdownMenu.querySelector('.no-results-message');
+              if (noResultsMsg) {
+                noResultsMsg.style.display = 'none';
+              }
+            }
+          }
+        });
+      }
+
+    })();
+  </script>
+
+</body>
+</html>

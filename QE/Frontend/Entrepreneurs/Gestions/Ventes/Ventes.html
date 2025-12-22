@@ -1,0 +1,1705 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ventes</title>
+  
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#5271ff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#5271ff">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Script Service Worker -->
+  <script>
+  /* Service Worker disabled */
+  </script>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <!-- Variables globales définies dans common.js -->
+  <script>
+    // Ces variables sont maintenant gérées par common.js
+    // username, userRole, canEditParameters sont disponibles globalement
+  </script>
+
+  <!-- ANTI-FLASH: Détection coach AVANT le rendu du body -->
+  <script>
+    (function() {
+      const userRole = localStorage.getItem('userRole');
+      const isCoach = userRole === 'coach';
+      const urlParams = new URLSearchParams(window.location.search);
+      const hasUserParam = urlParams.get('user');
+
+      if (isCoach && !hasUserParam) {
+        // Injecter le CSS immédiatement pour cacher le contenu et afficher le sélecteur
+        const style = document.createElement('style');
+        style.id = 'coach-anti-flash-css';
+        style.textContent = `
+          .main-content {
+            opacity: 0 !important;
+            pointer-events: none !important;
+          }
+          #coach-selector-backdrop {
+            display: block !important;
+            opacity: 1 !important;
+            pointer-events: all !important;
+          }
+          #coach-entrepreneur-selector {
+            display: block !important;
+            opacity: 1 !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    })();
+  </script>
+
+  <!-- CSS uniquement pour le menu latéral -->
+  <link rel="stylesheet" href="/base.css" />
+
+  <!-- Styles centraleadmin pour les sections/tableaux -->
+  <link rel="stylesheet" href="/centraleadmin.css" />
+
+  <!-- Styles spécifiques à Ventes -->
+  <link rel="stylesheet" href="/Ventes.css">
+
+  <!-- Fix pour les modals dans les iframes -->
+  <style>
+    /* Forcer tous les modals à être fixés par rapport au viewport */
+    .modal-overlay, .modal-overlay-opaque, .modal, [class*="modal"] {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      z-index: 9999 !important;
+    }
+
+    .modal-content, .modal-dialog, [class*="modal-content"], [class*="modal-dialog"] {
+      position: fixed !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      max-height: 90vh !important;
+      overflow-y: auto !important;
+      z-index: 10000 !important;
+    }
+
+    /* ============================================
+       COACH SELECTOR - CENTERED STATE (initial)
+       ============================================ */
+    #coach-entrepreneur-selector {
+      position: fixed !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) scale(1);
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%);
+      backdrop-filter: blur(20px);
+      border: 2px solid var(--border-dark);
+      border-radius: 24px;
+      padding: 2.5rem 3rem;
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5), 0 0 100px rgba(139, 92, 246, 0.1);
+      z-index: 10001 !important;
+      display: none;
+      min-width: 450px;
+      max-width: 550px;
+      transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #coach-entrepreneur-selector.visible {
+      display: block !important;
+    }
+
+    /* ============================================
+       COACH SELECTOR - HEADER STATE (after selection)
+       ============================================ */
+    #coach-entrepreneur-selector.in-header {
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      transform: translate(0, 0) scale(1);
+      border-radius: 0;
+      padding: 0.75rem 2rem;
+      min-width: 100%;
+      max-width: 100%;
+      border: none;
+      border-bottom: 2px solid var(--border-dark);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    #coach-entrepreneur-selector .selector-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      transition: all 0.4s ease;
+    }
+
+    #coach-entrepreneur-selector.in-header .selector-container {
+      flex-direction: row;
+      max-width: 1400px;
+      gap: 1rem;
+    }
+
+    /* Titre centré */
+    #coach-entrepreneur-selector .selector-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-light);
+      text-align: center;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      opacity: 1;
+      transition: all 0.4s ease;
+    }
+
+    #coach-entrepreneur-selector .selector-title i {
+      color: var(--primary-blue);
+    }
+
+    #coach-entrepreneur-selector.in-header .selector-title {
+      display: none;
+    }
+
+    /* Sous-titre */
+    #coach-entrepreneur-selector .selector-subtitle {
+      font-size: 0.9rem;
+      color: var(--text-gray);
+      text-align: center;
+      margin-bottom: 1rem;
+      opacity: 1;
+      transition: all 0.4s ease;
+    }
+
+    #coach-entrepreneur-selector.in-header .selector-subtitle {
+      display: none;
+    }
+
+    /* ============================================
+       PAGE IDENTITY - Titre de page stylisé
+       ============================================ */
+    .page-identity {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .page-icon {
+      width: 70px;
+      height: 70px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .page-icon::before {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 23px;
+      background: inherit;
+      opacity: 0.4;
+      z-index: -1;
+    }
+
+    .page-icon i {
+      font-size: 32px;
+      color: #1e293b;
+    }
+
+    .page-name {
+      font-size: 1.75rem;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+
+    /* Cacher l'identité de page quand en mode header */
+    #coach-entrepreneur-selector.in-header .page-identity {
+      display: none;
+    }
+
+    #coach-entrepreneur-selector .selector-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-light);
+      font-weight: 600;
+      font-size: 14px;
+      white-space: nowrap;
+      opacity: 0;
+      transition: all 0.4s ease;
+    }
+
+    #coach-entrepreneur-selector.in-header .selector-label {
+      opacity: 1;
+    }
+
+    #coach-entrepreneur-selector .selector-label i {
+      color: var(--primary-blue);
+      font-size: 18px;
+    }
+
+    /* ============================================
+       OVERLAY BACKDROP
+       ============================================ */
+    #coach-selector-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      z-index: 10000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    #coach-selector-backdrop.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    body.coach-mode.has-selection #coach-selector-backdrop {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* ============================================
+       DROPDOWN - Mode centré (par défaut)
+       ============================================ */
+    .coach-dropdown {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+      transition: all 0.4s ease;
+    }
+
+    #coach-entrepreneur-selector.in-header .coach-dropdown {
+      flex: 1;
+      max-width: 450px;
+    }
+
+    .coach-dropdown-toggle {
+      background: rgba(23, 32, 51, 0.8);
+      border: 2px solid var(--border-dark);
+      border-radius: 16px;
+      padding: 14px 20px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: var(--text-light);
+      font-size: 15px;
+      gap: 0.5rem;
+    }
+
+    #coach-entrepreneur-selector.in-header .coach-dropdown-toggle {
+      height: 44px;
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+    }
+
+    #coach-entrepreneur-selector.in-header .coach-dropdown-toggle:hover {
+      border-color: var(--primary-blue);
+      background: rgba(23, 32, 51, 1);
+    }
+
+    #coach-entrepreneur-selector.in-header .coach-dropdown-toggle.active {
+      border-color: var(--primary-blue);
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+    }
+
+    .coach-dropdown-toggle:hover {
+      border-color: var(--primary-blue);
+      background: rgba(23, 32, 51, 1);
+    }
+
+    .coach-dropdown-toggle.active {
+      border-color: var(--primary-blue);
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+    }
+
+    .coach-dropdown-toggle .placeholder {
+      color: var(--text-gray);
+      flex: 1;
+    }
+
+    .coach-dropdown-toggle .selected-text {
+      color: var(--text-light);
+      font-weight: 500;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .coach-dropdown-toggle .selected-text i {
+      color: var(--primary-green);
+    }
+
+    .coach-dropdown-toggle .chevron {
+      color: var(--text-gray);
+      transition: transform 0.3s ease;
+      font-size: 12px;
+    }
+
+    .coach-dropdown-toggle.active .chevron {
+      transform: rotate(180deg);
+    }
+
+    .coach-dropdown-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      background: var(--bg-card);
+      border: 2px solid var(--border-dark);
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+      z-index: 10000;
+      max-height: 320px;
+      overflow-y: auto;
+      opacity: 0;
+      transform: translateY(-10px);
+      pointer-events: none;
+      transition: all 0.3s ease;
+    }
+
+    .coach-dropdown-menu.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: all;
+    }
+
+    .coach-dropdown-option {
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 14px;
+      color: var(--text-light);
+      border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .coach-dropdown-option:hover {
+      background: rgba(59, 130, 246, 0.15);
+    }
+
+    .coach-dropdown-option:last-child {
+      border-bottom: none;
+    }
+
+    .coach-dropdown-option i {
+      color: var(--primary-green);
+      font-size: 16px;
+    }
+
+    .coach-dropdown-option-disabled {
+      padding: 12px 16px;
+      color: var(--text-gray);
+      font-style: italic;
+      cursor: default;
+      text-align: center;
+    }
+
+    /* ============================================
+       BODY STATES FOR COACH MODE
+       ============================================ */
+    body.coach-mode {
+      padding-top: 0 !important;
+    }
+
+    /* ============================================
+       MAIN CONTENT - Hidden until selection
+       ============================================ */
+    body.coach-mode .main-content {
+      opacity: 0;
+      transform: translateY(30px);
+      pointer-events: none;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body.coach-mode.has-selection .main-content {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: all;
+    }
+
+    /* Pour mobile overlay et autres éléments directs du body */
+    body.coach-mode > .mobile-overlay,
+    body.coach-mode > div:not(#coach-entrepreneur-selector):not(.mobile-overlay) {
+      margin-top: 0 !important;
+    }
+
+    /* Scrollbar personnalisée pour le dropdown */
+    .coach-dropdown-menu::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .coach-dropdown-menu::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 10px;
+    }
+
+    .coach-dropdown-menu::-webkit-scrollbar-thumb {
+      background: var(--primary-blue);
+      border-radius: 10px;
+    }
+
+    .coach-dropdown-menu::-webkit-scrollbar-thumb:hover {
+      background: #60a5fa;
+    }
+
+    /* Forcer les colonnes du tbody à respecter les largeurs du thead */
+    .modern-table {
+      table-layout: fixed !important;
+      width: 100% !important;
+    }
+
+    .modern-table tbody tr td:nth-child(1) { width: 20%; }
+    .modern-table tbody tr td:nth-child(2) { width: 15%; }
+    .modern-table tbody tr td:nth-child(3) { width: 35%; }
+    .modern-table tbody tr td:nth-child(4) { width: 15%; }
+    .modern-table tbody tr td:nth-child(5) { width: 15%; }
+
+    .modern-table td {
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Scroll dans les tbody comme dans employés */
+    .modern-table tbody {
+      display: block;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .modern-table thead,
+    .modern-table tbody tr {
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+    }
+
+    /* Scrollbar personnalisée pour tbody */
+    .modern-table tbody::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    .modern-table tbody::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+    }
+
+    .modern-table tbody::-webkit-scrollbar-thumb {
+      background: var(--primary-blue);
+      border-radius: 10px;
+    }
+
+    .modern-table tbody::-webkit-scrollbar-thumb:hover {
+      background: #60a5fa;
+    }
+  </style>
+  <link rel="stylesheet" href="/entrepreneur-selector.css">
+</head>
+<body class="min-h-screen" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: var(--text-light); overflow-x: hidden; margin: 0; padding: 0;">
+
+  <!-- Mobile overlay for sidebar -->
+  <div class="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+  <!-- Backdrop pour le sélecteur coach (état centré) -->
+  <div id="coach-selector-backdrop"></div>
+
+  <!-- Sélecteur d'entrepreneur (visible uniquement pour les coaches) -->
+  <div id="coach-entrepreneur-selector">
+    <!-- Titre de la page avec icône Ventes -->
+    <div class="page-identity">
+      <div class="page-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3), 0 0 40px rgba(139, 92, 246, 0.15);">
+        <i class="fas fa-chart-line"></i>
+      </div>
+      <div class="page-name" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #a78bfa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Ventes</div>
+    </div>
+
+    <!-- Titre et sous-titre (visibles uniquement en mode centré) -->
+    <div class="selector-title">
+      <i class="fas fa-user-tie"></i>
+      Sélectionnez un entrepreneur
+    </div>
+    <div class="selector-subtitle">Choisissez l'entrepreneur dont vous souhaitez consulter les ventes</div>
+
+    <div class="selector-container">
+      <div class="selector-label">
+        <i class="fas fa-user-tie"></i>
+        <span>Entrepreneur:</span>
+      </div>
+      <div class="coach-dropdown">
+        <div class="coach-dropdown-toggle" id="coach-dropdown-toggle">
+          <input type="text"
+                 class="search-input"
+                 id="search-input"
+                 placeholder="Rechercher..."
+                 autocomplete="off"
+                 style="display: none;">
+          <span class="placeholder">-- Sélectionner un entrepreneur --</span>
+          <i class="fas fa-chevron-down chevron"></i>
+        </div>
+        <div class="coach-dropdown-menu" id="coach-dropdown-menu">
+          <!-- Options chargées dynamiquement -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section en développement (CACHÉE) -->
+  <div class="main-content w-full hidden" style="width: 100%; padding: 2rem;">
+    <div class="flex items-center justify-center" style="min-height: 60vh;">
+      <div class="status-card p-12 text-center max-w-2xl" style="--card-color: var(--primary-blue); background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(51, 65, 85, 0.95) 100%);">
+        <div class="mb-6">
+          <i class="fas fa-tools text-6xl mb-4" style="color: var(--primary-blue);"></i>
+        </div>
+        <h2 class="text-3xl font-bold mb-4" style="color: var(--text-light);">
+          Section Ventes en Développement
+        </h2>
+        <p class="text-lg mb-6" style="color: var(--text-gray);">
+          Cette fonctionnalité est actuellement en cours de développement et sera bientôt disponible.
+        </p>
+        <div class="inline-flex items-center px-6 py-3 rounded-full text-sm font-medium" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);">
+          <i class="fas fa-clock mr-2"></i>
+          Disponible prochainement
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenu principal (VISIBLE) -->
+  <div class="main-content w-full" style="width: 100%; padding: 2rem;">
+    <div class="md:hidden h-4"></div>
+    <div class="w-full">
+    
+      <!-- Header -->
+      <div class="mb-10 mt-5 md:mt-0">
+        <div class="relative">
+          <h1 class="text-4xl font-bold mb-3">
+            Gestion des Ventes
+          </h1>
+          <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+          <div class="flex items-center justify-between">
+            <p class="text-xl font-medium" style="color: var(--text-gray);">
+              <span class="hide-mobile">Gérez vos clients et suivez l'état de vos projets</span>
+              <span class="show-mobile">Gérez vos clients</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+    <!-- Sections Container -->
+    <div id="sections-container" style="display: flex; flex-direction: column; gap: 2rem;">
+
+      <!-- Section 1: Clients potentiels -->
+      <div class="box">
+        <div class="box-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);">
+              <i class="fas fa-user-plus"></i>
+            </div>
+            <h2 class="box-header-title" style="margin: 0;">Clients potentiels</h2>
+          </div>
+          <button id="add-prospect-btn" onclick="ouvrirModalProspect()" class="btn-primary" style="display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-plus"></i>
+            <span>Ajouter un client potentiel</span>
+          </button>
+        </div>
+        <div class="box-body">
+          <!-- Champ de recherche -->
+          <div class="mb-4">
+            <div class="relative">
+              <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: var(--text-gray);"></i>
+              <input type="text" id="searchPotentiel" placeholder="Rechercher par nom, téléphone, adresse, prix..." class="w-full pl-10 pr-4 py-2 rounded-lg" style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-dark); color: var(--text-light);">
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="modern-table" style="table-layout: fixed; width: 100%;">
+              <thead>
+                <tr>
+                  <th style="width: 20%; padding: 1rem;">Nom</th>
+                  <th style="width: 15%; padding: 1rem;">Téléphone</th>
+                  <th style="width: 35%; padding: 1rem;">Adresse</th>
+                  <th style="width: 15%; padding: 1rem;">Prix</th>
+                  <th style="width: 15%; padding: 1rem;">Paiement</th>
+                </tr>
+              </thead>
+              <tbody id="potentiel-tbody">
+                <tr>
+                  <td colspan="5" class="empty-state">
+                    <i class="fas fa-user-plus" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
+                    <p style="font-size: 1rem;">Aucun client potentiel</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: En attente -->
+      <div class="box">
+        <div class="box-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+              <i class="fas fa-clock"></i>
+            </div>
+            <h2 class="box-header-title" style="margin: 0;">En attente</h2>
+          </div>
+        </div>
+        <div class="box-body">
+          <!-- Champ de recherche -->
+          <div class="mb-4">
+            <div class="relative">
+              <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: var(--text-gray);"></i>
+              <input type="text" id="searchAttente" placeholder="Rechercher par nom, téléphone, adresse, prix..." class="w-full pl-10 pr-4 py-2 rounded-lg" style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-dark); color: var(--text-light);">
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="modern-table" style="table-layout: fixed; width: 100%;">
+              <thead>
+                <tr>
+                  <th style="width: 20%; padding: 1rem;">Nom</th>
+                  <th style="width: 15%; padding: 1rem;">Téléphone</th>
+                  <th style="width: 35%; padding: 1rem;">Adresse</th>
+                  <th style="width: 15%; padding: 1rem;">Prix</th>
+                  <th style="width: 15%; padding: 1rem;">Paiement</th>
+                </tr>
+              </thead>
+              <tbody id="attente-tbody">
+                <tr>
+                  <td colspan="5" class="empty-state">
+                    <i class="fas fa-clock" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
+                    <p style="font-size: 1rem;">Aucun client en attente</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Acceptés -->
+      <div class="box">
+        <div class="box-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+              <i class="fas fa-check"></i>
+            </div>
+            <h2 class="box-header-title" style="margin: 0;">Acceptés</h2>
+          </div>
+        </div>
+        <div class="box-body">
+          <!-- Champ de recherche -->
+          <div class="mb-4">
+            <div class="relative">
+              <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: var(--text-gray);"></i>
+              <input type="text" id="searchAccepte" placeholder="Rechercher par nom, téléphone, adresse, prix..." class="w-full pl-10 pr-4 py-2 rounded-lg" style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-dark); color: var(--text-light);">
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="modern-table" style="table-layout: fixed; width: 100%;">
+              <thead>
+                <tr>
+                  <th style="width: 20%; padding: 1rem;">Nom</th>
+                  <th style="width: 15%; padding: 1rem;">Téléphone</th>
+                  <th style="width: 35%; padding: 1rem;">Adresse</th>
+                  <th style="width: 15%; padding: 1rem;">Prix</th>
+                  <th style="width: 15%; padding: 1rem;">Paiement</th>
+                </tr>
+              </thead>
+              <tbody id="accepte-tbody">
+                <tr>
+                  <td colspan="5" class="empty-state">
+                    <i class="fas fa-check-circle" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
+                    <p style="font-size: 1rem;">Aucun client accepté</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 4: Produits -->
+      <div class="box">
+        <div class="box-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+              <i class="fas fa-box"></i>
+            </div>
+            <h2 class="box-header-title" style="margin: 0;">Produits</h2>
+          </div>
+        </div>
+        <div class="box-body">
+          <!-- Champ de recherche -->
+          <div class="mb-4">
+            <div class="relative">
+              <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: var(--text-gray);"></i>
+              <input type="text" id="searchProduit" placeholder="Rechercher par nom, téléphone, adresse, prix..." class="w-full pl-10 pr-4 py-2 rounded-lg" style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-dark); color: var(--text-light);">
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="modern-table" style="table-layout: fixed; width: 100%;">
+              <thead>
+                <tr>
+                  <th style="width: 20%; padding: 1rem;">Nom</th>
+                  <th style="width: 15%; padding: 1rem;">Téléphone</th>
+                  <th style="width: 35%; padding: 1rem;">Adresse</th>
+                  <th style="width: 15%; padding: 1rem;">Prix</th>
+                  <th style="width: 15%; padding: 1rem;">Paiement</th>
+                </tr>
+              </thead>
+              <tbody id="produit-tbody">
+                <tr>
+                  <td colspan="5" class="empty-state">
+                    <i class="fas fa-box" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
+                    <p style="font-size: 1rem;">Aucun client produit</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    </div>
+  </div>
+
+  <!-- Modal informations client -->
+  <div id="clientInfoModal" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none;">
+    <div id="clientInfoCard" class="status-card p-6 max-w-lg w-full" style="max-height: 90vh; overflow-y: auto;">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i id="clientInfoIcon" class="fas fa-user mr-2"></i>
+          Informations client
+        </h3>
+        <button id="clientInfoCloseBtn" onclick="closeClientInfo()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div id="clientInfoContent" class="space-y-4">
+        <!-- Le contenu sera inséré ici par JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal confirmation clôture -->
+  <div id="confirmationModal" class="flex" style="display:none;">
+    <div class="modal-content">
+      <p class="text-lg font-semibold">Confirmer que le projet est terminé ?</p>
+      <div class="modal-buttons">
+        <button id="modalConfirm" type="button" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-800">Oui</button>
+        <button id="modalCancel" type="button" class="px-4 py-2 bg-white text-gray-600 border border-gray-300 rounded hover:bg-gray-50">Non</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal confirmation retour -->
+  <div id="retourModal" class="flex" style="display:none;">
+    <div class="modal-content">
+      <p class="text-lg font-semibold">Êtes-vous sûr de retourner en arrière ?</p>
+      <p class="text-sm text-gray-600 mt-2">Le courriel d'avis a déjà été envoyé au client.</p>
+      <div class="modal-buttons">
+        <button id="retourConfirm" type="button" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-800">Oui</button>
+        <button id="retourCancel" type="button" class="px-4 py-2 bg-white text-gray-600 border border-gray-300 rounded hover:bg-gray-50">Non</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Ajouter un prospect -->
+  <div id="ajouterProspectModal" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none;">
+    <div class="status-card p-6 max-w-md w-full" style="max-height: 90vh; overflow-y: auto;">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i class="fas fa-user-plus mr-2" style="color: var(--primary-blue);"></i>
+          Ajouter un client potentiel
+        </h3>
+        <button onclick="fermerModalProspect()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);" onmouseover="this.style.background='rgba(96, 165, 250, 0.3)'" onmouseout="this.style.background='rgba(96, 165, 250, 0.2)'">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <form id="prospectForm" class="space-y-4" autocomplete="off">
+        <!-- Prénom -->
+        <div>
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Prénom *</label>
+          <input type="text" id="prospectPrenom" name="prospect-first-name" required autocomplete="new-password" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly');"
+                 class="w-full p-2 text-sm rounded-lg" 
+                 style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"
+                 placeholder="Ex: Jean">
+        </div>
+        
+        <!-- Nom -->
+        <div>
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Nom *</label>
+          <input type="text" id="prospectNom" name="prospect-last-name" required autocomplete="new-password" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly');"
+                 class="w-full p-2 text-sm rounded-lg" 
+                 style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"
+                 placeholder="Ex: Dupont">
+        </div>
+        
+        <!-- Téléphone -->
+        <div>
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Téléphone *</label>
+          <input type="tel" id="prospectTelephone" name="telephone" required autocomplete="off" autocapitalize="off" spellcheck="false"
+                 class="w-full p-2 text-sm rounded-lg"
+                 style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);"
+                 placeholder="Ex: 450-123-4567" maxlength="12">
+        </div>
+        
+        <!-- Adresse -->
+        <div>
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Adresse *</label>
+          <input type="text" id="prospectAdresse" name="prospect-address-field-unique-12345" required autocomplete="new-password" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly');" data-form-type="other" placeholder="Ex: 123 Rue de la Paix, Montréal, QC"
+                    class="w-full p-2 text-sm rounded-lg"
+                    style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);">
+        </div>
+        
+        <!-- Boutons -->
+        <div class="flex space-x-3 pt-4">
+          <button type="button" onclick="fermerModalProspect()" 
+                  class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
+            Annuler
+          </button>
+          <button type="submit" 
+                  class="btn-primary px-4 py-2 rounded-lg relative overflow-hidden">
+            <span>Ajouter</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal confirmation Marquer comme perdu -->
+  <div id="confirmPerduModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
+    <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+      <div class="mb-6">
+        <h3 class="text-xl font-bold mb-2" style="color: var(--text-light);">
+          <i class="fas fa-exclamation-triangle mr-2" style="color: #ef4444;"></i>
+          Confirmer la perte du client
+        </h3>
+        <p style="color: var(--text-gray);">Êtes-vous sûr de vouloir marquer ce client comme perdu ?</p>
+      </div>
+
+      <div class="flex space-x-3">
+        <button onclick="confirmMarquerPerdu()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: #ef4444; color: white;">
+          Oui
+        </button>
+        <button onclick="closeConfirmPerduModal()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: rgba(148, 163, 184, 0.2); color: var(--text-light);">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal confirmation Production terminée -->
+  <div id="confirmProductionModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
+    <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+      <div class="mb-6">
+        <h3 class="text-xl font-bold mb-2" style="color: var(--text-light);">
+          <i class="fas fa-check-circle mr-2" style="color: #10b981;"></i>
+          Confirmer la production terminée
+        </h3>
+        <p style="color: var(--text-gray);">Êtes-vous sûr que la production est terminée pour ce client ?</p>
+      </div>
+
+      <div class="flex space-x-3">
+        <button onclick="confirmTerminerProduction()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: #10b981; color: white;">
+          Oui
+        </button>
+        <button onclick="closeConfirmProductionModal()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: rgba(148, 163, 184, 0.2); color: var(--text-light);">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Clients perdus -->
+  <div id="clients-perdus-modal" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none;" onclick="if(event.target === this) closeClientsPerdusModal();">
+    <div class="status-card p-6 max-w-3xl w-full" style="max-height: 90vh; overflow-y: auto;">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i class="fas fa-user-times mr-2" style="color: #ef4444;"></i>
+          Clients perdus
+        </h3>
+        <button onclick="closeClientsPerdusModal(); event.stopPropagation();" type="button" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; cursor: pointer; border: none;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <!-- Barre de recherche -->
+      <div class="mb-4">
+        <div class="relative">
+          <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2" style="color: var(--text-gray);"></i>
+          <input type="text" id="perdus-search" placeholder="Rechercher par nom, téléphone, adresse..."
+            class="w-full pl-10 pr-4 py-2 rounded-lg"
+            style="background: var(--bg-tertiary); border: 1px solid var(--border-dark); color: var(--text-light); padding-left: 2.5rem !important;"
+            oninput="filtrerClientsPerdus(this.value)">
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="modern-table" style="table-layout: fixed; width: 100%;">
+          <thead>
+            <tr>
+              <th style="width: 22%; padding: 1rem;">Nom</th>
+              <th style="width: 18%; padding: 1rem;">Téléphone</th>
+              <th style="width: 30%; padding: 1rem;">Adresse</th>
+              <th style="width: 12%; padding: 1rem;">Prix</th>
+              <th style="width: 18%; padding: 1rem; text-align: center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="perdus-modal-tbody">
+            <tr>
+              <td colspan="5" class="empty-state">
+                <i class="fas fa-user-times" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
+                <p style="font-size: 1rem;">Aucun client perdu</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal confirmation Annulation client accepté -->
+  <div id="confirmAnnulationModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
+    <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+      <div class="mb-6">
+        <h3 class="text-xl font-bold mb-2" style="color: var(--text-light);">
+          <i class="fas fa-exclamation-triangle mr-2" style="color: #ef4444;"></i>
+          Confirmer l'annulation
+        </h3>
+        <p style="color: var(--text-gray);">Êtes-vous sûr de vouloir annuler ce client ? Il sera déplacé vers les clients perdus.</p>
+      </div>
+
+      <div class="flex space-x-3">
+        <button onclick="confirmAnnulerClient()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: #ef4444; color: white;">
+          Oui
+        </button>
+        <button onclick="closeConfirmAnnulationModal()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: rgba(148, 163, 184, 0.2); color: var(--text-light);">
+          Non
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal confirmation suppression prospect -->
+  <div id="confirmDeleteProspectModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
+    <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+      <div class="mb-6">
+        <h3 class="text-xl font-bold mb-2" style="color: var(--text-light);">
+          <i class="fas fa-exclamation-triangle mr-2" style="color: #ef4444;"></i>
+          Confirmer la suppression
+        </h3>
+        <p style="color: var(--text-gray);">Êtes-vous sûr de vouloir supprimer ce client potentiel ?</p>
+      </div>
+
+      <div class="flex space-x-3">
+        <button onclick="confirmDeleteProspect()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: #ef4444; color: white;">
+          Oui
+        </button>
+        <button onclick="closeConfirmDeleteProspectModal()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: rgba(148, 163, 184, 0.2); color: var(--text-light);">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal confirmation suppression client perdu -->
+  <div id="confirmDeletePerduModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
+    <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+      <div class="mb-6">
+        <h3 class="text-xl font-bold mb-2" style="color: var(--text-light);">
+          <i class="fas fa-exclamation-triangle mr-2" style="color: #ef4444;"></i>
+          Confirmer la suppression
+        </h3>
+        <p id="confirmDeletePerduText" style="color: var(--text-gray);"></p>
+      </div>
+
+      <div class="flex space-x-3">
+        <button onclick="confirmDeleteClientPerdu()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: #ef4444; color: white;">
+          Oui
+        </button>
+        <button onclick="closeConfirmDeletePerduModal()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: rgba(148, 163, 184, 0.2); color: var(--text-light);">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal confirmation récupération client perdu -->
+  <div id="confirmRecupererModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
+    <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+      <div class="mb-6">
+        <h3 class="text-xl font-bold mb-2" style="color: var(--text-light);">
+          <i class="fas fa-undo mr-2" style="color: #10b981;"></i>
+          Récupérer ce client ?
+        </h3>
+        <p id="confirmRecupererText" style="color: var(--text-gray);">Vous allez être redirigé vers la page soumission pour renvoyer une nouvelle soumission à ce client.</p>
+      </div>
+
+      <div class="flex space-x-3">
+        <button onclick="confirmRecupererClientPerdu()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: #10b981; color: white;">
+          Oui
+        </button>
+        <button onclick="closeConfirmRecupererModal()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: rgba(148, 163, 184, 0.2); color: var(--text-light);">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Attendre que common.js soit initialisé au lieu de rediriger
+  function checkUsername() {
+    if (!window.username) {
+      // Réessayer dans 100ms si common.js n'est pas encore prêt
+      setTimeout(checkUsername, 100);
+      return;
+    }
+    // Username disponible, continuer avec l'initialisation de la page
+    console.log('Username disponible:', window.username);
+  }
+  
+  // Lancer la vérification avec un délai initial
+  setTimeout(checkUsername, 200);
+
+  function formaterPrix(valeur) {
+    if (!valeur) return "-";
+    let nombre = Number(valeur.toString().replace(/\s/g, '').replace(',', '.'));
+    if (isNaN(nombre)) return valeur;
+    return nombre.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " $";
+  }
+
+  window.addEventListener("load", () => {
+    // Dropdown compte géré par l'event listener DOMContentLoaded plus bas
+    
+    if (window.username && window.usernameDisplay) {
+      window.usernameDisplay.textContent = "Compte: " + window.username;
+    }
+
+    // Variables pour gérer l'ID du travail à clôturer
+    let eventIdToClose = null;
+
+    // Code legacy supprimé - nous utilisons maintenant le système de cartes
+    // Recherches supprimées - système de cartes utilisé maintenant
+  });
+
+  // Anciennes fonctions supprimées - utiliser les nouvelles à partir de la ligne 1829
+</script>
+
+  <!-- Script pour toggle clients perdus -->
+  <script>
+    // Variable pour stocker l'état du modal
+    let perdusModalOpen = false;
+
+    function toggleClientsPerdus() {
+      const modal = document.getElementById('clients-perdus-modal');
+      if (!modal) return;
+
+      perdusModalOpen = true;
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden'; // Bloquer le scroll en arrière-plan
+      chargerClientsPerdus();
+    }
+
+    function closeClientsPerdusModal() {
+      const modal = document.getElementById('clients-perdus-modal');
+      if (!modal) return;
+
+      perdusModalOpen = false;
+      modal.style.display = 'none';
+      document.body.style.overflow = ''; // Rétablir le scroll
+    }
+
+    // Variable globale pour stocker les clients perdus
+    let allClientsPerdus = [];
+
+    async function chargerClientsPerdus() {
+      try {
+        const response = await fetch(`${window.location.origin}/clients-perdus/${window.username}`);
+        allClientsPerdus = await response.json();
+
+        afficherClientsPerdus(allClientsPerdus);
+      } catch (error) {
+        console.error('Erreur chargement clients perdus:', error);
+      }
+    }
+
+    function afficherClientsPerdus(clientsPerdus) {
+      const tbody = document.getElementById('perdus-modal-tbody');
+      if (!tbody) return;
+
+      if (!clientsPerdus || clientsPerdus.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="empty-state">
+              <i class="fas fa-user-times" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
+              <p style="font-size: 1rem;">Aucun client perdu</p>
+            </td>
+          </tr>
+        `;
+      } else {
+        tbody.innerHTML = clientsPerdus.map((client, index) => {
+          const clientId = client.id || `${client.prenom || client.clientPrenom}_${client.nom || client.clientNom}_${client.telephone}`;
+          // Supporter les deux formats de nom: prenom/nom ou clientPrenom/clientNom
+          const prenom = client.prenom || client.clientPrenom || '';
+          const nom = client.nom || client.clientNom || '';
+          const nomComplet = `${prenom} ${nom}`.trim() || 'N/A';
+          return `
+          <tr>
+            <td data-label="Nom" style="padding: 1rem;">${nomComplet}</td>
+            <td data-label="Téléphone" style="padding: 1rem;">${client.telephone || '-'}</td>
+            <td data-label="Adresse" style="padding: 1rem;">${client.adresse || '-'}</td>
+            <td data-label="Prix" style="padding: 1rem;">${client.prix || '-'}</td>
+            <td data-label="Actions" style="padding: 0.75rem;">
+              <div style="display: flex; gap: 8px; justify-content: center;">
+                <button onclick="recupererClientPerdu('${clientId}')" title="Récupérer" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(16, 185, 129, 0.3)'" onmouseout="this.style.background='rgba(16, 185, 129, 0.15)'">
+                  <i class="fas fa-undo"></i>
+                </button>
+                <button onclick="supprimerClientPerdu('${prenom}', '${nom}', '${client.telephone || ''}')" title="Supprimer" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.15)'">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `}).join('');
+      }
+    }
+
+    function filtrerClientsPerdus(searchTerm) {
+      if (!searchTerm || searchTerm.trim() === '') {
+        afficherClientsPerdus(allClientsPerdus);
+        return;
+      }
+
+      const term = searchTerm.toLowerCase().trim();
+      const filtered = allClientsPerdus.filter(client => {
+        const prenom = client.prenom || client.clientPrenom || '';
+        const nomClient = client.nom || client.clientNom || '';
+        const nom = `${prenom} ${nomClient}`.toLowerCase();
+        const telephone = (client.telephone || '').toLowerCase();
+        const adresse = (client.adresse || '').toLowerCase();
+        const prix = (client.prix || '').toString().toLowerCase();
+        return nom.includes(term) || telephone.includes(term) || adresse.includes(term) || prix.includes(term);
+      });
+
+      afficherClientsPerdus(filtered);
+    }
+
+    // Variable pour stocker l'ID du client à récupérer
+    let clientIdToRecuperer = null;
+
+    // Récupérer un client perdu (ouvre le modal de confirmation)
+    function recupererClientPerdu(clientId) {
+      // Trouver le client dans la liste
+      const client = allClientsPerdus.find(c => {
+        const prenom = c.prenom || c.clientPrenom || '';
+        const nom = c.nom || c.clientNom || '';
+        const id = c.id || `${prenom}_${nom}_${c.telephone}`;
+        return id === clientId;
+      });
+
+      if (!client) {
+        alert('Client non trouvé');
+        return;
+      }
+
+      // Stocker l'ID pour la confirmation
+      clientIdToRecuperer = clientId;
+
+      // Afficher le nom dans le modal
+      const prenom = client.prenom || client.clientPrenom || '';
+      const nom = client.nom || client.clientNom || '';
+      const clientNom = `${prenom} ${nom}`.trim() || 'ce client';
+      document.getElementById('confirmRecupererText').textContent = `Voulez-vous récupérer ${clientNom} ? Vous serez redirigé vers la page soumission pour renvoyer une nouvelle soumission.`;
+      document.getElementById('confirmRecupererModal').style.display = 'flex';
+    }
+
+    // Fermer le modal de récupération
+    window.closeConfirmRecupererModal = function() {
+      document.getElementById('confirmRecupererModal').style.display = 'none';
+      clientIdToRecuperer = null;
+    }
+
+    // Confirmer la récupération du client perdu
+    window.confirmRecupererClientPerdu = async function() {
+      if (!clientIdToRecuperer) return;
+
+      const clientId = clientIdToRecuperer;
+
+      // Trouver le client
+      const client = allClientsPerdus.find(c => {
+        const prenom = c.prenom || c.clientPrenom || '';
+        const nom = c.nom || c.clientNom || '';
+        const id = c.id || `${prenom}_${nom}_${c.telephone}`;
+        return id === clientId;
+      });
+
+      if (!client) {
+        closeConfirmRecupererModal();
+        alert('Client non trouvé');
+        return;
+      }
+
+      try {
+        // Retirer de clients perdus
+        const response = await fetch(`${window.location.origin}/retirer-client-perdu`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: window.username,
+            clientOriginalId: clientId
+          })
+        });
+
+        if (!response.ok) throw new Error('Erreur lors de la récupération');
+
+        // Stocker les infos du client pour pré-remplir la soumission
+        const clientData = {
+          prenom: client.prenom || client.clientPrenom || '',
+          nom: client.nom || client.clientNom || '',
+          telephone: client.telephone || '',
+          adresse: client.adresse || '',
+          courriel: client.courriel || client.email || '',
+          prix: client.prix || ''
+        };
+        localStorage.setItem('recuperationClient', JSON.stringify(clientData));
+
+        // Fermer les modals
+        closeConfirmRecupererModal();
+        closeClientsPerdusModal();
+
+        // Rediriger vers la page de soumission via le routeur parent (même logique que calcul.html)
+        if (window.parent && window.parent !== window) {
+          // On est dans un iframe - utiliser le hash du parent pour déclencher le routeur
+          window.parent.location.hash = '#/soumissions';
+        } else {
+          // Fallback si pas dans un iframe
+          window.location.href = '/soumissions';
+        }
+
+      } catch (error) {
+        console.error('Erreur récupération client:', error);
+        alert('Erreur lors de la récupération du client');
+      }
+    }
+
+    // Supprimer définitivement un client perdu
+    async function supprimerClientPerdu(prenom, nom, telephone) {
+      if (!confirm(`Voulez-vous supprimer définitivement ${prenom} ${nom} de la liste des clients perdus ?`)) return;
+
+      try {
+        const response = await fetch(`${window.location.origin}/supprimer-client-perdu`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: window.username,
+            prenom: prenom,
+            nom: nom,
+            telephone: telephone
+          })
+        });
+
+        if (!response.ok) throw new Error('Erreur lors de la suppression');
+
+        // Recharger la liste
+        await chargerClientsPerdus();
+
+      } catch (error) {
+        console.error('Erreur suppression client perdu:', error);
+        alert('Erreur lors de la suppression');
+      }
+    }
+  </script>
+
+  <!-- Script pour gestion menu actif -->
+  <script>
+    // Fonction pour activer le menu basé sur la page actuelle
+    function activateCurrentPageMenu() {
+      const currentPath = window.location.pathname;
+      console.log('🌐 Page actuelle détectée:', currentPath);
+      
+      const allMenuLinks = document.querySelectorAll('#sidebar a');
+      allMenuLinks.forEach(link => {
+        link.classList.remove('menu-active');
+        link.removeAttribute('data-menu-state');
+      });
+      
+      const pageMap = {
+        '/dashboard': '/dashboard',
+        '/centralevue': '/centralevue', 
+        '/calcul': '/calcul',
+        '/soumissions': '/soumissions',
+        '/gqp': '/gqp',
+        '/travaux': '/travaux',
+        '/facture': '/facture',
+        '/avis': '/avis',
+        '/centrale': '/centrale',
+        '/dashboardcoach': '/dashboardcoach'
+      };
+      
+      const targetPath = pageMap[currentPath];
+      let targetLink = null;
+      
+      if (targetPath) {
+        targetLink = document.querySelector(`#sidebar a[data-path="${targetPath}"]`);
+        console.log('[TARGET] Page détectée - activation du menu pour:', targetPath);
+      }
+      
+      if (targetLink) {
+        targetLink.classList.add('menu-active');
+        targetLink.setAttribute('data-menu-state', 'active');
+        console.log('[OK] Menu activé pour:', targetLink.textContent.trim());
+      } else {
+        console.log('[WARN] Aucun menu trouvé pour la page:', currentPath);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      activateCurrentPageMenu();
+      setTimeout(activateCurrentPageMenu, 150);
+      setTimeout(activateCurrentPageMenu, 300);
+    });
+
+    // Menu mobile functions - EXACT COPY from newgqp
+    function setupMobileMenu() {
+      const mobileToggle = document.getElementById('mobile-menu-toggle');
+      const mobileAccountBtn = document.getElementById('mobile-account-menu-button');
+      const mobileAccountDropdown = document.getElementById('mobile-account-dropdown');
+      
+      if (mobileToggle) {
+        mobileToggle.addEventListener('click', toggleMobileMenu);
+      }
+      
+      if (mobileAccountBtn && mobileAccountDropdown) {
+        mobileAccountBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          mobileAccountDropdown.classList.toggle('hidden');
+        });
+      }
+    }
+
+    function toggleMobileMenu() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.querySelector('.mobile-overlay');
+      
+      sidebar.classList.toggle('mobile-open');
+      overlay.classList.toggle('active');
+    }
+
+    window.closeMobileMenu = function() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.querySelector('.mobile-overlay');
+
+      if (sidebar) {
+        sidebar.classList.remove('mobile-open');
+      }
+      if (overlay) {
+        overlay.classList.remove('active');
+      }
+    }
+
+    // Account dropdown functionality - EXACT COPY from newgqp
+    document.addEventListener('DOMContentLoaded', function() {
+      const btn = document.getElementById("account-dropdown-toggle");
+      const dropdown = document.getElementById("account-dropdown");
+
+      console.log('[DEBUG] Bouton account trouvé:', btn);
+      console.log('[DEBUG] Dropdown trouvé:', dropdown);
+
+      if (btn && dropdown) {
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('👆 Click sur account button');
+          
+          if (dropdown.classList.contains("hidden")) {
+            dropdown.classList.remove("hidden");
+            dropdown.style.display = 'block';
+            dropdown.style.visibility = 'visible';
+            console.log('[UNLOCK] Dropdown ouvert');
+          } else {
+            dropdown.classList.add("hidden");
+            dropdown.style.display = 'none';
+            console.log('[LOCK] Dropdown fermé');
+          }
+        });
+
+        document.addEventListener("click", (e) => {
+          if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add("hidden");
+          }
+        });
+      }
+
+      // Setup mobile menu
+      setupMobileMenu();
+    });
+  </script>
+
+  <!-- Script commun de gestion des permissions et interface -->
+  <script src="/common.js"></script>
+
+  <!-- Inline entrepreneur selector script removed - now handled by shared /entrepreneur-selector.js -->
+
+<!-- Styles pour Google Places Autocomplete -->
+<!-- Styles spécifiques à Ventes -->
+
+<!-- Google Places API et Autocomplétion Adresse -->
+<script>
+  // Variable globale pour tracker si une adresse Google a été sélectionnée
+  window.googleProspectAddressSelected = false;
+
+  window.initProspectAutocomplete = function() {
+    const input = document.getElementById('prospectAdresse');
+    if (!input) return;
+
+    // Forcer la désactivation de l'autocomplete navigateur
+    input.setAttribute('autocomplete', 'new-password');
+    input.setAttribute('autocorrect', 'off');
+    input.setAttribute('autocapitalize', 'off');
+    input.setAttribute('spellcheck', 'false');
+
+    const autocomplete = new google.maps.places.Autocomplete(input, {
+      types: ['address'],
+      componentRestrictions: { country: 'ca' }
+    });
+
+    // Reset flag when user types manually
+    input.addEventListener('input', () => {
+      window.googleProspectAddressSelected = false;
+      // Réappliquer les attributs anti-autocomplete
+      input.setAttribute('autocomplete', 'new-password');
+    });
+
+    // Supprimer l'autocomplete navigateur sur focus
+    input.addEventListener('focus', () => {
+      input.setAttribute('autocomplete', 'new-password');
+      input.removeAttribute('readonly');
+    });
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (!place.geometry) {
+        console.log("Adresse invalide");
+        window.googleProspectAddressSelected = false;
+        return;
+      }
+
+      // Marquer qu'une adresse Google a été sélectionnée
+      window.googleProspectAddressSelected = true;
+
+      const components = place.address_components;
+      let streetNumber = '';
+      let route = '';
+      let city = '';
+      let province = '';
+      let postalCode = '';
+
+      components.forEach(component => {
+        const types = component.types;
+
+        if (types.includes('street_number')) {
+          streetNumber = component.long_name;
+        }
+        if (types.includes('route')) {
+          route = component.long_name;
+        }
+        if (types.includes('locality')) {
+          city = component.long_name;
+        }
+        if (types.includes('administrative_area_level_1')) {
+          province = component.short_name;
+        }
+        if (types.includes('postal_code')) {
+          postalCode = component.long_name;
+        }
+      });
+
+      const fullAddress = `${streetNumber} ${route}, ${city}, ${province} ${postalCode}`;
+      input.value = fullAddress.trim();
+    });
+  };
+
+  // Fonctions de recherche pour les tables
+  function setupTableSearch(searchInputId, tableId) {
+    const searchInput = document.getElementById(searchInputId);
+    const tbody = document.getElementById(tableId);
+
+    if (!searchInput || !tbody) return;
+
+    searchInput.addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase().trim();
+      const rows = tbody.getElementsByTagName('tr');
+
+      Array.from(rows).forEach(row => {
+        // Ignorer les lignes "empty-state"
+        if (row.querySelector('.empty-state')) {
+          return;
+        }
+
+        const cells = row.getElementsByTagName('td');
+        let found = false;
+
+        // Rechercher dans toutes les cellules (nom, téléphone, adresse, prix, paiement)
+        Array.from(cells).forEach(cell => {
+          const text = cell.textContent.toLowerCase();
+          if (text.includes(searchTerm)) {
+            found = true;
+          }
+        });
+
+        // Afficher ou cacher la ligne selon le résultat
+        row.style.display = found ? '' : 'none';
+      });
+    });
+  }
+
+  // Initialiser la recherche pour toutes les tables après le chargement de la page
+  document.addEventListener('DOMContentLoaded', function() {
+    // Attendre un peu pour s'assurer que les tables sont chargées
+    setTimeout(function() {
+      setupTableSearch('searchPotentiel', 'potentiel-tbody');
+      setupTableSearch('searchAttente', 'attente-tbody');
+      setupTableSearch('searchAccepte', 'accepte-tbody');
+      setupTableSearch('searchProduit', 'produit-tbody');
+    }, 500);
+  });
+</script>
+
+  <!-- Modaux pour gestion sections -->
+  <div id="sectionModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 700px;">
+      <h3 class="modal-title">
+        <i class="fas fa-icons mr-2"></i>
+        Choisir une icône
+      </h3>
+      <div class="modal-body">
+        <div id="iconGrid" class="icon-grid"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="sectionCancel" class="btn-secondary">Annuler</button>
+        <button id="sectionSave" class="btn-primary">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="columnModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+      <h3 class="modal-title">
+        <i class="fas fa-columns mr-2"></i>
+        Ajouter une colonne
+      </h3>
+      <div class="modal-body">
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Sélectionnez le type de colonne :</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="column-type-card" data-type="texte">
+            <i class="fas fa-font" style="font-size: 2rem; color: var(--primary-blue); margin-bottom: 0.75rem;"></i>
+            <h4 style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">Texte</h4>
+            <p style="font-size: 0.75rem; color: var(--text-secondary);">Champ texte</p>
+          </div>
+          <div class="column-type-card" data-type="numero">
+            <i class="fas fa-hashtag" style="font-size: 2rem; color: var(--primary-blue); margin-bottom: 0.75rem;"></i>
+            <h4 style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">Numéro</h4>
+            <p style="font-size: 0.75rem; color: var(--text-secondary);">Montant/Numéro</p>
+          </div>
+          <div class="column-type-card" data-type="date">
+            <i class="fas fa-calendar" style="font-size: 2rem; color: var(--primary-blue); margin-bottom: 0.75rem;"></i>
+            <h4 style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">Date</h4>
+            <p style="font-size: 0.75rem; color: var(--text-secondary);">Date projet</p>
+          </div>
+          <div class="column-type-card" data-type="statut">
+            <i class="fas fa-tag" style="font-size: 2rem; color: var(--primary-blue); margin-bottom: 0.75rem;"></i>
+            <h4 style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">Statut</h4>
+            <p style="font-size: 0.75rem; color: var(--text-secondary);">État projet</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="columnCancel" class="btn-secondary">Annuler</button>
+        <button id="columnSave" class="btn-primary">Ajouter</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="confirmModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 450px;">
+      <h3 class="modal-title" id="confirmTitle">
+        <i class="fas fa-exclamation-triangle mr-2" style="color: #f59e0b;"></i>
+        Confirmation
+      </h3>
+      <div class="modal-body">
+        <p id="confirmMessage" style="color: var(--text-secondary);"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="confirmCancel" class="btn-secondary">Annuler</button>
+        <button id="confirmOk" class="btn-primary" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="alertModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 450px;">
+      <h3 class="modal-title" id="alertTitle">
+        <i class="fas fa-info-circle mr-2"></i>
+        Information
+      </h3>
+      <div class="modal-body">
+        <p id="alertMessage" style="color: var(--text-secondary);"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="alertOk" class="btn-primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript sections management -->
+  <!-- <script src="/Ventes_sections.js"></script> -->
+
+<script
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAZDi-RMHDdA4l-4sv_5H8GhsUAYXV4DVE&libraries=places&callback=initProspectAutocomplete&language=fr&region=CA"
+  async
+  defer
+></script>
+  <script src="/entrepreneur-selector.js"></script>
+</body>
+</html>

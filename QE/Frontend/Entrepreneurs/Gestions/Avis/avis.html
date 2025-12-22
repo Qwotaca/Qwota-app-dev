@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Avis clients</title>
+  
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#5271ff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#5271ff">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Script Service Worker -->
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      /* DISABLED - Service Worker
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          console.log('SW registered: ', registration);
+        })
+        .catch((registrationError) => {
+          console.log('SW registration failed: ', registrationError);
+        });
+      */
+    });
+  }
+  </script>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="/base.css">
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Variables globales définies dans common.js -->
+  <script>
+    // Ces variables sont maintenant gérées par common.js
+    // username, userRole, canEditParameters sont disponibles globalement
+  </script>
+
+  <link rel="stylesheet" href="/entrepreneur-selector.css">
+</head>
+<body class="min-h-screen" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: var(--text-light); margin: 0; padding: 0;">
+
+  <!-- Backdrop pour le sélecteur coach (état centré) -->
+  <div id="coach-selector-backdrop"></div>
+
+  <!-- Sélecteur d'entrepreneur (visible uniquement pour les coaches) -->
+  <div id="coach-entrepreneur-selector">
+    <!-- Titre de la page avec icône Avis clients -->
+    <div class="page-identity">
+      <div class="page-icon" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); box-shadow: 0 10px 30px rgba(251, 191, 36, 0.3), 0 0 40px rgba(251, 191, 36, 0.15);">
+        <i class="fas fa-star"></i>
+      </div>
+      <div class="page-name" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #fcd34d 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Avis clients</div>
+    </div>
+
+    <!-- Titre et sous-titre (visibles uniquement en mode centré) -->
+    <div class="selector-title">
+      <i class="fas fa-user-tie"></i>
+      Sélectionnez un entrepreneur
+    </div>
+    <div class="selector-subtitle">Choisissez l'entrepreneur dont vous souhaitez consulter les avis</div>
+
+    <div class="selector-container">
+      <div class="selector-label">
+        <i class="fas fa-user-tie"></i>
+        <span>Entrepreneur:</span>
+      </div>
+      <div class="coach-dropdown">
+        <div class="coach-dropdown-toggle" id="coach-dropdown-toggle">
+          <input type="text"
+                 class="search-input"
+                 id="search-input"
+                 placeholder="Rechercher..."
+                 autocomplete="off"
+                 style="display: none;">
+          <span class="placeholder">-- Sélectionner un entrepreneur --</span>
+          <i class="fas fa-chevron-down chevron"></i>
+        </div>
+        <div class="coach-dropdown-menu" id="coach-dropdown-menu">
+          <!-- Options chargées dynamiquement -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Wrapper pour les transitions coach -->
+  <div id="main-content-wrapper">
+  <!-- Main Content - Avis Clients MODERNE -->
+  <div class="w-full" style="width: 100%; padding: 2rem;">
+
+    <!-- Bouton Retour -->
+    <div id="back-button-container">
+      <button id="back-to-gestions-btn" onclick="goBackToGestions()" class="back-button">
+        <i class="fas fa-arrow-left"></i>
+        <span class="back-button-text">Retour à gestions</span>
+      </button>
+    </div>
+
+    <!-- Header -->
+    <div class="mb-10">
+      <div class="relative">
+        <h1 class="text-4xl font-bold mb-3" style="color: var(--text-light);">
+          Mes avis clients
+        </h1>
+        <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        <div class="flex items-center justify-between">
+          <p class="text-xl font-medium" style="color: var(--text-gray);">Gérez et consultez tous vos avis clients</p>
+          <div class="text-sm flex items-center" style="color: var(--text-gray);">
+            <i class="fas fa-calendar-alt mr-2"></i>
+            <span id="currentDate">Aujourd'hui</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <!-- SECTION AVIS CLIENTS -->
+    <div class="space-y-6">
+
+  <!-- Mes avis clients -->
+  <section class="box relative shadow-md overflow-hidden">
+    <div class="box-header">
+      <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
+        <div class="box-header-icon" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);">
+          <i class="fas fa-star"></i>
+        </div>
+        <h2 class="box-header-title">Mes avis clients</h2>
+      </div>
+      <!-- Filtres d'étoiles épurés -->
+      <div class="flex items-center gap-3" style="margin-right: 2rem;">
+        <span class="text-sm font-medium" style="color: var(--text-gray);">
+          <i class="fas fa-filter mr-2"></i>Filtrer :
+        </span>
+
+        <div class="flex items-center gap-2">
+          <button onclick="filterReviewsByRating(1)" class="btn-secondary group flex items-center gap-1 px-3 py-1.5">
+            <span class="text-sm font-bold">1</span>
+            <i class="fas fa-star text-sm group-hover:text-yellow-400"></i>
+          </button>
+
+          <button onclick="filterReviewsByRating(2)" class="btn-secondary group flex items-center gap-1 px-3 py-1.5">
+            <span class="text-sm font-bold">2</span>
+            <i class="fas fa-star text-sm group-hover:text-yellow-400"></i>
+          </button>
+
+          <button onclick="filterReviewsByRating(3)" class="btn-secondary group flex items-center gap-1 px-3 py-1.5">
+            <span class="text-sm font-bold">3</span>
+            <i class="fas fa-star text-sm group-hover:text-yellow-400"></i>
+          </button>
+
+          <button onclick="filterReviewsByRating(4)" class="btn-secondary group flex items-center gap-1 px-3 py-1.5">
+            <span class="text-sm font-bold">4</span>
+            <i class="fas fa-star text-sm group-hover:text-yellow-400"></i>
+          </button>
+
+          <button onclick="filterReviewsByRating(5)" class="btn-secondary group flex items-center gap-1 px-3 py-1.5">
+            <span class="text-sm font-bold">5</span>
+            <i class="fas fa-star text-sm group-hover:text-yellow-400"></i>
+          </button>
+
+          <button onclick="showAllReviews()" class="btn-secondary btn-secondary-active group flex items-center gap-1 px-3 py-1.5">
+            <span class="text-sm font-bold">Tout</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Barre de recherche -->
+      <div class="flex items-center space-x-2">
+        <div class="relative">
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Rechercher dans les avis..."
+            class="px-4 py-2 pr-10 rounded-lg text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-opacity-50"
+            style="background: rgba(71, 85, 105, 0.3); border: 1px solid var(--border-dark); color: var(--text-light); width: 250px; focus:ring-color: var(--primary-blue);"
+            onkeyup="searchReviews()"
+          >
+          <i class="fas fa-search absolute right-3 top-1/2 transform -translate-y-1/2 text-sm" style="color: var(--text-gray);"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="box-body" style="height: 600px; overflow-y: scroll;">
+      <div id="reviews-container">
+        <!-- Avis chargés dynamiquement ici -->
+      </div>
+    </div>
+  </section>
+
+    </div>
+  </div>
+
+</div>
+  </div> <!-- Fin du main-content-wrapper -->
+
+<script>
+// Mettre à jour la date actuelle
+document.addEventListener('DOMContentLoaded', function() {
+  const dateElement = document.getElementById('currentDate');
+  if (dateElement) {
+    const today = new Date();
+    const options = { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    };
+    dateElement.textContent = today.toLocaleDateString('fr-FR', options);
+  }
+});
+</script>
+
+<script>
+  const reviewsContainer = document.getElementById('reviews-container');
+  const stars = document.querySelectorAll('.star');
+  let selectedRating = null; // Par défaut tous les avis (aucune étoile sélectionnée)
+  let allReviews = []; // Avis récupérés depuis l'API
+
+  // Format date simple FR (ex: 23 juillet 2025)
+  function formatDate(dateString) {
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', options);
+  }
+
+  // Colorie les étoiles jusqu'à la note sélectionnée
+  function highlightStars(rating) {
+    stars.forEach(star => {
+      const val = Number(star.dataset.value);
+      if (val <= rating) {
+        star.style.color = '#f7b500'; // jaune
+      } else {
+        star.style.color = '#ccc'; // gris
+      }
+      star.setAttribute('aria-checked', val === rating);
+      star.tabIndex = val === rating ? 0 : -1;
+    });
+  }
+
+  // Affiche les avis filtrés par note exacte
+  function renderFilteredReviews(rating) {
+    reviewsContainer.innerHTML = '';
+    const filtered = allReviews.filter(r => r.rating === rating);
+    if (filtered.length === 0) {
+      reviewsContainer.innerHTML = `
+        <div class="text-center py-8" style="color: var(--text-gray);">
+          <i class="fas fa-search text-2xl mb-2" style="color: rgba(247, 181, 0, 0.3);"></i>
+          <p class="text-sm">Aucun avis avec ${rating} étoile${rating > 1 ? 's' : ''}</p>
+        </div>
+      `;
+      return;
+    }
+    filtered.forEach(renderReview);
+  }
+  
+  // Fonction pour filtrer les avis par note (appelée par les boutons)
+  function filterReviewsByRating(rating) {
+    selectedRating = rating;
+    highlightStars(rating);
+    renderFilteredReviews(rating);
+    
+    // Enlever la classe active de tous les boutons
+    document.querySelectorAll('.btn-secondary').forEach(btn => btn.classList.remove('btn-secondary-active'));
+    
+    // Ajouter la classe active au bouton cliqué (trouve par onclick)
+    document.querySelectorAll('button[onclick*="filterReviewsByRating(' + rating + ')"]').forEach(btn => {
+      btn.classList.add('btn-secondary-active');
+    });
+    
+    console.log('Filtrer les avis avec ' + rating + ' étoile(s)');
+  }
+  
+  // Fonction pour afficher tous les avis
+  function showAllReviews() {
+    selectedRating = null; // Réinitialiser la sélection
+    // Désactiver toutes les étoiles
+    stars.forEach(star => {
+      star.style.color = '#ccc'; // gris
+      star.setAttribute('aria-checked', false);
+      star.tabIndex = -1;
+    });
+    
+    // Enlever la classe active de tous les boutons
+    document.querySelectorAll('.btn-secondary').forEach(btn => btn.classList.remove('btn-secondary-active'));
+    
+    // Ajouter la classe active au bouton "Tout"
+    document.querySelectorAll('button[onclick*="showAllReviews"]').forEach(btn => {
+      btn.classList.add('btn-secondary-active');
+    });
+    
+    reviewsContainer.innerHTML = '';
+    if (allReviews.length === 0) {
+      reviewsContainer.innerHTML = `
+        <div class="text-center py-8" style="color: var(--text-gray);">
+          <i class="fas fa-star text-2xl mb-2" style="color: rgba(247, 181, 0, 0.3);"></i>
+          <p class="text-sm">Aucun avis pour le moment</p>
+        </div>
+      `;
+      return;
+    }
+    allReviews.forEach(renderReview);
+    console.log('Afficher tous les avis (' + allReviews.length + ' avis)');
+  }
+
+  // Crée un élément avis
+  function renderReview(r) {
+    const reviewElem = document.createElement('div');
+    reviewElem.className = 'review-card';
+
+    reviewElem.innerHTML = `
+      <div class="review-header">
+        <div class="review-name">${r.prenom} ${r.nom}</div>
+        <div class="review-date">${formatDate(r.timestamp)}</div>
+      </div>
+      <div class="review-stars">${renderStars(r.rating)}</div>
+      <div class="review-comment">${r.comment || ''}</div>
+    `;
+
+    reviewsContainer.appendChild(reviewElem);
+  }
+
+  // Rends les étoiles affichées dans chaque avis
+  function renderStars(rating) {
+    let starsHtml = '';
+    for (let i = 1; i <= 5; i++) {
+      starsHtml += i <= rating ? '&#9733;' : '&#9734;';
+    }
+    return starsHtml;
+  }
+
+  // Clic sur une étoile : mise à jour de la sélection et affichage filtré
+  stars.forEach(star => {
+    star.addEventListener('click', () => {
+      const rating = Number(star.dataset.value);
+      selectedRating = rating; // Modifie la sélection (pas de désélection possible)
+      highlightStars(selectedRating);
+      renderFilteredReviews(selectedRating);
+      console.log("Filtrer les avis avec " + selectedRating + " étoiles");
+    });
+  });
+
+  // Initialisation : récupération des avis + affichage par défaut 5 étoiles
+  async function initReviews() {
+    try {
+      if (!window.username) {
+        // Réessayer dans 100ms si common.js n'est pas encore prêt
+        setTimeout(initReviews, 100);
+        return;
+      }
+      const res = await fetch(`/api/reviews/${window.username}`);
+      if (!res.ok) throw new Error('Erreur chargement avis');
+      const data = await res.json();
+      allReviews = data.reviews;
+
+      showAllReviews();  // Affiche tous les avis par défaut
+      console.log("Affichage de tous les avis par défaut"); // Log par défaut au chargement
+    } catch (err) {
+      // En cas d'erreur, initialiser avec un tableau vide et afficher l'état "Tout" par défaut
+      allReviews = [];
+      showAllReviews(); // Ceci affichera "Aucun avis pour le moment" avec le bon style
+      console.error('Erreur lors du chargement des avis:', err);
+    }
+  }
+
+  setTimeout(initReviews, 200);
+  
+  // Afficher l'état initial immédiatement
+  document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser avec un tableau vide pour éviter l'erreur
+    if (typeof allReviews === 'undefined') {
+      allReviews = [];
+    }
+    showAllReviews(); // Affiche l'état vide propre par défaut avec le bouton "Tout" actif
+  });
+
+  // Fonction de recherche dans les avis
+  function searchReviews() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const filteredReviews = allReviews.filter(review => {
+      // Recherche dans le nom du client, le commentaire, et la note
+      const clientName = review.nom_client ? review.nom_client.toLowerCase() : '';
+      const comment = review.commentaire ? review.commentaire.toLowerCase() : '';
+      const rating = review.note ? review.note.toString() : '';
+      
+      return clientName.includes(searchTerm) || 
+             comment.includes(searchTerm) || 
+             rating.includes(searchTerm);
+    });
+    
+    // Appliquer aussi le filtre par étoiles
+    const finalReviews = searchTerm ? 
+      filteredReviews.filter(review => review.note === selectedRating) :
+      allReviews.filter(review => review.note === selectedRating);
+    
+    renderReviews(finalReviews);
+  }
+  
+  // Fonction pour afficher une liste d'avis
+  function renderReviews(reviews) {
+    reviewsContainer.innerHTML = '';
+    if (reviews.length === 0) {
+      reviewsContainer.innerHTML = `
+        <div class="text-center py-8" style="color: var(--text-gray);">
+          <i class="fas fa-star text-2xl mb-2" style="color: rgba(247, 181, 0, 0.3);"></i>
+          <p class="text-sm">Aucun avis pour le moment</p>
+        </div>
+      `;
+      return;
+    }
+    reviews.forEach(renderReview);
+  }
+
+  // Menu compte utilisateur - s'assurer que le DOM est chargé
+  const btn = document.getElementById("account-dropdown-toggle");
+  const dropdown = document.getElementById("account-dropdown");
+
+  console.log('[DEBUG] Bouton account trouvé:', btn);
+  console.log('[DEBUG] Dropdown trouvé:', dropdown);
+
+  if (btn && dropdown) {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('👆 Click sur account button');
+      
+      if (dropdown.classList.contains("hidden")) {
+        dropdown.classList.remove("hidden");
+        console.log('[UNLOCK] Dropdown ouvert');
+      } else {
+        dropdown.classList.add("hidden");
+        console.log('[LOCK] Dropdown fermé');
+      }
+      
+      console.log('[BAN] Dropdown classes:', dropdown.className);
+    });
+
+    window.addEventListener("click", (e) => {
+      if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.add("hidden");
+      }
+    });
+    console.log('[OK] Event listeners ajoutés');
+  } else {
+    // console.error('[ERROR] Bouton ou dropdown non trouvé');
+  }
+
+  // Fonction de déconnexion
+  window.logout = function() {
+    localStorage.removeItem('username');
+    localStorage.removeItem('token');
+    window.location.href = '/';
+  };
+</script>
+
+  <!-- Script pour gestion menu actif -->
+  <script>
+    // Fonction pour activer le menu basé sur la page actuelle
+    function activateCurrentPageMenu() {
+      const currentPath = window.location.pathname;
+      console.log('🌐 Page actuelle détectée:', currentPath);
+
+      const allMenuLinks = document.querySelectorAll('#sidebar a');
+      allMenuLinks.forEach(link => {
+        link.classList.remove('menu-active');
+        link.removeAttribute('data-menu-state');
+      });
+
+      const pageMap = {
+        '/dashboard': '/dashboard',
+        '/centralevue': '/centralevue',
+        '/calcul': '/calcul',
+        '/soumissions': '/soumissions',
+        '/gqp': '/gqp',
+        '/travaux': '/travaux',
+        '/facture': '/facture',
+        '/avis': '/avis',
+        '/centrale': '/centrale',
+        '/dashboardcoach': '/dashboardcoach'
+      };
+
+      const targetPath = pageMap[currentPath];
+      let targetLink = null;
+
+      if (targetPath) {
+        targetLink = document.querySelector(`#sidebar a[data-path="${targetPath}"]`);
+        console.log('[TARGET] Page détectée - activation du menu pour:', targetPath);
+      }
+
+      if (targetLink) {
+        targetLink.classList.add('menu-active');
+        targetLink.setAttribute('data-menu-state', 'active');
+        console.log('[OK] Menu activé pour:', targetLink.textContent.trim());
+      } else {
+        console.log('[WARN] Aucun menu trouvé pour la page:', currentPath);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      activateCurrentPageMenu();
+      setTimeout(activateCurrentPageMenu, 150);
+      setTimeout(activateCurrentPageMenu, 300);
+    });
+
+    // Fonction pour retourner à la page de gestions
+    function goBackToGestions() {
+      window.location.href = '/gestionsmobile';
+    }
+
+    // Global function for entrepreneur selector to reload data
+    window.loadAvisData = async function() {
+      await initReviews();
+    };
+  </script>
+
+  <!-- Inline entrepreneur selector script removed - now handled by shared /entrepreneur-selector.js -->
+
+  <!-- Script commun de gestion des permissions et interface -->
+  <script src="/common.js"></script>
+  <script src="/entrepreneur-selector.js"></script>
+</body>
+</html>

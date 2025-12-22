@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>La Centrale</title>
+
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#5271ff">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Feuille de style principale -->
+  <link rel="stylesheet" href="/base.css">
+
+  <!-- Styles spécifiques à La Centrale -->
+  <link rel="stylesheet" href="/Centralevue.css">
+
+</head>
+
+<body class="min-h-screen centrale-entrepreneur" style="margin: 0; padding: 0;">
+
+  <!-- Main Content -->
+  <div class="w-full" style="width: 100%; padding: 2rem;">
+
+    <!-- Bouton Retour -->
+    <div id="back-button-container">
+      <button id="back-to-gestions-btn" onclick="goBackToGestions()" class="back-button">
+        <i class="fas fa-arrow-left"></i>
+        <span class="back-button-text">Retour à gestions</span>
+      </button>
+    </div>
+
+    <!-- Header -->
+    <div class="mb-10">
+      <div class="relative">
+        <h1 class="text-4xl font-bold mb-3">
+          La Centrale
+        </h1>
+        <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        <div class="flex items-center justify-between">
+          <p class="text-xl font-medium">Centre de ressources et documentation</p>
+          <div class="text-sm flex items-center">
+            <i class="fas fa-calendar-alt mr-2"></i>
+            <span id="currentDate">Aujourd'hui</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sections dynamiques -->
+    <div class="space-y-8">
+      <div class="empty-state loading-shimmer" style="padding: 4rem 2rem; text-align: center;">
+        <i class="fas fa-spinner fa-spin" style="font-size: 3rem; color: var(--primary-blue); margin-bottom: 1rem;"></i>
+        <p style="color: var(--text-secondary); font-size: 1.125rem;">Chargement des sections...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay flou -->
+  <div id="viewerOverlay"></div>
+
+  <!-- Modal viewer -->
+  <div id="viewerModal" class="hidden">
+    <button id="viewerClose">×</button>
+    <div id="viewerContent"></div>
+  </div>
+
+  <!-- Script pour charger les sections dynamiques -->
+  <script src="/Centralevue.js"></script>
+
+  <script>
+    // Fonction pour mettre à jour la date
+    function updateCurrentDate() {
+      const now = new Date();
+      const options = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      };
+      const dateString = now.toLocaleDateString('fr-FR', options);
+      const dateElement = document.getElementById('currentDate');
+      if (dateElement) {
+        dateElement.textContent = dateString;
+      }
+    }
+
+    // Fonction pour retourner à la page de gestions
+    function goBackToGestions() {
+      window.location.href = '/gestionsmobile';
+    }
+
+    // Fonction de déconnexion
+    window.logout = function() {
+      localStorage.removeItem('username');
+      localStorage.removeItem('token');
+      window.location.href = '/';
+    };
+
+    // Script pour gestion menu actif
+    function activateCurrentPageMenu() {
+      const currentPath = window.location.pathname;
+      const allMenuLinks = document.querySelectorAll('#sidebar a');
+      allMenuLinks.forEach(link => {
+        link.classList.remove('menu-active');
+        link.removeAttribute('data-menu-state');
+      });
+
+      const pageMap = {
+        '/centralevue': '/centralevue',
+        '/new_centralentrepreneur': '/centralevue'
+      };
+
+      const targetPath = pageMap[currentPath] || currentPath;
+      const targetLink = document.querySelector(`#sidebar a[data-path="${targetPath}"]`);
+
+      if (targetLink) {
+        targetLink.classList.add('menu-active');
+        targetLink.setAttribute('data-menu-state', 'active');
+      }
+    }
+
+    // Initialisation
+    document.addEventListener('DOMContentLoaded', () => {
+      updateCurrentDate();
+      activateCurrentPageMenu();
+
+      if (typeof setupMobileMenu === 'function') setupMobileMenu();
+      if (typeof setupAccountMenus === 'function') setupAccountMenus();
+    });
+  </script>
+</body>
+</html>

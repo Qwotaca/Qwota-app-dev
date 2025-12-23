@@ -5982,7 +5982,13 @@ function initStarRatings() {
 
 // Get current username from session
 function getCurrentUsername() {
-  // IMPORTANT: Vérifier d'abord si un paramètre 'user' existe dans l'URL
+  // IMPORTANT: Vérifier d'abord si un entrepreneur a été sélectionné (pour les coaches)
+  // Le entrepreneur-selector.js définit window.selectedEntrepreneurUsername
+  if (window.selectedEntrepreneurUsername) {
+    return window.selectedEntrepreneurUsername;
+  }
+
+  // Vérifier ensuite si un paramètre 'user' existe dans l'URL
   // Cela permet aux coachs de voir le RPO d'un entrepreneur spécifique
   const urlParams = new URLSearchParams(window.location.search);
   const userParam = urlParams.get('user');
@@ -6034,6 +6040,9 @@ async function loadRPOData() {
 
   return null;
 }
+
+// Exposer loadRPOData globalement pour entrepreneur-selector.js
+window.loadRPOData = loadRPOData;
 
 // Load annual data into UI
 function loadAnnualData(annual) {
@@ -6712,8 +6721,22 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   // Skip data loading if coach hasn't selected an entrepreneur yet
   // La fonction selectEntrepreneur() gérera le chargement des données
-  if (isCoach && !hasUserParam) {
+  if (isCoach && !hasUserParam && !window.selectedEntrepreneurUsername) {
     console.log('[INIT] Coach mode without entrepreneur selected - skipping initial data load');
+
+    // Écouter l'événement de sélection d'entrepreneur
+    document.addEventListener('entrepreneurSelected', async function(e) {
+      console.log('[RPO] Entrepreneur sélectionné:', e.detail.username);
+      await loadRPOData();
+
+      // Réinitialiser les vues
+      setTimeout(() => {
+        changeMonthlyView(0);
+        changeMonth(0);
+        calculateMonthlyTotalsFromWeekly(0);
+      }, 100);
+    });
+
     return;
   }
 

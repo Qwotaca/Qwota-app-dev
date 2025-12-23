@@ -45,9 +45,14 @@
       const userRole = localStorage.getItem('userRole');
       const isCoach = userRole === 'coach';
       const urlParams = new URLSearchParams(window.location.search);
-      const hasUserParam = urlParams.get('user');
+      const userParam = urlParams.get('user');
+      const coachUsername = localStorage.getItem('username');
 
-      if (isCoach && !hasUserParam) {
+      // Afficher le sélecteur si:
+      // - C'est un coach ET (pas de paramètre user OU le paramètre user est le coach lui-même)
+      const shouldShowSelector = isCoach && (!userParam || userParam === coachUsername);
+
+      if (shouldShowSelector) {
         // Injecter le CSS immédiatement pour cacher le contenu et afficher le sélecteur
         const style = document.createElement('style');
         style.id = 'coach-anti-flash-css';
@@ -6712,7 +6717,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Détecter si un coach n'a pas encore sélectionné d'entrepreneur
   const userRole = localStorage.getItem('userRole');
   const isCoach = userRole === 'coach';
-  const hasUserParam = urlParams.get('user');
+  const userParam = urlParams.get('user');
+  const coachUsername = localStorage.getItem('username');
 
   initStarRatings();
   initCustomDropdowns();
@@ -6720,8 +6726,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   setupWeeklyInputFormatting();
 
   // Skip data loading if coach hasn't selected an entrepreneur yet
-  // La fonction selectEntrepreneur() gérera le chargement des données
-  if (isCoach && !hasUserParam && !window.selectedEntrepreneurUsername) {
+  // (si pas de user param OU si le user param est le coach lui-même)
+  const shouldShowSelector = isCoach && (!userParam || userParam === coachUsername) && !window.selectedEntrepreneurUsername;
+
+  if (shouldShowSelector) {
     console.log('[INIT] Coach mode without entrepreneur selected - skipping initial data load');
 
     // Écouter l'événement de sélection d'entrepreneur

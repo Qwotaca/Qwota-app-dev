@@ -3413,14 +3413,16 @@
           const selectedEntrepreneur = sessionStorage.getItem('viewEntrepreneurUsername');
 
           if (userRole === 'coach') {
-            // Si coach: utiliser l'entrepreneur sélectionné (peut être null)
+            // Si coach: utiliser l'entrepreneur sélectionné, sinon le username du coach
             if (selectedEntrepreneur) {
               targetUser = selectedEntrepreneur;
               console.log(`[APPPC] Coach - Navigation RPO pour entrepreneur sélectionné: ${targetUser}`);
             } else {
-              // Pas d'entrepreneur sélectionné - ne pas ajouter de paramètre user
-              console.log(`[APPPC] Coach - Navigation RPO sans entrepreneur sélectionné (page de sélection)`);
-              targetUser = null;
+              // Pas d'entrepreneur sélectionné - utiliser le username du coach pour éviter redirect
+              // La page RPO affichera le sélecteur grâce à son anti-flash
+              const urlParams = new URLSearchParams(window.location.search);
+              targetUser = urlParams.get('user') || localStorage.getItem('username');
+              console.log(`[APPPC] Coach - Navigation RPO avec username coach: ${targetUser} (pour afficher sélecteur)`);
             }
           } else {
             // Si entrepreneur: utiliser son propre username

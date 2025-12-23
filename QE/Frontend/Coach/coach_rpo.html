@@ -7803,7 +7803,15 @@ document.addEventListener('entrepreneurSelected', function(e) {
   function initCoachSelector() {
     const userRole = localStorage.getItem('userRole');
 
-    // Add coach-mode class to body
+    // Only show selector for direction users
+    // Coaches will use the entrepreneur-selector.js instead
+    if (userRole !== 'direction') {
+      // For coaches, entrepreneur-selector.js will handle the selection
+      // Do NOT add 'coach-viewing-own-data' class - we want them to select an entrepreneur
+      return;
+    }
+
+    // Add coach-mode class to body (for direction users)
     document.body.classList.add('coach-mode');
 
     // Get DOM elements
@@ -7824,25 +7832,15 @@ document.addEventListener('entrepreneurSelected', function(e) {
       backdrop.classList.add('visible');
     }
 
-    // Load data based on role:
-    // - Direction users: load coaches
-    // - Coach users: load entrepreneurs
-    if (userRole === 'direction') {
-      // Direction: load coaches
-      console.log('[RPO COACH] Direction - Loading coaches');
-      loadCoaches();
-    } else {
-      // Coach: load entrepreneurs
-      console.log('[RPO COACH] Coach - Loading entrepreneurs');
-      loadEntrepreneursForCoach();
-    }
+    // Load coaches (not entrepreneurs!)
+    loadCoaches();
 
     // Setup event listeners
     setupCoachSelectorListeners(dropdownToggle, dropdownMenu, searchInput, selector, backdrop);
   }
 
   // ============================================
-  // LOAD COACHES (for direction)
+  // LOAD COACHES
   // ============================================
   async function loadCoaches() {
     try {
@@ -7851,7 +7849,7 @@ document.addEventListener('entrepreneurSelected', function(e) {
 
       if (data.success && data.coaches) {
         console.log('[RPO COACH] Coaches chargés:', data.coaches.length);
-        populateCoachDropdown(data.coaches, 'coach');
+        populateCoachDropdown(data.coaches);
       } else {
         showNoCoaches();
       }
@@ -7862,60 +7860,36 @@ document.addEventListener('entrepreneurSelected', function(e) {
   }
 
   // ============================================
-  // LOAD ENTREPRENEURS (for coaches)
-  // ============================================
-  async function loadEntrepreneursForCoach() {
-    try {
-      const coachUsername = localStorage.getItem('username');
-      const response = await fetch(`/api/users/entrepreneurs?coach_username=${coachUsername}`);
-      const data = await response.json();
-
-      if (data.success && data.entrepreneurs) {
-        console.log('[RPO COACH] Entrepreneurs chargés:', data.entrepreneurs.length);
-        populateCoachDropdown(data.entrepreneurs, 'entrepreneur');
-      } else {
-        showNoCoaches();  // Reuse the same message function
-      }
-    } catch (error) {
-      console.error('[RPO COACH] Erreur chargement entrepreneurs:', error);
-      showNoCoaches();
-    }
-  }
-
-  // ============================================
   // POPULATE DROPDOWN
   // ============================================
-  function populateCoachDropdown(items, type) {
+  function populateCoachDropdown(coaches) {
     const dropdownMenu = document.getElementById('coach-dropdown-menu');
 
-    if (items.length === 0) {
+    if (coaches.length === 0) {
       showNoCoaches();
       return;
     }
 
     dropdownMenu.innerHTML = '';
 
-    items.forEach(item => {
+    coaches.forEach(coach => {
       const option = document.createElement('div');
       option.className = 'coach-dropdown-option';
-      option.dataset.username = item.username;
-      option.dataset.type = type;  // Store the type for later use
+      option.dataset.username = coach.username;
 
-      const displayName = item.prenom && item.nom
-        ? `${item.prenom} ${item.nom} (${item.username})`
-        : item.username;
-
-      const icon = type === 'coach' ? 'fa-user-graduate' : 'fa-user-tie';
+      const displayName = coach.prenom && coach.nom
+        ? `${coach.prenom} ${coach.nom} (${coach.username})`
+        : coach.username;
 
       option.innerHTML = `
         <span>
-          <i class="fas ${icon}"></i>
+          <i class="fas fa-user-graduate"></i>
           <span>${displayName}</span>
         </span>
       `;
 
       option.addEventListener('click', function() {
-        selectCoach(item.username, type);
+        selectCoach(coach.username);
       });
 
       dropdownMenu.appendChild(option);
@@ -7935,31 +7909,20 @@ document.addEventListener('entrepreneurSelected', function(e) {
   }
 
   // ============================================
-  // SELECT COACH OR ENTREPRENEUR
+  // SELECT COACH
   // ============================================
-  function selectCoach(username, type) {
+  function selectCoach(username) {
     const dropdownToggle = document.getElementById('coach-dropdown-toggle');
     const dropdownMenu = document.getElementById('coach-dropdown-menu');
     const searchInput = document.getElementById('search-input');
     const selector = document.getElementById('coach-entrepreneur-selector');
     const backdrop = document.getElementById('coach-selector-backdrop');
 
-    if (type === 'entrepreneur') {
-      console.log('[RPO COACH] Entrepreneur sélectionné:', username);
-      // Set entrepreneur as selected
-      window.selectedEntrepreneurUsername = username;
+    console.log('[RPO COACH] Coach sélectionné:', username);
 
-      // Dispatch event for other parts of the code listening for entrepreneur selection
-      const event = new CustomEvent('entrepreneurSelected', {
-        detail: { username: username }
-      });
-      document.dispatchEvent(event);
-    } else {
-      console.log('[RPO COACH] Coach sélectionné:', username);
-      // Set coach as selected (for direction)
-      window.selectedCoachUsername = username;
-      coachUsername = username; // For compatibility with existing code
-    }
+    // Set the selected coach username globally
+    window.selectedCoachUsername = username;
+    window.username = username; // For compatibility with existing code
 
     // Update toggle display
     let textElement = dropdownToggle.querySelector('.placeholder, .selected-text');
@@ -7992,8 +7955,10 @@ document.addEventListener('entrepreneurSelected', function(e) {
       backdrop.classList.remove('visible');
     }
 
-    // Load RPO data (the entrepreneurSelected event will trigger initTeamPlan)
-    // No need to call window.loadRPOData here as the event listener will handle it
+    // Load RPO data for selected coach
+    if (typeof window.loadRPOData === 'function') {
+      window.loadRPOData();
+    }
   }
 
   // ============================================

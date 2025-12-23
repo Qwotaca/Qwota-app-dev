@@ -3,12 +3,21 @@ Coach Team Objectifs - Gestion des prévisions d'objectifs par coach
 """
 
 import os
+import sys
 import json
 from datetime import datetime
 from pathlib import Path
 
-# Chemin de base pour les données
-DATA_DIR = Path(__file__).parent.parent.parent / "data" / "coach_previsions"
+# Déterminer le chemin de base selon l'OS
+if sys.platform == 'win32':
+    # Windows - remonter à la racine du projet (3 niveaux depuis QE/Backend/coach_previsions.py)
+    DATA_DIR = Path(__file__).parent.parent.parent / "data" / "coach_previsions"
+else:
+    # Unix/Linux (Production sur Render)
+    # Utiliser la variable d'environnement STORAGE_PATH si définie, sinon /mnt/cloud
+    base_cloud = os.getenv("STORAGE_PATH", "/mnt/cloud")
+    DATA_DIR = Path(base_cloud) / "coach_previsions"
+
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 

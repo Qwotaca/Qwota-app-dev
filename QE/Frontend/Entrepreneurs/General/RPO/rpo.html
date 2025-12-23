@@ -9222,9 +9222,19 @@ function loadWeeklyDataToPlan() {
     }
   }
 
-  // Recalculer le plan après avoir chargé les données
-  console.log('[PLAN] Données chargées, recalcul du plan...');
-  calculatePlan();
+  // Charger aussi les ventes produit pour la colonne Production Réel
+  if (typeof loadVentesProduitIntoPlan === 'function') {
+    loadVentesProduitIntoPlan().then(() => {
+      console.log('[PLAN] Ventes produit chargées');
+      // Recalculer le plan après avoir chargé toutes les données
+      console.log('[PLAN] Toutes les données chargées, recalcul du plan...');
+      calculatePlan();
+    });
+  } else {
+    // Recalculer le plan même si loadVentesProduitIntoPlan n'est pas disponible
+    console.log('[PLAN] Données chargées, recalcul du plan...');
+    calculatePlan();
+  }
 }
 
 // Charger les données hebdomadaires du RPO dans le plan d'affaire

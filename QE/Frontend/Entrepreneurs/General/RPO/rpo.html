@@ -6076,11 +6076,11 @@ window.loadRPOData = async function() {
     console.log('[RPO] Plan d\'affaire régénéré');
   }
 
-  // Synchroniser les données réelles RPO vers le plan d'affaire
+  // Charger les données réelles dans le plan d'affaire depuis window.weeklyData
   setTimeout(() => {
-    if (typeof syncRPOToPlan === 'function') {
-      syncRPOToPlan();
-      console.log('[RPO] Données réelles synchronisées vers plan d\'affaire');
+    if (typeof loadWeeklyDataToPlan === 'function') {
+      loadWeeklyDataToPlan();
+      console.log('[RPO] Données hebdomadaires chargées dans le plan d\'affaire');
     }
   }, 50);
 
@@ -9120,6 +9120,110 @@ function syncRPOToPlan() {
   });
 
   // Recalculer le plan après synchronisation
+  calculatePlan();
+}
+
+// Charger les données hebdomadaires depuis window.weeklyData vers le plan d'affaire
+function loadWeeklyDataToPlan() {
+  if (!window.weeklyData) {
+    console.log('[PLAN] window.weeklyData non disponible');
+    return;
+  }
+
+  console.log('[PLAN] Chargement des données depuis window.weeklyData...');
+
+  // Décembre 2025 (monthIndex -2): semaines 1-5 -> plan weeks 1-5
+  if (window.weeklyData['-2']) {
+    Object.keys(window.weeklyData['-2']).forEach(weekNumber => {
+      const weekData = window.weeklyData['-2'][weekNumber];
+      const planWeekIndex = parseInt(weekNumber);
+
+      // H. Marketing
+      if (weekData.h_marketing !== undefined) {
+        const input = document.getElementById(`plan-w${planWeekIndex}-mktg-reel`);
+        if (input) {
+          const val = weekData.h_marketing;
+          input.value = (val !== null && val !== undefined && val !== '-') ? val + ' h' : '-';
+          console.log(`[PLAN] Décembre sem ${weekNumber} -> plan-w${planWeekIndex}-mktg-reel = ${input.value}`);
+        }
+      }
+
+      // Estimation
+      if (weekData.estimation !== undefined) {
+        const input = document.getElementById(`plan-w${planWeekIndex}-estim-reel`);
+        if (input) {
+          input.value = weekData.estimation;
+          console.log(`[PLAN] Décembre sem ${weekNumber} -> plan-w${planWeekIndex}-estim-reel = ${input.value}`);
+        }
+      }
+
+      // Contrat
+      if (weekData.contract !== undefined) {
+        const input = document.getElementById(`plan-w${planWeekIndex}-contrat-reel`);
+        if (input) {
+          input.value = weekData.contract;
+          console.log(`[PLAN] Décembre sem ${weekNumber} -> plan-w${planWeekIndex}-contrat-reel = ${input.value}`);
+        }
+      }
+
+      // Dollar
+      if (weekData.dollar !== undefined) {
+        const input = document.getElementById(`plan-w${planWeekIndex}-dollar-reel`);
+        if (input) {
+          input.value = Math.round(weekData.dollar).toLocaleString('fr-CA') + ' $';
+          console.log(`[PLAN] Décembre sem ${weekNumber} -> plan-w${planWeekIndex}-dollar-reel = ${input.value}`);
+        }
+      }
+    });
+  }
+
+  // Janvier 2026+ (monthIndex 0-11): mapper aux semaines 6+
+  for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
+    const monthKey = String(monthIndex);
+    if (window.weeklyData[monthKey]) {
+      Object.keys(window.weeklyData[monthKey]).forEach(weekNumber => {
+        const weekData = window.weeklyData[monthKey][weekNumber];
+
+        // Calculer le numéro de semaine dans le plan d'affaires
+        // Décembre 2025 occupe les 5 premières semaines (1-5)
+        // Janvier 2026 (monthIndex 0) commence à la semaine 6
+        // Chaque mois a 5 semaines
+        const planWeekIndex = 5 + (monthIndex * 5) + parseInt(weekNumber);
+
+        if (planWeekIndex > 52) return; // Ne pas dépasser la semaine 52
+
+        // H. Marketing
+        if (weekData.h_marketing !== undefined) {
+          const input = document.getElementById(`plan-w${planWeekIndex}-mktg-reel`);
+          if (input) {
+            const val = weekData.h_marketing;
+            input.value = (val !== null && val !== undefined && val !== '-') ? val + ' h' : '-';
+          }
+        }
+
+        // Estimation
+        if (weekData.estimation !== undefined) {
+          const input = document.getElementById(`plan-w${planWeekIndex}-estim-reel`);
+          if (input) input.value = weekData.estimation;
+        }
+
+        // Contrat
+        if (weekData.contract !== undefined) {
+          const input = document.getElementById(`plan-w${planWeekIndex}-contrat-reel`);
+          if (input) input.value = weekData.contract;
+        }
+
+        // Dollar
+        if (weekData.dollar !== undefined) {
+          const input = document.getElementById(`plan-w${planWeekIndex}-dollar-reel`);
+          if (input) input.value = Math.round(weekData.dollar).toLocaleString('fr-CA') + ' $';
+        }
+      });
+    }
+  }
+
+  // Recalculer le plan après avoir chargé les données
+  console.log('[PLAN] Données chargées, recalcul du plan...');
   calculatePlan();
 }
 

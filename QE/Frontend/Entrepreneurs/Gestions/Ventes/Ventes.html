@@ -1717,8 +1717,91 @@
   <!-- <script src="/Ventes_sections.js"></script> -->
 
 <script>
+  // Load ventes data from backend
+  async function loadVentesDataInternal() {
+    const username = window.username;
+    if (!username) {
+      console.error('[VENTES] Aucun username défini');
+      return;
+    }
+
+    console.log('[VENTES] Chargement des données pour:', username);
+
+    // Load all 4 categories
+    await Promise.all([
+      loadVentesCategory('attente', 'attente-tbody'),
+      loadVentesCategory('acceptees', 'accepte-tbody'),
+      loadVentesCategory('produit', 'produit-tbody')
+    ]);
+
+    console.log('[VENTES] Toutes les données chargées');
+  }
+
+  async function loadVentesCategory(category, tbodyId) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+
+    try {
+      const response = await fetch(`/cloud/ventes_${category}/${window.username}/ventes.json`);
+
+      if (!response.ok) {
+        console.log(`[VENTES] Pas de données ${category} pour ${window.username}`);
+        showEmptyTable(tbody, category);
+        return;
+      }
+
+      const ventes = await response.json();
+
+      if (!ventes || ventes.length === 0) {
+        showEmptyTable(tbody, category);
+        return;
+      }
+
+      // Populate table
+      tbody.innerHTML = ventes.map(vente => {
+        const nomComplet = `${vente.clientPrenom || ''} ${vente.clientNom || ''}`.trim() || '-';
+        return `
+        <tr>
+          <td data-label="Nom" style="padding: 1rem;">${nomComplet}</td>
+          <td data-label="Téléphone" style="padding: 1rem;">${vente.telephone || '-'}</td>
+          <td data-label="Adresse" style="padding: 1rem;">${vente.adresse || '-'}</td>
+          <td data-label="Prix" style="padding: 1rem;">${vente.prix || '-'}</td>
+          <td data-label="Paiement" style="padding: 1rem;">${vente.statut_paiement || vente.typePaiement || '-'}</td>
+        </tr>
+      `}).join('');
+
+      console.log(`[VENTES] ${ventes.length} vente(s) ${category} chargée(s)`);
+
+    } catch (error) {
+      console.error(`[VENTES] Erreur chargement ${category}:`, error);
+      showEmptyTable(tbody, category);
+    }
+  }
+
+  function showEmptyTable(tbody, category) {
+    const icons = {
+      'attente': 'fa-clock',
+      'acceptees': 'fa-check-circle',
+      'produit': 'fa-box'
+    };
+    const labels = {
+      'attente': 'en attente',
+      'acceptees': 'accepté',
+      'produit': 'produit'
+    };
+
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" class="empty-state">
+          <i class="fas ${icons[category]}" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
+          <p style="font-size: 1rem;">Aucun client ${labels[category]}</p>
+        </td>
+      </tr>
+    `;
+  }
+
   // Function called by entrepreneur-selector.js when coach selects an entrepreneur
-  window.loadVentesData = function() {
+  window.loadVentesData = async function() {
     console.log('[VENTES] Chargement des données pour le nouvel entrepreneur:', window.username);
 
     // Supprimer l'anti-flash CSS pour rendre le contenu visible
@@ -1728,12 +1811,21 @@
       console.log('[VENTES] Anti-flash CSS supprimé');
     }
 
-    // Note: Pour l'instant, les données de ventes sont vides
-    // TODO: Implémenter le chargement des données de ventes depuis le backend
-    // comme c'est fait dans RPO avec loadRPODataInternal()
+    // Load ventes data
+    await loadVentesDataInternal();
 
     console.log('[VENTES] Interface prête pour:', window.username);
   };
+
+  // Load data on page load if username is already set
+  window.addEventListener('DOMContentLoaded', function() {
+    setTimeout(async function() {
+      if (window.username) {
+        console.log('[VENTES] Chargement initial des données pour:', window.username);
+        await loadVentesDataInternal();
+      }
+    }, 500);
+  });
 </script>
 
 <script

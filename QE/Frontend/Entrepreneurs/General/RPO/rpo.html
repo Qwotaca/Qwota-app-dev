@@ -2135,6 +2135,18 @@
 
   </div> <!-- Fin du main-content-wrapper -->
 
+<!-- Initialiser window.username AVANT common.js pour éviter la redirection -->
+<script>
+(function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const userParam = urlParams.get('user');
+  if (userParam) {
+    window.username = userParam;
+    console.log('[RPO INIT] window.username initialisé depuis URL:', userParam);
+  }
+})();
+</script>
+
 <script src="/common.js"></script>
 
 <!-- Inline entrepreneur selector script removed - now handled by shared /entrepreneur-selector.js -->
@@ -5982,22 +5994,10 @@ function initStarRatings() {
 
 // Get current username from session
 function getCurrentUsername() {
-  // IMPORTANT: Vérifier d'abord si un entrepreneur a été sélectionné (pour les coaches)
-  // Le entrepreneur-selector.js définit window.selectedEntrepreneurUsername
-  if (window.selectedEntrepreneurUsername) {
-    return window.selectedEntrepreneurUsername;
-  }
-
-  // Vérifier ensuite si un paramètre 'user' existe dans l'URL
-  // Cela permet aux coachs de voir le RPO d'un entrepreneur spécifique
+  // EXACTEMENT comme facturationqe: utiliser window.username en priorité
+  // (défini par entrepreneur-selector.js quand un coach sélectionne un entrepreneur)
   const urlParams = new URLSearchParams(window.location.search);
-  const userParam = urlParams.get('user');
-
-  if (userParam) {
-    return userParam;
-  }
-
-  return window.username || localStorage.getItem('username') || 'demo';
+  return urlParams.get('user') || window.username || sessionStorage.getItem('username') || localStorage.getItem('username') || 'demo';
 }
 
 // Load all RPO data from backend

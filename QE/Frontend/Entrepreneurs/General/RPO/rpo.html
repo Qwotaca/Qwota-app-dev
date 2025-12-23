@@ -6005,8 +6005,8 @@ function getCurrentUsername() {
   return urlParams.get('user') || window.username || sessionStorage.getItem('username') || localStorage.getItem('username') || 'demo';
 }
 
-// Load all RPO data from backend
-async function loadRPOData() {
+// Load all RPO data from backend (internal function)
+async function loadRPODataInternal() {
   const username = getCurrentUsername();
 
   try {
@@ -6047,7 +6047,18 @@ async function loadRPOData() {
 }
 
 // Exposer loadRPOData globalement pour entrepreneur-selector.js
-window.loadRPOData = loadRPOData;
+// Wrapper function to reload data AND reinitialize views (comme facturationqe)
+window.loadRPOData = async function() {
+  console.log('[RPO] Rechargement des données après sélection entrepreneur');
+  await loadRPODataInternal();
+
+  // Réinitialiser les vues
+  setTimeout(() => {
+    changeMonthlyView(0);
+    changeMonth(0);
+    calculateMonthlyTotalsFromWeekly(0);
+  }, 100);
+};
 
 // Load annual data into UI
 function loadAnnualData(annual) {
@@ -6727,29 +6738,18 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   // Skip data loading if coach hasn't selected an entrepreneur yet
   // (si pas de user param OU si le user param est le coach lui-même)
-  const shouldShowSelector = isCoach && (!userParam || userParam === coachUsername) && !window.selectedEntrepreneurUsername;
+  // EXACTEMENT COMME FACTURATION QE
+  const userParamIsCoach = userParam && userParam === coachUsername;
+  const isCoachModeWithoutSelection = isCoach && (!userParam || userParamIsCoach);
 
-  if (shouldShowSelector) {
-    console.log('[INIT] Coach mode without entrepreneur selected - skipping initial data load');
-
-    // Écouter l'événement de sélection d'entrepreneur
-    document.addEventListener('entrepreneurSelected', async function(e) {
-      console.log('[RPO] Entrepreneur sélectionné:', e.detail.username);
-      await loadRPOData();
-
-      // Réinitialiser les vues
-      setTimeout(() => {
-        changeMonthlyView(0);
-        changeMonth(0);
-        calculateMonthlyTotalsFromWeekly(0);
-      }, 100);
-    });
-
+  if (isCoachModeWithoutSelection) {
+    console.log('[INIT] Mode coach détecté - Les données seront chargées après la sélection d\'entrepreneur');
+    // Ne pas charger les données maintenant, elles seront chargées par entrepreneur-selector.js
     return;
   }
 
   // Load RPO data from backend (entrepreneurs ou coachs avec entrepreneur sélectionné)
-  await loadRPOData();
+  await loadRPODataInternal();
 
   // Initialize views with January AFTER DOM is fully ready
   setTimeout(() => {

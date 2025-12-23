@@ -7775,14 +7775,17 @@ async function initTeamPlan() {
   }
 }
 
-// Appeler initTeamPlan au chargement si on a déjà un coachUsername
-document.addEventListener('DOMContentLoaded', function() {
-  // Attendre un peu que coachUsername soit défini (dans l'autre DOMContentLoaded)
-  setTimeout(() => {
-    if (coachUsername) {
-      initTeamPlan();
-    }
-  }, 100);
+// NE PAS charger automatiquement - attendre la sélection d'un entrepreneur
+// Pour les coaches: le RPO sera chargé quand un entrepreneur est sélectionné via entrepreneur-selector.js
+// Pour la direction: le RPO sera chargé quand un coach est sélectionné via le custom selector ci-dessous
+
+// Écouter les événements de sélection d'entrepreneur (pour les coaches)
+document.addEventListener('entrepreneurSelected', function(e) {
+  console.log('[RPO COACH] Entrepreneur sélectionné:', e.detail.username);
+  // Charger le RPO de l'entrepreneur sélectionné
+  if (typeof initTeamPlan === 'function') {
+    initTeamPlan();
+  }
 });
 
 // ============================================
@@ -7801,9 +7804,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const userRole = localStorage.getItem('userRole');
 
     // Only show selector for direction users
+    // Coaches will use the entrepreneur-selector.js instead
     if (userRole !== 'direction') {
-      // For coaches viewing their own data, show content immediately
-      document.body.classList.add('coach-viewing-own-data');
+      // For coaches, entrepreneur-selector.js will handle the selection
+      // Do NOT add 'coach-viewing-own-data' class - we want them to select an entrepreneur
       return;
     }
 
@@ -8422,6 +8426,9 @@ document.getElementById('teamObjectifPopup')?.addEventListener('click', function
   }
 });
 </script>
+
+<!-- Entrepreneur Selector for Coaches -->
+<script src="/entrepreneur-selector.js"></script>
 
 </body>
 </html>

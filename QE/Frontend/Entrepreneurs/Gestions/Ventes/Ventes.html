@@ -41,9 +41,19 @@
       const userRole = localStorage.getItem('userRole');
       const isCoach = userRole === 'coach';
       const urlParams = new URLSearchParams(window.location.search);
-      const hasUserParam = urlParams.get('user');
+      const userParam = urlParams.get('user');
+      const coachUsername = localStorage.getItem('username');
 
-      if (isCoach && !hasUserParam) {
+      console.log('[VENTES ANTI-FLASH] userRole:', userRole, 'isCoach:', isCoach);
+      console.log('[VENTES ANTI-FLASH] userParam:', userParam, 'coachUsername:', coachUsername);
+
+      // Afficher le sélecteur si:
+      // - C'est un coach ET (pas de paramètre user OU le paramètre user est le coach lui-même)
+      const shouldShowSelector = isCoach && (!userParam || userParam === coachUsername);
+
+      console.log('[VENTES ANTI-FLASH] shouldShowSelector:', shouldShowSelector);
+
+      if (shouldShowSelector) {
         // Injecter le CSS immédiatement pour cacher le contenu et afficher le sélecteur
         const style = document.createElement('style');
         style.id = 'coach-anti-flash-css';
@@ -1476,6 +1486,18 @@
     });
   </script>
 
+  <!-- Initialiser window.username AVANT common.js pour éviter la redirection -->
+  <script>
+  (function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const userParam = urlParams.get('user');
+    if (userParam) {
+      window.username = userParam;
+      console.log('[VENTES INIT] window.username initialisé depuis URL:', userParam);
+    }
+  })();
+  </script>
+
   <!-- Script commun de gestion des permissions et interface -->
   <script src="/common.js"></script>
 
@@ -1698,9 +1720,21 @@
 <script>
   // Function called by entrepreneur-selector.js when coach selects an entrepreneur
   window.loadVentesData = function() {
-    console.log('[VENTES] Rechargement de la page pour le nouvel entrepreneur:', window.username);
-    // Reload the page to fetch data for the selected entrepreneur
-    window.location.reload();
+    console.log('[VENTES] Rechargement des données pour le nouvel entrepreneur:', window.username);
+
+    // Supprimer l'anti-flash CSS pour rendre le contenu visible
+    const antiFlashStyle = document.getElementById('coach-anti-flash-css');
+    if (antiFlashStyle) {
+      antiFlashStyle.remove();
+      console.log('[VENTES] Anti-flash CSS supprimé');
+    }
+
+    // Get current URL without query parameters
+    const baseUrl = window.location.origin + window.location.pathname;
+
+    // Reload the page with the selected entrepreneur's username as URL parameter
+    // This prevents the entrepreneur selector from showing again
+    window.location.href = baseUrl + '?user=' + encodeURIComponent(window.username);
   };
 </script>
 

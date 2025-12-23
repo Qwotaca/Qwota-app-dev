@@ -190,6 +190,12 @@
     window.selectedEntrepreneurUsername = username;
     window.username = username; // For compatibility with existing code
 
+    // IMPORTANT: Update sessionStorage and localStorage too
+    // This ensures getCurrentUsername() and other functions get the correct entrepreneur
+    sessionStorage.setItem('username', username);
+    localStorage.setItem('username', username);
+    console.log('[ENTREPRENEUR-SELECTOR] Username updated:', username);
+
     // Update toggle display
     let textElement = dropdownToggle.querySelector('.placeholder, .selected-text');
     if (textElement) {

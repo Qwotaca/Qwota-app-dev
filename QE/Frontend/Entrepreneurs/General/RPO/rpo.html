@@ -5998,9 +5998,19 @@ function initStarRatings() {
 }
 
 // Get current username from session
+// EXACTEMENT COMME FACTURATIONQE
 function getCurrentUsername() {
-  // EXACTEMENT comme facturationqe: utiliser window.username en priorité
-  // (défini par entrepreneur-selector.js quand un coach sélectionne un entrepreneur)
+  // Si window.username est défini ET différent du URL param, c'est qu'un entrepreneur a été sélectionné par le coach
+  if (window.username) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlUser = urlParams.get('user');
+    // Si URL param existe ET qu'un username est défini ET qu'ils sont différents, utiliser le username sélectionné
+    if (urlUser && window.username !== urlUser) {
+      console.log('[COACH] Utilisation du username sélectionné:', window.username);
+      return window.username;
+    }
+  }
+  // Sinon, comportement normal
   const urlParams = new URLSearchParams(window.location.search);
   return urlParams.get('user') || window.username || sessionStorage.getItem('username') || localStorage.getItem('username') || 'demo';
 }

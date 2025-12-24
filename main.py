@@ -18169,6 +18169,53 @@ async def production_terminee_vente(data: dict = Body(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/ventes/update-statut-paiement")
+async def update_statut_paiement_vente(data: dict = Body(...)):
+    """
+    Met à jour le statut de paiement d'une vente dans n'importe quelle catégorie
+    """
+    try:
+        username = data.get("username")
+        vente_id = data.get("id")
+        nouveau_statut = data.get("statut")
+        category = data.get("category")  # attente, acceptees, produit
+
+        if not username or not vente_id or not nouveau_statut or not category:
+            raise HTTPException(status_code=400, detail="Paramètres manquants")
+
+        # Déterminer le fichier selon la catégorie
+        fichier_ventes = os.path.join(f"{base_cloud}/ventes_{category}", username, "ventes.json")
+
+        if not os.path.exists(fichier_ventes):
+            raise HTTPException(status_code=404, detail=f"Fichier ventes_{category} non trouvé")
+
+        # Charger les ventes
+        with open(fichier_ventes, "r", encoding="utf-8") as f:
+            ventes = json.load(f)
+
+        # Trouver et mettre à jour la vente
+        vente_trouvee = False
+        for vente in ventes:
+            if vente.get("id") == vente_id or vente.get("num") == vente_id:
+                vente["statut_paiement"] = nouveau_statut
+                vente_trouvee = True
+                break
+
+        if not vente_trouvee:
+            raise HTTPException(status_code=404, detail="Vente non trouvée")
+
+        # Sauvegarder les modifications
+        with open(fichier_ventes, "w", encoding="utf-8") as f:
+            json.dump(ventes, f, ensure_ascii=False, indent=2)
+
+        print(f"[VENTES] Statut paiement mis à jour pour {username}/{vente_id}: {nouveau_statut}")
+        return {"success": True, "message": "Statut de paiement mis à jour"}
+
+    except Exception as e:
+        print(f"[ERREUR update_statut_paiement_vente] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/ventes/produit/{username}")
 def get_ventes_produit(username: str):
     """

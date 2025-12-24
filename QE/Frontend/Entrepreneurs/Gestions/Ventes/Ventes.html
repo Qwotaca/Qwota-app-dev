@@ -1158,6 +1158,27 @@
 
   // Handle prospect form submission
   document.addEventListener('DOMContentLoaded', function() {
+    // Format phone number with dashes
+    const prospectTelephone = document.getElementById('prospectTelephone');
+    if (prospectTelephone) {
+      prospectTelephone.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+
+        if (value.length > 10) {
+          value = value.substring(0, 10);
+        }
+
+        // Format as 000-000-0000
+        if (value.length >= 6) {
+          e.target.value = `${value.substring(0, 3)}-${value.substring(3, 6)}-${value.substring(6)}`;
+        } else if (value.length >= 3) {
+          e.target.value = `${value.substring(0, 3)}-${value.substring(3)}`;
+        } else {
+          e.target.value = value;
+        }
+      });
+    }
+
     const prospectForm = document.getElementById('prospectForm');
     if (prospectForm) {
       prospectForm.addEventListener('submit', async function(e) {
@@ -1169,15 +1190,35 @@
         const adresse = document.getElementById('prospectAdresse').value.trim();
 
         if (!prenom || !nom || !telephone || !adresse) {
-          alert('Veuillez remplir tous les champs');
+          console.log('[VENTES] Tous les champs sont requis');
           return;
         }
 
-        // TODO: Save to backend - for now just show success message
-        console.log('[VENTES] Nouveau prospect:', { prenom, nom, telephone, adresse });
-        alert('Client potentiel ajouté avec succès!\n\nNote: La sauvegarde backend n\'est pas encore implémentée.');
+        // Save to backend
+        try {
+          const response = await fetch('/ajouter-prospect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              username: window.username,
+              prenom: prenom,
+              nom: nom,
+              telephone: telephone,
+              adresse: adresse
+            })
+          });
 
-        fermerModalProspect();
+          if (response.ok) {
+            console.log('[VENTES] Prospect ajouté avec succès');
+            fermerModalProspect();
+            // Reload data to show new prospect
+            await loadVentesDataInternal();
+          } else {
+            console.error('[VENTES] Erreur ajout prospect:', await response.text());
+          }
+        } catch (error) {
+          console.error('[VENTES] Erreur réseau:', error);
+        }
       });
     }
   });
@@ -1296,7 +1337,7 @@
       });
 
       if (!client) {
-        alert('Client non trouvé');
+        console.error('[VENTES] Client non trouvé');
         return;
       }
 
@@ -1333,7 +1374,7 @@
 
       if (!client) {
         closeConfirmRecupererModal();
-        alert('Client non trouvé');
+        console.error('[VENTES] Client non trouvé');
         return;
       }
 
@@ -1375,8 +1416,7 @@
         }
 
       } catch (error) {
-        console.error('Erreur récupération client:', error);
-        alert('Erreur lors de la récupération du client');
+        console.error('[VENTES] Erreur récupération client:', error);
       }
     }
 
@@ -1402,8 +1442,7 @@
         await chargerClientsPerdus();
 
       } catch (error) {
-        console.error('Erreur suppression client perdu:', error);
-        alert('Erreur lors de la suppression');
+        console.error('[VENTES] Erreur suppression client perdu:', error);
       }
     }
   </script>
@@ -1766,7 +1805,7 @@
 
 <script>
   // Create payment status badge (Monday.com style)
-  function createPaymentBadge(statut) {
+  function createPaymentBadge(statut, venteId) {
     if (!statut || statut === '-') {
       return '<span style="color: var(--text-gray);">-</span>';
     }
@@ -1782,10 +1821,10 @@
       textColor = '#fff';
       label = 'Paiement final reçu';
     } else if (statutLower.includes('dépôt') || statutLower.includes('depot')) {
-      // Dépôt - Orange
+      // Dépôt reçu - Orange
       bgColor = '#fdab3d';
       textColor = '#fff';
-      label = 'Dépôt';
+      label = 'Dépôt reçu';
     } else {
       // Par défaut: En attente - Rouge
       bgColor = '#e2445c';
@@ -1793,7 +1832,9 @@
       label = 'En attente';
     }
 
-    return `<span style="
+    return `<span
+      onclick="changerStatutPaiement('${venteId}', '${label}', event)"
+      style="
       display: inline-block;
       padding: 4px 12px;
       border-radius: 4px;
@@ -1802,7 +1843,171 @@
       font-size: 0.875rem;
       font-weight: 500;
       white-space: nowrap;
-    ">${label}</span>`;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    "
+    onmouseover="this.style.opacity='0.8'"
+    onmouseout="this.style.opacity='1'"
+    >${label}</span>`;
+  }
+
+  // Change payment status
+  function changerStatutPaiement(venteId, currentStatut, event) {
+    // Prevent event bubbling
+    if (event) {
+      event.stopPropagation();
+    }
+
+    // Remove any existing dropdown
+    const existingDropdown = document.getElementById('payment-status-dropdown');
+    if (existingDropdown) {
+      existingDropdown.remove();
+    }
+
+    // Create dropdown menu
+    const dropdown = document.createElement('div');
+    dropdown.id = 'payment-status-dropdown';
+    dropdown.style.cssText = `
+      position: fixed;
+      background: #1e293b;
+      border: 2px solid var(--border-dark);
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+      z-index: 10001;
+      min-width: 200px;
+      overflow: hidden;
+    `;
+
+    // Status options with Monday.com colors
+    const statuts = [
+      { label: 'En attente', color: '#e2445c', textColor: '#fff' },
+      { label: 'Dépôt reçu', color: '#fdab3d', textColor: '#fff' },
+      { label: 'Paiement final reçu', color: '#00c875', textColor: '#fff' }
+    ];
+
+    // Create options
+    statuts.forEach(statut => {
+      const option = document.createElement('div');
+      option.style.cssText = `
+        padding: 12px 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+        transition: background 0.2s;
+      `;
+
+      // Add color badge preview
+      const badge = document.createElement('span');
+      badge.style.cssText = `
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: ${statut.color};
+      `;
+
+      const label = document.createElement('span');
+      label.textContent = statut.label;
+      label.style.cssText = `
+        color: var(--text-light);
+        font-size: 14px;
+        flex: 1;
+      `;
+
+      // Add checkmark if current status
+      if (statut.label === currentStatut) {
+        const checkmark = document.createElement('i');
+        checkmark.className = 'fas fa-check';
+        checkmark.style.cssText = 'color: var(--primary-blue); font-size: 12px;';
+        option.appendChild(checkmark);
+      }
+
+      option.appendChild(badge);
+      option.appendChild(label);
+
+      // Hover effect
+      option.addEventListener('mouseenter', () => {
+        option.style.background = 'rgba(59, 130, 246, 0.15)';
+      });
+      option.addEventListener('mouseleave', () => {
+        option.style.background = 'transparent';
+      });
+
+      // Click handler
+      option.addEventListener('click', async () => {
+        if (statut.label !== currentStatut) {
+          console.log(`[VENTES] Changement statut paiement pour ${venteId}: ${currentStatut} → ${statut.label}`);
+
+          // Determine category from current table
+          let category = 'acceptees'; // default
+          const clickedBadge = event && event.target;
+          if (clickedBadge) {
+            const row = clickedBadge.closest('tr');
+            if (row) {
+              const tbody = row.closest('tbody');
+              if (tbody) {
+                const tbodyId = tbody.id;
+                if (tbodyId === 'attente-tbody') category = 'attente';
+                else if (tbodyId === 'accepte-tbody') category = 'acceptees';
+                else if (tbodyId === 'produit-tbody') category = 'produit';
+              }
+            }
+          }
+
+          // Save to backend
+          try {
+            const response = await fetch('/ventes/update-statut-paiement', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                username: window.username,
+                id: venteId,
+                statut: statut.label,
+                category: category
+              })
+            });
+
+            if (response.ok) {
+              console.log('[VENTES] Statut paiement sauvegardé avec succès');
+              // Reload data to show updated status
+              await loadVentesDataInternal();
+            } else {
+              console.error('[VENTES] Erreur sauvegarde statut:', await response.text());
+            }
+          } catch (error) {
+            console.error('[VENTES] Erreur réseau:', error);
+          }
+        }
+        dropdown.remove();
+      });
+
+      dropdown.appendChild(option);
+    });
+
+    // Position dropdown near the clicked badge
+    document.body.appendChild(dropdown);
+
+    // Get click position from event if available, otherwise center
+    if (event && event.target) {
+      const rect = event.target.getBoundingClientRect();
+      dropdown.style.top = `${rect.bottom + 5}px`;
+      dropdown.style.left = `${rect.left}px`;
+    } else {
+      // Fallback: center of screen
+      dropdown.style.top = '50%';
+      dropdown.style.left = '50%';
+      dropdown.style.transform = 'translate(-50%, -50%)';
+    }
+
+    // Close dropdown when clicking outside
+    setTimeout(() => {
+      document.addEventListener('click', function closeDropdown() {
+        dropdown.remove();
+        document.removeEventListener('click', closeDropdown);
+      });
+    }, 100);
   }
 
   // Load ventes data from backend
@@ -1815,14 +2020,57 @@
 
     console.log('[VENTES] Chargement des données pour:', username);
 
-    // Load all 4 categories
+    // Load all categories
     await Promise.all([
+      loadProspects('potentiel-tbody'),
       loadVentesCategory('attente', 'attente-tbody'),
       loadVentesCategory('acceptees', 'accepte-tbody'),
       loadVentesCategory('produit', 'produit-tbody')
     ]);
 
     console.log('[VENTES] Toutes les données chargées');
+  }
+
+  async function loadProspects(tbodyId) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+
+    try {
+      const response = await fetch(`/cloud/prospects/${window.username}/prospects.json`);
+
+      if (!response.ok) {
+        console.log(`[VENTES] Pas de prospects pour ${window.username}`);
+        showEmptyTable(tbody, 'potentiel');
+        return;
+      }
+
+      const prospects = await response.json();
+
+      if (!prospects || prospects.length === 0) {
+        showEmptyTable(tbody, 'potentiel');
+        return;
+      }
+
+      // Populate table
+      tbody.innerHTML = prospects.map(prospect => {
+        const nomComplet = `${prospect.prenom || ''} ${prospect.nom || ''}`.trim() || '-';
+
+        return `
+        <tr style="cursor: pointer;">
+          <td data-label="Nom" style="padding: 1rem;">${nomComplet}</td>
+          <td data-label="Téléphone" style="padding: 1rem;">${prospect.telephone || '-'}</td>
+          <td data-label="Adresse" style="padding: 1rem;">${prospect.adresse || '-'}</td>
+          <td data-label="Prix" style="padding: 1rem;">-</td>
+          <td data-label="Paiement" style="padding: 1rem;">-</td>
+        </tr>
+      `}).join('');
+
+      console.log(`[VENTES] ${prospects.length} prospect(s) chargé(s)`);
+
+    } catch (error) {
+      console.error(`[VENTES] Erreur chargement prospects:`, error);
+      showEmptyTable(tbody, 'potentiel');
+    }
   }
 
   async function loadVentesCategory(category, tbodyId) {
@@ -1865,9 +2113,10 @@
           }
         }
 
-        // Create payment badge
+        // Create payment badge with vente ID
         const statutPaiement = vente.statut_paiement || vente.typePaiement || vente.payer_par || '-';
-        const badgePaiement = createPaymentBadge(statutPaiement);
+        const venteId = vente.id || vente.num || `vente-${Math.random()}`;
+        const badgePaiement = createPaymentBadge(statutPaiement, venteId);
 
         return `
         <tr>
@@ -1889,11 +2138,13 @@
 
   function showEmptyTable(tbody, category) {
     const icons = {
+      'potentiel': 'fa-user-plus',
       'attente': 'fa-clock',
       'acceptees': 'fa-check-circle',
       'produit': 'fa-box'
     };
     const labels = {
+      'potentiel': 'potentiel',
       'attente': 'en attente',
       'acceptees': 'accepté',
       'produit': 'produit'

@@ -1759,14 +1759,31 @@
 
       // Populate table
       tbody.innerHTML = ventes.map(vente => {
-        const nomComplet = `${vente.clientPrenom || ''} ${vente.clientNom || ''}`.trim() || '-';
+        // Support both formats: prenom/nom (attente) and clientPrenom/clientNom (acceptees/produit)
+        const prenom = vente.prenom || vente.clientPrenom || '';
+        const nom = vente.nom || vente.clientNom || '';
+        const nomComplet = `${prenom} ${nom}`.trim() || '-';
+
+        // Format price if it's a number without formatting
+        let prixFormate = vente.prix || '-';
+        if (prixFormate !== '-' && !prixFormate.includes('$')) {
+          // Convert "1500.00" to "1 500,00 $"
+          const prixNum = parseFloat(prixFormate);
+          if (!isNaN(prixNum)) {
+            prixFormate = prixNum.toLocaleString('fr-FR', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            }).replace(/\s/g, '\u00A0') + '\u00A0$';
+          }
+        }
+
         return `
         <tr>
           <td data-label="Nom" style="padding: 1rem;">${nomComplet}</td>
           <td data-label="Téléphone" style="padding: 1rem;">${vente.telephone || '-'}</td>
           <td data-label="Adresse" style="padding: 1rem;">${vente.adresse || '-'}</td>
-          <td data-label="Prix" style="padding: 1rem;">${vente.prix || '-'}</td>
-          <td data-label="Paiement" style="padding: 1rem;">${vente.statut_paiement || vente.typePaiement || '-'}</td>
+          <td data-label="Prix" style="padding: 1rem;">${prixFormate}</td>
+          <td data-label="Paiement" style="padding: 1rem;">${vente.statut_paiement || vente.typePaiement || vente.payer_par || '-'}</td>
         </tr>
       `}).join('');
 

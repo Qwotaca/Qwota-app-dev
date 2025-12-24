@@ -18216,6 +18216,32 @@ async def update_statut_paiement_vente(data: dict = Body(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/prospects/{username}")
+def get_prospects(username: str):
+    """
+    Récupère les prospects d'un utilisateur
+    """
+    try:
+        prospects_dir = os.path.join(f"{base_cloud}/prospects", username)
+        fichier_prospects = os.path.join(prospects_dir, "prospects.json")
+
+        # Créer le dossier et le fichier s'ils n'existent pas
+        if not os.path.exists(fichier_prospects):
+            os.makedirs(prospects_dir, exist_ok=True)
+            with open(fichier_prospects, "w", encoding="utf-8") as f:
+                json.dump([], f)
+            return []
+
+        with open(fichier_prospects, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            if not content:
+                return []
+            return json.loads(content)
+    except Exception as e:
+        print(f"[ERREUR prospects] {e}")
+        return []
+
+
 @app.get("/ventes/produit/{username}")
 def get_ventes_produit(username: str):
     """

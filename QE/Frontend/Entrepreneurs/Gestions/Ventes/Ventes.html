@@ -1133,6 +1133,54 @@
   });
 
   // Anciennes fonctions supprimées - utiliser les nouvelles à partir de la ligne 1829
+
+  // ============================================
+  // MODAL PROSPECT FUNCTIONS
+  // ============================================
+  function ouvrirModalProspect() {
+    const modal = document.getElementById('ajouterProspectModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      console.log('[VENTES] Modal prospect ouvert');
+    }
+  }
+
+  function fermerModalProspect() {
+    const modal = document.getElementById('ajouterProspectModal');
+    if (modal) {
+      modal.style.display = 'none';
+      // Reset form
+      const form = document.getElementById('prospectForm');
+      if (form) form.reset();
+      console.log('[VENTES] Modal prospect fermé');
+    }
+  }
+
+  // Handle prospect form submission
+  document.addEventListener('DOMContentLoaded', function() {
+    const prospectForm = document.getElementById('prospectForm');
+    if (prospectForm) {
+      prospectForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const prenom = document.getElementById('prospectPrenom').value.trim();
+        const nom = document.getElementById('prospectNom').value.trim();
+        const telephone = document.getElementById('prospectTelephone').value.trim();
+        const adresse = document.getElementById('prospectAdresse').value.trim();
+
+        if (!prenom || !nom || !telephone || !adresse) {
+          alert('Veuillez remplir tous les champs');
+          return;
+        }
+
+        // TODO: Save to backend - for now just show success message
+        console.log('[VENTES] Nouveau prospect:', { prenom, nom, telephone, adresse });
+        alert('Client potentiel ajouté avec succès!\n\nNote: La sauvegarde backend n\'est pas encore implémentée.');
+
+        fermerModalProspect();
+      });
+    }
+  });
 </script>
 
   <!-- Script pour toggle clients perdus -->
@@ -1717,6 +1765,56 @@
   <!-- <script src="/Ventes_sections.js"></script> -->
 
 <script>
+  // Create payment status badge (Monday.com style)
+  function createPaymentBadge(statut) {
+    if (!statut || statut === '-') {
+      return '<span style="color: var(--text-gray);">-</span>';
+    }
+
+    let bgColor, textColor, label;
+
+    // Normalize status text
+    const statutLower = statut.toLowerCase();
+
+    if (statutLower.includes('final') && (statutLower.includes('reçu') || statutLower.includes('recu'))) {
+      // Paiement final reçu - Vert
+      bgColor = '#00c875';
+      textColor = '#fff';
+      label = 'Paiement final reçu';
+    } else if (statutLower.includes('attente')) {
+      // En attente - Rouge
+      bgColor = '#e2445c';
+      textColor = '#fff';
+      label = 'En attente';
+    } else if (statutLower.includes('dépôt') || statutLower.includes('depot')) {
+      // Dépôt - Orange
+      bgColor = '#fdab3d';
+      textColor = '#fff';
+      label = 'Dépôt';
+    } else if (statutLower.includes('virement')) {
+      // Virement Interac - Bleu
+      bgColor = '#579bfc';
+      textColor = '#fff';
+      label = statut;
+    } else {
+      // Autre statut - Gris
+      bgColor = '#c4c4c4';
+      textColor = '#fff';
+      label = statut;
+    }
+
+    return `<span style="
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      background-color: ${bgColor};
+      color: ${textColor};
+      font-size: 0.875rem;
+      font-weight: 500;
+      white-space: nowrap;
+    ">${label}</span>`;
+  }
+
   // Load ventes data from backend
   async function loadVentesDataInternal() {
     const username = window.username;
@@ -1777,13 +1875,17 @@
           }
         }
 
+        // Create payment badge
+        const statutPaiement = vente.statut_paiement || vente.typePaiement || vente.payer_par || '-';
+        const badgePaiement = createPaymentBadge(statutPaiement);
+
         return `
         <tr>
           <td data-label="Nom" style="padding: 1rem;">${nomComplet}</td>
           <td data-label="Téléphone" style="padding: 1rem;">${vente.telephone || '-'}</td>
           <td data-label="Adresse" style="padding: 1rem;">${vente.adresse || '-'}</td>
           <td data-label="Prix" style="padding: 1rem;">${prixFormate}</td>
-          <td data-label="Paiement" style="padding: 1rem;">${vente.statut_paiement || vente.typePaiement || vente.payer_par || '-'}</td>
+          <td data-label="Paiement" style="padding: 1rem;">${badgePaiement}</td>
         </tr>
       `}).join('');
 

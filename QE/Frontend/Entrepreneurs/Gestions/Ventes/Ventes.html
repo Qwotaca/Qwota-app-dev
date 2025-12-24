@@ -508,8 +508,7 @@
     /* Scroll dans les tbody comme dans employés */
     .modern-table tbody {
       display: block;
-      max-height: 400px;
-      overflow-y: auto;
+      overflow-y: visible;
     }
 
     .modern-table thead,
@@ -536,6 +535,80 @@
 
     .modern-table tbody::-webkit-scrollbar-thumb:hover {
       background: #60a5fa;
+    }
+
+    /* Animation de succès */
+    .success-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.95);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .success-content {
+      text-align: center;
+      color: white;
+      animation: scaleIn 0.5s ease;
+    }
+
+    .success-checkmark {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.5rem;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 0 30px rgba(16, 185, 129, 0.5);
+      animation: checkmarkPop 0.6s ease;
+    }
+
+    .success-checkmark svg {
+      animation: drawCheck 0.5s ease 0.3s forwards;
+      stroke-dasharray: 50;
+      stroke-dashoffset: 50;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes scaleIn {
+      from {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes checkmarkPop {
+      0% {
+        transform: scale(0);
+      }
+      50% {
+        transform: scale(1.1);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @keyframes drawCheck {
+      to {
+        stroke-dashoffset: 0;
+      }
     }
   </style>
   <link rel="stylesheet" href="/entrepreneur-selector.css">
@@ -626,6 +699,10 @@
               <span class="hide-mobile">Gérez vos clients et suivez l'état de vos projets</span>
               <span class="show-mobile">Gérez vos clients</span>
             </p>
+            <button onclick="ouvrirModalClientsPerdus()" class="px-4 py-2 rounded-lg flex items-center gap-2 transition-all font-medium" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);" onmouseover="this.style.background='rgba(239, 68, 68, 0.25)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.15)'">
+              <i class="fas fa-user-times"></i>
+              <span>Clients perdus</span>
+            </button>
           </div>
         </div>
       </div>
@@ -812,7 +889,7 @@
 
   <!-- Modal informations client -->
   <div id="clientInfoModal" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none;">
-    <div id="clientInfoCard" class="status-card p-6 max-w-lg w-full" style="max-height: 90vh; overflow-y: auto;">
+    <div id="clientInfoCard" class="status-card p-6 w-full" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-xl font-bold" style="color: var(--text-light);">
           <i id="clientInfoIcon" class="fas fa-user mr-2" style="color: var(--primary-blue);"></i>
@@ -1052,6 +1129,28 @@
     </div>
   </div>
 
+  <!-- Modal confirmation marquer vente en attente comme perdue -->
+  <div id="confirmMarquerPerduModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
+    <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+      <div class="mb-6">
+        <h3 class="text-xl font-bold mb-2" style="color: var(--text-light);">
+          <i class="fas fa-exclamation-triangle mr-2" style="color: #ef4444;"></i>
+          Marquer comme perdu
+        </h3>
+        <p id="confirmMarquerPerduText" style="color: var(--text-gray);"></p>
+      </div>
+
+      <div class="flex space-x-3">
+        <button onclick="confirmMarquerPerdu()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: #ef4444; color: white;">
+          Oui
+        </button>
+        <button onclick="closeConfirmMarquerPerduModal()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: rgba(148, 163, 184, 0.2); color: var(--text-light);">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal confirmation suppression client perdu -->
   <div id="confirmDeletePerduModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
     <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
@@ -1075,7 +1174,7 @@
   </div>
 
   <!-- Modal confirmation récupération client perdu -->
-  <div id="confirmRecupererModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
+  <div id="confirmRecupererModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 80;">
     <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
       <div class="mb-6">
         <h3 class="text-xl font-bold mb-2" style="color: var(--text-light);">
@@ -1092,6 +1191,55 @@
         <button onclick="closeConfirmRecupererModal()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: rgba(148, 163, 184, 0.2); color: var(--text-light);">
           Annuler
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Clients Perdus -->
+  <div id="clientsPerdusModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px); display: none; z-index: 70;">
+    <div class="flex flex-col p-6 mx-4" style="width: 90%; max-width: 900px; max-height: 85vh; background: #1e293b; border: 1px solid var(--border-dark); border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i class="fas fa-user-times mr-2" style="color: #ef4444;"></i>
+          Clients perdus
+        </h3>
+        <button onclick="fermerModalClientsPerdus()" class="w-10 h-10 rounded-full flex items-center justify-center transition-colors" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+      <div class="flex-1 overflow-auto rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark);">
+        <table class="w-full">
+          <thead style="background: rgba(30, 41, 59, 0.5); position: sticky; top: 0; z-index: 10;">
+            <tr style="border-bottom: 2px solid var(--border-dark);">
+              <th class="px-4 py-3 text-left text-sm font-semibold" style="color: var(--text-gray);">Client</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold" style="color: var(--text-gray);">Téléphone</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold" style="color: var(--text-gray);">Prix</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold" style="color: var(--text-gray);">Date</th>
+              <th class="px-4 py-3 text-center text-sm font-semibold" style="color: var(--text-gray);">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="clientsPerdusTableBody">
+            <!-- Les clients perdus seront ajoutés ici -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal PDF Viewer -->
+  <div id="pdfViewerModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px); display: none; z-index: 70;">
+    <div class="flex flex-col p-6 mx-4" style="width: 90%; max-width: 1200px; height: 85vh; background: #1e293b; border: 1px solid var(--border-dark); border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i class="fas fa-file-pdf mr-2" style="color: var(--primary-blue);"></i>
+          <span id="pdfViewerTitle">Soumission</span>
+        </h3>
+        <button onclick="closePDFViewer()" class="w-10 h-10 rounded-full flex items-center justify-center transition-colors" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+      <div class="flex-1 rounded-lg overflow-hidden" style="background: #0f172a; border: 2px solid var(--border-dark);">
+        <iframe id="pdfViewerFrame" style="width: 100%; height: 100%; border: none;"></iframe>
       </div>
     </div>
   </div>
@@ -1156,16 +1304,321 @@
     }
   }
 
+  // Prix formatting helper
+  function formatPrix(prix) {
+    if (!prix || prix === '-') return '-';
+
+    // Si le prix est déjà formaté correctement (contient " $"), le retourner tel quel
+    if (prix.toString().includes(' $')) {
+      return prix;
+    }
+
+    // Remove $ and spaces first
+    let cleanPrix = prix.toString().replace(/[\s$]/g, '');
+
+    // Replace comma with dot for decimal separator (French format to JS format)
+    cleanPrix = cleanPrix.replace(',', '.');
+
+    // Parse as float
+    let number = parseFloat(cleanPrix);
+    if (isNaN(number)) return prix; // Return original if not a valid number
+
+    // Format with space for thousands and comma for decimals
+    let formatted = number.toFixed(2).replace('.', ',');
+    formatted = formatted.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
+    return formatted + ' $';
+  }
+
   // Global storage for client data
   window.ventesData = {
     prospects: [],
     attente: [],
     acceptees: [],
-    produit: []
+    produit: [],
+    perdus: []
+  };
+
+  // Modal Clients Perdus functions
+  window.ouvrirModalClientsPerdus = async function() {
+    const modal = document.getElementById('clientsPerdusModal');
+    if (!modal) return;
+
+    // Charger les clients perdus
+    await loadClientsPerdus();
+
+    // Afficher le modal
+    modal.style.display = 'flex';
+  };
+
+  window.fermerModalClientsPerdus = function() {
+    const modal = document.getElementById('clientsPerdusModal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+  };
+
+  async function loadClientsPerdus() {
+    try {
+      console.log('[VENTES] 🔍 Username actuel:', window.username);
+      const url = `/clients-perdus/${window.username}`;
+      console.log('[VENTES] 📡 URL de chargement:', url);
+
+      const response = await fetch(url);
+      console.log('[VENTES] 📡 Réponse status:', response.status);
+
+      if (!response.ok) {
+        console.error('[VENTES] ❌ Erreur chargement clients perdus, status:', response.status);
+        window.ventesData.perdus = [];
+        renderClientsPerdusTable();
+        return;
+      }
+
+      const clientsPerdus = await response.json();
+      console.log('[VENTES] 📦 Données brutes reçues:', clientsPerdus);
+
+      window.ventesData.perdus = clientsPerdus || [];
+      console.log('[VENTES] ✅ Clients perdus chargés:', window.ventesData.perdus.length);
+      console.log('[VENTES] 📊 window.ventesData.perdus:', window.ventesData.perdus);
+
+      renderClientsPerdusTable();
+    } catch (error) {
+      console.error('[VENTES] ❌ Erreur chargement clients perdus:', error);
+      window.ventesData.perdus = [];
+      renderClientsPerdusTable();
+    }
+  }
+
+  function renderClientsPerdusTable() {
+    const tbody = document.getElementById('clientsPerdusTableBody');
+    if (!tbody) return;
+
+    console.log('[VENTES] 📊 Rendu table clients perdus, total:', window.ventesData.perdus.length);
+
+    if (window.ventesData.perdus.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="px-4 py-8 text-center" style="color: var(--text-gray);">
+            <i class="fas fa-info-circle mb-2" style="font-size: 2rem; opacity: 0.5;"></i>
+            <p>Aucun client perdu</p>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = window.ventesData.perdus.map((client, index) => {
+      console.log(`[VENTES] 📋 Client ${index}:`, client.prenom, client.nom);
+      const prenom = client.prenom || client.clientPrenom || '';
+      const nom = client.nom || client.clientNom || '';
+      const nomComplet = `${prenom} ${nom}`.trim();
+      const telephone = client.telephone || '-';
+      const prix = formatPrix(client.prix || '0');
+      const date = client.date || '-';
+
+      return `
+        <tr style="border-bottom: 1px solid var(--border-dark); transition: background 0.2s;" onmouseover="this.style.background='rgba(30, 41, 59, 0.3)'" onmouseout="this.style.background='transparent'">
+          <td class="px-4 py-3" style="color: var(--text-light);">${nomComplet}</td>
+          <td class="px-4 py-3" style="color: var(--text-gray);">${telephone}</td>
+          <td class="px-4 py-3" style="color: #10b981; font-weight: 600;">${prix}</td>
+          <td class="px-4 py-3" style="color: var(--text-gray);">${date}</td>
+          <td class="px-4 py-3 text-center">
+            <div class="flex items-center justify-center gap-2">
+              <button onclick="recupererClientPerdu(${index})" class="px-3 py-1.5 rounded-lg transition-all text-sm font-medium" style="background: rgba(16, 185, 129, 0.2); color: #10b981;" onmouseover="this.style.background='rgba(16, 185, 129, 0.3)'" onmouseout="this.style.background='rgba(16, 185, 129, 0.2)'">
+                <i class="fas fa-undo mr-1"></i> Récupérer
+              </button>
+              <button onclick="supprimerClientPerdu(${index})" class="px-3 py-1.5 rounded-lg transition-all text-sm font-medium" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
+                <i class="fas fa-trash mr-1"></i> Supprimer
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // Variable globale pour récupération client perdu
+  let clientPerduToRecuperer = null;
+
+  window.recupererClientPerdu = function(clientIndex) {
+    console.log('[VENTES] 🔄 Récupérer client index:', clientIndex);
+    console.log('[VENTES] 📊 Total clients perdus:', window.ventesData.perdus.length);
+    console.log('[VENTES] 📋 Tous les clients perdus:', window.ventesData.perdus);
+
+    const client = window.ventesData.perdus[clientIndex];
+    if (!client) {
+      console.error('[VENTES] ❌ Client perdu introuvable à l\'index', clientIndex);
+      console.error('[VENTES] 📋 Données disponibles:', window.ventesData.perdus);
+      return;
+    }
+
+    console.log('[VENTES] ✅ Client trouvé:', client);
+
+    // Stocker le client à récupérer
+    clientPerduToRecuperer = client;
+
+    // Mettre à jour le message du modal
+    const modal = document.getElementById('confirmRecupererModal');
+    const message = document.getElementById('confirmRecupererText');
+
+    console.log('[VENTES] 🔍 Modal trouvé:', modal ? 'Oui' : 'Non');
+    console.log('[VENTES] 🔍 Message trouvé:', message ? 'Oui' : 'Non');
+
+    if (!modal || !message) {
+      console.error('[VENTES] ❌ Éléments du modal introuvables');
+      return;
+    }
+
+    const nomComplet = `${client.prenom || client.clientPrenom || ''} ${client.nom || client.clientNom || ''}`.trim();
+    message.textContent = `Vous allez récupérer ${nomComplet}. Les informations seront pré-remplies dans la page soumission pour créer une nouvelle soumission.`;
+
+    // Afficher le modal
+    modal.style.display = 'flex';
+    console.log('[VENTES] ✅ Modal de confirmation affiché');
+  };
+
+  window.closeConfirmRecupererModal = function() {
+    const modal = document.getElementById('confirmRecupererModal');
+    modal.style.display = 'none';
+    clientPerduToRecuperer = null;
+  };
+
+  window.confirmRecupererClientPerdu = async function() {
+    console.log('[VENTES] 🚀 Confirmation récupération...');
+
+    if (!clientPerduToRecuperer) {
+      console.error('[VENTES] ❌ Aucun client à récupérer');
+      return;
+    }
+
+    const modal = document.getElementById('confirmRecupererModal');
+    modal.style.display = 'none';
+
+    try {
+      console.log('[VENTES] 📋 Récupération du client perdu:', clientPerduToRecuperer);
+
+      // Préparer les données pour la page soumission
+      const dataToStore = {
+        prenom: clientPerduToRecuperer.prenom || clientPerduToRecuperer.clientPrenom || '',
+        nom: clientPerduToRecuperer.nom || clientPerduToRecuperer.clientNom || '',
+        telephone: clientPerduToRecuperer.telephone || '',
+        adresse: clientPerduToRecuperer.adresse || '',
+        courriel: clientPerduToRecuperer.courriel || clientPerduToRecuperer.email || '',
+        // Garder les anciennes informations si disponibles
+        prix: clientPerduToRecuperer.prix || '',
+        date2: clientPerduToRecuperer.date2 || '',
+        item: clientPerduToRecuperer.item || '',
+        temps: clientPerduToRecuperer.temps || '',
+        endroit: clientPerduToRecuperer.endroit || '',
+        produit: clientPerduToRecuperer.produit || '',
+        part: clientPerduToRecuperer.part || '',
+        payer_par: clientPerduToRecuperer.payer_par || 'Virement Interac',
+        client_perdu_id: clientPerduToRecuperer.id || clientPerduToRecuperer.num // Pour supprimer après création de la nouvelle soumission
+      };
+
+      // Stocker dans localStorage pour la page soumission
+      localStorage.setItem('clientSoumission', JSON.stringify(dataToStore));
+      console.log('[VENTES] ✅ Données stockées pour récupération:', dataToStore);
+      console.log('[VENTES] 🔍 Vérification localStorage:', localStorage.getItem('clientSoumission'));
+
+      // Attendre un peu pour s'assurer que localStorage est bien écrit
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Rediriger vers la page soumission
+      fermerModalClientsPerdus();
+
+      console.log('[VENTES] 🔄 Redirection vers soumission...');
+      console.log('[VENTES] 🔍 window.parent:', window.parent);
+      console.log('[VENTES] 🔍 Dans iframe?', window.parent !== window);
+
+      if (window.parent && window.parent !== window) {
+        console.log('[VENTES] 🎯 Redirection via hash: #/soumissions');
+        // Forcer le rechargement de l'iframe même si on est déjà sur soumissions
+        const currentHash = window.parent.location.hash;
+        if (currentHash === '#/soumissions') {
+          // Temporairement changer le hash puis revenir pour forcer le reload
+          window.parent.location.hash = '#/temp';
+          setTimeout(() => {
+            window.parent.location.hash = '#/soumissions';
+          }, 50);
+        } else {
+          window.parent.location.hash = '#/soumissions';
+        }
+      } else {
+        console.log('[VENTES] 🎯 Redirection directe: /soumissions');
+        window.location.href = '/soumissions';
+      }
+    } catch (error) {
+      console.error('[VENTES] ❌ Erreur récupération client perdu:', error);
+    }
+
+    clientPerduToRecuperer = null;
+  };
+
+  // Variable globale pour suppression client perdu
+  let clientPerduToDelete = null;
+
+  window.supprimerClientPerdu = function(clientIndex) {
+    const client = window.ventesData.perdus[clientIndex];
+    if (!client) {
+      console.error('[VENTES] Client perdu introuvable');
+      return;
+    }
+
+    // Stocker le client à supprimer
+    clientPerduToDelete = client;
+
+    // Mettre à jour le message du modal
+    const modal = document.getElementById('confirmDeletePerduModal');
+    const message = document.getElementById('confirmDeletePerduText');
+    const nomComplet = `${client.prenom || client.clientPrenom || ''} ${client.nom || client.clientNom || ''}`.trim();
+    message.textContent = `Êtes-vous sûr de vouloir supprimer définitivement ${nomComplet} de la liste des clients perdus ?`;
+
+    // Afficher le modal
+    modal.style.display = 'flex';
+  };
+
+  window.closeConfirmDeletePerduModal = function() {
+    const modal = document.getElementById('confirmDeletePerduModal');
+    modal.style.display = 'none';
+    clientPerduToDelete = null;
+  };
+
+  window.confirmDeleteClientPerdu = async function() {
+    if (!clientPerduToDelete) return;
+
+    const modal = document.getElementById('confirmDeletePerduModal');
+    modal.style.display = 'none';
+
+    try {
+      console.log('[VENTES] Suppression du client perdu:', clientPerduToDelete);
+
+      // Appeler le backend pour supprimer
+      const response = await fetch('/clients-perdus/supprimer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: window.username,
+          client_id: clientPerduToDelete.id || clientPerduToDelete.num
+        })
+      });
+
+      if (response.ok) {
+        console.log('[VENTES] ✅ Client perdu supprimé avec succès');
+        // Recharger les clients perdus
+        await loadClientsPerdus();
+      } else {
+        console.error('[VENTES] ❌ Erreur lors de la suppression');
+      }
+    } catch (error) {
+      console.error('[VENTES] Erreur suppression client perdu:', error);
+    }
+
+    clientPerduToDelete = null;
   };
 
   // Show client details modal
-  window.showClientDetails = function(index, category) {
+  window.showClientDetails = async function(index, category) {
     const clientData = window.ventesData[category][index];
     if (!clientData) {
       console.error('[VENTES] Données client introuvables');
@@ -1173,8 +1626,72 @@
     }
     const modal = document.getElementById('clientInfoModal');
     const content = document.getElementById('clientInfoContent');
+    const modalHeader = modal.querySelector('.flex.items-center.justify-between');
 
     if (!modal || !content) return;
+
+    // Mettre à jour le header avec bouton supprimer pour prospects
+    if (category === 'prospects') {
+      modalHeader.innerHTML = `
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i class="fas fa-user mr-2" style="color: var(--primary-blue);"></i>
+          Informations client
+        </h3>
+        <div class="flex items-center gap-2">
+          <button onclick="supprimerProspect(${index})" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'" title="Supprimer">
+            <i class="fas fa-trash"></i>
+          </button>
+          <button onclick="closeClientInfo()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);" onmouseover="this.style.background='rgba(96, 165, 250, 0.3)'" onmouseout="this.style.background='rgba(96, 165, 250, 0.2)'">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      `;
+    } else if (category === 'attente') {
+      // Header avec bouton "Marquer comme perdu" pour ventes en attente
+      modalHeader.innerHTML = `
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i class="fas fa-user mr-2" style="color: var(--primary-blue);"></i>
+          Informations client
+        </h3>
+        <div class="flex items-center gap-2">
+          <button onclick="marquerCommePerdu(${index})" class="px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'" title="Marquer comme perdu">
+            <i class="fas fa-times-circle"></i>
+            <span>Marquer comme perdu</span>
+          </button>
+          <button onclick="closeClientInfo()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);" onmouseover="this.style.background='rgba(96, 165, 250, 0.3)'" onmouseout="this.style.background='rgba(96, 165, 250, 0.2)'">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      `;
+    } else if (category === 'acceptees' || category === 'produit') {
+      // Header avec bouton "Marquer comme perdu" pour ventes acceptées et en production
+      modalHeader.innerHTML = `
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i class="fas fa-user mr-2" style="color: var(--primary-blue);"></i>
+          Informations client
+        </h3>
+        <div class="flex items-center gap-2">
+          <button onclick="marquerCommePerdu(${index})" class="px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'" title="Marquer comme perdu">
+            <i class="fas fa-times-circle"></i>
+            <span>Marquer comme perdu</span>
+          </button>
+          <button onclick="closeClientInfo()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);" onmouseover="this.style.background='rgba(96, 165, 250, 0.3)'" onmouseout="this.style.background='rgba(96, 165, 250, 0.2)'">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      `;
+    } else {
+      // Header normal pour les autres catégories
+      modalHeader.innerHTML = `
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i class="fas fa-user mr-2" style="color: var(--primary-blue);"></i>
+          Informations client
+        </h3>
+        <button onclick="closeClientInfo()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);" onmouseover="this.style.background='rgba(96, 165, 250, 0.3)'" onmouseout="this.style.background='rgba(96, 165, 250, 0.2)'">
+          <i class="fas fa-times"></i>
+        </button>
+      `;
+    }
 
     // Build client info HTML
     const prenom = clientData.prenom || clientData.clientPrenom || '-';
@@ -1182,95 +1699,169 @@
     const telephone = clientData.telephone || '-';
     const adresse = clientData.adresse || '-';
     const courriel = clientData.courriel || clientData.email || '-';
-    const prix = clientData.prix || '-';
+    const prixRaw = clientData.prix || '-';
+    const prix = formatPrix(prixRaw);
+
+    // Clean phone number for tel: link
+    const telNumber = telephone.replace(/\D/g, '');
+
+    // Create Google Maps search URL
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(adresse)}`;
 
     let html = `
-      <div class="space-y-3">
-        <div>
-          <label class="block text-sm font-medium mb-1" style="color: var(--text-gray);">Nom</label>
-          <div class="p-2 rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark);">
-            <span style="color: var(--text-light);">${prenom} ${nom}</span>
+      <div style="background: rgba(30, 41, 59, 0.5); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+        <!-- Nom complet -->
+        <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid rgba(71, 85, 105, 0.3);">
+          <i class="fas fa-user" style="color: var(--primary-blue); width: 20px; text-align: center;"></i>
+          <div style="flex: 1;">
+            <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 0.25rem;">Nom complet</div>
+            <div style="color: var(--text-light); font-weight: 500;">${prenom} ${nom}</div>
           </div>
         </div>
 
-        <div>
-          <label class="block text-sm font-medium mb-1" style="color: var(--text-gray);">Téléphone</label>
-          <div class="p-2 rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark);">
-            <span style="color: var(--text-light);">${telephone}</span>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-1" style="color: var(--text-gray);">Adresse</label>
-          <div class="p-2 rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark);">
-            <span style="color: var(--text-light);">${adresse}</span>
-          </div>
-        </div>
-
-        ${courriel !== '-' ? `
-        <div>
-          <label class="block text-sm font-medium mb-1" style="color: var(--text-gray);">Courriel</label>
-          <div class="p-2 rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark);">
-            <span style="color: var(--text-light);">${courriel}</span>
+        <!-- Téléphone cliquable -->
+        ${telephone !== '-' ? `
+        <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid rgba(71, 85, 105, 0.3);">
+          <i class="fas fa-phone" style="color: var(--primary-blue); width: 20px; text-align: center;"></i>
+          <div style="flex: 1;">
+            <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 0.25rem;">Téléphone</div>
+            <a href="tel:${telNumber}" style="color: var(--primary-blue); text-decoration: none; display: flex; align-items: center; gap: 0.5rem; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+              <i class="fas fa-phone-alt" style="font-size: 0.75rem;"></i>
+              <span style="font-weight: 500;">${telephone}</span>
+            </a>
           </div>
         </div>
         ` : ''}
 
+        <!-- Adresse cliquable vers Google Maps -->
+        ${adresse !== '-' ? `
+        <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid rgba(71, 85, 105, 0.3);">
+          <i class="fas fa-map-marker-alt" style="color: var(--primary-blue); width: 20px; text-align: center;"></i>
+          <div style="flex: 1;">
+            <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 0.25rem;">Adresse</div>
+            <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-blue); text-decoration: none; display: flex; align-items: center; gap: 0.5rem; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+              <i class="fas fa-external-link-alt" style="font-size: 0.75rem;"></i>
+              <span style="font-weight: 500;">${adresse}</span>
+            </a>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- Courriel cliquable -->
+        ${courriel !== '-' ? `
+        <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid rgba(71, 85, 105, 0.3);">
+          <i class="fas fa-envelope" style="color: var(--primary-blue); width: 20px; text-align: center;"></i>
+          <div style="flex: 1;">
+            <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 0.25rem;">Courriel</div>
+            <a href="mailto:${courriel}" style="color: var(--primary-blue); text-decoration: none; display: flex; align-items: center; gap: 0.5rem; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+              <i class="fas fa-paper-plane" style="font-size: 0.75rem;"></i>
+              <span style="font-weight: 500;">${courriel}</span>
+            </a>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- Prix bien formaté -->
         ${prix !== '-' ? `
-        <div>
-          <label class="block text-sm font-medium mb-1" style="color: var(--text-gray);">Prix</label>
-          <div class="p-2 rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark);">
-            <span style="color: var(--primary-blue); font-weight: 600;">${prix}</span>
+        <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0;">
+          <i class="fas fa-dollar-sign" style="color: #10b981; width: 20px; text-align: center;"></i>
+          <div style="flex: 1;">
+            <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 0.25rem;">Prix</div>
+            <div style="color: #10b981; font-weight: 600; font-size: 1.125rem;">${prix}</div>
           </div>
         </div>
         ` : ''}
       </div>
 
-      <div class="flex space-x-3 pt-4">
+      <div class="pt-4">
     `;
 
     // Add action buttons based on category
     if (category === 'prospects') {
       const clientDataStr = encodeURIComponent(JSON.stringify(clientData));
       html += `
-        <button onclick="commencerEstimation('${clientDataStr}')" class="btn-primary px-4 py-2 rounded-lg relative overflow-hidden">
-          <span><i class="fas fa-calculator mr-2"></i>Commencer une estimation</span>
-        </button>
-        <button onclick="supprimerProspect(${index})" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
-          <i class="fas fa-trash mr-2"></i>Supprimer
-        </button>
+        <div class="flex justify-end">
+          <button onclick="commencerEstimation('${clientDataStr}')" class="btn-primary px-4 py-2 rounded-lg relative overflow-hidden">
+            <span><i class="fas fa-calculator mr-2"></i>Commencer une estimation</span>
+          </button>
+        </div>
       `;
     } else if (category === 'attente') {
+      // Vérifier si un calcul existe pour ce client
+      const hasCalcul = await checkIfCalculExists(clientData);
+
+      // Vérifier si un GQP existe pour ce client
+      const hasGQP = !!(clientData.lien_gqp && clientData.lien_gqp !== '');
+      const gqpUrl = clientData.lien_gqp || '';
+
+      const pdfUrl = clientData.pdf_url || clientData.pdfUrl || '';
       html += `
-        <button onclick="signerSoumission('${clientData.id}')" class="btn-primary px-4 py-2 rounded-lg relative overflow-hidden">
-          <span><i class="fas fa-pen-fancy mr-2"></i>Signer la soumission</span>
-        </button>
-        <button onclick="voirPDF('${clientData.pdfUrl || ''}')" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
-          <i class="fas fa-file-pdf mr-2"></i>Voir PDF
-        </button>
+        <div class="flex justify-end space-x-3">
+          <button onclick="voirSoumission('${pdfUrl}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
+            <span><i class="fas fa-file-pdf mr-2"></i>Voir la soumission</span>
+          </button>
+          <button onclick="${hasGQP ? `voirGQP('${gqpUrl}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasGQP ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
+            <i class="fas fa-clipboard-check mr-2"></i>Voir GQP
+          </button>
+          <button onclick="${hasCalcul ? `voirCalcul('${clientData.id}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasCalcul ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
+            <i class="fas fa-calculator mr-2"></i>Voir calcul
+          </button>
+        </div>
       `;
     } else if (category === 'acceptees') {
+      // Vérifier si un GQP existe pour ce client
+      const hasGQP = !!(clientData.lien_gqp && clientData.lien_gqp !== '');
+      const gqpUrl = clientData.lien_gqp || '';
+
+      // Vérifier si un calcul existe pour ce client
+      const hasCalcul = await checkIfCalculExists(clientData);
+
       html += `
-        <button onclick="creerGQP('${clientData.id}')" class="btn-primary px-4 py-2 rounded-lg relative overflow-hidden">
-          <span><i class="fas fa-clipboard-check mr-2"></i>Créer GQP</span>
-        </button>
-        <button onclick="terminerProduction('${clientData.id}')" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
-          <i class="fas fa-check-circle mr-2"></i>Terminer production
-        </button>
-        <button onclick="voirPDF('${clientData.pdfUrl || ''}')" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
-          <i class="fas fa-file-pdf mr-2"></i>Voir PDF
-        </button>
+        <div class="space-y-3">
+          <!-- Boutons de consultation -->
+          <div class="flex justify-end space-x-3">
+            <button onclick="voirPDF('${clientData.pdfUrl || ''}')" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
+              <i class="fas fa-file-pdf mr-2"></i>Voir soumission
+            </button>
+            <button onclick="${hasGQP ? `voirGQP('${gqpUrl}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasGQP ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
+              <i class="fas fa-clipboard-list mr-2"></i>Voir GQP
+            </button>
+            <button onclick="${hasCalcul ? `voirCalcul('${clientData.id}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasCalcul ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
+              <i class="fas fa-calculator mr-2"></i>Voir calcul
+            </button>
+          </div>
+
+          <!-- Séparateur -->
+          <div style="border-top: 1px solid rgba(71, 85, 105, 0.3); margin: 1rem 0;"></div>
+
+          <!-- Action de finalisation -->
+          <div class="flex justify-end">
+            <button onclick="terminerProduction('${clientData.id}')" class="px-6 py-2.5 rounded-lg relative overflow-hidden font-medium transition-all" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(16, 185, 129, 0.3)'">
+              <i class="fas fa-check-circle mr-2"></i>Terminer production
+            </button>
+          </div>
+        </div>
       `;
     } else if (category === 'produit') {
+      // Vérifier si un GQP existe pour ce client
+      const hasGQP = !!(clientData.lien_gqp && clientData.lien_gqp !== '');
+      const gqpUrl = clientData.lien_gqp || '';
+
+      // Vérifier si un calcul existe pour ce client
+      const hasCalcul = await checkIfCalculExists(clientData);
+
       html += `
-        <button onclick="voirPDF('${clientData.pdfUrl || ''}')" class="btn-primary px-4 py-2 rounded-lg relative overflow-hidden">
-          <span><i class="fas fa-file-pdf mr-2"></i>Voir PDF</span>
-        </button>
-        ${clientData.lien_gqp ? `
-        <button onclick="voirGQP('${clientData.lien_gqp}')" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
-          <i class="fas fa-clipboard-check mr-2"></i>Voir GQP
-        </button>
-        ` : ''}
+        <div class="flex justify-end space-x-3">
+          <button onclick="voirPDF('${clientData.pdfUrl || ''}')" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
+            <i class="fas fa-file-pdf mr-2"></i>Voir soumission
+          </button>
+          <button onclick="${hasGQP ? `voirGQP('${gqpUrl}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasGQP ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
+            <i class="fas fa-clipboard-list mr-2"></i>Voir GQP
+          </button>
+          <button onclick="${hasCalcul ? `voirCalcul('${clientData.id}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasCalcul ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
+            <i class="fas fa-calculator mr-2"></i>Voir calcul
+          </button>
+        </div>
       `;
     }
 
@@ -1292,13 +1883,16 @@
       console.log('[VENTES] Commencer estimation pour:', clientData);
 
       // Store client data for prefill in calcul page
-      localStorage.setItem('clientEstimation', JSON.stringify({
+      const dataToStore = {
         prenom: clientData.prenom || '',
         nom: clientData.nom || '',
         telephone: clientData.telephone || '',
         adresse: clientData.adresse || '',
         courriel: clientData.courriel || clientData.email || ''
-      }));
+      };
+      localStorage.setItem('clientEstimation', JSON.stringify(dataToStore));
+      console.log('[VENTES] ✅ Données stockées dans localStorage.clientEstimation:', dataToStore);
+      console.log('[VENTES] 🔍 Vérification immédiate:', localStorage.getItem('clientEstimation'));
 
       // Navigate to calcul page
       if (window.parent && window.parent !== window) {
@@ -1311,7 +1905,10 @@
     }
   };
 
-  window.supprimerProspect = async function(prospectIndex) {
+  // Variables globales pour la suppression
+  let prospectToDelete = null;
+
+  window.supprimerProspect = function(prospectIndex) {
     closeClientInfo();
 
     const prospect = window.ventesData.prospects[prospectIndex];
@@ -1320,19 +1917,119 @@
       return;
     }
 
-    if (!confirm(`Supprimer ${prospect.prenom} ${prospect.nom} de la liste des clients potentiels ?`)) {
-      return;
-    }
+    // Stocker le prospect à supprimer
+    prospectToDelete = prospect;
+
+    // Mettre à jour le message du modal
+    const modal = document.getElementById('confirmDeleteProspectModal');
+    const message = modal.querySelector('p');
+    message.textContent = `Êtes-vous sûr de vouloir supprimer ${prospect.prenom} ${prospect.nom} de la liste des clients potentiels ?`;
+
+    // Afficher le modal
+    modal.style.display = 'flex';
+  };
+
+  window.closeConfirmDeleteProspectModal = function() {
+    const modal = document.getElementById('confirmDeleteProspectModal');
+    modal.style.display = 'none';
+    prospectToDelete = null;
+  };
+
+  window.confirmDeleteProspect = async function() {
+    if (!prospectToDelete) return;
+
+    const modal = document.getElementById('confirmDeleteProspectModal');
+    modal.style.display = 'none';
 
     try {
-      // TODO: Call backend to delete prospect
-      console.log('[VENTES] Supprimer prospect:', prospect);
+      console.log('[VENTES] Suppression du prospect:', prospectToDelete);
 
-      // For now, just reload data
-      await loadVentesDataInternal();
+      // Appeler le backend pour supprimer
+      const response = await fetch('/supprimer-prospect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: window.username,
+          id: prospectToDelete.id
+        })
+      });
+
+      if (response.ok) {
+        console.log('[VENTES] ✅ Prospect supprimé avec succès');
+        // Recharger les données
+        await loadVentesDataInternal();
+      } else {
+        console.error('[VENTES] ❌ Erreur lors de la suppression');
+      }
     } catch (error) {
       console.error('[VENTES] Erreur suppression prospect:', error);
     }
+
+    prospectToDelete = null;
+  };
+
+  // Variables globales pour marquer comme perdu
+  let venteToMarkPerdu = null;
+
+  window.marquerCommePerdu = function(venteIndex) {
+    closeClientInfo();
+
+    const vente = window.ventesData.attente[venteIndex];
+    if (!vente) {
+      console.error('[VENTES] Vente introuvable');
+      return;
+    }
+
+    // Stocker la vente à marquer comme perdue
+    venteToMarkPerdu = vente;
+
+    // Mettre à jour le message du modal
+    const modal = document.getElementById('confirmMarquerPerduModal');
+    const message = document.getElementById('confirmMarquerPerduText');
+    const nomComplet = `${vente.prenom || vente.clientPrenom || ''} ${vente.nom || vente.clientNom || ''}`.trim();
+    message.textContent = `Êtes-vous sûr de vouloir marquer ${nomComplet} comme client perdu ?`;
+
+    // Afficher le modal
+    modal.style.display = 'flex';
+  };
+
+  window.closeConfirmMarquerPerduModal = function() {
+    const modal = document.getElementById('confirmMarquerPerduModal');
+    modal.style.display = 'none';
+    venteToMarkPerdu = null;
+  };
+
+  window.confirmMarquerPerdu = async function() {
+    if (!venteToMarkPerdu) return;
+
+    const modal = document.getElementById('confirmMarquerPerduModal');
+    modal.style.display = 'none';
+
+    try {
+      console.log('[VENTES] Marquer comme perdu:', venteToMarkPerdu);
+
+      // Appeler le backend pour marquer comme perdu
+      const response = await fetch('/ventes/marquer-perdu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: window.username,
+          vente_id: venteToMarkPerdu.id || venteToMarkPerdu.num
+        })
+      });
+
+      if (response.ok) {
+        console.log('[VENTES] ✅ Vente marquée comme perdue avec succès');
+        // Recharger les données
+        await loadVentesDataInternal();
+      } else {
+        console.error('[VENTES] ❌ Erreur lors du marquage comme perdu');
+      }
+    } catch (error) {
+      console.error('[VENTES] Erreur marquer comme perdu:', error);
+    }
+
+    venteToMarkPerdu = null;
   };
 
   window.signerSoumission = function(venteId) {
@@ -1350,7 +2047,145 @@
   window.terminerProduction = function(venteId) {
     closeClientInfo();
     console.log('[VENTES] Terminer production:', venteId);
-    // TODO: Show confirmation modal
+
+    // Afficher l'animation de succès
+    showSuccessAnimation('production');
+
+    // TODO: Envoyer au backend pour déplacer vers "Terminées"
+    // TODO: Recharger les données après 2 secondes
+  };
+
+  // Animation de succès (même style que soumission.html)
+  function showSuccessAnimation(messageKey) {
+    const messages = {
+      'production': 'Production terminée avec succès!',
+      'perdu': 'Client marqué comme perdu'
+    };
+
+    const message = messages[messageKey] || 'Opération réussie!';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'success-overlay';
+    overlay.innerHTML = `
+      <div class="success-content">
+        <div class="success-checkmark">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <path d="M8 20 L16 28 L32 12" stroke="white" stroke-width="3"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">${message}</h2>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    setTimeout(() => {
+      overlay.remove();
+      // Recharger les ventes
+      loadVentes();
+    }, 2000);
+  }
+
+  window.voirSoumission = function(pdfUrl, clientName) {
+    console.log('[VENTES] voirSoumission appelée avec:', pdfUrl, clientName);
+    closeClientInfo();
+
+    if (!pdfUrl || pdfUrl === '') {
+      console.log('[VENTES] Aucun PDF disponible');
+      return;
+    }
+
+    const modal = document.getElementById('pdfViewerModal');
+    const iframe = document.getElementById('pdfViewerFrame');
+    const title = document.getElementById('pdfViewerTitle');
+
+    console.log('[VENTES] Éléments trouvés:', { modal, iframe, title });
+
+    if (!modal || !iframe || !title) {
+      console.error('[VENTES] Éléments du modal PDF introuvables');
+      return;
+    }
+
+    title.textContent = `Soumission - ${clientName}`;
+    iframe.src = pdfUrl;
+    modal.style.display = 'flex';
+
+    console.log('[VENTES] Modal PDF affiché');
+  };
+
+  window.closePDFViewer = function() {
+    const modal = document.getElementById('pdfViewerModal');
+    const iframe = document.getElementById('pdfViewerFrame');
+
+    modal.style.display = 'none';
+    iframe.src = '';
+  };
+
+  async function checkIfCalculExists(clientData) {
+    try {
+      // Récupérer la liste des projets depuis l'API
+      const response = await fetch(`/api/projets/${window.username}`);
+      if (!response.ok) return false;
+
+      const projets = await response.json();
+
+      // Chercher un projet qui correspond au client (par adresse et nom)
+      const nomComplet = `${clientData.prenom || clientData.clientPrenom || ''} ${clientData.nom || clientData.clientNom || ''}`.trim();
+      const adresse = clientData.adresse || '';
+
+      const projetTrouve = projets.find(p =>
+        p.client === nomComplet && p.adresse === adresse
+      );
+
+      return !!projetTrouve;
+    } catch (error) {
+      console.error('[VENTES] Erreur vérification calcul:', error);
+      return false;
+    }
+  }
+
+  window.voirCalcul = async function(venteId) {
+    closeClientInfo();
+
+    try {
+      // Récupérer les données de la vente
+      const vente = window.ventesData.attente.find(v => v.id === venteId || v.num === venteId);
+      if (!vente) {
+        console.error('[VENTES] Vente non trouvée');
+        return;
+      }
+
+      const nomComplet = `${vente.prenom || vente.clientPrenom || ''} ${vente.nom || vente.clientNom || ''}`.trim();
+      const adresse = vente.adresse || '';
+
+      // Récupérer la liste des projets
+      const response = await fetch(`/api/projets/${window.username}`);
+      if (!response.ok) {
+        console.error('[VENTES] Erreur chargement projets');
+        return;
+      }
+
+      const projets = await response.json();
+      const projet = projets.find(p => p.client === nomComplet && p.adresse === adresse);
+
+      if (!projet) {
+        console.error('[VENTES] Projet non trouvé');
+        return;
+      }
+
+      // Stocker l'ID du projet dans sessionStorage pour le charger dans calcul
+      sessionStorage.setItem('projetToLoad', projet.id);
+
+      // Naviguer vers calcul
+      if (window.parent && window.parent !== window) {
+        window.parent.location.hash = '#/calcul';
+      } else {
+        window.location.href = '/calcul';
+      }
+    } catch (error) {
+      console.error('[VENTES] Erreur voir calcul:', error);
+    }
   };
 
   window.voirPDF = function(pdfUrl) {
@@ -1537,128 +2372,6 @@
       afficherClientsPerdus(filtered);
     }
 
-    // Variable pour stocker l'ID du client à récupérer
-    let clientIdToRecuperer = null;
-
-    // Récupérer un client perdu (ouvre le modal de confirmation)
-    function recupererClientPerdu(clientId) {
-      // Trouver le client dans la liste
-      const client = allClientsPerdus.find(c => {
-        const prenom = c.prenom || c.clientPrenom || '';
-        const nom = c.nom || c.clientNom || '';
-        const id = c.id || `${prenom}_${nom}_${c.telephone}`;
-        return id === clientId;
-      });
-
-      if (!client) {
-        console.error('[VENTES] Client non trouvé');
-        return;
-      }
-
-      // Stocker l'ID pour la confirmation
-      clientIdToRecuperer = clientId;
-
-      // Afficher le nom dans le modal
-      const prenom = client.prenom || client.clientPrenom || '';
-      const nom = client.nom || client.clientNom || '';
-      const clientNom = `${prenom} ${nom}`.trim() || 'ce client';
-      document.getElementById('confirmRecupererText').textContent = `Voulez-vous récupérer ${clientNom} ? Vous serez redirigé vers la page soumission pour renvoyer une nouvelle soumission.`;
-      document.getElementById('confirmRecupererModal').style.display = 'flex';
-    }
-
-    // Fermer le modal de récupération
-    window.closeConfirmRecupererModal = function() {
-      document.getElementById('confirmRecupererModal').style.display = 'none';
-      clientIdToRecuperer = null;
-    }
-
-    // Confirmer la récupération du client perdu
-    window.confirmRecupererClientPerdu = async function() {
-      if (!clientIdToRecuperer) return;
-
-      const clientId = clientIdToRecuperer;
-
-      // Trouver le client
-      const client = allClientsPerdus.find(c => {
-        const prenom = c.prenom || c.clientPrenom || '';
-        const nom = c.nom || c.clientNom || '';
-        const id = c.id || `${prenom}_${nom}_${c.telephone}`;
-        return id === clientId;
-      });
-
-      if (!client) {
-        closeConfirmRecupererModal();
-        console.error('[VENTES] Client non trouvé');
-        return;
-      }
-
-      try {
-        // Retirer de clients perdus
-        const response = await fetch(`${window.location.origin}/retirer-client-perdu`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            username: window.username,
-            clientOriginalId: clientId
-          })
-        });
-
-        if (!response.ok) throw new Error('Erreur lors de la récupération');
-
-        // Stocker les infos du client pour pré-remplir la soumission
-        const clientData = {
-          prenom: client.prenom || client.clientPrenom || '',
-          nom: client.nom || client.clientNom || '',
-          telephone: client.telephone || '',
-          adresse: client.adresse || '',
-          courriel: client.courriel || client.email || '',
-          prix: client.prix || ''
-        };
-        localStorage.setItem('recuperationClient', JSON.stringify(clientData));
-
-        // Fermer les modals
-        closeConfirmRecupererModal();
-        closeClientsPerdusModal();
-
-        // Rediriger vers la page de soumission via le routeur parent (même logique que calcul.html)
-        if (window.parent && window.parent !== window) {
-          // On est dans un iframe - utiliser le hash du parent pour déclencher le routeur
-          window.parent.location.hash = '#/soumissions';
-        } else {
-          // Fallback si pas dans un iframe
-          window.location.href = '/soumissions';
-        }
-
-      } catch (error) {
-        console.error('[VENTES] Erreur récupération client:', error);
-      }
-    }
-
-    // Supprimer définitivement un client perdu
-    async function supprimerClientPerdu(prenom, nom, telephone) {
-      if (!confirm(`Voulez-vous supprimer définitivement ${prenom} ${nom} de la liste des clients perdus ?`)) return;
-
-      try {
-        const response = await fetch(`${window.location.origin}/supprimer-client-perdu`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            username: window.username,
-            prenom: prenom,
-            nom: nom,
-            telephone: telephone
-          })
-        });
-
-        if (!response.ok) throw new Error('Erreur lors de la suppression');
-
-        // Recharger la liste
-        await chargerClientsPerdus();
-
-      } catch (error) {
-        console.error('[VENTES] Erreur suppression client perdu:', error);
-      }
-    }
   </script>
 
   <!-- Script pour gestion menu actif -->

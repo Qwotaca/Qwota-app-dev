@@ -272,9 +272,15 @@
     
     <!-- SECTION INFORMATION CLIENT -->
     <div class="form-section mb-6">
-      <h2 class="section-title">
-        <i class="fas fa-user mr-2 text-blue-500"></i>
-        Information client
+      <h2 class="section-title" style="display: flex; align-items: center; justify-content: space-between;">
+        <span>
+          <i class="fas fa-user mr-2 text-blue-500"></i>
+          Information client
+        </span>
+        <span id="recuperationBadge" style="display: none; font-size: 0.75rem; padding: 4px 12px; border-radius: 6px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; font-weight: 600; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);">
+          <i class="fas fa-redo mr-1"></i>
+          <span id="recuperationText">Récupération de client</span>
+        </span>
       </h2>
       
       <!-- Ligne 1: Prénom, Nom, Adresse, Téléphone -->
@@ -2608,8 +2614,8 @@ function autoFillForm() {
     }
   } else {
     // Vérifier s'il y a des données de récupération client (venant de Ventes - clients perdus)
-    const recuperationData = localStorage.getItem('recuperationClient');
-    console.log("[DEBUG] recuperationClient trouvé:", recuperationData);
+    const recuperationData = localStorage.getItem('clientSoumission') || localStorage.getItem('recuperationClient');
+    console.log("[DEBUG] clientSoumission/recuperationClient trouvé:", recuperationData);
 
     if (recuperationData) {
       try {
@@ -2617,18 +2623,26 @@ function autoFillForm() {
         console.log("[OK] Données de récupération client trouvées:", data);
 
         setTimeout(() => {
+          // Champs de base
           if (data.prenom) {
             const prenomField = document.querySelector('input[name="prenom"]');
-            if (prenomField) prenomField.value = data.prenom;
+            if (prenomField) {
+              prenomField.value = data.prenom;
+              prenomField.style.setProperty('border-right-color', '#4caf50', 'important');
+            }
           }
           if (data.nom) {
             const nomField = document.querySelector('input[name="nom"]');
-            if (nomField) nomField.value = data.nom;
+            if (nomField) {
+              nomField.value = data.nom;
+              nomField.style.setProperty('border-right-color', '#4caf50', 'important');
+            }
           }
           if (data.adresse) {
             const adresseField = document.querySelector('input[name="adresse"]');
             if (adresseField) {
               adresseField.value = data.adresse;
+              adresseField.style.setProperty('border-right-color', '#4caf50', 'important');
               window.googleProspectAddressSelected = true;
               window.initialAutofilledAddress = data.adresse;
               console.log("[OK] Adresse auto-remplie depuis récupération client");
@@ -2636,20 +2650,222 @@ function autoFillForm() {
           }
           if (data.telephone) {
             const telephoneField = document.querySelector('input[name="telephone"]');
-            if (telephoneField) telephoneField.value = data.telephone;
+            if (telephoneField) {
+              telephoneField.value = data.telephone;
+              telephoneField.style.setProperty('border-right-color', '#4caf50', 'important');
+            }
           }
           if (data.courriel) {
             const courrielField = document.querySelector('input[name="courriel"]');
-            if (courrielField) courrielField.value = data.courriel;
+            if (courrielField) {
+              courrielField.value = data.courriel;
+              courrielField.style.setProperty('border-right-color', '#4caf50', 'important');
+            }
+          }
+
+          // Champs supplémentaires
+          if (data.endroit) {
+            const endroitField = document.querySelector('textarea[name="endroit_peinture"]');
+            if (endroitField) {
+              endroitField.value = data.endroit;
+              endroitField.style.setProperty('border-right-color', '#4caf50', 'important');
+            }
+          }
+          if (data.temps) {
+            const tempsField = document.querySelector('input[name="temps"]');
+            if (tempsField) {
+              tempsField.value = data.temps;
+              tempsField.style.setProperty('border-right-color', '#4caf50', 'important');
+            }
+          }
+          if (data.date2) {
+            const date2Field = document.querySelector('input[name="date_travaux"]');
+            if (date2Field) {
+              date2Field.value = data.date2;
+              date2Field.style.setProperty('border-right-color', '#4caf50', 'important');
+            }
           }
           if (data.prix) {
+            console.log("[PRIX] Prix détecté dans data:", data.prix, "Type:", typeof data.prix);
             const prixField = document.querySelector('input[name="prix"]');
-            if (prixField) prixField.value = data.prix;
+            console.log("[PRIX] Champ prix trouvé:", prixField ? 'Oui' : 'Non');
+            if (prixField) {
+              // Formater le prix: enlever .00 si présent, enlever $ si présent (le champ le formate automatiquement)
+              let prixFormate = data.prix.toString();
+              // Enlever le $ s'il est présent
+              prixFormate = prixFormate.replace('$', '').trim();
+              // Enlever .00 si présent
+              if (prixFormate.endsWith('.00')) {
+                prixFormate = prixFormate.replace('.00', '');
+              }
+              console.log("[PRIX] Prix formaté:", prixFormate);
+              prixField.value = prixFormate;
+
+              // Déclencher les événements pour activer le formatage automatique
+              prixField.dispatchEvent(new Event('input', { bubbles: true }));
+              prixField.dispatchEvent(new Event('blur', { bubbles: true }));
+              prixField.dispatchEvent(new Event('change', { bubbles: true }));
+
+              prixField.style.setProperty('border-right-color', '#4caf50', 'important');
+              console.log("[OK] Prix rempli:", data.prix, "→", prixFormate, "Valeur dans champ:", prixField.value);
+            }
+          } else {
+            console.log("[PRIX] ⚠️ Aucun prix dans les données");
+          }
+
+          // Type de travaux (dropdown toggle)
+          if (data.item) {
+            const itemToggle = document.getElementById('itemToggle');
+            if (itemToggle) {
+              itemToggle.innerHTML = `<span class="tag">${data.item}</span>`;
+              itemToggle.style.setProperty('border-right-color', '#4caf50', 'important');
+              if (window.dropdownStates) {
+                window.dropdownStates.item = data.item;
+              }
+              console.log("[OK] Type de travaux rempli:", data.item);
+            }
+          }
+
+          // Payé par (dropdown toggle)
+          if (data.payer_par) {
+            const paidByToggle = document.getElementById('paidByToggle');
+            if (paidByToggle) {
+              paidByToggle.innerHTML = `<span class="tag">${data.payer_par}</span>`;
+              paidByToggle.style.setProperty('border-right-color', '#4caf50', 'important');
+              if (window.dropdownStates) {
+                window.dropdownStates.paidBy = data.payer_par;
+              }
+              console.log("[OK] Payé par rempli:", data.payer_par);
+            }
+          }
+
+          // Produit/Couleurs (popup with hidden field)
+          if (data.produit) {
+            const produitHidden = document.getElementById('produitCouleursHidden');
+            const produitTrigger = document.getElementById('productTrigger');
+            const produitDisplay = document.getElementById('productDisplay');
+            if (produitHidden) {
+              produitHidden.value = data.produit;
+              if (produitDisplay) {
+                produitDisplay.textContent = data.produit;
+                produitDisplay.style.color = 'var(--text-light)';
+              }
+              if (produitTrigger) {
+                produitTrigger.style.setProperty('border-right-color', '#4caf50', 'important');
+              }
+              console.log("[OK] Produit rempli:", data.produit.substring(0, 50) + '...');
+            }
+          }
+
+          // Particularités (popup with hidden field)
+          if (data.part) {
+            const partHidden = document.getElementById('partTravauxHidden');
+            const partTrigger = document.getElementById('partTravauxTrigger');
+            const partDisplay = document.getElementById('partTravauxDisplay');
+            if (partHidden) {
+              partHidden.value = data.part;
+              if (partDisplay) {
+                partDisplay.textContent = data.part;
+                partDisplay.style.color = 'var(--text-light)';
+              }
+              if (partTrigger) {
+                partTrigger.style.setProperty('border-right-color', '#4caf50', 'important');
+              }
+              console.log("[OK] Particularités remplies:", data.part.substring(0, 50) + '...');
+            }
+          }
+
+          // Afficher le badge de récupération
+          const recuperationBadge = document.getElementById('recuperationBadge');
+          const recuperationText = document.getElementById('recuperationText');
+          if (recuperationBadge && recuperationText && (data.prenom || data.nom)) {
+            const nomComplet = `${data.prenom || ''} ${data.nom || ''}`.trim();
+            recuperationText.textContent = `Récupération de ${nomComplet}`;
+            recuperationBadge.style.display = 'block';
+            console.log("[BADGE] Badge de récupération affiché pour:", nomComplet);
+          }
+
+          // Détecter et appliquer la langue/province basée sur l'item
+          if (data.item) {
+            const englishKeywords = ['Interior Work', 'Exterior Work', 'Interior', 'Exterior'];
+            const frenchKeywords = ['Travaux intérieurs', 'Travaux extérieurs', 'Intérieur', 'Extérieur'];
+
+            const isEnglish = englishKeywords.some(keyword =>
+              data.item.toLowerCase().includes(keyword.toLowerCase())
+            );
+
+            console.log("[LANG] Détection langue - Item:", data.item, "Anglais:", isEnglish);
+
+            const langOptions = document.querySelectorAll('.lang-option');
+            if (langOptions.length >= 2) {
+              const quebecOption = langOptions[0];
+              const ontarioOption = langOptions[1];
+
+              if (isEnglish) {
+                // Ontario (anglais) - Forcer le style visuel
+                quebecOption.classList.remove('active');
+                quebecOption.style.removeProperty('background');
+                quebecOption.style.removeProperty('color');
+                quebecOption.style.padding = '6px 12px';
+                quebecOption.style.borderRadius = '6px';
+                quebecOption.style.fontSize = '0.875rem';
+                quebecOption.style.fontWeight = '600';
+                quebecOption.style.transition = 'all 0.3s ease';
+                quebecOption.style.color = 'var(--text-gray)';
+
+                ontarioOption.classList.add('active');
+                ontarioOption.style.background = 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)';
+                ontarioOption.style.color = 'white';
+                ontarioOption.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.3)';
+
+                console.log("[LANG] Province changée: Ontario (anglais)");
+                if (typeof window.switchLanguage === 'function') {
+                  window.switchLanguage('en');
+                }
+              } else {
+                // Québec (français) - Forcer le style visuel
+                quebecOption.classList.add('active');
+                quebecOption.style.background = 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)';
+                quebecOption.style.color = 'white';
+                quebecOption.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.3)';
+
+                ontarioOption.classList.remove('active');
+                ontarioOption.style.removeProperty('background');
+                ontarioOption.style.removeProperty('color');
+                ontarioOption.style.removeProperty('box-shadow');
+                ontarioOption.style.padding = '6px 12px';
+                ontarioOption.style.borderRadius = '6px';
+                ontarioOption.style.fontSize = '0.875rem';
+                ontarioOption.style.fontWeight = '600';
+                ontarioOption.style.transition = 'all 0.3s ease';
+                ontarioOption.style.color = 'var(--text-gray)';
+
+                console.log("[LANG] Province changée: Québec (français)");
+                if (typeof window.switchLanguage === 'function') {
+                  window.switchLanguage('fr');
+                }
+              }
+            }
+          }
+
+          // Stocker l'ID du client perdu si présent
+          if (data.client_perdu_id) {
+            sessionStorage.setItem('client_perdu_id', data.client_perdu_id);
+            console.log("[OK] ID client perdu stocké:", data.client_perdu_id);
           }
 
           console.log("[OK] Formulaire prérempli avec données client récupéré");
 
+          // Valider les champs après le remplissage
+          setTimeout(() => {
+            if (typeof validateRequiredFields === 'function') {
+              validateRequiredFields();
+              console.log("[OK] Validation des champs effectuée");
+            }
+          }, 100);
+
           // Nettoyer les données de récupération
+          localStorage.removeItem('clientSoumission');
           localStorage.removeItem('recuperationClient');
           console.log("🧹 Données de récupération nettoyées");
         }, 500);
@@ -3425,33 +3641,6 @@ function initFormulaire() {
         console.log("[WARN] Erreur lors de la suppression du prospect (non critique):", prospectError);
       }
 
-      // [OK] Retirer le client de la liste des perdus si c'est une récupération
-      try {
-        if (window.clientOriginalId) {
-          console.log("🔄 Tentative de retrait du client perdu récupéré:", window.clientOriginalId);
-
-          const retirerResponse = await fetch(`${window.location.origin}/retirer-client-perdu`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              username: window.username,
-              clientOriginalId: window.clientOriginalId
-            })
-          });
-
-          if (retirerResponse.ok) {
-            const retirerResult = await retirerResponse.json();
-            console.log("[OK] Client retiré de la liste des perdus:", retirerResult);
-            // Nettoyer la variable après avoir retiré de perdus
-            window.clientOriginalId = null;
-          } else {
-            console.log("[WARN] Client non trouvé dans les perdus");
-          }
-        }
-      } catch (perduError) {
-        console.log("[WARN] Erreur lors du retrait du client perdu (non critique):", perduError);
-      }
-
       if (eventId) {
         await fetch("/supprimer-evenement", {
           method: "POST",
@@ -3545,6 +3734,38 @@ function initFormulaire() {
         btnText.textContent = "Envoyer au client";
         btn.disabled = false;
       }, 3000);
+    } finally {
+      // CRITIQUE: Retirer le client de la liste des perdus MÊME si l'envoi email échoue
+      // Cela garantit que le client récupéré est bien retiré des perdus
+      try {
+        const clientPerduId = sessionStorage.getItem('client_perdu_id') || window.clientOriginalId;
+        if (clientPerduId) {
+          console.log("🔄 [FINALLY] Tentative de retrait du client perdu récupéré:", clientPerduId);
+
+          const retirerResponse = await fetch(`${window.location.origin}/retirer-client-perdu`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: window.username,
+              clientOriginalId: clientPerduId
+            })
+          });
+
+          if (retirerResponse.ok) {
+            const retirerResult = await retirerResponse.json();
+            console.log("[OK] [FINALLY] Client retiré de la liste des perdus:", retirerResult);
+            // Nettoyer après avoir retiré de perdus
+            sessionStorage.removeItem('client_perdu_id');
+            window.clientOriginalId = null;
+          } else {
+            console.log("[WARN] [FINALLY] Client non trouvé dans les perdus");
+          }
+        } else {
+          console.log("[INFO] [FINALLY] Pas de client perdu à retirer (soumission normale)");
+        }
+      } catch (perduError) {
+        console.log("[WARN] [FINALLY] Erreur lors du retrait du client perdu (non critique):", perduError);
+      }
     }
   });
 }
@@ -6678,6 +6899,214 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       console.log("🔄 Rechargement des données Soumission pour l'entrepreneur sélectionné...");
       loadPendingSoumissions();
     };
+
+    // Charger les données du client depuis localStorage (récupération client perdu ou prospect)
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('[SOUMISSION] 🔍 DOMContentLoaded - Vérification localStorage...');
+      const clientData = localStorage.getItem('clientSoumission');
+      console.log('[SOUMISSION] 📦 clientSoumission trouvé:', clientData ? 'Oui' : 'Non');
+
+      if (clientData) {
+        try {
+          const data = JSON.parse(clientData);
+          console.log('[SOUMISSION] 📋 Chargement données client:', data);
+
+          // Attendre que tous les champs soient disponibles
+          setTimeout(() => {
+            console.log('[SOUMISSION] 🔄 Début du remplissage des champs...');
+
+            // Remplir les champs du formulaire en utilisant querySelector avec name
+            if (data.prenom) {
+              const prenomField = document.querySelector('input[name="prenom"]');
+              console.log('[SOUMISSION] 🔍 Champ prenom trouvé:', prenomField ? 'Oui' : 'Non');
+              if (prenomField) {
+                prenomField.value = data.prenom;
+                prenomField.style.setProperty('border-right-color', '#4caf50', 'important');
+                console.log('[SOUMISSION] ✅ Prenom rempli:', data.prenom);
+              }
+            }
+            if (data.nom) {
+              const nomField = document.querySelector('input[name="nom"]');
+              console.log('[SOUMISSION] 🔍 Champ nom trouvé:', nomField ? 'Oui' : 'Non');
+              if (nomField) {
+                nomField.value = data.nom;
+                nomField.style.setProperty('border-right-color', '#4caf50', 'important');
+                console.log('[SOUMISSION] ✅ Nom rempli:', data.nom);
+              }
+            }
+            if (data.telephone) {
+              const telephoneField = document.querySelector('input[name="telephone"]');
+              console.log('[SOUMISSION] 🔍 Champ telephone trouvé:', telephoneField ? 'Oui' : 'Non');
+              if (telephoneField) {
+                telephoneField.value = data.telephone;
+                telephoneField.style.setProperty('border-right-color', '#4caf50', 'important');
+                console.log('[SOUMISSION] ✅ Telephone rempli:', data.telephone);
+              }
+            }
+            if (data.adresse) {
+              const adresseField = document.querySelector('input[name="adresse"]');
+              console.log('[SOUMISSION] 🔍 Champ adresse trouvé:', adresseField ? 'Oui' : 'Non');
+              if (adresseField) {
+                adresseField.value = data.adresse;
+                adresseField.style.setProperty('border-right-color', '#4caf50', 'important');
+                console.log('[SOUMISSION] ✅ Adresse remplie:', data.adresse);
+              }
+            }
+            if (data.courriel) {
+              const courrielField = document.querySelector('input[name="courriel"]');
+              console.log('[SOUMISSION] 🔍 Champ courriel trouvé:', courrielField ? 'Oui' : 'Non');
+              if (courrielField) {
+                courrielField.value = data.courriel;
+                courrielField.style.setProperty('border-right-color', '#4caf50', 'important');
+                console.log('[SOUMISSION] ✅ Courriel rempli:', data.courriel);
+              }
+            }
+            if (data.date2) {
+              const date2Field = document.querySelector('input[name="date_travaux"]');
+              console.log('[SOUMISSION] 🔍 Champ date_travaux trouvé:', date2Field ? 'Oui' : 'Non');
+              if (date2Field) {
+                date2Field.value = data.date2;
+                console.log('[SOUMISSION] ✅ Date travaux remplie:', data.date2);
+              }
+            }
+            // Type de travaux (dropdown toggle)
+            if (data.item) {
+              const itemToggle = document.getElementById('itemToggle');
+              console.log('[SOUMISSION] 🔍 Champ itemToggle trouvé:', itemToggle ? 'Oui' : 'Non');
+              if (itemToggle) {
+                itemToggle.innerHTML = `<span class="tag">${data.item}</span>`;
+                itemToggle.style.setProperty('border-right-color', '#4caf50', 'important');
+                if (window.dropdownStates) {
+                  window.dropdownStates.item = data.item;
+                }
+                console.log('[SOUMISSION] ✅ Item (toggle) rempli:', data.item);
+              }
+            }
+
+            // Payé par (dropdown toggle) - Par défaut "Virement Interac" si non spécifié
+            const payerPar = data.payer_par || 'Virement Interac';
+            const paidByToggle = document.getElementById('paidByToggle');
+            console.log('[SOUMISSION] 🔍 Champ paidByToggle trouvé:', paidByToggle ? 'Oui' : 'Non');
+            if (paidByToggle) {
+              paidByToggle.innerHTML = `<span class="tag">${payerPar}</span>`;
+              paidByToggle.style.setProperty('border-right-color', '#4caf50', 'important');
+              if (window.dropdownStates) {
+                window.dropdownStates.paidBy = payerPar;
+              }
+              console.log('[SOUMISSION] ✅ Payé par (toggle) rempli:', payerPar);
+            }
+
+            if (data.temps) {
+              const tempsField = document.querySelector('input[name="temps"]');
+              console.log('[SOUMISSION] 🔍 Champ temps trouvé:', tempsField ? 'Oui' : 'Non');
+              if (tempsField) {
+                tempsField.value = data.temps;
+                tempsField.style.setProperty('border-right-color', '#4caf50', 'important');
+                console.log('[SOUMISSION] ✅ Temps rempli:', data.temps);
+              }
+            }
+            if (data.endroit) {
+              const endroitField = document.querySelector('textarea[name="endroit_peinture"]');
+              console.log('[SOUMISSION] 🔍 Champ endroit_peinture trouvé:', endroitField ? 'Oui' : 'Non');
+              if (endroitField) {
+                endroitField.value = data.endroit;
+                console.log('[SOUMISSION] ✅ Endroit rempli:', data.endroit);
+              }
+            }
+
+            // Produit/Couleurs (popup avec champ caché)
+            if (data.produit) {
+              const produitHidden = document.getElementById('produitCouleursHidden');
+              const produitTrigger = document.getElementById('productTrigger');
+              console.log('[SOUMISSION] 🔍 Champs produit trouvés - Hidden:', produitHidden ? 'Oui' : 'Non', 'Trigger:', produitTrigger ? 'Oui' : 'Non');
+              if (produitHidden) {
+                produitHidden.value = data.produit;
+                if (produitTrigger) {
+                  produitTrigger.style.setProperty('border-right-color', '#4caf50', 'important');
+                }
+                console.log('[SOUMISSION] ✅ Produit rempli:', data.produit);
+              }
+            }
+
+            // Particularités travaux (popup avec champ caché)
+            if (data.part) {
+              const partHidden = document.getElementById('partTravauxHidden');
+              const partTrigger = document.getElementById('partTravauxTrigger');
+              console.log('[SOUMISSION] 🔍 Champs part trouvés - Hidden:', partHidden ? 'Oui' : 'Non', 'Trigger:', partTrigger ? 'Oui' : 'Non');
+              if (partHidden) {
+                partHidden.value = data.part;
+                if (partTrigger) {
+                  partTrigger.style.setProperty('border-right-color', '#4caf50', 'important');
+                }
+                console.log('[SOUMISSION] ✅ Part rempli:', data.part);
+              }
+            }
+
+            // Détecter et appliquer la langue/province basée sur l'item
+            if (data.item) {
+              // Vérifier si c'est de l'anglais (Ontario) ou du français (Québec)
+              const englishKeywords = ['Interior Work', 'Exterior Work', 'Interior', 'Exterior'];
+              const frenchKeywords = ['Travaux intérieurs', 'Travaux extérieurs', 'Intérieur', 'Extérieur'];
+
+              const isEnglish = englishKeywords.some(keyword =>
+                data.item.toLowerCase().includes(keyword.toLowerCase())
+              );
+              const isFrench = frenchKeywords.some(keyword =>
+                data.item.toLowerCase().includes(keyword.toLowerCase())
+              );
+
+              console.log('[SOUMISSION] 🌍 Détection langue - Item:', data.item, 'Anglais:', isEnglish, 'Français:', isFrench);
+
+              // Changer la province selon la langue détectée
+              const langOptions = document.querySelectorAll('.lang-option');
+              if (langOptions.length >= 2) {
+                if (isEnglish) {
+                  // Ontario (anglais)
+                  langOptions[0].classList.remove('active');
+                  langOptions[0].removeAttribute('style'); // Enlever les styles inline de Québec
+                  langOptions[1].classList.add('active');
+                  console.log('[SOUMISSION] ✅ Province changée: Ontario (anglais)');
+
+                  // Déclencher le changement de langue si la fonction existe
+                  if (typeof window.switchLanguage === 'function') {
+                    window.switchLanguage('en');
+                  }
+                } else if (isFrench) {
+                  // Québec (français)
+                  langOptions[0].classList.add('active');
+                  langOptions[1].classList.remove('active');
+                  langOptions[1].removeAttribute('style'); // Enlever les styles inline d'Ontario
+                  console.log('[SOUMISSION] ✅ Province changée: Québec (français)');
+
+                  // Déclencher le changement de langue si la fonction existe
+                  if (typeof window.switchLanguage === 'function') {
+                    window.switchLanguage('fr');
+                  }
+                }
+              }
+            }
+
+            // Stocker l'ID du client perdu si présent (pour suppression après soumission)
+            if (data.client_perdu_id) {
+              sessionStorage.setItem('client_perdu_id', data.client_perdu_id);
+              console.log('[SOUMISSION] ✅ ID client perdu stocké:', data.client_perdu_id);
+            }
+
+            // Nettoyer le localStorage après chargement
+            localStorage.removeItem('clientSoumission');
+            console.log('[SOUMISSION] ✅ Données chargées et localStorage nettoyé');
+
+            // Déclencher la validation des champs
+            setTimeout(() => validateRequiredFields(), 100);
+          }, 500);
+        } catch (error) {
+          console.error('[SOUMISSION] ❌ Erreur chargement données client:', error);
+          localStorage.removeItem('clientSoumission');
+        }
+      } else {
+        console.log('[SOUMISSION] ℹ️ Aucune donnée clientSoumission à charger');
+      }
+    });
   </script>
 
   <!-- Script commun de gestion des permissions et interface -->

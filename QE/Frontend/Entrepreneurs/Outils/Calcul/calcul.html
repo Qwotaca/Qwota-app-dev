@@ -12818,12 +12818,69 @@ function initializeApp() {
         // NE PAS nettoyer sessionStorage ici - il sera utilisé pour bypasser la validation d'adresse
         // sessionStorage.removeItem('submissionData'); // Sera nettoyé après "Compléter la soumission"
         console.log('💾 SessionStorage conservé pour validation');
-        
+
       } catch (error) {
         console.error('[ERROR] Erreur lors du parsing des données prospect:', error);
       }
     } else {
       console.log('ℹ️ Aucune donnée prospect trouvée dans sessionStorage');
+    }
+
+    // Vérifier également localStorage.clientEstimation (depuis page Ventes)
+    console.log('[DEBUG] Vérification localStorage.clientEstimation...');
+    const clientEstimationData = localStorage.getItem('clientEstimation');
+    console.log('[DEBUG] clientEstimationData:', clientEstimationData);
+    if (clientEstimationData) {
+      try {
+        const clientData = JSON.parse(clientEstimationData);
+        console.log('[VENTES] Données client estimation détectées:', clientData);
+
+        // Pré-remplir les champs client
+        const clientPrenomField = document.getElementById('clientPrenom');
+        const clientNomField = document.getElementById('clientNom');
+        const clientAddressField = document.getElementById('clientAddress');
+        const clientPhoneField = document.getElementById('clientPhone');
+
+        if (clientPrenomField && clientData.prenom) {
+          clientPrenomField.value = clientData.prenom;
+          clientPrenomField.style.setProperty('border-right-color', '#4caf50', 'important');
+          console.log('[OK] Prénom défini:', clientData.prenom);
+        }
+        if (clientNomField && clientData.nom) {
+          clientNomField.value = clientData.nom;
+          clientNomField.style.setProperty('border-right-color', '#4caf50', 'important');
+          console.log('[OK] Nom défini:', clientData.nom);
+        }
+        if (clientAddressField && clientData.adresse) {
+          clientAddressField.value = clientData.adresse;
+          clientAddressField.style.setProperty('border-right-color', '#4caf50', 'important');
+          console.log('[OK] Adresse définie:', clientData.adresse);
+        }
+        if (clientPhoneField && clientData.telephone) {
+          clientPhoneField.value = clientData.telephone;
+          clientPhoneField.style.setProperty('border-right-color', '#4caf50', 'important');
+          console.log('[OK] Téléphone défini:', clientData.telephone);
+        }
+
+        // Mettre à jour le message de validation client
+        setTimeout(() => {
+          if (typeof updateClientValidationMessage === 'function') {
+            updateClientValidationMessage();
+          }
+          if (typeof validateCompleterButton === 'function') {
+            validateCompleterButton();
+          }
+        }, 100);
+
+        console.log('[OK] Client estimation pré-rempli avec bordures vertes');
+
+        // Nettoyer localStorage après utilisation
+        localStorage.removeItem('clientEstimation');
+        console.log('🗑️ localStorage.clientEstimation nettoyé');
+
+      } catch (error) {
+        console.error('[ERROR] Erreur lors du parsing des données client estimation:', error);
+      }
     }
   }, 1000); // Délai de 1 seconde pour s'assurer que le DOM est prêt
   

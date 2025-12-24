@@ -1933,6 +1933,50 @@ def get_prospects(username: str):
         print(f"[ERROR] Erreur lors du chargement des prospects pour {username}: {e}")
         return []
 
+@app.post("/supprimer-prospect")
+async def supprimer_prospect_by_id(data: dict = Body(...)):
+    """
+    Supprime un prospect par ID
+    """
+    try:
+        username = data.get("username")
+        prospect_id = data.get("id")
+
+        if not username or not prospect_id:
+            raise HTTPException(status_code=400, detail="Username et ID requis")
+
+        fichier_prospects = os.path.join(f"{base_cloud}/prospects", username, "prospects.json")
+
+        if not os.path.exists(fichier_prospects):
+            raise HTTPException(status_code=404, detail="Aucun fichier prospects trouvé")
+
+        with open(fichier_prospects, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            if not content:
+                prospects = []
+            else:
+                prospects = json.loads(content)
+
+        # Filtrer pour retirer le prospect avec cet ID
+        nouveaux_prospects = [p for p in prospects if p.get('id') != prospect_id]
+
+        if len(nouveaux_prospects) == len(prospects):
+            print(f"[WARNING] Aucun prospect trouvé avec ID: {prospect_id}")
+            return JSONResponse({"success": False, "message": "Prospect non trouvé"})
+
+        # Sauvegarder la liste mise à jour
+        with open(fichier_prospects, "w", encoding="utf-8") as f:
+            json.dump(nouveaux_prospects, f, indent=2, ensure_ascii=False)
+
+        print(f"[OK] Prospect supprimé: {prospect_id} pour {username}")
+        return JSONResponse({"success": True, "message": "Prospect supprimé avec succès"})
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Erreur lors de la suppression du prospect: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.delete("/supprimer-prospect/{username}")
 async def supprimer_prospect(username: str, prospect_data: dict):
     """
@@ -9730,15 +9774,25 @@ async def retirer_client_perdu(data: dict = Body(...)):
         with open(perdus_file, "r", encoding="utf-8") as f:
             clients_perdus = json.load(f)
 
-        # Trouver et retirer le client
+        # Trouver et retirer le client (supporter UUID, num, ou format composite prenom_nom_telephone)
         clients_perdus_updated = []
         client_retire = None
         for client in clients_perdus:
-            current_id = f"{client.get('prenom', '')}_{client.get('nom', '')}_{client.get('telephone', '')}"
-            if current_id != client_id:
-                clients_perdus_updated.append(client)
-            else:
+            # Vérifier par UUID
+            if client.get('id') == client_id:
                 client_retire = client
+                continue
+            # Vérifier par numéro de soumission
+            if client.get('num') == client_id:
+                client_retire = client
+                continue
+            # Vérifier par format composite
+            current_id = f"{client.get('prenom', '')}_{client.get('nom', '')}_{client.get('telephone', '')}"
+            if current_id == client_id:
+                client_retire = client
+                continue
+            # Si aucun match, garder le client
+            clients_perdus_updated.append(client)
 
         # Sauvegarder la liste mise à jour
         with open(perdus_file, "w", encoding="utf-8") as f:
@@ -18213,6 +18267,142 @@ async def update_statut_paiement_vente(data: dict = Body(...)):
 
     except Exception as e:
         print(f"[ERREUR update_statut_paiement_vente] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/ventes/marquer-perdu")
+async def marquer_vente_perdue(data: dict = Body(...)):
+    """
+    Déplace une vente de ventes_attente vers clients_perdus
+    """
+    try:
+        username = data.get("username")
+        vente_id = data.get("vente_id")
+
+        if not username or not vente_id:
+            raise HTTPException(status_code=400, detail="Username et vente_id requis")
+
+        # Fichiers source et destination
+        fichier_attente = os.path.join(f"{base_cloud}/ventes_attente", username, "ventes.json")
+        fichier_perdus = os.path.join(f"{base_cloud}/clients_perdus", username, "clients.json")
+
+        if not os.path.exists(fichier_attente):
+            raise HTTPException(status_code=404, detail="Fichier ventes_attente non trouvé")
+
+        # Charger les ventes en attente
+        with open(fichier_attente, "r", encoding="utf-8") as f:
+            ventes_attente = json.load(f)
+
+        # Trouver la vente à déplacer
+        vente_a_deplacer = None
+        nouvelles_ventes_attente = []
+        for vente in ventes_attente:
+            if vente.get("id") == vente_id or vente.get("num") == vente_id:
+                vente_a_deplacer = vente
+            else:
+                nouvelles_ventes_attente.append(vente)
+
+        if not vente_a_deplacer:
+            raise HTTPException(status_code=404, detail="Vente non trouvée dans ventes_attente")
+
+        # Sauvegarder les ventes en attente mises à jour
+        with open(fichier_attente, "w", encoding="utf-8") as f:
+            json.dump(nouvelles_ventes_attente, f, ensure_ascii=False, indent=2)
+
+        # Charger ou créer le fichier clients perdus
+        clients_perdus_dir = os.path.dirname(fichier_perdus)
+        os.makedirs(clients_perdus_dir, exist_ok=True)
+
+        if os.path.exists(fichier_perdus):
+            with open(fichier_perdus, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                clients_perdus = json.loads(content) if content else []
+        else:
+            clients_perdus = []
+
+        # Ajouter la vente aux clients perdus
+        clients_perdus.append(vente_a_deplacer)
+
+        # Sauvegarder les clients perdus
+        with open(fichier_perdus, "w", encoding="utf-8") as f:
+            json.dump(clients_perdus, f, ensure_ascii=False, indent=2)
+
+        print(f"[VENTES] ✅ Vente {vente_id} déplacée vers clients perdus pour {username}")
+        return {"success": True, "message": "Vente marquée comme perdue"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERREUR marquer_vente_perdue] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/clients-perdus/{username}")
+def get_clients_perdus(username: str):
+    """
+    Récupère les clients perdus d'un utilisateur
+    """
+    try:
+        clients_perdus_dir = os.path.join(f"{base_cloud}/clients_perdus", username)
+        fichier_perdus = os.path.join(clients_perdus_dir, "clients.json")
+
+        # Créer le dossier et le fichier s'ils n'existent pas
+        if not os.path.exists(fichier_perdus):
+            os.makedirs(clients_perdus_dir, exist_ok=True)
+            with open(fichier_perdus, "w", encoding="utf-8") as f:
+                json.dump([], f)
+            return []
+
+        with open(fichier_perdus, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            if not content:
+                return []
+            return json.loads(content)
+    except Exception as e:
+        print(f"[ERREUR clients_perdus] {e}")
+        return []
+
+
+@app.post("/clients-perdus/supprimer")
+async def supprimer_client_perdu(data: dict = Body(...)):
+    """
+    Supprime définitivement un client perdu
+    """
+    try:
+        username = data.get("username")
+        client_id = data.get("client_id")
+
+        if not username or not client_id:
+            raise HTTPException(status_code=400, detail="Username et client_id requis")
+
+        fichier_perdus = os.path.join(f"{base_cloud}/clients_perdus", username, "clients.json")
+
+        if not os.path.exists(fichier_perdus):
+            raise HTTPException(status_code=404, detail="Fichier clients perdus non trouvé")
+
+        # Charger les clients perdus
+        with open(fichier_perdus, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            clients_perdus = json.loads(content) if content else []
+
+        # Filtrer pour retirer le client
+        nouveaux_clients = [c for c in clients_perdus if c.get('id') != client_id and c.get('num') != client_id]
+
+        if len(nouveaux_clients) == len(clients_perdus):
+            print(f"[WARNING] Aucun client perdu trouvé avec ID: {client_id}")
+            return JSONResponse({"success": False, "message": "Client perdu non trouvé"})
+
+        # Sauvegarder la liste mise à jour
+        with open(fichier_perdus, "w", encoding="utf-8") as f:
+            json.dump(nouveaux_clients, f, indent=2, ensure_ascii=False)
+
+        print(f"[OK] Client perdu supprimé: {client_id} pour {username}")
+        return JSONResponse({"success": True, "message": "Client perdu supprimé avec succès"})
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Erreur lors de la suppression du client perdu: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

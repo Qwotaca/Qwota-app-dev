@@ -2343,6 +2343,276 @@ let currentPage = 'todolist';
 let selectedEntrepreneurUsername = '';
 let selectedEntrepreneurDisplayName = '';
 
+// ============================================
+// COACH SELECTOR - Pour la page RPO Coach (Direction)
+// ============================================
+(function() {
+  'use strict';
+
+  document.addEventListener('DOMContentLoaded', function() {
+    initCoachSelector();
+  });
+
+  function initCoachSelector() {
+    const userRole = localStorage.getItem('userRole');
+
+    // Only show selector for direction users
+    if (userRole !== 'direction') {
+      return;
+    }
+
+    // Add coach-mode class to body
+    document.body.classList.add('coach-mode');
+
+    // Get DOM elements
+    const selector = document.getElementById('coach-entrepreneur-selector');
+    const backdrop = document.getElementById('coach-selector-backdrop');
+    const dropdownToggle = document.getElementById('coach-dropdown-toggle');
+    const dropdownMenu = document.getElementById('coach-dropdown-menu');
+    const searchInput = document.getElementById('search-input');
+
+    if (!selector || !dropdownToggle || !dropdownMenu) {
+      console.error('[RPO COACH] Selector elements not found');
+      return;
+    }
+
+    // Show selector and backdrop
+    selector.classList.add('visible');
+    if (backdrop) {
+      backdrop.classList.add('visible');
+    }
+
+    // Load coaches
+    loadCoaches();
+
+    // Setup event listeners
+    setupCoachSelectorListeners(dropdownToggle, dropdownMenu, searchInput, selector, backdrop);
+  }
+
+  // Load coaches from API
+  async function loadCoaches() {
+    try {
+      const response = await fetch('/api/users/coaches');
+      const data = await response.json();
+
+      if (data.success && data.coaches) {
+        console.log('[RPO COACH] Coaches chargés:', data.coaches.length);
+        populateCoachDropdown(data.coaches);
+      } else {
+        showNoCoaches();
+      }
+    } catch (error) {
+      console.error('[RPO COACH] Erreur chargement coaches:', error);
+      showNoCoaches();
+    }
+  }
+
+  // Populate dropdown with coaches
+  function populateCoachDropdown(coaches) {
+    const dropdownMenu = document.getElementById('coach-dropdown-menu');
+
+    if (coaches.length === 0) {
+      showNoCoaches();
+      return;
+    }
+
+    dropdownMenu.innerHTML = '';
+
+    coaches.forEach(coach => {
+      const option = document.createElement('div');
+      option.className = 'coach-dropdown-option';
+      option.dataset.username = coach.username;
+
+      const displayName = coach.prenom && coach.nom
+        ? `${coach.prenom} ${coach.nom} (${coach.username})`
+        : coach.username;
+
+      option.innerHTML = `
+        <span>
+          <i class="fas fa-user-tie"></i>
+          <span>${displayName}</span>
+        </span>
+      `;
+
+      option.addEventListener('click', function() {
+        selectCoach(coach.username);
+      });
+
+      dropdownMenu.appendChild(option);
+    });
+  }
+
+  // Show no coaches message
+  function showNoCoaches() {
+    const dropdownMenu = document.getElementById('coach-dropdown-menu');
+    dropdownMenu.innerHTML = `
+      <div class="coach-dropdown-option-disabled">
+        Aucun coach trouvé
+      </div>
+    `;
+  }
+
+  // Select a coach
+  function selectCoach(username) {
+    const dropdownToggle = document.getElementById('coach-dropdown-toggle');
+    const dropdownMenu = document.getElementById('coach-dropdown-menu');
+    const searchInput = document.getElementById('search-input');
+    const selector = document.getElementById('coach-entrepreneur-selector');
+    const backdrop = document.getElementById('coach-selector-backdrop');
+
+    console.log('[RPO COACH] Coach sélectionné:', username);
+
+    // Set global coach username
+    window.coachUsername = username;
+    coachUsername = username;
+
+    // Update toggle display
+    let textElement = dropdownToggle.querySelector('.placeholder, .selected-text');
+    if (textElement) {
+      textElement.innerHTML = `<i class="fas fa-check-circle"></i> ${username}`;
+      textElement.classList.remove('placeholder');
+      textElement.classList.add('selected-text');
+      textElement.style.display = 'flex';
+    }
+
+    // Hide search input
+    if (searchInput) {
+      searchInput.style.display = 'none';
+      searchInput.value = '';
+    }
+
+    // Close dropdown
+    dropdownToggle.classList.remove('active');
+    dropdownMenu.classList.remove('show');
+    if (searchInput) {
+      searchInput.blur();
+    }
+
+    // Move selector to header
+    selector.classList.add('in-header');
+    document.body.classList.add('has-selection');
+
+    // Hide backdrop
+    if (backdrop) {
+      backdrop.classList.remove('visible');
+    }
+
+    // Load data for selected coach
+    console.log('[RPO COACH] Chargement des données pour:', username);
+    if (typeof loadTasks === 'function') {
+      loadTasks();
+    }
+    if (typeof loadTaskHistory === 'function') {
+      loadTaskHistory();
+    }
+  }
+
+  // Setup event listeners
+  function setupCoachSelectorListeners(dropdownToggle, dropdownMenu, searchInput, selector, backdrop) {
+    // Dropdown toggle click
+    dropdownToggle.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const isOpening = !this.classList.contains('active');
+
+      this.classList.toggle('active');
+      dropdownMenu.classList.toggle('show');
+
+      const placeholderEl = dropdownToggle.querySelector('.placeholder, .selected-text');
+
+      if (isOpening && searchInput) {
+        if (placeholderEl) {
+          placeholderEl.style.display = 'none';
+        }
+        searchInput.style.display = '';
+        searchInput.style.removeProperty('display');
+        searchInput.value = '';
+        searchInput.focus();
+      } else if (searchInput) {
+        searchInput.style.display = 'none';
+        searchInput.value = '';
+        searchInput.blur();
+
+        if (placeholderEl) {
+          placeholderEl.style.display = 'flex';
+        }
+
+        const allOptions = dropdownMenu.querySelectorAll('.coach-dropdown-option');
+        allOptions.forEach(opt => opt.style.removeProperty('display'));
+
+        const noResultsMsg = dropdownMenu.querySelector('.no-results-message');
+        if (noResultsMsg) {
+          noResultsMsg.style.display = 'none';
+        }
+      }
+    });
+
+    // Search input
+    if (searchInput) {
+      searchInput.addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        const allOptions = dropdownMenu.querySelectorAll('.coach-dropdown-option');
+        let visibleCount = 0;
+
+        allOptions.forEach(option => {
+          const text = option.querySelector('span span')?.textContent?.toLowerCase() || '';
+          if (searchTerm === '' || text.includes(searchTerm)) {
+            option.style.display = 'flex';
+            visibleCount++;
+          } else {
+            option.style.display = 'none';
+          }
+        });
+
+        // Show/hide "no results" message
+        let noResultsMsg = dropdownMenu.querySelector('.no-results-message');
+
+        if (visibleCount === 0 && searchTerm !== '') {
+          if (!noResultsMsg) {
+            noResultsMsg = document.createElement('div');
+            noResultsMsg.className = 'coach-dropdown-option-disabled no-results-message';
+            noResultsMsg.textContent = 'Aucun coach trouvé...';
+            dropdownMenu.appendChild(noResultsMsg);
+          }
+          noResultsMsg.style.display = 'block';
+        } else if (noResultsMsg) {
+          noResultsMsg.style.display = 'none';
+        }
+      });
+
+      searchInput.addEventListener('click', function(e) {
+        e.stopPropagation();
+      });
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!dropdownToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
+        dropdownToggle.classList.remove('active');
+        dropdownMenu.classList.remove('show');
+
+        if (searchInput) {
+          searchInput.style.display = 'none';
+          searchInput.value = '';
+          searchInput.blur();
+
+          const placeholderEl = dropdownToggle.querySelector('.placeholder, .selected-text');
+          if (placeholderEl) {
+            placeholderEl.style.display = 'flex';
+          }
+
+          const allOptions = dropdownMenu.querySelectorAll('.coach-dropdown-option');
+          allOptions.forEach(opt => opt.style.removeProperty('display'));
+
+          const noResultsMsg = dropdownMenu.querySelector('.no-results-message');
+          if (noResultsMsg) {
+            noResultsMsg.style.display = 'none';
+          }
+        }
+      }
+    });
+  }
+})();
+
 // ==================== CALENDRIER DASHBOARD ====================
 let taskCurrentDate = new Date();
 let taskSelectedDate = null;
@@ -2596,44 +2866,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     loadTasks();
     loadTaskHistory();
   }
-
-  // Initialiser les event listeners pour le dropdown coach
-  const coachOptions = document.querySelectorAll('.coach-dropdown-option');
-  coachOptions.forEach(option => {
-    option.addEventListener('click', function() {
-      const username = this.dataset.username;
-      const displayText = this.querySelector('span span')?.textContent || username;
-
-      // Fermer le dropdown
-      const dropdownMenu = document.getElementById('coach-dropdown-menu');
-      if (dropdownMenu) {
-        dropdownMenu.classList.remove('show');
-      }
-
-      // Mettre à jour le toggle avec le coach sélectionné
-      const toggleText = document.querySelector('.coach-dropdown-toggle .placeholder, .coach-dropdown-toggle .selected-text');
-      if (toggleText) {
-        toggleText.textContent = displayText;
-        toggleText.classList.remove('placeholder');
-        toggleText.classList.add('selected-text');
-      }
-
-      // Cacher le sélecteur et afficher le contenu
-      const selector = document.getElementById('coach-entrepreneur-selector');
-      if (selector) {
-        selector.classList.remove('visible');
-        selector.classList.add('hidden');
-      }
-
-      // Définir le coach sélectionné et charger les données
-      coachUsername = username;
-      console.log('[RPO COACH] Coach sélectionné:', username);
-
-      // Charger les tâches et données pour ce coach
-      loadTasks();
-      loadTaskHistory();
-    });
-  });
 });
 
 // ==================== GESTION DES TÂCHES ====================

@@ -8285,11 +8285,12 @@ async function populateTeamObjectifTable(entrepreneurs, coachUsername) {
     // Charger l'objectif actuel de l'entrepreneur depuis son RPO
     let objectifActuel = 0;
     try {
-      const rpoResponse = await fetch(`/api/get-rpo-data?entrepreneur_username=${entrepreneur.username}`);
+      const rpoResponse = await fetch(`/api/rpo/data/${entrepreneur.username}`);
       const rpoData = await rpoResponse.json();
-      if (rpoData.success && rpoData.rpoData) {
+      // L'endpoint /api/rpo/data/{username} retourne directement les données RPO
+      if (rpoData && rpoData.annual) {
         // Chercher l'objectif dans annual.objectif_ca
-        objectifActuel = parseFloat(rpoData.rpoData?.annual?.objectif_ca) || 0;
+        objectifActuel = parseFloat(rpoData.annual?.objectif_ca) || 0;
       }
     } catch (error) {
       console.warn('[TEAM OBJECTIF] Erreur chargement objectif pour', entrepreneur.username);

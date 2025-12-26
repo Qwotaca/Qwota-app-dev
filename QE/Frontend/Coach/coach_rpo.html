@@ -7802,12 +7802,35 @@ document.addEventListener('entrepreneurSelected', function(e) {
 
   function initCoachSelector() {
     const userRole = localStorage.getItem('userRole');
+    const currentUsername = localStorage.getItem('username');
+
+    // Coaches viewing their own RPO - hide selectors and load their own data
+    if (userRole === 'coach') {
+      console.log('[RPO COACH] Coach viewing own RPO:', currentUsername);
+
+      // Add class to hide entrepreneur selector
+      document.body.classList.add('coach-viewing-own-data');
+
+      // Hide the coach selector elements
+      const selector = document.getElementById('coach-entrepreneur-selector');
+      const backdrop = document.getElementById('coach-selector-backdrop');
+      if (selector) selector.style.display = 'none';
+      if (backdrop) backdrop.style.display = 'none';
+
+      // Load coach's own RPO data
+      window.selectedCoachUsername = currentUsername;
+      window.username = currentUsername; // For compatibility with existing code
+
+      // Load RPO data
+      if (typeof window.loadRPOData === 'function') {
+        window.loadRPOData();
+      }
+
+      return;
+    }
 
     // Only show selector for direction users
-    // Coaches will use the entrepreneur-selector.js instead
     if (userRole !== 'direction') {
-      // For coaches, entrepreneur-selector.js will handle the selection
-      // Do NOT add 'coach-viewing-own-data' class - we want them to select an entrepreneur
       return;
     }
 

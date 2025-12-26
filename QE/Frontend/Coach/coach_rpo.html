@@ -734,6 +734,13 @@ select:disabled {
   max-width: 170px;
 }
 
+/* Medium columns (240px) - pour Racine du problème */
+.rpo-col-medium {
+  width: 240px;
+  min-width: 240px;
+  max-width: 240px;
+}
+
 /* Wide columns (340px) */
 .rpo-col-wide {
   width: 340px;
@@ -1433,8 +1440,8 @@ select:disabled {
           </div>
 
           <div style="display: flex; align-items: center; gap: 1rem;">
-            <!-- Bouton Enregistrer (à gauche) -->
-            <button id="save-all-btn" onclick="saveAllEntrepreneurWeeklyData()" class="btn-save-all" style="display: none;">
+            <!-- Bouton Enregistrer désactivé - auto-sauvegarde activée -->
+            <button id="save-all-btn" onclick="saveAllEntrepreneurWeeklyData()" class="btn-save-all" style="display: none !important;">
               <i class="fas fa-save mr-2"></i>Enregistrer
             </button>
 
@@ -1536,7 +1543,7 @@ select:disabled {
                   <th class="rpo-col-standard" style="border-right: 2px solid rgba(96, 165, 250, 0.3);">$Vendu</th>
                   <th class="rpo-col-wide" style="border-right: 1px solid rgba(96, 165, 250, 0.15);">Problème semaine</th>
                   <th class="rpo-col-wide" style="border-right: 2px solid rgba(96, 165, 250, 0.3);">Racine problème</th>
-                  <th class="rpo-col-standard" style="border-right: 1px solid rgba(96, 165, 250, 0.15);">Racine du problème</th>
+                  <th class="rpo-col-medium" style="border-right: 1px solid rgba(96, 165, 250, 0.15);">Racine du problème</th>
                   <th class="rpo-col-standard" style="border-right: 1px solid rgba(96, 165, 250, 0.15);">Type coaching</th>
                   <th class="rpo-col-wide">Plan match</th>
                 </tr>
@@ -5143,7 +5150,7 @@ function toggleRpoDropdown(element, field, entryId) {
   }
 }
 
-function selectRpoOption(event, entryId, field, value) {
+async function selectRpoOption(event, entryId, field, value) {
   event.stopPropagation();
 
   const dropdown = event.target.closest('.rpo-dropdown');
@@ -5156,13 +5163,9 @@ function selectRpoOption(event, entryId, field, value) {
   const menu = dropdown.querySelector('.rpo-dropdown-menu');
   if (menu) menu.style.display = 'none';
 
-  // Afficher le bouton "Enregistrer" quand une modification est faite
-  const saveBtn = document.getElementById('save-all-btn');
-  if (saveBtn && selectedEntrepreneurForView) {
-    saveBtn.style.display = 'inline-flex';
-  }
-
-  console.log('[RPO] Valeur modifiée:', field, '=', value, '(non sauvegardé)');
+  // Auto-sauvegarde immédiate
+  console.log('[RPO] Sauvegarde automatique:', field, '=', value);
+  await saveRpoChange(entryId, field, value);
 }
 
 // Fonction saveRpoTextarea supprimée - la sauvegarde se fait uniquement avec le bouton "Enregistrer"
@@ -5195,7 +5198,7 @@ async function saveRpoChange(entryId, field, value) {
     const updateData = {
       id: uniqueId,
       coach_username: coachUsername,
-      week: selectedWeekValue,
+      week: entry.week_value || entry.week || selectedWeekValue,  // Utiliser le week_value de l'entrée
       entrepreneur_username: selectedEntrepreneurForView,
       week_label: entry.week_label,
       // Envoyer TOUS les champs, pas seulement celui modifié
@@ -5241,12 +5244,27 @@ document.addEventListener('click', function(event) {
   }
 });
 
-// Fermer les dropdowns RPO lors du scroll
-window.addEventListener('scroll', function() {
+// Tracker la position de la souris pour savoir si elle est dans un dropdown
+let currentMouseTarget = null;
+document.addEventListener('mousemove', function(e) {
+  currentMouseTarget = e.target;
+}, true);
+
+// Fermer les dropdowns RPO lors du scroll (sauf si souris dans le dropdown)
+window.addEventListener('scroll', function(e) {
   document.querySelectorAll('.rpo-dropdown.active').forEach(dropdown => {
-    dropdown.classList.remove('active');
+    // Vérifier si la souris est actuellement dans ce dropdown ou son menu
     const menu = dropdown.querySelector('.rpo-dropdown-menu');
-    if (menu) menu.style.display = 'none';
+    const isMouseInDropdown = currentMouseTarget && (
+      dropdown.contains(currentMouseTarget) ||
+      (menu && menu.contains(currentMouseTarget))
+    );
+
+    // Ne fermer que si la souris n'est pas dans le dropdown
+    if (!isMouseInDropdown) {
+      dropdown.classList.remove('active');
+      if (menu) menu.style.display = 'none';
+    }
   });
 }, true); // true pour capturer en phase de capture
 
@@ -5590,7 +5608,7 @@ function renderEntrepreneurWeeklyTable() {
       </td>
 
       <!-- Dropdown Source du problème -->
-      <td class="rpo-col-standard">
+      <td class="rpo-col-medium">
         <div class="rpo-dropdown"
              onclick="toggleRpoDropdown(this, 'source', '${entry.week_label}')"
              data-field="source_probleme"
@@ -5649,14 +5667,29 @@ function renderEntrepreneurWeeklyTable() {
     tbody.appendChild(tr);
   });
 
-  // Ajouter des event listeners aux textareas pour afficher le bouton "Enregistrer"
+  // Auto-sauvegarde des textareas avec debounce (1 seconde)
   const allTextareas = tbody.querySelectorAll('.rpo-textarea');
+  const saveTimers = new Map(); // Map pour stocker les timers de chaque textarea
+
   allTextareas.forEach(textarea => {
     textarea.addEventListener('input', function() {
-      const saveBtn = document.getElementById('save-all-btn');
-      if (saveBtn && selectedEntrepreneurForView) {
-        saveBtn.style.display = 'inline-flex';
+      const field = this.getAttribute('data-field');
+      const entryId = this.getAttribute('data-entry-id');
+      const value = this.value;
+
+      // Annuler le timer précédent s'il existe
+      if (saveTimers.has(this)) {
+        clearTimeout(saveTimers.get(this));
       }
+
+      // Créer un nouveau timer pour sauvegarder après 1 seconde
+      const timer = setTimeout(async () => {
+        console.log('[RPO] Auto-sauvegarde textarea:', field, 'pour', entryId);
+        await saveRpoChange(entryId, field, value);
+        saveTimers.delete(this);
+      }, 1000);
+
+      saveTimers.set(this, timer);
     });
   });
 

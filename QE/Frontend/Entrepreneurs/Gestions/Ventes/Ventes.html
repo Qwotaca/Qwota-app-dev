@@ -1800,7 +1800,7 @@
           <button onclick="voirSoumission('${pdfUrl}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
             <span><i class="fas fa-file-pdf mr-2"></i>Voir la soumission</span>
           </button>
-          <button onclick="${hasGQP ? `voirGQP('${gqpUrl}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasGQP ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
+          <button onclick="${hasGQP ? `voirGQP('${gqpUrl}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasGQP ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
             <i class="fas fa-clipboard-check mr-2"></i>Voir GQP
           </button>
           <button onclick="${hasCalcul ? `voirCalcul('${clientData.id}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasCalcul ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
@@ -1820,10 +1820,10 @@
         <div class="space-y-3">
           <!-- Boutons de consultation -->
           <div class="flex justify-end space-x-3">
-            <button onclick="voirPDF('${clientData.pdfUrl || ''}')" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
+            <button onclick="voirPDF('${clientData.pdfUrl || ''}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
               <i class="fas fa-file-pdf mr-2"></i>Voir soumission
             </button>
-            <button onclick="${hasGQP ? `voirGQP('${gqpUrl}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasGQP ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
+            <button onclick="${hasGQP ? `voirGQP('${gqpUrl}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasGQP ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
               <i class="fas fa-clipboard-list mr-2"></i>Voir GQP
             </button>
             <button onclick="${hasCalcul ? `voirCalcul('${clientData.id}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasCalcul ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
@@ -1852,10 +1852,10 @@
 
       html += `
         <div class="flex justify-end space-x-3">
-          <button onclick="voirPDF('${clientData.pdfUrl || ''}')" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
+          <button onclick="voirPDF('${clientData.pdfUrl || ''}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
             <i class="fas fa-file-pdf mr-2"></i>Voir soumission
           </button>
-          <button onclick="${hasGQP ? `voirGQP('${gqpUrl}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasGQP ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
+          <button onclick="${hasGQP ? `voirGQP('${gqpUrl}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasGQP ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
             <i class="fas fa-clipboard-list mr-2"></i>Voir GQP
           </button>
           <button onclick="${hasCalcul ? `voirCalcul('${clientData.id}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasCalcul ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
@@ -2188,20 +2188,60 @@
     }
   };
 
-  window.voirPDF = function(pdfUrl) {
-    if (pdfUrl && pdfUrl !== '') {
-      window.open(pdfUrl, '_blank');
-    } else {
+  // Fonction pour voir soumission dans popup (pour Acceptées et Produit)
+  window.voirPDF = function(pdfUrl, clientName) {
+    console.log('[VENTES] voirPDF appelée avec:', pdfUrl, clientName);
+    closeClientInfo();
+
+    if (!pdfUrl || pdfUrl === '') {
       console.log('[VENTES] Aucun PDF disponible');
+      return;
     }
+
+    const modal = document.getElementById('pdfViewerModal');
+    const iframe = document.getElementById('pdfViewerFrame');
+    const title = document.getElementById('pdfViewerTitle');
+
+    console.log('[VENTES] Éléments trouvés:', { modal, iframe, title });
+
+    if (!modal || !iframe || !title) {
+      console.error('[VENTES] Éléments du modal PDF introuvables');
+      return;
+    }
+
+    title.textContent = `Soumission - ${clientName}`;
+    iframe.src = pdfUrl;
+    modal.style.display = 'flex';
+
+    console.log('[VENTES] Modal PDF affiché');
   };
 
-  window.voirGQP = function(gqpUrl) {
-    if (gqpUrl && gqpUrl !== '') {
-      window.open(gqpUrl, '_blank');
-    } else {
+  // Fonction pour voir GQP dans le même popup que voirSoumission
+  window.voirGQP = function(gqpUrl, clientName) {
+    console.log('[VENTES] voirGQP appelée avec:', gqpUrl, clientName);
+    closeClientInfo();
+
+    if (!gqpUrl || gqpUrl === '') {
       console.log('[VENTES] Aucun GQP disponible');
+      return;
     }
+
+    const modal = document.getElementById('pdfViewerModal');
+    const iframe = document.getElementById('pdfViewerFrame');
+    const title = document.getElementById('pdfViewerTitle');
+
+    console.log('[VENTES] Éléments trouvés:', { modal, iframe, title });
+
+    if (!modal || !iframe || !title) {
+      console.error('[VENTES] Éléments du modal PDF introuvables');
+      return;
+    }
+
+    title.textContent = `GQP - ${clientName}`;
+    iframe.src = gqpUrl;
+    modal.style.display = 'flex';
+
+    console.log('[VENTES] Modal GQP affiché');
   };
 
 
@@ -3047,7 +3087,7 @@
         }
 
         // Create payment badge with vente ID
-        const statutPaiement = vente.statut_paiement || vente.typePaiement || vente.payer_par || '-';
+        const statutPaiement = vente.statut_paiement || vente.typePaiement || vente.payer_par || 'En attente';
         const venteId = vente.id || vente.num || `vente-${Math.random()}`;
         const badgePaiement = createPaymentBadge(statutPaiement, venteId);
 

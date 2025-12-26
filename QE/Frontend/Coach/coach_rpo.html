@@ -8004,15 +8004,30 @@ document.addEventListener('entrepreneurSelected', function(e) {
       const username = option.dataset.username;
       console.log(`[RPO COACH] Option ${index}: username="${username}"`);
 
-      // Don't clone - just add listener directly (cloning was causing issues)
-      option.addEventListener('click', function(e) {
-        console.log('[RPO COACH] ✅ CLICK EVENT FIRED on option:', username);
-        e.preventDefault();
-        e.stopPropagation();
-        selectCoach(username);
+      // Add multiple event listeners to catch the click
+      ['click', 'mousedown', 'mouseup'].forEach(eventType => {
+        option.addEventListener(eventType, function(e) {
+          console.log(`[RPO COACH] ✅ ${eventType.toUpperCase()} EVENT on option:`, username);
+          if (eventType === 'click') {
+            e.preventDefault();
+            e.stopPropagation();
+            selectCoach(username);
+          }
+        }, true); // Use capture phase
       });
 
-      console.log(`[RPO COACH] Listener attached to option ${index} (${username})`);
+      // Also add listener to child span elements
+      const spans = option.querySelectorAll('span');
+      spans.forEach(span => {
+        span.addEventListener('click', function(e) {
+          console.log('[RPO COACH] ✅ CLICK on SPAN, selecting:', username);
+          e.preventDefault();
+          e.stopPropagation();
+          selectCoach(username);
+        }, true);
+      });
+
+      console.log(`[RPO COACH] Listeners attached to option ${index} (${username})`);
     });
 
     console.log('[RPO COACH] All listeners attached. Total:', existingOptions.length);

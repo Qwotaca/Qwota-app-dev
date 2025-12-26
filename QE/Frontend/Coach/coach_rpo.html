@@ -8296,6 +8296,18 @@ async function populateTeamObjectifTable(entrepreneurs, coachUsername) {
       console.warn('[TEAM OBJECTIF] Erreur chargement objectif pour', entrepreneur.username);
     }
 
+    // Charger la photo de profil via l'API (même système que le dashboard)
+    let photoUrl = null;
+    try {
+      const photoResponse = await fetch(`/api/get-profile-photo/${entrepreneur.username}`);
+      if (photoResponse.ok) {
+        const photoResult = await photoResponse.json();
+        photoUrl = photoResult.photoUrl || null;
+      }
+    } catch (error) {
+      console.warn('[TEAM OBJECTIF] Erreur chargement photo pour', entrepreneur.username);
+    }
+
     // Récupérer la prévision du coach (ou objectif actuel par défaut)
     const previsionCoach = coachPrevisions[entrepreneur.username] || objectifActuel;
     totalPrevision += previsionCoach;
@@ -8313,8 +8325,8 @@ async function populateTeamObjectifTable(entrepreneurs, coachUsername) {
     row.onmouseout = function() { this.style.background = 'transparent'; };
 
     // Générer l'avatar (photo ou initiales)
-    const avatarHtml = entrepreneur.photo_url
-      ? `<img src="${entrepreneur.photo_url}" alt="${displayName}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">`
+    const avatarHtml = photoUrl
+      ? `<img src="${photoUrl}" alt="${displayName}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">`
       : `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.875rem;">
           ${initials}
         </div>`;

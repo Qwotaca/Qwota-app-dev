@@ -2382,64 +2382,31 @@ let selectedEntrepreneurDisplayName = '';
       backdrop.classList.add('visible');
     }
 
-    // Load coaches
-    loadCoaches();
+    // Attach event listeners to existing options (already in HTML)
+    attachCoachOptionListeners();
 
     // Setup event listeners
     setupCoachSelectorListeners(dropdownToggle, dropdownMenu, searchInput, selector, backdrop);
   }
 
-  // Load coaches from API
-  async function loadCoaches() {
-    try {
-      const response = await fetch('/api/users/coaches');
-      const data = await response.json();
-
-      if (data.success && data.coaches) {
-        console.log('[RPO COACH] Coaches chargés:', data.coaches.length);
-        populateCoachDropdown(data.coaches);
-      } else {
-        showNoCoaches();
-      }
-    } catch (error) {
-      console.error('[RPO COACH] Erreur chargement coaches:', error);
-      showNoCoaches();
-    }
-  }
-
-  // Populate dropdown with coaches
-  function populateCoachDropdown(coaches) {
+  // Attach click listeners to existing coach options
+  function attachCoachOptionListeners() {
     const dropdownMenu = document.getElementById('coach-dropdown-menu');
+    const existingOptions = dropdownMenu.querySelectorAll('.coach-dropdown-option');
 
-    if (coaches.length === 0) {
-      showNoCoaches();
-      return;
-    }
+    console.log('[RPO COACH] Options trouvées:', existingOptions.length);
 
-    dropdownMenu.innerHTML = '';
-
-    coaches.forEach(coach => {
-      const option = document.createElement('div');
-      option.className = 'coach-dropdown-option';
-      option.dataset.username = coach.username;
-
-      const displayName = coach.prenom && coach.nom
-        ? `${coach.prenom} ${coach.nom} (${coach.username})`
-        : coach.username;
-
-      option.innerHTML = `
-        <span>
-          <i class="fas fa-user-tie"></i>
-          <span>${displayName}</span>
-        </span>
-      `;
-
+    existingOptions.forEach(option => {
       option.addEventListener('click', function() {
-        selectCoach(coach.username);
+        const username = this.dataset.username;
+        console.log('[RPO COACH] Option cliquée:', username);
+        selectCoach(username);
       });
-
-      dropdownMenu.appendChild(option);
     });
+
+    if (existingOptions.length === 0) {
+      showNoCoaches();
+    }
   }
 
   // Show no coaches message

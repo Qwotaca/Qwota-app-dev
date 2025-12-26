@@ -7986,6 +7986,34 @@ document.addEventListener('entrepreneurSelected', function(e) {
 
       dropdownMenu.appendChild(option);
     });
+
+    // Attach event listeners to all existing options (in case they were pre-rendered in HTML)
+    attachCoachOptionListeners();
+  }
+
+  // ============================================
+  // ATTACH LISTENERS TO EXISTING OPTIONS
+  // ============================================
+  function attachCoachOptionListeners() {
+    const dropdownMenu = document.getElementById('coach-dropdown-menu');
+    const existingOptions = dropdownMenu.querySelectorAll('.coach-dropdown-option');
+
+    console.log('[RPO COACH] Attaching listeners to', existingOptions.length, 'options');
+
+    existingOptions.forEach(option => {
+      // Remove any existing listeners by cloning
+      const newOption = option.cloneNode(true);
+      option.parentNode.replaceChild(newOption, option);
+
+      // Add new listener
+      newOption.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const username = this.dataset.username;
+        console.log('[RPO COACH] Coach cliqué:', username);
+        selectCoach(username);
+      });
+    });
   }
 
   // ============================================

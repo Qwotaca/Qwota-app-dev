@@ -6512,6 +6512,35 @@ function renderModalWeeklyTable(monthData, monthIndex) {
     const stars = rating > 0 ? '⭐'.repeat(rating) : '-';
     const isLastRow = index === weeks.length - 1;
 
+    // Parser le commentaire pour extraire Problème et Focus
+    let probleme = '-';
+    let focus = '-';
+    const commentaireRaw = weekData.commentaire || '';
+
+    if (commentaireRaw && commentaireRaw.includes('|')) {
+      // Format: "Problème: xxx | Focus: yyy"
+      const parts = commentaireRaw.split('|');
+      parts.forEach(part => {
+        const trimmed = part.trim();
+        if (trimmed.startsWith('Problème:')) {
+          probleme = trimmed.replace('Problème:', '').trim();
+        } else if (trimmed.startsWith('Focus:')) {
+          focus = trimmed.replace('Focus:', '').trim();
+        }
+      });
+    } else if (commentaireRaw) {
+      // Format simple sans séparateur
+      if (commentaireRaw.startsWith('Problème:')) {
+        probleme = commentaireRaw.replace('Problème:', '').trim();
+      } else if (commentaireRaw.startsWith('Focus:')) {
+        focus = commentaireRaw.replace('Focus:', '').trim();
+      }
+    }
+
+    // Si vide ou "-", garder "-"
+    if (!probleme || probleme === '') probleme = '-';
+    if (!focus || focus === '') focus = '-';
+
     // Utiliser le week_label depuis le JSON (exactement comme l'entrepreneur le voit)
     // Pour Décembre 2025 (index -2), générer les labels si manquants
     let weekLabel = weekData.week_label;
@@ -6545,8 +6574,8 @@ function renderModalWeeklyTable(monthData, monthIndex) {
           ${isCurrentWeek ? '<span style="display: inline-block; margin-left: 8px; padding: 2px 8px; background: #fbbf24; color: white; border-radius: 4px; font-size: 0.65rem; font-weight: 600;">Cette semaine</span>' : ''}
         </td>
         <td style="${cellBgLight} color: #e2e8f0; padding: 12px; text-align: center; font-size: 0.875rem;">${stars}</td>
-        <td style="${cellBgDark} color: #e2e8f0; padding: 12px; text-align: center; font-size: 0.875rem;">${weekData.probleme || '-'}</td>
-        <td style="${cellBgLight} color: #e2e8f0; padding: 12px; text-align: center; font-size: 0.875rem; ${isLastRow ? 'border-radius: 0px 0px 14px 0px;' : ''}">${weekData.focus || '-'}</td>
+        <td style="${cellBgDark} color: #e2e8f0; padding: 12px; text-align: center; font-size: 0.875rem;">${probleme}</td>
+        <td style="${cellBgLight} color: #e2e8f0; padding: 12px; text-align: center; font-size: 0.875rem; ${isLastRow ? 'border-radius: 0px 0px 14px 0px;' : ''}">${focus}</td>
       </tr>
     `;
   });

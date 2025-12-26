@@ -8388,9 +8388,10 @@ function parseCurrency(formattedValue) {
 function handlePrevisionFocus(input) {
   input.style.borderColor = 'var(--primary-blue)';
   input.style.background = 'rgba(23, 32, 51, 1)';
-  // Afficher la valeur brute sans formatage pour faciliter l'édition
-  const rawValue = input.dataset.rawValue || '0';
-  input.value = rawValue;
+  // Enlever le $ à la fin si présent, mais garder les espaces pour l'édition
+  if (input.value.endsWith(' $')) {
+    input.value = input.value.slice(0, -2).trim();
+  }
   input.select();
 }
 
@@ -8398,8 +8399,9 @@ function handlePrevisionFocus(input) {
 function handlePrevisionBlur(input) {
   input.style.borderColor = 'var(--border-dark)';
   input.style.background = 'rgba(23, 32, 51, 0.8)';
-  // Formater la valeur en devise
-  const value = parseFloat(input.value) || 0;
+  // Formater la valeur en devise avec le $
+  const rawValue = input.dataset.rawValue || '0';
+  const value = parseFloat(rawValue) || 0;
   input.dataset.rawValue = value;
   input.value = formatCurrency(value);
   updateTotalPrevision();
@@ -8407,12 +8409,41 @@ function handlePrevisionBlur(input) {
 
 // Gestion de la saisie dans l'input de prévision
 function handlePrevisionInput(input) {
-  // Permettre seulement les chiffres et le point/virgule
-  let value = input.value.replace(/[^\d.,]/g, '');
-  // Remplacer la virgule par un point pour la valeur numérique
-  value = value.replace(',', '.');
-  input.value = value;
-  input.dataset.rawValue = value;
+  // Sauvegarder la position du curseur
+  const cursorPosition = input.selectionStart;
+  const oldValue = input.value;
+
+  // Enlever tout sauf les chiffres et le point/virgule
+  let cleanValue = input.value.replace(/[^\d.,]/g, '');
+
+  // Remplacer la virgule par un point
+  cleanValue = cleanValue.replace(',', '.');
+
+  // Séparer partie entière et décimale
+  const parts = cleanValue.split('.');
+  let integerPart = parts[0] || '';
+  const decimalPart = parts.length > 1 ? '.' + parts[1].substring(0, 2) : '';
+
+  // Formater la partie entière avec des espaces tous les 3 chiffres
+  integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
+  // Combiner partie entière et décimale
+  const formattedValue = integerPart + decimalPart;
+
+  // Mettre à jour l'input
+  input.value = formattedValue;
+
+  // Stocker la valeur brute (sans espaces)
+  input.dataset.rawValue = cleanValue;
+
+  // Ajuster la position du curseur (en tenant compte des espaces ajoutés)
+  const oldSpaces = (oldValue.substring(0, cursorPosition).match(/ /g) || []).length;
+  const newSpaces = (formattedValue.substring(0, cursorPosition).match(/ /g) || []).length;
+  const newCursorPosition = cursorPosition + (newSpaces - oldSpaces);
+
+  // Repositionner le curseur
+  input.setSelectionRange(newCursorPosition, newCursorPosition);
+
   updateTotalPrevision();
 }
 

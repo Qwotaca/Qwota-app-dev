@@ -8224,10 +8224,10 @@ window.loadRPOData = function() {
 
     <!-- Footer Actions -->
     <div style="display: flex; gap: 1rem; margin-top: 2rem; justify-content: flex-end;">
-      <button onclick="closeTeamObjectifPopup()" style="background: transparent; border: 1px solid var(--border-dark); color: var(--text-gray); padding: 0.75rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 600; transition: all 0.3s ease;">
+      <button onclick="closeTeamObjectifPopup()" class="btn-secondary">
         <i class="fas fa-times"></i> Annuler
       </button>
-      <button onclick="saveTeamObjectifs()" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: none; color: white; padding: 0.75rem 2rem; border-radius: 12px; cursor: pointer; font-weight: 600; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
+      <button onclick="saveTeamObjectifs()" class="btn-primary">
         <i class="fas fa-save"></i> Enregistrer
       </button>
     </div>
@@ -8348,15 +8348,15 @@ async function populateTeamObjectifTable(entrepreneurs, coachUsername) {
       </td>
       <td style="padding: 1rem;">
         <input
-          type="number"
-          step="0.01"
-          value="${previsionCoach}"
+          type="text"
+          value="${formatCurrency(previsionCoach)}"
           data-entrepreneur="${entrepreneur.username}"
+          data-raw-value="${previsionCoach}"
           class="prevision-input"
           style="width: 100%; background: rgba(23, 32, 51, 0.8); border: 2px solid var(--border-dark); border-radius: 12px; padding: 0.75rem; color: var(--text-light); font-weight: 600; font-size: 0.875rem; transition: all 0.3s ease;"
-          onfocus="this.style.borderColor='var(--primary-blue)'; this.style.background='rgba(23, 32, 51, 1)';"
-          onblur="this.style.borderColor='var(--border-dark)'; this.style.background='rgba(23, 32, 51, 0.8)';"
-          oninput="updateTotalPrevision()"
+          onfocus="handlePrevisionFocus(this)"
+          onblur="handlePrevisionBlur(this)"
+          oninput="handlePrevisionInput(this)"
         />
       </td>
     `;
@@ -8371,14 +8371,59 @@ async function populateTeamObjectifTable(entrepreneurs, coachUsername) {
   }) + ' $';
 }
 
+// Fonction pour formater un nombre en devise
+function formatCurrency(value) {
+  const num = parseFloat(value) || 0;
+  return num.toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' $';
+}
+
+// Fonction pour extraire la valeur numérique d'une devise formatée
+function parseCurrency(formattedValue) {
+  // Enlever les espaces, le $, et remplacer la virgule par un point
+  const cleaned = formattedValue.replace(/\s/g, '').replace('$', '').replace(',', '.');
+  return parseFloat(cleaned) || 0;
+}
+
+// Gestion du focus sur l'input de prévision
+function handlePrevisionFocus(input) {
+  input.style.borderColor = 'var(--primary-blue)';
+  input.style.background = 'rgba(23, 32, 51, 1)';
+  // Afficher la valeur brute sans formatage pour faciliter l'édition
+  const rawValue = input.dataset.rawValue || '0';
+  input.value = rawValue;
+  input.select();
+}
+
+// Gestion de la perte de focus sur l'input de prévision
+function handlePrevisionBlur(input) {
+  input.style.borderColor = 'var(--border-dark)';
+  input.style.background = 'rgba(23, 32, 51, 0.8)';
+  // Formater la valeur en devise
+  const value = parseFloat(input.value) || 0;
+  input.dataset.rawValue = value;
+  input.value = formatCurrency(value);
+  updateTotalPrevision();
+}
+
+// Gestion de la saisie dans l'input de prévision
+function handlePrevisionInput(input) {
+  // Permettre seulement les chiffres et le point/virgule
+  let value = input.value.replace(/[^\d.,]/g, '');
+  // Remplacer la virgule par un point pour la valeur numérique
+  value = value.replace(',', '.');
+  input.value = value;
+  input.dataset.rawValue = value;
+  updateTotalPrevision();
+}
+
 // Fonction pour mettre à jour le total en temps réel
 function updateTotalPrevision() {
   const inputs = document.querySelectorAll('.prevision-input');
   let total = 0;
 
   inputs.forEach(input => {
-    const value = parseFloat(input.value) || 0;
-    total += value;
+    const rawValue = parseFloat(input.dataset.rawValue) || 0;
+    total += rawValue;
   });
 
   document.getElementById('popup-team-total').textContent = total.toLocaleString('fr-CA', {
@@ -8397,7 +8442,7 @@ async function saveTeamObjectifs() {
   const previsions = {};
   inputs.forEach(input => {
     const entrepreneur = input.dataset.entrepreneur;
-    const value = parseFloat(input.value) || 0;
+    const value = parseFloat(input.dataset.rawValue) || 0;
     previsions[entrepreneur] = value;
   });
 

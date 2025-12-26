@@ -27,7 +27,7 @@ def get_entrepreneurs_for_coach(coach_username: str):
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT username, prenom, nom
+                SELECT username, prenom, nom, photo_url
                 FROM users
                 WHERE assigned_coach = ? AND role = 'entrepreneur' AND is_active = 1
             """, (coach_username,))
@@ -38,7 +38,8 @@ def get_entrepreneurs_for_coach(coach_username: str):
                     "username": row["username"],
                     "prenom": row["prenom"] or "",
                     "nom": row["nom"] or "",
-                    "full_name": f"{row['prenom'] or ''} {row['nom'] or ''}".strip() or row["username"]
+                    "full_name": f"{row['prenom'] or ''} {row['nom'] or ''}".strip() or row["username"],
+                    "photo_url": row["photo_url"] or ""
                 }
                 for row in results
             ]

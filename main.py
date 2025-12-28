@@ -18880,8 +18880,8 @@ def get_user_info_endpoint(username: str):
     """Récupère les informations utilisateur depuis user_info.json"""
     try:
         import json
-        # Utiliser CLOUD_BASE pour compatibilité Render
-        user_info_path = os.path.join(CLOUD_BASE, "signatures", username, "user_info.json")
+        # Utiliser base_cloud pour compatibilité Render
+        user_info_path = os.path.join(base_cloud, "signatures", username, "user_info.json")
 
         print(f"[DEBUG] [GET-INFO] Chemin user_info: {user_info_path}")
         print(f"[DEBUG] [GET-INFO] Fichier existe: {os.path.exists(user_info_path)}")

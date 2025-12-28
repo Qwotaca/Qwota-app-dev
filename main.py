@@ -18880,7 +18880,11 @@ def get_user_info_endpoint(username: str):
     """Récupère les informations utilisateur depuis user_info.json"""
     try:
         import json
-        user_info_path = os.path.join(BASE_DIR, "data", "signatures", username, "user_info.json")
+        # Utiliser CLOUD_BASE pour compatibilité Render
+        user_info_path = os.path.join(CLOUD_BASE, "signatures", username, "user_info.json")
+
+        print(f"[DEBUG] [GET-INFO] Chemin user_info: {user_info_path}")
+        print(f"[DEBUG] [GET-INFO] Fichier existe: {os.path.exists(user_info_path)}")
 
         if not os.path.exists(user_info_path):
             raise HTTPException(status_code=404, detail=f"User info not found for {username}")
@@ -18888,6 +18892,7 @@ def get_user_info_endpoint(username: str):
         with open(user_info_path, 'r', encoding='utf-8') as f:
             user_info = json.load(f)
 
+        print(f"[DEBUG] [GET-INFO] Données lues pour {username}: {user_info}")
         return user_info
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"User info not found for {username}")

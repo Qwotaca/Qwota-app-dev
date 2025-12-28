@@ -925,10 +925,45 @@ def list_users_route(include_inactive: bool = False):
     return users_list  # Retourne tous les champs incluant id, email, created_at, last_login, is_active, prenom, nom, etc.
 
 @app.get("/api/entrepreneurs")
-def get_entrepreneurs_list_api():
-    """Retourne tous les utilisateurs avec le rôle entrepreneur ou beta avec leurs stats dashboard"""
+def get_entrepreneurs_list_api(
+    period: str = "all",
+    start: str = None,
+    end: str = None
+):
+    """Retourne tous les utilisateurs avec le rôle entrepreneur ou beta avec leurs stats dashboard
+
+    Supporte les filtres de période:
+    - period: all, week, month, year, 90, 30, 14
+    - start/end: dates personnalisées au format YYYY-MM-DD
+    """
+    from datetime import datetime, timedelta, timezone
+
+    # Calculer start_date et end_date selon la période
+    now = datetime.now(timezone.utc)
+    start_date = None
+    end_date = now
+
+    if start and end:
+        try:
+            start_date = datetime.fromisoformat(start).replace(tzinfo=timezone.utc)
+            end_date = datetime.fromisoformat(end).replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+        except ValueError:
+            start_date = None
+            end_date = now
+    elif period == "today":
+        start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif period == "week":
+        days_since_monday = now.weekday()
+        start_date = (now - timedelta(days=days_since_monday)).replace(hour=0, minute=0, second=0, microsecond=0)
+    elif period == "month":
+        start_date = now - timedelta(days=30)
+    elif period == "year":
+        start_date = now - timedelta(days=365)
+    elif period.isdigit():
+        start_date = now - timedelta(days=int(period))
+
     try:
-        print("[DEBUG] [CLASSEMENT] Chargement des entrepreneurs...", flush=True)
+        print(f"[DEBUG] [CLASSEMENT] Chargement des entrepreneurs avec période: {period}, start: {start_date}, end: {end_date}", flush=True)
         entrepreneurs = []
 
         # Récupérer tous les utilisateurs de la base de données
@@ -939,8 +974,8 @@ def get_entrepreneurs_list_api():
             role = user_data.get("role", "")
             if role in ["entrepreneur", "beta"]:
                 try:
-                    # Calculer les stats dashboard pour cet entrepreneur
-                    stats = calculate_dashboard_stats(username)
+                    # Calculer les stats dashboard pour cet entrepreneur avec filtrage par période
+                    stats = calculate_dashboard_stats(username, start_date, end_date)
 
                     # Charger le prénom et nom depuis user_info.json
                     prenom = ""
@@ -978,6 +1013,13 @@ def get_entrepreneurs_list_api():
                                 if content:
                                     ventes = json.loads(content)
                                     for v in ventes:
+                                        # Filtrer par période si nécessaire
+                                        if start_date:
+                                            date_str = v.get("date", "")
+                                            date_obj = parse_date_flexible(date_str)
+                                            if date_obj and (date_obj < start_date or date_obj > end_date):
+                                                continue
+
                                         prix_str = str(v.get("prix", "0")).replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
                                         try:
                                             montant_signe += float(prix_str)
@@ -995,6 +1037,13 @@ def get_entrepreneurs_list_api():
                                 if content:
                                     ventes = json.loads(content)
                                     for v in ventes:
+                                        # Filtrer par période si nécessaire
+                                        if start_date:
+                                            date_str = v.get("date", "")
+                                            date_obj = parse_date_flexible(date_str)
+                                            if date_obj and (date_obj < start_date or date_obj > end_date):
+                                                continue
+
                                         prix_str = str(v.get("prix", "0")).replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
                                         try:
                                             prix_float = float(prix_str)
@@ -1306,10 +1355,15 @@ def save_user_dashboard_data(username: str, data: dict) -> bool:
         return False
 
 
-def calculate_dashboard_stats(username: str) -> dict:
+def calculate_dashboard_stats(username: str, start_date=None, end_date=None) -> dict:
     """
     Calcule automatiquement toutes les statistiques du dashboard
     à partir des données existantes (soumissions, ventes, etc.)
+
+    Args:
+        username: Username de l'entrepreneur
+        start_date: Date de début pour le filtrage (datetime object, optionnel)
+        end_date: Date de fin pour le filtrage (datetime object, optionnel)
     """
     stats = {
         "status_soumissions": {"signees": 0, "en_attente": 0, "perdus": 0},
@@ -1324,18 +1378,42 @@ def calculate_dashboard_stats(username: str) -> dict:
         if os.path.exists(signees_path):
             with open(signees_path, 'r', encoding='utf-8') as f:
                 signees = json.load(f)
+                # Filtrer par période si nécessaire
+                if start_date:
+                    filtered = []
+                    for s in signees:
+                        date_obj = parse_date_flexible(s.get("date", ""))
+                        if date_obj and start_date <= date_obj <= end_date:
+                            filtered.append(s)
+                    signees = filtered
                 stats["status_soumissions"]["signees"] = len(signees)
 
         attente_path = os.path.join(base_cloud, "ventes_attente", username, "ventes.json")
         if os.path.exists(attente_path):
             with open(attente_path, 'r', encoding='utf-8') as f:
                 attente = json.load(f)
+                # Filtrer par période si nécessaire
+                if start_date:
+                    filtered = []
+                    for a in attente:
+                        date_obj = parse_date_flexible(a.get("date", ""))
+                        if date_obj and start_date <= date_obj <= end_date:
+                            filtered.append(a)
+                    attente = filtered
                 stats["status_soumissions"]["en_attente"] = len(attente)
 
         perdus_path = os.path.join(base_cloud, "clients_perdus", username, "clients_perdus.json")
         if os.path.exists(perdus_path):
             with open(perdus_path, 'r', encoding='utf-8') as f:
                 perdus = json.load(f)
+                # Filtrer par période si nécessaire
+                if start_date:
+                    filtered = []
+                    for p in perdus:
+                        date_obj = parse_date_flexible(p.get("date", ""))
+                        if date_obj and start_date <= date_obj <= end_date:
+                            filtered.append(p)
+                    perdus = filtered
                 stats["status_soumissions"]["perdus"] = len(perdus)
 
         # 2. CHIFFRE D'AFFAIRES (calculé depuis ventes_acceptees + ventes_produit, comme la page Ventes)
@@ -1347,6 +1425,12 @@ def calculate_dashboard_stats(username: str) -> dict:
             with open(acceptees_path, 'r', encoding='utf-8') as f:
                 acceptees = json.load(f)
                 for v in acceptees:
+                    # Filtrer par période si nécessaire
+                    if start_date:
+                        date_obj = parse_date_flexible(v.get("date", ""))
+                        if not date_obj or not (start_date <= date_obj <= end_date):
+                            continue
+
                     # Nettoyer le prix (gérer espaces insécables \xa0, espaces normaux, virgules françaises)
                     prix_str = str(v.get("prix", "0"))
                     prix_str = prix_str.replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
@@ -1361,6 +1445,12 @@ def calculate_dashboard_stats(username: str) -> dict:
             with open(produit_path, 'r', encoding='utf-8') as f:
                 produit = json.load(f)
                 for v in produit:
+                    # Filtrer par période si nécessaire
+                    if start_date:
+                        date_obj = parse_date_flexible(v.get("date", ""))
+                        if not date_obj or not (start_date <= date_obj <= end_date):
+                            continue
+
                     # Nettoyer le prix (gérer espaces insécables \xa0, espaces normaux, virgules françaises)
                     prix_str = str(v.get("prix", "0"))
                     prix_str = prix_str.replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
@@ -6048,28 +6138,82 @@ def api_get_coach_equipe(coach_username: str):
         }
     }
 
+def parse_date_flexible(date_str: str):
+    """
+    Parse une date dans différents formats: DD/MM/YYYY, YYYY-MM-DD, ISO
+    Retourne un objet datetime ou None si le parsing échoue
+    """
+    from datetime import datetime, timezone
+
+    if not date_str:
+        return None
+
+    # Essayer format DD/MM/YYYY
+    try:
+        return datetime.strptime(date_str, "%d/%m/%Y").replace(tzinfo=timezone.utc)
+    except ValueError:
+        pass
+
+    # Essayer format YYYY-MM-DD
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        pass
+
+    # Essayer format ISO complet
+    try:
+        date_obj = datetime.fromisoformat(date_str)
+        if date_obj.tzinfo is None:
+            date_obj = date_obj.replace(tzinfo=timezone.utc)
+        return date_obj
+    except ValueError:
+        pass
+
+    return None
+
 @app.get("/api/coach/{coach_username}/equipe/dashboard")
-def api_get_coach_equipe_dashboard(coach_username: str, period: str = "all"):
+def api_get_coach_equipe_dashboard(
+    coach_username: str,
+    period: str = "all",
+    start: str = None,
+    end: str = None
+):
     """
     API pour récupérer toutes les statistiques complètes de l'équipe d'un coach
     Similaire au dashboard entrepreneur mais pour toute l'équipe avec filtrage par période
 
-    Périodes supportées: today, week, month, year, all
+    Périodes supportées: today, week, month, year, all, 90, 30, 14
+    Ou période personnalisée avec start et end (format YYYY-MM-DD)
     """
     from datetime import datetime, timedelta, timezone
 
     # Définir les dates de début/fin selon la période
     now = datetime.now(timezone.utc)
     start_date = None
+    end_date = now
 
-    if period == "today":
+    # Si des dates personnalisées sont fournies, les utiliser
+    if start and end:
+        try:
+            start_date = datetime.fromisoformat(start).replace(tzinfo=timezone.utc)
+            end_date = datetime.fromisoformat(end).replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+        except ValueError:
+            start_date = None
+            end_date = now
+    # Sinon, utiliser la période prédéfinie
+    elif period == "today":
         start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
     elif period == "week":
-        start_date = now - timedelta(days=7)
+        # Cette semaine = depuis lundi de la semaine en cours
+        days_since_monday = now.weekday()  # 0=lundi, 6=dimanche
+        start_date = (now - timedelta(days=days_since_monday)).replace(hour=0, minute=0, second=0, microsecond=0)
     elif period == "month":
         start_date = now - timedelta(days=30)
     elif period == "year":
         start_date = now - timedelta(days=365)
+    elif period.isdigit():
+        # Support pour 90, 30, 14 jours
+        start_date = now - timedelta(days=int(period))
     # else: period == "all" -> start_date = None
 
     entrepreneur_data = get_entrepreneurs_for_coach(coach_username)
@@ -6158,14 +6302,9 @@ def api_get_coach_equipe_dashboard(coach_username: str, period: str = "all"):
                         # Vérifier la période si nécessaire
                         if start_date:
                             date_str = v.get("date", "")
-                            try:
-                                date_obj = datetime.fromisoformat(date_str)
-                                if date_obj.tzinfo is None:
-                                    date_obj = date_obj.replace(tzinfo=timezone.utc)
-                                if date_obj < start_date:
-                                    continue
-                            except:
-                                pass
+                            date_obj = parse_date_flexible(date_str)
+                            if date_obj and (date_obj < start_date or date_obj > end_date):
+                                continue
 
                         prix_str = str(v.get("prix", "0"))
                         prix_str = prix_str.replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
@@ -6186,14 +6325,9 @@ def api_get_coach_equipe_dashboard(coach_username: str, period: str = "all"):
                     for v in produit:
                         if start_date:
                             date_str = v.get("date", "")
-                            try:
-                                date_obj = datetime.fromisoformat(date_str)
-                                if date_obj.tzinfo is None:
-                                    date_obj = date_obj.replace(tzinfo=timezone.utc)
-                                if date_obj < start_date:
-                                    continue
-                            except:
-                                pass
+                            date_obj = parse_date_flexible(date_str)
+                            if date_obj and (date_obj < start_date or date_obj > end_date):
+                                continue
 
                         prix_str = str(v.get("prix", "0"))
                         prix_str = prix_str.replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
@@ -6236,14 +6370,9 @@ def api_get_coach_equipe_dashboard(coach_username: str, period: str = "all"):
                     for s in signees:
                         if start_date:
                             date_str = s.get("date", "")
-                            try:
-                                date_obj = datetime.fromisoformat(date_str)
-                                if date_obj.tzinfo is None:
-                                    date_obj = date_obj.replace(tzinfo=timezone.utc)
-                                if date_obj < start_date:
-                                    continue
-                            except:
-                                pass
+                            date_obj = parse_date_flexible(date_str)
+                            if date_obj and (date_obj < start_date or date_obj > end_date):
+                                continue
                         signees_count += 1
             except:
                 pass
@@ -6256,14 +6385,9 @@ def api_get_coach_equipe_dashboard(coach_username: str, period: str = "all"):
                     for a in attente:
                         if start_date:
                             date_str = a.get("date", "")
-                            try:
-                                date_obj = datetime.fromisoformat(date_str)
-                                if date_obj.tzinfo is None:
-                                    date_obj = date_obj.replace(tzinfo=timezone.utc)
-                                if date_obj < start_date:
-                                    continue
-                            except:
-                                pass
+                            date_obj = parse_date_flexible(date_str)
+                            if date_obj and (date_obj < start_date or date_obj > end_date):
+                                continue
                         attente_count += 1
             except:
                 pass
@@ -6276,14 +6400,9 @@ def api_get_coach_equipe_dashboard(coach_username: str, period: str = "all"):
                     for p in perdus:
                         if start_date:
                             date_str = p.get("date", "")
-                            try:
-                                date_obj = datetime.fromisoformat(date_str)
-                                if date_obj.tzinfo is None:
-                                    date_obj = date_obj.replace(tzinfo=timezone.utc)
-                                if date_obj < start_date:
-                                    continue
-                            except:
-                                pass
+                            date_obj = parse_date_flexible(date_str)
+                            if date_obj and (date_obj < start_date or date_obj > end_date):
+                                continue
                         perdus_count += 1
             except:
                 pass
@@ -6300,14 +6419,9 @@ def api_get_coach_equipe_dashboard(coach_username: str, period: str = "all"):
                     for r in reviews:
                         if start_date:
                             date_str = r.get("date", "")
-                            try:
-                                date_obj = datetime.fromisoformat(date_str)
-                                if date_obj.tzinfo is None:
-                                    date_obj = date_obj.replace(tzinfo=timezone.utc)
-                                if date_obj < start_date:
-                                    continue
-                            except:
-                                pass
+                            date_obj = parse_date_flexible(date_str)
+                            if date_obj and (date_obj < start_date or date_obj > end_date):
+                                continue
                         valid_reviews.append(r)
 
                     if valid_reviews:
@@ -6415,14 +6529,9 @@ def api_get_coach_equipe_dashboard(coach_username: str, period: str = "all"):
                     for s in completes:
                         if start_date:
                             date_str = s.get("date", "")
-                            try:
-                                date_obj = datetime.fromisoformat(date_str)
-                                if date_obj.tzinfo is None:
-                                    date_obj = date_obj.replace(tzinfo=timezone.utc)
-                                if date_obj < start_date:
-                                    continue
-                            except:
-                                pass
+                            date_obj = parse_date_flexible(date_str)
+                            if date_obj and (date_obj < start_date or date_obj > end_date):
+                                continue
                         estimation_count += 1
             except:
                 pass
@@ -6588,11 +6697,8 @@ def load_submissions_for_entrepreneur(username: str, start_date: datetime, end_d
     filtered = []
     for s in soumissions:
         date_str = s.get("date", "")
-        try:
-            date_obj = datetime.fromisoformat(date_str)
-            if date_obj.tzinfo is None:
-                date_obj = date_obj.replace(tzinfo=timezone.utc)
-        except Exception:
+        date_obj = parse_date_flexible(date_str)
+        if not date_obj:
             continue
         if start_date <= date_obj <= end_date:
             filtered.append(s)
@@ -18746,6 +18852,47 @@ def recalculate_xp_endpoint():
         return {"status": "success", "result": result}
     except Exception as e:
         print(f"[ERROR] Erreur recalculate_xp: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/coaches/list")
+def get_coaches_list():
+    """Retourne la liste de tous les coaches actifs"""
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT username, prenom, nom, email, photo_url
+                FROM users
+                WHERE role = 'coach' AND is_active = 1
+                ORDER BY prenom, nom
+            """)
+            coaches = [dict(row) for row in cursor.fetchall()]
+            return coaches
+    except Exception as e:
+        print(f"[ERROR] Erreur get_coaches_list: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/user-info/{username}")
+def get_user_info_endpoint(username: str):
+    """Récupère les informations utilisateur depuis user_info.json"""
+    try:
+        import json
+        user_info_path = os.path.join(BASE_DIR, "data", "signatures", username, "user_info.json")
+
+        if not os.path.exists(user_info_path):
+            raise HTTPException(status_code=404, detail=f"User info not found for {username}")
+
+        with open(user_info_path, 'r', encoding='utf-8') as f:
+            user_info = json.load(f)
+
+        return user_info
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"User info not found for {username}")
+    except Exception as e:
+        print(f"[ERROR] Erreur get_user_info: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

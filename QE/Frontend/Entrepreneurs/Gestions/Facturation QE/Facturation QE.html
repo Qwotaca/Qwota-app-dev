@@ -2953,8 +2953,50 @@
           </div>
         `;
       }).join('');
+
+      // Calculer et mettre à jour le total pour cette colonne
+      calculerEtMettreAJourTotal(containerId, facturations);
     }
-    
+
+    // Fonction pour parser un montant au format "1293,46 $" ou "1293.46"
+    function parseMontant(montantStr) {
+      if (!montantStr) return 0;
+      // Supprimer le symbole $ et les espaces
+      let cleaned = String(montantStr).replace(/\$/g, '').trim();
+      // Remplacer la virgule par un point pour le format décimal
+      cleaned = cleaned.replace(',', '.');
+      // Parser en float
+      return parseFloat(cleaned) || 0;
+    }
+
+    // Fonction pour calculer et afficher le total d'une colonne
+    function calculerEtMettreAJourTotal(containerId, facturations) {
+      // Déterminer le span ID du total basé sur le containerId
+      let totalSpanId = '';
+      if (containerId === 'urgente-content') {
+        totalSpanId = 'urgente-total';
+      } else if (containerId === 'traitement-content') {
+        totalSpanId = 'traitement-total';
+      } else if (containerId === 'traitees-content') {
+        totalSpanId = 'traitees-total';
+      }
+
+      if (!totalSpanId) return;
+
+      const totalSpan = document.getElementById(totalSpanId);
+      if (!totalSpan) return;
+
+      // Calculer le total
+      let total = 0;
+      facturations.forEach(facturation => {
+        const montant = parseMontant(facturation.montantPaiement);
+        total += montant;
+      });
+
+      // Formater et afficher le total
+      totalSpan.textContent = formatCurrency(total);
+    }
+
     function calculerTempsEcoule(dateCreation) {
       if (!dateCreation) return 'Date inconnue';
       
@@ -4687,11 +4729,16 @@
       <!-- Colonne 1: À traiter (Urgente) -->
       <div class="status-card-wrapper" id="urgente-box">
         <div class="status-card p-6" style="--card-color: #f87171; min-height: 800px; max-height: 800px; display: flex; flex-direction: column;">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-bold" style="color: var(--text-light);">Urgent</h2>
-            <div class="px-3 py-1 rounded-full text-sm font-medium" style="background: rgba(248, 113, 113, 0.2); color: #f87171;">
-              <i class="fas fa-exclamation-triangle mr-1"></i>
-              <span id="urgente-count">0</span>
+          <div class="mb-4">
+            <div class="flex items-center justify-between">
+              <h2 class="text-xl font-bold" style="color: var(--text-light);">Urgent</h2>
+              <div class="px-3 py-1 rounded-full text-sm font-medium" style="background: rgba(248, 113, 113, 0.2); color: #f87171;">
+                <i class="fas fa-exclamation-triangle mr-1"></i>
+                <span id="urgente-count">0</span>
+              </div>
+            </div>
+            <div style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--text-gray);">
+              Total: <span id="urgente-total" style="font-weight: 600; color: #f87171;">0,00 $</span>
             </div>
           </div>
 
@@ -4705,11 +4752,16 @@
       <!-- Colonne 2: En traitement -->
       <div class="status-card-wrapper" id="traitement-box">
         <div class="status-card p-6" style="--card-color: #fb923c; min-height: 800px; max-height: 800px; display: flex; flex-direction: column;">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-bold" style="color: var(--text-light);">En traitement</h2>
-            <div class="px-3 py-1 rounded-full text-sm font-medium" style="background: rgba(251, 146, 60, 0.2); color: #fb923c;">
-              <i class="fas fa-spinner mr-1"></i>
-              <span id="traitement-count">0</span>
+          <div class="mb-4">
+            <div class="flex items-center justify-between">
+              <h2 class="text-xl font-bold" style="color: var(--text-light);">En traitement</h2>
+              <div class="px-3 py-1 rounded-full text-sm font-medium" style="background: rgba(251, 146, 60, 0.2); color: #fb923c;">
+                <i class="fas fa-spinner mr-1"></i>
+                <span id="traitement-count">0</span>
+              </div>
+            </div>
+            <div style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--text-gray);">
+              Total: <span id="traitement-total" style="font-weight: 600; color: #fb923c;">0,00 $</span>
             </div>
           </div>
 
@@ -4723,11 +4775,16 @@
       <!-- Colonne 3: Traitées -->
       <div class="status-card-wrapper" id="traitees-box">
         <div class="status-card p-6" style="--card-color: #10b981; min-height: 800px; max-height: 800px; display: flex; flex-direction: column;">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-bold" style="color: var(--text-light);">Traitées</h2>
-            <div class="px-3 py-1 rounded-full text-sm font-medium" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">
-              <i class="fas fa-check-double mr-1"></i>
-              <span id="traitees-count">0</span>
+          <div class="mb-4">
+            <div class="flex items-center justify-between">
+              <h2 class="text-xl font-bold" style="color: var(--text-light);">Traitées</h2>
+              <div class="px-3 py-1 rounded-full text-sm font-medium" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">
+                <i class="fas fa-check-double mr-1"></i>
+                <span id="traitees-count">0</span>
+              </div>
+            </div>
+            <div style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--text-gray);">
+              Total: <span id="traitees-total" style="font-weight: 600; color: #10b981;">0,00 $</span>
             </div>
           </div>
 
@@ -12867,6 +12924,22 @@
 
         if (Object.keys(periodesFiltrees).length === 0) {
           empty.style.display = 'flex';
+        }
+
+        // Calculer le total de tous les paiements traités
+        let totalTraitees = 0;
+        for (const [periodeId, paiements] of Object.entries(periodesFiltrees)) {
+          paiements.forEach(paiement => {
+            // Extraire le montant du paiement avec parsing correct
+            const montantMatch = parseMontant(paiement.montant);
+            totalTraitees += montantMatch;
+          });
+        }
+
+        // Mettre à jour l'affichage du total
+        const totalSpan = document.getElementById('traitees-total');
+        if (totalSpan) {
+          totalSpan.textContent = formatCurrency(totalTraitees);
         }
 
       } catch (error) {

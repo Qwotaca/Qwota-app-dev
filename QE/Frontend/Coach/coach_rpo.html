@@ -4142,6 +4142,10 @@ async function saveMacroMicroProblem() {
     if (response.ok) {
       console.log('[RPO] MACRO/MICRO/Problème sauvegardés pour la semaine:', selectedWeekValue);
       button.innerHTML = '<i class="fas fa-check" style="margin-right: 0.5rem;"></i>Enregistré!';
+
+      // Recharger le sélecteur de semaine pour mettre à jour le badge si c'est la semaine actuelle
+      await initResumeWeekSelector();
+
       setTimeout(() => {
         button.innerHTML = originalText;
         button.disabled = false;
@@ -4355,7 +4359,7 @@ function initWeekSelectorTable() {
 }
 
 // Initialiser le sélecteur de semaine pour Résumé hebdomadaire (MACRO/MICRO/Problème)
-function initResumeWeekSelector() {
+async function initResumeWeekSelector() {
   const weekDropdownMenu = document.getElementById('resume-week-dropdown-menu');
   const weekDropdownText = document.getElementById('resume-week-dropdown-text');
   if (!weekDropdownMenu || !weekDropdownText) return;
@@ -4369,6 +4373,18 @@ function initResumeWeekSelector() {
   const currentWeekValue = '2025-W53';
   const currentWeekLabel = '29 décembre 2025 - 4 janvier 2026';
 
+  // Vérifier si la semaine actuelle a des données
+  let isCurrentWeekFilled = false;
+  try {
+    const response = await fetch(`/api/coach/macro-micro-problem?coach_username=${coachUsername}&week=${currentWeekValue}`);
+    if (response.ok) {
+      const data = await response.json();
+      isCurrentWeekFilled = !!(data.macro && data.micro && data.problem);
+    }
+  } catch (error) {
+    console.log('[RESUME WEEK] Erreur vérification semaine actuelle:', error);
+  }
+
   const currentOption = document.createElement('div');
   currentOption.className = 'dropdown-secondary-option';
   currentOption.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;';
@@ -4377,8 +4393,13 @@ function initResumeWeekSelector() {
   currentWeekText.textContent = currentWeekLabel;
 
   const badge = document.createElement('span');
-  badge.style.cssText = 'background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 600; white-space: nowrap;';
-  badge.textContent = 'Cette semaine';
+  if (isCurrentWeekFilled) {
+    badge.style.cssText = 'background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 600; white-space: nowrap;';
+    badge.textContent = 'Cette semaine ✓';
+  } else {
+    badge.style.cssText = 'background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 600; white-space: nowrap;';
+    badge.textContent = 'Cette semaine';
+  }
 
   currentOption.appendChild(currentWeekText);
   currentOption.appendChild(badge);

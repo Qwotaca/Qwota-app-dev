@@ -96,3 +96,67 @@ def get_team_objectif_total(coach_username):
     previsions = load_coach_previsions(coach_username)
     total = sum(float(objectif) for objectif in previsions.values())
     return total
+
+
+# ========== GESTION DES MÉTRIQUES COACH (CM, RATIO MARKETING, TAUX DE VENTE) ==========
+
+def get_coach_metrics_file(coach_username):
+    """
+    Retourne le chemin du fichier JSON des métriques pour un coach
+    """
+    return DATA_DIR / f"{coach_username}_metrics.json"
+
+
+def load_coach_metrics(coach_username):
+    """
+    Charge les métriques prévisionnelles d'un coach (valeur unique)
+
+    Args:
+        coach_username: Nom d'utilisateur du coach
+
+    Returns:
+        dict: Dictionnaire {cm: X, ratioMktg: Y, tauxVente: Z}
+    """
+    file_path = get_coach_metrics_file(coach_username)
+
+    if not file_path.exists():
+        return {'cm': 0, 'ratioMktg': 0, 'tauxVente': 0}
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return data.get('metrics', {'cm': 0, 'ratioMktg': 0, 'tauxVente': 0})
+    except Exception as e:
+        print(f"[COACH METRICS] Erreur lecture {coach_username}: {e}")
+        return {'cm': 0, 'ratioMktg': 0, 'tauxVente': 0}
+
+
+def save_coach_metrics(coach_username, metrics):
+    """
+    Sauvegarde les métriques prévisionnelles d'un coach (valeur unique)
+
+    Args:
+        coach_username: Nom d'utilisateur du coach
+        metrics: Dictionnaire {cm: X, ratioMktg: Y, tauxVente: Z}
+
+    Returns:
+        bool: True si succès, False sinon
+    """
+    file_path = get_coach_metrics_file(coach_username)
+
+    try:
+        data = {
+            'coach_username': coach_username,
+            'metrics': metrics,
+            'last_updated': datetime.now().isoformat()
+        }
+
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        print(f"[COACH METRICS] ✅ Sauvegardé pour {coach_username}: CM={metrics.get('cm')}, Ratio={metrics.get('ratioMktg')}%, Taux={metrics.get('tauxVente')}%")
+        return True
+
+    except Exception as e:
+        print(f"[COACH METRICS] ❌ Erreur sauvegarde {coach_username}: {e}")
+        return False

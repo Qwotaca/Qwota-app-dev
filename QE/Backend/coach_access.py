@@ -33,16 +33,16 @@ def get_entrepreneurs_for_coach(coach_username: str):
             """, (coach_username,))
 
             results = cursor.fetchall()
-            entrepreneurs = [
-                {
+            entrepreneurs = []
+
+            for row in results:
+                entrepreneurs.append({
                     "username": row["username"],
                     "prenom": row["prenom"] or "",
                     "nom": row["nom"] or "",
                     "full_name": f"{row['prenom'] or ''} {row['nom'] or ''}".strip() or row["username"],
                     "photo_url": row["photo_url"] or ""
-                }
-                for row in results
-            ]
+                })
 
             print(f"[COACH_ACCESS] Coach {coach_username} a {len(entrepreneurs)} entrepreneurs: {[e['username'] for e in entrepreneurs]}")
             return entrepreneurs
@@ -50,6 +50,37 @@ def get_entrepreneurs_for_coach(coach_username: str):
     except Exception as e:
         print(f"[COACH_ACCESS ERROR] Erreur récupération entrepreneurs pour {coach_username}: {e}")
         return []
+
+def get_coach_for_entrepreneur(entrepreneur_username: str):
+    """
+    Récupère le coach assigné à un entrepreneur
+
+    Args:
+        entrepreneur_username: Username de l'entrepreneur
+
+    Returns:
+        str: Username du coach assigné, ou None si non trouvé
+    """
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT assigned_coach
+                FROM users
+                WHERE username = ? AND role = 'entrepreneur' AND is_active = 1
+            """, (entrepreneur_username,))
+
+            result = cursor.fetchone()
+            if result and result[0]:
+                print(f"[COACH_ACCESS] Entrepreneur {entrepreneur_username} assigné au coach {result[0]}")
+                return result[0]
+            else:
+                print(f"[COACH_ACCESS] Aucun coach assigné pour {entrepreneur_username}")
+                return None
+
+    except Exception as e:
+        print(f"[COACH_ACCESS ERROR] Erreur récupération coach pour {entrepreneur_username}: {e}")
+        return None
 
 def get_all_entrepreneurs():
     """

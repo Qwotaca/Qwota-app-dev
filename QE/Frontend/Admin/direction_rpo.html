@@ -756,9 +756,9 @@ select:disabled {
   left: 0 !important;
   background: #0f172a !important;
   z-index: 25 !important;
-  width: 195px;
-  min-width: 195px;
-  max-width: 195px;
+  width: 170px !important;
+  min-width: 170px !important;
+  max-width: 170px !important;
 }
 
 /* Standard columns (170px) */
@@ -768,11 +768,10 @@ select:disabled {
   max-width: 170px;
 }
 
-/* Wide columns (340px) */
+/* Wide columns (prend la largeur disponible) */
 .rpo-col-wide {
-  width: 340px;
-  min-width: 340px;
-  max-width: 340px;
+  width: auto;
+  min-width: 200px;
 }
 
 /* Table body */
@@ -1457,7 +1456,7 @@ select:disabled {
             <!-- Badge du coach sélectionné avec filtre mois -->
             <div id="selected-coach-badge" style="display: none; position: relative; border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 10px; padding: 0.75rem 1.25rem; align-items: center; gap: 1rem; background: rgba(139, 92, 246, 0.05);">
               <!-- Bulle de chat RPO -->
-              <button onclick="openRpoModal(this)" style="position: absolute; top: -10px; left: -10px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4); transition: all 0.3s ease; z-index: 10;" onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 6px 16px rgba(139, 92, 246, 0.6)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(139, 92, 246, 0.4)'">
+              <button onclick="openCoachRpoModal(this)" style="position: absolute; top: -10px; left: -10px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4); transition: all 0.3s ease; z-index: 10;" onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 6px 16px rgba(139, 92, 246, 0.6)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(139, 92, 246, 0.4)'">
                 <i class="fas fa-comment-dots" style="color: white; font-size: 0.9rem;"></i>
               </button>
               <!-- Coach Info -->
@@ -1917,6 +1916,103 @@ select:disabled {
         </button>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Modal RPO Complet Coach -->
+  <div id="coach-rpo-modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-card); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 1rem; padding: 0; max-width: 98%; width: 1400px; max-height: 95vh; overflow: hidden; display: flex; flex-direction: column;">
+
+      <!-- Header avec bouton fermer -->
+      <div style="padding: 1.5rem 2rem; border-bottom: 2px solid rgba(139, 92, 246, 0.3); background: rgba(15, 23, 42, 0.8); display: flex; justify-content: space-between; align-items: center;">
+        <h2 id="coach-rpo-modal-title" style="color: var(--text-light); font-size: 1.5rem; font-weight: 700; margin: 0;">
+          <i class="fas fa-chalkboard-teacher" style="color: #8b5cf6;"></i>
+          RPO Coach - <span id="coach-rpo-name"></span>
+        </h2>
+        <button onclick="closeCoachRpoModal()" style="background: none; border: none; color: var(--text-gray); cursor: pointer; font-size: 1.5rem; padding: 0; width: 2rem; height: 2rem;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <!-- Contenu du modal -->
+      <div style="padding: 1rem 1.5rem; overflow-y: auto; flex: 1; display: flex; flex-direction: column;">
+        <!-- Section MACRO/MICRO/PROBLÈME (Compact) -->
+        <div style="background: rgba(139, 92, 246, 0.05); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 0.5rem; padding: 1rem; margin-bottom: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h3 style="color: var(--text-light); font-size: 1rem; font-weight: 600; margin: 0;">
+              <i class="fas fa-bullseye" style="color: #8b5cf6;"></i> Résumé Hebdomadaire
+            </h3>
+
+            <!-- Sélecteur de semaine -->
+            <div style="position: relative; display: flex; align-items: center; gap: 0.5rem;">
+              <span id="coach-current-week-badge" style="display: none; background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.15)); border: 1px solid #fbbf24; border-radius: 6px; padding: 0.25rem 0.5rem; color: #fbbf24; font-size: 0.75rem; font-weight: 600; white-space: nowrap;">
+                Semaine actuelle
+              </span>
+              <button id="coach-week-selector-btn" onclick="toggleCoachWeekDropdown()" class="dropdown-secondary" style="min-width: 160px;">
+                <span id="coach-selected-week-text">Sélectionner une semaine</span>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              <div id="coach-week-dropdown" class="dropdown-secondary-menu" style="min-width: 180px;">
+                <!-- Options de semaines générées par JS -->
+              </div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+            <!-- MACRO -->
+            <div>
+              <label style="display: block; color: var(--text-light); margin-bottom: 0.3rem; font-weight: 600; font-size: 0.75rem;">
+                <i class="fas fa-mountain" style="color: #10b981;"></i> MACRO
+              </label>
+              <div id="coach-macro-display" style="background: var(--bg-dark); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 6px; padding: 0.5rem; color: var(--text-gray); min-height: 40px; font-size: 0.85rem; max-height: 60px; overflow-y: auto;">
+                -
+              </div>
+            </div>
+
+            <!-- MICRO / Plan de match -->
+            <div>
+              <label style="display: block; color: var(--text-light); margin-bottom: 0.3rem; font-weight: 600; font-size: 0.75rem;">
+                <i class="fas fa-tasks" style="color: #3b82f6;"></i> MICRO
+              </label>
+              <div id="coach-micro-display" style="background: var(--bg-dark); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 6px; padding: 0.5rem; color: var(--text-gray); min-height: 40px; font-size: 0.85rem; max-height: 60px; overflow-y: auto;">
+                -
+              </div>
+            </div>
+
+            <!-- PROBLÈME -->
+            <div>
+              <label style="display: block; color: var(--text-light); margin-bottom: 0.3rem; font-weight: 600; font-size: 0.75rem;">
+                <i class="fas fa-exclamation-triangle" style="color: #f59e0b;"></i> PROBLÈME
+              </label>
+              <div id="coach-problem-display" style="background: var(--bg-dark); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 6px; padding: 0.5rem; color: var(--text-gray); min-height: 40px; font-size: 0.85rem; max-height: 60px; overflow-y: auto;">
+                -
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tableau de suivi des entrepreneurs -->
+        <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h3 style="color: var(--text-light); font-size: 1rem; font-weight: 600; margin: 0;">
+              <i class="fas fa-users" style="color: #60a5fa;"></i> Suivi des Entrepreneurs
+            </h3>
+            <!-- Filtre entrepreneur -->
+            <div style="position: relative;">
+              <button id="coach-entrepreneur-filter-btn" onclick="toggleCoachEntrepreneurFilter()" class="dropdown-secondary">
+                <span id="coach-entrepreneur-filter-text">Tous les entrepreneurs</span>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              <div id="coach-entrepreneur-filter-dropdown" class="dropdown-secondary-menu">
+                <!-- Options générées par JS -->
+              </div>
+            </div>
+          </div>
+          <div id="coach-entrepreneurs-table" style="overflow-x: auto; flex: 1;">
+            <!-- Tableau généré par JS -->
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -4646,7 +4742,7 @@ async function selectCoach(username, displayName) {
   // Mettre à jour le titre
   const title = document.querySelector('.box-header-title');
   if (title && title.textContent === 'Suivi hebdomadaire des coachs') {
-    title.textContent = `Suivi hebdomadaire de ${displayName}`;
+    title.textContent = `Cette semaine - ${displayName}`;
   }
 
   // Afficher le badge, le tableau et cacher le bouton et le message
@@ -5850,7 +5946,6 @@ function renderCoachWeeklyTable() {
     tr.innerHTML = `
       <td class="rpo-col-date">
         ${entry.week_label}
-        ${isCurrentWeek ? '<span style="display: inline-block; margin-left: 8px; padding: 2px 8px; background: #fbbf24; color: white; border-radius: 4px; font-size: 0.65rem; font-weight: 600;">Cette semaine</span>' : ''}
       </td>
       <td class="rpo-col-wide">
         <textarea
@@ -6293,6 +6388,465 @@ let modalRpoData = null;
 let modalCurrentMonth = -2; // Décembre 2025 par défaut
 let modalTransformOrigin = 'top left'; // Origine de l'animation
 
+// Variables globales pour le modal RPO Coach
+let coachModalSelectedWeek = '2025-W53'; // Semaine par défaut (29 déc - 4 janv)
+let coachModalCurrentCoach = null;
+let coachModalEntrepreneurFilter = null; // null = tous, sinon username de l'entrepreneur filtré
+let coachModalAllEntrepreneurs = []; // Liste de tous les entrepreneurs du coach
+
+// Ouvrir le modal RPO Coach - Afficher le RPO du coach sélectionné
+async function openCoachRpoModal(buttonElement) {
+  if (!selectedCoachForView) {
+    console.error('[COACH RPO MODAL] Aucun coach sélectionné');
+    return;
+  }
+
+  console.log('[COACH RPO MODAL] Ouverture pour:', selectedCoachForView, selectedCoachDisplayName);
+
+  coachModalCurrentCoach = selectedCoachForView;
+
+  // Afficher le modal
+  const modal = document.getElementById('coach-rpo-modal');
+  const nameSpan = document.getElementById('coach-rpo-name');
+  nameSpan.textContent = selectedCoachDisplayName;
+
+  modal.style.display = 'flex';
+
+  // Bloquer le scroll de la page en arrière-plan
+  document.body.style.overflow = 'hidden';
+
+  // Initialiser le sélecteur de semaines
+  initCoachWeekSelector();
+
+  // Charger les données de la semaine actuelle
+  await loadCoachMacroMicroProblem();
+  await loadCoachEntrepreneursTable();
+}
+
+// Fermer le modal RPO Coach
+function closeCoachRpoModal() {
+  const modal = document.getElementById('coach-rpo-modal');
+  modal.style.display = 'none';
+
+  // Réactiver le scroll de la page
+  document.body.style.overflow = '';
+}
+
+// Initialiser le sélecteur de semaines
+function initCoachWeekSelector() {
+  const dropdown = document.getElementById('coach-week-dropdown');
+  const selectedText = document.getElementById('coach-selected-week-text');
+
+  dropdown.innerHTML = '';
+
+  // Semaine actuelle (29 déc 2025 - 4 janv 2026)
+  const currentWeek = {
+    value: '2025-W53',
+    label: '29 déc. - 4 janv.'
+  };
+
+  const currentOption = document.createElement('div');
+  currentOption.className = 'dropdown-secondary-option';
+  currentOption.textContent = currentWeek.label + ' (Semaine actuelle)';
+  currentOption.style.background = 'linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.1))';
+  currentOption.style.borderLeft = '3px solid #fbbf24';
+  currentOption.style.fontWeight = '600';
+  currentOption.style.color = '#fbbf24';
+  currentOption.onclick = () => selectCoachWeek(currentWeek.value, currentWeek.label);
+  dropdown.appendChild(currentOption);
+
+  // Séparateur après la semaine actuelle
+  const separator = document.createElement('div');
+  separator.style.height = '1px';
+  separator.style.background = 'rgba(139, 92, 246, 0.3)';
+  separator.style.margin = '0.5rem 0';
+  dropdown.appendChild(separator);
+
+  // Toutes les semaines de 2026
+  const weeks2026 = [
+    // Janvier
+    { value: '2026-W01', label: '5 - 11 janv.' }, { value: '2026-W02', label: '12 - 18 janv.' },
+    { value: '2026-W03', label: '19 - 25 janv.' }, { value: '2026-W04', label: '26 janv. - 1 fév.' },
+    // Février
+    { value: '2026-W05', label: '2 - 8 fév.' }, { value: '2026-W06', label: '9 - 15 fév.' },
+    { value: '2026-W07', label: '16 - 22 fév.' }, { value: '2026-W08', label: '23 fév. - 1 mars' },
+    // Mars
+    { value: '2026-W09', label: '2 - 8 mars' }, { value: '2026-W10', label: '9 - 15 mars' },
+    { value: '2026-W11', label: '16 - 22 mars' }, { value: '2026-W12', label: '23 - 29 mars' },
+    { value: '2026-W13', label: '30 mars - 5 avr.' },
+    // Avril
+    { value: '2026-W14', label: '6 - 12 avr.' }, { value: '2026-W15', label: '13 - 19 avr.' },
+    { value: '2026-W16', label: '20 - 26 avr.' }, { value: '2026-W17', label: '27 avr. - 3 mai' },
+    // Mai
+    { value: '2026-W18', label: '4 - 10 mai' }, { value: '2026-W19', label: '11 - 17 mai' },
+    { value: '2026-W20', label: '18 - 24 mai' }, { value: '2026-W21', label: '25 - 31 mai' },
+    // Juin
+    { value: '2026-W22', label: '1 - 7 juin' }, { value: '2026-W23', label: '8 - 14 juin' },
+    { value: '2026-W24', label: '15 - 21 juin' }, { value: '2026-W25', label: '22 - 28 juin' },
+    { value: '2026-W26', label: '29 juin - 5 juil.' },
+    // Juillet
+    { value: '2026-W27', label: '6 - 12 juil.' }, { value: '2026-W28', label: '13 - 19 juil.' },
+    { value: '2026-W29', label: '20 - 26 juil.' }, { value: '2026-W30', label: '27 juil. - 2 août' },
+    // Août
+    { value: '2026-W31', label: '3 - 9 août' }, { value: '2026-W32', label: '10 - 16 août' },
+    { value: '2026-W33', label: '17 - 23 août' }, { value: '2026-W34', label: '24 - 30 août' },
+    { value: '2026-W35', label: '31 août - 6 sept.' },
+    // Septembre
+    { value: '2026-W36', label: '7 - 13 sept.' }, { value: '2026-W37', label: '14 - 20 sept.' },
+    { value: '2026-W38', label: '21 - 27 sept.' }, { value: '2026-W39', label: '28 sept. - 4 oct.' },
+    // Octobre
+    { value: '2026-W40', label: '5 - 11 oct.' }, { value: '2026-W41', label: '12 - 18 oct.' },
+    { value: '2026-W42', label: '19 - 25 oct.' }, { value: '2026-W43', label: '26 oct. - 1 nov.' },
+    // Novembre
+    { value: '2026-W44', label: '2 - 8 nov.' }, { value: '2026-W45', label: '9 - 15 nov.' },
+    { value: '2026-W46', label: '16 - 22 nov.' }, { value: '2026-W47', label: '23 - 29 nov.' },
+    { value: '2026-W48', label: '30 nov. - 6 déc.' },
+    // Décembre
+    { value: '2026-W49', label: '7 - 13 déc.' }, { value: '2026-W50', label: '14 - 20 déc.' },
+    { value: '2026-W51', label: '21 - 27 déc.' }
+  ];
+
+  weeks2026.forEach(week => {
+    const option = document.createElement('div');
+    option.className = 'dropdown-secondary-option';
+    option.textContent = week.label;
+    option.onclick = () => selectCoachWeek(week.value, week.label);
+    dropdown.appendChild(option);
+  });
+
+  // Sélectionner la semaine actuelle par défaut
+  coachModalSelectedWeek = currentWeek.value;
+  selectedText.textContent = currentWeek.label;
+
+  // Afficher le badge "Semaine actuelle"
+  document.getElementById('coach-current-week-badge').style.display = 'inline-block';
+}
+
+// Toggle dropdown de semaines
+function toggleCoachWeekDropdown() {
+  const dropdown = document.getElementById('coach-week-dropdown');
+  dropdown.classList.toggle('show');
+}
+
+// Sélectionner une semaine
+async function selectCoachWeek(weekValue, weekLabel) {
+  coachModalSelectedWeek = weekValue;
+  document.getElementById('coach-selected-week-text').textContent = weekLabel;
+  document.getElementById('coach-week-dropdown').classList.remove('show');
+
+  // Afficher/masquer le badge "Semaine actuelle" selon si c'est la semaine en cours
+  const badge = document.getElementById('coach-current-week-badge');
+  if (weekValue === '2025-W53') {
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  // Recharger les données
+  await loadCoachMacroMicroProblem();
+  await loadCoachEntrepreneursTable(); // Recharger le tableau aussi car le statut RPO dépend de la semaine
+}
+
+// Charger MACRO/MICRO/PROBLÈME du coach
+async function loadCoachMacroMicroProblem() {
+  try {
+    const response = await fetch(`/api/coach/macro-micro-problem?coach_username=${coachModalCurrentCoach}&week=${coachModalSelectedWeek}`);
+
+    if (response.ok) {
+      const data = await response.json();
+
+      document.getElementById('coach-macro-display').textContent = data.macro || '-';
+      document.getElementById('coach-micro-display').textContent = data.micro || '-';
+      document.getElementById('coach-problem-display').textContent = data.problem || '-';
+    }
+  } catch (error) {
+    console.error('[COACH RPO MODAL] Erreur chargement MACRO/MICRO/PROBLÈME:', error);
+  }
+}
+
+// Charger le tableau des entrepreneurs du coach (tableau RPO complet avec toutes les semaines)
+async function loadCoachEntrepreneursTable() {
+  const tableContainer = document.getElementById('coach-entrepreneurs-table');
+
+  try {
+    // Récupérer la liste des entrepreneurs du coach
+    const response = await fetch(`/api/entrepreneurs/${coachModalCurrentCoach}`);
+
+    if (!response.ok) {
+      throw new Error('Erreur chargement entrepreneurs');
+    }
+
+    const entrepreneurs = await response.json();
+
+    // Sauvegarder tous les entrepreneurs pour le filtre
+    if (coachModalAllEntrepreneurs.length === 0) {
+      coachModalAllEntrepreneurs = entrepreneurs;
+      // Initialiser le dropdown du filtre
+      initCoachEntrepreneurFilter();
+    }
+
+    if (!entrepreneurs || entrepreneurs.length === 0) {
+      tableContainer.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: var(--text-gray);">
+          <i class="fas fa-users" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+          <p>Aucun entrepreneur assigné à ce coach</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Récupérer les photos de profil pour tous les entrepreneurs (comme dans dashboard classement)
+    const photoPromises = entrepreneurs.map(async (entrepreneur) => {
+      try {
+        const photoResponse = await fetch(`/api/get-profile-photo/${entrepreneur.username}`);
+        if (photoResponse.ok) {
+          const photoResult = await photoResponse.json();
+          return { username: entrepreneur.username, photoUrl: photoResult.photoUrl || null };
+        }
+      } catch (err) {
+        console.warn(`Erreur récupération photo pour ${entrepreneur.username}:`, err);
+      }
+      return { username: entrepreneur.username, photoUrl: null };
+    });
+
+    const photoResults = await Promise.all(photoPromises);
+    const photoMap = {};
+    photoResults.forEach(result => {
+      photoMap[result.username] = result.photoUrl;
+    });
+
+    // Filtrer les entrepreneurs selon le filtre sélectionné
+    let filteredEntrepreneurs = entrepreneurs;
+    if (coachModalEntrepreneurFilter) {
+      filteredEntrepreneurs = entrepreneurs.filter(e => e.username === coachModalEntrepreneurFilter);
+    }
+
+    // Créer le tableau RPO complet (même structure que le tableau entrepreneur RPO)
+    let tableHTML = `
+      <div class="rpo-scroll-horizontal" style="overflow-x: auto;">
+        <table class="rpo-weekly-table" style="width: 100%; border-collapse: separate; border-spacing: 0;">
+          <thead class="rpo-table-head">
+            <!-- Première ligne: Groupes de colonnes -->
+            <tr class="rpo-header-row rpo-header-group">
+              <th class="rpo-col-date" rowspan="2" style="vertical-align: middle; border-right: 2px solid rgba(96, 165, 250, 0.3); position: sticky; left: 0; background: #0f172a; z-index: 30;">Entrepreneur</th>
+              <th colspan="3" style="text-align: center; background: rgba(15, 23, 42, 0.5); border-right: 2px solid rgba(96, 165, 250, 0.3);">A-t-il réussi ses objectifs?</th>
+              <th colspan="2" style="text-align: center; background: rgba(15, 23, 42, 0.5); border-right: 2px solid rgba(96, 165, 250, 0.3);">Problématique</th>
+              <th colspan="3" style="text-align: center; background: rgba(15, 23, 42, 0.5);">Coaching</th>
+            </tr>
+            <!-- Deuxième ligne: Détails des colonnes -->
+            <tr class="rpo-header-row">
+              <th class="rpo-col-standard" style="border-right: 1px solid rgba(96, 165, 250, 0.15);">HPAP</th>
+              <th class="rpo-col-standard" style="border-right: 1px solid rgba(96, 165, 250, 0.15);">Estims</th>
+              <th class="rpo-col-standard" style="border-right: 2px solid rgba(96, 165, 250, 0.3);">$Vendu</th>
+              <th class="rpo-col-wide" style="border-right: 1px solid rgba(96, 165, 250, 0.15);">Problème semaine</th>
+              <th class="rpo-col-wide" style="border-right: 2px solid rgba(96, 165, 250, 0.3);">Racine problème</th>
+              <th class="rpo-col-medium" style="border-right: 1px solid rgba(96, 165, 250, 0.15);">Source problème</th>
+              <th class="rpo-col-standard" style="border-right: 1px solid rgba(96, 165, 250, 0.15);">Type coaching</th>
+              <th class="rpo-col-wide">Plan de match</th>
+            </tr>
+          </thead>
+          <tbody class="rpo-table-body">
+    `;
+
+    // Pour chaque entrepreneur (filtré), créer une ligne avec ses données RPO pour la semaine sélectionnée
+    for (const entrepreneur of filteredEntrepreneurs) {
+      const entrepreneurName = entrepreneur.full_name || entrepreneur.username;
+      const entrepreneurPhoto = photoMap[entrepreneur.username] || null;
+
+      console.log('[COACH RPO MODAL] Entrepreneur:', entrepreneur.username, 'Photo:', entrepreneurPhoto);
+
+      // Charger les données RPO de cet entrepreneur pour la semaine sélectionnée
+      let rpoData = {
+        objectif_hpap: '',
+        objectif_estims: '',
+        objectif_vendu: '',
+        probleme_semaine: '',
+        racine_probleme: '',
+        source_probleme: '',
+        type_coaching: '',
+        plan_match: ''
+      };
+
+      try {
+        const rpoResp = await fetch(`/api/entrepreneur/weekly-data?username=${entrepreneur.username}&week=${coachModalSelectedWeek}`);
+        if (rpoResp.ok) {
+          const data = await rpoResp.json();
+          if (data.has_data && data.data) {
+            rpoData = { ...rpoData, ...data.data };
+          }
+        }
+      } catch (err) {
+        console.warn(`Erreur chargement RPO pour ${entrepreneur.username}:`, err);
+      }
+
+      tableHTML += `
+        <tr style="border-bottom: 1px solid rgba(51, 65, 85, 0.5);">
+          <td class="rpo-col-date" style="position: sticky; left: 0; background: #0f172a; z-index: 15; font-weight: 600; color: var(--text-light);">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              ${entrepreneurPhoto
+                ? `<img src="${entrepreneurPhoto}" alt="${entrepreneurName}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 2px solid #60a5fa;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                   <i class="fas fa-user-circle" style="display: none; color: #60a5fa; font-size: 1.5rem;"></i>`
+                : `<i class="fas fa-user-circle" style="color: #60a5fa; font-size: 1.5rem;"></i>`
+              }
+              <span>${entrepreneurName}</span>
+            </div>
+          </td>
+
+          <!-- HPAP -->
+          <td class="rpo-col-standard" style="text-align: center; color: var(--text-gray);">${rpoData.objectif_hpap || '-'}</td>
+
+          <!-- Estims -->
+          <td class="rpo-col-standard" style="text-align: center; color: var(--text-gray);">${rpoData.objectif_estims || '-'}</td>
+
+          <!-- $Vendu -->
+          <td class="rpo-col-standard" style="text-align: center; color: var(--text-gray);">${rpoData.objectif_vendu || '-'}</td>
+
+          <!-- Problème semaine -->
+          <td class="rpo-col-wide">
+            <div style="padding: 0.5rem; color: var(--text-gray); font-size: 0.875rem; max-height: 80px; overflow-y: auto;">
+              ${rpoData.probleme_semaine || '-'}
+            </div>
+          </td>
+
+          <!-- Racine problème -->
+          <td class="rpo-col-wide">
+            <div style="padding: 0.5rem; color: var(--text-gray); font-size: 0.875rem; max-height: 80px; overflow-y: auto;">
+              ${rpoData.racine_probleme || '-'}
+            </div>
+          </td>
+
+          <!-- Source problème -->
+          <td class="rpo-col-medium" style="text-align: center; color: var(--text-gray); font-size: 0.85rem;">${rpoData.source_probleme || '-'}</td>
+
+          <!-- Type coaching -->
+          <td class="rpo-col-standard" style="text-align: center; color: var(--text-gray);">${rpoData.type_coaching || '-'}</td>
+
+          <!-- Plan de match -->
+          <td class="rpo-col-wide">
+            <div style="padding: 0.5rem; color: var(--text-gray); font-size: 0.875rem; max-height: 80px; overflow-y: auto;">
+              ${rpoData.plan_match || '-'}
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    tableHTML += `
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    tableContainer.innerHTML = tableHTML;
+
+    // Activer le drag-to-scroll sur le conteneur horizontal
+    const scrollContainer = tableContainer.querySelector('.rpo-scroll-horizontal');
+    if (scrollContainer) {
+      let isDown = false;
+      let startX;
+      let scrollLeft;
+
+      scrollContainer.addEventListener('mousedown', (e) => {
+        // Seulement si on clique sur le header
+        if (e.target.tagName === 'TH' || e.target.closest('th')) {
+          isDown = true;
+          scrollContainer.style.cursor = 'grabbing';
+          startX = e.pageX - scrollContainer.offsetLeft;
+          scrollLeft = scrollContainer.scrollLeft;
+        }
+      });
+
+      scrollContainer.addEventListener('mouseleave', () => {
+        isDown = false;
+        scrollContainer.style.cursor = 'default';
+      });
+
+      scrollContainer.addEventListener('mouseup', () => {
+        isDown = false;
+        scrollContainer.style.cursor = 'default';
+      });
+
+      scrollContainer.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - scrollContainer.offsetLeft;
+        const walk = (x - startX) * 2; // Vitesse de scroll (multiplier pour plus rapide)
+        scrollContainer.scrollLeft = scrollLeft - walk;
+      });
+    }
+
+  } catch (error) {
+    console.error('[COACH RPO MODAL] Erreur chargement tableau entrepreneurs:', error);
+    tableContainer.innerHTML = `
+      <div style="text-align: center; padding: 2rem; color: #ef4444;">
+        <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+        <p>Erreur lors du chargement des entrepreneurs</p>
+      </div>
+    `;
+  }
+}
+
+// Toggle dropdown filtre entrepreneur
+function toggleCoachEntrepreneurFilter() {
+  const dropdown = document.getElementById('coach-entrepreneur-filter-dropdown');
+  dropdown.classList.toggle('show');
+}
+
+// Initialiser le filtre entrepreneur
+function initCoachEntrepreneurFilter() {
+  const dropdown = document.getElementById('coach-entrepreneur-filter-dropdown');
+  dropdown.innerHTML = '';
+
+  // Option "Tous les entrepreneurs"
+  const allOption = document.createElement('div');
+  allOption.className = 'dropdown-option';
+  allOption.textContent = 'Tous les entrepreneurs';
+  allOption.onclick = () => selectCoachEntrepreneurFilter(null, 'Tous les entrepreneurs');
+  dropdown.appendChild(allOption);
+
+  // Ajouter un séparateur
+  const separator = document.createElement('div');
+  separator.className = 'dropdown-separator';
+  dropdown.appendChild(separator);
+
+  // Ajouter chaque entrepreneur
+  coachModalAllEntrepreneurs.forEach(entrepreneur => {
+    const option = document.createElement('div');
+    option.className = 'dropdown-option';
+    option.textContent = entrepreneur.full_name || entrepreneur.username;
+    option.onclick = () => selectCoachEntrepreneurFilter(entrepreneur.username, entrepreneur.full_name || entrepreneur.username);
+    dropdown.appendChild(option);
+  });
+}
+
+// Sélectionner un filtre entrepreneur
+async function selectCoachEntrepreneurFilter(username, displayName) {
+  coachModalEntrepreneurFilter = username;
+  document.getElementById('coach-entrepreneur-filter-text').textContent = displayName;
+  document.getElementById('coach-entrepreneur-filter-dropdown').classList.remove('show');
+
+  // Recharger le tableau avec le filtre
+  await loadCoachEntrepreneursTable();
+}
+
+// Fermer le dropdown si on clique ailleurs
+document.addEventListener('click', function(event) {
+  const dropdown = document.getElementById('coach-week-dropdown');
+  const button = document.getElementById('coach-week-selector-btn');
+
+  if (dropdown && button && !button.contains(event.target) && !dropdown.contains(event.target)) {
+    dropdown.classList.remove('show');
+  }
+
+  // Fermer aussi le dropdown du filtre entrepreneur
+  const filterDropdown = document.getElementById('coach-entrepreneur-filter-dropdown');
+  const filterButton = document.getElementById('coach-entrepreneur-filter-btn');
+
+  if (filterDropdown && filterButton && !filterButton.contains(event.target) && !filterDropdown.contains(event.target)) {
+    filterDropdown.classList.remove('show');
+  }
+});
+
 // Ouvrir le modal RPO - Charger et afficher les données
 async function openRpoModal(buttonElement) {
   if (!selectedEntrepreneurForView) {
@@ -6522,38 +7076,50 @@ function selectModalMonth(monthIndex, monthName) {
 function getCurrentWeekLabel() {
   const today = new Date();
   const year = today.getFullYear();
-  const month = today.getMonth(); // 0-11
+  const month = today.getMonth(); // 0-11 (0=Janvier, 11=Décembre)
   const day = today.getDate();
 
-  // Semaines de l'année 2026 (même structure que coach RPO)
-  const weeks2026 = [
-    '5 janvier - 11 janvier', '12 janvier - 18 janvier', '19 janvier - 25 janvier', '26 janvier - 1 février',
-    '2 février - 8 février', '9 février - 15 février', '16 février - 22 février', '23 février - 1 mars',
-    '2 mars - 8 mars', '9 mars - 15 mars', '16 mars - 22 mars', '23 mars - 29 mars', '30 mars - 5 avril',
-    '6 avril - 12 avril', '13 avril - 19 avril', '20 avril - 26 avril', '27 avril - 3 mai',
-    '4 mai - 10 mai', '11 mai - 17 mai', '18 mai - 24 mai', '25 mai - 31 mai',
-    '1 juin - 7 juin', '8 juin - 14 juin', '15 juin - 21 juin', '22 juin - 28 juin', '29 juin - 5 juillet',
-    '6 juillet - 12 juillet', '13 juillet - 19 juillet', '20 juillet - 26 juillet', '27 juillet - 2 août',
-    '3 août - 9 août', '10 août - 16 août', '17 août - 23 août', '24 août - 30 août', '31 août - 6 septembre',
-    '7 septembre - 13 septembre', '14 septembre - 20 septembre', '21 septembre - 27 septembre', '28 septembre - 4 octobre',
-    '5 octobre - 11 octobre', '12 octobre - 18 octobre', '19 octobre - 25 octobre', '26 octobre - 1 novembre',
-    '2 novembre - 8 novembre', '9 novembre - 15 novembre', '16 novembre - 22 novembre', '23 novembre - 29 novembre',
-    '30 novembre - 6 décembre', '7 décembre - 13 décembre', '14 décembre - 20 décembre', '21 décembre - 27 décembre', '28 décembre - 3 janvier'
-  ];
-
-  // Pour 2025/2026, parcourir les semaines et trouver celle qui correspond
-  for (const weekLabel of weeks2026) {
-    // Parser le label pour extraire les dates
-    const match = weekLabel.match(/(\d+) (\w+)/);
-    if (match) {
-      const startDay = parseInt(match[1]);
-      // Retourner la semaine actuelle basée sur une logique simple
-      // Cette fonction retourne juste la première semaine pour l'instant
-      // Vous pouvez l'améliorer avec une logique plus précise
-    }
+  // Semaine actuelle: 29 décembre 2025 - 4 janvier 2026
+  if ((year === 2025 && month === 11 && day >= 29) ||
+      (year === 2026 && month === 0 && day <= 4)) {
+    return '29 déc - 4 janv';
   }
 
-  return weeks2026[0]; // Par défaut, retourner la première semaine
+  // Décembre 2025
+  if (year === 2025 && month === 11) {
+    if (day >= 1 && day <= 7) return '1 - 7 déc 2025';
+    if (day >= 8 && day <= 14) return '8 - 14 déc 2025';
+    if (day >= 15 && day <= 21) return '15 - 21 déc 2025';
+    if (day >= 22 && day <= 28) return '22 - 28 déc 2025';
+  }
+
+  // Janvier 2026
+  if (year === 2026 && month === 0) {
+    if (day >= 5 && day <= 11) return '5 - 11 janv.';
+    if (day >= 12 && day <= 18) return '12 - 18 janv.';
+    if (day >= 19 && day <= 25) return '19 - 25 janv.';
+    if (day >= 26) return '26 janv. - 1 fév.';
+  }
+
+  // Février 2026
+  if (year === 2026 && month === 1) {
+    if (day >= 2 && day <= 8) return '2 - 8 fév.';
+    if (day >= 9 && day <= 15) return '9 - 15 fév.';
+    if (day >= 16 && day <= 22) return '16 - 22 fév.';
+    if (day >= 23) return '23 fév. - 1 mars';
+  }
+
+  // Mars 2026
+  if (year === 2026 && month === 2) {
+    if (day >= 2 && day <= 8) return '2 - 8 mars';
+    if (day >= 9 && day <= 15) return '9 - 15 mars';
+    if (day >= 16 && day <= 22) return '16 - 22 mars';
+    if (day >= 23 && day <= 29) return '23 - 29 mars';
+    if (day >= 30) return '30 mars - 5 avr.';
+  }
+
+  // Par défaut (si aucune correspondance)
+  return '29 déc - 4 janv';
 }
 
 // Fonction pour déterminer la semaine actuelle

@@ -12911,6 +12911,70 @@ async def save_direction_team_metrics(request: DirectionTeamMetricsRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ====================================================
+# ENDPOINTS DIRECTION - MACRO/MICRO/PROBLÈME
+# ====================================================
+
+@app.post("/api/direction/macro-micro-problem")
+async def save_direction_macro_micro_problem(request: Request):
+    """Sauvegarde MACRO, MICRO et Problème pour la direction et une semaine"""
+    try:
+        data = await request.json()
+        direction_username = data.get("direction_username")
+        week = data.get("week")
+        macro = data.get("macro", "")
+        micro = data.get("micro", "")
+        problem = data.get("problem", "")
+
+        if not direction_username:
+            raise HTTPException(status_code=400, detail="direction_username est requis")
+        if not week:
+            raise HTTPException(status_code=400, detail="week est requis")
+
+        data_dir = os.path.join("data", "direction_macro_micro")
+        os.makedirs(data_dir, exist_ok=True)
+
+        data_file = os.path.join(data_dir, f"{direction_username}_{week}.json")
+
+        save_data = {
+            "direction_username": direction_username,
+            "week": week,
+            "macro": macro,
+            "micro": micro,
+            "problem": problem,
+            "updated_at": datetime.now().isoformat()
+        }
+
+        # Sauvegarder
+        with open(data_file, "w", encoding="utf-8") as f:
+            json.dump(save_data, f, ensure_ascii=False, indent=2)
+
+        return {"success": True, "message": "MACRO/MICRO/Problème sauvegardés"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erreur lors de la sauvegarde MACRO/MICRO/Problème direction: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/direction/macro-micro-problem")
+async def get_direction_macro_micro_problem(direction_username: str, week: str):
+    """Récupère MACRO, MICRO et Problème pour la direction et une semaine"""
+    try:
+        data_dir = os.path.join("data", "direction_macro_micro")
+        data_file = os.path.join(data_dir, f"{direction_username}_{week}.json")
+
+        if not os.path.exists(data_file):
+            return {"macro": "", "micro": "", "problem": ""}
+
+        with open(data_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        return data
+    except Exception as e:
+        print(f"Erreur lors de la récupération MACRO/MICRO/Problème direction: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============================================
 # ENDPOINTS COACH - MÉTRIQUES PRÉVISIONNELLES
 # ============================================

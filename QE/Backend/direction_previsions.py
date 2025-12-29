@@ -66,6 +66,12 @@ def save_direction_previsions(direction_username, previsions):
     file_path = get_direction_previsions_file(direction_username)
 
     try:
+        print(f"[DIRECTION PREVISIONS] Tentative sauvegarde pour {direction_username}")
+        print(f"[DIRECTION PREVISIONS] Chemin fichier: {file_path}")
+        print(f"[DIRECTION PREVISIONS] Répertoire DATA_DIR: {DATA_DIR}")
+        print(f"[DIRECTION PREVISIONS] Existe: {DATA_DIR.exists()}")
+        print(f"[DIRECTION PREVISIONS] Prévisions: {previsions}")
+
         data = {
             'direction_username': direction_username,
             'previsions': previsions,
@@ -80,6 +86,9 @@ def save_direction_previsions(direction_username, previsions):
 
     except Exception as e:
         print(f"[DIRECTION PREVISIONS] ❌ Erreur sauvegarde {direction_username}: {e}")
+        print(f"[DIRECTION PREVISIONS] Type erreur: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -145,6 +154,10 @@ def save_direction_metrics(direction_username, metrics):
     file_path = get_direction_metrics_file(direction_username)
 
     try:
+        print(f"[DIRECTION METRICS] Tentative sauvegarde pour {direction_username}")
+        print(f"[DIRECTION METRICS] Chemin fichier: {file_path}")
+        print(f"[DIRECTION METRICS] Métriques: {metrics}")
+
         data = {
             'direction_username': direction_username,
             'metrics': metrics,
@@ -159,4 +172,7 @@ def save_direction_metrics(direction_username, metrics):
 
     except Exception as e:
         print(f"[DIRECTION METRICS] ❌ Erreur sauvegarde {direction_username}: {e}")
+        print(f"[DIRECTION METRICS] Type erreur: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
         return False

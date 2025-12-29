@@ -12773,6 +12773,215 @@ async def save_coach_team_objectifs(request: TeamObjectifsRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================
+# ENDPOINTS DIRECTION - TEAM OBJECTIFS
+# ============================================
+
+@app.get("/api/direction/team-objectifs")
+async def get_direction_team_objectifs(direction_username: str):
+    """
+    Récupère les prévisions d'objectifs pour les coaches (depuis la direction)
+
+    Args:
+        direction_username: Nom d'utilisateur de la direction
+
+    Returns:
+        {
+            "success": True,
+            "previsions": {"coach1": 100000, "coach2": 150000},
+            "total": 250000
+        }
+    """
+    try:
+        from QE.Backend.direction_previsions import load_direction_previsions, get_direction_team_objectif_total
+
+        previsions = load_direction_previsions(direction_username)
+        total = get_direction_team_objectif_total(direction_username)
+
+        return {
+            "success": True,
+            "previsions": previsions,
+            "total": total
+        }
+    except Exception as e:
+        print(f"[DIRECTION API] Erreur GET team-objectifs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class DirectionTeamObjectifsRequest(BaseModel):
+    direction_username: str
+    previsions: dict
+
+@app.post("/api/direction/team-objectifs")
+async def save_direction_team_objectifs(request: DirectionTeamObjectifsRequest):
+    """
+    Sauvegarde les prévisions d'objectifs pour les coaches (depuis la direction)
+
+    Body:
+        {
+            "direction_username": "direction1",
+            "previsions": {"coach1": 100000, "coach2": 150000}
+        }
+
+    Returns:
+        {"success": True, "total": 250000}
+    """
+    try:
+        from QE.Backend.direction_previsions import save_direction_previsions, get_direction_team_objectif_total
+
+        success = save_direction_previsions(request.direction_username, request.previsions)
+
+        if success:
+            total = get_direction_team_objectif_total(request.direction_username)
+            return {
+                "success": True,
+                "total": total
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
+
+    except Exception as e:
+        print(f"[DIRECTION API] Erreur POST team-objectifs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========== ENDPOINTS DIRECTION - MÉTRIQUES ÉQUIPE (CM, RATIO MARKETING, TAUX DE VENTE) ==========
+
+@app.get("/api/direction/team-metrics")
+async def get_direction_team_metrics(direction_username: str):
+    """
+    Récupère les métriques d'équipe de la direction (valeur unique)
+
+    Query params:
+        direction_username: Nom d'utilisateur de la direction
+
+    Returns:
+        {
+            "success": True,
+            "metrics": {"cm": 5000, "ratioMktg": 15.5, "tauxVente": 33.3}
+        }
+    """
+    try:
+        from QE.Backend.direction_previsions import load_direction_metrics
+
+        metrics = load_direction_metrics(direction_username)
+
+        return {
+            "success": True,
+            "metrics": metrics
+        }
+
+    except Exception as e:
+        print(f"[DIRECTION API] Erreur GET team-metrics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class DirectionTeamMetricsRequest(BaseModel):
+    direction_username: str
+    metrics: dict  # {"cm": 5000, "ratioMktg": 15.5, "tauxVente": 33.3}
+
+
+@app.post("/api/direction/team-metrics")
+async def save_direction_team_metrics(request: DirectionTeamMetricsRequest):
+    """
+    Sauvegarde les métriques d'équipe de la direction (valeur unique)
+
+    Body:
+        {
+            "direction_username": "direction1",
+            "metrics": {"cm": 5000, "ratioMktg": 15.5, "tauxVente": 33.3}
+        }
+
+    Returns:
+        {"success": True, "metrics": {"cm": 5000, "ratioMktg": 15.5, "tauxVente": 33.3}}
+    """
+    try:
+        from QE.Backend.direction_previsions import save_direction_metrics
+
+        success = save_direction_metrics(request.direction_username, request.metrics)
+
+        if success:
+            return {
+                "success": True,
+                "metrics": request.metrics
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
+
+    except Exception as e:
+        print(f"[DIRECTION API] Erreur POST team-metrics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================
+# ENDPOINTS COACH - MÉTRIQUES PRÉVISIONNELLES
+# ============================================
+
+@app.get("/api/coach/metrics")
+async def get_coach_metrics(coach_username: str):
+    """
+    Récupère les métriques prévisionnelles d'un coach (valeur unique)
+
+    Query params:
+        coach_username: Nom d'utilisateur du coach
+
+    Returns:
+        {
+            "success": True,
+            "metrics": {"cm": 5000, "ratioMktg": 15.5, "tauxVente": 33.3}
+        }
+    """
+    try:
+        from QE.Backend.coach_previsions import load_coach_metrics
+
+        metrics = load_coach_metrics(coach_username)
+
+        return {
+            "success": True,
+            "metrics": metrics
+        }
+
+    except Exception as e:
+        print(f"[COACH API] Erreur GET metrics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class CoachMetricsRequest(BaseModel):
+    coach_username: str
+    metrics: dict  # {"cm": 5000, "ratioMktg": 15.5, "tauxVente": 33.3}
+
+
+@app.post("/api/coach/metrics")
+async def save_coach_metrics(request: CoachMetricsRequest):
+    """
+    Sauvegarde les métriques prévisionnelles d'un coach (valeur unique)
+
+    Body:
+        {
+            "coach_username": "coach1",
+            "metrics": {"cm": 5000, "ratioMktg": 15.5, "tauxVente": 33.3}
+        }
+
+    Returns:
+        {"success": True, "metrics": {"cm": 5000, "ratioMktg": 15.5, "tauxVente": 33.3}}
+    """
+    try:
+        from QE.Backend.coach_previsions import save_coach_metrics
+
+        success = save_coach_metrics(request.coach_username, request.metrics)
+
+        if success:
+            return {
+                "success": True,
+                "metrics": request.metrics
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
+
+    except Exception as e:
+        print(f"[COACH API] Erreur POST metrics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================
 # ENDPOINTS COMPTABLE/DIRECTION - FACTURATION QE
 # ============================================
 

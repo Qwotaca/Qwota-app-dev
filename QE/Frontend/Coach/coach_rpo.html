@@ -1389,7 +1389,23 @@ select:disabled {
     <div id="rpo" class="page-content fade-in-up" style="animation-delay: 0.2s;">
 
       <!-- Section MACRO / MICRO / Problème -->
-      <div style="background: var(--bg-card); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 1rem; margin-bottom: 2rem;">
+      <div id="resume-section-container" style="background: var(--bg-card); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 1rem; margin-bottom: 2rem;">
+        <!-- Badge "Cette semaine" -->
+        <div id="current-week-badge" style="display: none; margin: 1rem 1rem 0 1rem; padding: 0.75rem 1rem; border-radius: 0.5rem; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: 2px solid rgba(245, 158, 11, 0.3);">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <i class="fas fa-calendar-week" style="color: white; font-size: 1.25rem;"></i>
+              <div>
+                <div style="color: white; font-weight: 700; font-size: 1rem;">Cette semaine</div>
+                <div id="current-week-date-range" style="color: rgba(255, 255, 255, 0.9); font-size: 0.85rem; margin-top: 0.125rem;"></div>
+              </div>
+            </div>
+            <div id="current-week-status" style="color: white; font-weight: 600; font-size: 0.9rem;">
+              <i class="fas fa-exclamation-circle" style="margin-right: 0.5rem;"></i>À remplir
+            </div>
+          </div>
+        </div>
+
         <div class="box-header">
           <div style="display: flex; align-items: center; gap: 1rem;">
             <div class="box-header-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
@@ -4165,6 +4181,40 @@ async function saveMacroMicroProblem() {
   }
 }
 
+// Mettre à jour le badge "Cette semaine"
+function updateCurrentWeekBadge(isCurrentWeek, isFilled) {
+  const badge = document.getElementById('current-week-badge');
+  const dateRange = document.getElementById('current-week-date-range');
+  const status = document.getElementById('current-week-status');
+  const container = document.getElementById('resume-section-container');
+
+  if (!badge || !dateRange || !status || !container) return;
+
+  if (isCurrentWeek) {
+    // Afficher le badge pour la semaine actuelle
+    badge.style.display = 'block';
+    dateRange.textContent = '29 décembre 2025 - 4 janvier 2026';
+
+    if (isFilled) {
+      // Vert - Complété
+      badge.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+      badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+      container.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+      status.innerHTML = '<i class="fas fa-check-circle" style="margin-right: 0.5rem;"></i>Complété';
+    } else {
+      // Jaune - À remplir
+      badge.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+      badge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+      container.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+      status.innerHTML = '<i class="fas fa-exclamation-circle" style="margin-right: 0.5rem;"></i>À remplir';
+    }
+  } else {
+    // Masquer le badge pour les autres semaines
+    badge.style.display = 'none';
+    container.style.borderColor = 'rgba(51, 65, 85, 0.5)';
+  }
+}
+
 // Mettre à jour le bouton d'action selon l'état des données
 function updateResumeActionButton(hasMacro, hasMicro, hasProblem) {
   const button = document.getElementById('resume-action-btn');
@@ -4222,6 +4272,12 @@ async function loadMacroMicroProblem() {
       if (microLabel) microLabel.style.opacity = data.micro ? '0.6' : '1';
       if (problemLabel) problemLabel.style.opacity = data.problem ? '0.6' : '1';
 
+      // Vérifier si c'est la semaine actuelle et mettre à jour le badge
+      const currentWeekValue = '2025-W53';
+      const isCurrentWeek = selectedWeekValue === currentWeekValue;
+      const isFilled = !!(data.macro && data.micro && data.problem);
+      updateCurrentWeekBadge(isCurrentWeek, isFilled);
+
       // Mettre à jour le bouton d'action
       updateResumeActionButton(!!data.macro, !!data.micro, !!data.problem);
     } else {
@@ -4254,6 +4310,11 @@ async function loadMacroMicroProblem() {
       if (macroLabel) macroLabel.style.opacity = '1';
       if (microLabel) microLabel.style.opacity = '1';
       if (problemLabel) problemLabel.style.opacity = '1';
+
+      // Vérifier si c'est la semaine actuelle et mettre à jour le badge
+      const currentWeekValue = '2025-W53';
+      const isCurrentWeek = selectedWeekValue === currentWeekValue;
+      updateCurrentWeekBadge(isCurrentWeek, false);
 
       // Mettre à jour le bouton d'action
       updateResumeActionButton(false, false, false);

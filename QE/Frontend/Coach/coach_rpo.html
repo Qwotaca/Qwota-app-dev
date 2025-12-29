@@ -4360,12 +4360,36 @@ function initResumeWeekSelector() {
   const weekDropdownText = document.getElementById('resume-week-dropdown-text');
   if (!weekDropdownMenu || !weekDropdownText) return;
 
-  // Générer toutes les semaines de 2026
-  const year = 2026;
   const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',
                       'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 
-  // Commencer au premier lundi de 2026
+  weekDropdownMenu.innerHTML = '';
+
+  // ===== SEMAINE ACTUELLE (29 déc 2025 - 4 janv 2026) =====
+  const currentWeekValue = '2025-W53';
+  const currentWeekLabel = '29 décembre 2025 - 4 janvier 2026';
+
+  const currentOption = document.createElement('div');
+  currentOption.className = 'dropdown-secondary-option';
+  currentOption.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;';
+
+  const currentWeekText = document.createElement('span');
+  currentWeekText.textContent = currentWeekLabel;
+
+  const badge = document.createElement('span');
+  badge.style.cssText = 'background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 600; white-space: nowrap;';
+  badge.textContent = 'Cette semaine';
+
+  currentOption.appendChild(currentWeekText);
+  currentOption.appendChild(badge);
+  currentOption.onclick = (e) => {
+    e.stopPropagation();
+    selectResumeWeek(currentWeekValue, currentWeekLabel);
+  };
+  weekDropdownMenu.appendChild(currentOption);
+
+  // ===== SEMAINES DE 2026 =====
+  const year = 2026;
   let currentDate = new Date(year, 0, 1);
   const dayOfWeek = currentDate.getDay();
   if (dayOfWeek !== 1) {
@@ -4373,11 +4397,7 @@ function initResumeWeekSelector() {
     currentDate.setDate(currentDate.getDate() + daysUntilMonday);
   }
 
-  // Créer les options pour toutes les semaines de 2026
-  weekDropdownMenu.innerHTML = '';
   let weekNumber = 1;
-  let firstWeekValue = '';
-  let firstWeekLabel = '';
 
   while (currentDate.getFullYear() === year) {
     const monday = new Date(currentDate);
@@ -4398,11 +4418,6 @@ function initResumeWeekSelector() {
 
     const weekValue = `${year}-W${String(weekNumber).padStart(2, '0')}`;
 
-    if (weekNumber === 1) {
-      firstWeekValue = weekValue;
-      firstWeekLabel = weekLabel;
-    }
-
     const option = document.createElement('div');
     option.className = 'dropdown-secondary-option';
     option.textContent = weekLabel;
@@ -4416,11 +4431,11 @@ function initResumeWeekSelector() {
     weekNumber++;
   }
 
-  // Sélectionner la première semaine de 2026 par défaut (utilise la même variable selectedWeekValue)
+  // Sélectionner la semaine actuelle par défaut
   if (!selectedWeekValue) {
-    selectedWeekValue = firstWeekValue;
+    selectedWeekValue = currentWeekValue;
   }
-  weekDropdownText.textContent = firstWeekLabel;
+  weekDropdownText.textContent = currentWeekLabel;
 }
 
 // Toggle le dropdown de semaine pour Résumé hebdomadaire

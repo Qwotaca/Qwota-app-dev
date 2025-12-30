@@ -12710,6 +12710,37 @@ async def get_coach_entrepreneurs_list(coach_username: str):
         print(f"Erreur lors de la récupération des entrepreneurs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/direction/all-entrepreneurs")
+async def get_all_entrepreneurs_list():
+    """Récupère la liste de TOUS les entrepreneurs (pour Direction)"""
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT username, prenom, nom, photo_url
+                FROM users
+                WHERE role = 'entrepreneur' AND is_active = 1
+            """)
+
+            results = cursor.fetchall()
+            entrepreneurs = []
+
+            for row in results:
+                entrepreneurs.append({
+                    "username": row["username"],
+                    "prenom": row["prenom"] or "",
+                    "nom": row["nom"] or "",
+                    "full_name": f"{row['prenom'] or ''} {row['nom'] or ''}".strip() or row["username"],
+                    "photo_url": row["photo_url"] or ""
+                })
+
+            print(f"[DIRECTION] Total entrepreneurs actifs: {len(entrepreneurs)}")
+            return {"entrepreneurs": entrepreneurs}
+    except Exception as e:
+        print(f"Erreur lors de la récupération de tous les entrepreneurs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/rpo/data/{username}")
 async def get_entrepreneur_rpo_data_full(username: str):
     """Récupère toutes les données RPO d'un entrepreneur"""

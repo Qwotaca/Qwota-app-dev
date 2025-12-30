@@ -3948,13 +3948,63 @@
     }
 
     // Fonction pour configurer le dropdown de scope d'entrepreneurs
-    function setupEntrepreneurScopeDropdown() {
+    async function setupEntrepreneurScopeDropdown() {
       const scopeSelect = document.getElementById('entrepreneurScopeSelect');
       const scopeBtn = document.getElementById('entrepreneurScopeBtn');
       const scopeBtnText = document.getElementById('entrepreneurScopeBtnText');
       const dropdown = document.getElementById('entrepreneurScopeDropdown');
 
       if (!scopeSelect || !scopeBtn) return;
+
+      // Si l'utilisateur est un entrepreneur (pas coach), initialiser avec son grade
+      const userRole = localStorage.getItem('userRole');
+      const username = localStorage.getItem('username');
+
+      if (userRole !== 'coach' && userRole !== 'direction') {
+        try {
+          // Récupérer le grade de l'entrepreneur depuis l'API
+          const response = await fetch(`/api/get-info/${username}`);
+
+          console.log('[GRADE FILTER] Username recherché:', username);
+
+          if (response.ok) {
+            const result = await response.json();
+            const userInfo = result.data || {};
+            const grade = userInfo.grade;
+
+            console.log('[GRADE FILTER] Réponse API:', result);
+            console.log('[GRADE FILTER] Grade de l\'entrepreneur:', grade);
+
+            if (grade) {
+              const gradeLower = grade.toLowerCase();
+              console.log('[GRADE FILTER] Grade normalisé:', gradeLower);
+
+              // Mapper le grade au bon format
+              const gradeMap = {
+                'recrue': { icon: 'fas fa-seedling', text: 'Recrue', value: 'recrue' },
+                'senior1': { icon: 'fas fa-star', text: 'Sénior 1', value: 'senior1' },
+                'senior2': { icon: 'fas fa-star', text: 'Sénior 2', value: 'senior2' },
+                'senior3': { icon: 'fas fa-star', text: 'Sénior 3', value: 'senior3' }
+              };
+
+              if (gradeMap[gradeLower]) {
+                // Mettre à jour le bouton avec le grade de l'entrepreneur
+                console.log('[GRADE FILTER] Mise à jour du bouton avec:', gradeMap[gradeLower].text);
+                scopeBtnText.innerHTML = `<i class="${gradeMap[gradeLower].icon} mr-2"></i>${gradeMap[gradeLower].text}`;
+                currentGroupFilter = gradeMap[gradeLower].value;
+                console.log('[GRADE FILTER] currentGroupFilter défini à:', currentGroupFilter);
+              } else {
+                console.log('[GRADE FILTER] Grade non trouvé dans gradeMap:', gradeLower);
+              }
+            } else {
+              console.log('[GRADE FILTER] Pas de grade trouvé dans les infos utilisateur');
+            }
+          }
+        } catch (error) {
+          console.error('[GRADE FILTER] Erreur lors de la récupération du grade:', error);
+          // Garder la valeur par défaut "Tous les entrepreneurs"
+        }
+      }
 
       // Toggle dropdown
       scopeBtn.addEventListener('click', function(e) {

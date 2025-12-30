@@ -545,13 +545,13 @@
     <!-- Navigation Pages -->
     <div class="mb-8" style="position: relative; z-index: 10000; pointer-events: auto; touch-action: manipulation;">
       <div class="tab-spacing">
-        <button id="rpo-tab" class="btn-primary" onclick="showPage('rpo')">
+        <button id="rpo-tab" class="btn-primary" onclick="showPage('rpo')" style="display: flex; align-items: center; gap: 0.5rem;">
           <i class="fas fa-chart-line"></i>RPO
         </button>
-        <button id="plan-affaire-tab" class="btn-secondary" onclick="showPage('plan-affaire')">
+        <button id="plan-affaire-tab" class="btn-secondary" onclick="showPage('plan-affaire')" style="display: flex; align-items: center; gap: 0.5rem;">
           <i class="fas fa-briefcase"></i>Plan d'affaire
         </button>
-        <button id="etat-resultats-tab" class="btn-secondary" onclick="showPage('etat-resultats')">
+        <button id="etat-resultats-tab" class="btn-secondary" onclick="showPage('etat-resultats')" style="display: flex; align-items: center; gap: 0.5rem;">
           <i class="fas fa-file-invoice-dollar"></i>État des résultats
         </button>
       </div>
@@ -1032,8 +1032,9 @@
         <div class="w-full border-t" style="border-color: var(--border-dark);"></div>
       </div>
       <div class="relative flex justify-center">
-        <span class="px-6 py-2 rounded-full text-sm font-semibold" style="background: rgb(30, 41, 59); color: var(--text-gray); border: 1px solid var(--border-dark);">
-          <i class="fas fa-chart-line"></i>Détails mensuels
+        <span class="px-6 py-2 rounded-full text-sm font-semibold" style="background: rgb(30, 41, 59); color: var(--text-gray); border: 1px solid var(--border-dark); display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fas fa-chart-line"></i>
+          <span>Détails mensuels</span>
         </span>
       </div>
     </div>
@@ -1042,7 +1043,7 @@
     <div class="flex flex-col mb-8" style="border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 1rem; overflow: hidden;">
 
       <!-- Header -->
-      <div class="flex items-center justify-between px-6" style="background: var(--bg-card); border-radius: 1rem 1rem 0 0; min-height: 80px;">
+      <div class="flex items-center justify-between px-6" style="background: var(--bg-card); border-bottom: 1px solid rgba(51, 65, 85, 0.5); border-radius: 1rem 1rem 0 0; min-height: 80px;">
         <div class="flex items-center gap-3">
           <div style="width: 48px; height: 48px; border-radius: 12px; background: #f97316; display: flex; align-items: center; justify-content: center;">
             <i class="fas fa-calendar-check" style="font-size: 1.5rem; color: white;"></i>
@@ -1051,10 +1052,6 @@
             <span id="currentMonthlyLabel">Objectifs et résultats mensuels - Décembre 2025</span>
           </h3>
         </div>
-      </div>
-
-      <!-- Dropdown Mois - Séparé du header -->
-      <div class="flex items-center justify-start gap-3 px-6" style="background: var(--bg-card); border-bottom: 1px solid rgba(51, 65, 85, 0.5); padding-top: 0.5rem; padding-bottom: 0.75rem;">
         <div class="dropdown-with-label">
           <label class="dropdown-label">Mois</label>
           <div class="custom-select" id="monthlySelector" style="width: 180px;">
@@ -1091,8 +1088,9 @@
         <div class="w-full border-t" style="border-color: var(--border-dark);"></div>
       </div>
       <div class="relative flex justify-center">
-        <span class="px-6 py-2 rounded-full text-sm font-semibold" style="background: rgb(30, 41, 59); color: var(--text-gray); border: 1px solid var(--border-dark);">
-          <i class="fas fa-calendar-week"></i>Détails hebdomadaires
+        <span class="px-6 py-2 rounded-full text-sm font-semibold" style="background: rgb(30, 41, 59); color: var(--text-gray); border: 1px solid var(--border-dark); display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fas fa-calendar-week"></i>
+          <span>Détails hebdomadaires</span>
         </span>
       </div>
     </div>
@@ -3683,8 +3681,9 @@ function toggleEditJan() {
       input.style.background = 'transparent';
       input.style.borderBottom = 'none';
       const inputId = input.id;
-      if (inputId === 'jan-obj-pap' || inputId === 'jan-obj-rep') {
-        input.style.color = 'var(--primary-blue)';
+      // Objectifs Coach (violet)
+      if (inputId.endsWith('-obj-pap') || inputId.endsWith('-obj-rep')) {
+        input.style.color = 'rgba(139, 92, 246, 0.8)';
       } else {
         input.style.color = 'var(--text-gray)';
       }
@@ -4097,6 +4096,55 @@ function getDaysInMonthForWeek(weekStart, weekEnd, monthIndex, year) {
   return Math.round((effectiveEnd - effectiveStart) / (1000 * 60 * 60 * 24)) + 1;
 }
 
+// Récupérer les objectifs hebdomadaires depuis le plan d'affaires
+function getWeeklyTargetsFromPlan(monthIndex, weekNumber) {
+  if (!window.planWeeklyTargets) {
+    return null;
+  }
+
+  // Calculer l'index global dans les patterns (0-51)
+  // Le plan d'affaires génère 52 semaines à partir du 1er décembre 2025
+  // On doit mapper les semaines RPO (par mois) aux index du plan (global)
+
+  // Mapping cumulatif: nombre de semaines écoulées avant chaque mois
+  const weekOffsets = {
+    '-2': 0,   // Décembre 2025: commence à l'index 0
+    '0': 4,    // Janvier 2026: commence à l'index 4 (après 4 semaines de déc)
+    '1': 9,    // Février 2026: commence à l'index 9 (4 déc + 5 jan)
+    '2': 13,   // Mars 2026: commence à l'index 13 (4+5+4)
+    '3': 17,   // Avril 2026: commence à l'index 17
+    '4': 22,   // Mai 2026: commence à l'index 22
+    '5': 26,   // Juin 2026: commence à l'index 26
+    '6': 30,   // Juillet 2026: commence à l'index 30
+    '7': 35,   // Août 2026: commence à l'index 35
+    '8': 39,   // Septembre 2026: commence à l'index 39
+    '9': 43,   // Octobre 2026: commence à l'index 43
+    '10': 48,  // Novembre 2026: commence à l'index 48
+    '11': 52   // Décembre 2026: commence à l'index 52
+  };
+
+  const offset = weekOffsets[String(monthIndex)];
+  if (offset === undefined) {
+    return null;
+  }
+
+  const globalIndex = offset + weekNumber - 1;
+
+  if (globalIndex < 0 || globalIndex >= window.planWeeklyTargets.mktg.length) {
+    return null;
+  }
+
+  const result = {
+    h_marketing: window.planWeeklyTargets.mktg[globalIndex],
+    estimation: window.planWeeklyTargets.estim[globalIndex],
+    contract: window.planWeeklyTargets.contrat[globalIndex],
+    dollar: window.planWeeklyTargets.dollar[globalIndex],
+    prod: window.planWeeklyTargets.prod[globalIndex]
+  };
+
+  return result;
+}
+
 // Calculate automatic values for weekly objectives
 function calculateWeeklyObjectives(monthIndex) {
   // Déterminer l'année et le mois réel
@@ -4133,6 +4181,14 @@ function calculateWeeklyObjectives(monthIndex) {
 
 // Generate weekly tables dynamically
 function generateWeeklyTables(monthIndex) {
+  // S'assurer que le plan d'affaires a été généré
+  if (!window.planWeeklyTargets) {
+    console.log('[RPO] Plan d\'affaires non généré, génération en cours...');
+    if (typeof generatePlanWeeks === 'function') {
+      generatePlanWeeks();
+    }
+  }
+
   const weeks = getWeeksForMonth(monthIndex);
   const showProdHoraire = monthIndex === -2 || monthIndex >= 4; // Décembre 2025 ou à partir de Mai 2026 (index 4)
 
@@ -4173,54 +4229,25 @@ function generateWeeklyTables(monthIndex) {
     const stickyClass = index === 0 ? 'sticky-semaine-header' : '';
     const stickyStyle = index === 0 ? 'position: sticky; left: 0; background: var(--bg-card); z-index: 10;' : '';
 
-    // Calculer le numéro de semaine global (pour lier avec plan d'affaire)
-    const globalWeekNum = (monthIndex * 4) + (index + 1);
+    // Récupérer les objectifs depuis le plan d'affaires
+    const weekTargets = getWeeklyTargetsFromPlan(monthIndex, index + 1);
 
-    // Calculate week dates
-    const weekStartParts = week.label.split(' - ')[0].split(' ');
-    const weekEndParts = week.label.split(' - ')[1].split(' ');
-
-    // Determine dates (simple parsing for calculation)
-    const monthNames = ['janv.', 'févr.', 'mars', 'avril', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
-    const startDay = parseInt(weekStartParts[0]);
-    const startMonth = monthNames.indexOf(weekStartParts[1]);
-    const endDay = parseInt(weekEndParts[0]);
-    const endMonth = monthNames.indexOf(weekEndParts[1]);
-
-    // Handle year transition: if start month is December and current month is January, start is previous year
-    const startYear = (startMonth === 11 && realMonth === 0) ? year - 1 : year;
-    const endYear = (endMonth === 0 && startMonth === 11) ? year : year;
-
-    const weekStart = new Date(startYear, startMonth, startDay);
-    const weekEnd = new Date(endYear, endMonth, endDay);
-
-    // Calculate days in this month for this week
-    const daysInWeek = getDaysInMonthForWeek(weekStart, weekEnd, realMonth, year);
-
-    // Calculate automatic values
-    let hMarketingAuto = 0;
-    let estimationAuto = 0;
-    let contractAuto = 0;
-    let dollarAuto = 0;
-
-    if (monthlyData && daysInWeek > 0) {
-      const ratio = daysInWeek / monthlyData.daysInMonth;
-      hMarketingAuto = monthlyData.hMarketing * ratio;
-      estimationAuto = Math.round(monthlyData.estimation * ratio);
-      contractAuto = Math.round(monthlyData.contract * ratio);
-      dollarAuto = monthlyData.dollar * ratio;
-    }
+    // Valeurs automatiques (objectifs depuis le plan d'affaires)
+    let hMarketingAuto = weekTargets ? weekTargets.h_marketing : 0;
+    let estimationAuto = weekTargets ? weekTargets.estimation : 0;
+    let contractAuto = weekTargets ? weekTargets.contract : 0;
+    let dollarAuto = weekTargets ? weekTargets.dollar : 0;
 
     objectifsHTML += `
       <tr data-week="${index + 1}" style="border-bottom: 1px solid var(--border-dark); height: 60px;">
         <td class="p-3 text-sm ${stickyClass}" style="color: #9ca3af; ${stickyStyle}">${week.label}</td>
-        <td class="p-3 text-center" style="background-color: #0f172a;"><input type="text" readonly class="bg-transparent rounded px-1 py-0.5 w-full text-center text-sm" style="cursor: not-allowed !important; background-color: transparent !important; color: #9ca3af !important; text-align: center !important; border: none !important; outline: none !important; pointer-events: none !important;" value="${hMarketingAuto > 0 ? hMarketingAuto.toFixed(2) + ' h' : '-'}"></td>
+        <td class="p-3 text-center" style="background-color: #0f172a;"><input type="text" readonly class="bg-transparent rounded px-1 py-0.5 w-full text-center text-sm" style="cursor: not-allowed !important; background-color: transparent !important; color: #9ca3af !important; text-align: center !important; border: none !important; outline: none !important; pointer-events: none !important;" value="${hMarketingAuto > 0 ? hMarketingAuto.toFixed(1) + ' h' : '-'}"></td>
         <td class="p-3 text-center"><input type="text" readonly data-week="${index + 1}" data-field="h_marketing" class="week-jan-input rpo-metric-input bg-transparent text-center w-full text-sm" style="color: var(--text-light); outline: none !important; border: none !important; padding: 0 !important; background: transparent !important; cursor: not-allowed !important; pointer-events: none !important;" value="-" data-value="-"></td>
         <td class="p-3 text-center" style="background-color: #0f172a;"><input type="text" readonly class="bg-transparent rounded px-1 py-0.5 w-full text-center text-sm" style="cursor: not-allowed !important; background-color: transparent !important; color: #9ca3af !important; text-align: center !important; border: none !important; outline: none !important; pointer-events: none !important;" value="${estimationAuto > 0 ? estimationAuto : '-'}"></td>
         <td class="p-3 text-center"><input type="text" readonly data-week="${index + 1}" data-field="estimation" class="week-jan-input rpo-metric-input bg-transparent text-center w-full text-sm" style="color: var(--text-light); outline: none !important; border: none !important; padding: 0 !important; background: transparent !important; cursor: not-allowed !important; pointer-events: none !important;" value="0" data-value="0"></td>
-        <td class="p-3 text-center" style="background-color: #0f172a;"><input type="text" readonly class="bg-transparent rounded px-1 py-0.5 w-full text-center text-sm" style="cursor: not-allowed !important; background-color: transparent !important; color: #9ca3af !important; text-align: center !important; border: none !important; outline: none !important; pointer-events: none !important;" value="${contractAuto > 0 ? contractAuto : '-'}"></td>
+        <td class="p-3 text-center" style="background-color: #0f172a;"><input type="text" readonly class="bg-transparent rounded px-1 py-0.5 w-full text-center text-sm" style="cursor: not-allowed !important; background-color: transparent !important; color: #9ca3af !important; text-align: center !important; border: none !important; outline: none !important; pointer-events: none !important;" value="${contractAuto > 0 ? (contractAuto % 1 === 0 ? contractAuto : contractAuto.toFixed(1)) : '-'}"></td>
         <td class="p-3 text-center"><input type="text" readonly data-week="${index + 1}" data-field="contract" class="week-jan-input rpo-metric-input bg-transparent text-center w-full text-sm" style="color: var(--text-light); outline: none !important; border: none !important; padding: 0 !important; background: transparent !important; cursor: not-allowed !important; pointer-events: none !important;" value="0" data-value="0"></td>
-        <td class="p-3 text-center" style="background-color: #0f172a;"><input type="text" readonly class="bg-transparent rounded px-1 py-0.5 w-full text-center text-sm font-semibold" style="cursor: not-allowed !important; background-color: transparent !important; color: #9ca3af !important; text-align: center !important; border: none !important; outline: none !important; pointer-events: none !important;" value="${dollarAuto > 0 ? dollarAuto.toFixed(2) + ' $' : '-'}"></td>
+        <td class="p-3 text-center" style="background-color: #0f172a;"><input type="text" readonly class="bg-transparent rounded px-1 py-0.5 w-full text-center text-sm font-semibold" style="cursor: not-allowed !important; background-color: transparent !important; color: #9ca3af !important; text-align: center !important; border: none !important; outline: none !important; pointer-events: none !important;" value="${dollarAuto > 0 ? Math.round(dollarAuto).toLocaleString('fr-CA') + ' $' : '-'}"></td>
         <td class="p-3 text-center"><input type="text" readonly data-week="${index + 1}" data-field="dollar" class="week-jan-input rpo-metric-input bg-transparent text-center w-full text-sm font-semibold" style="color: var(--text-light); outline: none !important; border: none !important; padding: 0 !important; background: transparent !important; cursor: not-allowed !important; pointer-events: none !important;" value="0 $" data-value="0"></td>
         ${showProdHoraire ? `<td class="p-3 text-center"><input type="text" data-week="${index + 1}" data-field="prod_horaire" class="week-jan-input rpo-metric-input bg-transparent text-center w-full text-sm" style="color: var(--text-light); outline: none !important; border: none !important; padding: 0 !important; background: transparent !important; cursor: text !important;" value="0 $/h" data-value="0"></td>` : ''}
       </tr>`;
@@ -4428,8 +4455,8 @@ function updateIncompleteObjectifsBadge() {
     td.removeAttribute('data-incomplete-marketing');
   });
 
-  // Parcourir SEULEMENT le mois actuellement affiché
-  const monthIndex = currentWeeklyMonthIndex;
+  // Parcourir TOUS les mois (décembre 2025 = -2, puis janvier à décembre 2026 = 0 à 11)
+  for (let monthIndex = -2; monthIndex <= 11; monthIndex++) {
     const monthKey = String(monthIndex);
     const monthData = window.weeklyData[monthKey];
 
@@ -4490,6 +4517,7 @@ function updateIncompleteObjectifsBadge() {
         }
       }
     }
+  }
 
   // Afficher le badge
   const badge = document.getElementById('incompleteWeeksBadge');
@@ -4535,13 +4563,13 @@ function updateIncompleteResumeBadge() {
     td.removeAttribute('data-incomplete-rating');
   });
 
-  // Parcourir SEULEMENT le mois actuellement affiché
-  const monthIndex = currentWeeklyMonthIndex;
-  const monthKey = String(monthIndex);
-  const monthData = window.weeklyData[monthKey];
+  // Parcourir TOUS les mois (décembre 2025 = -2, puis janvier à décembre 2026 = 0 à 11)
+  for (let monthIndex = -2; monthIndex <= 11; monthIndex++) {
+    const monthKey = String(monthIndex);
+    const monthData = window.weeklyData[monthKey];
 
-  if (monthData) {
-    for (let weekNumber = 1; weekNumber <= 5; weekNumber++) {
+    if (monthData) {
+      for (let weekNumber = 1; weekNumber <= 5; weekNumber++) {
         const weekKey = String(weekNumber);
         const weekData = monthData[weekKey];
 
@@ -4660,6 +4688,7 @@ function updateIncompleteResumeBadge() {
         }
       }
     }
+  }
 
   // Afficher le badge
   const badge = document.getElementById('incompleteWeeksBadge2');
@@ -4679,6 +4708,22 @@ function updateIncompleteWeeksBadge() {
   updateIncompleteResumeBadge();
   updateMonthDropdownBadges();
   updateTotalBadge();
+
+  // Mettre à jour le badge du menu latéral
+  const totalIncomplete = (window.incompleteObjectifsWeeks?.length || 0) +
+                         (window.incompleteResumeWeeks?.length || 0);
+
+  console.log('[RPO BADGE DEBUG] incompleteObjectifsWeeks:', window.incompleteObjectifsWeeks?.length || 0);
+  console.log('[RPO BADGE DEBUG] incompleteResumeWeeks:', window.incompleteResumeWeeks?.length || 0);
+  console.log('[RPO BADGE DEBUG] Total incomplete:', totalIncomplete);
+
+  updateMenuBadge(totalIncomplete);
+
+  // Afficher le modal automatiquement si on vient de charger la page ET qu'il y a des données incomplètes
+  if (!window.rpoNotificationModalShown && totalIncomplete > 0) {
+    window.rpoNotificationModalShown = true;
+    showNotificationsModal();
+  }
 }
 
 // Mettre à jour le badge total permanent sur le dropdown
@@ -4919,9 +4964,10 @@ async function changeMonth(monthIndex) {
   }, 50);
 
   // Synchroniser les prévisions du plan vers RPO
-  setTimeout(() => {
-    syncPlanToRPO();
-  }, 100);
+  // DÉSACTIVÉ: Les objectifs sont déjà remplis par generateWeeklyTables() depuis window.planWeeklyTargets
+  // setTimeout(() => {
+  //   syncPlanToRPO();
+  // }, 100);
 
   // Synchroniser les données réelles RPO vers le plan
   setTimeout(() => {
@@ -5607,13 +5653,29 @@ function generateMonthlyContent(monthIndex) {
 
   return `
     <div>
-      <!-- Section Objectifs (2 en haut ou 1 si septembre) -->
-        <div class="grid ${getObjectifLabel2(monthIndex) === '' ? 'grid-cols-1' : 'grid-cols-2'} gap-4 mb-8">
-          <div class="rounded-xl flex" style="background: linear-gradient(145deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(96, 165, 250, 0.15); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); ">
+      <!-- ========== SECTION OBJECTIFS COACH ========== -->
+      <div class="mb-8" style="border: 2px solid rgba(139, 92, 246, 0.3); border-radius: 1rem; overflow: hidden; background: rgba(139, 92, 246, 0.05);">
+        <!-- Header Section Coach -->
+        <div class="px-6 py-4" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(124, 58, 237, 0.1)); border-bottom: 2px solid rgba(139, 92, 246, 0.2);">
+          <div class="flex items-center gap-3">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">
+              <i class="fas fa-user-shield" style="font-size: 1.25rem; color: white;"></i>
+            </div>
+            <div>
+              <h4 style="color: var(--text-light); font-weight: 700; font-size: 1.125rem; margin: 0; letter-spacing: 0.02em;">OBJECTIFS COACH</h4>
+              <p style="color: rgba(167, 139, 250, 0.8); font-size: 0.75rem; margin: 0; margin-top: 0.125rem;">Objectifs généraux définis par votre coach</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contenu Objectifs Coach -->
+        <div class="p-6">
+          <div class="grid ${getObjectifLabel2(monthIndex) === '' ? 'grid-cols-1' : 'grid-cols-2'} gap-4">
+            <div class="rounded-xl flex" style="background: linear-gradient(145deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(139, 92, 246, 0.3); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);">
             <div class="flex-1 flex flex-col">
               <div class="p-3 text-center border-b" style="border-color: rgba(96, 165, 250, 0.1);">
                 <div class="text-xs mb-1" style="color: var(--text-gray);">Objectif</div>
-                <input type="text" id="${abbr}-obj-pap" value="${getObjectifDefaultValue1(monthIndex)}" data-value="0" class="rpo-metric-input bg-transparent border-none text-center w-full rounded" style="color: rgba(96, 165, 250, 0.7); outline: none; font-size: 1.25rem;" readonly>
+                <input type="text" id="${abbr}-obj-pap" value="${getObjectifDefaultValue1(monthIndex)}" data-value="0" class="rpo-metric-input bg-transparent border-none text-center w-full rounded" style="color: rgba(139, 92, 246, 0.8); outline: none; font-size: 1.25rem;" readonly>
               </div>
               <div class="flex-1 p-4 flex flex-col justify-center text-center">
                 <div class="text-base font-bold mb-2" style="color: var(--text-light); text-transform: uppercase; letter-spacing: 0.05em;">${getObjectifLabel1(monthIndex)}</div>
@@ -5635,11 +5697,11 @@ function generateMonthlyContent(monthIndex) {
             </div>
           </div>
           ${getObjectifLabel2(monthIndex) !== '' ? `
-          <div class="rounded-xl flex" style="background: linear-gradient(145deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(96, 165, 250, 0.15); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); ">
+          <div class="rounded-xl flex" style="background: linear-gradient(145deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(139, 92, 246, 0.3); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);">
             <div class="flex-1 flex flex-col">
               <div class="p-3 text-center border-b" style="border-color: rgba(96, 165, 250, 0.1);">
                 <div class="text-xs mb-1" style="color: var(--text-gray);">Objectif</div>
-                <input type="text" id="${abbr}-obj-rep" value="${getObjectifDefaultValue2(monthIndex)}" data-value="0" class="rpo-metric-input bg-transparent border-none text-center w-full rounded" style="color: rgba(96, 165, 250, 0.7); outline: none; font-size: 1.25rem;" readonly>
+                <input type="text" id="${abbr}-obj-rep" value="${getObjectifDefaultValue2(monthIndex)}" data-value="0" class="rpo-metric-input bg-transparent border-none text-center w-full rounded" style="color: rgba(139, 92, 246, 0.8); outline: none; font-size: 1.25rem;" readonly>
               </div>
               <div class="flex-1 p-4 flex flex-col justify-center text-center">
                 <div class="text-base font-bold mb-2" style="color: var(--text-light); text-transform: uppercase; letter-spacing: 0.05em;">${getObjectifLabel2(monthIndex)}</div>
@@ -5661,11 +5723,24 @@ function generateMonthlyContent(monthIndex) {
             </div>
           </div>
           ` : ''}
+          </div>
         </div>
+      </div>
 
-        <!-- Titre et boutons pour les objectifs visés -->
-        <div style="margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid rgba(96, 165, 250, 0.1); display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-          <h4 style="color: var(--text-light); font-weight: 600; font-size: 1.125rem;">Objectifs</h4>
+      <!-- ========== SECTION OBJECTIFS MENSUELS PERSONNELS ========== -->
+      <div class="mb-8" style="border: 2px solid rgba(96, 165, 250, 0.3); border-radius: 1rem; overflow: hidden; background: rgba(96, 165, 250, 0.03);">
+        <!-- Header Section Personnels -->
+        <div class="px-6 py-4" style="background: linear-gradient(135deg, rgba(96, 165, 250, 0.15), rgba(59, 130, 246, 0.1)); border-bottom: 2px solid rgba(96, 165, 250, 0.2);">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #60a5fa, #3b82f6); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);">
+                <i class="fas fa-bullseye" style="font-size: 1.25rem; color: white;"></i>
+              </div>
+              <div>
+                <h4 style="color: var(--text-light); font-weight: 700; font-size: 1.125rem; margin: 0; letter-spacing: 0.02em;">OBJECTIFS MENSUELS PERSONNELS</h4>
+                <p style="color: rgba(96, 165, 250, 0.8); font-size: 0.75rem; margin: 0; margin-top: 0.125rem;">Vos objectifs personnalisés pour ce mois</p>
+              </div>
+            </div>
           <div class="flex items-center gap-3">
             <button id="editMonthlyBtn-${abbr}" onclick="toggleEditMonthly(${monthIndex})" class="rounded-lg flex items-center gap-2 justify-center transition-all hover:scale-105 px-3 py-2" style="background: rgba(96, 165, 250, 0.15); color: var(--primary-blue); border: 1px solid rgba(96, 165, 250, 0.3);" title="Modifier">
               <i class="fas fa-pencil-alt text-xs"></i>
@@ -5676,20 +5751,23 @@ function generateMonthlyContent(monthIndex) {
               <span class="text-xs font-bold">Enregistrer</span>
             </button>
           </div>
-        </div>
-
-        <!-- Alerte objectifs manquants (seulement pour mois actuel) -->
-        <div id="${abbr}-objectives-alert" style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.1)); border-left: 4px solid #f59e0b; border-radius: 0.5rem;">
-          <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <i class="fas fa-exclamation-triangle" style="color: #f59e0b; font-size: 1.25rem;"></i>
-            <div>
-              <div style="color: var(--text-light); font-weight: 600; margin-bottom: 0.25rem;">Objectifs manquants</div>
-              <div style="color: rgba(148, 163, 184, 0.9); font-size: 0.875rem;">Veuillez remplir les objectifs pour ${monthInfo.fullName}</div>
-            </div>
           </div>
         </div>
 
-        <!-- Section Métriques (4 en bas) -->
+        <!-- Contenu Objectifs Personnels -->
+        <div class="p-6">
+          <!-- Alerte objectifs manquants (seulement pour mois actuel) -->
+          <div id="${abbr}-objectives-alert" style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.1)); border-left: 4px solid #f59e0b; border-radius: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <i class="fas fa-exclamation-triangle" style="color: #f59e0b; font-size: 1.25rem;"></i>
+              <div>
+                <div style="color: var(--text-light); font-weight: 600; margin-bottom: 0.25rem;">Objectifs manquants</div>
+                <div style="color: rgba(148, 163, 184, 0.9); font-size: 0.875rem;">Veuillez remplir les objectifs pour ${monthInfo.fullName}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Métriques (4 en bas) -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <!-- HR PÀP RÉEL -->
           <div class="rounded-xl" style="background: linear-gradient(145deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(96, 165, 250, 0.15); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); ">
@@ -5791,6 +5869,8 @@ function generateMonthlyContent(monthIndex) {
             </div>
           </div>
         </div>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -7748,6 +7828,16 @@ function generatePlanWeeks() {
   log('[DATE] Nombre de semaines avec production > 0:', semAvecProd);
   log('[BAN] ProdPattern:', prodPattern);
 
+  // Stocker les patterns globalement pour utilisation par le tableau RPO
+  window.planWeeklyTargets = {
+    mktg: [...mktgPattern],
+    estim: [...estimPattern],
+    contrat: [...contratPattern],
+    dollar: [...dollarPattern],
+    prod: [...prodPattern],
+    startDate: new Date(startDate.getTime()) // Clone de la date de départ
+  };
+
   let html = '';
 
   for (let i = 1; i <= weeks; i++) {
@@ -7901,6 +7991,11 @@ function generatePlanWeeks() {
 
   // Générer aussi la version mobile
   generatePlanMobile();
+
+  // Rafraîchir les tableaux RPO hebdomadaires si affichés
+  if (typeof refreshWeeklyTables === 'function') {
+    refreshWeeklyTables();
+  }
 }
 
 // Générer la version mobile (cartes) du plan d'affaire
@@ -12077,6 +12172,836 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <!-- Entrepreneur Selector - Pour coaches ET direction -->
+<style>
+  /* Custom scrollbar pour le modal RPO */
+  #incomplete-weeks-list::-webkit-scrollbar,
+  #quick-fill-form::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  #incomplete-weeks-list::-webkit-scrollbar-track,
+  #quick-fill-form::-webkit-scrollbar-track {
+    background: rgba(30, 41, 59, 0.3);
+    border-radius: 3px;
+  }
+
+  #incomplete-weeks-list::-webkit-scrollbar-thumb,
+  #quick-fill-form::-webkit-scrollbar-thumb {
+    background: rgba(96, 165, 250, 0.5);
+    border-radius: 3px;
+  }
+
+  #incomplete-weeks-list::-webkit-scrollbar-thumb:hover,
+  #quick-fill-form::-webkit-scrollbar-thumb:hover {
+    background: rgba(96, 165, 250, 0.7);
+  }
+</style>
+
+<!-- Modal Pop-up Notifications RPO -->
+<div id="rpo-notifications-modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.85); z-index: 10000; align-items: center; justify-content: center;">
+  <div class="stats-modal-content" style="max-width: 1400px; width: 95%; height: 650px; background: var(--bg-card, #1e293b); border-radius: 1.5rem; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column;">
+    <!-- Header du modal -->
+    <div class="stats-modal-header" style="padding: 1rem 1.5rem; border-bottom: 1px solid rgba(71, 85, 105, 0.3); background: rgba(15, 23, 42, 0.5); border-radius: 1.5rem 1.5rem 0 0; flex-shrink: 0;">
+      <h2 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-light); display: flex; align-items: center;">
+        <i class="fas fa-exclamation-triangle" style="color: #ef4444; margin-right: 0.5rem;"></i>
+        Données manquantes - Remplissez tous les champs
+      </h2>
+    </div>
+
+    <!-- Contenu du modal -->
+    <div class="stats-modal-body" style="padding: 1rem 1.5rem; flex: 1; display: flex; flex-direction: column;">
+      <!-- Contenu en 2 colonnes -->
+      <div style="display: grid; grid-template-columns: 320px 1fr; gap: 1.25rem; flex: 1; overflow: hidden;">
+        <!-- Colonne gauche: Liste des semaines -->
+        <div style="display: flex; flex-direction: column; min-height: 0;">
+          <h3 style="font-size: 0.875rem; font-weight: 600; color: var(--text-gray); margin: 0 0 0.5rem 0; text-transform: uppercase; letter-spacing: 0.5px;">
+            <i class="fas fa-list-ul" style="margin-right: 0.375rem;"></i>
+            Semaines à compléter
+          </h3>
+          <div id="incomplete-weeks-list" style="overflow-y: auto; flex: 1; padding-right: 0.5rem;"></div>
+        </div>
+
+        <!-- Colonne droite: Formulaire -->
+        <div style="display: flex; flex-direction: column; min-height: 0;">
+          <h3 style="font-size: 0.875rem; font-weight: 600; color: var(--text-gray); margin: 0 0 0.5rem 0; text-transform: uppercase; letter-spacing: 0.5px;">
+            <i class="fas fa-edit" style="margin-right: 0.375rem;"></i>
+            Formulaire de saisie
+          </h3>
+          <div id="quick-fill-form" style="overflow-y: auto; flex: 1; padding-right: 0.5rem;">
+            <div id="quick-fill-inputs"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bouton d'enregistrement -->
+      <div style="display: flex; justify-content: flex-end; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(51, 65, 85, 0.3);">
+        <button class="btn-primary" id="save-rpo-btn" onclick="saveQuickFillData()" disabled style="opacity: 0.5; cursor: not-allowed;">
+          <i class="fas fa-save"></i>
+          Enregistrer et accéder au RPO
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== FONCTIONS POUR LE MODAL DE NOTIFICATIONS RPO =====
+
+// Fermer le modal
+function closeNotificationsModal() {
+  const modal = document.getElementById('rpo-notifications-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+
+  // Débloquer le contenu RPO
+  const rpoContent = document.querySelector('.w-full');
+  if (rpoContent) {
+    rpoContent.style.filter = 'none';
+    rpoContent.style.pointerEvents = 'auto';
+  }
+}
+
+// Afficher le modal avec les semaines incomplètes
+function showNotificationsModal() {
+  // Combiner les semaines incomplètes des deux sources
+  const allIncompleteWeeks = [];
+
+  // Ajouter les semaines avec H Marketing manquant
+  if (window.incompleteObjectifsWeeks) {
+    window.incompleteObjectifsWeeks.forEach(week => {
+      allIncompleteWeeks.push({
+        ...week,
+        type: 'marketing',
+        label: 'H Marketing Visé'
+      });
+    });
+  }
+
+  // Ajouter les semaines avec Prod Horaire manquant (à partir de incompleteResumeWeeks)
+  if (window.incompleteResumeWeeks) {
+    window.incompleteResumeWeeks.forEach(week => {
+      // Vérifier si cette semaine n'est pas déjà dans la liste
+      const exists = allIncompleteWeeks.some(w =>
+        w.monthIndex === week.monthIndex && w.weekNumber === week.weekNumber
+      );
+      if (!exists) {
+        allIncompleteWeeks.push({
+          ...week,
+          type: 'resume',
+          label: 'Résumé'
+        });
+      } else {
+        // Si la semaine existe déjà, ajouter le type resume
+        const existingWeek = allIncompleteWeeks.find(w =>
+          w.monthIndex === week.monthIndex && w.weekNumber === week.weekNumber
+        );
+        if (existingWeek && existingWeek.type === 'marketing') {
+          existingWeek.type = 'both';
+        }
+      }
+    });
+  }
+
+  if (allIncompleteWeeks.length === 0) {
+    console.log('[RPO NOTIFICATIONS] Aucune semaine incomplète');
+    return;
+  }
+
+  // Générer la liste des semaines
+  generateIncompleteWeeksList(allIncompleteWeeks);
+
+  // Générer les inputs
+  generateQuickFillInputs(allIncompleteWeeks);
+
+  // Bloquer le contenu RPO en arrière-plan
+  const rpoContent = document.querySelector('.w-full');
+  if (rpoContent) {
+    rpoContent.style.filter = 'blur(8px)';
+    rpoContent.style.pointerEvents = 'none';
+  }
+
+  // Afficher le modal
+  const modal = document.getElementById('rpo-notifications-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+
+  console.log('[RPO NOTIFICATIONS] Modal affiché avec', allIncompleteWeeks.length, 'semaines incomplètes');
+}
+
+// Variable globale pour la semaine sélectionnée
+let selectedWeekIndex = 0;
+
+// Calculer les dates de début et fin de semaine + temps écoulé
+function getWeekDates(monthIndex, weekNumber) {
+  const fiscalYearStart = new Date(2025, 11, 1); // 1er décembre 2025
+
+  // Calculer le numéro de semaine global
+  let globalWeekNumber;
+  if (monthIndex === -2) {
+    globalWeekNumber = weekNumber;
+  } else {
+    globalWeekNumber = 13 + (monthIndex * 4) + weekNumber;
+  }
+
+  // Calculer la date de début de la semaine
+  const weekStartDate = new Date(fiscalYearStart);
+  weekStartDate.setDate(fiscalYearStart.getDate() + (globalWeekNumber - 1) * 7);
+
+  // Date de fin (6 jours après le début)
+  const weekEndDate = new Date(weekStartDate);
+  weekEndDate.setDate(weekStartDate.getDate() + 6);
+
+  // Formater les dates
+  const startDay = weekStartDate.getDate();
+  const endDay = weekEndDate.getDate();
+  const monthNames = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+  const monthName = monthNames[weekEndDate.getMonth()];
+
+  // Calculer "il y a X semaines"
+  const today = new Date();
+  const weeksAgo = Math.floor((today - weekEndDate) / (7 * 24 * 60 * 60 * 1000));
+  const timeAgo = weeksAgo === 0 ? 'cette semaine' : weeksAgo === 1 ? 'il y a 1 semaine' : `il y a ${weeksAgo} semaines`;
+
+  return {
+    dateRange: `Du ${startDay}-${endDay} ${monthName}`,
+    timeAgo: timeAgo
+  };
+}
+
+// Générer la liste des semaines incomplètes
+function generateIncompleteWeeksList(weeks) {
+  const container = document.getElementById('incomplete-weeks-list');
+  if (!container) return;
+
+  let html = '<div style="display: flex; flex-direction: column; gap: 0.375rem;">';
+
+  weeks.forEach((week, index) => {
+    const weekKey = `${week.monthIndex}-${week.weekNumber}`;
+    const isValid = window.weekValidation[weekKey];
+    const typeLabel = week.type === 'marketing' ? 'H Marketing' : (week.type === 'resume' ? 'Résumé' : 'Les deux');
+    const dates = getWeekDates(week.monthIndex, week.weekNumber);
+    const isSelected = index === selectedWeekIndex;
+
+    let bgColor, borderColor, iconClass, iconColor;
+
+    if (isValid) {
+      bgColor = 'rgba(16, 185, 129, 0.2)';
+      borderColor = '#10b981';
+      iconClass = 'fa-check-circle';
+      iconColor = '#10b981';
+    } else if (isSelected) {
+      bgColor = 'rgba(59, 130, 246, 0.2)';
+      borderColor = '#3b82f6';
+      iconClass = 'fa-exclamation-circle';
+      iconColor = '#3b82f6';
+    } else {
+      bgColor = 'rgba(239, 68, 68, 0.1)';
+      borderColor = '#ef4444';
+      iconClass = 'fa-exclamation-circle';
+      iconColor = '#ef4444';
+    }
+
+    html += `
+      <div onclick="selectWeek(${index})" style="padding: 0.5rem 0.625rem; background: ${bgColor}; border-left: 3px solid ${borderColor}; border-radius: 0.375rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: all 0.2s;">
+        <i class="fas ${iconClass}" style="color: ${iconColor}; font-size: 0.875rem;"></i>
+        <div style="flex: 1;">
+          <div style="font-weight: 600; color: var(--text-light); font-size: 0.8rem; line-height: 1.2;">${dates.dateRange}</div>
+          <div style="font-size: 0.65rem; color: var(--text-gray); line-height: 1.2; margin-top: 0.125rem;">${dates.timeAgo} • ${typeLabel}</div>
+        </div>
+      </div>
+    `;
+  });
+
+  html += '</div>';
+
+  container.innerHTML = html;
+}
+
+// Sauvegarder les données de la semaine actuelle dans modalWeekData
+function saveCurrentWeekToMemory() {
+  const inputs = document.querySelectorAll('#quick-fill-inputs input[type="text"]');
+  const textareas = document.querySelectorAll('#quick-fill-inputs textarea');
+  const ratingInput = document.getElementById('rating-value');
+
+  if (inputs.length === 0 && textareas.length === 0) return;
+
+  const monthIndex = inputs[0]?.getAttribute('data-month') || textareas[0]?.getAttribute('data-month');
+  const weekNumber = inputs[0]?.getAttribute('data-week') || textareas[0]?.getAttribute('data-week');
+  const weekKey = `${monthIndex}-${weekNumber}`;
+
+  // Sauvegarder dans modalWeekData
+  window.modalWeekData[weekKey] = {
+    monthIndex: parseInt(monthIndex),
+    weekNumber: parseInt(weekNumber),
+    h_marketing: null,
+    probleme: null,
+    focus: null,
+    rating: 0
+  };
+
+  // H Marketing
+  inputs.forEach(input => {
+    const value = input.dataset.value || input.value.replace(/[^\d.-]/g, '');
+    if (value && value !== '') {
+      window.modalWeekData[weekKey].h_marketing = parseFloat(value);
+    }
+  });
+
+  // Textareas
+  textareas.forEach(textarea => {
+    const field = textarea.getAttribute('data-field');
+    if (field === 'probleme') {
+      window.modalWeekData[weekKey].probleme = textarea.value.trim();
+    } else if (field === 'focus') {
+      window.modalWeekData[weekKey].focus = textarea.value.trim();
+    }
+  });
+
+  // Rating
+  if (ratingInput) {
+    window.modalWeekData[weekKey].rating = parseInt(ratingInput.value) || 0;
+  }
+}
+
+// Sélectionner une semaine
+function selectWeek(index) {
+  // Sauvegarder la semaine actuelle avant de changer
+  saveCurrentWeekToMemory();
+
+  selectedWeekIndex = index;
+  const allWeeks = [
+    ...(window.incompleteObjectifsWeeks || []).map(w => ({ ...w, type: 'marketing', label: 'H Marketing Visé' })),
+    ...(window.incompleteResumeWeeks || []).map(w => ({ ...w, type: 'resume', label: 'Résumé' }))
+  ];
+
+  // Recombiner pour gérer les semaines avec les deux types
+  const combinedWeeks = [];
+  allWeeks.forEach(week => {
+    const existing = combinedWeeks.find(w => w.monthIndex === week.monthIndex && w.weekNumber === week.weekNumber);
+    if (!existing) {
+      combinedWeeks.push(week);
+    } else if (existing.type !== week.type) {
+      existing.type = 'both';
+    }
+  });
+
+  generateIncompleteWeeksList(combinedWeeks);
+  generateQuickFillInputs(combinedWeeks);
+
+  // Restaurer les données si elles existent
+  const week = combinedWeeks[index];
+  if (week) {
+    const weekKey = `${week.monthIndex}-${week.weekNumber}`;
+    const savedData = window.modalWeekData[weekKey];
+
+    if (savedData) {
+      // Restaurer H Marketing
+      const hMarketingInput = document.querySelector(`input[data-field="h_marketing"]`);
+      if (hMarketingInput && savedData.h_marketing !== null) {
+        hMarketingInput.value = savedData.h_marketing;
+        hMarketingInput.dataset.value = savedData.h_marketing;
+        formatHMarketingInput(hMarketingInput);
+      }
+
+      // Restaurer Problème
+      const problemeInput = document.querySelector(`textarea[data-field="probleme"]`);
+      if (problemeInput && savedData.probleme) {
+        problemeInput.value = savedData.probleme;
+      }
+
+      // Restaurer Focus
+      const focusInput = document.querySelector(`textarea[data-field="focus"]`);
+      if (focusInput && savedData.focus) {
+        focusInput.value = savedData.focus;
+      }
+
+      // Restaurer Rating
+      const ratingInput = document.getElementById('rating-value');
+      if (ratingInput && savedData.rating > 0) {
+        ratingInput.value = savedData.rating;
+        const stars = document.querySelectorAll('.star-rating');
+        stars.forEach((star, idx) => {
+          if (idx < savedData.rating) {
+            star.style.color = '#fbbf24';
+          } else {
+            star.style.color = '#374151';
+          }
+        });
+      }
+
+      // Revalider
+      validateCurrentWeek();
+    }
+  }
+}
+
+// Valider la semaine actuelle
+function validateCurrentWeek() {
+  const inputs = document.querySelectorAll('#quick-fill-inputs input[type="text"]');
+  const textareas = document.querySelectorAll('#quick-fill-inputs textarea');
+  const ratingInput = document.getElementById('rating-value');
+
+  let isValid = true;
+
+  // Vérifier les inputs (H Marketing Réel)
+  inputs.forEach(input => {
+    const dataValue = input.dataset.value;
+    const value = input.value.replace(/[^\d.-]/g, '');
+    // Valide si dataset.value existe ou si value n'est pas vide
+    if ((!dataValue || dataValue === '') && (!value || value === '')) {
+      isValid = false;
+    }
+  });
+
+  // Vérifier les textareas
+  textareas.forEach(textarea => {
+    if (!textarea.value || textarea.value === '') {
+      isValid = false;
+    }
+  });
+
+  // Vérifier le rating
+  if (ratingInput && parseInt(ratingInput.value) === 0) {
+    isValid = false;
+  }
+
+  // Stocker l'état de validation
+  if (inputs.length > 0 || textareas.length > 0) {
+    const monthIndex = inputs[0]?.getAttribute('data-month') || textareas[0]?.getAttribute('data-month');
+    const weekNumber = inputs[0]?.getAttribute('data-week') || textareas[0]?.getAttribute('data-week');
+    const weekKey = `${monthIndex}-${weekNumber}`;
+    window.weekValidation[weekKey] = isValid;
+  }
+
+  // Sauvegarder automatiquement dans modalWeekData
+  saveCurrentWeekToMemory();
+
+  // Mettre à jour l'affichage de la liste
+  updateWeekListColors();
+
+  // Activer/désactiver le bouton
+  updateSaveButton();
+}
+
+// Mettre à jour les couleurs de la liste
+function updateWeekListColors() {
+  const weekItems = document.querySelectorAll('#incomplete-weeks-list > div > div');
+  const allWeeks = [
+    ...(window.incompleteObjectifsWeeks || []).map(w => ({ ...w, type: 'marketing' })),
+    ...(window.incompleteResumeWeeks || []).map(w => ({ ...w, type: 'resume' }))
+  ];
+
+  const combinedWeeks = [];
+  allWeeks.forEach(week => {
+    const existing = combinedWeeks.find(w => w.monthIndex === week.monthIndex && w.weekNumber === week.weekNumber);
+    if (!existing) {
+      combinedWeeks.push(week);
+    } else if (existing.type !== week.type) {
+      existing.type = 'both';
+    }
+  });
+
+  weekItems.forEach((item, index) => {
+    const week = combinedWeeks[index];
+    if (!week) return;
+
+    const weekKey = `${week.monthIndex}-${week.weekNumber}`;
+    const isValid = window.weekValidation[weekKey];
+
+    if (isValid) {
+      item.style.background = 'rgba(16, 185, 129, 0.2)';
+      item.style.borderLeft = '3px solid #10b981';
+      const icon = item.querySelector('i');
+      if (icon) {
+        icon.className = 'fas fa-check-circle';
+        icon.style.color = '#10b981';
+      }
+    } else if (index === selectedWeekIndex) {
+      item.style.background = 'rgba(59, 130, 246, 0.2)';
+      item.style.borderLeft = '3px solid #3b82f6';
+    } else {
+      item.style.background = 'rgba(239, 68, 68, 0.1)';
+      item.style.borderLeft = '3px solid #ef4444';
+    }
+  });
+}
+
+// Activer/désactiver le bouton (vérifier TOUTES les semaines)
+function updateSaveButton() {
+  const saveBtn = document.getElementById('save-rpo-btn');
+  if (!saveBtn) return;
+
+  // Récupérer toutes les semaines incomplètes
+  const allWeeks = [
+    ...(window.incompleteObjectifsWeeks || []).map(w => ({ ...w, type: 'marketing' })),
+    ...(window.incompleteResumeWeeks || []).map(w => ({ ...w, type: 'resume' }))
+  ];
+
+  const combinedWeeks = [];
+  allWeeks.forEach(week => {
+    const existing = combinedWeeks.find(w => w.monthIndex === week.monthIndex && w.weekNumber === week.weekNumber);
+    if (!existing) {
+      combinedWeeks.push(week);
+    } else if (existing.type !== week.type) {
+      existing.type = 'both';
+    }
+  });
+
+  // Vérifier si TOUTES les semaines sont validées
+  const allValid = combinedWeeks.every(week => {
+    const weekKey = `${week.monthIndex}-${week.weekNumber}`;
+    return window.weekValidation[weekKey] === true;
+  });
+
+  if (allValid && combinedWeeks.length > 0) {
+    saveBtn.disabled = false;
+    saveBtn.style.opacity = '1';
+    saveBtn.style.cursor = 'pointer';
+  } else {
+    saveBtn.disabled = true;
+    saveBtn.style.opacity = '0.5';
+    saveBtn.style.cursor = 'not-allowed';
+  }
+}
+
+// Fonctions pour le système d'étoiles
+function setRating(star) {
+  const rating = parseInt(star.getAttribute('data-rating'));
+  const container = star.parentElement;
+  const hiddenInput = document.getElementById('rating-value');
+
+  hiddenInput.value = rating;
+
+  // Mettre à jour les couleurs des étoiles
+  const stars = container.querySelectorAll('.star-rating');
+  stars.forEach((s, index) => {
+    if (index < rating) {
+      s.style.color = '#fbbf24';
+    } else {
+      s.style.color = '#374151';
+    }
+  });
+
+  // Valider après le rating
+  validateCurrentWeek();
+}
+
+function updateStarColors(container) {
+  const hiddenInput = document.getElementById('rating-value');
+  const rating = parseInt(hiddenInput.value);
+  const stars = container.querySelectorAll('.star-rating');
+
+  stars.forEach((s, index) => {
+    if (index < rating) {
+      s.style.color = '#fbbf24';
+    } else {
+      s.style.color = '#374151';
+    }
+  });
+}
+
+// Fonctions de formatage pour H Marketing Réel
+function formatHMarketingInput(input) {
+  const value = input.value.replace(/[^\d.-]/g, '');
+  const numValue = parseFloat(value);
+
+  if (!isNaN(numValue) && numValue >= 0) {
+    // Stocker la valeur numérique
+    input.dataset.value = numValue;
+
+    // Formater: enlever .0 si entier, sinon .toFixed(1)
+    const formatted = numValue % 1 === 0 ? numValue.toFixed(0) : numValue.toFixed(1);
+    input.value = formatted + ' h';
+  } else if (value === '' || value === '-') {
+    input.value = '';
+    input.dataset.value = '';
+  }
+
+  // Valider après formatage
+  validateCurrentWeek();
+}
+
+function unfocusHMarketingInput(input) {
+  // Enlever le formatage pour permettre l'édition
+  const value = input.dataset.value || input.value.replace(/[^\d.-]/g, '');
+  if (value && value !== '') {
+    input.value = value;
+  }
+}
+
+// Stocker l'état de validation de chaque semaine
+window.weekValidation = {};
+
+// Stocker temporairement les données de chaque semaine avant sauvegarde
+window.modalWeekData = {};
+
+// Générer les inputs pour le remplissage rapide (seulement la semaine sélectionnée)
+function generateQuickFillInputs(weeks) {
+  const container = document.getElementById('quick-fill-inputs');
+  if (!container) return;
+
+  const week = weeks[selectedWeekIndex];
+  if (!week) return;
+
+  const dates = getWeekDates(week.monthIndex, week.weekNumber);
+  const weekKey = `${week.monthIndex}-${week.weekNumber}`;
+
+  let html = `
+    <div style="padding: 0.75rem; background: rgba(59, 130, 246, 0.1); border-radius: 0.5rem; border: 2px solid rgba(59, 130, 246, 0.3);">
+      <div style="font-weight: 600; color: var(--text-light); margin-bottom: 0.75rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.375rem;">
+        <i class="fas fa-calendar-alt" style="color: #3b82f6; font-size: 0.875rem;"></i>
+        ${dates.dateRange} (${dates.timeAgo})
+      </div>
+  `;
+
+  // H Marketing Réel
+  if (week.type === 'marketing' || week.type === 'both') {
+    html += `
+      <div style="margin-bottom: 0.625rem;">
+        <label style="display: block; font-size: 0.7rem; font-weight: 600; color: var(--text-gray); margin-bottom: 0.25rem;">
+          <i class="fas fa-bullseye" style="margin-right: 0.25rem; color: #60a5fa;"></i>
+          H Marketing Réel
+        </label>
+        <input type="text"
+               data-week-index="${selectedWeekIndex}"
+               data-field="h_marketing"
+               data-month="${week.monthIndex}"
+               data-week="${week.weekNumber}"
+               oninput="validateCurrentWeek()"
+               onblur="formatHMarketingInput(this)"
+               onfocus="unfocusHMarketingInput(this)"
+               placeholder="Ex: 5.5"
+               style="width: 100%; padding: 0.5rem; background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.5); border-radius: 0.375rem; color: var(--text-light); font-size: 0.8rem;">
+      </div>
+    `;
+  }
+
+  // Résumé (Problème de la semaine, Focus et Rating)
+  if (week.type === 'resume' || week.type === 'both') {
+    html += `
+      <div style="margin-bottom: 0.625rem;">
+        <label style="display: block; font-size: 0.7rem; font-weight: 600; color: var(--text-gray); margin-bottom: 0.25rem;">
+          <i class="fas fa-exclamation-triangle" style="margin-right: 0.25rem; color: #f59e0b;"></i>
+          Problème de la semaine
+        </label>
+        <textarea
+          data-week-index="${selectedWeekIndex}"
+          data-field="probleme"
+          data-month="${week.monthIndex}"
+          data-week="${week.weekNumber}"
+          oninput="validateCurrentWeek()"
+          placeholder="Décrivez le problème de la semaine..."
+          rows="2"
+          style="width: 100%; padding: 0.5rem; background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.5); border-radius: 0.375rem; color: var(--text-light); font-size: 0.8rem; resize: none;"></textarea>
+      </div>
+
+      <div style="margin-bottom: 0.625rem;">
+        <label style="display: block; font-size: 0.7rem; font-weight: 600; color: var(--text-gray); margin-bottom: 0.25rem;">
+          <i class="fas fa-crosshairs" style="margin-right: 0.25rem; color: #10b981;"></i>
+          Focus
+        </label>
+        <textarea
+          data-week-index="${selectedWeekIndex}"
+          data-field="focus"
+          data-month="${week.monthIndex}"
+          data-week="${week.weekNumber}"
+          oninput="validateCurrentWeek()"
+          placeholder="Sur quoi allez-vous vous concentrer..."
+          rows="2"
+          style="width: 100%; padding: 0.5rem; background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(71, 85, 105, 0.5); border-radius: 0.375rem; color: var(--text-light); font-size: 0.8rem; resize: none;"></textarea>
+      </div>
+
+      <div style="margin-bottom: 0;">
+        <label style="display: block; font-size: 0.7rem; font-weight: 600; color: var(--text-gray); margin-bottom: 0.375rem;">
+          <i class="fas fa-star" style="margin-right: 0.25rem; color: #fbbf24;"></i>
+          Évaluation
+        </label>
+        <div class="star-rating-container" data-month="${week.monthIndex}" data-week="${week.weekNumber}" style="display: flex; gap: 0.375rem; font-size: 1.25rem;">
+          <i class="fas fa-star star-rating" data-rating="1" style="color: #374151; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#fbbf24'" onmouseout="updateStarColors(this.parentElement)" onclick="setRating(this)"></i>
+          <i class="fas fa-star star-rating" data-rating="2" style="color: #374151; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#fbbf24'" onmouseout="updateStarColors(this.parentElement)" onclick="setRating(this)"></i>
+          <i class="fas fa-star star-rating" data-rating="3" style="color: #374151; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#fbbf24'" onmouseout="updateStarColors(this.parentElement)" onclick="setRating(this)"></i>
+          <i class="fas fa-star star-rating" data-rating="4" style="color: #374151; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#fbbf24'" onmouseout="updateStarColors(this.parentElement)" onclick="setRating(this)"></i>
+          <i class="fas fa-star star-rating" data-rating="5" style="color: #374151; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#fbbf24'" onmouseout="updateStarColors(this.parentElement)" onclick="setRating(this)"></i>
+        </div>
+        <input type="hidden" id="rating-value" data-week-index="${selectedWeekIndex}" data-field="rating" data-month="${week.monthIndex}" data-week="${week.weekNumber}" value="0">
+      </div>
+    `;
+  }
+
+  html += '</div>';
+
+  container.innerHTML = html;
+  validateCurrentWeek();
+}
+
+// Sauvegarder les données du formulaire rapide
+async function saveQuickFillData() {
+  // Sauvegarder la semaine actuelle dans modalWeekData avant de commencer
+  saveCurrentWeekToMemory();
+
+  // Vérifier que toutes les semaines dans modalWeekData sont valides
+  const weekKeys = Object.keys(window.modalWeekData || {});
+  if (weekKeys.length === 0) {
+    alert('⚠️ Aucune donnée à sauvegarder');
+    return;
+  }
+
+  console.log('[RPO NOTIFICATIONS] Sauvegarde de', weekKeys.length, 'semaine(s)');
+
+  // Désactiver le bouton de sauvegarde pendant le traitement
+  const saveBtn = document.getElementById('save-rpo-btn');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
+  }
+
+  // Compteurs pour le suivi
+  let successCount = 0;
+  let failCount = 0;
+  const savedMonths = new Set();
+
+  // Boucle sur toutes les semaines dans modalWeekData
+  for (const weekKey of weekKeys) {
+    const weekData = window.modalWeekData[weekKey];
+    if (!weekData) continue;
+
+    const { monthIndex, weekNumber, h_marketing, probleme, focus, rating } = weekData;
+
+    // Préparer les données pour cette semaine
+    const data = {
+      h_marketing: h_marketing !== null && h_marketing !== undefined ? h_marketing : '-',
+      estimation: 0,
+      contract: 0,
+      dollar: 0,
+      prod_horaire: 0,
+      rating: rating || 0,
+      commentaire: ''
+    };
+
+    // Construire le commentaire
+    let problemeText = probleme && probleme.trim() !== '' ? probleme.trim() : '-';
+    let focusText = focus && focus.trim() !== '' ? focus.trim() : '-';
+    data.commentaire = `Problème: ${problemeText} | Focus: ${focusText}`;
+
+    // Sauvegarder cette semaine via l'API
+    try {
+      const response = await fetch(`/api/rpo/${username}/weekly/${monthIndex}/${weekNumber}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        console.error('[RPO NOTIFICATIONS] Erreur sauvegarde semaine', weekNumber, ':', response.status);
+        failCount++;
+        continue;
+      }
+
+      // Mettre à jour les données globales
+      if (!window.weeklyData[String(monthIndex)]) {
+        window.weeklyData[String(monthIndex)] = {};
+      }
+      window.weeklyData[String(monthIndex)][String(weekNumber)] = data;
+
+      console.log('[RPO NOTIFICATIONS] Semaine sauvegardée:', monthIndex, weekNumber);
+      successCount++;
+      savedMonths.add(monthIndex);
+
+    } catch (error) {
+      console.error('[RPO NOTIFICATIONS] Erreur sauvegarde semaine', weekNumber, ':', error);
+      failCount++;
+    }
+  }
+
+  // Recharger les données pour tous les mois affectés
+  if (typeof loadWeeklyDataForMonth === 'function') {
+    for (const monthIndex of savedMonths) {
+      await loadWeeklyDataForMonth(monthIndex);
+    }
+  }
+
+  // Rafraîchir les badges
+  updateIncompleteObjectifsBadge();
+  updateIncompleteResumeBadge();
+  updateMonthDropdownBadges();
+  updateTotalBadge();
+
+  // Recalculer les totaux
+  if (typeof calculateAllMonthlyTotalsFromWeekly === 'function') {
+    calculateAllMonthlyTotalsFromWeekly();
+  }
+
+  // Mettre à jour le graphique
+  if (typeof updateAnnualChart === 'function') {
+    updateAnnualChart();
+  }
+
+  console.log('[RPO NOTIFICATIONS] Sauvegarde terminée:', {
+    succès: successCount,
+    échecs: failCount,
+    total: weekKeys.length
+  });
+
+  // Vider modalWeekData et weekValidation après la sauvegarde
+  window.modalWeekData = {};
+  window.weekValidation = {};
+
+  // Vérifier s'il reste des semaines incomplètes
+  const totalIncomplete = (window.incompleteObjectifsWeeks?.length || 0) + (window.incompleteResumeWeeks?.length || 0);
+
+  console.log('[RPO NOTIFICATIONS] Semaines incomplètes après sauvegarde:', {
+    objectifs: window.incompleteObjectifsWeeks?.length || 0,
+    resume: window.incompleteResumeWeeks?.length || 0,
+    total: totalIncomplete
+  });
+
+  // Réactiver le bouton
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '<i class="fas fa-save"></i> Enregistrer et accéder au RPO';
+  }
+
+  if (failCount > 0) {
+    alert(`⚠️ ${successCount} semaine(s) enregistrée(s), ${failCount} erreur(s)`);
+    return;
+  }
+
+  if (totalIncomplete === 0) {
+    // Plus de semaines incomplètes, débloquer et fermer
+    const rpoContent = document.querySelector('.w-full');
+    if (rpoContent) {
+      rpoContent.style.filter = 'none';
+      rpoContent.style.pointerEvents = 'auto';
+    }
+    closeNotificationsModal();
+    alert(`✅ Toutes les données ont été enregistrées ! (${successCount} semaine(s)) Vous pouvez maintenant accéder au RPO.`);
+  } else {
+    // Il reste des semaines incomplètes, régénérer le modal
+    showNotificationsModal();
+    alert(`✅ ${successCount} semaine(s) enregistrée(s) ! Il reste ${totalIncomplete} semaine(s) à compléter.`);
+  }
+}
+
+// Note: Le modal est maintenant affiché automatiquement depuis updateIncompleteWeeksBadge()
+// Plus besoin d'attendre un timeout arbitraire
+
+// Mettre à jour le badge dans le menu latéral
+function updateMenuBadge(count) {
+  // Envoyer un message au parent pour mettre à jour le badge
+  if (parent) {
+    parent.postMessage({
+      type: 'update-rpo-badge',
+      count: count
+    }, '*');
+    console.log('[RPO NOTIFICATIONS] Message envoyé au parent pour mettre à jour le badge:', count);
+  }
+}
+
+// Le modal s'affiche maintenant automatiquement via updateIncompleteWeeksBadge()
+</script>
+
 <script>
 (function() {
   const userRole = localStorage.getItem('userRole');

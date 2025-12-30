@@ -3289,12 +3289,13 @@
             <span class="nav-label">Dashboard</span>
             <span class="tooltip">Dashboard</span>
           </a>
-          <a href="#/rpo" class="nav-item" data-page="rpo" id="nav-rpo">
+          <a href="#/rpo" class="nav-item" data-page="rpo" id="nav-rpo" style="position: relative;">
             <span class="nav-icon">
               <i class="fas fa-calendar-alt"></i>
             </span>
             <span class="nav-label">RPO</span>
             <span class="tooltip">RPO</span>
+            <span id="rpo-notification-badge" class="hidden" style="position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; border-radius: 50%; min-width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; padding: 0 5px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); z-index: 100;">0</span>
           </a>
           <a href="#/centralevue" class="nav-item" data-page="centralevue">
             <span class="nav-icon">
@@ -4181,7 +4182,14 @@
 
             const page = link.dataset.page;
             if (page) {
-              location.hash = `#/${page}`;
+              const currentHash = location.hash.slice(2);
+              // Si le hash est déjà sur cette page, forcer le chargement
+              if (currentHash === page) {
+                console.log(`[APPPC] Hash déjà sur ${page}, chargement forcé`);
+                this.loadPage(page);
+              } else {
+                location.hash = `#/${page}`;
+              }
             }
           });
         });
@@ -4255,6 +4263,24 @@
             if (gqpIframe && gqpIframe.src) {
               gqpIframe.src = gqpIframe.src;
               console.log('[APPPC] iframe GQP rechargée');
+            }
+          }
+          // Mettre à jour le badge RPO depuis l'iframe
+          if (event.data && event.data.type === 'update-rpo-badge') {
+            console.log('[APPPC] Mise à jour du badge RPO:', event.data.count);
+            const badge = document.getElementById('rpo-notification-badge');
+            if (badge) {
+              const count = event.data.count;
+              if (count > 0) {
+                badge.textContent = count;
+                badge.classList.remove('hidden');
+                console.log('[APPPC] Badge RPO mis à jour et affiché:', count);
+              } else {
+                badge.classList.add('hidden');
+                console.log('[APPPC] Badge RPO caché (count = 0)');
+              }
+            } else {
+              console.warn('[APPPC] Badge RPO non trouvé dans le DOM');
             }
           }
         });

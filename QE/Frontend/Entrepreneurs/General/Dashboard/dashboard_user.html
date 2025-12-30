@@ -4092,6 +4092,7 @@
 
           return {
             username: entrepreneur.username,
+            loginUsername: loginUsername, // Ajouter le loginUsername pour le modal
             photoUrl: photoUrl,
             grade: gradeMetier,
             gradeGamification: gradeGamification
@@ -4100,6 +4101,7 @@
           error(`[ERROR] Erreur chargement données pour ${entrepreneur.username}:`, error);
           return {
             username: entrepreneur.username,
+            loginUsername: loginUsername, // Ajouter le loginUsername pour le modal
             photoUrl: null,
             grade: 'recrue',
             gradeGamification: 'Démarrage'
@@ -4111,15 +4113,18 @@
       const photoMap = {};
       const gradeMap = {};
       const gradeGamificationMap = {};
+      const loginUsernameMap = {}; // Map pour stocker login_username
       photosGrades.forEach(p => {
         photoMap[p.username] = p.photoUrl;
         gradeMap[p.username] = p.grade;
         gradeGamificationMap[p.username] = p.gradeGamification;
-        log(`📸 ${p.username}: photo=${p.photoUrl ? 'oui' : 'non'}, gradeMetier=${p.grade}, gradeGamif=${p.gradeGamification}`);
+        loginUsernameMap[p.username] = p.loginUsername; // Stocker le loginUsername
+        log(`📸 ${p.username}: photo=${p.photoUrl ? 'oui' : 'non'}, gradeMetier=${p.grade}, gradeGamif=${p.gradeGamification}, loginUsername=${p.loginUsername}`);
       });
       log('🗺️ Photo map final:', photoMap);
       log('🎖️ Grade métier map final:', gradeMap);
       log('🏆 Grade gamification map final:', gradeGamificationMap);
+      log('🔑 Login username map final:', loginUsernameMap);
 
       // Mettre à jour classementData avec les grades
       classementData = classementData.map(e => ({
@@ -4133,9 +4138,19 @@
       // Stocker les données avec photos pour le modal mobile
       currentClassementData = data.map(e => ({
         ...e,
+        login_username: loginUsernameMap[e.username] || e.username, // Ajouter login_username
         photoUrl: photoMap[e.username] || null,
         grade: gradeMap[e.username] || e.grade || 'recrue'
       }));
+
+      // Log pour vérifier les données
+      log('[DEBUG] currentClassementData créé avec photos:',
+        currentClassementData.slice(0, 3).map(e => ({
+          username: e.username,
+          login_username: e.login_username,
+          photoUrl: e.photoUrl
+        }))
+      );
 
       tbody.innerHTML = data.map((entrepreneur, index) => {
         // Médailles pour les 3 premières positions
@@ -4165,7 +4180,7 @@
         const dollarsProduit = Math.round(entrepreneur.montant_produit || 0);
 
         return `
-          <tr class="border-b hover:bg-opacity-5 hover:bg-blue-500 transition-colors" style="border-color: var(--border-dark); cursor: pointer;" onclick="openUserStatsModal('${entrepreneur.username}')">
+          <tr class="border-b hover:bg-opacity-5 hover:bg-blue-500 transition-colors" style="border-color: var(--border-dark); cursor: pointer;" onclick="showEntrepreneurStats(${index})">
             <td class="py-4 px-4 text-center" style="border-right: 1px solid var(--border-dark);">
               ${rangDisplay}
             </td>
@@ -4219,8 +4234,14 @@
           ? `<img src="${photoUrl}" alt="Photo de profil" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border-dark);">`
           : `<div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #2586fd 0%, #b2c5fbc7 100%); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-dark);"><i class="fas fa-user" style="color: white; font-size: 14px;"></i></div>`;
 
+        // Badge "Moi" si c'est l'utilisateur actuel
+        const isCurrentUser = entrepreneur.username === window.username;
+        const meBadge = isCurrentUser
+          ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.125rem 0.5rem; background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: white; font-size: 0.65rem; font-weight: 700; border-radius: 12px; margin-left: 0.5rem; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); letter-spacing: 0.5px;"><i class="fas fa-user-circle" style="font-size: 0.7rem;"></i>MOI</span>`
+          : '';
+
         return `
-          <div class="classement-card" onclick="showEntrepreneurStats(${index})">
+          <div class="classement-card" onclick="showEntrepreneurStats(${index})" style="${isCurrentUser ? 'background: rgba(96, 165, 250, 0.08); border-color: rgba(96, 165, 250, 0.3);' : ''}">
             <div class="classement-card-rang">
               ${rangDisplay}
             </div>
@@ -4228,7 +4249,7 @@
               ${profilePhotoHTML}
             </div>
             <div class="classement-card-info">
-              <div class="classement-card-name">${entrepreneur.username}</div>
+              <div class="classement-card-name">${entrepreneur.username}${meBadge}</div>
             </div>
           </div>
         `;
@@ -4243,9 +4264,20 @@
       const entrepreneur = currentClassementData[index];
       if (!entrepreneur) return;
 
+      // Log pour déboguer
+      log('[MODAL DEBUG] Entrepreneur cliqué:', {
+        username: entrepreneur.username,
+        login_username: entrepreneur.login_username,
+        photoUrl: entrepreneur.photoUrl
+      });
+
       // Si desktop, ouvrir le modal complet de statistiques
       if (window.innerWidth > 768) {
-        openUserStatsModal(entrepreneur.username);
+        // Utiliser login_username si disponible, sinon username
+        const targetUsername = entrepreneur.login_username || entrepreneur.username;
+        // Passer aussi la photoUrl déjà chargée
+        log('[MODAL DEBUG] Passage au modal - username:', targetUsername, 'photoUrl:', entrepreneur.photoUrl);
+        openUserStatsModal(targetUsername, entrepreneur.photoUrl);
         return;
       }
 
@@ -4359,11 +4391,11 @@
     // ================================================================
 
     // Fonction pour ouvrir le modal de stats d'un utilisateur
-    async function openUserStatsModal(username) {
+    async function openUserStatsModal(username, photoUrl = null) {
       // UTILISER LE MODAL D'APPPC.HTML (même modal que les statistiques du menu)
       if (parent && parent.openStatsModal) {
-        // Appeler la fonction du parent (apppc.html)
-        await parent.openStatsModal(username);
+        // Appeler la fonction du parent (apppc.html) avec la photoUrl
+        await parent.openStatsModal(username, photoUrl);
       } else if (window.openStatsModal) {
         // Si pas dans une iframe, utiliser la fonction locale
         await window.openStatsModal(username);
@@ -4408,8 +4440,8 @@
     }
 
     // Fonction pour peupler le modal avec les données
-    async function populateUserStatsModal(profile, username) {
-      log('Peuplement du modal avec:', { profile, username });
+    async function populateUserStatsModal(profile, username, preloadedPhotoUrl = null) {
+      log('Peuplement du modal avec:', { profile, username, preloadedPhotoUrl });
 
       const gradeImageMap = {
         'Démarrage': 'https://i.ibb.co/v6PRQ6RX/2.png',
@@ -4435,18 +4467,44 @@
       document.getElementById('user-stats-username').textContent = username || 'Utilisateur';
 
       // Photo de profil
-      try {
-        const photoResponse = await fetch(`/api/get-profile-photo/${username}`);
-        const photoData = await photoResponse.json();
-        const statsPhoto = document.getElementById('user-stats-profile-photo');
-        if (photoData.success && photoData.photoUrl) {
-          statsPhoto.src = photoData.photoUrl;
-        } else {
+      const statsPhoto = document.getElementById('user-stats-profile-photo');
+
+      // Log pour déboguer
+      log('[DASHBOARD DEBUG] populateUserStatsModal - username:', username, 'preloadedPhotoUrl:', preloadedPhotoUrl);
+
+      // Si une photoUrl préchargée est fournie, l'utiliser directement
+      if (preloadedPhotoUrl) {
+        log('[DASHBOARD DEBUG] Utilisation de la photo préchargée:', preloadedPhotoUrl);
+        statsPhoto.src = preloadedPhotoUrl;
+      } else {
+        log('[DASHBOARD DEBUG] Pas de photo préchargée, chargement via API');
+        // Sinon, charger via l'API
+        try {
+          const photoResponse = await fetch(`/api/get-profile-photo/${username}`);
+
+          if (photoResponse.ok) {
+            const photoData = await photoResponse.json();
+            // Vérifier si photoUrl existe dans la réponse
+            if (photoData && photoData.photoUrl) {
+              statsPhoto.src = photoData.photoUrl;
+            } else {
+              // Fallback sur SVG avec initiale
+              const initial = username.charAt(0).toUpperCase();
+              statsPhoto.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+            }
+          } else {
+            // Erreur de réponse, utiliser le fallback
+            const initial = username.charAt(0).toUpperCase();
+            statsPhoto.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+          }
+        } catch (error) {
+          error('Erreur photo:', error);
+          // En cas d'erreur, utiliser le fallback
           const initial = username.charAt(0).toUpperCase();
-          statsPhoto.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+          if (statsPhoto) {
+            statsPhoto.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+          }
         }
-      } catch (error) {
-        error('Erreur photo:', error);
       }
 
       // Nom du grade dans la section du haut
@@ -8283,6 +8341,7 @@ async function renderCoachClassementData(data) {
 
       return {
         username: entrepreneur.username,
+        loginUsername: loginUsername, // Ajouter loginUsername
         photoUrl: photoUrl,
         grade: grade
       };
@@ -8290,6 +8349,7 @@ async function renderCoachClassementData(data) {
       error(`[ERROR] Erreur chargement données pour ${entrepreneur.username}:`, error);
       return {
         username: entrepreneur.username,
+        loginUsername: loginUsername, // Ajouter loginUsername
         photoUrl: null,
         grade: 'Démarrage'
       };
@@ -8299,11 +8359,29 @@ async function renderCoachClassementData(data) {
   const photosGrades = await Promise.all(photoGradePromises);
   const photoMap = {};
   const gradeMap = {};
+  const loginUsernameMap = {}; // Map pour login_username
   photosGrades.forEach(p => {
     photoMap[p.username] = p.photoUrl;
     gradeMap[p.username] = p.grade;
-    log(`📸 ${p.username}: photo=${p.photoUrl ? 'oui' : 'non'}, grade=${p.grade}`);
+    loginUsernameMap[p.username] = p.loginUsername; // Stocker loginUsername
+    log(`📸 ${p.username}: photo=${p.photoUrl ? 'oui' : 'non'}, grade=${p.grade}, loginUsername=${p.loginUsername}`);
   });
+
+  // Mettre à jour currentClassementData avec les photos (IMPORTANT pour le modal!)
+  currentClassementData = data.map(e => ({
+    ...e,
+    login_username: loginUsernameMap[e.username] || e.username,
+    photoUrl: photoMap[e.username] || null,
+    grade: gradeMap[e.username] || e.grade || 'Démarrage'
+  }));
+
+  log('[DEBUG COACH] currentClassementData mis à jour avec photos:',
+    currentClassementData.slice(0, 3).map(e => ({
+      username: e.username,
+      login_username: e.login_username,
+      photoUrl: e.photoUrl
+    }))
+  );
 
   // Obtenir le username de l'utilisateur connecté
   const currentUsername = localStorage.getItem('username');
@@ -8363,7 +8441,7 @@ async function renderCoachClassementData(data) {
     const dollarsProduit = Math.round(entrepreneur.montant_produit || 0);
 
     return separatorRow + `
-      <tr class="border-b hover:bg-opacity-5 hover:bg-blue-500 transition-colors" style="border-color: var(--border-dark); cursor: pointer;" onclick="openUserStatsModal('${entrepreneur.username}')">
+      <tr class="border-b hover:bg-opacity-5 hover:bg-blue-500 transition-colors" style="border-color: var(--border-dark); cursor: pointer;" onclick="showEntrepreneurStats(${index})">
         <td class="py-2 px-3 text-center" style="border-right: 1px solid var(--border-dark);">
           ${rangDisplay}
         </td>
@@ -8430,8 +8508,14 @@ async function renderCoachClassementData(data) {
       ? `<img src="${photoUrl}" alt="Photo de profil" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border-dark);">`
       : `<div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #2586fd 0%, #b2c5fbc7 100%); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-dark);"><i class="fas fa-user" style="color: white; font-size: 14px;"></i></div>`;
 
+    // Badge "Moi" si c'est l'utilisateur actuel
+    const isCurrentUser = entrepreneur.username === window.username;
+    const meBadge = isCurrentUser
+      ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.125rem 0.5rem; background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: white; font-size: 0.65rem; font-weight: 700; border-radius: 12px; margin-left: 0.5rem; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); letter-spacing: 0.5px;"><i class="fas fa-user-circle" style="font-size: 0.7rem;"></i>MOI</span>`
+      : '';
+
     return separatorDiv + `
-      <div class="classement-card" onclick="showEntrepreneurStats(${index})">
+      <div class="classement-card" onclick="showEntrepreneurStats(${index})" style="${isCurrentUser ? 'background: rgba(96, 165, 250, 0.08); border-color: rgba(96, 165, 250, 0.3);' : ''}">
         <div class="classement-card-rang">
           ${rangDisplay}
         </div>
@@ -8439,7 +8523,7 @@ async function renderCoachClassementData(data) {
           ${profilePhotoHTML}
         </div>
         <div class="classement-card-info">
-          <div class="classement-card-name">${entrepreneur.username}</div>
+          <div class="classement-card-name">${entrepreneur.username}${meBadge}</div>
         </div>
       </div>
     `;

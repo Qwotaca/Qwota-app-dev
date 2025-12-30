@@ -1029,6 +1029,36 @@
       flex: 1;
     }
 
+    /* Spinner de chargement dans le modal */
+    .stats-modal-loader {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+      gap: 1.5rem;
+    }
+
+    .stats-loader-spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid rgba(96, 165, 250, 0.2);
+      border-top-color: #60a5fa;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .stats-loader-text {
+      color: var(--text-gray);
+      font-size: 1rem;
+      font-weight: 500;
+      margin: 0;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     .stats-section {
       margin-bottom: 1.5rem;
       padding: 1rem;
@@ -3624,8 +3654,14 @@
         </button>
       </div>
 
+      <!-- Spinner de chargement -->
+      <div id="stats-modal-loader" class="stats-modal-loader" style="display: none;">
+        <div class="stats-loader-spinner"></div>
+        <p class="stats-loader-text">Chargement des statistiques...</p>
+      </div>
+
       <!-- Contenu du modal -->
-      <div class="stats-modal-body">
+      <div class="stats-modal-body" id="stats-modal-body-content">
         <!-- SECTION 1: PROFIL COMPLET (Photo + Nom + Grade + Progression) -->
         <div class="stats-section">
           <div class="stats-unified-card">
@@ -3741,39 +3777,47 @@
               <tbody>
                 <tr>
                   <td class="stat-label">Dollars ($) vendu</td>
-                  <td class="stat-value" id="stats-ca-actuel">0 $</td>
+                  <td class="stat-value text-green-600 font-bold" id="stats-ca-actuel">0 $</td>
+                </tr>
+                <tr>
+                  <td class="stat-label">H de PÀP</td>
+                  <td class="stat-value" id="stats-heures-pap">0 h</td>
+                </tr>
+                <tr>
+                  <td class="stat-label">Taux marketing</td>
+                  <td class="stat-value" id="stats-taux-marketing">0%</td>
                 </tr>
                 <tr>
                   <td class="stat-label">Contrats signés</td>
-                  <td class="stat-value" id="stats-contrats-signes">0</td>
+                  <td class="stat-value font-bold" id="stats-contrats-signes">0</td>
                 </tr>
                 <tr>
-                  <td class="stat-label">Satisfaction</td>
-                  <td class="stat-value" id="stats-satisfaction">0</td>
-                </tr>
-                <tr>
-                  <td class="stat-label">Contrat moyen</td>
-                  <td class="stat-value" id="stats-contrat-moyen">0 $</td>
+                  <td class="stat-label">Estimations totales</td>
+                  <td class="stat-value" id="stats-estimations-totales">0</td>
                 </tr>
               </tbody>
             </table>
             <table class="stats-table">
               <tbody>
                 <tr>
-                  <td class="stat-label">Taux marketing</td>
-                  <td class="stat-value" id="stats-taux-marketing">0%</td>
+                  <td class="stat-label">Contrat moyen</td>
+                  <td class="stat-value" id="stats-contrat-moyen">0 $</td>
                 </tr>
                 <tr>
                   <td class="stat-label">Taux de vente</td>
                   <td class="stat-value" id="stats-taux-vente">0%</td>
                 </tr>
                 <tr>
+                  <td class="stat-label">Dollars produit</td>
+                  <td class="stat-value font-bold" style="color: #60a5fa;" id="stats-dollars-produit">0 $</td>
+                </tr>
+                <tr>
                   <td class="stat-label">Productivité/h</td>
                   <td class="stat-value" id="stats-prod-horaire">0 $/h</td>
                 </tr>
                 <tr>
-                  <td class="stat-label">H de PÀP</td>
-                  <td class="stat-value" id="stats-heures-pap">0 h</td>
+                  <td class="stat-label">Satisfaction</td>
+                  <td class="stat-value" style="color: #eab308;" id="stats-satisfaction"><i class="fas fa-star"></i> 0</td>
                 </tr>
               </tbody>
             </table>
@@ -4456,12 +4500,29 @@
 
     // === FONCTIONS MODAL STATISTIQUES ===
 
-    async function openStatsModal(username = null) {
+    async function openStatsModal(username = null, photoUrl = null) {
       const modal = document.getElementById('stats-modal');
       if (!modal) return;
 
+      const loader = document.getElementById('stats-modal-loader');
+      const content = document.getElementById('stats-modal-body-content');
+
+      // Réinitialiser le scroll en haut du modal
+      if (content) content.scrollTop = 0;
+
+      // Ouvrir le modal immédiatement avec le spinner
+      modal.classList.add('active');
+
+      // Afficher le spinner, cacher le contenu
+      if (loader) loader.style.display = 'flex';
+      if (content) content.style.display = 'none';
+
       // Si aucun username fourni, utiliser l'utilisateur connecté
       const targetUsername = username || localStorage.getItem('username');
+
+      // Début du chargement (pour calculer le temps minimum d'affichage du spinner)
+      const startTime = Date.now();
+      const minLoadingTime = 500; // Temps minimum d'affichage du spinner en ms
 
       // Charger les données de gamification pour l'utilisateur cible
       try {
@@ -4469,13 +4530,31 @@
         const data = await response.json();
 
         if (data.status === 'success') {
-          modal.classList.add('active');
-          populateStatsModal(data.profile, targetUsername);
+          // Passer la photoUrl déjà chargée à populateStatsModal
+          await populateStatsModal(data.profile, targetUsername, photoUrl);
+
+          // Calculer le temps écoulé
+          const elapsedTime = Date.now() - startTime;
+          const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+
+          // Attendre le temps restant pour atteindre le temps minimum
+          await new Promise(resolve => setTimeout(resolve, remainingTime));
+
+          // Cacher le spinner, afficher le contenu
+          if (loader) loader.style.display = 'none';
+          if (content) {
+            content.style.display = 'block';
+            // S'assurer que le scroll est bien en haut après affichage
+            content.scrollTop = 0;
+          }
         } else {
+          // En cas d'erreur, fermer le modal et alerter
+          modal.classList.remove('active');
           alert('Erreur lors du chargement du profil');
         }
       } catch (error) {
-        console.error('Erreur chargement profil:', error);
+        error('Erreur chargement profil:', error);
+        modal.classList.remove('active');
         alert('Erreur lors du chargement du profil');
       }
     }
@@ -4515,7 +4594,7 @@
       }
     }
 
-    async function populateStatsModal(profile, targetUsername = null) {
+    async function populateStatsModal(profile, targetUsername = null, preloadedPhotoUrl = null) {
       // Utiliser le username passé en paramètre ou celui du localStorage
       const username = targetUsername || localStorage.getItem('username');
       const role = localStorage.getItem('role');
@@ -4544,18 +4623,44 @@
       document.getElementById('stats-username').textContent = username;
 
       // Photo de profil
-      try {
-        const photoResponse = await fetch(`/api/get-profile-photo/${username}`);
-        const photoData = await photoResponse.json();
-        const statsPhoto = document.getElementById('stats-profile-photo');
-        if (photoData.success && photoData.photoUrl) {
-          statsPhoto.src = photoData.photoUrl;
-        } else {
+      const statsPhoto = document.getElementById('stats-profile-photo');
+
+      // Log pour déboguer
+      log('[APPPC DEBUG] populateStatsModal - username:', username, 'preloadedPhotoUrl:', preloadedPhotoUrl);
+
+      // Si une photoUrl préchargée est fournie, l'utiliser directement
+      if (preloadedPhotoUrl) {
+        log('[APPPC DEBUG] Utilisation de la photo préchargée:', preloadedPhotoUrl);
+        statsPhoto.src = preloadedPhotoUrl;
+      } else {
+        log('[APPPC DEBUG] Pas de photo préchargée, chargement via API');
+        // Sinon, charger via l'API
+        try {
+          const photoResponse = await fetch(`/api/get-profile-photo/${username}`);
+
+          if (photoResponse.ok) {
+            const photoData = await photoResponse.json();
+            // Vérifier si photoUrl existe dans la réponse
+            if (photoData && photoData.photoUrl) {
+              statsPhoto.src = photoData.photoUrl;
+            } else {
+              // Fallback sur SVG avec initiale
+              const initial = username.charAt(0).toUpperCase();
+              statsPhoto.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+            }
+          } else {
+            // Erreur de réponse, utiliser le fallback
+            const initial = username.charAt(0).toUpperCase();
+            statsPhoto.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+          }
+        } catch (error) {
+          error('Erreur photo:', error);
+          // En cas d'erreur, utiliser le fallback
           const initial = username.charAt(0).toUpperCase();
-          statsPhoto.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+          if (statsPhoto) {
+            statsPhoto.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+          }
         }
-      } catch (error) {
-        console.error('Erreur photo:', error);
       }
 
       // Nom du grade dans la section du haut
@@ -4633,8 +4738,14 @@
             // Contrats signés
             document.getElementById('stats-contrats-signes').textContent = currentEntrepreneur.soumissions_signees || 0;
 
-            // Satisfaction
-            document.getElementById('stats-satisfaction').textContent = (currentEntrepreneur.etoiles || 0).toFixed(1);
+            // Estimations totales (signées + en attente + perdues)
+            const estimationsTotales = (currentEntrepreneur.soumissions_signees || 0) +
+                                      (currentEntrepreneur.soumissions_en_attente || 0) +
+                                      (currentEntrepreneur.soumissions_perdues || 0);
+            document.getElementById('stats-estimations-totales').textContent = estimationsTotales;
+
+            // Satisfaction (avec étoile)
+            document.getElementById('stats-satisfaction').innerHTML = `<i class="fas fa-star"></i> ${(currentEntrepreneur.etoiles || 0).toFixed(1)}`;
 
             // Contrat moyen
             document.getElementById('stats-contrat-moyen').textContent = `${(currentEntrepreneur.contrat_moyen || 0).toLocaleString()} $`;
@@ -4645,8 +4756,12 @@
             // Taux de vente
             document.getElementById('stats-taux-vente').textContent = `${Math.round((currentEntrepreneur.taux_vente || 0) * 10) / 10}%`;
 
+            // Dollars produit
+            const dollarsProduit = Math.round(currentEntrepreneur.montant_produit || 0);
+            document.getElementById('stats-dollars-produit').textContent = `${dollarsProduit.toLocaleString()} $`;
+
             // Productivité horaire
-            document.getElementById('stats-prod-horaire').textContent = `${(currentEntrepreneur.prod_horaire || 0).toLocaleString()} $/h`;
+            document.getElementById('stats-prod-horaire').textContent = `${Math.round(currentEntrepreneur.prod_horaire || 0).toLocaleString()} $/h`;
 
             // Heures de PÀP
             document.getElementById('stats-heures-pap').textContent = `${(currentEntrepreneur.heures_pap || 0).toFixed(1)} h`;
@@ -4654,10 +4769,12 @@
             // Utilisateur non trouvé, mettre des valeurs par défaut
             document.getElementById('stats-ca-actuel').textContent = '0 $';
             document.getElementById('stats-contrats-signes').textContent = '0';
-            document.getElementById('stats-satisfaction').textContent = '0.0';
+            document.getElementById('stats-estimations-totales').textContent = '0';
+            document.getElementById('stats-satisfaction').innerHTML = '<i class="fas fa-star"></i> 0.0';
             document.getElementById('stats-contrat-moyen').textContent = '0 $';
             document.getElementById('stats-taux-marketing').textContent = '0%';
             document.getElementById('stats-taux-vente').textContent = '0%';
+            document.getElementById('stats-dollars-produit').textContent = '0 $';
             document.getElementById('stats-prod-horaire').textContent = '0 $/h';
             document.getElementById('stats-heures-pap').textContent = '0.0 h';
           }
@@ -4667,10 +4784,12 @@
         // En cas d'erreur, mettre des valeurs par défaut
         document.getElementById('stats-ca-actuel').textContent = '0 $';
         document.getElementById('stats-contrats-signes').textContent = '0';
-        document.getElementById('stats-satisfaction').textContent = '0.0';
+        document.getElementById('stats-estimations-totales').textContent = '0';
+        document.getElementById('stats-satisfaction').innerHTML = '<i class="fas fa-star"></i> 0.0';
         document.getElementById('stats-contrat-moyen').textContent = '0 $';
         document.getElementById('stats-taux-marketing').textContent = '0%';
         document.getElementById('stats-taux-vente').textContent = '0%';
+        document.getElementById('stats-dollars-produit').textContent = '0 $';
         document.getElementById('stats-prod-horaire').textContent = '0 $/h';
         document.getElementById('stats-heures-pap').textContent = '0.0 h';
       }

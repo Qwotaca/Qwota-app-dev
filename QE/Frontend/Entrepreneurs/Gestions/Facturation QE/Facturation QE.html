@@ -27,10 +27,10 @@
       /* DISABLED - Service Worker
       navigator.serviceWorker.register('/sw.js')
         .then((registration) => {
-          console.log('SW registered: ', registration);
+          log('SW registered: ', registration);
         })
         .catch((registrationError) => {
-          console.log('SW registration failed: ', registrationError);
+          log('SW registration failed: ', registrationError);
         });
       */
     });
@@ -119,6 +119,13 @@
 
   <!-- Variables globales définies dans common.js -->
   <script>
+    // ⚡ DÉSACTIVATION DES LOGS - Performance optimization
+    window.log = window.log || (() => {});
+    window.warn = window.warn || (() => {});
+    window.error = window.error || (() => {});
+    window.info = window.info || (() => {});
+    window.debug = window.debug || (() => {});
+
     // Ces variables sont maintenant gérées par common.js
     // username, userRole, canEditParameters sont disponibles globalement
 
@@ -139,7 +146,7 @@
         const urlUser = urlParams.get('user');
         // Si URL param est un coach ET qu'un username est défini, utiliser le username sélectionné
         if (urlUser && isCoachUsername(urlUser) && window.username !== urlUser) {
-          console.log('[COACH] Utilisation du username sélectionné:', window.username);
+          log('[COACH] Utilisation du username sélectionné:', window.username);
           return window.username;
         }
       }
@@ -153,7 +160,7 @@
       try {
         const username = getFacturationUsername();
         
-        console.log('[DEBUG] Vérification des clients pour:', username);
+        log('[DEBUG] Vérification des clients pour:', username);
         
         const response = await fetch(`/api/facturationqe/clients-count/${username}`);
         
@@ -162,26 +169,26 @@
         }
         
         const result = await response.json();
-        console.log('[OK] Clients disponibles:', result.total_clients, 'pour', result.username);
+        log('[OK] Clients disponibles:', result.total_clients, 'pour', result.username);
         
         if (result.total_clients === 0) {
-          console.log('[WARN] Aucun client trouvé - Vérifiez les soumissions signées');
+          log('[WARN] Aucun client trouvé - Vérifiez les soumissions signées');
         }
         
       } catch (error) {
-        console.error('[ERROR] Erreur vérification clients:', error);
+        error('[ERROR] Erreur vérification clients:', error);
       }
     }
 
     // Function to show/hide pages - définie globalement dans le head
     function showPage(pageId) {
-      console.log('showPage appelée avec:', pageId);
+      log('showPage appelée avec:', pageId);
 
       // Supprimer le style anti-flash temporaire si présent (permet aux tabs de fonctionner)
       const antiFlashStyle = document.getElementById('coach-mode-initial-style');
       if (antiFlashStyle) {
         antiFlashStyle.remove();
-        console.log('[ANTI-FLASH] Style temporaire supprimé, tabs fonctionnels');
+        log('[ANTI-FLASH] Style temporaire supprimé, tabs fonctionnels');
       }
 
       // Hide all pages
@@ -238,11 +245,11 @@
 
     // Fonction pour afficher la section de paiement sélectionnée
     function showPaiementSection(section) {
-      console.log('showPaiementSection appelée avec:', section);
+      log('showPaiementSection appelée avec:', section);
       
       // NOTE: La gestion des couleurs de boutons est maintenant entièrement déléguée à
       // selectionnerClientFacturation() pour éviter les conflits entre clients
-      console.log('🎨 Couleurs de boutons gérées par selectionnerClientFacturation()');
+      log('🎨 Couleurs de boutons gérées par selectionnerClientFacturation()');
       
       // Gérer la visibilité du bouton "Envoyer au comptable" selon la section
       const boutonEnvoiContainer = document.getElementById('boutonEnvoiContainer');
@@ -268,14 +275,14 @@
           btnAutresPaiements.style.opacity = '0.3';
           btnAutresPaiements.style.cursor = 'not-allowed';
           btnAutresPaiements.style.pointerEvents = 'none';
-          console.log('🚫 Bouton "Autres paiements" désactivé (paiement final en traitement/attente_comptable)');
+          log('🚫 Bouton "Autres paiements" désactivé (paiement final en traitement/attente_comptable)');
         } else if (isUnSeulPaiement && autresPaiementsEnTraitement) {
           // Désactiver "autres paiements" si "un seul paiement" en traitement/traité
           btnAutresPaiements.disabled = true;
           btnAutresPaiements.style.opacity = '0.3';
           btnAutresPaiements.style.cursor = 'not-allowed';
           btnAutresPaiements.style.pointerEvents = 'none';
-          console.log('🚫 Bouton "Autres paiements" désactivé (un seul paiement en traitement)', {isUnSeulPaiement, autresPaiementsEnTraitement});
+          log('🚫 Bouton "Autres paiements" désactivé (un seul paiement en traitement)', {isUnSeulPaiement, autresPaiementsEnTraitement});
         } else if (!isUnSeulPaiement && statutPaiementFinal !== 'traitement' && statutPaiementFinal !== 'attente_comptable') {
           // Réactiver SEULEMENT si ce n'est PAS "un seul paiement" ET paiement final pas en traitement/attente_comptable
           btnAutresPaiements.disabled = false;
@@ -283,9 +290,9 @@
           btnAutresPaiements.style.cursor = 'pointer';
           btnAutresPaiements.style.pointerEvents = 'auto';
           btnAutresPaiements.style.color = 'white';
-          console.log('[OK] Bouton "Autres paiements" disponible');
+          log('[OK] Bouton "Autres paiements" disponible');
         } else {
-          console.log('⏸️ Bouton "Autres paiements" laissé dans son état (un seul paiement sans traitement)');
+          log('⏸️ Bouton "Autres paiements" laissé dans son état (un seul paiement sans traitement)');
         }
       }
       
@@ -295,26 +302,26 @@
 
         if (section === 'depot' && (statutDepot === 'traitement' || statutDepot === 'traite' || statutDepot === 'attente_comptable' || statutDepot === 'traite_attente_final')) {
           masquerBouton = true;
-          console.log('🚫 Section DÉPÔT déjà traitée/en attente, bouton masqué');
+          log('🚫 Section DÉPÔT déjà traitée/en attente, bouton masqué');
         } else if (section === 'paiement-final') {
           const statutPaiementFinal = clientData.statutPaiementFinal;
           if (statutPaiementFinal === 'traitement' || statutPaiementFinal === 'traite' || statutPaiementFinal === 'attente_comptable') {
             masquerBouton = true;
-            console.log('🚫 Section PAIEMENT FINAL déjà traitée/en attente, bouton masqué');
+            log('🚫 Section PAIEMENT FINAL déjà traitée/en attente, bouton masqué');
           }
         } else if (section.startsWith('paiement-partiel-')) {
           // Toujours masquer le bouton dans les sections paiement partiel
           masquerBouton = true;
-          console.log('🚫 Section PAIEMENT PARTIEL - bouton masqué');
+          log('🚫 Section PAIEMENT PARTIEL - bouton masqué');
         } else if (section.startsWith('un-seul-paiement-')) {
           // Toujours masquer le bouton dans les sections "un seul paiement"
           masquerBouton = true;
-          console.log('🚫 Section UN SEUL PAIEMENT - bouton masqué');
+          log('🚫 Section UN SEUL PAIEMENT - bouton masqué');
         } else if (section === 'autres-paiements') {
           const statutAutresPaiements = clientData.statutAutresPaiements;
           if (statutAutresPaiements === 'traitement' || statutAutresPaiements === 'traite') {
             masquerBouton = true;
-            console.log('🚫 Section AUTRES PAIEMENTS déjà traitée, bouton masqué');
+            log('🚫 Section AUTRES PAIEMENTS déjà traitée, bouton masqué');
           }
         }
 
@@ -322,7 +329,7 @@
           boutonEnvoiContainer.style.display = 'none';
         } else {
           boutonEnvoiContainer.style.display = 'flex';
-          console.log('[OK] Bouton envoyer au comptable affiché (section:', section, ')');
+          log('[OK] Bouton envoyer au comptable affiché (section:', section, ')');
         }
       }
       
@@ -352,13 +359,13 @@
           if (btnId === 'btn-depot' && statutDepotSection !== 'non_envoye') {
             // Remettre le style de statut normal (pas actif) pour le bouton dépôt
             changerBoutonDepotStatut(statutDepotSection);
-            console.log('🔄 Bouton dépôt remis au style de statut normal:', statutDepotSection);
+            log('🔄 Bouton dépôt remis au style de statut normal:', statutDepotSection);
           } else if (btnId === 'btn-paiement-final') {
             // Remettre le style de statut pour le bouton paiement final (orange si attente_comptable, vert si traite)
             const statutPaiementFinalSection = clientDataSection.paiementFinal?.statut;
             if (statutPaiementFinalSection && statutPaiementFinalSection !== 'non_envoye') {
               changerBoutonPaiementFinalStatut(statutPaiementFinalSection);
-              console.log('🔄 Bouton paiement final remis au style de statut normal:', statutPaiementFinalSection);
+              log('🔄 Bouton paiement final remis au style de statut normal:', statutPaiementFinalSection);
             } else {
               // Si pas de statut, supprimer les couleurs inline
               btn.style.removeProperty('background');
@@ -368,7 +375,7 @@
           } else if (btnId.startsWith('btn-paiement-partiel-') || btnId.startsWith('btn-un-seul-paiement-')) {
             // Pour les boutons de paiements partiels et "un seul paiement", CONSERVER leurs couleurs (vert/orange)
             // Ne rien faire - les couleurs sont gérées par genererBoutonsPaiementsPartiels()
-            console.log('🎨 Bouton', btnId, 'conserve sa couleur');
+            log('🎨 Bouton', btnId, 'conserve sa couleur');
           } else if (btnId !== 'btn-depot') {
             // Pour les autres boutons, supprimer les couleurs inline
             btn.style.removeProperty('background');
@@ -379,7 +386,7 @@
           // Supprimer l'indicateur de sélection pour tous les boutons
           btn.style.removeProperty('border-width');
           
-          console.log('🔄 Bouton', btnId, 'remis à la couleur de base');
+          log('🔄 Bouton', btnId, 'remis à la couleur de base');
         }
       });
       
@@ -398,7 +405,7 @@
         if (detectTypePaiementAutres === 'un_seul_paiement') {
           // Activer btn-depot (qui est transformé en "Un seul paiement")
           buttonToActivate = 'btn-depot';
-          console.log('🔄 Section autres-paiements avec un_seul_paiement -> activation de btn-depot');
+          log('🔄 Section autres-paiements avec un_seul_paiement -> activation de btn-depot');
         }
       }
 
@@ -408,7 +415,7 @@
           // Pour le bouton dépôt actif, utiliser btn-primary (bleu) comme les autres
           currentSectionBtn.classList.remove('btn-secondary');
           currentSectionBtn.classList.add('btn-primary');
-          console.log('[OK] Bouton dépôt activé (bleu)');
+          log('[OK] Bouton dépôt activé (bleu)');
         } else if (currentSectionBtn.id === 'btn-paiement-final') {
           // Pour le bouton paiement final, vérifier si en traitement ou attente_comptable
           const clientData = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
@@ -417,18 +424,18 @@
           if (statutPaiementFinal === 'traitement' || statutPaiementFinal === 'attente_comptable' || statutPaiementFinal === 'traite' || statutPaiementFinal === 'traite_attente_final') {
             // Garder le style (orange ou vert selon statut)
             changerBoutonPaiementFinalStatut(statutPaiementFinal);
-            console.log('[OK] Bouton paiement final gardé avec couleur statut');
+            log('[OK] Bouton paiement final gardé avec couleur statut');
           } else {
             // Style normal bleu pour paiement final (pas encore soumis)
             currentSectionBtn.classList.remove('btn-secondary');
             currentSectionBtn.classList.add('btn-primary');
-            console.log('[OK] Bouton paiement final normal activé');
+            log('[OK] Bouton paiement final normal activé');
           }
         } else {
           // Pour les autres boutons, utiliser btn-primary
           currentSectionBtn.classList.remove('btn-secondary');
           currentSectionBtn.classList.add('btn-primary');
-          console.log('[OK] Bouton section courante activé:', section);
+          log('[OK] Bouton section courante activé:', section);
         }
       }
       
@@ -468,7 +475,7 @@
         }
         if (virementFieldsDepot) virementFieldsDepot.classList.add('hidden');
         if (chequeFieldsDepot) chequeFieldsDepot.classList.add('hidden');
-        console.log('[LOCK] Fermeture FORCÉE éléments à ajouter DÉPÔT avec !important');
+        log('[LOCK] Fermeture FORCÉE éléments à ajouter DÉPÔT avec !important');
       }
       
       // 2. Fermer éléments à ajouter PAIEMENT FINAL
@@ -483,7 +490,7 @@
         }
         if (virementFieldsPaiementFinal) virementFieldsPaiementFinal.classList.add('hidden');
         if (chequeFieldsPaiementFinal) chequeFieldsPaiementFinal.classList.add('hidden');
-        console.log('[LOCK] Fermeture éléments à ajouter PAIEMENT FINAL');
+        log('[LOCK] Fermeture éléments à ajouter PAIEMENT FINAL');
       }
       
       // 3. Fermer éléments à ajouter AUTRES PAIEMENTS (s'il y en a)
@@ -498,7 +505,7 @@
         }
         if (virementFieldsAutres) virementFieldsAutres.classList.add('hidden');
         if (chequeFieldsAutres) chequeFieldsAutres.classList.add('hidden');
-        console.log('[LOCK] Fermeture éléments à ajouter AUTRES PAIEMENTS');
+        log('[LOCK] Fermeture éléments à ajouter AUTRES PAIEMENTS');
       }
       
       // 4. RÉINITIALISER TOUS LES DROPDOWNS "PAYÉ PAR" SAUF CELUI DE LA SECTION ACTIVE
@@ -532,7 +539,7 @@
       if (activeBtn) {
         if (activeBtn.id === 'btn-autres-paiements') {
           // NE PAS colorer le bouton autres paiements - il doit rester avec son style par défaut
-          console.log('[OK] Bouton autres-paiements activé SANS coloration');
+          log('[OK] Bouton autres-paiements activé SANS coloration');
         } else if (activeBtn.id === 'btn-remboursement') {
           // Style actif pour remboursement - couleur rouge
           activeBtn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
@@ -552,7 +559,7 @@
             activeBtn.style.setProperty('background', 'linear-gradient(135deg, rgb(245, 158, 11), rgb(217, 119, 6))', 'important');
             activeBtn.style.setProperty('border-color', 'rgb(245, 158, 11)', 'important');
             activeBtn.style.setProperty('color', 'white', 'important');
-            console.log('[HOT] Bouton dépôt (en traitement) activé - style orange');
+            log('[HOT] Bouton dépôt (en traitement) activé - style orange');
           } else if (!hasStatusColor) {
             // Pas de couleur de statut, appliquer le style actif normal
             activeBtn.classList.remove('btn-secondary');
@@ -584,12 +591,12 @@
               // Visible si en traitement OU si un type est déjà sélectionné
               elementsAjouterPaiementFinal.style.maxHeight = '2000px';
               elementsAjouterPaiementFinal.style.opacity = '1';
-              console.log('[RESTORE] Restauration éléments à ajouter PAIEMENT FINAL (visible) - statut:', statutPaiementFinal || 'aucun', 'type:', paiementFinalType || 'aucun');
+              log('[RESTORE] Restauration éléments à ajouter PAIEMENT FINAL (visible) - statut:', statutPaiementFinal || 'aucun', 'type:', paiementFinalType || 'aucun');
             } else {
               // Garder caché si pas en traitement ET pas de type sélectionné
               elementsAjouterPaiementFinal.style.maxHeight = '0';
               elementsAjouterPaiementFinal.style.opacity = '0';
-              console.log('[HIDE] Section éléments à ajouter PAIEMENT FINAL cachée (pas en traitement, pas de type)');
+              log('[HIDE] Section éléments à ajouter PAIEMENT FINAL cachée (pas en traitement, pas de type)');
             }
           }
         }
@@ -602,14 +609,14 @@
             const hasTraitement = autresPaiements.some(p => p.statut === 'traitement');
             const hasTraite = autresPaiements.some(p => p.statut === 'traite');
             if (hasTraitement || hasTraite) {
-              console.log('[LOCK] Section autres paiements en traitement/traité, appel rendreSectionAutresPaiementsNonModifiable');
+              log('[LOCK] Section autres paiements en traitement/traité, appel rendreSectionAutresPaiementsNonModifiable');
               rendreSectionAutresPaiementsNonModifiable();
             }
           }
 
           // === NOUVEAU: Gérer la visibilité de l'option "Un seul paiement" quand la section s'ouvre ===
           gererVisibiliteUnSeulPaiement();
-          console.log('[OK] Visibilité option "Un seul paiement" mise à jour lors ouverture section');
+          log('[OK] Visibilité option "Un seul paiement" mise à jour lors ouverture section');
 
           // === NOUVEAU: Pré-sélectionner "Paiement partiel" si le dépôt est en traitement/traité ===
           preselectionnerPaiementPartielSiNecessaire();
@@ -619,7 +626,7 @@
         preremplirChampsSelon(section);
       }
 
-      console.log(`Section ${section} sélectionnée`);
+      log(`Section ${section} sélectionnée`);
     }
 
     // Fonction pour pré-remplir et griser les champs selon le client et la section
@@ -627,7 +634,7 @@
       const clientData = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
       if (!clientData.num) return;
       
-      console.log('[FIX] PRÉREMPLISSAGE pour section:', section, 'clientData:', clientData);
+      log('[FIX] PRÉREMPLISSAGE pour section:', section, 'clientData:', clientData);
       
       const statutDepot = clientData.statutDepot || 'non_envoye';
       const depotTraiteOuEnTraitement = (statutDepot === 'traitement' || statutDepot === 'traite');
@@ -659,7 +666,7 @@
 
             if (depotDefaut > 0) {
               paiementInput.value = formatMontant(depotDefaut);
-              console.log('[INFO] DÉPÔT calculé automatiquement (25%):', depotDefaut, '= 25% de', totalAvecTaxes);
+              log('[INFO] DÉPÔT calculé automatiquement (25%):', depotDefaut, '= 25% de', totalAvecTaxes);
             }
           }
         } else if (clientData.depot) {
@@ -668,7 +675,7 @@
             const montantValue = typeof clientData.depot.montant === 'string' ?
               clientData.depot.montant.replace(/[$ ]/g, '').replace(',', '.') : clientData.depot.montant;
             paiementInput.value = clientData.depot.montant; // Garder le format original avec $
-            console.log('[MONEY] DÉPÔT: Montant pré-rempli:', clientData.depot.montant);
+            log('[MONEY] DÉPÔT: Montant pré-rempli:', clientData.depot.montant);
           }
         }
 
@@ -678,12 +685,12 @@
           // Pré-remplir la date si présente
           if (dateDepotInput && clientData.depot.date) {
             dateDepotInput.value = clientData.depot.date;
-            console.log('[DATE] DÉPÔT: Date pré-remplie:', clientData.depot.date);
+            log('[DATE] DÉPÔT: Date pré-remplie:', clientData.depot.date);
           }
           
           // Pré-remplir le type de paiement - utiliser 'methode' au lieu de 'type'
           const typeDepot = clientData.depot.methode || clientData.depot.type;
-          console.log('[DEBUG] DEBUG TypeDepot:', {
+          log('[DEBUG] DEBUG TypeDepot:', {
             typeDepot,
             'clientData.depot.methode': clientData.depot.methode,
             'clientData.depot.type': clientData.depot.type
@@ -712,22 +719,22 @@
                 elementsAjouterDepot.style.setProperty('visibility', 'visible', 'important');
                 elementsAjouterDepot.style.setProperty('overflow', 'visible', 'important');
                 elementsAjouterDepot.style.setProperty('height', 'auto', 'important');
-                console.log('[UNLOCK] RÉOUVERTURE: Éléments dépôt forcés visibles avec !important pour', section);
+                log('[UNLOCK] RÉOUVERTURE: Éléments dépôt forcés visibles avec !important pour', section);
                 
                 if (typeDepot === 'virement') {
                   if (virementFieldsDepot) virementFieldsDepot.classList.remove('hidden');
                   if (chequeFieldsDepot) chequeFieldsDepot.classList.add('hidden');
                   
                   // Pré-remplir et griser les champs virement si disponibles
-                  console.log('[DEBUG] DEBUG Virement - clientData.depot:', clientData.depot);
-                  console.log('[DEBUG] DEBUG Virement - lienVirement:', clientData.depot?.lienVirement);
-                  console.log('[DEBUG] DEBUG Virement - motDePasse:', clientData.depot?.motDePasse);
-                  console.log('[DEBUG] DEBUG Virement - depotTraiteOuEnTraitement:', depotTraiteOuEnTraitement);
+                  log('[DEBUG] DEBUG Virement - clientData.depot:', clientData.depot);
+                  log('[DEBUG] DEBUG Virement - lienVirement:', clientData.depot?.lienVirement);
+                  log('[DEBUG] DEBUG Virement - motDePasse:', clientData.depot?.motDePasse);
+                  log('[DEBUG] DEBUG Virement - depotTraiteOuEnTraitement:', depotTraiteOuEnTraitement);
                   
                   const lienInput = document.querySelector('input[name="lien_virement"]');
                   const mdpInput = document.querySelector('input[name="mdp_virement"]');
                   
-                  console.log('[DEBUG] DEBUG Éléments DOM:', {
+                  log('[DEBUG] DEBUG Éléments DOM:', {
                     lienInput: !!lienInput,
                     mdpInput: !!mdpInput
                   });
@@ -736,7 +743,7 @@
                   if (lienInput) {
                     // Pré-remplir avec la valeur sauvegardée (ou vide si pas de valeur)
                     lienInput.value = clientData.depot?.lienVirement || '';
-                    console.log('[OK] Lien virement rempli:', lienInput.value || '(vide)');
+                    log('[OK] Lien virement rempli:', lienInput.value || '(vide)');
                     
                     // Griser si dépôt traité ou en traitement (même si vide)
                     if (depotTraiteOuEnTraitement) {
@@ -744,14 +751,14 @@
                       lienInput.style.backgroundColor = 'rgba(55, 65, 81, 0.3)';
                       lienInput.style.color = '#9ca3af';
                       lienInput.style.cursor = 'not-allowed';
-                      console.log('[LOCK] Lien virement grisé');
+                      log('[LOCK] Lien virement grisé');
                     }
                   }
                   
                   if (mdpInput) {
                     // Pré-remplir avec la valeur sauvegardée (ou vide si pas de valeur)
                     mdpInput.value = clientData.depot?.motDePasse || '';
-                    console.log('[OK] Mot de passe rempli:', mdpInput.value || '(vide)');
+                    log('[OK] Mot de passe rempli:', mdpInput.value || '(vide)');
                     
                     // Griser si dépôt traité ou en traitement (même si vide)
                     if (depotTraiteOuEnTraitement) {
@@ -763,13 +770,13 @@
                       // Retirer le placeholder si le champ est vide quand c'est grisé
                       if (!mdpInput.value || mdpInput.value.trim() === '') {
                         mdpInput.placeholder = '';
-                        console.log('[LOCK] Placeholder retiré du mot de passe (champ vide et grisé)');
+                        log('[LOCK] Placeholder retiré du mot de passe (champ vide et grisé)');
                       }
                       
-                      console.log('[LOCK] Mot de passe grisé');
+                      log('[LOCK] Mot de passe grisé');
                     }
                   }
-                  console.log('🔄 DÉPÔT: Éléments à ajouter virement réouverts');
+                  log('🔄 DÉPÔT: Éléments à ajouter virement réouverts');
                 } else if (typeDepot === 'cheque') {
                   if (chequeFieldsDepot) chequeFieldsDepot.classList.remove('hidden');
                   if (virementFieldsDepot) virementFieldsDepot.classList.add('hidden');
@@ -788,7 +795,7 @@
                       }
                     }
                   }
-                  console.log('🔄 DÉPÔT: Éléments à ajouter chèque réouverts');
+                  log('🔄 DÉPÔT: Éléments à ajouter chèque réouverts');
                 }
               } else if (section !== 'depot') {
                 // Si on n'est PAS dans la section dépôt, s'assurer que les éléments dépôt sont fermés
@@ -796,7 +803,7 @@
                 elementsAjouterDepot.style.opacity = '0';
                 if (virementFieldsDepot) virementFieldsDepot.classList.add('hidden');
                 if (chequeFieldsDepot) chequeFieldsDepot.classList.add('hidden');
-                console.log('[LOCK] DÉPÔT: Éléments à ajouter forcés fermés (pas dans section dépôt)');
+                log('[LOCK] DÉPÔT: Éléments à ajouter forcés fermés (pas dans section dépôt)');
               }
             }
           }
@@ -804,7 +811,7 @@
         
         // GRISER LES CHAMPS seulement si PAS "en attente du dépôt"
         if (statutDepot !== 'non_envoye') {
-          console.log('[LOCK] DÉPÔT: Grisage des champs (statut:', statutDepot + ')');
+          log('[LOCK] DÉPÔT: Grisage des champs (statut:', statutDepot + ')');
 
           // Griser $ Dépôt avec le style exact demandé
           if (paiementInput) {
@@ -869,7 +876,7 @@
             });
           }
         } else {
-          console.log('[OK] DÉPÔT: Champs laissés modifiables (en attente du dépôt)');
+          log('[OK] DÉPÔT: Champs laissés modifiables (en attente du dépôt)');
           
           // S'ASSURER que tous les champs sont bien normaux pour les clients en attente
           if (paiementInput) {
@@ -910,7 +917,7 @@
             // FERMER la section éléments à ajouter pour les clients en attente de dépôt
             elementsAjouterDepot.style.maxHeight = '0';
             elementsAjouterDepot.style.opacity = '0';
-            console.log('[LOCK] DÉPÔT: Éléments à ajouter fermés (en attente de dépôt)');
+            log('[LOCK] DÉPÔT: Éléments à ajouter fermés (en attente de dépôt)');
 
             // Cacher les champs virement et chèque
             if (virementFieldsDepot) virementFieldsDepot.classList.add('hidden');
@@ -939,7 +946,7 @@
             });
           }
 
-          console.log('[OK] DÉPÔT: Tous les champs remis en état normal (en attente du dépôt)');
+          log('[OK] DÉPÔT: Tous les champs remis en état normal (en attente du dépôt)');
         }
         
       } else if (section === 'paiement-final') {
@@ -950,18 +957,18 @@
         if (disclaimerPaiementFinal) {
           if (statutDepot === 'non_envoye') {
             disclaimerPaiementFinal.classList.remove('hidden');
-            console.log('[WARN] PAIEMENT FINAL: Disclaimer affiché (client en attente de dépôt)');
+            log('[WARN] PAIEMENT FINAL: Disclaimer affiché (client en attente de dépôt)');
           } else {
             disclaimerPaiementFinal.classList.add('hidden');
-            console.log('[OK] PAIEMENT FINAL: Disclaimer masqué (dépôt traité)');
+            log('[OK] PAIEMENT FINAL: Disclaimer masqué (dépôt traité)');
           }
         }
         
         const paiementFinalInput = document.getElementById('paiementFinal');
         const datePaiementFinalInput = document.getElementById('datePaiementFinal');
 
-        console.log('[DEBUG] DEBUG PAIEMENT FINAL - clientData.paiementFinal:', clientData.paiementFinal);
-        console.log('[DEBUG] DEBUG PAIEMENT FINAL - montant:', clientData.paiementFinal?.montant, 'type:', typeof clientData.paiementFinal?.montant);
+        log('[DEBUG] DEBUG PAIEMENT FINAL - clientData.paiementFinal:', clientData.paiementFinal);
+        log('[DEBUG] DEBUG PAIEMENT FINAL - montant:', clientData.paiementFinal?.montant, 'type:', typeof clientData.paiementFinal?.montant);
 
         // Fonction helper pour nettoyer et parser les montants
         const cleanAndParseAmount = (montant) => {
@@ -989,12 +996,12 @@
             // Ajouter le dépôt si traité ou en traitement (inclure traite_attente_final et attente_comptable)
             if (clientData.depot && (clientData.depot.statut === 'traite' || clientData.depot.statut === 'traitement' || clientData.depot.statut === 'traite_attente_final' || clientData.depot.statut === 'attente_comptable')) {
               montantsDejaPayes += cleanAndParseAmount(clientData.depot.montant);
-              console.log('[MONEY] Dépôt ajouté aux montants payés:', cleanAndParseAmount(clientData.depot.montant));
+              log('[MONEY] Dépôt ajouté aux montants payés:', cleanAndParseAmount(clientData.depot.montant));
             } else if ((clientData.statutDepot === 'traite' || clientData.statutDepot === 'traitement' || clientData.statutDepot === 'traite_attente_final' || clientData.statutDepot === 'attente_comptable')) {
               const paiementInput = document.getElementById('paiement');
               if (paiementInput && paiementInput.value) {
                 montantsDejaPayes += cleanAndParseAmount(paiementInput.value);
-                console.log('[MONEY] Dépôt ajouté aux montants payés (depuis input):', cleanAndParseAmount(paiementInput.value));
+                log('[MONEY] Dépôt ajouté aux montants payés (depuis input):', cleanAndParseAmount(paiementInput.value));
               }
             }
 
@@ -1003,7 +1010,7 @@
               clientData.autresPaiements.forEach(paiement => {
                 if (paiement.statut === 'traite' || paiement.statut === 'traitement' || paiement.statut === 'attente_comptable') {
                   montantsDejaPayes += cleanAndParseAmount(paiement.montant);
-                  console.log('[MONEY] Autre paiement ajouté:', cleanAndParseAmount(paiement.montant), '(statut:', paiement.statut, ')');
+                  log('[MONEY] Autre paiement ajouté:', cleanAndParseAmount(paiement.montant), '(statut:', paiement.statut, ')');
                 }
               });
             }
@@ -1013,7 +1020,7 @@
 
             if (montantRestant > 0 && paiementFinalInput) {
               paiementFinalInput.value = formatMontant(montantRestant);
-              console.log('[INFO] PAIEMENT FINAL calculé automatiquement:', montantRestant, '= Total avec taxes:', totalAvecTaxes, '- Montants payés:', montantsDejaPayes);
+              log('[INFO] PAIEMENT FINAL calculé automatiquement:', montantRestant, '= Total avec taxes:', totalAvecTaxes, '- Montants payés:', montantsDejaPayes);
             }
           }
         } else if (clientData.paiementFinal && clientData.paiementFinal.montant && (parseFloat(clientData.paiementFinal.montant) > 0 || clientData.paiementFinal.montant !== '0,00 $')) {
@@ -1083,7 +1090,7 @@
                     mdpVirementFinal.style.cursor = 'not-allowed';
                   }
                   
-                  console.log('🔄 PAIEMENT FINAL: Éléments virement pré-remplis et grisés (statut traitement)');
+                  log('🔄 PAIEMENT FINAL: Éléments virement pré-remplis et grisés (statut traitement)');
                 } else if (typePaiement === 'cheque') {
                   if (chequeFieldsPaiementFinal) chequeFieldsPaiementFinal.classList.remove('hidden');
                   if (virementFieldsPaiementFinal) virementFieldsPaiementFinal.classList.add('hidden');
@@ -1097,7 +1104,7 @@
                     numeroChequeInput.style.color = '#9ca3af';
                   }
                   
-                  console.log('🔄 PAIEMENT FINAL: Éléments chèque pré-remplis et grisés (statut traitement)');
+                  log('🔄 PAIEMENT FINAL: Éléments chèque pré-remplis et grisés (statut traitement)');
                 }
               }
             }
@@ -1110,7 +1117,7 @@
                                                clientData.paiementFinal.statut === 'traite_attente_final' ||
                                                clientData.paiementFinal.statut === 'traite'));
           if (paiementTraiteOuEnTraitement) {
-            console.log('[LOCK] PAIEMENT FINAL: Grisage des champs (statut:', clientData.paiementFinal.statut + ')');
+            log('[LOCK] PAIEMENT FINAL: Grisage des champs (statut:', clientData.paiementFinal.statut + ')');
 
             // Fonction pour appliquer le grisage
             const appliquerGrisagePaiementFinal = () => {
@@ -1197,7 +1204,7 @@
               // FERMER la section éléments à ajouter par défaut
               elementsAjouterPaiementFinal.style.maxHeight = '0';
               elementsAjouterPaiementFinal.style.opacity = '0';
-              console.log('[LOCK] PAIEMENT FINAL: Éléments à ajouter fermés par défaut');
+              log('[LOCK] PAIEMENT FINAL: Éléments à ajouter fermés par défaut');
               
               // Cacher les champs virement et chèque
               if (virementFieldsPaiementFinal) virementFieldsPaiementFinal.classList.add('hidden');
@@ -1217,7 +1224,7 @@
         }
       }
       
-      console.log(`[FIX] FACTURATION: Champs pré-remplis pour section ${section}`);
+      log(`[FIX] FACTURATION: Champs pré-remplis pour section ${section}`);
     }
 
     // Fonction pour activer/désactiver la section paiements
@@ -1263,7 +1270,7 @@
           contentDepot.classList.remove('hidden');
         }
         
-        console.log('[OK] Section paiements activée');
+        log('[OK] Section paiements activée');
       } else {
         // Masquer la section
         sectionPaiements.style.display = 'none';
@@ -1296,13 +1303,13 @@
           elementsAjouterDepot.style.opacity = '0';
         }
         
-        console.log('[ERROR] Section paiements désactivée');
+        log('[ERROR] Section paiements désactivée');
       }
     }
     
     // Function to load facturations in columns format
     function chargerFacturationsColonnes() {
-      console.log('Chargement des facturations en colonnes...');
+      log('Chargement des facturations en colonnes...');
       // Les compteurs et contenus sont déjà définis dans le HTML avec les données fictives
     }
 
@@ -1315,7 +1322,7 @@
       paiementsPartielsCount++;
       const paiementId = `paiement-partiel-${paiementsPartielsCount}`;
 
-      console.log('[ADD] Création bouton paiement partiel:', paiementId, donneesPaiement);
+      log('[ADD] Création bouton paiement partiel:', paiementId, donneesPaiement);
 
       // Créer le bouton entre dépôt et paiement final
       const container = document.getElementById('workflow-buttons-container');
@@ -1352,7 +1359,7 @@
         ...donneesPaiement
       });
 
-      console.log('[OK] Bouton paiement partiel créé:', paiementId);
+      log('[OK] Bouton paiement partiel créé:', paiementId);
 
       return paiementId;
     }
@@ -1558,7 +1565,7 @@
         // Récupérer les données du client depuis sessionStorage
         const clientData = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
 
-        console.log('[BAN] Données client pour remboursement:', clientData);
+        log('[BAN] Données client pour remboursement:', clientData);
 
         // Vérifier si au moins un paiement a été traité
         const statutDepot = clientData.statutDepot || 'non_envoye';
@@ -1575,7 +1582,7 @@
             : 'ce client';
 
           afficherErreurRemboursement(`Ne peut pas procéder à un remboursement pour ${nomClient} car aucun paiement n'a été traité pour le moment.`);
-          console.log('[ERROR] Remboursement refusé: aucun paiement traité');
+          log('[ERROR] Remboursement refusé: aucun paiement traité');
           return;
         }
 
@@ -1588,12 +1595,12 @@
           const nomComplet = `${clientData.prenom || ''} ${clientData.nom || ''}`.trim();
           clientInput.value = nomComplet;
           numSoumissionInput.value = clientData.num || clientData.numeroSoumission || '';
-          console.log('[OK] Champs remplis - Client:', clientInput.value, 'Num:', numSoumissionInput.value);
+          log('[OK] Champs remplis - Client:', clientInput.value, 'Num:', numSoumissionInput.value);
         } else {
           // Si pas de client sélectionné, laisser vide
           clientInput.value = '';
           numSoumissionInput.value = '';
-          console.log('[WARN] Aucun client sélectionné');
+          log('[WARN] Aucun client sélectionné');
         }
 
         modal.classList.remove('hidden');
@@ -1688,7 +1695,7 @@
             timestamp: new Date().toISOString()
           };
 
-          console.log('[MONEY] REMBOURSEMENT:', remboursement);
+          log('[MONEY] REMBOURSEMENT:', remboursement);
 
           // Sauvegarder le remboursement via l'API
           try {
@@ -1706,7 +1713,7 @@
               alert('[ERROR] Erreur lors de l\'enregistrement du remboursement');
             }
           } catch (error) {
-            console.error('Erreur:', error);
+            error('Erreur:', error);
             alert('[ERROR] Erreur lors de l\'enregistrement du remboursement');
           }
         });
@@ -1758,7 +1765,7 @@
         // const soumissionData = await response.json();
         
       } catch (error) {
-        console.error('Erreur lors du chargement de la soumission:', error);
+        error('Erreur lors du chargement de la soumission:', error);
         content.innerHTML = `
           <div class="bg-red-900 bg-opacity-20 p-4 rounded-lg border border-red-600">
             <div class="flex items-center">
@@ -1839,7 +1846,7 @@
           }
         });
 
-        console.log('Données de facturations chargées:', {
+        log('Données de facturations chargées:', {
           urgentes: facturationsUrgentes.length,
           enCours: facturationsEnCours.length,
           traitement: facturationsTraitement.length,
@@ -1852,9 +1859,9 @@
         
         return true;
       } catch (error) {
-        console.error('Erreur lors du chargement des facturations:', error);
+        error('Erreur lors du chargement des facturations:', error);
         // Utiliser les données de test de nos 4 clients du workflow
-        console.log('🔄 STATUS: Utilisation des données de test synchronisées avec le workflow');
+        log('🔄 STATUS: Utilisation des données de test synchronisées avec le workflow');
         utiliserDonneesTestStatus();
         return false;
       }
@@ -1926,7 +1933,7 @@
         }
         Object.assign(etatsRelsClients[numeroSoumission], nouvelEtat);
         
-        console.log('🔄 État réel mis à jour localement pour', numeroSoumission, ':', etatsRelsClients[numeroSoumission]);
+        log('🔄 État réel mis à jour localement pour', numeroSoumission, ':', etatsRelsClients[numeroSoumission]);
         
         // Appel API pour chaque type de statut modifié
         for (const [cle, valeur] of Object.entries(nouvelEtat)) {
@@ -1959,7 +1966,7 @@
             }
             
             const result = await response.json();
-            console.log('[OK] Statut mis à jour via API:', result);
+            log('[OK] Statut mis à jour via API:', result);
           }
         }
         
@@ -1968,11 +1975,11 @@
         if (statusTab && !statusTab.classList.contains('hidden')) {
           await utiliserDonneesTestStatus();
           chargerFacturationsColonnes();
-          console.log('[DATA] Onglet Status mis à jour en temps réel via API');
+          log('[DATA] Onglet Status mis à jour en temps réel via API');
         }
         
       } catch (error) {
-        console.error('[ERROR] Erreur mise à jour état client via API:', error);
+        error('[ERROR] Erreur mise à jour état client via API:', error);
         
         // Fallback: mise à jour locale seulement
         mettreAJourEtatReelClientLocal(numeroSoumission, nouvelEtat);
@@ -1986,14 +1993,14 @@
       }
       
       Object.assign(etatsRelsClients[numeroSoumission], nouvelEtat);
-      console.log('[WARN] État réel mis à jour localement (fallback) pour', numeroSoumission, ':', etatsRelsClients[numeroSoumission]);
+      log('[WARN] État réel mis à jour localement (fallback) pour', numeroSoumission, ':', etatsRelsClients[numeroSoumission]);
       
       // Mettre à jour l'onglet Status si c'est actuellement visible
       const statusTab = document.getElementById('page2');
       if (statusTab && !statusTab.classList.contains('hidden')) {
         utiliserDonneesTestStatus();
         chargerFacturationsColonnes();
-        console.log('[DATA] Onglet Status mis à jour localement');
+        log('[DATA] Onglet Status mis à jour localement');
       }
     }
 
@@ -2059,14 +2066,14 @@
           }
         }
         
-        console.log('[OK] Données clients récupérées depuis API:', Object.keys(clientsWorkflow).length, 'clients');
+        log('[OK] Données clients récupérées depuis API:', Object.keys(clientsWorkflow).length, 'clients');
         return clientsWorkflow;
         
       } catch (error) {
-        console.error('[ERROR] Erreur lors de la récupération des clients:', error);
+        error('[ERROR] Erreur lors de la récupération des clients:', error);
         
         // En cas d'erreur, retourner un objet vide pour forcer l'utilisation des vraies données
-        console.warn('[WARN] Impossible de récupérer les données clients - Aucune donnée de test utilisée');
+        warn('[WARN] Impossible de récupérer les données clients - Aucune donnée de test utilisée');
         return {};
       }
     }
@@ -2086,14 +2093,14 @@
         return data.description || 'État inconnu';
         
       } catch (error) {
-        console.error('[ERROR] Erreur génération description:', error);
+        error('[ERROR] Erreur génération description:', error);
         return lireEtatReelBoutons(numeroSoumission);
       }
     }
 
     // Fonction pour synchroniser l'onglet Status avec les données API
     async function utiliserDonneesTestStatus() {
-      console.log('🔄 Début de la synchronisation des données Status avec API...');
+      log('🔄 Début de la synchronisation des données Status avec API...');
 
       try {
         // Récupérer le username de manière robuste (URL, window.username, storage)
@@ -2106,7 +2113,7 @@
         }
         
         const data = await response.json();
-        console.log('[BAN] Colonnes de status récupérées depuis API:', data);
+        log('[BAN] Colonnes de status récupérées depuis API:', data);
         
         // Réinitialiser les tableaux
         facturationsUrgentes = [];
@@ -2118,7 +2125,7 @@
           data.urgentes.clients.forEach(payment => {
             const paymentData = transformerPaiementPourStatus(payment, 'urgente');
             facturationsUrgentes.push(paymentData);
-            console.log('🚨 Paiement ajouté en urgente:', paymentData);
+            log('🚨 Paiement ajouté en urgente:', paymentData);
           });
         }
 
@@ -2126,7 +2133,7 @@
           data.en_traitement.clients.forEach(payment => {
             const paymentData = transformerPaiementPourStatus(payment, 'traitement');
             facturationsTraitement.push(paymentData);
-            console.log('⚙️ Paiement ajouté en traitement:', paymentData);
+            log('⚙️ Paiement ajouté en traitement:', paymentData);
           });
         }
 
@@ -2134,11 +2141,11 @@
           data.traitees.clients.forEach(payment => {
             const paymentData = transformerPaiementPourStatus(payment, 'traitees');
             facturationsTraitees.push(paymentData);
-            console.log('[OK] Paiement ajouté en traité:', paymentData);
+            log('[OK] Paiement ajouté en traité:', paymentData);
           });
         }
         
-        console.log('[DATA] Répartition finale depuis API:', {
+        log('[DATA] Répartition finale depuis API:', {
           urgentes: facturationsUrgentes.length,
           traitement: facturationsTraitement.length, 
           traitees: facturationsTraitees.length
@@ -2159,13 +2166,13 @@
           }
         });
         
-        console.log('[OK] Données Status synchronisées depuis API');
+        log('[OK] Données Status synchronisées depuis API');
 
         // Mettre à jour l'affichage des colonnes Status
         peuplerSectionsFacturations();
 
       } catch (error) {
-        console.error('[ERROR] Erreur synchronisation Status API:', error);
+        error('[ERROR] Erreur synchronisation Status API:', error);
 
         // Fallback vers les données locales
         await utiliserDonneesTestStatusFallback();
@@ -2375,10 +2382,10 @@
           .replace(/[^\d.]/g, '');  // Garder seulement chiffres et point
         const montant = parseFloat(montantStr) || 0;
         totalAutresPaiements += montant;
-        console.log('[MONEY] Montant autre paiement:', p.montant, '->', montant);
+        log('[MONEY] Montant autre paiement:', p.montant, '->', montant);
       });
       const montantAutresPaiementsFormate = totalAutresPaiements > 0 ? `${totalAutresPaiements.toFixed(2).replace('.', ',')} $` : '0,00 $';
-      console.log('[MONEY] Total autres paiements calculé:', totalAutresPaiements, '->', montantAutresPaiementsFormate);
+      log('[MONEY] Total autres paiements calculé:', totalAutresPaiements, '->', montantAutresPaiementsFormate);
 
       // Retourner un objet avec les statuts séparés pour affichage en 2 <i> différents
       const result = {
@@ -2670,7 +2677,7 @@
 
     // Fonction fallback pour les données locales
     async function utiliserDonneesTestStatusFallback() {
-      console.log('[WARN] Utilisation du fallback pour les données Status');
+      log('[WARN] Utilisation du fallback pour les données Status');
       const clientsWorkflow = await obtenirDonneesClientsWorkflow();
       
       facturationsUrgentes = [];
@@ -2689,7 +2696,7 @@
         }
       });
       
-      console.log('[DATA] Fallback - Répartition finale:', {
+      log('[DATA] Fallback - Répartition finale:', {
         urgentes: facturationsUrgentes.length,
         traitement: facturationsTraitement.length, 
         traitees: facturationsTraitees.length
@@ -2706,13 +2713,13 @@
         
         const client = data.clients.find(c => c.num === numeroSoumission);
         if (client && client.depot && client.depot.montant) {
-          console.log(`[MONEY] Montant trouvé pour ${numeroSoumission}:`, client.depot.montant);
+          log(`[MONEY] Montant trouvé pour ${numeroSoumission}:`, client.depot.montant);
           return client.depot.montant;
         }
         
-        console.log(`[WARN] Pas de depot.montant trouvé pour ${numeroSoumission}, client:`, client);
+        log(`[WARN] Pas de depot.montant trouvé pour ${numeroSoumission}, client:`, client);
       } catch (error) {
-        console.error(`[ERROR] Erreur getMontantForClient pour ${numeroSoumission}:`, error);
+        error(`[ERROR] Erreur getMontantForClient pour ${numeroSoumission}:`, error);
       }
       
       // Fallback vers les données hardcodées pour les anciens clients
@@ -2772,7 +2779,7 @@
         const year = date.getFullYear();
         return `${day}/${month}/${year}`;
       } catch (error) {
-        console.error('Erreur format date:', error);
+        error('Erreur format date:', error);
         return '';
       }
     }
@@ -2801,7 +2808,7 @@
     }
     
     function peuplerSectionsFacturations() {
-      console.log('🏗️ Début du peuplement des sections:', {
+      log('🏗️ Début du peuplement des sections:', {
         urgentes: facturationsUrgentes.length,
         traitement: facturationsTraitement.length,
         traitees: facturationsTraitees.length
@@ -2818,7 +2825,7 @@
         traiteesCount.textContent = facturationsTraitees.length;
       }
 
-      console.log('[OK] Sections peuplées terminées');
+      log('[OK] Sections peuplées terminées');
     }
     
     function peuplerSection(containerId, facturations, statusText, bgColor, textColor, showModifyButton, showTraiterButton = false) {
@@ -2849,7 +2856,7 @@
 
         // Pour les coachs dans la section traitement: bouton "À traiter" ou badge "En attente comptable"
         let statusBadgeHTML;
-        console.log('[DEBUG A TRAITER]', facturation.numeroSoumission, {
+        log('[DEBUG A TRAITER]', facturation.numeroSoumission, {
           isCoach, isTraitementSection, userRole,
           statutDepot: facturation.statutDepot,
           statutPaiementFinal: facturation.statutPaiementFinal,
@@ -3044,7 +3051,7 @@
 
     // Fonction pour modifier une facturation - définie globalement
     async function modifierFacturation(numeroFacture) {
-      console.log('Modification de la facture:', numeroFacture);
+      log('Modification de la facture:', numeroFacture);
       
       // Attendre que le DOM soit chargé
       if (document.readyState === 'loading') {
@@ -3060,7 +3067,7 @@
       // Récupérer les données de la facturation
       const facturationData = facturationsData[numeroFacture];
       if (!facturationData) {
-        console.error('Données de facturation non trouvées pour:', numeroFacture);
+        error('Données de facturation non trouvées pour:', numeroFacture);
         // Essayer de récupérer depuis l'API
         try {
           const username = getFacturationUsername();
@@ -3083,11 +3090,11 @@
             };
             facturationsData[numeroFacture] = facturationData;
           } else {
-            console.error('Facturation non trouvée dans l\'API');
+            error('Facturation non trouvée dans l\'API');
             return;
           }
         } catch (error) {
-          console.error('Erreur lors de la récupération depuis l\'API:', error);
+          error('Erreur lors de la récupération depuis l\'API:', error);
           return;
         }
       }
@@ -3098,7 +3105,7 @@
       const modalContent = document.getElementById('modalContent');
       
       if (!modal || !modalTitle || !modalContent) {
-        console.error('Éléments de modal non trouvés');
+        error('Éléments de modal non trouvés');
         return;
       }
       
@@ -3371,7 +3378,7 @@
       
       // Utiliser l'événement delegation directement sur la modal
       modal.addEventListener('click', (e) => {
-        console.log('👆 Click dans la modal sur:', e.target);
+        log('👆 Click dans la modal sur:', e.target);
         
         // Gérer les dropdowns avec delegation
         if (e.target.closest('.modern-dropdown')) {
@@ -3388,10 +3395,10 @@
           
           if (menuId) {
             const menu = document.getElementById(menuId);
-            console.log('[DEBUG] Menu element found:', !!menu, 'for menuId:', menuId);
+            log('[DEBUG] Menu element found:', !!menu, 'for menuId:', menuId);
             if (menu) {
-              console.log('[BAN] Menu classes before:', menu.className);
-              console.log('[FIX] Toggle dropdown:', dropdownId);
+              log('[BAN] Menu classes before:', menu.className);
+              log('[FIX] Toggle dropdown:', dropdownId);
               
               // Fermer tous les autres dropdowns du modal ET réinitialiser leurs styles
               document.querySelectorAll('#modificationModal .modern-dropdown-menu').forEach(m => {
@@ -3428,7 +3435,7 @@
               }
               
             } else {
-              console.error('[ERROR] Menu element not found for:', menuId);
+              error('[ERROR] Menu element not found for:', menuId);
             }
           }
         }
@@ -3450,7 +3457,7 @@
           if (toggleId) {
             const toggle = document.getElementById(toggleId);
             if (toggle) {
-              console.log('[OK] Option sélectionnée:', option.textContent);
+              log('[OK] Option sélectionnée:', option.textContent);
               
               // Mettre à jour le texte affiché
               const placeholder = toggle.querySelector('.placeholder');
@@ -3609,7 +3616,7 @@
           numeroCheque: document.getElementById('modalNumeroCheque')?.value || ''
         };
         
-        console.log('Sauvegarde modification:', { numeroFacture, donneesModifiees });
+        log('Sauvegarde modification:', { numeroFacture, donneesModifiees });
         
         // Envoyer à l'API pour modification
         const response = await fetch(`/facturation/${username}/${numeroFacture}`, {
@@ -3622,7 +3629,7 @@
         
         if (response.ok) {
           const result = await response.json();
-          console.log('Modification sauvegardée:', result);
+          log('Modification sauvegardée:', result);
           
           // Mettre à jour les données locales
           if (facturationsData[numeroFacture]) {
@@ -3633,7 +3640,7 @@
           await envoyerAuComptableAPI(numeroFacture, donneesModifiees);
           
         } else {
-          console.error('Erreur lors de la sauvegarde:', response.statusText);
+          error('Erreur lors de la sauvegarde:', response.statusText);
           alert('Erreur lors de la sauvegarde. Veuillez réessayer.');
           return;
         }
@@ -3645,7 +3652,7 @@
         await chargerFacturationsDepuisAPI();
         
       } catch (error) {
-        console.error('Erreur lors de la sauvegarde:', error);
+        error('Erreur lors de la sauvegarde:', error);
         alert('Erreur lors de la sauvegarde. Veuillez réessayer.');
       }
     }
@@ -3666,7 +3673,7 @@
         const facturationData = facturationsData[numeroFacture];
         
         if (!facturationData) {
-          console.error('Données de facturation non trouvées');
+          error('Données de facturation non trouvées');
           return;
         }
         
@@ -3692,13 +3699,13 @@
         });
         
         if (response.ok) {
-          console.log('Facturation envoyée au comptable avec succès');
+          log('Facturation envoyée au comptable avec succès');
         } else {
-          console.error('Erreur lors de l\'envoi au comptable:', response.statusText);
+          error('Erreur lors de l\'envoi au comptable:', response.statusText);
         }
         
       } catch (error) {
-        console.error('Erreur lors de l\'envoi au comptable:', error);
+        error('Erreur lors de l\'envoi au comptable:', error);
       }
     }
   </script>
@@ -4832,33 +4839,33 @@
     
     // Déclarations globales précoces pour éviter les erreurs de référence
     window.ouvrirMenuFacturation = async function() {
-      console.log('[UNLOCK] FACTURATION: Tentative ouverture menu facturation');
+      log('[UNLOCK] FACTURATION: Tentative ouverture menu facturation');
       const menu = document.getElementById('clientMenuFacturation');
-      console.log('[DEBUG] FACTURATION: Menu element:', menu);
+      log('[DEBUG] FACTURATION: Menu element:', menu);
       
       if (menu) {
-        console.log('[OK] FACTURATION: Menu facturation trouvé, suppression classe hidden');
+        log('[OK] FACTURATION: Menu facturation trouvé, suppression classe hidden');
         menu.classList.remove('hidden');
         
         // Charger les clients depuis l'API
         // Vérifier si les clients sont déjà chargés
         if (window.clientsFacturationData.length === 0) {
-          console.log('📥 FACTURATION: Aucun client chargé, charger depuis API');
+          log('📥 FACTURATION: Aucun client chargé, charger depuis API');
           await chargerClientsDepuisAPI();
         } else {
-          console.log('[BAN] FACTURATION: Clients déjà chargés:', window.clientsFacturationData.length);
+          log('[BAN] FACTURATION: Clients déjà chargés:', window.clientsFacturationData.length);
         }
         
         // Forcer l'affichage des clients
         if (typeof afficherClientsFacturationFiltres === 'function') {
-          console.log('🖥️ FACTURATION: Affichage forcé des clients...');
+          log('🖥️ FACTURATION: Affichage forcé des clients...');
           afficherClientsFacturationFiltres();
         }
       } else {
-        console.log('[WARN] FACTURATION: Menu facturation introuvable');
+        log('[WARN] FACTURATION: Menu facturation introuvable');
       }
         
-      console.log('👁️ FACTURATION: Menu visible:', menu && !menu.classList.contains('hidden'));
+      log('👁️ FACTURATION: Menu visible:', menu && !menu.classList.contains('hidden'));
     };
 
     // showPage() et chargerFacturationsColonnes() sont définis dans le <head>
@@ -4866,23 +4873,23 @@
     // Menu compte utilisateur - s'assurer que le DOM est chargé
     const accountBtn = document.getElementById("account-dropdown-toggle");
     const accountDropdown = document.getElementById("account-dropdown");
-    console.log('[DEBUG] Bouton account trouvé:', accountBtn);
-    console.log('[DEBUG] Dropdown trouvé:', accountDropdown);
+    log('[DEBUG] Bouton account trouvé:', accountBtn);
+    log('[DEBUG] Dropdown trouvé:', accountDropdown);
     if (accountBtn && accountDropdown) {
       accountBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log('👆 Click sur account button');
+        log('👆 Click sur account button');
         
         if (accountDropdown.classList.contains("hidden")) {
           accountDropdown.classList.remove("hidden");
-          console.log('[UNLOCK] Dropdown ouvert');
+          log('[UNLOCK] Dropdown ouvert');
         } else {
           accountDropdown.classList.add("hidden");
-          console.log('[LOCK] Dropdown fermé');
+          log('[LOCK] Dropdown fermé');
         }
         
-        console.log('[BAN] Dropdown classes:', accountDropdown.className);
+        log('[BAN] Dropdown classes:', accountDropdown.className);
       });
       // Délai pour éviter la fermeture immédiate
       setTimeout(() => {
@@ -4892,16 +4899,16 @@
           }
         });
       }, 100);
-      console.log('[OK] Event listeners ajoutés');
+      log('[OK] Event listeners ajoutés');
     } else {
-      // console.error('[ERROR] Bouton ou dropdown non trouvé');
+      // error('[ERROR] Bouton ou dropdown non trouvé');
     }
 
     // showPage() est définie une seule fois dans le <head> avec la logique anti-flash
 
     // Fonction pour envoyer une facturation au comptable et la déplacer vers "En traitement"
     function envoyerAuComptable(numeroFacture, nomClient) {
-      console.log('Envoi au comptable:', numeroFacture);
+      log('Envoi au comptable:', numeroFacture);
       
       // Déplacer de "Urgente" vers "En traitement"
       const urgentContent = document.getElementById('urgente-content');
@@ -4962,7 +4969,7 @@
       const typePaiement = document.getElementById('modalTypePaiement').value;
       const message = document.getElementById('modalMessage').value;
       
-      console.log('Sauvegarde modification:', { numeroFacture, montant, typePaiement, message });
+      log('Sauvegarde modification:', { numeroFacture, montant, typePaiement, message });
       
       // TODO: Envoyer les modifications à l'API
       
@@ -4999,11 +5006,11 @@
       // CORRECTION: Afficher page2 (Status) SEULEMENT si c'est un coach
       // Si page=status est demandé ET c'est un coach, OU si on a un paramètre user ET c'est un coach
       const shouldShowStatus = isCoach && (pageParam === 'status' || urlParams.has('user'));
-      console.log('[INIT] Mode coach sans sélection:', isCoachModeWithoutSelection, '| Page param:', pageParam, '| Show Status:', shouldShowStatus);
+      log('[INIT] Mode coach sans sélection:', isCoachModeWithoutSelection, '| Page param:', pageParam, '| Show Status:', shouldShowStatus);
       showPage(shouldShowStatus ? 'page2' : 'page1');
 
       if (isCoachModeWithoutSelection) {
-        console.log('[INIT] Mode coach détecté - Les données seront chargées après la sélection d\'entrepreneur');
+        log('[INIT] Mode coach détecté - Les données seront chargées après la sélection d\'entrepreneur');
         // Ne pas charger les données maintenant, elles seront chargées par selectEntrepreneur
         // Seulement initialiser le menu déroulant de sélection client
         initClientSelect();
@@ -5014,7 +5021,7 @@
       initClientSelect();
 
       // Charger les clients facturation depuis l'API
-      console.log('[INIT] Chargement initial des clients facturation...');
+      log('[INIT] Chargement initial des clients facturation...');
       await chargerClientsDepuisAPI();
 
       // Ajouter un client test pour les modifications
@@ -5184,7 +5191,7 @@
         delete depotsEnvoyes['24-TEST-001'];
         delete depotsEnvoyes['test-001'];
         localStorage.setItem('depotsEnvoyes', JSON.stringify(depotsEnvoyes));
-        console.log('🧹 Nettoyage localStorage pour Jean Dupont (test)');
+        log('🧹 Nettoyage localStorage pour Jean Dupont (test)');
       }
       
       // Créer l'option test
@@ -5200,7 +5207,7 @@
       
       // Ajouter au début du menu
       clientMenu.appendChild(optionTest);
-      console.log('🧪 Client test ajouté:', clientTest);
+      log('🧪 Client test ajouté:', clientTest);
     }
 
     // Fonction pour charger les clients depuis les soumissions
@@ -5215,7 +5222,7 @@
           
           // Vérifier si clientMenu existe (cette fonction peut être appelée sur une page sans ce menu)
           if (!clientMenu) {
-            console.warn('Element clientMenu introuvable - probablement sur une page différente');
+            warn('Element clientMenu introuvable - probablement sur une page différente');
             return;
           }
           
@@ -5225,7 +5232,7 @@
           soumissions.forEach(soumission => {
             // Filtrer les clients dont le paiement final est déjà traité
             if (soumission.statutPaiementFinal === 'traite') {
-              console.log('🚫 Client exclu (paiement final traité):', soumission.prenom, soumission.nom);
+              log('🚫 Client exclu (paiement final traité):', soumission.prenom, soumission.nom);
               return; // Ne pas ajouter ce client à la liste
             }
 
@@ -5247,15 +5254,15 @@
             option.style.cursor = 'pointer';
             option.style.borderBottom = '1px solid #334155';
             clientMenu.appendChild(option);
-            console.log('[ADD] Option client créée:', clientKey, option);
+            log('[ADD] Option client créée:', clientKey, option);
           });
           
-          console.log(`${clientsUniques.size} clients uniques chargés`);
+          log(`${clientsUniques.size} clients uniques chargés`);
         } else {
-          console.error('Erreur lors du chargement des soumissions');
+          error('Erreur lors du chargement des soumissions');
         }
       } catch (error) {
-        console.error('Erreur:', error);
+        error('Erreur:', error);
       }
     }
 
@@ -5264,11 +5271,11 @@
       const toggle = document.getElementById('clientToggle');
       const menu = document.getElementById('clientMenu');
       
-      console.log('[DEBUG] Toggle trouvé:', toggle);
-      console.log('[DEBUG] Menu trouvé:', menu);
+      log('[DEBUG] Toggle trouvé:', toggle);
+      log('[DEBUG] Menu trouvé:', menu);
       
       if (!toggle || !menu) {
-        console.warn('[WARN] Éléments clientToggle/clientMenu non trouvés (non utilisés dans facturation)');
+        warn('[WARN] Éléments clientToggle/clientMenu non trouvés (non utilisés dans facturation)');
         return;
       }
       
@@ -5276,7 +5283,7 @@
       document.body.addEventListener('click', (e) => {
         // Ouvrir/fermer le menu client
         if (e.target.closest('#clientToggle')) {
-          console.log('[TARGET] Clic sur clientToggle détecté');
+          log('[TARGET] Clic sur clientToggle détecté');
           e.preventDefault();
           e.stopPropagation();
           
@@ -5293,28 +5300,28 @@
           
           clientMenu.classList.toggle('hidden');
           clientToggle.classList.toggle('active', !clientMenu.classList.contains('hidden'));
-          console.log('[BAN] Menu client maintenant:', clientMenu.classList.contains('hidden') ? 'fermé' : 'ouvert');
+          log('[BAN] Menu client maintenant:', clientMenu.classList.contains('hidden') ? 'fermé' : 'ouvert');
         }
       });
       
-      console.log('📎 Event listener attaché au menu client');
+      log('📎 Event listener attaché au menu client');
       
       // Gérer TOUS les menus avec délégation d'événements
       document.body.addEventListener('click', (e) => {
         // Vérifier si le clic est dans le menu client
         if (e.target.closest('#clientMenu')) {
-          console.log('👆 Clic détecté sur le menu client');
-          console.log('[TARGET] Target:', e.target);
-          console.log('[TARGET] Target classList:', e.target.classList);
+          log('👆 Clic détecté sur le menu client');
+          log('[TARGET] Target:', e.target);
+          log('[TARGET] Target classList:', e.target.classList);
           
           const option = e.target.closest('.custom-select-option');
-          console.log('[BAN] Option trouvée:', option);
+          log('[BAN] Option trouvée:', option);
           
           if (option) {
-            console.log('[OK] Option valide, parsing data...');
-            console.log('[DEBUG] Dataset clientData:', option.dataset.clientData);
+            log('[OK] Option valide, parsing data...');
+            log('[DEBUG] Dataset clientData:', option.dataset.clientData);
             const clientData = JSON.parse(option.dataset.clientData);
-            console.log('[DATA] Client data parsed:', clientData);
+            log('[DATA] Client data parsed:', clientData);
           
             // Mettre à jour l'affichage du toggle
             const clientName = `${clientData.prenom} ${clientData.nom}`;
@@ -5335,8 +5342,8 @@
             
             // Auto-remplir le champ "Total des travaux" avec le prix formaté
             const totalTravauxField = document.getElementById('totalTravauxClient');
-            console.log('[MONEY] Prix du client:', clientData.prix);
-            console.log('[BAN] Champ total travaux:', totalTravauxField);
+            log('[MONEY] Prix du client:', clientData.prix);
+            log('[BAN] Champ total travaux:', totalTravauxField);
             if (clientData.prix) {
               // Formater le prix : 1000 -> "1 000,00 $"
               const prix = parseFloat(clientData.prix);
@@ -5346,7 +5353,7 @@
               const decimalFormatted = decimalPart.toString().padStart(2, '0');
               const prixFormate = wholePartFormatted + ',' + decimalFormatted + ' $';
               totalTravauxField.value = prixFormate;
-              console.log('[OK] Prix formaté rempli:', prixFormate);
+              log('[OK] Prix formaté rempli:', prixFormate);
             }
             
             // Sauvegarder les données client pour le bouton "Envoyé au comptable"
@@ -5379,25 +5386,25 @@
             menu.classList.add('hidden');
             toggle.classList.remove('active');
             
-            console.log('Client sélectionné:', clientName, 'Numéro:', numeroSoumission);
+            log('Client sélectionné:', clientName, 'Numéro:', numeroSoumission);
             
             // Activer la section paiements après sélection du client
-            console.log('[LAUNCH] Activation des sections paiements...');
+            log('[LAUNCH] Activation des sections paiements...');
             toggleSectionPaiements(true);
-            console.log('[OK] Sections paiements activées');
+            log('[OK] Sections paiements activées');
             
             // NOTE: Le statut du dépôt est maintenant géré dans selectionnerClientFacturation()
             // pour éviter les conflits entre localStorage et les données du client
-            console.log('[OK] Statut du dépôt géré par selectionnerClientFacturation()');
+            log('[OK] Statut du dépôt géré par selectionnerClientFacturation()');
           }
         }
         
         // Vérifier si le clic est dans le menu Type de paiement
         else if (e.target.closest('#typePaiementMenu')) {
-          console.log('👆 Clic détecté sur typePaiementMenu');
-          console.log('[TARGET] Target:', e.target);
+          log('👆 Clic détecté sur typePaiementMenu');
+          log('[TARGET] Target:', e.target);
           const option = e.target.closest('.custom-select-option');
-          console.log('[BAN] Option trouvée:', option);
+          log('[BAN] Option trouvée:', option);
           if (option) {
             const value = option.dataset.value;
             const text = option.textContent;
@@ -5408,16 +5415,16 @@
             typePaiementMenu.classList.add('hidden');
             typePaiementToggle.classList.remove('active');
             
-            console.log('[OK] Type de paiement sélectionné:', value);
+            log('[OK] Type de paiement sélectionné:', value);
           }
         }
         
         // Vérifier si le clic est dans le menu Payé par
         else if (e.target.closest('#payeParMenu')) {
-          console.log('👆 Clic détecté sur payeParMenu');
-          console.log('[TARGET] Target:', e.target);
+          log('👆 Clic détecté sur payeParMenu');
+          log('[TARGET] Target:', e.target);
           const option = e.target.closest('.custom-select-option');
-          console.log('[BAN] Option trouvée:', option);
+          log('[BAN] Option trouvée:', option);
           if (option) {
             const value = option.dataset.value;
             const text = option.textContent;
@@ -5443,7 +5450,7 @@
               chequeFields.style.display = 'grid';
             }
             
-            console.log('[OK] Payé par sélectionné:', value);
+            log('[OK] Payé par sélectionné:', value);
           }
         }
       });
@@ -5515,7 +5522,7 @@
 
       if (!btnDepot || !btnPaiementFinal || !btnAutresPaiements) return;
 
-      console.log('🔄 Adaptation des boutons selon type:', typeAutresPaiements);
+      log('🔄 Adaptation des boutons selon type:', typeAutresPaiements);
 
       if (typeAutresPaiements === 'un_seul_paiement') {
         // Cacher le bouton Dépôt (car "Un seul paiement" remplace le dépôt)
@@ -5529,7 +5536,7 @@
         btnAutresPaiements.classList.remove('px-6', 'py-3', 'text-base', 'font-semibold');
         btnAutresPaiements.classList.add('btn-secondary', 'px-4', 'py-2', 'text-sm');
 
-        console.log('[OK] Mode "Un seul paiement" : Dépôt et Paiement final cachés');
+        log('[OK] Mode "Un seul paiement" : Dépôt et Paiement final cachés');
       } else if (typeAutresPaiements === 'paiement_partiel') {
         // Réinitialiser le bouton dépôt
         btnDepot.innerHTML = '<i class="fas fa-piggy-bank mr-2"></i>Dépôt';
@@ -5546,7 +5553,7 @@
         btnAutresPaiements.classList.remove('px-6', 'py-3', 'text-base', 'font-semibold');
         btnAutresPaiements.classList.add('btn-secondary', 'px-4', 'py-2', 'text-sm');
 
-        console.log('[OK] Mode "Paiement partiel" : Tous les boutons affichés, Autres paiements reste inchangé');
+        log('[OK] Mode "Paiement partiel" : Tous les boutons affichés, Autres paiements reste inchangé');
       } else {
         // Mode par défaut: réinitialiser tous les boutons
         btnDepot.innerHTML = '<i class="fas fa-piggy-bank mr-2"></i>Dépôt';
@@ -5594,7 +5601,7 @@
             typePaiementAutresMenu.classList.add('hidden');
             typePaiementAutresToggle.classList.remove('active');
 
-            console.log('[OK] Type de paiement autres sélectionné:', value);
+            log('[OK] Type de paiement autres sélectionné:', value);
 
             // Gérer le champ montant selon le type
             const paiementAutresInput = document.getElementById('paiementAutres');
@@ -5613,7 +5620,7 @@
                 paiementAutresInput.style.setProperty('cursor', 'not-allowed', 'important');
                 paiementAutresInput.style.setProperty('opacity', '0.7', 'important');
                 paiementAutresInput.style.pointerEvents = 'none';
-                console.log('[MONEY] Un seul paiement: montant auto-calculé:', totalAvecTaxes);
+                log('[MONEY] Un seul paiement: montant auto-calculé:', totalAvecTaxes);
               }
             } else if (value === 'paiement_partiel') {
               // Paiement partiel: rendre modifiable
@@ -5625,7 +5632,7 @@
               paiementAutresInput.style.removeProperty('cursor');
               paiementAutresInput.style.removeProperty('opacity');
               paiementAutresInput.style.pointerEvents = 'auto';
-              console.log('[MONEY] Paiement partiel: montant modifiable');
+              log('[MONEY] Paiement partiel: montant modifiable');
             }
 
             // Adapter les boutons de paiement selon le type
@@ -5669,10 +5676,10 @@
       });
       
       payeParMenu.addEventListener('click', (e) => {
-        console.log('👆 Clic sur payeParMenu détecté');
-        console.log('[TARGET] Target:', e.target);
+        log('👆 Clic sur payeParMenu détecté');
+        log('[TARGET] Target:', e.target);
         const option = e.target.closest('.custom-select-option');
-        console.log('[BAN] Option trouvée:', option);
+        log('[BAN] Option trouvée:', option);
         if (option) {
           const value = option.dataset.value;
           const text = option.textContent;
@@ -5701,7 +5708,7 @@
             elementsAjouterDepot.style.setProperty('height', 'auto', 'important');
             virementFieldsDepot.classList.remove('hidden');
             chequeFieldsDepot.classList.add('hidden');
-            console.log('[OK] Éléments à ajouter DÉPÔT - virement sélectionné avec !important (statut:', statutDepot + ')');
+            log('[OK] Éléments à ajouter DÉPÔT - virement sélectionné avec !important (statut:', statutDepot + ')');
           } else if (value === 'cheque') {
             elementsAjouterDepot.style.setProperty('max-height', '1000px', 'important');
             elementsAjouterDepot.style.setProperty('opacity', '1', 'important');
@@ -5711,17 +5718,17 @@
             elementsAjouterDepot.style.setProperty('height', 'auto', 'important');
             chequeFieldsDepot.classList.remove('hidden');
             virementFieldsDepot.classList.add('hidden');
-            console.log('[OK] Éléments à ajouter DÉPÔT - chèque sélectionné avec !important (statut:', statutDepot + ')');
+            log('[OK] Éléments à ajouter DÉPÔT - chèque sélectionné avec !important (statut:', statutDepot + ')');
           } else {
             elementsAjouterDepot.style.setProperty('max-height', '0', 'important');
             elementsAjouterDepot.style.setProperty('opacity', '0', 'important');
             elementsAjouterDepot.style.setProperty('display', 'none', 'important');
             virementFieldsDepot.classList.add('hidden');
             chequeFieldsDepot.classList.add('hidden');
-            console.log('[LOCK] Éléments à ajouter DÉPÔT fermé avec !important (statut:', statutDepot + ')');
+            log('[LOCK] Éléments à ajouter DÉPÔT fermé avec !important (statut:', statutDepot + ')');
           }
           
-          console.log('Méthode de paiement sélectionnée:', value);
+          log('Méthode de paiement sélectionnée:', value);
         }
       });
       
@@ -5763,22 +5770,22 @@
               elementsAjouterPaiementFinal.style.opacity = '1';
               virementFieldsPaiementFinal.classList.remove('hidden');
               chequeFieldsPaiementFinal.classList.add('hidden');
-              console.log('[OK] Nouveaux éléments à ajouter PAIEMENT FINAL - virement (champs vides)');
+              log('[OK] Nouveaux éléments à ajouter PAIEMENT FINAL - virement (champs vides)');
             } else if (value === 'cheque') {
               elementsAjouterPaiementFinal.style.maxHeight = '500px';
               elementsAjouterPaiementFinal.style.opacity = '1';
               chequeFieldsPaiementFinal.classList.remove('hidden');
               virementFieldsPaiementFinal.classList.add('hidden');
-              console.log('[OK] Nouveaux éléments à ajouter PAIEMENT FINAL - chèque (champs vides)');
+              log('[OK] Nouveaux éléments à ajouter PAIEMENT FINAL - chèque (champs vides)');
             } else {
               elementsAjouterPaiementFinal.style.maxHeight = '0';
               elementsAjouterPaiementFinal.style.opacity = '0';
               virementFieldsPaiementFinal.classList.add('hidden');
               chequeFieldsPaiementFinal.classList.add('hidden');
-              console.log('[LOCK] Éléments à ajouter PAIEMENT FINAL fermés');
+              log('[LOCK] Éléments à ajouter PAIEMENT FINAL fermés');
             }
             
-            console.log('Méthode de paiement final sélectionnée:', value);
+            log('Méthode de paiement final sélectionnée:', value);
           }
         });
       }
@@ -5821,22 +5828,22 @@
               elementsAjouterAutres.style.opacity = '1';
               virementFieldsAutres.classList.remove('hidden');
               chequeFieldsAutres.classList.add('hidden');
-              console.log('[OK] Éléments à ajouter AUTRES PAIEMENTS - virement');
+              log('[OK] Éléments à ajouter AUTRES PAIEMENTS - virement');
             } else if (value === 'cheque') {
               elementsAjouterAutres.style.maxHeight = '500px';
               elementsAjouterAutres.style.opacity = '1';
               chequeFieldsAutres.classList.remove('hidden');
               virementFieldsAutres.classList.add('hidden');
-              console.log('[OK] Éléments à ajouter AUTRES PAIEMENTS - chèque');
+              log('[OK] Éléments à ajouter AUTRES PAIEMENTS - chèque');
             } else {
               elementsAjouterAutres.style.maxHeight = '0';
               elementsAjouterAutres.style.opacity = '0';
               virementFieldsAutres.classList.add('hidden');
               chequeFieldsAutres.classList.add('hidden');
-              console.log('[LOCK] Éléments à ajouter AUTRES PAIEMENTS fermés');
+              log('[LOCK] Éléments à ajouter AUTRES PAIEMENTS fermés');
             }
             
-            console.log('Méthode de paiement autres sélectionnée:', value);
+            log('Méthode de paiement autres sélectionnée:', value);
           }
         });
       }
@@ -5891,7 +5898,7 @@
               chequeFields.classList.add('hidden');
             }
             
-            console.log('Méthode de paiement remboursement sélectionnée:', value);
+            log('Méthode de paiement remboursement sélectionnée:', value);
           }
         });
       }
@@ -6058,7 +6065,7 @@
         
         // Vérifier que les éléments existent
         if (!this.inputElement || !this.calendarElement) {
-          console.warn(`CustomCalendar: Éléments manquants - input: ${inputId}, calendar: ${calendarId}`);
+          warn(`CustomCalendar: Éléments manquants - input: ${inputId}, calendar: ${calendarId}`);
           return;
         }
         
@@ -6245,7 +6252,7 @@
         const originalText = envoyerBtn.innerHTML;
         
         try {
-          console.log('[LAUNCH] === DÉBUT ENVOI COMPTABLE ===');
+          log('[LAUNCH] === DÉBUT ENVOI COMPTABLE ===');
           
           // D'abord, détecter quelle section est active pour récupérer les bons champs
           const contentDepot = document.getElementById('content-depot');
@@ -6259,24 +6266,24 @@
             sectionActive = 'paiement-final';
             paiementEl = document.getElementById('paiementFinal');
             dateEl = document.getElementById('datePaiementFinal');
-            console.log('[TARGET] Section PAIEMENT FINAL détectée pour collecte des données');
+            log('[TARGET] Section PAIEMENT FINAL détectée pour collecte des données');
           } else if (contentAutres && !contentAutres.classList.contains('hidden')) {
             sectionActive = 'autres-paiements';
             paiementEl = document.getElementById('paiementAutres');
             dateEl = document.getElementById('datePaiementAutres');
-            console.log('[TARGET] Section AUTRES PAIEMENTS détectée pour collecte des données');
+            log('[TARGET] Section AUTRES PAIEMENTS détectée pour collecte des données');
           } else {
             sectionActive = 'depot';
             paiementEl = document.getElementById('paiement');
             dateEl = document.getElementById('dateDepot');
-            console.log('[TARGET] Section DÉPÔT détectée pour collecte des données');
+            log('[TARGET] Section DÉPÔT détectée pour collecte des données');
           }
           
           // Récupérer les données du formulaire avec vérification
           const clientInfoEl = document.getElementById('clientInfo');
           const totalTravauxEl = document.getElementById('totalTravauxClient');
           
-          console.log('[DEBUG] Éléments DOM trouvés pour section', sectionActive + ':', {
+          log('[DEBUG] Éléments DOM trouvés pour section', sectionActive + ':', {
             clientInfoEl: !!clientInfoEl,
             paiementEl: !!paiementEl,
             totalTravauxEl: !!totalTravauxEl,
@@ -6288,14 +6295,14 @@
           const totalTravaux = totalTravauxEl ? totalTravauxEl.value : '';
           const dateDepot = dateEl ? dateEl.value : '';
           
-          console.log('[DEBUG] DEBUG - Éléments DOM détaillés:', {
+          log('[DEBUG] DEBUG - Éléments DOM détaillés:', {
             clientInfoEl: clientInfoEl,
             paiementEl: paiementEl,
             paiementElValue: paiementEl?.value,
             paiementElVisible: paiementEl ? getComputedStyle(paiementEl).display !== 'none' : false
           });
           
-          console.log('[DATA] Valeurs formulaire:', {
+          log('[DATA] Valeurs formulaire:', {
             clientInfo,
             paiement,
             totalTravaux,
@@ -6304,7 +6311,7 @@
           
           // Vérifier les champs obligatoires
           if (!clientInfo || !paiement) {
-            console.error('[ERROR] Champs obligatoires manquants:', { clientInfo, paiement });
+            error('[ERROR] Champs obligatoires manquants:', { clientInfo, paiement });
             alert('Veuillez sélectionner un client et saisir le montant du paiement');
             return;
           }
@@ -6321,7 +6328,7 @@
             const payeParFinalEl = document.getElementById('payeParFinalToggle');
             payeParText = payeParFinalEl ? payeParFinalEl.textContent.trim() : 'Choisir méthode...';
             
-            console.log('[FIX] Dropdowns PAIEMENT FINAL:', {
+            log('[FIX] Dropdowns PAIEMENT FINAL:', {
               payeParFinalEl: !!payeParFinalEl,
               payeParText
             });
@@ -6336,7 +6343,7 @@
             const typePaiementAutresEl = document.getElementById('typePaiementAutresToggle');
             typePaiementAutresText = typePaiementAutresEl ? typePaiementAutresEl.textContent.trim() : '';
 
-            console.log('[FIX] Dropdowns AUTRES PAIEMENTS:', {
+            log('[FIX] Dropdowns AUTRES PAIEMENTS:', {
               payeParAutresEl: !!payeParAutresEl,
               payeParText,
               typePaiementAutresText
@@ -6349,7 +6356,7 @@
             typePaiementText = typePaiementEl ? typePaiementEl.textContent.trim() : 'Dépôt';
             payeParText = payeParEl ? payeParEl.textContent.trim() : 'Choisir méthode...';
             
-            console.log('[FIX] Dropdowns DÉPÔT:', {
+            log('[FIX] Dropdowns DÉPÔT:', {
               typePaiementEl: !!typePaiementEl,
               payeParEl: !!payeParEl,
               typePaiementText,
@@ -6357,21 +6364,21 @@
             });
           }
           
-          console.log('[TARGET] Section active détectée:', sectionActive);
-          console.log('🎛️ Valeurs dropdowns finales:', {
+          log('[TARGET] Section active détectée:', sectionActive);
+          log('🎛️ Valeurs dropdowns finales:', {
             typePaiementText,
             payeParText
           });
           
           if (typePaiementText === 'Choisir le type...' || payeParText === 'Choisir méthode...') {
-            console.error('[ERROR] Dropdowns pas sélectionnés:', { typePaiementText, payeParText });
+            error('[ERROR] Dropdowns pas sélectionnés:', { typePaiementText, payeParText });
             alert('Veuillez sélectionner le type de paiement et la méthode');
             return;
           }
           
           // Récupérer les données client sélectionné depuis le sessionStorage
           const clientData = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
-          console.log('👤 Données client récupérées:', clientData);
+          log('👤 Données client récupérées:', clientData);
           
           // Mapper le type de paiement vers les valeurs attendues par le backend
           let typePaiementBackend = 'depot'; // par défaut
@@ -6383,14 +6390,14 @@
             typePaiementBackend = 'autres_paiements';
           }
           
-          console.log('🔄 Mapping type paiement:', {
+          log('🔄 Mapping type paiement:', {
             frontend: typePaiementText,
             backend: typePaiementBackend
           });
 
           // S'assurer que les valeurs ne sont pas vides
           if (!paiement || paiement.trim() === '') {
-            console.error('[ERROR] Montant de paiement manquant');
+            error('[ERROR] Montant de paiement manquant');
             alert('Veuillez saisir un montant de paiement');
             return;
           }
@@ -6426,21 +6433,21 @@
               if (statutDepot === 'non_envoye') {
                 // Pas de dépôt = c'est un "Un seul paiement"
                 typePaiementAutresValue = 'un_seul_paiement';
-                console.log('[FALLBACK] Type déduit automatiquement: un_seul_paiement (pas de dépôt)');
+                log('[FALLBACK] Type déduit automatiquement: un_seul_paiement (pas de dépôt)');
               } else {
                 // Dépôt existe = c'est un paiement partiel
                 typePaiementAutresValue = 'paiement_partiel';
-                console.log('[FALLBACK] Type déduit automatiquement: paiement_partiel (dépôt existe)');
+                log('[FALLBACK] Type déduit automatiquement: paiement_partiel (dépôt existe)');
               }
             }
 
             if (typePaiementAutresValue) {
               facturationData.typePaiementAutres = typePaiementAutresValue;
-              console.log('[OK] Type paiement autres ajouté:', typePaiementAutresValue);
+              log('[OK] Type paiement autres ajouté:', typePaiementAutresValue);
             }
           }
 
-          console.log('[PACKAGE] Données facturation préparées:', facturationData);
+          log('[PACKAGE] Données facturation préparées:', facturationData);
           
           // Ajouter les champs spécifiques selon la méthode et la section active
           if (payeParText.toLowerCase() === 'virement') {
@@ -6451,7 +6458,7 @@
               // Section paiement final
               lienVirementEl = document.querySelector('input[name="lien_virement_final"]');
               motDePasseEl = document.querySelector('input[name="mdp_virement_final"]');
-              console.log('[MONEY] Recherche champs virement PAIEMENT FINAL:', {
+              log('[MONEY] Recherche champs virement PAIEMENT FINAL:', {
                 lienVirementEl: !!lienVirementEl,
                 motDePasseEl: !!motDePasseEl
               });
@@ -6459,7 +6466,7 @@
               // Section autres paiements
               lienVirementEl = document.querySelector('input[name="lien_virement_autres"]');
               motDePasseEl = document.querySelector('input[name="mdp_virement_autres"]');
-              console.log('[MONEY] Recherche champs virement AUTRES PAIEMENTS:', {
+              log('[MONEY] Recherche champs virement AUTRES PAIEMENTS:', {
                 lienVirementEl: !!lienVirementEl,
                 motDePasseEl: !!motDePasseEl
               });
@@ -6467,7 +6474,7 @@
               // Section dépôt (par défaut)
               lienVirementEl = document.querySelector('input[name="lien_virement"]') || document.getElementById('lienVirement');
               motDePasseEl = document.querySelector('input[name="mdp_virement"]') || document.getElementById('motDePasseVirement');
-              console.log('[MONEY] Recherche champs virement DÉPÔT:', {
+              log('[MONEY] Recherche champs virement DÉPÔT:', {
                 lienVirementEl: !!lienVirementEl,
                 motDePasseEl: !!motDePasseEl
               });
@@ -6476,7 +6483,7 @@
             facturationData.lienVirement = lienVirementEl ? lienVirementEl.value : '';
             facturationData.motDePasseVirement = motDePasseEl ? motDePasseEl.value : '';
             
-            console.log('[MONEY] Champs virement collectés pour section', sectionActive + ':', {
+            log('[MONEY] Champs virement collectés pour section', sectionActive + ':', {
               lienVirementEl: !!lienVirementEl,
               lienValue: facturationData.lienVirement,
               motDePasseEl: !!motDePasseEl,
@@ -6488,24 +6495,24 @@
             // Collecter les champs chèque selon la section active
             if (sectionActive === 'paiement-final') {
               numeroChequeEl = document.querySelector('input[name="num_cheque_final"]');
-              console.log('📜 Recherche champ chèque PAIEMENT FINAL:', {
+              log('📜 Recherche champ chèque PAIEMENT FINAL:', {
                 numeroChequeEl: !!numeroChequeEl
               });
             } else if (sectionActive === 'autres-paiements') {
               numeroChequeEl = document.querySelector('input[name="num_cheque_autres"]');
-              console.log('📜 Recherche champ chèque AUTRES PAIEMENTS:', {
+              log('📜 Recherche champ chèque AUTRES PAIEMENTS:', {
                 numeroChequeEl: !!numeroChequeEl
               });
             } else {
               numeroChequeEl = document.querySelector('input[name="num_cheque"]') || document.getElementById('numeroCheque');
-              console.log('📜 Recherche champ chèque DÉPÔT:', {
+              log('📜 Recherche champ chèque DÉPÔT:', {
                 numeroChequeEl: !!numeroChequeEl
               });
             }
             
             facturationData.numeroCheque = numeroChequeEl ? numeroChequeEl.value : '';
             
-            console.log('📜 Champs chèque collectés pour section', sectionActive + ':', {
+            log('📜 Champs chèque collectés pour section', sectionActive + ':', {
               numeroChequeEl: !!numeroChequeEl,
               numValue: facturationData.numeroCheque
             });
@@ -6526,7 +6533,7 @@
           const username = getFacturationUsername();
           const numeroSoumission = clientInfo; // Utiliser le numéro affiché dans l'interface
           
-          console.log('🌐 Préparation requête API:', {
+          log('🌐 Préparation requête API:', {
             username,
             numeroSoumission,
             url: `/api/facturationqe/envoyer-comptable/${username}/${numeroSoumission}`
@@ -6535,7 +6542,7 @@
           const requestBody = {
             ...facturationData
           };
-          console.log('[PACKAGE] Corps de la requête:', requestBody);
+          log('[PACKAGE] Corps de la requête:', requestBody);
           
           const response = await fetch(`/api/facturationqe/envoyer-comptable/${username}/${numeroSoumission}`, {
             method: 'POST',
@@ -6543,7 +6550,7 @@
             body: JSON.stringify(requestBody)
           });
           
-          console.log('📡 Réponse API:', {
+          log('📡 Réponse API:', {
             status: response.status,
             statusText: response.statusText,
             ok: response.ok
@@ -6551,22 +6558,22 @@
           
           if (!response.ok) {
             const errorData = await response.text();
-            console.error('[ERROR] Erreur API:', { status: response.status, errorData });
+            error('[ERROR] Erreur API:', { status: response.status, errorData });
             throw new Error(`Erreur ${response.status}: ${errorData}`);
           }
           
           const responseData = await response.json();
-          console.log('[OK] Réponse API succès:', responseData);
+          log('[OK] Réponse API succès:', responseData);
 
           // Succès
           envoyerBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Envoyé !';
           envoyerBtn.style.backgroundColor = 'rgb(16, 185, 129)';
 
-          console.log('[OK] Paiement envoyé au comptable avec succès');
+          log('[OK] Paiement envoyé au comptable avec succès');
 
           // La génération des boutons de paiements partiels se fera automatiquement
           // lors du rechargement du client depuis l'API (plus bas)
-          console.log('🔄 Les boutons de paiements partiels seront générés après rechargement des données');
+          log('🔄 Les boutons de paiements partiels seront générés après rechargement des données');
 
           // Si c'est un paiement final ou un seul paiement, désactiver "Autres paiements"
           if (sectionActive === 'paiement-final' || (sectionActive === 'autres-paiements' && typePaiementAutresText === 'Un seul paiement')) {
@@ -6576,7 +6583,7 @@
               btnAutresPaiements.style.opacity = '0.3';
               btnAutresPaiements.style.cursor = 'not-allowed';
               btnAutresPaiements.style.pointerEvents = 'none';
-              console.log('🚫 Bouton "Autres paiements" désactivé (paiement final ou un seul paiement)');
+              log('🚫 Bouton "Autres paiements" désactivé (paiement final ou un seul paiement)');
             }
           }
 
@@ -6588,17 +6595,17 @@
           }
 
           // Attendre 800ms puis recharger les colonnes et données
-          console.log('🔄 Rechargement des données et colonnes après envoi...');
+          log('🔄 Rechargement des données et colonnes après envoi...');
           await new Promise(resolve => setTimeout(resolve, 800));
 
           // Recharger les colonnes de statut ET les données
           await chargerFacturationsDepuisAPI();
 
-          console.log('[OK] Données rechargées après envoi au comptable');
+          log('[OK] Données rechargées après envoi au comptable');
 
           // === NOUVEAU: Réinitialiser le formulaire "Autres paiements" après envoi réussi ===
           if (sectionActive === 'autres-paiements') {
-            console.log('🧹 Réinitialisation du formulaire Autres paiements');
+            log('🧹 Réinitialisation du formulaire Autres paiements');
 
             // Réinitialiser les champs
             if (paiementEl) paiementEl.value = '';
@@ -6644,7 +6651,7 @@
               elementsAjouterAutres.style.opacity = '0';
             }
 
-            console.log('[OK] Formulaire Autres paiements réinitialisé - prêt pour nouveau paiement');
+            log('[OK] Formulaire Autres paiements réinitialisé - prêt pour nouveau paiement');
           }
 
           // Réinitialiser le bouton envoi
@@ -6656,7 +6663,7 @@
           const currentClientNum = sessionStorage.getItem('selectedClientFacturation');
           const currentClientName = sessionStorage.getItem('selectedClientNameFacturation');
 
-          console.log('🔄 Rechargement du client avec données fraîches:', currentClientNum);
+          log('🔄 Rechargement du client avec données fraîches:', currentClientNum);
 
           if (currentClientNum && currentClientName) {
             try {
@@ -6664,24 +6671,24 @@
               const responseClient = await fetch(`/api/facturationqe/statuts/${username}/${currentClientNum}`);
               if (responseClient.ok) {
                 const freshData = await responseClient.json();
-                console.log('[OK] Données fraîches récupérées:', freshData);
-                console.log('[DEBUG] autresPaiements dans freshData:', freshData.autresPaiements);
+                log('[OK] Données fraîches récupérées:', freshData);
+                log('[DEBUG] autresPaiements dans freshData:', freshData.autresPaiements);
 
                 // Recharger le client avec les données fraîches
                 if (typeof selectionnerClientFacturation === 'function') {
                   await selectionnerClientFacturation(currentClientNum, currentClientName, freshData);
-                  console.log('[OK] Client rechargé - boutons de paiements partiels générés');
+                  log('[OK] Client rechargé - boutons de paiements partiels générés');
 
                   // Si c'était un paiement partiel, ouvrir la section "Autres paiements" pour permettre d'en ajouter d'autres
                   if (sectionActive === 'autres-paiements' && typePaiementAutresText === 'Paiement partiel') {
                     setTimeout(() => {
                       showPaiementSection('autres-paiements');
-                      console.log('[UNLOCK] Section "Autres paiements" réouverte pour ajouter un autre paiement');
+                      log('[UNLOCK] Section "Autres paiements" réouverte pour ajouter un autre paiement');
                     }, 300);
                   }
                 }
               } else {
-                console.error('[ERROR] Erreur récupération données fraîches');
+                error('[ERROR] Erreur récupération données fraîches');
                 // Fallback: recharger avec les données en cache
                 const cachedData = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
                 if (typeof selectionnerClientFacturation === 'function') {
@@ -6689,7 +6696,7 @@
                 }
               }
             } catch (error) {
-              console.error('[ERROR] Erreur rechargement client:', error);
+              error('[ERROR] Erreur rechargement client:', error);
             }
           }
 
@@ -6700,7 +6707,7 @@
           showSuccessToast('Envoi réussi !', 'Le paiement a été envoyé au comptable avec succès.');
 
         } catch (error) {
-          console.error('Erreur envoi comptable:', error);
+          error('Erreur envoi comptable:', error);
 
           // Cacher l'overlay en cas d'erreur
           const overlay = document.getElementById('sectionPaiementsOverlay');
@@ -6838,14 +6845,14 @@
       const totalTaxes = TPS + TVQ;  // 14,975%
       
       const totalAvecTaxes = montantHorsTaxes * (1 + totalTaxes);
-      console.log(`[MONEY] Calcul taxes: ${montantHorsTaxes} + ${(totalTaxes * 100).toFixed(3)}% = ${totalAvecTaxes.toFixed(2)}`);
+      log(`[MONEY] Calcul taxes: ${montantHorsTaxes} + ${(totalTaxes * 100).toFixed(3)}% = ${totalAvecTaxes.toFixed(2)}`);
       
       return totalAvecTaxes;
     }
 
     // Fonction pour mettre à jour la progression du paiement
     function updateProgressionPaiement(clientData) {
-      console.log('🔄 Mise à jour progression paiement pour:', clientData);
+      log('🔄 Mise à jour progression paiement pour:', clientData);
       
       const progressBar = document.getElementById('progressBar');
       const progressPercentage = document.getElementById('progressPercentage');
@@ -6855,14 +6862,14 @@
       const totalTravauxElement = document.getElementById('totalTravauxClient');
       const totalTravauxProgression = document.getElementById('totalTravauxProgression');
       
-      console.log('[DEBUG] DEBUG - Elements trouvés:', {
+      log('[DEBUG] DEBUG - Elements trouvés:', {
         progressTextRight: !!progressTextRight,
         totalTravauxElement: !!totalTravauxElement,
         totalTravauxElementValue: totalTravauxElement?.value
       });
       
       if (!progressBar || !progressPercentage || !statutPaiement) {
-        console.log('[ERROR] DEBUG - Éléments manquants:', {
+        log('[ERROR] DEBUG - Éléments manquants:', {
           progressBar: !!progressBar,
           progressPercentage: !!progressPercentage,
           statutPaiement: !!statutPaiement
@@ -6880,7 +6887,7 @@
           .replace(/[^\d.]/g, ''); // Garder seulement chiffres et points
         
         totalTravaux = parseFloat(cleanValue) || 0;
-        console.log('[MONEY] Total travaux extrait:', totalTravaux, 'de:', totalTravauxElement.value);
+        log('[MONEY] Total travaux extrait:', totalTravaux, 'de:', totalTravauxElement.value);
       }
       
       // Mettre à jour l'affichage du montant total avec taxes (format canadien français)
@@ -6902,23 +6909,23 @@
         totalAvecTaxesFormate = formatMontant(totalAvecTaxes);
       }
       
-      console.log('[DATA] Total avec taxes calculé:', totalAvecTaxes, 'formaté:', totalAvecTaxesFormate);
-      console.log('[TARGET] DEBUG - Condition check: totalTravaux =', totalTravaux, 'totalAvecTaxes =', totalAvecTaxes);
+      log('[DATA] Total avec taxes calculé:', totalAvecTaxes, 'formaté:', totalAvecTaxesFormate);
+      log('[TARGET] DEBUG - Condition check: totalTravaux =', totalTravaux, 'totalAvecTaxes =', totalAvecTaxes);
       
       // Toujours mettre à jour les textes de progression d'abord
       if (progressTextLeft) {
         progressTextLeft.textContent = '0$';
-        console.log('[OK] DEBUG - progressTextLeft:', progressTextLeft.textContent);
+        log('[OK] DEBUG - progressTextLeft:', progressTextLeft.textContent);
       }
       if (progressTextRight) {
         progressTextRight.textContent = totalAvecTaxesFormate;
-        console.log('[OK] DEBUG - progressTextRight mis à jour avec taxes:', totalAvecTaxesFormate);
+        log('[OK] DEBUG - progressTextRight mis à jour avec taxes:', totalAvecTaxesFormate);
       } else {
-        console.log('[ERROR] DEBUG - progressTextRight non trouvé!');
+        log('[ERROR] DEBUG - progressTextRight non trouvé!');
       }
       
       if (totalTravaux === 0) {
-        console.log('[WARN] DEBUG - Passage par la condition totalTravaux === 0');
+        log('[WARN] DEBUG - Passage par la condition totalTravaux === 0');
 
         // Vérifier s'il y a des "autres paiements" (un seul paiement ou paiement partiel)
         const autresPaiementsData = clientData.autresPaiements || [];
@@ -6939,7 +6946,7 @@
             if (p.typePaiementAutres === 'un_seul_paiement') hasUnSeulPaiement = true;
           });
 
-          console.log('[DEBUG] Autres paiements trouvés:', autresPaiementsData.length, 'total:', totalAutres, 'en traitement:', hasEnTraitement, 'traité:', hasTraite, 'un seul:', hasUnSeulPaiement);
+          log('[DEBUG] Autres paiements trouvés:', autresPaiementsData.length, 'total:', totalAutres, 'en traitement:', hasEnTraitement, 'traité:', hasTraite, 'un seul:', hasUnSeulPaiement);
 
           // Mettre à jour la barre avec le montant des autres paiements
           const totalAvecTaxesAutres = calculerTotalAvecTaxes(totalAutres);
@@ -6977,7 +6984,7 @@
         return;
       }
       
-      console.log('[OK] DEBUG - Passage par la condition totalTravaux > 0, calcul progression...');
+      log('[OK] DEBUG - Passage par la condition totalTravaux > 0, calcul progression...');
       // Calculer séparément les montants traités et en traitement
       let montantTraite = 0;
       let montantEnTraitement = 0;
@@ -7003,7 +7010,7 @@
         const paiementInput = document.getElementById('paiement');
         if (paiementInput && paiementInput.value) {
           montantDepot = cleanAndParseAmount(paiementInput.value);
-          console.log('[INFO] Montant dépôt lu depuis input:', montantDepot);
+          log('[INFO] Montant dépôt lu depuis input:', montantDepot);
         }
       }
 
@@ -7011,37 +7018,37 @@
       if (clientData.depot && clientData.depot.statut === 'traite') {
         montantTraite += montantDepot;
         statut = 'Dépôt traité - En attente paiement final';
-        console.log('[MONEY] Dépôt TRAITÉ ajouté:', montantDepot);
+        log('[MONEY] Dépôt TRAITÉ ajouté:', montantDepot);
       } else if (clientData.statutDepot === 'traite') {
         montantTraite += montantDepot;
         statut = 'Dépôt traité - En attente paiement final';
-        console.log('[MONEY] Dépôt TRAITÉ ajouté (via statutDepot):', montantDepot);
+        log('[MONEY] Dépôt TRAITÉ ajouté (via statutDepot):', montantDepot);
       } else if (clientData.depot && clientData.depot.statut === 'traite_attente_final') {
         // Dépôt validé par direction - considéré comme traité (vert)
         montantTraite += montantDepot;
         statut = 'Dépôt traité - En attente paiement final';
-        console.log('[MONEY] Dépôt TRAITÉ (traite_attente_final) ajouté:', montantDepot);
+        log('[MONEY] Dépôt TRAITÉ (traite_attente_final) ajouté:', montantDepot);
       } else if (clientData.statutDepot === 'traite_attente_final') {
         montantTraite += montantDepot;
         statut = 'Dépôt traité - En attente paiement final';
-        console.log('[MONEY] Dépôt TRAITÉ (traite_attente_final via statutDepot) ajouté:', montantDepot);
+        log('[MONEY] Dépôt TRAITÉ (traite_attente_final via statutDepot) ajouté:', montantDepot);
       } else if (clientData.depot && clientData.depot.statut === 'attente_comptable') {
         // Dépôt validé par coach, en attente direction - EN TRAITEMENT (orange) pour l'entrepreneur
         montantEnTraitement += montantDepot;
         statut = 'Dépôt en traitement';
-        console.log('[ORANGE] Dépôt EN TRAITEMENT (attente_comptable) ajouté:', montantDepot);
+        log('[ORANGE] Dépôt EN TRAITEMENT (attente_comptable) ajouté:', montantDepot);
       } else if (clientData.statutDepot === 'attente_comptable') {
         montantEnTraitement += montantDepot;
         statut = 'Dépôt en traitement';
-        console.log('[ORANGE] Dépôt EN TRAITEMENT (attente_comptable via statutDepot) ajouté:', montantDepot);
+        log('[ORANGE] Dépôt EN TRAITEMENT (attente_comptable via statutDepot) ajouté:', montantDepot);
       } else if (clientData.depot && clientData.depot.statut === 'traitement') {
         montantEnTraitement += montantDepot;
         statut = 'Dépôt en traitement';
-        console.log('[ORANGE] Dépôt EN TRAITEMENT ajouté:', montantDepot);
+        log('[ORANGE] Dépôt EN TRAITEMENT ajouté:', montantDepot);
       } else if (clientData.statutDepot === 'traitement') {
         montantEnTraitement += montantDepot;
         statut = 'Dépôt en traitement';
-        console.log('[ORANGE] Dépôt EN TRAITEMENT ajouté (via statutDepot):', montantDepot);
+        log('[ORANGE] Dépôt EN TRAITEMENT ajouté (via statutDepot):', montantDepot);
       } else if (clientData.depot && clientData.depot.statut === 'envoye') {
         statut = 'Dépôt envoyé au comptable';
       } else if (clientData.statutDepot === 'envoye') {
@@ -7056,13 +7063,13 @@
         } else {
           statut = 'Paiement final traité';
         }
-        console.log('[MONEY] Paiement final TRAITÉ ajouté:', cleanAndParseAmount(clientData.paiementFinal.montant));
+        log('[MONEY] Paiement final TRAITÉ ajouté:', cleanAndParseAmount(clientData.paiementFinal.montant));
       } else if (clientData.statutPaiementFinal === 'traite') {
         if (clientData.paiementFinal && clientData.paiementFinal.montant) {
           montantTraite += cleanAndParseAmount(clientData.paiementFinal.montant);
         }
         statut = 'Paiements complets';
-        console.log('[MONEY] Paiement final TRAITÉ ajouté (via statutPaiementFinal):', cleanAndParseAmount(clientData.paiementFinal?.montant));
+        log('[MONEY] Paiement final TRAITÉ ajouté (via statutPaiementFinal):', cleanAndParseAmount(clientData.paiementFinal?.montant));
       } else if (clientData.paiementFinal && clientData.paiementFinal.statut === 'attente_comptable') {
         // Paiement final validé par coach, en attente direction - EN TRAITEMENT (orange) pour l'entrepreneur
         montantEnTraitement += cleanAndParseAmount(clientData.paiementFinal.montant);
@@ -7075,7 +7082,7 @@
         } else {
           statut = 'Paiement final en traitement';
         }
-        console.log('[ORANGE] Paiement final EN TRAITEMENT (attente_comptable) ajouté:', cleanAndParseAmount(clientData.paiementFinal.montant));
+        log('[ORANGE] Paiement final EN TRAITEMENT (attente_comptable) ajouté:', cleanAndParseAmount(clientData.paiementFinal.montant));
       } else if (clientData.statutPaiementFinal === 'attente_comptable') {
         if (clientData.paiementFinal && clientData.paiementFinal.montant) {
           montantEnTraitement += cleanAndParseAmount(clientData.paiementFinal.montant);
@@ -7089,7 +7096,7 @@
         } else {
           statut = 'Paiement final en traitement';
         }
-        console.log('[ORANGE] Paiement final EN TRAITEMENT (attente_comptable via statutPaiementFinal) ajouté:', cleanAndParseAmount(clientData.paiementFinal?.montant));
+        log('[ORANGE] Paiement final EN TRAITEMENT (attente_comptable via statutPaiementFinal) ajouté:', cleanAndParseAmount(clientData.paiementFinal?.montant));
       } else if (clientData.paiementFinal && clientData.paiementFinal.statut === 'traitement') {
         montantEnTraitement += cleanAndParseAmount(clientData.paiementFinal.montant);
         const depotStatut = clientData.depot?.statut || clientData.statutDepot;
@@ -7101,7 +7108,7 @@
         } else {
           statut = 'Paiement final en traitement';
         }
-        console.log('[ORANGE] Paiement final EN TRAITEMENT ajouté:', cleanAndParseAmount(clientData.paiementFinal.montant));
+        log('[ORANGE] Paiement final EN TRAITEMENT ajouté:', cleanAndParseAmount(clientData.paiementFinal.montant));
       } else if (clientData.statutPaiementFinal === 'traitement') {
         if (clientData.paiementFinal && clientData.paiementFinal.montant) {
           montantEnTraitement += cleanAndParseAmount(clientData.paiementFinal.montant);
@@ -7115,7 +7122,7 @@
         } else {
           statut = 'Paiement final en traitement';
         }
-        console.log('[ORANGE] Paiement final EN TRAITEMENT ajouté (via statutPaiementFinal):', cleanAndParseAmount(clientData.paiementFinal?.montant));
+        log('[ORANGE] Paiement final EN TRAITEMENT ajouté (via statutPaiementFinal):', cleanAndParseAmount(clientData.paiementFinal?.montant));
       }
 
       // Vérifier les autres paiements
@@ -7127,12 +7134,12 @@
           if (paiement.statut === 'traite') {
             montantTraite += montantAutre;
             hasAutresPaiementsTraite = true;
-            console.log('[MONEY] Autre paiement TRAITÉ ajouté:', montantAutre);
+            log('[MONEY] Autre paiement TRAITÉ ajouté:', montantAutre);
           } else if (paiement.statut === 'traitement' || paiement.statut === 'attente_comptable') {
             // attente_comptable = validé par coach, en attente direction = toujours "en traitement" pour l'entrepreneur
             montantEnTraitement += montantAutre;
             hasAutresPaiementsTraitement = true;
-            console.log('[ORANGE] Autre paiement EN TRAITEMENT ajouté:', montantAutre, '(statut:', paiement.statut, ')');
+            log('[ORANGE] Autre paiement EN TRAITEMENT ajouté:', montantAutre, '(statut:', paiement.statut, ')');
           }
         });
       }
@@ -7230,7 +7237,7 @@
         progressBar.style.background = '#6b7280'; // Gris solide
       }
 
-      console.log('[OK] Progression mise à jour:', Math.round(progression) + '%', '- Montant traité:', montantTraite, '- Montant en traitement:', montantEnTraitement, '- Total avec taxes:', totalAvecTaxes, '- Statut:', statut);
+      log('[OK] Progression mise à jour:', Math.round(progression) + '%', '- Montant traité:', montantTraite, '- Montant en traitement:', montantEnTraitement, '- Total avec taxes:', totalAvecTaxes, '- Statut:', statut);
     }
     
     // Fonctions de recherche supprimées - les tables n'existent plus avec le nouveau système
@@ -7239,43 +7246,43 @@
 
     // Fonction pour initialiser le formatage automatique des montants
     function initFormattingMontants() {
-      console.log('[LAUNCH] Initialisation du formatage des montants...');
+      log('[LAUNCH] Initialisation du formatage des montants...');
       const champsMonetaires = ['paiement', 'paiementFinal', 'paiementAutres', 'totalTravauxClient', 'produit'];
       
       champsMonetaires.forEach(champId => {
         const champ = document.getElementById(champId);
-        console.log(`[DEBUG] Champ ${champId}:`, champ ? 'trouvé' : 'NON TROUVÉ');
+        log(`[DEBUG] Champ ${champId}:`, champ ? 'trouvé' : 'NON TROUVÉ');
         
         if (champ && typeof champ.addEventListener === 'function') {
-          console.log(`[OK] Event listeners ajoutés pour ${champId}`);
+          log(`[OK] Event listeners ajoutés pour ${champId}`);
           
           // Fonction pour nettoyer la valeur (enlever formatage pour édition)
           champ.addEventListener('focus', function() {
-            console.log(`👆 Focus sur ${champId}, valeur avant:`, this.value);
+            log(`👆 Focus sur ${champId}, valeur avant:`, this.value);
             let valeur = this.value;
             // Enlever le formatage (espaces, virgules, $) pour permettre l'édition
             valeur = valeur.replace(/\s/g, '').replace(',', '.').replace('$', '').trim();
             this.value = valeur;
-            console.log(`🧹 ${champId} nettoyé pour édition:`, valeur);
+            log(`🧹 ${champId} nettoyé pour édition:`, valeur);
           });
           
           // Ajout événement input pour formatage en temps réel
           champ.addEventListener('input', function() {
-            console.log(`⌨️ Saisie dans ${champId}:`, this.value);
+            log(`⌨️ Saisie dans ${champId}:`, this.value);
           });
           
           // Fonction pour formater la valeur quand on quitte le champ
           champ.addEventListener('blur', function() {
-            console.log(`👋 Blur sur ${champId}, valeur:`, this.value);
+            log(`👋 Blur sur ${champId}, valeur:`, this.value);
             let valeur = this.value.trim();
             if (valeur === '' || isNaN(parseFloat(valeur))) {
-              console.log(`[ERROR] ${champId} - Valeur invalide ou vide:`, valeur);
+              log(`[ERROR] ${champId} - Valeur invalide ou vide:`, valeur);
               return;
             }
             
             // Convertir en nombre
             const nombre = parseFloat(valeur);
-            console.log(`🔢 ${champId} - Nombre parsé:`, nombre);
+            log(`🔢 ${champId} - Nombre parsé:`, nombre);
             
             // Formater avec espaces pour milliers et 2 décimales
             const wholePart = Math.floor(nombre);
@@ -7284,7 +7291,7 @@
             const decimalFormatted = decimalPart.toString().padStart(2, '0');
             const nombreFormate = wholePartFormatted + ',' + decimalFormatted;
             
-            console.log(`🎨 ${champId} - Formatage:`, {
+            log(`🎨 ${champId} - Formatage:`, {
               wholePart,
               decimalPart,
               wholePartFormatted,
@@ -7295,7 +7302,7 @@
             // Ajouter le $ à la fin
             const valeurFinale = nombreFormate + ' $';
             this.value = valeurFinale;
-            console.log(`[OK] ${champId} - Valeur finale:`, valeurFinale);
+            log(`[OK] ${champId} - Valeur finale:`, valeurFinale);
           });
         }
       });
@@ -7349,7 +7356,7 @@
     // Fonction pour activer le menu basé sur la page actuelle
     function activateCurrentPageMenu() {
       const currentPath = window.location.pathname;
-      console.log('🌐 Page actuelle détectée:', currentPath);
+      log('🌐 Page actuelle détectée:', currentPath);
       
       const allMenuLinks = document.querySelectorAll('#sidebar a');
       allMenuLinks.forEach(link => {
@@ -7367,9 +7374,9 @@
       if (targetLink) {
         targetLink.classList.add('menu-active');
         targetLink.setAttribute('data-menu-state', 'active');
-        console.log('[OK] Menu activé pour:', targetLink.textContent.trim());
+        log('[OK] Menu activé pour:', targetLink.textContent.trim());
       } else {
-        console.log('[WARN] Aucun menu trouvé pour la page:', currentPath);
+        log('[WARN] Aucun menu trouvé pour la page:', currentPath);
       }
     }
 
@@ -7381,7 +7388,7 @@
         dateEnvoi: new Date().toISOString()
       };
       localStorage.setItem('depotsEnvoyes', JSON.stringify(depotsEnvoyes));
-      console.log('[OK] Dépôt marqué comme envoyé pour client:', clientId);
+      log('[OK] Dépôt marqué comme envoyé pour client:', clientId);
     }
 
     function marquerDepotTraite(clientId) {
@@ -7390,7 +7397,7 @@
         depotsEnvoyes[clientId].statut = 'traite';
         depotsEnvoyes[clientId].dateTraitement = new Date().toISOString();
         localStorage.setItem('depotsEnvoyes', JSON.stringify(depotsEnvoyes));
-        console.log('[OK] Dépôt marqué comme traité pour client:', clientId);
+        log('[OK] Dépôt marqué comme traité pour client:', clientId);
       }
     }
 
@@ -7398,14 +7405,14 @@
       // Priorité aux données du client actuel si disponibles
       const clientData = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
       if (clientData.num === clientId && clientData.statutDepot) {
-        console.log('[TARGET] Statut dépôt depuis clientData pour', clientId, ':', clientData.statutDepot);
+        log('[TARGET] Statut dépôt depuis clientData pour', clientId, ':', clientData.statutDepot);
         return clientData.statutDepot;
       }
       
       // Fallback vers localStorage
       const depotsEnvoyes = JSON.parse(localStorage.getItem('depotsEnvoyes') || '{}');
       const statutFromStorage = depotsEnvoyes[clientId]?.statut || null;
-      console.log('[PACKAGE] Statut dépôt depuis localStorage pour', clientId, ':', statutFromStorage);
+      log('[PACKAGE] Statut dépôt depuis localStorage pour', clientId, ':', statutFromStorage);
       return statutFromStorage;
     }
 
@@ -7429,7 +7436,7 @@
           }
         });
         
-        console.log('[OK] Section dépôt grisée et désactivée');
+        log('[OK] Section dépôt grisée et désactivée');
         
         // Afficher les informations de paiement même quand grisé
         afficherInfosPaiementGrisees('depot');
@@ -7466,7 +7473,7 @@
           }
         });
         
-        console.log('[OK] Section dépôt rendue non-modifiable (traitement)');
+        log('[OK] Section dépôt rendue non-modifiable (traitement)');
         
         // Cette fonction peut être appelée dans 2 contextes:
         // 1. Au chargement initial (section peut ne pas être active encore)
@@ -7476,8 +7483,8 @@
         const clientData = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
         const statutDepot = clientData.statutDepot || 'non_envoye';
         
-        console.log('[DEBUG] DEBUG - elementsAjouterDepot trouvé:', elementsAjouterDepot);
-        console.log('[DEBUG] DEBUG - Statut dépôt:', statutDepot);
+        log('[DEBUG] DEBUG - elementsAjouterDepot trouvé:', elementsAjouterDepot);
+        log('[DEBUG] DEBUG - Statut dépôt:', statutDepot);
         
         // Stocker dans sessionStorage qu'on veut afficher les éléments dépôt
         sessionStorage.setItem('showDepotElements', 'true');
@@ -7493,11 +7500,11 @@
           elementsAjouterDepot.style.setProperty('position', 'static', 'important');
           elementsAjouterDepot.classList.remove('hidden');
           
-          console.log('[OK] Section éléments à ajouter DÉPÔT FORCÉE visible pour traitement');
-          console.log('[DEBUG] DEBUG - Style complet appliqué:', elementsAjouterDepot.style.cssText);
-          console.log('[DEBUG] DEBUG - Classes:', elementsAjouterDepot.classList.toString());
+          log('[OK] Section éléments à ajouter DÉPÔT FORCÉE visible pour traitement');
+          log('[DEBUG] DEBUG - Style complet appliqué:', elementsAjouterDepot.style.cssText);
+          log('[DEBUG] DEBUG - Classes:', elementsAjouterDepot.classList.toString());
         } else {
-          console.log('[ERROR] DEBUG - elementsAjouterDepot non trouvé!');
+          log('[ERROR] DEBUG - elementsAjouterDepot non trouvé!');
         }
         
         // Afficher les champs spécifiques au type de paiement (virement/chèque)
@@ -7509,20 +7516,20 @@
             const typeText = clientData.depot.type === 'virement' ? 'Virement' : 
                             clientData.depot.type === 'cheque' ? 'Chèque' : clientData.depot.type;
             payeParToggle.textContent = typeText;
-            console.log('[OK] Dropdown Payé par mis à jour:', typeText);
+            log('[OK] Dropdown Payé par mis à jour:', typeText);
           }
           
           // Debug pour voir les éléments disponibles de la section DÉPÔT
           const virementFieldsDepot = document.getElementById('virementFieldsDepot');
           const chequeFieldsDepot = document.getElementById('chequeFieldsDepot');
           
-          console.log('[DEBUG] DEBUG - virementFieldsDepot trouvé:', virementFieldsDepot);
-          console.log('[DEBUG] DEBUG - chequeFieldsDepot trouvé:', chequeFieldsDepot);
-          console.log('[DEBUG] DEBUG - Type de paiement:', clientData.depot.type);
+          log('[DEBUG] DEBUG - virementFieldsDepot trouvé:', virementFieldsDepot);
+          log('[DEBUG] DEBUG - chequeFieldsDepot trouvé:', chequeFieldsDepot);
+          log('[DEBUG] DEBUG - Type de paiement:', clientData.depot.type);
           
           if (clientData.depot.type === 'virement' && virementFieldsDepot) {
-            console.log('[DEBUG] Affichage des champs virement DÉPÔT...');
-            console.log('[DEBUG] virementFieldsDepot trouvé:', virementFieldsDepot);
+            log('[DEBUG] Affichage des champs virement DÉPÔT...');
+            log('[DEBUG] virementFieldsDepot trouvé:', virementFieldsDepot);
             
             // Forcer l'affichage avec !important
             virementFieldsDepot.classList.remove('hidden');
@@ -7531,31 +7538,31 @@
             virementFieldsDepot.style.setProperty('visibility', 'visible', 'important');
             virementFieldsDepot.style.setProperty('max-height', 'none', 'important');
             
-            console.log('[OK] DEBUG - virementFieldsDepot styles forcés:', virementFieldsDepot.style.cssText);
+            log('[OK] DEBUG - virementFieldsDepot styles forcés:', virementFieldsDepot.style.cssText);
             
             // Remplir les champs virement avec les données
             const lienVirementInput = virementFieldsDepot.querySelector('input[name="lien_virement"]');
             const mdpVirementInput = virementFieldsDepot.querySelector('input[name="mdp_virement"]');
             
-            console.log('[DEBUG] lienVirementInput:', lienVirementInput);
-            console.log('[DEBUG] mdpVirementInput:', mdpVirementInput);
+            log('[DEBUG] lienVirementInput:', lienVirementInput);
+            log('[DEBUG] mdpVirementInput:', mdpVirementInput);
             
             if (lienVirementInput && clientData.depot.lienVirement) {
               lienVirementInput.value = clientData.depot.lienVirement;
               lienVirementInput.readOnly = true;
               lienVirementInput.style.backgroundColor = 'rgba(55, 65, 81, 0.3)';
               lienVirementInput.style.color = '#9ca3af';
-              console.log('[OK] Lien virement rempli:', clientData.depot.lienVirement);
+              log('[OK] Lien virement rempli:', clientData.depot.lienVirement);
             }
             if (mdpVirementInput && clientData.depot.motDePasse) {
               mdpVirementInput.value = clientData.depot.motDePasse;
               mdpVirementInput.readOnly = true;
               mdpVirementInput.style.backgroundColor = 'rgba(55, 65, 81, 0.3)';
               mdpVirementInput.style.color = '#9ca3af';
-              console.log('[OK] Mot de passe rempli:', clientData.depot.motDePasse);
+              log('[OK] Mot de passe rempli:', clientData.depot.motDePasse);
             }
             
-            console.log('[OK] Champs virement DÉPÔT affichés et remplis');
+            log('[OK] Champs virement DÉPÔT affichés et remplis');
             
           } else if (clientData.depot.type === 'cheque' && chequeFieldsDepot) {
             chequeFieldsDepot.classList.remove('hidden');
@@ -7570,7 +7577,7 @@
               numeroChequeInput.style.color = '#9ca3af';
             }
             
-            console.log('[OK] Champs chèque affichés et remplis');
+            log('[OK] Champs chèque affichés et remplis');
           }
         }
         
@@ -7676,7 +7683,7 @@
         
         // Ajouter le nouvel affichage
         elementsAjouter.insertAdjacentHTML('afterend', infoHTML);
-        console.log('[OK] Informations de paiement affichées pour section', section, 'type:', paiementData.type);
+        log('[OK] Informations de paiement affichées pour section', section, 'type:', paiementData.type);
       }
     }
     
@@ -7686,7 +7693,7 @@
     // Les paiements envoyés deviennent des boutons "Paiement Partiel 1, 2, 3..." entre Dépôt et Paiement Final
 
     function rendreSectionAutresPaiementsNonModifiable() {
-      console.log('[WARN] rendreSectionAutresPaiementsNonModifiable appelée - MAIS ne grise plus la section');
+      log('[WARN] rendreSectionAutresPaiementsNonModifiable appelée - MAIS ne grise plus la section');
       // Ne rien faire - la section "Autres paiements" reste toujours active
     }
 
@@ -7694,13 +7701,13 @@
      * Génère dynamiquement les boutons "Paiement Partiel 1, 2, 3..." et "Un seul paiement" depuis clientData.autresPaiements[]
      */
     function genererBoutonsPaiementsPartiels(autresPaiements) {
-      console.log('[FIX] genererBoutonsPaiementsPartiels appelée avec', autresPaiements.length, 'paiements');
+      log('[FIX] genererBoutonsPaiementsPartiels appelée avec', autresPaiements.length, 'paiements');
 
       const btnDepot = document.getElementById('btn-depot');
       const tabSpacing = btnDepot?.parentElement;
 
       if (!tabSpacing) {
-        console.error('[ERROR] Container non trouvé');
+        error('[ERROR] Container non trouvé');
         return;
       }
 
@@ -7716,7 +7723,7 @@
         return p.typePaiementAutres === 'un_seul_paiement';
       });
 
-      console.log(`[DEBUG] ${paiementsPartiels.length} paiements partiels, ${paiementsUnSeul.length} un seul paiement`);
+      log(`[DEBUG] ${paiementsPartiels.length} paiements partiels, ${paiementsUnSeul.length} un seul paiement`);
 
       // Générer boutons pour paiements partiels
       paiementsPartiels.forEach((paiement, index) => {
@@ -7775,7 +7782,7 @@
         });
       }
 
-      console.log(`[OK] ${paiementsPartiels.length + paiementsUnSeul.length} boutons créés`);
+      log(`[OK] ${paiementsPartiels.length + paiementsUnSeul.length} boutons créés`);
     }
 
     /**
@@ -7797,7 +7804,7 @@
         return p.typePaiementAutres === 'un_seul_paiement';
       });
 
-      console.log(`[FIX] Génération sections: ${paiementsPartiels.length} partielles, ${paiementsUnSeul.length} un seul paiement`);
+      log(`[FIX] Génération sections: ${paiementsPartiels.length} partielles, ${paiementsUnSeul.length} un seul paiement`);
 
       // Générer sections pour paiements partiels
       paiementsPartiels.forEach((paiement, index) => {
@@ -8093,7 +8100,7 @@
         contentPaiementFinal.parentElement.insertBefore(newSection, contentPaiementFinal);
       });
 
-      console.log(`[OK] ${paiementsPartiels.length + paiementsUnSeul.length} sections créées avec structure identique`);
+      log(`[OK] ${paiementsPartiels.length + paiementsUnSeul.length} sections créées avec structure identique`);
     }
 
     /**
@@ -8167,10 +8174,10 @@
       // Si le dépôt est en traitement, attente_comptable, traite_attente_final ou traité, cacher l'option "Un seul paiement"
       if (statutDepot === 'traitement' || statutDepot === 'attente_comptable' || statutDepot === 'traite_attente_final' || statutDepot === 'traite') {
         optionUnSeulPaiement.style.display = 'none';
-        console.log('🚫 Option "Un seul paiement" cachée (dépôt en', statutDepot + ')');
+        log('🚫 Option "Un seul paiement" cachée (dépôt en', statutDepot + ')');
       } else {
         optionUnSeulPaiement.style.display = 'block';
-        console.log('[OK] Option "Un seul paiement" affichée (dépôt:', statutDepot + ')');
+        log('[OK] Option "Un seul paiement" affichée (dépôt:', statutDepot + ')');
       }
     }
 
@@ -8197,7 +8204,7 @@
           // Adapter les boutons pour afficher le bon layout
           adapterBoutonsPaiement('paiement_partiel');
 
-          console.log('[OK] "Paiement partiel" pré-sélectionné automatiquement (dépôt en', statutDepot + ')');
+          log('[OK] "Paiement partiel" pré-sélectionné automatiquement (dépôt en', statutDepot + ')');
         }
       }
     }
@@ -8224,7 +8231,7 @@
           await selectionnerClientFacturation(clientData.num, `${updated.prenom} ${updated.nom}`, updated);
         }
       } catch (error) {
-        console.error('Erreur:', error);
+        error('Erreur:', error);
         alert('Erreur lors du marquage comme traité');
       }
     }
@@ -8263,7 +8270,7 @@
           }
         });
         
-        console.log('[OK] Section paiement final rendue non-modifiable (traitement)');
+        log('[OK] Section paiement final rendue non-modifiable (traitement)');
         
         // Obtenir les données client pour afficher les champs virement/chèque avec auto-grisage
         const clientData = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
@@ -8282,7 +8289,7 @@
           elementsAjouterPaiementFinal.style.setProperty('overflow', 'visible', 'important');
           elementsAjouterPaiementFinal.style.setProperty('height', 'auto', 'important');
 
-          console.log('[OK] Section éléments à ajouter PAIEMENT FINAL FORCÉE visible pour traitement/attente_comptable');
+          log('[OK] Section éléments à ajouter PAIEMENT FINAL FORCÉE visible pour traitement/attente_comptable');
           
           const virementFieldsPaiementFinal = document.getElementById('virementFieldsPaiementFinal');
           const chequeFieldsPaiementFinal = document.getElementById('chequeFieldsPaiementFinal');
@@ -8321,7 +8328,7 @@
               mdpVirementFinal.style.cursor = 'not-allowed';
             }
             
-            console.log('[OK] Champs virement PAIEMENT FINAL grisés automatiquement');
+            log('[OK] Champs virement PAIEMENT FINAL grisés automatiquement');
             
           } else if (clientData.paiementFinal.type === 'cheque' && chequeFieldsPaiementFinal) {
             // Afficher et griser les champs chèque paiement final
@@ -8339,7 +8346,7 @@
               numeroChequeInput.style.cursor = 'not-allowed';
             }
             
-            console.log('[OK] Champs chèque PAIEMENT FINAL grisés automatiquement');
+            log('[OK] Champs chèque PAIEMENT FINAL grisés automatiquement');
           }
         }
         
@@ -8413,7 +8420,7 @@
 
           btnDepot.innerHTML = '<i class="fas fa-piggy-bank mr-2"></i>Dépôt';
           btnDepot.disabled = false;
-          console.log('[ORANGE] Bouton dépôt mis en mode attente_comptable (orange - en attente direction)');
+          log('[ORANGE] Bouton dépôt mis en mode attente_comptable (orange - en attente direction)');
         } else if (statut === 'traite_attente_final') {
           // Vert pour "traite_attente_final" - direction a validé le dépôt
           btnDepot.classList.remove('btn-secondary', 'btn-primary');
@@ -8426,7 +8433,7 @@
 
           btnDepot.innerHTML = '<i class="fas fa-piggy-bank mr-2"></i>Dépôt';
           btnDepot.disabled = false;
-          console.log('[GREEN] Bouton dépôt mis en mode traite_attente_final (vert - validé par direction)');
+          log('[GREEN] Bouton dépôt mis en mode traite_attente_final (vert - validé par direction)');
         } else {
           // Statut non reconnu - remettre le bouton à l'état par défaut
           btnDepot.style.removeProperty('background');
@@ -8436,10 +8443,10 @@
           btnDepot.innerHTML = '<i class="fas fa-piggy-bank mr-2"></i>Dépôt';
           btnDepot.disabled = false;
           btnDepot.classList.add('btn-secondary');
-          console.log('[WARN] Statut dépôt non reconnu:', statut, '- remise à l\'état par défaut');
+          log('[WARN] Statut dépôt non reconnu:', statut, '- remise à l\'état par défaut');
         }
         
-        console.log('[OK] Bouton dépôt changé en statut:', statut);
+        log('[OK] Bouton dépôt changé en statut:', statut);
       }
     }
 
@@ -8470,7 +8477,7 @@
           btnPaiementFinal.style.setProperty('cursor', 'pointer', 'important');
 
           btnPaiementFinal.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Paiement final';
-          console.log('[ORANGE] Bouton paiement final mis en mode traitement (orange)');
+          log('[ORANGE] Bouton paiement final mis en mode traitement (orange)');
         } else if (statutPaiementFinal === 'attente_comptable') {
           // Orange pour "attente comptable" (validé par coach, en attente direction) - ACTIF
           btnPaiementFinal.classList.add('btn-secondary');
@@ -8481,7 +8488,7 @@
 
           btnPaiementFinal.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Paiement final';
           btnPaiementFinal.disabled = false;
-          console.log('[ORANGE] Bouton paiement final mis en mode attente_comptable (orange - en attente direction - ACTIF)');
+          log('[ORANGE] Bouton paiement final mis en mode attente_comptable (orange - en attente direction - ACTIF)');
         } else if (statutPaiementFinal === 'traite' || statutPaiementFinal === 'traite_attente_final') {
           // Vert pour "traité" ou "traite_attente_final" (validé par direction) - RESTE CLIQUABLE
           btnPaiementFinal.classList.add('btn-secondary');
@@ -8492,15 +8499,15 @@
 
           btnPaiementFinal.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Paiement final';
           btnPaiementFinal.disabled = false;
-          console.log('[GREEN] Bouton paiement final mis en mode traité (vert - ACTIF)');
+          log('[GREEN] Bouton paiement final mis en mode traité (vert - ACTIF)');
         } else {
           // Style normal pour autres statuts
           btnPaiementFinal.classList.add('btn-secondary');
           btnPaiementFinal.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Paiement final';
-          console.log('[WHITE] Bouton paiement final en mode normal');
+          log('[WHITE] Bouton paiement final en mode normal');
         }
         
-        console.log('[OK] Bouton paiement final changé en statut:', statutPaiementFinal);
+        log('[OK] Bouton paiement final changé en statut:', statutPaiementFinal);
       }
     }
 
@@ -8516,7 +8523,7 @@
         // Ouvrir la section paiement final
         showPaiementSection('paiement-final');
         
-        console.log('[OK] Paiement final ouvert par défaut car dépôt', statut);
+        log('[OK] Paiement final ouvert par défaut car dépôt', statut);
       }
     }
 
@@ -8546,7 +8553,7 @@
       // Charger les clients facturation depuis soumissions signées (tous les statuts)
       chargerClientsDepuisAPI();
 
-      console.log('[OK] Mode Facturation activé - Page indépendante');
+      log('[OK] Mode Facturation activé - Page indépendante');
     }
 
     // Mode Remboursement - affiche uniquement la page remboursement
@@ -8575,7 +8582,7 @@
       btnRemboursement.style.setProperty('border-color', '#ef4444', 'important');
       btnRemboursement.style.setProperty('color', 'white', 'important');
       
-      console.log('[OK] Mode Remboursement activé - Page indépendante');
+      log('[OK] Mode Remboursement activé - Page indépendante');
     }
 
     // Variables pour la recherche remboursement
@@ -8584,24 +8591,24 @@
 
     // Fonction pour ouvrir le menu remboursement
     function ouvrirMenuRemboursement() {
-      console.log('[UNLOCK] Tentative ouverture menu remboursement');
+      log('[UNLOCK] Tentative ouverture menu remboursement');
       const menu = document.getElementById('clientMenuRemboursement');
       if (menu) {
-        console.log('[OK] Menu trouvé, suppression classe hidden');
+        log('[OK] Menu trouvé, suppression classe hidden');
         
         // Si les clients ne sont pas chargés, les charger
         if (window.clientsRemboursementData.length === 0) {
-          console.log('📥 Chargement des clients remboursement...');
+          log('📥 Chargement des clients remboursement...');
           chargerClientsRemboursement();
         } else {
-          console.log('[BAN] Clients déjà chargés:', window.clientsRemboursementData.length);
+          log('[BAN] Clients déjà chargés:', window.clientsRemboursementData.length);
           // Réafficher les clients filtrés
           afficherClientsRemboursementFiltres();
         }
         
         menu.classList.remove('hidden');
       } else {
-        console.error('[ERROR] Menu remboursement non trouvé');
+        error('[ERROR] Menu remboursement non trouvé');
       }
     }
 
@@ -8628,7 +8635,7 @@
 
     // Fonction de recherche pour les clients remboursement
     function rechercherClientsRemboursement(searchTerm) {
-      console.log('[DEBUG] Recherche remboursement:', searchTerm);
+      log('[DEBUG] Recherche remboursement:', searchTerm);
       
       if (!searchTerm || searchTerm.length === 0) {
         // Afficher tous les clients si recherche vide
@@ -8653,14 +8660,14 @@
 
     // Fonction pour afficher les clients filtrés
     function afficherClientsRemboursementFiltres() {
-      console.log('🖥️ Affichage des clients remboursement filtrés:', clientsRemboursementFiltres.length);
+      log('🖥️ Affichage des clients remboursement filtrés:', clientsRemboursementFiltres.length);
       const clientMenu = document.getElementById('clientMenuRemboursement');
       
       if (!clientMenu) {
-        console.error('[ERROR] Menu clientMenuRemboursement non trouvé');
+        error('[ERROR] Menu clientMenuRemboursement non trouvé');
         return;
       }
-      console.log('[OK] Menu clientMenuRemboursement trouvé');
+      log('[OK] Menu clientMenuRemboursement trouvé');
       
       // Vider le menu
       clientMenu.innerHTML = '';
@@ -8699,7 +8706,7 @@
 
     // Fonction pour sélectionner un client remboursement
     function selectionnerClientRemboursement(numeroSoumission, clientName, clientData) {
-      console.log('[OK] Client sélectionné (remboursement):', clientName, clientData);
+      log('[OK] Client sélectionné (remboursement):', clientName, clientData);
       
       // Mettre à jour les champs
       const clientInfo = document.getElementById('clientInfoRemboursement');
@@ -8804,16 +8811,16 @@
           // Afficher tous les clients au début
           afficherClientsRemboursementFiltres();
           
-          console.log(`[OK] ${clients.length} clients chargés depuis soumissions_signees original pour remboursement`);
-          console.log('[DATA] Données clients remboursement:', clientsRemboursementData.slice(0, 3)); // Afficher 3 premiers
+          log(`[OK] ${clients.length} clients chargés depuis soumissions_signees original pour remboursement`);
+          log('[DATA] Données clients remboursement:', clientsRemboursementData.slice(0, 3)); // Afficher 3 premiers
         } else {
-          console.error('Erreur lors du chargement des clients remboursement:', response.status);
+          error('Erreur lors du chargement des clients remboursement:', response.status);
         }
       } catch (error) {
-        console.error('Erreur lors du chargement des clients remboursement:', error);
+        error('Erreur lors du chargement des clients remboursement:', error);
         
         // Fallback avec données de test si pas de serveur
-        console.log('🔄 Utilisation des données de test pour remboursement');
+        log('🔄 Utilisation des données de test pour remboursement');
         const clientsTest = [
           { prenom: 'Jean', nom: 'Dupont', num: '24-0001', total_travaux: '5000', telephone: '514-123-4567', adresse: '123 Rue Saint-Denis, Montréal', pdfUrl: '#' },
           { prenom: 'Marie', nom: 'Martin', num: '24-0002', total_travaux: '7500', telephone: '514-234-5678', adresse: '456 Ave du Parc, Montréal', pdfUrl: '#' },
@@ -8835,7 +8842,7 @@
         clientsRemboursementFiltres = [...clientsRemboursementData];
         afficherClientsRemboursementFiltres();
         
-        console.log(`[OK] ${clientsTest.length} clients de test chargés pour remboursement`);
+        log(`[OK] ${clientsTest.length} clients de test chargés pour remboursement`);
       }
     }
 
@@ -8873,26 +8880,26 @@
 
     // Fonction pour afficher les clients facturation filtrés
     function afficherClientsFacturationFiltres() {
-      console.log('[LAUNCH] FACTURATION: Début affichage clients filtrés');
+      log('[LAUNCH] FACTURATION: Début affichage clients filtrés');
       
       const menu = document.getElementById('clientMenuFacturation');
-      console.log('[TARGET] FACTURATION: Menu element trouvé:', !!menu, menu);
+      log('[TARGET] FACTURATION: Menu element trouvé:', !!menu, menu);
       
       if (!menu) {
-        console.error('[ERROR] FACTURATION: Menu clientMenuFacturation non trouvé');
+        error('[ERROR] FACTURATION: Menu clientMenuFacturation non trouvé');
         return;
       }
       
-      console.log(`🖥️ FACTURATION: Nombre de clients à afficher: ${clientsFacturationFiltres.length}`);
-      console.log('[BAN] FACTURATION: Détails clients:', clientsFacturationFiltres);
+      log(`🖥️ FACTURATION: Nombre de clients à afficher: ${clientsFacturationFiltres.length}`);
+      log('[BAN] FACTURATION: Détails clients:', clientsFacturationFiltres);
       
       // Vider le menu
       menu.innerHTML = '';
-      console.log('[DELETE] FACTURATION: Menu vidé');
+      log('[DELETE] FACTURATION: Menu vidé');
       
       // Afficher les résultats
       if (clientsFacturationFiltres.length === 0) {
-        console.log('[ERROR] FACTURATION: Aucun client à afficher');
+        log('[ERROR] FACTURATION: Aucun client à afficher');
         const noResult = document.createElement('div');
         noResult.className = 'px-3 py-2 text-sm';
         noResult.style.color = 'var(--text-gray)';
@@ -8901,17 +8908,17 @@
         return;
       }
       
-      console.log('[ADD] FACTURATION: Début ajout des clients dans le DOM');
+      log('[ADD] FACTURATION: Début ajout des clients dans le DOM');
       
       clientsFacturationFiltres.forEach((client, index) => {
-        console.log(`[NOTE] FACTURATION: Ajout client ${index + 1}:`, client.prenom, client.nom);
+        log(`[NOTE] FACTURATION: Ajout client ${index + 1}:`, client.prenom, client.nom);
         
         const option = document.createElement('div');
         option.className = 'custom-select-option cursor-pointer';
         option.onclick = () => selectionnerClientFacturation(client.num, `${client.prenom} ${client.nom}`, client);
         
         const totalFormate = formatMontant(client.total_travaux);
-        console.log(`[MONEY] FACTURATION: Montant formaté pour ${client.prenom}:`, totalFormate);
+        log(`[MONEY] FACTURATION: Montant formaté pour ${client.prenom}:`, totalFormate);
         
         // Contenu simple comme remboursement: nom et numéro seulement
         option.innerHTML = `
@@ -8936,16 +8943,16 @@
         });
         
         menu.appendChild(option);
-        console.log(`[OK] FACTURATION: Client ${index + 1} ajouté au DOM`);
+        log(`[OK] FACTURATION: Client ${index + 1} ajouté au DOM`);
       });
       
-      console.log('[OK] FACTURATION: Tous les clients ajoutés au menu');
-      console.log('[DEBUG] FACTURATION: Children du menu:', menu.children.length);
+      log('[OK] FACTURATION: Tous les clients ajoutés au menu');
+      log('[DEBUG] FACTURATION: Children du menu:', menu.children.length);
     }
 
     // Fonction pour sélectionner un client facturation - déclarée globalement
     window.selectionnerClientFacturation = async function(numeroSoumission, clientName, clientData) {
-      console.log('[TARGET] Sélection client facturation:', numeroSoumission, clientName);
+      log('[TARGET] Sélection client facturation:', numeroSoumission, clientName);
       
       // Fermer le menu
       fermerMenuFacturation();
@@ -8969,10 +8976,10 @@
         const responseDetails = await fetch(`/api/facturationqe/client/${username}/${numeroSoumission}/statuts`);
         if (responseDetails.ok) {
           detailsComplets = await responseDetails.json();
-          console.log('💾 Détails complets récupérés depuis l\'API pour', numeroSoumission, ':', detailsComplets);
+          log('💾 Détails complets récupérés depuis l\'API pour', numeroSoumission, ':', detailsComplets);
         }
       } catch (error) {
-        console.warn('[WARN] Impossible de récupérer les détails complets:', error);
+        warn('[WARN] Impossible de récupérer les détails complets:', error);
       }
       
       // Fusionner les données du workflow avec les données originales du client ET les détails complets
@@ -8988,13 +8995,13 @@
       };
 
       // Debug: afficher les données enrichies
-      console.log('[DEBUG] DONNÉES ENRICHIES POUR', numeroSoumission, ':', clientDataEnriched);
-      console.log('[DEBUG] AUTRES PAIEMENTS pour', numeroSoumission, ':', clientDataEnriched.autresPaiements);
-      console.log('[DEBUG] SOURCE autresPaiements - detailsComplets:', detailsComplets.autresPaiements, '| clientData:', clientData.autresPaiements);
+      log('[DEBUG] DONNÉES ENRICHIES POUR', numeroSoumission, ':', clientDataEnriched);
+      log('[DEBUG] AUTRES PAIEMENTS pour', numeroSoumission, ':', clientDataEnriched.autresPaiements);
+      log('[DEBUG] SOURCE autresPaiements - detailsComplets:', detailsComplets.autresPaiements, '| clientData:', clientData.autresPaiements);
       if (clientDataEnriched.depot) {
-        console.log('[MONEY] DÉPÔT ENRICHI:', clientDataEnriched.depot);
+        log('[MONEY] DÉPÔT ENRICHI:', clientDataEnriched.depot);
       } else {
-        console.warn('[WARN] Aucune donnée de dépôt dans clientDataEnriched');
+        warn('[WARN] Aucune donnée de dépôt dans clientDataEnriched');
       }
       
       // Sauvegarder les données du client enrichies
@@ -9010,7 +9017,7 @@
       const statutDepot = clientDataEnriched.depot?.statut || clientDataEnriched.statutDepot || 'non_envoye';
       const depotTraiteOuEnTraitement = (statutDepot === 'traitement' || statutDepot === 'traite');
 
-      console.log('🔄 Interface réinitialisée pour:', clientName, 'statut dépôt:', statutDepot, 'depuis:', clientDataEnriched.depot?.statut ? 'depot.statut' : 'statutDepot');
+      log('🔄 Interface réinitialisée pour:', clientName, 'statut dépôt:', statutDepot, 'depuis:', clientDataEnriched.depot?.statut ? 'depot.statut' : 'statutDepot');
       
       // Ajouter des transitions CSS fluides temporairement
       const elementsWithTransitions = document.querySelectorAll('.modern-input, .paiement-content, button[id^="btn-"], #clientDetailsCard');
@@ -9028,9 +9035,9 @@
         } else {
           numeroInput.style.color = 'var(--text-light)';
         }
-        console.log('[BAN] FACTURATION: Numéro soumission rempli:', numeroSoumission);
+        log('[BAN] FACTURATION: Numéro soumission rempli:', numeroSoumission);
       } else {
-        console.error('[ERROR] FACTURATION: Champ clientInfo non trouvé');
+        error('[ERROR] FACTURATION: Champ clientInfo non trouvé');
       }
       
       const totalTravauxInput = document.getElementById('totalTravauxClient');
@@ -9044,9 +9051,9 @@
           totalTravauxInput.style.color = 'var(--text-light)';
           totalTravauxInput.style.backgroundColor = 'rgba(55, 65, 81, 0.3)';
         }
-        console.log('[MONEY] FACTURATION: Total travaux rempli:', formatMontant(clientData.total_travaux));
+        log('[MONEY] FACTURATION: Total travaux rempli:', formatMontant(clientData.total_travaux));
       } else {
-        console.error('[ERROR] FACTURATION: Champ totalTravauxClient non trouvé');
+        error('[ERROR] FACTURATION: Champ totalTravauxClient non trouvé');
       }
       
       // Activer le bouton voir soumission (garder btn-secondary)
@@ -9054,9 +9061,9 @@
       if (voirSoumissionBtn) {
         voirSoumissionBtn.disabled = false;
         voirSoumissionBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        console.log('[OK] FACTURATION: Bouton voir soumission activé');
+        log('[OK] FACTURATION: Bouton voir soumission activé');
       } else {
-        console.error('[ERROR] FACTURATION: Bouton voir soumission non trouvé');
+        error('[ERROR] FACTURATION: Bouton voir soumission non trouvé');
       }
       
       // Remplir les informations client et la barre de progression
@@ -9087,25 +9094,25 @@
 
         // Vérifier si autres paiements en traitement
         const autresPaiements = Array.isArray(clientDataEnriched.autresPaiements) ? clientDataEnriched.autresPaiements : [];
-        console.log('[DEBUG FILTRES] ========== CLIENT:', numeroSoumission, '==========');
-        console.log('[DEBUG FILTRES] statutDepot utilisé:', statutDepot);
-        console.log('[DEBUG FILTRES] autresPaiements brut:', autresPaiements);
+        log('[DEBUG FILTRES] ========== CLIENT:', numeroSoumission, '==========');
+        log('[DEBUG FILTRES] statutDepot utilisé:', statutDepot);
+        log('[DEBUG FILTRES] autresPaiements brut:', autresPaiements);
 
         // Filtrer seulement les paiements partiels (exclure "un_seul_paiement")
         const paiementsPartiels = autresPaiements.filter(p => {
           const include = !p.typePaiementAutres || p.typePaiementAutres === 'paiement_partiel';
-          console.log('[DEBUG FILTRES] Paiement:', p, '| typePaiementAutres:', p.typePaiementAutres, '| inclus dans partiels:', include);
+          log('[DEBUG FILTRES] Paiement:', p, '| typePaiementAutres:', p.typePaiementAutres, '| inclus dans partiels:', include);
           return include;
         });
 
         // Filtrer les paiements "un seul paiement"
         const paiementsUnSeul = autresPaiements.filter(p => p.typePaiementAutres === 'un_seul_paiement');
-        console.log('[DEBUG FILTRES] paiementsPartiels:', paiementsPartiels.length, '| paiementsUnSeul:', paiementsUnSeul.length);
+        log('[DEBUG FILTRES] paiementsPartiels:', paiementsPartiels.length, '| paiementsUnSeul:', paiementsUnSeul.length);
 
         // Vérifier les statuts (traitement OU attente_comptable = en traitement pour l'entrepreneur)
         const autresPaiementsEnTraitement = paiementsPartiels.filter(p => {
           const inTraitement = p.statut === 'traitement' || p.statut === 'attente_comptable';
-          console.log('[DEBUG FILTRES] Paiement statut:', p.statut, '| en traitement:', inTraitement);
+          log('[DEBUG FILTRES] Paiement statut:', p.statut, '| en traitement:', inTraitement);
           return inTraitement;
         });
         const hasAutresPaiementsEnTraitement = autresPaiementsEnTraitement.length > 0;
@@ -9118,18 +9125,18 @@
         const unSeulPaiementTraite = paiementsUnSeul.filter(p => p.statut === 'traite');
         const hasUnSeulPaiementTraite = unSeulPaiementTraite.length > 0;
 
-        console.log('[DEBUG] DEBUG STATUT - Dépôt:', statutDepot, '| Paiement Final:', statutPaiementFinal, '| Autres paiements en traitement:', autresPaiementsEnTraitement.length, '| Un seul paiement en traitement:', unSeulPaiementEnTraitement.length);
-        console.log('[DEBUG] DEBUG SOURCE - depot:', clientDataEnriched.depot, '| paiementFinal:', clientDataEnriched.paiementFinal, '| autresPaiements:', clientDataEnriched.autresPaiements);
-        console.log('[DEBUG] CONDITION CHECK - statutDepot attente_comptable?', statutDepot === 'attente_comptable', '| statutPaiementFinal attente_comptable?', statutPaiementFinal === 'attente_comptable');
+        log('[DEBUG] DEBUG STATUT - Dépôt:', statutDepot, '| Paiement Final:', statutPaiementFinal, '| Autres paiements en traitement:', autresPaiementsEnTraitement.length, '| Un seul paiement en traitement:', unSeulPaiementEnTraitement.length);
+        log('[DEBUG] DEBUG SOURCE - depot:', clientDataEnriched.depot, '| paiementFinal:', clientDataEnriched.paiementFinal, '| autresPaiements:', clientDataEnriched.autresPaiements);
+        log('[DEBUG] CONDITION CHECK - statutDepot attente_comptable?', statutDepot === 'attente_comptable', '| statutPaiementFinal attente_comptable?', statutPaiementFinal === 'attente_comptable');
 
         // Construire le texte du statut
         let statutTexte = '';
         let statutCouleur = 'white';
 
-        console.log('[DEBUG CONDITIONS] ===== AVANT IF/ELSE =====');
-        console.log('[DEBUG CONDITIONS] statutDepot:', statutDepot, '| typeof:', typeof statutDepot);
-        console.log('[DEBUG CONDITIONS] hasAutresPaiementsEnTraitement:', hasAutresPaiementsEnTraitement);
-        console.log('[DEBUG CONDITIONS] Check traitement:', statutDepot === 'traitement');
+        log('[DEBUG CONDITIONS] ===== AVANT IF/ELSE =====');
+        log('[DEBUG CONDITIONS] statutDepot:', statutDepot, '| typeof:', typeof statutDepot);
+        log('[DEBUG CONDITIONS] hasAutresPaiementsEnTraitement:', hasAutresPaiementsEnTraitement);
+        log('[DEBUG CONDITIONS] Check traitement:', statutDepot === 'traitement');
 
         // Cas spécial: "un seul paiement" (pas de dépôt)
         if (statutDepot === 'non_envoye' && hasUnSeulPaiementEnTraitement) {
@@ -9154,17 +9161,17 @@
         } else if (statutDepot === 'traitement' || statutDepot === 'attente_comptable') {
           // Dépôt en traitement (ou validé par coach, en attente direction) - vérifier autres paiements
           const parts = ['Dépôt'];
-          console.log('[DEBUG TEXTE] Entrée condition dépôt traitement - hasAutresPaiementsEnTraitement:', hasAutresPaiementsEnTraitement, '| autresPaiementsEnTraitement.length:', autresPaiementsEnTraitement.length);
+          log('[DEBUG TEXTE] Entrée condition dépôt traitement - hasAutresPaiementsEnTraitement:', hasAutresPaiementsEnTraitement, '| autresPaiementsEnTraitement.length:', autresPaiementsEnTraitement.length);
           if (statutPaiementFinal === 'traitement' || statutPaiementFinal === 'attente_comptable') {
             parts.push('paiement final');
           }
           if (hasAutresPaiementsEnTraitement) {
             const nbPartiels = autresPaiementsEnTraitement.length;
-            console.log('[DEBUG TEXTE] Ajout paiement partiel - nbPartiels:', nbPartiels);
+            log('[DEBUG TEXTE] Ajout paiement partiel - nbPartiels:', nbPartiels);
             parts.push(nbPartiels > 1 ? `paiement partiel (${nbPartiels})` : 'paiement partiel');
           }
 
-          console.log('[DEBUG TEXTE] parts finales:', parts, '| length:', parts.length);
+          log('[DEBUG TEXTE] parts finales:', parts, '| length:', parts.length);
           if (parts.length === 1) {
             statutTexte = 'Dépôt en traitement';
           } else if (parts.length === 2) {
@@ -9218,11 +9225,11 @@
           }
         }
 
-        console.log('[DEBUG FINAL ASSIGNATION] Client:', numeroSoumission, '| statutTexte AVANT assignation:', statutTexte, '| hasAutresPaiementsEnTraitement:', hasAutresPaiementsEnTraitement);
+        log('[DEBUG FINAL ASSIGNATION] Client:', numeroSoumission, '| statutTexte AVANT assignation:', statutTexte, '| hasAutresPaiementsEnTraitement:', hasAutresPaiementsEnTraitement);
         clientStatutPaiement.textContent = statutTexte;
         clientStatutPaiement.style.color = statutCouleur;
 
-        console.log('[DATA] FACTURATION: Statut paiement affiché:', statutTexte, '(dépôt:', statutDepot, ', paiement:', statutPaiementFinal, ', autres:', autresPaiementsEnTraitement.length, ')');
+        log('[DATA] FACTURATION: Statut paiement affiché:', statutTexte, '(dépôt:', statutDepot, ', paiement:', statutPaiementFinal, ', autres:', autresPaiementsEnTraitement.length, ')');
       }
       
       // Remplir la barre de progression avec le montant total
@@ -9233,11 +9240,11 @@
       // Afficher la carte des détails client avec barre de progression
       if (clientDetailsCard) {
         clientDetailsCard.classList.remove('hidden');
-        console.log('[OK] FACTURATION: Informations client et barre de progression remplies');
-        console.log('[BAN] FACTURATION: Nom:', `${clientData.prenom} ${clientData.nom}`);
-        console.log('📞 FACTURATION: Téléphone:', clientData.telephone);
-        console.log('🏠 FACTURATION: Adresse:', clientData.adresse);
-        console.log('[MONEY] FACTURATION: Total travaux:', formatMontant(clientData.total_travaux));
+        log('[OK] FACTURATION: Informations client et barre de progression remplies');
+        log('[BAN] FACTURATION: Nom:', `${clientData.prenom} ${clientData.nom}`);
+        log('📞 FACTURATION: Téléphone:', clientData.telephone);
+        log('🏠 FACTURATION: Adresse:', clientData.adresse);
+        log('[MONEY] FACTURATION: Total travaux:', formatMontant(clientData.total_travaux));
       }
       
       // Activer les boutons de paiement pour saisir les informations
@@ -9249,14 +9256,14 @@
       // Afficher la section paiements et le bouton envoyer au comptable
       if (sectionPaiements) {
         sectionPaiements.style.display = 'block';
-        console.log('[OK] FACTURATION: Section paiements affichée');
+        log('[OK] FACTURATION: Section paiements affichée');
       }
 
       // Réafficher le container des boutons workflow (peut être caché par selectEntrepreneur)
       const workflowButtonsContainer = document.getElementById('workflow-buttons-container');
       if (workflowButtonsContainer) {
         workflowButtonsContainer.style.display = 'flex';
-        console.log('[OK] FACTURATION: Container workflow-buttons réaffiché');
+        log('[OK] FACTURATION: Container workflow-buttons réaffiché');
       }
       
       // Afficher le bouton "Envoyer au comptable" par défaut
@@ -9264,7 +9271,7 @@
       const boutonEnvoiContainer = document.getElementById('boutonEnvoiContainer');
       if (boutonEnvoiContainer) {
         boutonEnvoiContainer.style.display = 'flex';
-        console.log('[OK] FACTURATION: Bouton envoyer au comptable affiché (sera géré par section)');
+        log('[OK] FACTURATION: Bouton envoyer au comptable affiché (sera géré par section)');
       }
       
       // Activer les boutons de paiement
@@ -9272,7 +9279,7 @@
         if (btn) {
           btn.disabled = false;
           btn.classList.remove('opacity-50', 'cursor-not-allowed');
-          console.log(`[OK] FACTURATION: Bouton paiement ${index + 1} activé`);
+          log(`[OK] FACTURATION: Bouton paiement ${index + 1} activé`);
         }
       });
 
@@ -9283,7 +9290,7 @@
         btnAutresPaiements.style.setProperty('opacity', '0.3', 'important');
         btnAutresPaiements.style.setProperty('cursor', 'not-allowed', 'important');
         btnAutresPaiements.style.setProperty('pointer-events', 'none', 'important');
-        console.log('[GRIS IMMEDIAT] Bouton "Autres paiements" grisé immédiatement après activation (paiement final:', statutPaiementFinal, ')');
+        log('[GRIS IMMEDIAT] Bouton "Autres paiements" grisé immédiatement après activation (paiement final:', statutPaiementFinal, ')');
       }
 
       // === NOUVEAU: Générer les boutons et sections dynamiques de paiements partiels ===
@@ -9294,7 +9301,7 @@
       if (statutDepot === 'non_envoye' && autresPaiementsClient.length > 0) {
         autresPaiementsClient = autresPaiementsClient.map(p => {
           if (!p.typePaiementAutres || p.typePaiementAutres === 'paiement_partiel') {
-            console.log('[FIX] CORRECTION AUTO: Paiement sans typePaiementAutres -> un_seul_paiement');
+            log('[FIX] CORRECTION AUTO: Paiement sans typePaiementAutres -> un_seul_paiement');
             return { ...p, typePaiementAutres: 'un_seul_paiement' };
           }
           return p;
@@ -9302,12 +9309,12 @@
       }
 
       if (autresPaiementsClient.length > 0) {
-        console.log('[FIX] Génération des paiements partiels dynamiques:', autresPaiementsClient.length);
-        console.log('[BAN] Contenu autresPaiements:', JSON.stringify(autresPaiementsClient, null, 2));
+        log('[FIX] Génération des paiements partiels dynamiques:', autresPaiementsClient.length);
+        log('[BAN] Contenu autresPaiements:', JSON.stringify(autresPaiementsClient, null, 2));
         genererBoutonsPaiementsPartiels(autresPaiementsClient);
         genererSectionsPaiementsPartiels(autresPaiementsClient);
       } else {
-        console.log('[WARN] Aucun autre paiement trouvé dans clientDataEnriched');
+        log('[WARN] Aucun autre paiement trouvé dans clientDataEnriched');
       }
 
       // === NOUVEAU: Gérer la visibilité de l'option "Un seul paiement" ===
@@ -9326,19 +9333,19 @@
           btnDepot.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
           btnDepot.style.borderColor = '#f59e0b';
           btnDepot.style.color = 'white';
-          console.log('[ORANGE] FACTURATION: Dépôt ENVOYÉ = en traitement (orange)');
+          log('[ORANGE] FACTURATION: Dépôt ENVOYÉ = en traitement (orange)');
         } else if (statutDepot === 'traitement' || statutDepot === 'attente_comptable') {
           // Dépôt en traitement ou validé par coach (pas encore validé par direction) - orange
           btnDepot.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
           btnDepot.style.borderColor = '#f59e0b';
           btnDepot.style.color = 'white';
-          console.log('[ORANGE] FACTURATION: Dépôt en TRAITEMENT (orange) - statut:', statutDepot);
+          log('[ORANGE] FACTURATION: Dépôt en TRAITEMENT (orange) - statut:', statutDepot);
         } else if (statutDepot === 'traite' || statutDepot === 'traite_attente_final') {
           // Dépôt traité par la direction - vert
           btnDepot.style.background = 'linear-gradient(135deg, rgb(16, 185, 129), rgb(5, 150, 105))';
           btnDepot.style.borderColor = 'rgb(16, 185, 129)';
           btnDepot.style.color = 'white';
-          console.log('[GREEN] FACTURATION: Dépôt TRAITÉ (vert) - statut:', statutDepot);
+          log('[GREEN] FACTURATION: Dépôt TRAITÉ (vert) - statut:', statutDepot);
         }
       }
 
@@ -9349,13 +9356,13 @@
           btnPaiementFinal.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
           btnPaiementFinal.style.borderColor = '#f59e0b';
           btnPaiementFinal.style.color = 'white';
-          console.log('[ORANGE] FACTURATION: Paiement final en TRAITEMENT (orange) - statut:', statutPaiementFinal);
+          log('[ORANGE] FACTURATION: Paiement final en TRAITEMENT (orange) - statut:', statutPaiementFinal);
         } else if (statutPaiementFinal === 'traite') {
           // Paiement final traité par direction - vert
           btnPaiementFinal.style.background = 'linear-gradient(135deg, rgb(16, 185, 129), rgb(5, 150, 105))';
           btnPaiementFinal.style.borderColor = 'rgb(16, 185, 129)';
           btnPaiementFinal.style.color = 'white';
-          console.log('[GREEN] FACTURATION: Paiement final TRAITÉ (vert)');
+          log('[GREEN] FACTURATION: Paiement final TRAITÉ (vert)');
         }
       }
 
@@ -9368,9 +9375,9 @@
       // Fallback: Si pas de typePaiementAutres mais des autres paiements ET pas de dépôt, c'est probablement un "un seul paiement"
       if (!typePaiementAutres && autresPaiements.length > 0 && statutDepot === 'non_envoye') {
         typePaiementAutres = 'un_seul_paiement';
-        console.log('[DEBUG] Type de paiement autres déduit (fallback):', typePaiementAutres);
+        log('[DEBUG] Type de paiement autres déduit (fallback):', typePaiementAutres);
       } else {
-        console.log('[DEBUG] Type de paiement autres détecté:', typePaiementAutres);
+        log('[DEBUG] Type de paiement autres détecté:', typePaiementAutres);
       }
 
       // Adapter les boutons selon le type (même si aucun paiement encore)
@@ -9388,11 +9395,11 @@
       // CAS SPÉCIAL: Si "un seul paiement" existe, ouvrir la première section dynamique "un-seul-paiement-1"
       if (typePaiementAutres === 'un_seul_paiement' && autresPaiements.length > 0) {
         showPaiementSection('un-seul-paiement-1');
-        console.log('[BAN] FACTURATION: Section Un seul paiement 1 ouverte par défaut');
+        log('[BAN] FACTURATION: Section Un seul paiement 1 ouverte par défaut');
       } else if (statutDepot === 'traite' || statutDepot === 'traitement' || statutDepot === 'traite_attente_final' || statutDepot === 'attente_comptable') {
         // Si dépôt traité OU en traitement OU validé coach -> ouvrir Paiement Final par défaut
         showPaiementSection('paiement-final');
-        console.log('[BAN] FACTURATION: Section Paiement Final ouverte par défaut (dépôt', statutDepot, ')');
+        log('[BAN] FACTURATION: Section Paiement Final ouverte par défaut (dépôt', statutDepot, ')');
 
         // S'ASSURER que les éléments dépôt sont fermés quand on ouvre paiement final par défaut
         // MAIS seulement après que rendreSectionDepotNonModifiable() a fini de s'exécuter
@@ -9419,13 +9426,13 @@
             
             if (virementFieldsDepot) virementFieldsDepot.classList.add('hidden');
             if (chequeFieldsDepot) chequeFieldsDepot.classList.add('hidden');
-            console.log('[LOCK] FORÇAGE RENFORCÉ: Éléments dépôt fermés avec !important (paiement final actif)');
+            log('[LOCK] FORÇAGE RENFORCÉ: Éléments dépôt fermés avec !important (paiement final actif)');
           }
         }, 150); // Délai plus long pour s'exécuter après rendreSectionDepotNonModifiable (100ms)
       } else {
         // Sinon (non_envoye, envoye) -> ouvrir Dépôt par défaut
         showPaiementSection('depot');
-        console.log('[BAN] FACTURATION: Section Dépôt ouverte par défaut (statut:', statutDepot, ')');
+        log('[BAN] FACTURATION: Section Dépôt ouverte par défaut (statut:', statutDepot, ')');
       }
 
       // ENSUITE changer l'apparence du bouton et des champs (après le changement de section)
@@ -9434,7 +9441,7 @@
           changerBoutonDepotStatut(statutDepot);
           if (statutDepot === 'traitement') {
             // Pour traitement: section visible mais champs non-modifiables
-            console.log('[FIX] APPEL de rendreSectionDepotNonModifiable() pour Marie Martin');
+            log('[FIX] APPEL de rendreSectionDepotNonModifiable() pour Marie Martin');
             rendreSectionDepotNonModifiable();
           } else if (statutDepot === 'envoye' || statutDepot === 'traite') {
             // Pour envoyé/traité: section complètement grisée
@@ -9446,11 +9453,11 @@
         const statutPaiementFinal = clientDataEnriched.paiementFinal?.statut;
         if (statutPaiementFinal && (statutPaiementFinal === 'traitement' || statutPaiementFinal === 'traite' || statutPaiementFinal === 'attente_comptable')) {
           changerBoutonPaiementFinalStatut(statutPaiementFinal);
-          console.log('🎨 Bouton paiement final stylé selon statut:', statutPaiementFinal);
+          log('🎨 Bouton paiement final stylé selon statut:', statutPaiementFinal);
 
           // Si en traitement OU attente_comptable, appliquer le grisage automatique
           if (statutPaiementFinal === 'traitement' || statutPaiementFinal === 'attente_comptable') {
-            console.log('[FIX] APPEL de rendreSectionPaiementFinalNonModifiable() pour paiement final en', statutPaiementFinal);
+            log('[FIX] APPEL de rendreSectionPaiementFinalNonModifiable() pour paiement final en', statutPaiementFinal);
             rendreSectionPaiementFinalNonModifiable();
           }
         }
@@ -9471,7 +9478,7 @@
         const statutPaiementFinalCheck = clientDataEnriched.paiementFinal?.statut || clientDataEnriched.statutPaiementFinal;
         const paiementFinalEnTraitementOuAttente = statutPaiementFinalCheck === 'traitement' || statutPaiementFinalCheck === 'attente_comptable';
 
-        console.log('[DEBUG GRISAGE] statutPaiementFinalCheck:', statutPaiementFinalCheck, 'paiementFinalEnTraitementOuAttente:', paiementFinalEnTraitementOuAttente);
+        log('[DEBUG GRISAGE] statutPaiementFinalCheck:', statutPaiementFinalCheck, 'paiementFinalEnTraitementOuAttente:', paiementFinalEnTraitementOuAttente);
 
         if (btnAutresPaiements && (statutDepot === 'traite' || paiementFinalEnTraitementOuAttente || (isUnSeulPaiementCheck && autresPaiementsEnTraitementCheck))) {
           btnAutresPaiements.disabled = true;
@@ -9480,11 +9487,11 @@
           btnAutresPaiements.style.setProperty('pointer-events', 'none', 'important');
 
           if (statutDepot === 'traite') {
-            console.log('🚫 [FINAL] Bouton "Autres paiements" désactivé (dépôt traité)');
+            log('🚫 [FINAL] Bouton "Autres paiements" désactivé (dépôt traité)');
           } else if (paiementFinalEnTraitementOuAttente) {
-            console.log('🚫 [FINAL] Bouton "Autres paiements" désactivé (paiement final en', statutPaiementFinalCheck, ')');
+            log('🚫 [FINAL] Bouton "Autres paiements" désactivé (paiement final en', statutPaiementFinalCheck, ')');
           } else if (isUnSeulPaiementCheck && autresPaiementsEnTraitementCheck) {
-            console.log('🚫 [FINAL] Bouton "Autres paiements" désactivé (un seul paiement en traitement)');
+            log('🚫 [FINAL] Bouton "Autres paiements" désactivé (un seul paiement en traitement)');
           }
         } else if (btnAutresPaiements && !isUnSeulPaiementCheck && !paiementFinalEnTraitementOuAttente) {
           // Réactiver SEULEMENT si ce n'est PAS "un seul paiement" et pas en traitement
@@ -9493,7 +9500,7 @@
           btnAutresPaiements.style.removeProperty('cursor');
           btnAutresPaiements.style.removeProperty('pointer-events');
           btnAutresPaiements.style.color = 'white';
-          console.log('[OK] Bouton "Autres paiements" activé');
+          log('[OK] Bouton "Autres paiements" activé');
         }
       }, 200); // Délai plus long pour s'exécuter APRÈS showPaiementSection (qui peut réactiver le bouton)
 
@@ -9501,7 +9508,7 @@
       updateProgressionPaiement(clientDataEnriched);
       
       // Les sections éléments à ajouter sont maintenant indépendantes et se gèrent via les dropdowns
-      console.log('[BAN] Sections éléments à ajouter indépendantes prêtes');
+      log('[BAN] Sections éléments à ajouter indépendantes prêtes');
       
       // Retirer les transitions temporaires après un délai
       setTimeout(() => {
@@ -9509,15 +9516,15 @@
         elementsWithTransitions.forEach(el => {
           el.style.removeProperty('transition');
         });
-        console.log('🎭 Transitions temporaires supprimées');
+        log('🎭 Transitions temporaires supprimées');
       }, 500);
       
-      console.log('[OK] Client facturation sélectionné et données sauvegardées');
+      log('[OK] Client facturation sélectionné et données sauvegardées');
     }
 
     // Fonction pour réinitialiser complètement l'interface avant de changer de client
     function resetCompleteInterface() {
-      console.log('🧹 Réinitialisation complète de l\'interface...');
+      log('🧹 Réinitialisation complète de l\'interface...');
       
       // 1. RÉINITIALISER TOUS LES BOUTONS DE PAIEMENT
       const btnDepot = document.getElementById('btn-depot');
@@ -9597,7 +9604,7 @@
       if (btnDepotContainer) {
         const boutonsDynamiques = btnDepotContainer.querySelectorAll('[id^="btn-paiement-partiel-"], [id^="btn-un-seul-paiement-"]');
         boutonsDynamiques.forEach(btn => btn.remove());
-        console.log(`🧹 ${boutonsDynamiques.length} boutons dynamiques supprimés`);
+        log(`🧹 ${boutonsDynamiques.length} boutons dynamiques supprimés`);
       }
 
       // 4c. SUPPRIMER LES SECTIONS DYNAMIQUES (paiements partiels et un seul paiement)
@@ -9641,21 +9648,21 @@
         }
       });
       
-      console.log('[OK] Interface complètement réinitialisée');
+      log('[OK] Interface complètement réinitialisée');
     }
 
     // Fonction pour charger les clients facturation
     async function chargerClientsFacturation() {
-      console.log('🔄 FACTURATION: Chargement des clients facturation...');
+      log('🔄 FACTURATION: Chargement des clients facturation...');
 
       const username = getFacturationUsername();
       if (!username || username === 'demo') {
-        console.log('[BAN] FACTURATION: Pas de username - impossible de charger les clients');
+        log('[BAN] FACTURATION: Pas de username - impossible de charger les clients');
         return;
       }
 
       try {
-        console.log('🔄 FACTURATION: Tentative de chargement depuis soumissions_signees_facturation_qe...');
+        log('🔄 FACTURATION: Tentative de chargement depuis soumissions_signees_facturation_qe...');
         const response = await fetch(`/soumissions_signees_facturation_qe/${username}`);
         
         if (response.ok) {
@@ -9676,61 +9683,61 @@
           clientsFacturationFiltres = [...clientsFacturationData];
           afficherClientsFacturationFiltres();
           
-          console.log(`[OK] FACTURATION: ${clients.length} clients chargés pour facturation`);
-          console.log('[DATA] FACTURATION: Données clients facturation:', clientsFacturationData.slice(0, 3));
+          log(`[OK] FACTURATION: ${clients.length} clients chargés pour facturation`);
+          log('[DATA] FACTURATION: Données clients facturation:', clientsFacturationData.slice(0, 3));
         } else {
-          console.error('FACTURATION: Erreur lors du chargement des clients facturation:', response.status);
-          console.log('[ERROR] Impossible de charger les clients depuis l\'API');
+          error('FACTURATION: Erreur lors du chargement des clients facturation:', response.status);
+          log('[ERROR] Impossible de charger les clients depuis l\'API');
         }
       } catch (error) {
-        console.error('FACTURATION: Erreur de connexion pour facturation:', error);
-        console.log('[ERROR] Impossible de se connecter à l\'API');
+        error('FACTURATION: Erreur de connexion pour facturation:', error);
+        log('[ERROR] Impossible de se connecter à l\'API');
       }
     }
 
     // Fonction pour charger les clients depuis l'API
     async function chargerClientsDepuisAPI() {
-      console.log('🔄 FACTURATION API: Chargement des clients depuis l\'API...');
+      log('🔄 FACTURATION API: Chargement des clients depuis l\'API...');
 
       const username = getFacturationUsername();
-      console.log('[DEBUG] Username:', username);
+      log('[DEBUG] Username:', username);
 
       if (!username || username === 'demo') {
-        console.log('[ERROR] Pas de username - impossible de charger les clients');
+        log('[ERROR] Pas de username - impossible de charger les clients');
         return;
       }
 
       try {
         // Charger tous les clients depuis get-clients-by-username pour avoir TOUS les statuts
-        console.log('[DEBUG] Chargement depuis /get-clients-by-username/' + username);
+        log('[DEBUG] Chargement depuis /get-clients-by-username/' + username);
         const response = await fetch(`/get-clients-by-username/${username}`);
-        console.log('[DEBUG] Response status:', response.status);
+        log('[DEBUG] Response status:', response.status);
 
         if (!response.ok) {
           throw new Error(`Erreur API: ${response.status}`);
         }
 
         const data = await response.json();
-        console.log('[DEBUG] Réponse brute API:', data);
-        console.log('[DEBUG] Keys:', Object.keys(data));
+        log('[DEBUG] Réponse brute API:', data);
+        log('[DEBUG] Keys:', Object.keys(data));
 
         // Combiner les clients des statuts accepter et produit
         let allClients = [];
 
         if (data.accepter && Array.isArray(data.accepter)) {
-          console.log(`[INFO] ${data.accepter.length} clients dans ACCEPTER`);
+          log(`[INFO] ${data.accepter.length} clients dans ACCEPTER`);
           allClients = allClients.concat(data.accepter);
         }
 
         if (data.produit && Array.isArray(data.produit)) {
-          console.log(`[INFO] ${data.produit.length} clients dans PRODUIT`);
+          log(`[INFO] ${data.produit.length} clients dans PRODUIT`);
           allClients = allClients.concat(data.produit);
         }
 
-        console.log(`[INFO] Total: ${allClients.length} clients (accepter + produit)`);
+        log(`[INFO] Total: ${allClients.length} clients (accepter + produit)`);
 
         if (allClients.length > 0) {
-          console.log('[DEBUG] Premier client:', allClients[0]);
+          log('[DEBUG] Premier client:', allClients[0]);
         }
 
         clientsFacturationData = allClients.map(client => ({
@@ -9749,24 +9756,24 @@
 
         clientsFacturationFiltres = [...clientsFacturationData];
 
-        console.log(`[OK] FACTURATION API: ${clientsFacturationData.length} clients chargés (accepter + produit)`);
-        console.log('[DEBUG] clientsFacturationData:', clientsFacturationData);
-        console.log('[DEBUG] clientsFacturationFiltres:', clientsFacturationFiltres);
+        log(`[OK] FACTURATION API: ${clientsFacturationData.length} clients chargés (accepter + produit)`);
+        log('[DEBUG] clientsFacturationData:', clientsFacturationData);
+        log('[DEBUG] clientsFacturationFiltres:', clientsFacturationFiltres);
 
         // Afficher les clients
-        console.log('[DEBUG] Vérification fonction afficherClientsFacturationFiltres:', typeof afficherClientsFacturationFiltres);
+        log('[DEBUG] Vérification fonction afficherClientsFacturationFiltres:', typeof afficherClientsFacturationFiltres);
         if (typeof afficherClientsFacturationFiltres === 'function') {
-          console.log('[DEBUG] Appel de afficherClientsFacturationFiltres...');
+          log('[DEBUG] Appel de afficherClientsFacturationFiltres...');
           afficherClientsFacturationFiltres();
         } else {
-          console.log('[ERROR] afficherClientsFacturationFiltres n\'est pas une fonction!');
+          log('[ERROR] afficherClientsFacturationFiltres n\'est pas une fonction!');
         }
 
         return true;
 
       } catch (error) {
-        console.error('[ERROR] FACTURATION API: Erreur lors du chargement:', error);
-        console.error('[ERROR] Stack:', error.stack);
+        error('[ERROR] FACTURATION API: Erreur lors du chargement:', error);
+        error('[ERROR] Stack:', error.stack);
         return false;
       }
     }
@@ -9808,7 +9815,7 @@
     // Fonction pour voir les remboursements
     window.voirRemboursements = async function() {
       try {
-        console.log('[BAN] Chargement des remboursements...');
+        log('[BAN] Chargement des remboursements...');
 
         // Charger depuis le backend
         const username = getFacturationUsername();
@@ -9817,11 +9824,11 @@
 
         // Vérifier que c'est bien un tableau
         if (!Array.isArray(remboursements)) {
-          console.warn('[WARN] remboursements n\'est pas un tableau:', remboursements);
+          warn('[WARN] remboursements n\'est pas un tableau:', remboursements);
           remboursements = [];
         }
 
-        console.log(`[OK] ${remboursements.length} remboursements chargés`);
+        log(`[OK] ${remboursements.length} remboursements chargés`);
 
         // Créer le popup modal
         const modal = document.createElement('div');
@@ -9946,7 +9953,7 @@
         window.remboursementsData = remboursements;
 
       } catch (error) {
-        console.error('[ERROR] Erreur lors du chargement des remboursements:', error);
+        error('[ERROR] Erreur lors du chargement des remboursements:', error);
         alert('Erreur lors du chargement des remboursements');
       }
     };
@@ -9985,14 +9992,14 @@
         });
 
         if (response.ok) {
-          console.log('[OK] Remboursement supprimé');
+          log('[OK] Remboursement supprimé');
           closeRemboursementsModal();
           voirRemboursements(); // Recharger la liste
         } else {
           alert('Erreur lors de la suppression du remboursement');
         }
       } catch (error) {
-        console.error('[ERROR] Erreur suppression:', error);
+        error('[ERROR] Erreur suppression:', error);
         alert('Erreur lors de la suppression');
       }
     };
@@ -10291,7 +10298,7 @@
         if (warningMessage) warningMessage.style.display = 'block';
       }
 
-      console.log('[VALIDATION] Section:', currentActiveSection, '- Valid:', isValid);
+      log('[VALIDATION] Section:', currentActiveSection, '- Valid:', isValid);
     }
 
     // Fonction pour réinitialiser la validation (enlever toutes les classes)
@@ -10394,7 +10401,7 @@
         bouton.disabled = true;
       }
 
-      console.log('[VALIDATION] Système de validation initialisé');
+      log('[VALIDATION] Système de validation initialisé');
     });
 
     // Surcharger showPaiementSection pour déclencher la validation
@@ -10562,7 +10569,7 @@
       // Car selectEntrepreneur() va écraser localStorage avec l'entrepreneur
       const coachUsername = localStorage.getItem('username') || window.username;
       window.coachUsername = coachUsername;
-      console.log('[COACH] Username du coach initial:', coachUsername);
+      log('[COACH] Username du coach initial:', coachUsername);
 
       // NOTE: selector.classList.add('visible') is now handled by /entrepreneur-selector.js
       // const selector = document.getElementById('coach-entrepreneur-selector');
@@ -10684,7 +10691,7 @@
         // pour que getFacturationUsername() retourne le bon entrepreneur
         sessionStorage.setItem('username', username);
         localStorage.setItem('username', username);
-        console.log('[COACH] Username mis à jour vers:', username);
+        log('[COACH] Username mis à jour vers:', username);
 
         // Initialiser le menu déroulant de sélection client
         if (typeof initClientSelect === 'function') {
@@ -10692,7 +10699,7 @@
         }
 
         // Recharger les clients facturation depuis l'API
-        console.log('[COACH] Chargement des clients facturation pour:', username);
+        log('[COACH] Chargement des clients facturation pour:', username);
         if (typeof chargerClientsDepuisAPI === 'function') {
           await chargerClientsDepuisAPI();
         }
@@ -10703,14 +10710,14 @@
         }
 
         // Charger toutes les facturations depuis l'API
-        console.log('[COACH] Chargement des facturations pour:', username);
+        log('[COACH] Chargement des facturations pour:', username);
         if (typeof chargerFacturationsDepuisAPI === 'function') {
           await chargerFacturationsDepuisAPI();
         }
 
         // Recharger les colonnes Status automatiquement
         if (typeof utiliserDonneesTestStatus === 'function') {
-          console.log('🔄 Rechargement automatique des colonnes Status pour:', username);
+          log('🔄 Rechargement automatique des colonnes Status pour:', username);
           await utiliserDonneesTestStatus();
         }
 
@@ -10724,7 +10731,7 @@
     async function loadEntrepreneursForCoach() {
       // Si entrepreneur-selector.js est chargé, utiliser celui-ci au lieu de cette fonction legacy
       if (window.EntrepreneurSelector) {
-        console.log('[FACTURATION] Using EntrepreneurSelector.reload() instead of legacy function');
+        log('[FACTURATION] Using EntrepreneurSelector.reload() instead of legacy function');
         window.EntrepreneurSelector.reload();
         return;
       }
@@ -10754,24 +10761,24 @@
               coachUsername = window.username;
             } else {
               // Cas problématique : on ne peut pas déterminer le coach
-              console.error('[COACH] Impossible de déterminer le username du coach');
-              console.error('[COACH] localStorage:', localStorage.getItem('username'));
-              console.error('[COACH] window.username:', window.username);
-              console.error('[COACH] URL user param:', userParam);
+              error('[COACH] Impossible de déterminer le username du coach');
+              error('[COACH] localStorage:', localStorage.getItem('username'));
+              error('[COACH] window.username:', window.username);
+              error('[COACH] URL user param:', userParam);
               return;
             }
           }
 
           window.coachUsername = coachUsername;
-          console.log('[COACH] Username du coach sauvegardé:', coachUsername);
+          log('[COACH] Username du coach sauvegardé:', coachUsername);
         }
 
         if (!coachUsername || coachUsername === 'demo' || !isCoachUsername(coachUsername)) {
-          console.error('[COACH] Username invalide pour loadEntrepreneursForCoach:', coachUsername);
+          error('[COACH] Username invalide pour loadEntrepreneursForCoach:', coachUsername);
           return;
         }
 
-        console.log('[COACH] Chargement entrepreneurs pour coach:', coachUsername);
+        log('[COACH] Chargement entrepreneurs pour coach:', coachUsername);
         const response = await fetch(`/api/users/entrepreneurs?coach_username=${coachUsername}`);
         const data = await response.json();
 
@@ -10783,10 +10790,10 @@
           const facturationData = await facturationResponse.json();
           countByEntrepreneur = facturationData.details || {};
           totalCount = facturationData.count || 0;
-          console.log('Facturation en traitement - Count par entrepreneur:', countByEntrepreneur);
-          console.log('Facturation en traitement - Total:', totalCount);
+          log('Facturation en traitement - Count par entrepreneur:', countByEntrepreneur);
+          log('Facturation en traitement - Total:', totalCount);
         } catch (err) {
-          console.error('Erreur chargement count facturations:', err);
+          error('Erreur chargement count facturations:', err);
         }
 
         const menu = document.getElementById('coach-dropdown-menu');
@@ -10815,10 +10822,10 @@
 
             // Ajouter le badge si cet entrepreneur a des facturations en traitement
             const count = countByEntrepreneur[entrepreneur.username] || 0;
-            console.log(`Entrepreneur "${entrepreneur.username}" a ${count} facturations en traitement`);
+            log(`Entrepreneur "${entrepreneur.username}" a ${count} facturations en traitement`);
 
             if (count > 0) {
-              console.log(`→ Ajout du badge pour ${entrepreneur.username}`);
+              log(`→ Ajout du badge pour ${entrepreneur.username}`);
               const badge = document.createElement('span');
               badge.className = 'entrepreneur-badge';
               badge.textContent = count;
@@ -10887,11 +10894,11 @@
           // IMPORTANT: Seulement sélectionner si c'est un entrepreneur, pas un coach
           if (selectedUser && !isCoachUsername(selectedUser)) {
             // Un entrepreneur est sélectionné via URL - le marquer comme sélectionné
-            console.log('[COACH] Entrepreneur détecté dans URL:', selectedUser);
+            log('[COACH] Entrepreneur détecté dans URL:', selectedUser);
             selectEntrepreneur(selectedUser);
           } else if (!selectedUser || isCoachUsername(selectedUser)) {
             // Pas de sélection OU le paramètre user est un coach - ne pas auto-sélectionner
-            console.log('[COACH] Attente de sélection manuelle (user param:', selectedUser, ')');
+            log('[COACH] Attente de sélection manuelle (user param:', selectedUser, ')');
           }
         } else {
           const option = document.createElement('div');
@@ -10900,7 +10907,7 @@
           menu.appendChild(option);
         }
       } catch (error) {
-        console.error('Erreur chargement entrepreneurs:', error);
+        error('Erreur chargement entrepreneurs:', error);
       }
     }
   })();
@@ -11868,11 +11875,11 @@
 
     // Fonction pour ouvrir le modal de détails
     window.ouvrirDetailsTraitement = async function(numeroSoumission, facturationData) {
-      console.log('[MODAL] Ouverture modal pour:', numeroSoumission, facturationData);
+      log('[MODAL] Ouverture modal pour:', numeroSoumission, facturationData);
 
       // NOUVEAU: Filtrer pour n'afficher QUE le paiement cliqué
       const typePaiementClique = facturationData.typePaiement || 'depot';
-      console.log('[MODAL] Type de paiement cliqué:', typePaiementClique);
+      log('[MODAL] Type de paiement cliqué:', typePaiementClique);
 
       currentTraitementData = {
         numeroSoumission: numeroSoumission,
@@ -11890,7 +11897,7 @@
         const responseStatuts = await fetch(`/api/facturationqe/client/${username}/${numeroSoumission}/statuts`);
         if (responseStatuts.ok) {
           detailsComplets = await responseStatuts.json();
-          console.log('[MODAL] Détails statuts:', detailsComplets);
+          log('[MODAL] Détails statuts:', detailsComplets);
         }
 
         // Récupérer les infos client depuis la liste des clients
@@ -11898,10 +11905,10 @@
         if (responseClients.ok) {
           const data = await responseClients.json();
           clientData = data.clients.find(c => c.num === numeroSoumission);
-          console.log('[MODAL] Client data:', clientData);
+          log('[MODAL] Client data:', clientData);
         }
       } catch (error) {
-        console.error('[MODAL] Erreur récupération données:', error);
+        error('[MODAL] Erreur récupération données:', error);
       }
 
       // Construire le contenu du modal
@@ -12004,7 +12011,7 @@
               // Si pas de dépôt, c'est un seul paiement
               const statutDepot = detailsComplets.statutDepot || 'non_envoye';
               typeAutres = (statutDepot === 'non_envoye') ? 'un_seul_paiement' : 'paiement_partiel';
-              console.log('[FALLBACK MODAL] typePaiementAutres déduit:', typeAutres, '(statutDepot:', statutDepot, ')');
+              log('[FALLBACK MODAL] typePaiementAutres déduit:', typeAutres, '(statutDepot:', statutDepot, ')');
             }
             const typePaiement = typeAutres === 'un_seul_paiement' ? 'Paiement complet' : `Paiement partiel ${index + 1}`;
             contentHTML += `
@@ -12124,7 +12131,7 @@
       // Si pas trouvé ou pas de pdfUrl, récupérer depuis l'API
       if (!pdfUrl || pdfUrl === '#') {
         const username = getFacturationUsername();
-        console.log('[MODAL] Récupération PDF depuis API pour:', numeroSoumission, 'username:', username);
+        log('[MODAL] Récupération PDF depuis API pour:', numeroSoumission, 'username:', username);
 
         try {
           const response = await fetch(`/soumissions_signees_facturation_qe/${username}`);
@@ -12133,11 +12140,11 @@
             const clientFromAPI = clients.find(c => c.num === numeroSoumission);
             if (clientFromAPI) {
               pdfUrl = clientFromAPI.pdfUrl;
-              console.log('[MODAL] PDF trouvé depuis API:', pdfUrl);
+              log('[MODAL] PDF trouvé depuis API:', pdfUrl);
             }
           }
         } catch (error) {
-          console.error('[MODAL] Erreur récupération API:', error);
+          error('[MODAL] Erreur récupération API:', error);
         }
       }
 
@@ -12259,7 +12266,7 @@
           alert('Erreur: Impossible de valider le paiement');
         }
       } catch (error) {
-        console.error('[MODAL] Erreur accepter:', error);
+        error('[MODAL] Erreur accepter:', error);
         btnAccepter.disabled = false;
         btnAccepter.innerHTML = originalBtnContent;
         alert('Erreur lors de l\'acceptation');
@@ -12391,7 +12398,7 @@
           alert('Erreur: Impossible de valider le paiement');
         }
       } catch (error) {
-        console.error('[MODAL] Erreur accepterPaiementType:', error);
+        error('[MODAL] Erreur accepterPaiementType:', error);
         if (btn) {
           btn.disabled = false;
           btn.innerHTML = '<i class="fas fa-check"></i> Accepter';
@@ -12493,7 +12500,7 @@
           alert('Erreur: ' + (error.detail || 'Impossible de refuser le paiement'));
         }
       } catch (error) {
-        console.error('[MODAL] Erreur refuser:', error);
+        error('[MODAL] Erreur refuser:', error);
         alert('Erreur lors du refus');
       }
     };
@@ -12507,7 +12514,7 @@
 
     // Ouvrir le modal de refus entrepreneur
     window.ouvrirModalRefusEntrepreneur = async function(numeroSoumission, facturation) {
-      console.log('[MODAL REFUS ENTREPRENEUR] Ouverture pour:', numeroSoumission, facturation);
+      log('[MODAL REFUS ENTREPRENEUR] Ouverture pour:', numeroSoumission, facturation);
       currentRefusData = { numeroSoumission, facturation };
 
       // Remplir les infos client
@@ -12527,7 +12534,7 @@
         const responseStatuts = await fetch(`/api/facturationqe/client/${username}/${numeroSoumission}/statuts`);
         if (responseStatuts.ok) {
           const statuts = await responseStatuts.json();
-          console.log('[MODAL REFUS] Statuts récupérés:', statuts);
+          log('[MODAL REFUS] Statuts récupérés:', statuts);
 
           // Fonction pour formater le statut avec couleur
           const formaterStatutPaiement = (statut) => {
@@ -12625,7 +12632,7 @@
           paiementsContainer.style.display = 'none';
         }
       } catch (error) {
-        console.error('[MODAL REFUS] Erreur récupération statuts:', error);
+        error('[MODAL REFUS] Erreur récupération statuts:', error);
         paiementsContainer.innerHTML = '';
         paiementsContainer.style.display = 'none';
       }
@@ -12760,7 +12767,7 @@
           alert('Erreur: ' + (error.detail || 'Impossible d\'envoyer le message'));
         }
       } catch (error) {
-        console.error('[MODAL ENTREPRENEUR] Erreur envoi message:', error);
+        error('[MODAL ENTREPRENEUR] Erreur envoi message:', error);
         alert('Erreur lors de l\'envoi du message');
       }
     };
@@ -12815,7 +12822,7 @@
           alert('Erreur: ' + (error.detail || 'Impossible de renvoyer le paiement'));
         }
       } catch (error) {
-        console.error('[MODAL ENTREPRENEUR] Erreur renvoyer:', error);
+        error('[MODAL ENTREPRENEUR] Erreur renvoyer:', error);
         alert('Erreur lors du renvoi en traitement');
       }
     };
@@ -12858,7 +12865,7 @@
       const empty = document.getElementById('traiter-empty');
 
       if (!container || !loading || !empty) {
-        console.warn('[PERIODES] Éléments DOM non trouvés, skip chargement');
+        warn('[PERIODES] Éléments DOM non trouvés, skip chargement');
         return;
       }
 
@@ -12871,7 +12878,7 @@
         const userRole = localStorage.getItem('userRole');
         const username = window.selectedEntrepreneurUsername || window.username || localStorage.getItem('username');
 
-        console.log('[PERIODES] Chargement pour:', username, 'Role:', userRole);
+        log('[PERIODES] Chargement pour:', username, 'Role:', userRole);
 
         // Charger les périodes depuis l'API
         const response = await fetch('/api/comptable/facturation/periodes');
@@ -12882,7 +12889,7 @@
         const data = await response.json();
         const periodes = data.periodes || {};
 
-        console.log('[PERIODES] Données reçues:', periodes);
+        log('[PERIODES] Données reçues:', periodes);
 
         loading.style.display = 'none';
 
@@ -12897,7 +12904,7 @@
         for (const [periodeId, paiements] of Object.entries(periodes)) {
           // Vérifier que paiements est bien un tableau
           if (!Array.isArray(paiements)) {
-            console.warn('[PERIODES] Période ignorée (pas un tableau):', periodeId, paiements);
+            warn('[PERIODES] Période ignorée (pas un tableau):', periodeId, paiements);
             continue;
           }
 
@@ -12943,7 +12950,7 @@
         }
 
       } catch (error) {
-        console.error('[PERIODES] Erreur:', error);
+        error('[PERIODES] Erreur:', error);
         loading.style.display = 'none';
         empty.style.display = 'flex';
       }

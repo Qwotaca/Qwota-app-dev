@@ -493,6 +493,13 @@
   </div>
 
   <script>
+    // ⚡ DÉSACTIVATION DES LOGS - Performance optimization
+    window.log = () => {};
+    window.warn = () => {};
+    window.error = () => {};
+    window.info = () => {};
+    window.debug = () => {};
+
     let currentUser = null;
     let userProfile = null;
     let allBadges = {};
@@ -519,7 +526,7 @@
             userFullName = `${userData.prenom} ${userData.nom}`;
           }
         } catch (error) {
-          console.error('Erreur chargement infos utilisateur:', error);
+          error('Erreur chargement infos utilisateur:', error);
         }
 
         // Charger les données en parallèle
@@ -528,7 +535,7 @@
           loadBadges()
         ]);
       } catch (error) {
-        console.error('Erreur d\'initialisation:', error);
+        error('Erreur d\'initialisation:', error);
       }
     }
 
@@ -543,7 +550,7 @@
           renderProfile();
         }
       } catch (error) {
-        console.error('Erreur chargement profil:', error);
+        error('Erreur chargement profil:', error);
         document.getElementById('profileName').textContent = 'Erreur de chargement';
       }
     }
@@ -562,7 +569,7 @@
 
         if (allBadgesData.status === 'success') {
           allBadges = allBadgesData.all_badges;
-          console.log(`✅ ${allBadgesData.total} badges chargés depuis le backend`);
+          log(`✅ ${allBadgesData.total} badges chargés depuis le backend`);
         }
 
         if (userBadgesData.status === 'success') {
@@ -577,7 +584,7 @@
 
         renderBadges();
       } catch (error) {
-        console.error('Erreur chargement badges:', error);
+        error('Erreur chargement badges:', error);
         document.getElementById('badgesGrid').innerHTML = `
           <div class="empty-state">
             <i class="fas fa-exclamation-triangle"></i>
@@ -634,7 +641,7 @@
           }
         })
         .catch(error => {
-          console.error('Erreur chargement photo:', error);
+          error('Erreur chargement photo:', error);
           const initial = userFullName ? userFullName.charAt(0).toUpperCase() : currentUser.charAt(0).toUpperCase();
           photoEl.style.display = 'block';
           photoEl.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
@@ -767,7 +774,7 @@
         // Afficher le grade
         document.getElementById('entrepreneurGrade').textContent = gradeDisplay;
       } catch (error) {
-        console.error('Erreur lors de la récupération du grade:', error);
+        error('Erreur lors de la récupération du grade:', error);
         document.getElementById('entrepreneurGrade').textContent = 'Non défini';
       }
     }
@@ -1468,7 +1475,7 @@
           });
         }
       } catch (error) {
-        console.log('Erreur chargement avatar pour flammes:', error);
+        log('Erreur chargement avatar pour flammes:', error);
         document.querySelectorAll('.flame-user-avatar').forEach(img => {
           img.src = '/static/default-avatar.png';
           img.style.display = 'block';

@@ -584,6 +584,13 @@
   </div><!-- Fin de .main-content pour extraction SPA -->
 
 <script>
+// ⚡ DÉSACTIVATION DES LOGS - Performance optimization
+window.log = window.log || (() => {});
+window.warn = window.warn || (() => {});
+window.error = window.error || (() => {});
+window.info = window.info || (() => {});
+window.debug = window.debug || (() => {});
+
 // Fonction pour retourner à la page Outils
 function goBackToOutils() {
   // La page soumissions est chargée DANS l'iframe outils
@@ -609,7 +616,7 @@ function ensureBackButtonVisible() {
 // Fonction pour forcer les permissions et visibilité des éléments selon le rôle
 function enforceRoleBasedVisibility() {
   ensureBackButtonVisible();
-  console.log('Role-based visibility enforced - User:', window.username);
+  log('Role-based visibility enforced - User:', window.username);
 }
 
 // S'assurer que le bouton est toujours visible - TOUS les événements possibles
@@ -958,7 +965,7 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
 
       return; // Sortir ici, ne pas continuer avec le mode présentation
     } catch (error) {
-      console.error('[ERROR] Erreur génération PDF:', error);
+      error('[ERROR] Erreur génération PDF:', error);
       alert('Erreur lors de la génération du PDF');
       btn.disabled = false;
       btn.innerHTML = originalText;
@@ -970,8 +977,8 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
   // Stocker les données du formulaire pour la signature
   currentFormData = data;
 
-  console.log('[DEBUG] PRÉSENTATION - Produit envoyé:', data.produit);
-  console.log('[DEBUG] PRÉSENTATION - Part envoyé:', data.part);
+  log('[DEBUG] PRÉSENTATION - Produit envoyé:', data.produit);
+  log('[DEBUG] PRÉSENTATION - Part envoyé:', data.part);
 
   try {
     // Pour la présentation, on utilise juste preview-pdf (pas de création en attente)
@@ -1111,10 +1118,10 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
 
     // Récupérer le closePdfBtn depuis le modal déplacé (important!)
     const closePdfBtnMoved = pdfModal.querySelector('#closePdfBtn');
-    console.log('[DEBUG] closePdfBtnMoved trouvé:', closePdfBtnMoved);
+    log('[DEBUG] closePdfBtnMoved trouvé:', closePdfBtnMoved);
     if (closePdfBtnMoved) {
       closePdfBtnMoved.classList.remove("hidden");
-      console.log('[DEBUG] Classe hidden retirée du bouton X');
+      log('[DEBUG] Classe hidden retirée du bouton X');
     }
 
     // Attacher l'événement de signature via JavaScript
@@ -1125,13 +1132,13 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
       signatureOverlay = pdfModal.querySelector('#signatureOverlay');
     }
 
-    console.log('[DEBUG] signatureOverlay trouvé:', signatureOverlay);
+    log('[DEBUG] signatureOverlay trouvé:', signatureOverlay);
     if (signatureOverlay) {
       signatureOverlay.onclick = () => {
-        console.log('[DEBUG] Click sur signature overlay détecté!');
+        log('[DEBUG] Click sur signature overlay détecté!');
         window.openSignatureZoomPopup();
       };
-      console.log('[DEBUG] Événement onclick attaché à signatureOverlay');
+      log('[DEBUG] Événement onclick attaché à signatureOverlay');
 
       // Mettre à jour la position de la signature après un petit délai (attendre le rendu)
       setTimeout(() => {
@@ -1140,11 +1147,11 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
         }
       }, 100);
     } else {
-      console.error('[ERROR] signatureOverlay non trouvé!');
+      error('[ERROR] signatureOverlay non trouvé!');
     }
 
     // Attacher l'événement au bouton "Accepter" après le déplacement
-    console.log('[DEBUG] Appel de attachAcceptButtonEvent après déplacement modal');
+    log('[DEBUG] Appel de attachAcceptButtonEvent après déplacement modal');
     if (window.attachAcceptButtonEvent) {
       window.attachAcceptButtonEvent();
     }
@@ -1315,12 +1322,12 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
     // Utiliser le bouton déplacé pour l'événement onclick
     if (closePdfBtnMoved) {
       closePdfBtnMoved.onclick = () => {
-        console.log('[DEBUG] Click sur bouton X détecté!');
+        log('[DEBUG] Click sur bouton X détecté!');
         closePDF();
       };
-      console.log('[DEBUG] Événement onclick attaché au bouton X');
+      log('[DEBUG] Événement onclick attaché au bouton X');
     } else {
-      console.error('[ERROR] closePdfBtnMoved non trouvé, impossible d\'attacher onclick');
+      error('[ERROR] closePdfBtnMoved non trouvé, impossible d\'attacher onclick');
     }
     // NE PAS fermer au clic sur l'overlay - seulement avec Annuler ou X
 
@@ -1475,7 +1482,7 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
     // Fermer le calendrier
     document.getElementById('creationCalendar').classList.add('hidden');
 
-    console.log('[DATE] Date de création sélectionnée:', formattedDate);
+    log('[DATE] Date de création sélectionnée:', formattedDate);
   }
 
   // Fonction pour parser une date d'affichage (format français)
@@ -1544,26 +1551,26 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
   async function genererNumeroSoumission() {
     const numField = document.querySelector('input[name="num"]');
     if (!numField) {
-      console.warn('[NUM] Champ numéro non trouvé, nouvelle tentative dans 100ms');
+      warn('[NUM] Champ numéro non trouvé, nouvelle tentative dans 100ms');
       setTimeout(genererNumeroSoumission, 100);
       return;
     }
 
-    console.log('[NUM] Génération du numéro de soumission...');
+    log('[NUM] Génération du numéro de soumission...');
 
     try {
       const response = await fetch('/api/soumission/generer-numero');
       if (response.ok) {
         const data = await response.json();
         numField.value = data.numero;
-        console.log('[NUM] Numéro généré:', data.numero);
-        console.log('[NUM] Champ après assignation:', numField.value);
+        log('[NUM] Numéro généré:', data.numero);
+        log('[NUM] Champ après assignation:', numField.value);
 
         // Vérifier que la valeur reste après un court délai
         setTimeout(() => {
-          console.log('[NUM] Vérification après 500ms - Valeur:', numField.value);
+          log('[NUM] Vérification après 500ms - Valeur:', numField.value);
           if (!numField.value || numField.value === '') {
-            console.error('[NUM] PROBLÈME: Le champ a été vidé! Réassignation...');
+            error('[NUM] PROBLÈME: Le champ a été vidé! Réassignation...');
             numField.value = data.numero;
             numField.setAttribute('value', data.numero);
           }
@@ -1572,14 +1579,14 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
         // Fallback: générer localement si API échoue
         const suffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
         numField.value = `26-${suffix}`;
-        console.warn('[NUM] Fallback - Numéro généré localement:', numField.value);
+        warn('[NUM] Fallback - Numéro généré localement:', numField.value);
       }
     } catch (error) {
-      console.error('[NUM] Erreur génération numéro:', error);
+      error('[NUM] Erreur génération numéro:', error);
       // Fallback local
       const suffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
       numField.value = `26-${suffix}`;
-      console.warn('[NUM] Fallback après erreur - Numéro:', numField.value);
+      warn('[NUM] Fallback après erreur - Numéro:', numField.value);
     }
   }
 
@@ -1604,7 +1611,7 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
 
       return response.ok;
     } catch (error) {
-      console.error('Erreur réservation numéro:', error);
+      error('Erreur réservation numéro:', error);
       return true; // Continuer même si erreur
     }
   }
@@ -1679,7 +1686,7 @@ function updateToggle() {
 function updateProduitCouleursHidden() {
   const toggle = document.getElementById("toggleBox");
   if (!toggle) {
-    console.warn('Element toggleBox non trouvé');
+    warn('Element toggleBox non trouvé');
     return;
   }
   
@@ -1700,7 +1707,7 @@ function updateProduitCouleursHidden() {
 function updatePartTravauxHidden() {
   const toggle = document.getElementById("partTravauxToggle");
   if (!toggle) {
-    console.warn('Element partTravauxToggle non trouvé');
+    warn('Element partTravauxToggle non trouvé');
     return;
   }
   
@@ -1991,25 +1998,25 @@ if (e.key === "Delete" && document.activeElement === input && selected.length > 
 
     // D'abord vérifier le style inline (plus fiable car c'est ce qu'on définit)
     const inlineStyle = element.style.borderRightColor;
-    console.log(`[hasGreenBorder] ${element.name || element.id}: inlineStyle = "${inlineStyle}"`);
+    log(`[hasGreenBorder] ${element.name || element.id}: inlineStyle = "${inlineStyle}"`);
 
     // Vérifier si le style inline contient du vert
     if (inlineStyle) {
       // #4caf50 ou rgb(76, 175, 80) = vert
       if (inlineStyle.includes('4caf50') || inlineStyle.includes('76, 175, 80') || inlineStyle === 'rgb(76, 175, 80)') {
-        console.log(`[hasGreenBorder] => VERT (via inline style)`);
+        log(`[hasGreenBorder] => VERT (via inline style)`);
         return true;
       }
       // #e57373 ou rgb(229, 115, 115) = rouge
       if (inlineStyle.includes('e57373') || inlineStyle.includes('229, 115, 115') || inlineStyle === 'rgb(229, 115, 115)') {
-        console.log(`[hasGreenBorder] => ROUGE (via inline style)`);
+        log(`[hasGreenBorder] => ROUGE (via inline style)`);
         return false;
       }
     }
 
     // Fallback sur getComputedStyle
     const borderColor = getComputedStyle(element).borderRightColor;
-    console.log(`[hasGreenBorder] ${element.name || element.id}: computedStyle = ${borderColor}`);
+    log(`[hasGreenBorder] ${element.name || element.id}: computedStyle = ${borderColor}`);
 
     // Vérifier si c'est vert (G > R et G > B)
     const match = borderColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
@@ -2018,7 +2025,7 @@ if (e.key === "Delete" && document.activeElement === input && selected.length > 
       const g = parseInt(match[2]);
       const b = parseInt(match[3]);
       const isGreen = g > r && g > b;
-      console.log(`[hasGreenBorder] R=${r}, G=${g}, B=${b} => isGreen=${isGreen}`);
+      log(`[hasGreenBorder] R=${r}, G=${g}, B=${b} => isGreen=${isGreen}`);
       return isGreen;
     }
     return false;
@@ -2117,7 +2124,7 @@ if (e.key === "Delete" && document.activeElement === input && selected.length > 
 
   // Fonction de validation des champs requis
   function validateRequiredFields() {
-    console.log('[VALIDATION] ========== Début de validateRequiredFields ==========');
+    log('[VALIDATION] ========== Début de validateRequiredFields ==========');
 
     const sendNowRadio = document.getElementById('send-now');
     const saveOnlyRadio = document.getElementById('save-only');
@@ -2125,11 +2132,11 @@ if (e.key === "Delete" && document.activeElement === input && selected.length > 
     const voirPDFBtn = document.getElementById('voirPDFBtn');
     const validationMessage = document.getElementById('validationMessage');
 
-    console.log('[VALIDATION] Boutons trouvés:', { submitBtn: !!submitBtn, voirPDFBtn: !!voirPDFBtn });
+    log('[VALIDATION] Boutons trouvés:', { submitBtn: !!submitBtn, voirPDFBtn: !!voirPDFBtn });
 
     // Vérifier le mode sélectionné
     const isSendNow = sendNowRadio?.checked;
-    console.log('[VALIDATION] Mode sélectionné:', isSendNow ? '📧 Envoyer maintenant' : '💾 Ne pas envoyer');
+    log('[VALIDATION] Mode sélectionné:', isSendNow ? '📧 Envoyer maintenant' : '💾 Ne pas envoyer');
 
     let isValid = false;
 
@@ -2156,10 +2163,10 @@ if (e.key === "Delete" && document.activeElement === input && selected.length > 
       ];
 
       let allGreen = true;
-      console.log('[VALIDATION] Vérification des bordures vertes:');
+      log('[VALIDATION] Vérification des bordures vertes:');
       fieldsToCheck.forEach(field => {
         const isGreen = hasGreenBorder(field.el);
-        console.log(`  - ${field.name}:`, isGreen ? '✓ Vert' : '✗ Rouge');
+        log(`  - ${field.name}:`, isGreen ? '✓ Vert' : '✗ Rouge');
         if (!isGreen) allGreen = false;
       });
 
@@ -2175,14 +2182,14 @@ if (e.key === "Delete" && document.activeElement === input && selected.length > 
       const prenomGreen = hasGreenBorder(prenomEl);
       const nomGreen = hasGreenBorder(nomEl);
 
-      console.log('[VALIDATION] Mode "Ne pas envoyer" - Vérification nom et prénom seulement');
-      console.log('  - Prénom:', prenomGreen ? '✓ Vert' : '✗ Rouge');
-      console.log('  - Nom:', nomGreen ? '✓ Vert' : '✗ Rouge');
+      log('[VALIDATION] Mode "Ne pas envoyer" - Vérification nom et prénom seulement');
+      log('  - Prénom:', prenomGreen ? '✓ Vert' : '✗ Rouge');
+      log('  - Nom:', nomGreen ? '✓ Vert' : '✗ Rouge');
 
       isValid = prenomGreen && nomGreen;
     }
 
-    console.log('[VALIDATION] Résultat final: isValid =', isValid);
+    log('[VALIDATION] Résultat final: isValid =', isValid);
 
     // Activer/désactiver les boutons et le message selon la validation
     if (isValid) {
@@ -2216,7 +2223,7 @@ if (e.key === "Delete" && document.activeElement === input && selected.length > 
       }
     }
 
-    console.log('[VALIDATION] ========== Fin de validateRequiredFields ==========');
+    log('[VALIDATION] ========== Fin de validateRequiredFields ==========');
   }
 
   // Initialisation au chargement de la page
@@ -2225,24 +2232,24 @@ if (e.key === "Delete" && document.activeElement === input && selected.length > 
 
     // Hook sur le bouton "Envoyer au client" quand le DOM est prêt
     const submitBtn = document.getElementById('submitBtn');
-    console.log('[DEBUG] Recherche submitBtn:', submitBtn);
+    log('[DEBUG] Recherche submitBtn:', submitBtn);
 
     if (submitBtn) {
-      console.log('[OK] submitBtn trouvé, ajout du listener');
+      log('[OK] submitBtn trouvé, ajout du listener');
       submitBtn.addEventListener('click', async function(e) {
-        console.log('[TARGET] Clic détecté sur submitBtn');
+        log('[TARGET] Clic détecté sur submitBtn');
         const numInput = document.querySelector('input[name="num"]');
         const currentValue = numInput.value.trim();
-        console.log('[NOTE] Valeur actuelle:', currentValue);
+        log('[NOTE] Valeur actuelle:', currentValue);
 
         // Après l'envoi, générer un nouveau numéro pour la prochaine soumission
         setTimeout(async () => {
           await genererNumeroSoumission();
-          console.log('[OK] Nouveau numéro généré pour prochaine soumission');
+          log('[OK] Nouveau numéro généré pour prochaine soumission');
         }, 2000);
       });
     } else {
-      console.log('[ERROR] submitBtn non trouvé dans le DOM');
+      log('[ERROR] submitBtn non trouvé dans le DOM');
     }
 
     // Gestion des options d'envoi
@@ -2266,7 +2273,7 @@ if (e.key === "Delete" && document.activeElement === input && selected.length > 
           btnText.textContent = 'Envoyer au client';
           voirPDFBtn.innerHTML = '<i class="fas fa-file-signature mr-2"></i>Présenter au client';
         }
-        console.log('📧 Mode: Envoyer au client');
+        log('📧 Mode: Envoyer au client');
         validateRequiredFields(); // Revalider quand on change de mode
       });
 
@@ -2283,7 +2290,7 @@ if (e.key === "Delete" && document.activeElement === input && selected.length > 
           btnText.textContent = 'Enregistrer sans envoyer';
           voirPDFBtn.innerHTML = iconHTML + 'Voir en PDF';
         }
-        console.log('💾 Mode: Enregistrer sans envoyer');
+        log('💾 Mode: Enregistrer sans envoyer');
         validateRequiredFields(); // Revalider quand on change de mode
       });
     }
@@ -2302,11 +2309,11 @@ if (e.key === "Delete" && document.activeElement === input && selected.length > 
       adresseInput.addEventListener('blur', validateRequiredFields);
       // Aussi écouter input pour la saisie manuelle
       adresseInput.addEventListener('input', validateRequiredFields);
-      console.log('[VALIDATION] Écouteurs spéciaux sur adresse pour Google autocomplete');
+      log('[VALIDATION] Écouteurs spéciaux sur adresse pour Google autocomplete');
     }
 
-    console.log('[VALIDATION] Écouteurs d\'événements installés sur tous les champs visibles');
-    console.log('[VALIDATION] Les champs cachés (produit/particularités) seront validés après fermeture des popups');
+    log('[VALIDATION] Écouteurs d\'événements installés sur tous les champs visibles');
+    log('[VALIDATION] Les champs cachés (produit/particularités) seront validés après fermeture des popups');
 
     // Validation initiale
     validateRequiredFields();
@@ -2347,14 +2354,14 @@ if (e.key === "Delete" && document.activeElement === input && selected.length > 
           });
 
           if (saveResponse.ok) {
-            console.log('[OK] Informations entrepreneur sauvegardées pour le PDF');
+            log('[OK] Informations entrepreneur sauvegardées pour le PDF');
           }
         } else {
-          console.log('[INFO] Informations entrepreneur incomplètes dans le profil');
+          log('[INFO] Informations entrepreneur incomplètes dans le profil');
         }
       }
     } catch (error) {
-      console.error('[ERROR] Erreur initialisation info entrepreneur:', error);
+      error('[ERROR] Erreur initialisation info entrepreneur:', error);
     }
   }
 </script>
@@ -2368,16 +2375,16 @@ if (e.key === "Delete" && document.activeElement === input && selected.length > 
 // Bannir un client de la liste "à compléter" par ID unique
 async function bannirClientACompleter(soumissionData, eventId) {
   try {
-    console.log("🚫 Tentative de bannissement du client à compléter");
+    log("🚫 Tentative de bannissement du client à compléter");
     
     // Utiliser l'eventId passé en paramètre directement
-    console.log("[DEBUG] Event ID reçu en paramètre:", eventId);
+    log("[DEBUG] Event ID reçu en paramètre:", eventId);
     
     // Si pas d'eventId, générer un fallback basé sur les données client
     if (!eventId) {
       const clientInfo = `${soumissionData.nom}_${soumissionData.prenom}_${soumissionData.telephone}`;
       eventId = btoa(clientInfo).replace(/[^a-zA-Z0-9]/g, ''); // Encode en base64 et nettoie
-      console.log("[FIX] Fallback ID généré:", eventId);
+      log("[FIX] Fallback ID généré:", eventId);
     }
     
     const banData = {
@@ -2392,7 +2399,7 @@ async function bannirClientACompleter(soumissionData, eventId) {
       raison: 'Soumission envoyée - ne plus afficher dans clients à compléter'
     };
     
-    console.log("[BAN] Donnees de bannissement par ID unique:", banData);
+    log("[BAN] Donnees de bannissement par ID unique:", banData);
 
     // Appel à l'API pour bannir le client par ID unique (nouveau endpoint)
     const response = await fetch(`${window.location.origin}/bannir-client-par-id`, {
@@ -2404,27 +2411,27 @@ async function bannirClientACompleter(soumissionData, eventId) {
     });
     
     if (response.ok) {
-      console.log("[OK] Client banni de la liste 'à compléter' avec succès");
+      log("[OK] Client banni de la liste 'à compléter' avec succès");
       
       // Notifier les autres onglets ouverts (calcul.html) pour rafraîchir leur liste
       try {
         localStorage.setItem('clientsBannedUpdate', Date.now().toString());
-        console.log("📡 Signal de mise à jour envoyé aux autres onglets");
+        log("📡 Signal de mise à jour envoyé aux autres onglets");
 
         // Déclencher aussi un événement personnalisé pour le même onglet
         window.dispatchEvent(new CustomEvent('clientBanned', {
           detail: { eventId: eventId, clientInfo: banData }
         }));
-        console.log("📡 Événement clientBanned déclenché pour la page actuelle");
+        log("📡 Événement clientBanned déclenché pour la page actuelle");
       } catch (e) {
-        console.log("[WARN] Impossible d'envoyer le signal de mise à jour");
+        log("[WARN] Impossible d'envoyer le signal de mise à jour");
       }
     } else {
-      console.log("[WARN] Impossible de bannir le client de la liste 'à compléter'");
+      log("[WARN] Impossible de bannir le client de la liste 'à compléter'");
     }
     
   } catch (error) {
-    console.error("[ERROR] Erreur lors du bannissement du client à compléter:", error);
+    error("[ERROR] Erreur lors du bannissement du client à compléter:", error);
   }
 }
 
@@ -2457,7 +2464,7 @@ function confirmerSuppression(prenom, nom, btn) {
 <script>
 // Fonction pour nettoyer uniquement les données stockées (pas le formulaire)
 function clearStoredData() {
-  console.log("🧹 NETTOYAGE DES DONNÉES STOCKÉES");
+  log("🧹 NETTOYAGE DES DONNÉES STOCKÉES");
   
   // Nettoyer sessionStorage
   sessionStorage.removeItem('submissionData');
@@ -2465,12 +2472,12 @@ function clearStoredData() {
   // Nettoyer localStorage (optionnel - commenter si vous voulez garder le numéro)
   // localStorage.removeItem('lastSoumissionNumber');
   
-  console.log("[OK] Données stockées nettoyées");
+  log("[OK] Données stockées nettoyées");
 }
 
 // Fonction pour nettoyer complètement (données + formulaire)
 function clearAllData() {
-  console.log("🧹 NETTOYAGE COMPLET");
+  log("🧹 NETTOYAGE COMPLET");
   
   // Nettoyer les données stockées
   clearStoredData();
@@ -2488,10 +2495,10 @@ function clearAllData() {
       dropdown.textContent = dropdown.getAttribute('data-placeholder') || 'Sélectionner...';
     });
     
-    console.log("[DELETE] Formulaire réinitialisé");
+    log("[DELETE] Formulaire réinitialisé");
   }, 100);
   
-  console.log("[OK] Nettoyage complet terminé");
+  log("[OK] Nettoyage complet terminé");
 }
 
 // Variable globale pour stocker le clientOriginalId des clients perdus récupérés
@@ -2499,21 +2506,21 @@ window.clientOriginalId = null;
 
 // Fonction d'auto-fill qui peut s'exécuter à tout moment
 function autoFillForm() {
-  console.log("🔄 AUTO-FILL DÉMARRÉ");
+  log("🔄 AUTO-FILL DÉMARRÉ");
 
   // Vérifier s'il y a des données à auto-remplir (venant du calcul)
   const submissionData = sessionStorage.getItem('submissionData');
-  console.log("[DEBUG] submissionData trouvé:", submissionData);
+  log("[DEBUG] submissionData trouvé:", submissionData);
   
   if (submissionData) {
     try {
       const data = JSON.parse(submissionData);
-      console.log("[OK] Données de préremplissage trouvées:", data);
+      log("[OK] Données de préremplissage trouvées:", data);
 
       // Sauvegarder le clientOriginalId si c'est un client perdu récupéré
       if (data.clientOriginalId) {
         window.clientOriginalId = data.clientOriginalId;
-        console.log("💾 clientOriginalId sauvegardé:", window.clientOriginalId);
+        log("💾 clientOriginalId sauvegardé:", window.clientOriginalId);
       }
 
       // Attendre que les champs soient disponibles
@@ -2541,7 +2548,7 @@ function autoFillForm() {
             // Marquer que l'adresse vient de calcul (donc déjà validée)
             window.googleProspectAddressSelected = true;
             window.initialAutofilledAddress = data.adresse; // Stocker pour comparaison
-            console.log("[OK] Adresse auto-remplie depuis calcul - validation désactivée");
+            log("[OK] Adresse auto-remplie depuis calcul - validation désactivée");
           }
         }
         if (data.telephone) {
@@ -2574,9 +2581,9 @@ function autoFillForm() {
               window.dropdownStates.item = data.item;
             }
             
-            console.log(`[BAN] Item dropdown mis à jour: "${data.item}"`);
+            log(`[BAN] Item dropdown mis à jour: "${data.item}"`);
           } else {
-            console.log(`[ERROR] Dropdown item non trouvé pour: "${data.item}"`);
+            log(`[ERROR] Dropdown item non trouvé pour: "${data.item}"`);
           }
         }
         if (data.temps) {
@@ -2587,40 +2594,40 @@ function autoFillForm() {
           }
         }
 
-        console.log("[OK] Formulaire prérempli avec succès");
+        log("[OK] Formulaire prérempli avec succès");
 
         // Valider les champs après le remplissage pour mettre à jour l'état des boutons
         setTimeout(() => {
           if (typeof validateRequiredFields === 'function') {
             validateRequiredFields();
-            console.log("[OK] Validation des champs effectuée après préremplissage");
+            log("[OK] Validation des champs effectuée après préremplissage");
           }
         }, 100);
 
         // Stocker l'eventId AVANT de nettoyer sessionStorage
         window.storedEventId = data.eventId || data.id;
-        console.log("💾 EventId sauvegardé avant nettoyage:", window.storedEventId);
+        log("💾 EventId sauvegardé avant nettoyage:", window.storedEventId);
 
         // Nettoyer les données stockées après l'autofill pour éviter qu'elles persistent
         setTimeout(() => {
           clearStoredData();
-          console.log("🧹 Données nettoyées après autofill");
+          log("🧹 Données nettoyées après autofill");
         }, 1000);
         
       }, 500);
       
     } catch (error) {
-      console.error("[ERROR] Erreur lors du préremplissage:", error);
+      error("[ERROR] Erreur lors du préremplissage:", error);
     }
   } else {
     // Vérifier s'il y a des données de récupération client (venant de Ventes - clients perdus)
     const recuperationData = localStorage.getItem('clientSoumission') || localStorage.getItem('recuperationClient');
-    console.log("[DEBUG] clientSoumission/recuperationClient trouvé:", recuperationData);
+    log("[DEBUG] clientSoumission/recuperationClient trouvé:", recuperationData);
 
     if (recuperationData) {
       try {
         const data = JSON.parse(recuperationData);
-        console.log("[OK] Données de récupération client trouvées:", data);
+        log("[OK] Données de récupération client trouvées:", data);
 
         setTimeout(() => {
           // Champs de base
@@ -2645,7 +2652,7 @@ function autoFillForm() {
               adresseField.style.setProperty('border-right-color', '#4caf50', 'important');
               window.googleProspectAddressSelected = true;
               window.initialAutofilledAddress = data.adresse;
-              console.log("[OK] Adresse auto-remplie depuis récupération client");
+              log("[OK] Adresse auto-remplie depuis récupération client");
             }
           }
           if (data.telephone) {
@@ -2686,9 +2693,9 @@ function autoFillForm() {
             }
           }
           if (data.prix) {
-            console.log("[PRIX] Prix détecté dans data:", data.prix, "Type:", typeof data.prix);
+            log("[PRIX] Prix détecté dans data:", data.prix, "Type:", typeof data.prix);
             const prixField = document.querySelector('input[name="prix"]');
-            console.log("[PRIX] Champ prix trouvé:", prixField ? 'Oui' : 'Non');
+            log("[PRIX] Champ prix trouvé:", prixField ? 'Oui' : 'Non');
             if (prixField) {
               // Formater le prix: enlever .00 si présent, enlever $ si présent (le champ le formate automatiquement)
               let prixFormate = data.prix.toString();
@@ -2698,7 +2705,7 @@ function autoFillForm() {
               if (prixFormate.endsWith('.00')) {
                 prixFormate = prixFormate.replace('.00', '');
               }
-              console.log("[PRIX] Prix formaté:", prixFormate);
+              log("[PRIX] Prix formaté:", prixFormate);
               prixField.value = prixFormate;
 
               // Déclencher les événements pour activer le formatage automatique
@@ -2707,10 +2714,10 @@ function autoFillForm() {
               prixField.dispatchEvent(new Event('change', { bubbles: true }));
 
               prixField.style.setProperty('border-right-color', '#4caf50', 'important');
-              console.log("[OK] Prix rempli:", data.prix, "→", prixFormate, "Valeur dans champ:", prixField.value);
+              log("[OK] Prix rempli:", data.prix, "→", prixFormate, "Valeur dans champ:", prixField.value);
             }
           } else {
-            console.log("[PRIX] ⚠️ Aucun prix dans les données");
+            log("[PRIX] ⚠️ Aucun prix dans les données");
           }
 
           // Type de travaux (dropdown toggle)
@@ -2722,7 +2729,7 @@ function autoFillForm() {
               if (window.dropdownStates) {
                 window.dropdownStates.item = data.item;
               }
-              console.log("[OK] Type de travaux rempli:", data.item);
+              log("[OK] Type de travaux rempli:", data.item);
             }
           }
 
@@ -2735,7 +2742,7 @@ function autoFillForm() {
               if (window.dropdownStates) {
                 window.dropdownStates.paidBy = data.payer_par;
               }
-              console.log("[OK] Payé par rempli:", data.payer_par);
+              log("[OK] Payé par rempli:", data.payer_par);
             }
           }
 
@@ -2753,7 +2760,7 @@ function autoFillForm() {
               if (produitTrigger) {
                 produitTrigger.style.setProperty('border-right-color', '#4caf50', 'important');
               }
-              console.log("[OK] Produit rempli:", data.produit.substring(0, 50) + '...');
+              log("[OK] Produit rempli:", data.produit.substring(0, 50) + '...');
             }
           }
 
@@ -2771,7 +2778,7 @@ function autoFillForm() {
               if (partTrigger) {
                 partTrigger.style.setProperty('border-right-color', '#4caf50', 'important');
               }
-              console.log("[OK] Particularités remplies:", data.part.substring(0, 50) + '...');
+              log("[OK] Particularités remplies:", data.part.substring(0, 50) + '...');
             }
           }
 
@@ -2782,7 +2789,7 @@ function autoFillForm() {
             const nomComplet = `${data.prenom || ''} ${data.nom || ''}`.trim();
             recuperationText.textContent = `Récupération de ${nomComplet}`;
             recuperationBadge.style.display = 'block';
-            console.log("[BADGE] Badge de récupération affiché pour:", nomComplet);
+            log("[BADGE] Badge de récupération affiché pour:", nomComplet);
           }
 
           // Détecter et appliquer la langue/province basée sur l'item
@@ -2794,7 +2801,7 @@ function autoFillForm() {
               data.item.toLowerCase().includes(keyword.toLowerCase())
             );
 
-            console.log("[LANG] Détection langue - Item:", data.item, "Anglais:", isEnglish);
+            log("[LANG] Détection langue - Item:", data.item, "Anglais:", isEnglish);
 
             const langOptions = document.querySelectorAll('.lang-option');
             if (langOptions.length >= 2) {
@@ -2818,7 +2825,7 @@ function autoFillForm() {
                 ontarioOption.style.color = 'white';
                 ontarioOption.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.3)';
 
-                console.log("[LANG] Province changée: Ontario (anglais)");
+                log("[LANG] Province changée: Ontario (anglais)");
                 if (typeof window.switchLanguage === 'function') {
                   window.switchLanguage('en');
                 }
@@ -2840,7 +2847,7 @@ function autoFillForm() {
                 ontarioOption.style.transition = 'all 0.3s ease';
                 ontarioOption.style.color = 'var(--text-gray)';
 
-                console.log("[LANG] Province changée: Québec (français)");
+                log("[LANG] Province changée: Québec (français)");
                 if (typeof window.switchLanguage === 'function') {
                   window.switchLanguage('fr');
                 }
@@ -2851,30 +2858,30 @@ function autoFillForm() {
           // Stocker l'ID du client perdu si présent
           if (data.client_perdu_id) {
             sessionStorage.setItem('client_perdu_id', data.client_perdu_id);
-            console.log("[OK] ID client perdu stocké:", data.client_perdu_id);
+            log("[OK] ID client perdu stocké:", data.client_perdu_id);
           }
 
-          console.log("[OK] Formulaire prérempli avec données client récupéré");
+          log("[OK] Formulaire prérempli avec données client récupéré");
 
           // Valider les champs après le remplissage
           setTimeout(() => {
             if (typeof validateRequiredFields === 'function') {
               validateRequiredFields();
-              console.log("[OK] Validation des champs effectuée");
+              log("[OK] Validation des champs effectuée");
             }
           }, 100);
 
           // Nettoyer les données de récupération
           localStorage.removeItem('clientSoumission');
           localStorage.removeItem('recuperationClient');
-          console.log("🧹 Données de récupération nettoyées");
+          log("🧹 Données de récupération nettoyées");
         }, 500);
 
       } catch (error) {
-        console.error("[ERROR] Erreur lors du préremplissage récupération:", error);
+        error("[ERROR] Erreur lors du préremplissage récupération:", error);
       }
     } else {
-      console.log("ℹ️ Aucune donnée submissionData trouvée");
+      log("ℹ️ Aucune donnée submissionData trouvée");
     }
   }
 }
@@ -2885,10 +2892,10 @@ function detectRefreshAndExecute() {
   const isRefresh = !document.referrer || document.referrer === window.location.href;
   
   if (isRefresh) {
-    console.log("🔄 Refresh détecté - nettoyage complet");
+    log("🔄 Refresh détecté - nettoyage complet");
     clearAllData();
   } else {
-    console.log("🔗 Navigation normale - autofill autorisé");
+    log("🔗 Navigation normale - autofill autorisé");
     autoFillForm();
   }
 }
@@ -2949,7 +2956,7 @@ async function savePendingSoumission(formEl) {
   // Si on édite une soumission existante, ajouter l'ID pour mise à jour
   if (window.editingSoumissionId) {
     soumissionData.soumission_id = window.editingSoumissionId;
-    console.log('[UPDATE] Mode mise à jour - ID:', window.editingSoumissionId);
+    log('[UPDATE] Mode mise à jour - ID:', window.editingSoumissionId);
   }
 
   try {
@@ -2965,7 +2972,7 @@ async function savePendingSoumission(formEl) {
     }
 
     const result = await response.json();
-    console.log('[OK] Soumission sauvegardée en base:', result.soumission_id);
+    log('[OK] Soumission sauvegardée en base:', result.soumission_id);
 
     // Rafraîchir l'affichage de la table
     await loadPendingSoumissions();
@@ -3012,11 +3019,11 @@ async function savePendingSoumission(formEl) {
         window.editingSoumissionId = null;
       }
 
-      console.log('[OK] Formulaire réinitialisé');
+      log('[OK] Formulaire réinitialisé');
     }, 2000);
 
   } catch (error) {
-    console.error('[ERROR] Erreur sauvegarde:', error);
+    error('[ERROR] Erreur sauvegarde:', error);
     btn.disabled = false;
     btnText.textContent = "Erreur";
     alert('Erreur lors de la sauvegarde de la soumission');
@@ -3122,7 +3129,7 @@ async function loadPendingSoumissions() {
     }).join('');
 
   } catch (error) {
-    console.error('[ERROR] Erreur chargement soumissions:', error);
+    error('[ERROR] Erreur chargement soumissions:', error);
 
     // Vue desktop
     tbody.innerHTML = `
@@ -3146,7 +3153,7 @@ async function loadPendingSoumissions() {
 
 // Modifier/Compléter une soumission en attente (prefill le formulaire)
 async function editPendingSoumission(soumissionId) {
-  console.log('✏️ Édition de la soumission ID:', soumissionId);
+  log('✏️ Édition de la soumission ID:', soumissionId);
 
   try {
     // Récupérer les données de la soumission depuis la base
@@ -3256,13 +3263,13 @@ async function editPendingSoumission(soumissionId) {
         btnText.textContent = 'Envoyer au client';
       }
 
-      console.log('[OK] Formulaire prefilled avec les données de la soumission');
+      log('[OK] Formulaire prefilled avec les données de la soumission');
 
       // Revalider les champs pour activer les boutons
       if (typeof validateRequiredFields === 'function') {
         setTimeout(() => {
           validateRequiredFields();
-          console.log('[OK] Validation des champs après chargement soumission');
+          log('[OK] Validation des champs après chargement soumission');
         }, 100);
       }
 
@@ -3281,7 +3288,7 @@ async function editPendingSoumission(soumissionId) {
     }, 300);
 
   } catch (error) {
-    console.error('[ERROR] Erreur:', error);
+    error('[ERROR] Erreur:', error);
     alert('Erreur lors du chargement de la soumission.');
   }
 }
@@ -3374,7 +3381,7 @@ function showDeleteConfirmPopup(soumissionId) {
         throw new Error('Erreur lors de la suppression');
       }
 
-      console.log('[DELETE] Soumission supprimée:', soumissionId);
+      log('[DELETE] Soumission supprimée:', soumissionId);
 
       // Fermer le popup
       overlay.remove();
@@ -3383,7 +3390,7 @@ function showDeleteConfirmPopup(soumissionId) {
       await loadPendingSoumissions();
 
     } catch (error) {
-      console.error('[ERROR] Erreur suppression:', error);
+      error('[ERROR] Erreur suppression:', error);
       alert('Erreur lors de la suppression de la soumission');
       overlay.remove();
     }
@@ -3408,27 +3415,27 @@ function initFormulaire() {
   const formEl = document.getElementById("soumissionForm");
 
   if (!formEl) {
-    console.error("Formulaire introuvable");
+    error("Formulaire introuvable");
     return;
   }
 
   formEl.addEventListener("submit", async function (e) {
     // Les popups gèrent déjà les champs cachés
     e.preventDefault();
-    console.log("[LAUNCH] DÉBUT SOUMISSION - Form submit intercepté");
-    console.log("[LAUNCH] Prix dans le form au moment du submit:", document.querySelector('input[name="prix"]').value);
+    log("[LAUNCH] DÉBUT SOUMISSION - Form submit intercepté");
+    log("[LAUNCH] Prix dans le form au moment du submit:", document.querySelector('input[name="prix"]').value);
 
     // Vérifier si l'utilisateur veut sauvegarder sans envoyer
     const saveOnlyRadio = document.getElementById('save-only');
     if (saveOnlyRadio && saveOnlyRadio.checked) {
-      console.log('💾 Mode: Sauvegarder sans envoyer');
+      log('💾 Mode: Sauvegarder sans envoyer');
       savePendingSoumission(formEl);
       return;
     }
 
     // Validation de l'adresse Google - Accepter aussi les adresses au format canadien valide
     const adresseInput = document.querySelector('input[name="adresse"]');
-    console.log('[DEBUG] DEBUG Validation adresse:', {
+    log('[DEBUG] DEBUG Validation adresse:', {
       adresse: adresseInput?.value,
       googleProspectAddressSelected: window.googleProspectAddressSelected,
       initialAutofilledAddress: window.initialAutofilledAddress
@@ -3440,7 +3447,7 @@ function initFormulaire() {
       const formatCanadienRegex = /^.+,\s*.+,\s*(QC|Quebec|Québec)\s+[A-Za-z]\d[A-Za-z]\s*\d[A-Za-z]\d$/i;
 
       if (!formatCanadienRegex.test(adresse)) {
-        console.log('[ERROR] Adresse invalide:', adresse);
+        log('[ERROR] Adresse invalide:', adresse);
         alert('Veuillez sélectionner une adresse valide dans les suggestions Google ou entrer une adresse au format : "123 Rue Example, Ville, QC J7E 4S9"');
         const btn = document.getElementById("submitBtn");
         const btnText = document.getElementById("btnText");
@@ -3448,10 +3455,10 @@ function initFormulaire() {
         btnText.textContent = "Créer la soumission";
         return;
       } else {
-        console.log('[OK] Adresse au format canadien valide détectée:', adresse);
+        log('[OK] Adresse au format canadien valide détectée:', adresse);
       }
     } else {
-      console.log('[OK] Validation adresse bypassed (auto-remplie depuis prospect/calcul)');
+      log('[OK] Validation adresse bypassed (auto-remplie depuis prospect/calcul)');
     }
 
     // username est maintenant géré par common.js
@@ -3476,21 +3483,21 @@ function initFormulaire() {
       date2: form.date_travaux.value,
       prix: (() => {
         const prixValue = form.prix.value.trim();
-        console.log('[MONEY] Prix original du form:', prixValue);
-        console.log('[MONEY] Prix en unicode échappé:', JSON.stringify(prixValue));
+        log('[MONEY] Prix original du form:', prixValue);
+        log('[MONEY] Prix en unicode échappé:', JSON.stringify(prixValue));
         
         if (!prixValue || prixValue === '') {
-          console.log('[MONEY] Prix vide, retour de "0"');
+          log('[MONEY] Prix vide, retour de "0"');
           return '0';
         }
         
         // Enlever tout sauf chiffres, espaces (normaux ET insécables), virgules et points
         let cleaned = prixValue.replace(/[^\d\s\u00A0.,]/g, '');
-        console.log('[MONEY] Prix après nettoyage symboles:', cleaned);
+        log('[MONEY] Prix après nettoyage symboles:', cleaned);
         
         // Enlever TOUS les espaces (normaux \s ET insécables \u00A0)
         cleaned = cleaned.replace(/[\s\u00A0]+/g, '');
-        console.log('[MONEY] Prix après nettoyage espaces:', cleaned);
+        log('[MONEY] Prix après nettoyage espaces:', cleaned);
         
         // Si on a un format français avec virgule décimale (ex: "1000,00")
         // On veut convertir "1000,00" vers "1000.00" pour le backend
@@ -3502,21 +3509,21 @@ function initFormulaire() {
         if (lastCommaIndex > lastDotIndex && lastCommaIndex === cleaned.length - 3) {
           // Format français: "1000,00" -> remplacer dernière virgule par point
           cleaned = cleaned.substring(0, lastCommaIndex) + '.' + cleaned.substring(lastCommaIndex + 1);
-          console.log('[MONEY] Format français détecté, conversion:', cleaned);
+          log('[MONEY] Format français détecté, conversion:', cleaned);
         }
         
         // Nettoyer les virgules restantes (séparateurs de milliers)
         cleaned = cleaned.replace(/,/g, '');
-        console.log('[MONEY] Prix final envoyé:', cleaned);
+        log('[MONEY] Prix final envoyé:', cleaned);
         
         // Validation finale
         const finalNumber = parseFloat(cleaned);
         if (isNaN(finalNumber)) {
-          console.log('[MONEY] [ERROR] Nombre invalide, retour de "0"');
+          log('[MONEY] [ERROR] Nombre invalide, retour de "0"');
           return '0';
         }
         
-        console.log('[MONEY] [OK] Validation réussie:', finalNumber);
+        log('[MONEY] [OK] Validation réussie:', finalNumber);
         return cleaned;
       })(),
       adresse: form.adresse.value,
@@ -3527,8 +3534,8 @@ function initFormulaire() {
       payer_par: window.dropdownStates?.paidBy || "Virement Interac",
     };
 
-    console.log("[LAUNCH] AVANT FETCH - Données à envoyer:", data);
-    console.log("[LAUNCH] AVANT FETCH - URL:", `/creer-pdf?username=${window.username}`);
+    log("[LAUNCH] AVANT FETCH - Données à envoyer:", data);
+    log("[LAUNCH] AVANT FETCH - URL:", `/creer-pdf?username=${window.username}`);
     
     try {
       const pdfResponse = await fetch(`/creer-pdf?username=${window.username}`, {
@@ -3539,12 +3546,12 @@ function initFormulaire() {
 
       if (!pdfResponse.ok) {
         const text = await pdfResponse.text();
-        console.error("Erreur lors de la création du PDF :", pdfResponse.status, text);
+        error("Erreur lors de la création du PDF :", pdfResponse.status, text);
         throw new Error("Erreur PDF");
       }
 
       const { lien_pdf } = await pdfResponse.json();
-      console.log("[OK] PDF créé avec succès :", lien_pdf);
+      log("[OK] PDF créé avec succès :", lien_pdf);
 
       const emailPayload = {
         username: window.username,
@@ -3558,8 +3565,8 @@ function initFormulaire() {
         language: currentLanguage  // NOUVEAU: Passer la langue sélectionnée
       };
 
-      console.log("EMAIL PAYLOAD", emailPayload);
-      console.log("📤 Envoi vers /envoyer-soumission-email déclenché");
+      log("EMAIL PAYLOAD", emailPayload);
+      log("📤 Envoi vers /envoyer-soumission-email déclenché");
 
       // Réserver le numéro de soumission avant envoi
       await reserverNumeroSoumission();
@@ -3571,10 +3578,10 @@ function initFormulaire() {
       });
 
       const errorText = await emailRes.text();
-      console.log("EMAIL ERROR", errorText);
+      log("EMAIL ERROR", errorText);
 
       if (!emailRes.ok) {
-        console.error("Erreur email:", errorText);
+        error("Erreur email:", errorText);
         throw new Error("Erreur email");
       }
 
@@ -3585,18 +3592,18 @@ function initFormulaire() {
           headers: { 'Content-Type': 'application/json' }
         });
         if (statsResponse.ok) {
-          console.log("[DATA] Soumission enregistrée dans les statistiques");
+          log("[DATA] Soumission enregistrée dans les statistiques");
         } else {
-          console.log("[WARN] Erreur enregistrement statistiques (non bloquant)");
+          log("[WARN] Erreur enregistrement statistiques (non bloquant)");
         }
       } catch (e) {
-        console.log("[WARN] Erreur stats (non bloquant):", e);
+        log("[WARN] Erreur stats (non bloquant):", e);
       }
 
       // [OK] Si on modifiait une soumission en attente, la supprimer de la queue
       if (window.editingSoumissionId) {
         try {
-          console.log("[DELETE] Suppression de la soumission de la queue:", window.editingSoumissionId);
+          log("[DELETE] Suppression de la soumission de la queue:", window.editingSoumissionId);
           await fetch('/remove-soumission-from-queue', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
@@ -3605,13 +3612,13 @@ function initFormulaire() {
               soumission_id: window.editingSoumissionId
             })
           });
-          console.log("[OK] Soumission retirée de la queue après envoi");
+          log("[OK] Soumission retirée de la queue après envoi");
           // Réinitialiser la variable
           window.editingSoumissionId = null;
           // Rafraîchir la table
           await loadPendingSoumissions();
         } catch (e) {
-          console.log("[WARN] Erreur suppression de la queue (non bloquant):", e);
+          log("[WARN] Erreur suppression de la queue (non bloquant):", e);
         }
       }
 
@@ -3623,7 +3630,7 @@ function initFormulaire() {
           telephone: form.telephone.value
         };
 
-        console.log("[DELETE] Tentative de suppression du prospect:", prospectData);
+        log("[DELETE] Tentative de suppression du prospect:", prospectData);
 
         const deleteResponse = await fetch(`${window.location.origin}/supprimer-prospect/${window.username}`, {
           method: "DELETE",
@@ -3633,12 +3640,12 @@ function initFormulaire() {
 
         if (deleteResponse.ok) {
           const deleteResult = await deleteResponse.json();
-          console.log("[OK] Prospect supprimé de la liste potentiels:", deleteResult);
+          log("[OK] Prospect supprimé de la liste potentiels:", deleteResult);
         } else {
-          console.log("[WARN] Prospect non trouvé dans la liste potentiels (normal si pas venu d'un prospect)");
+          log("[WARN] Prospect non trouvé dans la liste potentiels (normal si pas venu d'un prospect)");
         }
       } catch (prospectError) {
-        console.log("[WARN] Erreur lors de la suppression du prospect (non critique):", prospectError);
+        log("[WARN] Erreur lors de la suppression du prospect (non critique):", prospectError);
       }
 
       if (eventId) {
@@ -3673,7 +3680,7 @@ function initFormulaire() {
           toggle.innerHTML = `<span class="placeholder" style="color: rgb(156 163 175); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 14px;">${placeholder}</span>`;
           document.querySelectorAll(`#${id.replace("Toggle", "Menu")} .check`).forEach(c => c.textContent = "");
         } else {
-          console.warn(`Element ${id} non trouvé pour reset dropdown`);
+          warn(`Element ${id} non trouvé pour reset dropdown`);
         }
       };
 
@@ -3712,12 +3719,12 @@ function initFormulaire() {
         paidByToggle.innerHTML = `<span class="tag">Virement Interac</span>`;
       }
 
-      console.log("[OK] Champs réinitialisés: produit/couleurs, part des travaux, payé par");
+      log("[OK] Champs réinitialisés: produit/couleurs, part des travaux, payé par");
 
       // Bannir le client de la liste "à compléter" du calculateur
       // Utiliser l'eventId stocké au moment de l'autofill (avant nettoyage sessionStorage)
       let clientEventId = eventId || window.storedEventId;
-      console.log("[DEBUG] EventId pour bannissement:", clientEventId, "(original:", eventId, ", stocké:", window.storedEventId, ")");
+      log("[DEBUG] EventId pour bannissement:", clientEventId, "(original:", eventId, ", stocké:", window.storedEventId, ")");
       bannirClientACompleter(data, clientEventId);
 
       // Nettoyer les données de session après le bannissement
@@ -3728,7 +3735,7 @@ function initFormulaire() {
       showSuccessAnimation('envoi');
 
     } catch (error) {
-      console.error("[ERROR] ERREUR JS COMPLÈTE :", error);
+      error("[ERROR] ERREUR JS COMPLÈTE :", error);
       btnText.textContent = "Erreur lors de l'envoi";
       setTimeout(() => {
         btnText.textContent = "Envoyer au client";
@@ -3740,7 +3747,7 @@ function initFormulaire() {
       try {
         const clientPerduId = sessionStorage.getItem('client_perdu_id') || window.clientOriginalId;
         if (clientPerduId) {
-          console.log("🔄 [FINALLY] Tentative de retrait du client perdu récupéré:", clientPerduId);
+          log("🔄 [FINALLY] Tentative de retrait du client perdu récupéré:", clientPerduId);
 
           const retirerResponse = await fetch(`${window.location.origin}/retirer-client-perdu`, {
             method: "POST",
@@ -3753,18 +3760,18 @@ function initFormulaire() {
 
           if (retirerResponse.ok) {
             const retirerResult = await retirerResponse.json();
-            console.log("[OK] [FINALLY] Client retiré de la liste des perdus:", retirerResult);
+            log("[OK] [FINALLY] Client retiré de la liste des perdus:", retirerResult);
             // Nettoyer après avoir retiré de perdus
             sessionStorage.removeItem('client_perdu_id');
             window.clientOriginalId = null;
           } else {
-            console.log("[WARN] [FINALLY] Client non trouvé dans les perdus");
+            log("[WARN] [FINALLY] Client non trouvé dans les perdus");
           }
         } else {
-          console.log("[INFO] [FINALLY] Pas de client perdu à retirer (soumission normale)");
+          log("[INFO] [FINALLY] Pas de client perdu à retirer (soumission normale)");
         }
       } catch (perduError) {
-        console.log("[WARN] [FINALLY] Erreur lors du retrait du client perdu (non critique):", perduError);
+        log("[WARN] [FINALLY] Erreur lors du retrait du client perdu (non critique):", perduError);
       }
     }
   });
@@ -3881,7 +3888,7 @@ window.updateSignatureOverlayPosition = function(zoomLevel = 1) {
   signatureOverlay.style.opacity = '1';
   signatureOverlay.style.pointerEvents = 'auto';
 
-  console.log('[DEBUG] Signature overlay always visible (zoom disabled on mobile)');
+  log('[DEBUG] Signature overlay always visible (zoom disabled on mobile)');
 };
 
 // Mettre à jour la position de la signature lors du resize de la fenêtre
@@ -3919,26 +3926,26 @@ window.openSignatureZoomPopup = async function() {
 
   const parentBody = window.parent.document.body;
 
-  console.log('[DEBUG] Popup signature:', popup);
-  console.log('[DEBUG] PDF Modal:', pdfModal);
-  console.log('[DEBUG] Popup parent:', popup ? popup.parentElement : 'null');
+  log('[DEBUG] Popup signature:', popup);
+  log('[DEBUG] PDF Modal:', pdfModal);
+  log('[DEBUG] Popup parent:', popup ? popup.parentElement : 'null');
 
   // Déplacer le popup vers le parent si pas déjà fait
   if (popup && popup.parentElement !== parentBody) {
     parentBody.appendChild(popup);
-    console.log('[DEBUG] Popup déplacé vers parent');
+    log('[DEBUG] Popup déplacé vers parent');
   }
 
   // Cacher temporairement le modal PDF pour voir seulement le popup signature
   if (pdfModal) {
     pdfModal.style.display = 'none';
-    console.log('[DEBUG] PDF Modal caché');
+    log('[DEBUG] PDF Modal caché');
   }
 
   if (popup) {
     popup.style.display = 'flex';
-    console.log('[DEBUG] Popup display set to flex');
-    console.log('[DEBUG] Popup computed style:', {
+    log('[DEBUG] Popup display set to flex');
+    log('[DEBUG] Popup computed style:', {
       display: window.parent.getComputedStyle(popup).display,
       zIndex: window.parent.getComputedStyle(popup).zIndex,
       position: window.parent.getComputedStyle(popup).position
@@ -3997,12 +4004,12 @@ async function renderZoomedPdfBackground() {
   }
 
   if (!zoomCanvas) {
-    console.error('[ERROR] pdfZoomCanvas non trouvé!');
+    error('[ERROR] pdfZoomCanvas non trouvé!');
     return;
   }
 
   const zoomCtx = zoomCanvas.getContext('2d');
-  console.log('[DEBUG] Rendu du PDF zoomé sur canvas:', zoomCanvas);
+  log('[DEBUG] Rendu du PDF zoomé sur canvas:', zoomCanvas);
 
   // Échelle de zoom - sur mobile on utilise un zoom adapté
   const isMobileCheck = window.innerWidth <= 768 || 'ontouchstart' in window;
@@ -4018,7 +4025,7 @@ async function renderZoomedPdfBackground() {
   const containerWidth = zoomCanvasRect.width > 0 ? zoomCanvasRect.width : (700 - 48);
   const containerHeight = zoomCanvasRect.height > 0 ? zoomCanvasRect.height : 300;
 
-  console.log('[DEBUG] Canvas zoom dimensions:', { containerWidth, containerHeight });
+  log('[DEBUG] Canvas zoom dimensions:', { containerWidth, containerHeight });
 
   // Dimensions du canvas zoom
   zoomCanvas.width = containerWidth;
@@ -4051,7 +4058,7 @@ async function renderZoomedPdfBackground() {
   const signatureWidthAtZoom = signatureWidthAt1_5 * zoomMultiplier;
   const signatureHeightAtZoom = signatureHeightAt1_5 * zoomMultiplier;
 
-  console.log('[DEBUG] Signature zoom:', { isMobile, zoomMultiplier, signatureWidthAtZoom, signatureHeightAtZoom });
+  log('[DEBUG] Signature zoom:', { isMobile, zoomMultiplier, signatureWidthAtZoom, signatureHeightAtZoom });
 
   // Position Y du haut de la zone de signature (depuis le haut du PDF)
   const signatureTopFromTop = viewport.height - signatureBottomAtZoom - signatureHeightAtZoom;
@@ -4079,7 +4086,7 @@ async function renderZoomedPdfBackground() {
     height: signatureHeightAtZoom
   };
 
-  console.log('[DEBUG] signatureZoomBounds:', window.signatureZoomBounds, 'containerSize:', { containerWidth, containerHeight });
+  log('[DEBUG] signatureZoomBounds:', window.signatureZoomBounds, 'containerSize:', { containerWidth, containerHeight });
 
   // Dessiner un rectangle avec bordure en pointillés bleus
   zoomCtx.strokeStyle = 'rgba(96, 165, 250, 0.6)';
@@ -4124,7 +4131,7 @@ window.validateSignature = function() {
   if (!previewCanvas) previewCanvas = window.parent.document.getElementById('signaturePreviewCanvas');
 
   if (!previewCanvas) {
-    console.error('[ERROR] signaturePreviewCanvas non trouvé!');
+    error('[ERROR] signaturePreviewCanvas non trouvé!');
     return;
   }
 
@@ -4238,11 +4245,11 @@ function initPresentationSignatureCanvas() {
   }
 
   if (!presentationSignatureCanvas) {
-    console.error('[ERROR] presentationSignaturePad non trouvé!');
+    error('[ERROR] presentationSignaturePad non trouvé!');
     return;
   }
 
-  console.log('[DEBUG] presentationSignaturePad trouvé:', presentationSignatureCanvas);
+  log('[DEBUG] presentationSignaturePad trouvé:', presentationSignatureCanvas);
 
   presentationSignatureCtx = presentationSignatureCanvas.getContext('2d');
 
@@ -4254,7 +4261,7 @@ function initPresentationSignatureCanvas() {
   const canvasWidth = rect.width;
   const canvasHeight = rect.height;
 
-  console.log('[DEBUG] Signature canvas dimensions:', { canvasWidth, canvasHeight });
+  log('[DEBUG] Signature canvas dimensions:', { canvasWidth, canvasHeight });
 
   presentationSignatureCanvas.width = canvasWidth * ratio;
   presentationSignatureCanvas.height = canvasHeight * ratio;
@@ -4282,7 +4289,7 @@ function initPresentationSignatureCanvas() {
         width: window.signatureZoomBounds.width * scaleX,
         height: window.signatureZoomBounds.height * scaleY
       };
-      console.log('[DEBUG] Bounds recalculés pour signature canvas:', window.signatureZoomBounds, 'scale:', { scaleX, scaleY });
+      log('[DEBUG] Bounds recalculés pour signature canvas:', window.signatureZoomBounds, 'scale:', { scaleX, scaleY });
     }
   }
   presentationSignatureCtx.lineCap = 'round';
@@ -4477,18 +4484,18 @@ window.closePdfModal = function() {
 
 // Fonction pour accepter la soumission avec signature
 window.acceptPresentation = async function() {
-  console.log('[acceptPresentation] Fonction appelée');
-  console.log('[acceptPresentation] hasPresentationSignature =', hasPresentationSignature);
-  console.log('[acceptPresentation] currentFormData =', currentFormData);
+  log('[acceptPresentation] Fonction appelée');
+  log('[acceptPresentation] hasPresentationSignature =', hasPresentationSignature);
+  log('[acceptPresentation] currentFormData =', currentFormData);
 
   if (!hasPresentationSignature) {
-    console.log('[acceptPresentation] BLOQUÉ - Pas de signature');
+    log('[acceptPresentation] BLOQUÉ - Pas de signature');
     alert('Veuillez signer avant d\'accepter.');
     return;
   }
 
   if (!currentFormData) {
-    console.log('[acceptPresentation] BLOQUÉ - Pas de données');
+    log('[acceptPresentation] BLOQUÉ - Pas de données');
     alert('Erreur: Données manquantes. Veuillez réessayer.');
     return;
   }
@@ -4497,16 +4504,16 @@ window.acceptPresentation = async function() {
   let btn = document.getElementById('acceptPresentationBtn');
   if (!btn && window.parent && window.parent.document) {
     btn = window.parent.document.getElementById('acceptPresentationBtn');
-    console.log('[acceptPresentation] Bouton trouvé dans le parent');
+    log('[acceptPresentation] Bouton trouvé dans le parent');
   }
 
   if (!btn) {
-    console.error('[acceptPresentation] ERREUR - Bouton non trouvé!');
+    error('[acceptPresentation] ERREUR - Bouton non trouvé!');
     alert('Erreur: Bouton non trouvé. Veuillez réessayer.');
     return;
   }
 
-  console.log('[acceptPresentation] Bouton trouvé:', btn);
+  log('[acceptPresentation] Bouton trouvé:', btn);
   const originalText = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Création...';
@@ -4528,7 +4535,7 @@ window.acceptPresentation = async function() {
     const pdfUrl = createResult.lien_pdf;
     const soumissionId = createResult.id;
 
-    console.log('[DEBUG] ACCEPTATION - Soumission créée:', soumissionId);
+    log('[DEBUG] ACCEPTATION - Soumission créée:', soumissionId);
 
     // Étape 2: Préparer la signature
     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Signature...';
@@ -4537,18 +4544,18 @@ window.acceptPresentation = async function() {
     let previewCanvas = document.getElementById('signaturePreviewCanvas');
     if (!previewCanvas && window.parent && window.parent.document) {
       previewCanvas = window.parent.document.getElementById('signaturePreviewCanvas');
-      console.log('[acceptPresentation] Canvas signature trouvé dans le parent');
+      log('[acceptPresentation] Canvas signature trouvé dans le parent');
     }
 
     if (!previewCanvas) {
-      console.error('[acceptPresentation] ERREUR - Canvas signature non trouvé!');
+      error('[acceptPresentation] ERREUR - Canvas signature non trouvé!');
       alert('Erreur: Signature non trouvée. Veuillez réessayer.');
       btn.disabled = false;
       btn.innerHTML = originalText;
       return;
     }
 
-    console.log('[acceptPresentation] Canvas signature trouvé:', previewCanvas);
+    log('[acceptPresentation] Canvas signature trouvé:', previewCanvas);
     const signatureDataUrl = previewCanvas.toDataURL('image/png');
 
     // Étape 3: Envoyer avec signature (va dans ventes_acceptees)
@@ -4566,7 +4573,7 @@ window.acceptPresentation = async function() {
       telephone: currentFormData.telephone || ""
     };
 
-    console.log('[DEBUG] ACCEPTATION - Envoi signature:', payload);
+    log('[DEBUG] ACCEPTATION - Envoi signature:', payload);
 
     // Réserver le numéro de soumission avant envoi signature
     await reserverNumeroSoumission();
@@ -4583,12 +4590,12 @@ window.acceptPresentation = async function() {
     }
 
     const result = await response.json();
-    console.log('[DEBUG] ACCEPTATION - Réponse:', result);
+    log('[DEBUG] ACCEPTATION - Réponse:', result);
 
     // Si on modifiait une soumission en attente, la supprimer de la queue
     if (window.editingSoumissionId) {
       try {
-        console.log("[DELETE] Suppression de la soumission de la queue après signature:", window.editingSoumissionId);
+        log("[DELETE] Suppression de la soumission de la queue après signature:", window.editingSoumissionId);
         await fetch('/remove-soumission-from-queue', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
@@ -4597,10 +4604,10 @@ window.acceptPresentation = async function() {
             soumission_id: window.editingSoumissionId
           })
         });
-        console.log("[OK] Soumission retirée de la queue après signature");
+        log("[OK] Soumission retirée de la queue après signature");
         window.editingSoumissionId = null;
       } catch (e) {
-        console.log("[WARN] Erreur suppression de la queue (non bloquant):", e);
+        log("[WARN] Erreur suppression de la queue (non bloquant):", e);
       }
     }
 
@@ -4611,7 +4618,7 @@ window.acceptPresentation = async function() {
     showSuccessAnimation('presentation');
 
   } catch (err) {
-    console.error('[ERROR] Erreur acceptation:', err);
+    error('[ERROR] Erreur acceptation:', err);
     alert('❌ Erreur lors de l\'envoi: ' + err.message);
     btn.disabled = false;
     btn.innerHTML = originalText;
@@ -4620,16 +4627,16 @@ window.acceptPresentation = async function() {
 
 // Attacher l'événement click au bouton après la définition de la fonction
 function attachAcceptButtonEvent() {
-  console.log('[attachAcceptButtonEvent] Tentative d\'attachement');
+  log('[attachAcceptButtonEvent] Tentative d\'attachement');
 
   // Chercher le bouton dans l'iframe d'abord, puis dans le parent
   let acceptBtn = document.getElementById('acceptPresentationBtn');
   if (!acceptBtn && window.parent && window.parent.document) {
     acceptBtn = window.parent.document.getElementById('acceptPresentationBtn');
-    console.log('[attachAcceptButtonEvent] Bouton cherché dans le parent');
+    log('[attachAcceptButtonEvent] Bouton cherché dans le parent');
   }
 
-  console.log('[attachAcceptButtonEvent] Bouton trouvé:', !!acceptBtn);
+  log('[attachAcceptButtonEvent] Bouton trouvé:', !!acceptBtn);
 
   if (acceptBtn) {
     // Retirer les anciens événements si présents
@@ -4637,21 +4644,21 @@ function attachAcceptButtonEvent() {
 
     // Attacher le nouvel événement
     acceptBtn.addEventListener('click', function(e) {
-      console.log('[acceptBtn] Click détecté');
-      console.log('[acceptBtn] disabled:', acceptBtn.disabled);
-      console.log('[acceptBtn] acceptPresentation exists:', !!window.acceptPresentation);
-      console.log('[acceptBtn] hasPresentationSignature:', hasPresentationSignature);
+      log('[acceptBtn] Click détecté');
+      log('[acceptBtn] disabled:', acceptBtn.disabled);
+      log('[acceptBtn] acceptPresentation exists:', !!window.acceptPresentation);
+      log('[acceptBtn] hasPresentationSignature:', hasPresentationSignature);
 
       if (!acceptBtn.disabled && window.acceptPresentation) {
-        console.log('[acceptBtn] Appel de acceptPresentation()');
+        log('[acceptBtn] Appel de acceptPresentation()');
         window.acceptPresentation();
       } else {
-        console.log('[acceptBtn] BLOQUÉ - disabled:', acceptBtn.disabled, ', fonction:', !!window.acceptPresentation);
+        log('[acceptBtn] BLOQUÉ - disabled:', acceptBtn.disabled, ', fonction:', !!window.acceptPresentation);
       }
     });
-    console.log('[attachAcceptButtonEvent] Événement attaché avec succès');
+    log('[attachAcceptButtonEvent] Événement attaché avec succès');
   } else {
-    console.log('[attachAcceptButtonEvent] ERREUR - Bouton non trouvé!');
+    log('[attachAcceptButtonEvent] ERREUR - Bouton non trouvé!');
   }
 }
 
@@ -4759,30 +4766,30 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
   // Fonction globale pour mettre à jour l'option CNESST/WSIB selon la province
   window.updateCNESSTOption = function(province) {
-    console.log('[CNESST/WSIB] 🔧 Début updateCNESSTOption avec province:', province);
+    log('[CNESST/WSIB] 🔧 Début updateCNESSTOption avec province:', province);
 
     // Chercher l'option avec CNESST ou WSIB dans le data-value OU dans le span
     let option = null;
     const allOptions = document.querySelectorAll('.popup-option');
 
-    console.log('[CNESST/WSIB] 📋 Nombre total d\'options trouvées:', allOptions.length);
+    log('[CNESST/WSIB] 📋 Nombre total d\'options trouvées:', allOptions.length);
 
     for (let opt of allOptions) {
       const dataValue = opt.getAttribute('data-value') || '';
       const spanText = opt.querySelector('span')?.textContent || '';
 
-      console.log('[CNESST/WSIB] 🔍 Vérification option - data-value:', dataValue, '| span:', spanText);
+      log('[CNESST/WSIB] 🔍 Vérification option - data-value:', dataValue, '| span:', spanText);
 
       if (dataValue.includes('CNESST') || dataValue.includes('WSIB') ||
           spanText.includes('CNESST') || spanText.includes('WSIB')) {
         option = opt;
-        console.log('[CNESST/WSIB] ✅ Option trouvée!', {dataValue, spanText});
+        log('[CNESST/WSIB] ✅ Option trouvée!', {dataValue, spanText});
         break;
       }
     }
 
     if (!option) {
-      console.warn('[CNESST/WSIB] ❌ Option introuvable - aucune option avec CNESST/WSIB détectée');
+      warn('[CNESST/WSIB] ❌ Option introuvable - aucune option avec CNESST/WSIB détectée');
       return;
     }
 
@@ -4794,11 +4801,11 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       ? 'Liability insurance $2M + WSIB'
       : 'Liability insurance $2M + CNESST';
 
-    console.log('[CNESST/WSIB] 📝 Textes générés:', {isOntario, frenchText, englishText});
+    log('[CNESST/WSIB] 📝 Textes générés:', {isOntario, frenchText, englishText});
 
     // Mettre à jour le dictionnaire de traduction (accès global via window)
     if (window.translations) {
-      console.log('[CNESST/WSIB] 📖 Mise à jour du dictionnaire de traduction');
+      log('[CNESST/WSIB] 📖 Mise à jour du dictionnaire de traduction');
       // Supprimer toutes les anciennes entrées possibles
       delete window.translations['Assurance responsabilité civile 2M$ + CNESST'];
       delete window.translations['Assurance responsabilité civile 2M$ + WSIB'];
@@ -4806,31 +4813,31 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       delete window.translations['Liability insurance $2M + WSIB'];
       // Ajouter la nouvelle entrée
       window.translations[frenchText] = englishText;
-      console.log('[CNESST/WSIB] ✅ Traduction ajoutée:', frenchText, '→', englishText);
+      log('[CNESST/WSIB] ✅ Traduction ajoutée:', frenchText, '→', englishText);
     } else {
-      console.warn('[CNESST/WSIB] ⚠️ window.translations est indéfini');
+      warn('[CNESST/WSIB] ⚠️ window.translations est indéfini');
     }
 
     // Déterminer la langue actuelle
     const currentLang = localStorage.getItem('language') || 'fr';
-    console.log('[CNESST/WSIB] 🌐 Langue actuelle:', currentLang);
+    log('[CNESST/WSIB] 🌐 Langue actuelle:', currentLang);
 
     // Mettre à jour l'attribut data-value avec le texte approprié
     const newDataValue = currentLang === 'en' ? englishText : frenchText;
     option.setAttribute('data-value', newDataValue);
-    console.log('[CNESST/WSIB] 🔄 data-value mis à jour:', newDataValue);
+    log('[CNESST/WSIB] 🔄 data-value mis à jour:', newDataValue);
 
     // Mettre à jour le texte affiché selon la langue actuelle
     const spanElement = option.querySelector('span');
     if (spanElement) {
       const newText = currentLang === 'en' ? englishText : frenchText;
       spanElement.textContent = newText;
-      console.log('[CNESST/WSIB] 🔄 Texte span mis à jour:', newText);
+      log('[CNESST/WSIB] 🔄 Texte span mis à jour:', newText);
     } else {
-      console.warn('[CNESST/WSIB] ⚠️ Span element non trouvé dans l\'option');
+      warn('[CNESST/WSIB] ⚠️ Span element non trouvé dans l\'option');
     }
 
-    console.log('[CNESST/WSIB] ✅ Fin updateCNESSTOption - Résultat:', {
+    log('[CNESST/WSIB] ✅ Fin updateCNESSTOption - Résultat:', {
       province: province,
       isOntario: isOntario,
       currentLang: currentLang,
@@ -4859,7 +4866,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       if (window.googleProspectAddressSelected && window.initialAutofilledAddress) {
         if (input.value !== window.initialAutofilledAddress) {
           window.googleProspectAddressSelected = false;
-          console.log('[WARN] Adresse modifiée manuellement, validation Google requise');
+          log('[WARN] Adresse modifiée manuellement, validation Google requise');
         }
       }
       // Réappliquer les attributs anti-autocomplete
@@ -4875,7 +4882,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     autocomplete.addListener('place_changed', () => {
       const place = autocomplete.getPlace();
       if (!place.geometry) {
-        console.log("Adresse invalide");
+        log("Adresse invalide");
         window.googleProspectAddressSelected = false;
         return;
       }
@@ -4913,8 +4920,8 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       const fullAddress = `${streetNumber} ${route}, ${city}, ${province} ${postalCode}`;
       input.value = fullAddress.trim();
 
-      console.log('[GOOGLE AUTOCOMPLETE] Adresse sélectionnée:', fullAddress.trim());
-      console.log('[GOOGLE AUTOCOMPLETE] Province détectée:', province);
+      log('[GOOGLE AUTOCOMPLETE] Adresse sélectionnée:', fullAddress.trim());
+      log('[GOOGLE AUTOCOMPLETE] Province détectée:', province);
 
       // Stocker la province globalement
       window.clientProvince = province;
@@ -4949,7 +4956,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     // Fonction pour activer le menu basé sur la page actuelle
     function activateCurrentPageMenu() {
       const currentPath = window.location.pathname;
-      console.log('🌐 Page actuelle détectée:', currentPath);
+      log('🌐 Page actuelle détectée:', currentPath);
       
       // Enlever la classe menu-active de tous les liens
       const allMenuLinks = document.querySelectorAll('#sidebar a');
@@ -4977,15 +4984,15 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       
       if (targetPath) {
         targetLink = document.querySelector(`#sidebar a[data-path="${targetPath}"]`);
-        console.log('[TARGET] Page détectée - activation du menu pour:', targetPath);
+        log('[TARGET] Page détectée - activation du menu pour:', targetPath);
       }
       
       if (targetLink) {
         targetLink.classList.add('menu-active');
         targetLink.setAttribute('data-menu-state', 'active');
-        console.log('[OK] Menu activé pour:', targetLink.textContent.trim());
+        log('[OK] Menu activé pour:', targetLink.textContent.trim());
       } else {
-        console.log('[WARN] Aucun menu trouvé pour la page:', currentPath);
+        log('[WARN] Aucun menu trouvé pour la page:', currentPath);
       }
     }
 
@@ -5265,7 +5272,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
           updateTemplateSelect();
         }
       } catch (error) {
-        console.error('Erreur chargement templates:', error);
+        error('Erreur chargement templates:', error);
         userTemplates = [];
         updateTemplateSelect();
       }
@@ -5453,7 +5460,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
           }
         }
       } catch (error) {
-        console.error('Erreur sauvegarde template:', error);
+        error('Erreur sauvegarde template:', error);
       }
     }
 
@@ -5510,7 +5517,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
           await loadUserTemplates();
         }
       } catch (error) {
-        console.error('Erreur suppression template:', error);
+        error('Erreur suppression template:', error);
       }
     }
 
@@ -5574,7 +5581,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
           }
         }
       } catch (error) {
-        console.error('Erreur modification template:', error);
+        error('Erreur modification template:', error);
       }
     }
 
@@ -5725,7 +5732,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       const display = document.getElementById('productDisplay');
       const hidden = document.getElementById('produitCouleursHidden');
 
-      console.log('[DEBUG] PRODUIT - Contenu textarea:', textarea);
+      log('[DEBUG] PRODUIT - Contenu textarea:', textarea);
 
       const productTrigger = document.getElementById('productTrigger');
       if (textarea) {
@@ -5734,7 +5741,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
         const cleanedLines = lines.map(line => line.trim()).filter(line => line);
         const textForBackend = cleanedLines.join('\n');
 
-        console.log('[DEBUG] PRODUIT - Contenu envoyé au backend (avec tirets):', textForBackend);
+        log('[DEBUG] PRODUIT - Contenu envoyé au backend (avec tirets):', textForBackend);
 
         // Afficher avec tirets (visuel pour l'utilisateur)
         display.innerHTML = textarea.replace(/\n/g, '<br>');
@@ -5746,7 +5753,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
         // Bordure verte quand rempli
         if (productTrigger) productTrigger.style.setProperty('border-right-color', '#4caf50', 'important');
 
-        console.log('[DEBUG] PRODUIT - Contenu dans hidden field:', hidden.value);
+        log('[DEBUG] PRODUIT - Contenu dans hidden field:', hidden.value);
       } else {
         display.textContent = 'Cliquez pour sélectionner produits et couleurs...';
         display.style.color = 'var(--text-gray)';
@@ -5966,16 +5973,16 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     // Fonction réutilisable pour vérifier le profil
     async function checkProfileComplete(username) {
       if (!username) {
-        console.error("[WARN] Aucun username fourni pour vérification");
+        error("[WARN] Aucun username fourni pour vérification");
         return;
       }
 
       try {
-        console.log('[DEBUG] Vérification du profil pour:', username);
+        log('[DEBUG] Vérification du profil pour:', username);
         const response = await fetch(`/api/check-profile-complete/${username}`);
         const result = await response.json();
 
-        console.log('[OK] Résultat vérification profil:', result);
+        log('[OK] Résultat vérification profil:', result);
 
         if (!result.is_complete) {
           // Afficher l'avertissement
@@ -6015,13 +6022,13 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
             pendingSoumissionsSection.style.display = 'none';
           }
 
-          console.log('[WARN] Profil incomplet - Éléments manquants:', result.missing, 'Valides:', result.valid);
+          log('[WARN] Profil incomplet - Éléments manquants:', result.missing, 'Valides:', result.valid);
         } else {
-          console.log('[OK] Profil complet - Accès autorisé');
+          log('[OK] Profil complet - Accès autorisé');
         }
 
       } catch (error) {
-        console.error('[ERROR] Erreur vérification profil:', error);
+        error('[ERROR] Erreur vérification profil:', error);
         // En cas d'erreur, on laisse l'utilisateur accéder (fallback)
       }
     }
@@ -6799,7 +6806,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       // Sauvegarder la préférence de langue dans le backend
       saveLanguagePreference(lang);
 
-      console.log(`[LANG] Langue changée vers: ${lang === 'fr' ? 'Français' : 'English'}`);
+      log(`[LANG] Langue changée vers: ${lang === 'fr' ? 'Français' : 'English'}`);
     }
 
     // Fonction pour sauvegarder la préférence de langue
@@ -6807,7 +6814,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       try {
         const username = window.username || localStorage.getItem('username');
         if (!username) {
-          console.warn('[LANG] Aucun username trouvé, impossible de sauvegarder la préférence');
+          warn('[LANG] Aucun username trouvé, impossible de sauvegarder la préférence');
           return;
         }
 
@@ -6823,12 +6830,12 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
         });
 
         if (response.ok) {
-          console.log(`[LANG] Préférence de langue sauvegardée: ${lang}`);
+          log(`[LANG] Préférence de langue sauvegardée: ${lang}`);
         } else {
-          console.error('[LANG] Erreur lors de la sauvegarde de la préférence');
+          error('[LANG] Erreur lors de la sauvegarde de la préférence');
         }
       } catch (error) {
-        console.error('[LANG] Erreur lors de la sauvegarde:', error);
+        error('[LANG] Erreur lors de la sauvegarde:', error);
       }
     }
 
@@ -6837,7 +6844,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       try {
         const username = window.username || localStorage.getItem('username');
         if (!username) {
-          console.warn('[LANG] Aucun username trouvé, utilisation de la langue par défaut (français)');
+          warn('[LANG] Aucun username trouvé, utilisation de la langue par défaut (français)');
           return;
         }
 
@@ -6846,7 +6853,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
         if (response.ok) {
           const data = await response.json();
           const savedLang = data.language || 'fr';
-          console.log(`[LANG] Préférence chargée: ${savedLang}`);
+          log(`[LANG] Préférence chargée: ${savedLang}`);
 
           // Appliquer la langue sauvegardée
           if (savedLang !== 'fr') {
@@ -6854,7 +6861,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
           }
         }
       } catch (error) {
-        console.error('[LANG] Erreur lors du chargement de la préférence:', error);
+        error('[LANG] Erreur lors du chargement de la préférence:', error);
       }
     }
 
@@ -6864,21 +6871,21 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
         option.addEventListener('click', function() {
           const lang = this.dataset.lang;
 
-          console.log('[TOGGLE PROVINCE] 🔄 Click détecté - langue:', lang);
+          log('[TOGGLE PROVINCE] 🔄 Click détecté - langue:', lang);
 
           // Déterminer la province selon la langue
           const province = lang === 'en' ? 'ON' : 'QC';
-          console.log('[TOGGLE PROVINCE] 🗺️ Province déterminée:', province);
+          log('[TOGGLE PROVINCE] 🗺️ Province déterminée:', province);
 
           // Mettre à jour l'option CNESST/WSIB selon la province
           if (typeof window.updateCNESSTOption === 'function') {
-            console.log('[TOGGLE PROVINCE] ✅ Appel de updateCNESSTOption avec province:', province);
+            log('[TOGGLE PROVINCE] ✅ Appel de updateCNESSTOption avec province:', province);
             window.updateCNESSTOption(province);
           } else {
-            console.error('[TOGGLE PROVINCE] ❌ window.updateCNESSTOption n\'est pas une fonction!');
+            error('[TOGGLE PROVINCE] ❌ window.updateCNESSTOption n\'est pas une fonction!');
           }
 
-          console.log('[TOGGLE PROVINCE] 🌐 Appel de changeLanguage avec langue:', lang);
+          log('[TOGGLE PROVINCE] 🌐 Appel de changeLanguage avec langue:', lang);
           changeLanguage(lang);
         });
       });
@@ -6896,121 +6903,121 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
     // Global function for entrepreneur selector to reload data
     window.loadSoumissionData = function() {
-      console.log("🔄 Rechargement des données Soumission pour l'entrepreneur sélectionné...");
+      log("🔄 Rechargement des données Soumission pour l'entrepreneur sélectionné...");
       loadPendingSoumissions();
     };
 
     // Charger les données du client depuis localStorage (récupération client perdu ou prospect)
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('[SOUMISSION] 🔍 DOMContentLoaded - Vérification localStorage...');
+      log('[SOUMISSION] 🔍 DOMContentLoaded - Vérification localStorage...');
       const clientData = localStorage.getItem('clientSoumission');
-      console.log('[SOUMISSION] 📦 clientSoumission trouvé:', clientData ? 'Oui' : 'Non');
+      log('[SOUMISSION] 📦 clientSoumission trouvé:', clientData ? 'Oui' : 'Non');
 
       if (clientData) {
         try {
           const data = JSON.parse(clientData);
-          console.log('[SOUMISSION] 📋 Chargement données client:', data);
+          log('[SOUMISSION] 📋 Chargement données client:', data);
 
           // Attendre que tous les champs soient disponibles
           setTimeout(() => {
-            console.log('[SOUMISSION] 🔄 Début du remplissage des champs...');
+            log('[SOUMISSION] 🔄 Début du remplissage des champs...');
 
             // Remplir les champs du formulaire en utilisant querySelector avec name
             if (data.prenom) {
               const prenomField = document.querySelector('input[name="prenom"]');
-              console.log('[SOUMISSION] 🔍 Champ prenom trouvé:', prenomField ? 'Oui' : 'Non');
+              log('[SOUMISSION] 🔍 Champ prenom trouvé:', prenomField ? 'Oui' : 'Non');
               if (prenomField) {
                 prenomField.value = data.prenom;
                 prenomField.style.setProperty('border-right-color', '#4caf50', 'important');
-                console.log('[SOUMISSION] ✅ Prenom rempli:', data.prenom);
+                log('[SOUMISSION] ✅ Prenom rempli:', data.prenom);
               }
             }
             if (data.nom) {
               const nomField = document.querySelector('input[name="nom"]');
-              console.log('[SOUMISSION] 🔍 Champ nom trouvé:', nomField ? 'Oui' : 'Non');
+              log('[SOUMISSION] 🔍 Champ nom trouvé:', nomField ? 'Oui' : 'Non');
               if (nomField) {
                 nomField.value = data.nom;
                 nomField.style.setProperty('border-right-color', '#4caf50', 'important');
-                console.log('[SOUMISSION] ✅ Nom rempli:', data.nom);
+                log('[SOUMISSION] ✅ Nom rempli:', data.nom);
               }
             }
             if (data.telephone) {
               const telephoneField = document.querySelector('input[name="telephone"]');
-              console.log('[SOUMISSION] 🔍 Champ telephone trouvé:', telephoneField ? 'Oui' : 'Non');
+              log('[SOUMISSION] 🔍 Champ telephone trouvé:', telephoneField ? 'Oui' : 'Non');
               if (telephoneField) {
                 telephoneField.value = data.telephone;
                 telephoneField.style.setProperty('border-right-color', '#4caf50', 'important');
-                console.log('[SOUMISSION] ✅ Telephone rempli:', data.telephone);
+                log('[SOUMISSION] ✅ Telephone rempli:', data.telephone);
               }
             }
             if (data.adresse) {
               const adresseField = document.querySelector('input[name="adresse"]');
-              console.log('[SOUMISSION] 🔍 Champ adresse trouvé:', adresseField ? 'Oui' : 'Non');
+              log('[SOUMISSION] 🔍 Champ adresse trouvé:', adresseField ? 'Oui' : 'Non');
               if (adresseField) {
                 adresseField.value = data.adresse;
                 adresseField.style.setProperty('border-right-color', '#4caf50', 'important');
-                console.log('[SOUMISSION] ✅ Adresse remplie:', data.adresse);
+                log('[SOUMISSION] ✅ Adresse remplie:', data.adresse);
               }
             }
             if (data.courriel) {
               const courrielField = document.querySelector('input[name="courriel"]');
-              console.log('[SOUMISSION] 🔍 Champ courriel trouvé:', courrielField ? 'Oui' : 'Non');
+              log('[SOUMISSION] 🔍 Champ courriel trouvé:', courrielField ? 'Oui' : 'Non');
               if (courrielField) {
                 courrielField.value = data.courriel;
                 courrielField.style.setProperty('border-right-color', '#4caf50', 'important');
-                console.log('[SOUMISSION] ✅ Courriel rempli:', data.courriel);
+                log('[SOUMISSION] ✅ Courriel rempli:', data.courriel);
               }
             }
             if (data.date2) {
               const date2Field = document.querySelector('input[name="date_travaux"]');
-              console.log('[SOUMISSION] 🔍 Champ date_travaux trouvé:', date2Field ? 'Oui' : 'Non');
+              log('[SOUMISSION] 🔍 Champ date_travaux trouvé:', date2Field ? 'Oui' : 'Non');
               if (date2Field) {
                 date2Field.value = data.date2;
-                console.log('[SOUMISSION] ✅ Date travaux remplie:', data.date2);
+                log('[SOUMISSION] ✅ Date travaux remplie:', data.date2);
               }
             }
             // Type de travaux (dropdown toggle)
             if (data.item) {
               const itemToggle = document.getElementById('itemToggle');
-              console.log('[SOUMISSION] 🔍 Champ itemToggle trouvé:', itemToggle ? 'Oui' : 'Non');
+              log('[SOUMISSION] 🔍 Champ itemToggle trouvé:', itemToggle ? 'Oui' : 'Non');
               if (itemToggle) {
                 itemToggle.innerHTML = `<span class="tag">${data.item}</span>`;
                 itemToggle.style.setProperty('border-right-color', '#4caf50', 'important');
                 if (window.dropdownStates) {
                   window.dropdownStates.item = data.item;
                 }
-                console.log('[SOUMISSION] ✅ Item (toggle) rempli:', data.item);
+                log('[SOUMISSION] ✅ Item (toggle) rempli:', data.item);
               }
             }
 
             // Payé par (dropdown toggle) - Par défaut "Virement Interac" si non spécifié
             const payerPar = data.payer_par || 'Virement Interac';
             const paidByToggle = document.getElementById('paidByToggle');
-            console.log('[SOUMISSION] 🔍 Champ paidByToggle trouvé:', paidByToggle ? 'Oui' : 'Non');
+            log('[SOUMISSION] 🔍 Champ paidByToggle trouvé:', paidByToggle ? 'Oui' : 'Non');
             if (paidByToggle) {
               paidByToggle.innerHTML = `<span class="tag">${payerPar}</span>`;
               paidByToggle.style.setProperty('border-right-color', '#4caf50', 'important');
               if (window.dropdownStates) {
                 window.dropdownStates.paidBy = payerPar;
               }
-              console.log('[SOUMISSION] ✅ Payé par (toggle) rempli:', payerPar);
+              log('[SOUMISSION] ✅ Payé par (toggle) rempli:', payerPar);
             }
 
             if (data.temps) {
               const tempsField = document.querySelector('input[name="temps"]');
-              console.log('[SOUMISSION] 🔍 Champ temps trouvé:', tempsField ? 'Oui' : 'Non');
+              log('[SOUMISSION] 🔍 Champ temps trouvé:', tempsField ? 'Oui' : 'Non');
               if (tempsField) {
                 tempsField.value = data.temps;
                 tempsField.style.setProperty('border-right-color', '#4caf50', 'important');
-                console.log('[SOUMISSION] ✅ Temps rempli:', data.temps);
+                log('[SOUMISSION] ✅ Temps rempli:', data.temps);
               }
             }
             if (data.endroit) {
               const endroitField = document.querySelector('textarea[name="endroit_peinture"]');
-              console.log('[SOUMISSION] 🔍 Champ endroit_peinture trouvé:', endroitField ? 'Oui' : 'Non');
+              log('[SOUMISSION] 🔍 Champ endroit_peinture trouvé:', endroitField ? 'Oui' : 'Non');
               if (endroitField) {
                 endroitField.value = data.endroit;
-                console.log('[SOUMISSION] ✅ Endroit rempli:', data.endroit);
+                log('[SOUMISSION] ✅ Endroit rempli:', data.endroit);
               }
             }
 
@@ -7018,13 +7025,13 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
             if (data.produit) {
               const produitHidden = document.getElementById('produitCouleursHidden');
               const produitTrigger = document.getElementById('productTrigger');
-              console.log('[SOUMISSION] 🔍 Champs produit trouvés - Hidden:', produitHidden ? 'Oui' : 'Non', 'Trigger:', produitTrigger ? 'Oui' : 'Non');
+              log('[SOUMISSION] 🔍 Champs produit trouvés - Hidden:', produitHidden ? 'Oui' : 'Non', 'Trigger:', produitTrigger ? 'Oui' : 'Non');
               if (produitHidden) {
                 produitHidden.value = data.produit;
                 if (produitTrigger) {
                   produitTrigger.style.setProperty('border-right-color', '#4caf50', 'important');
                 }
-                console.log('[SOUMISSION] ✅ Produit rempli:', data.produit);
+                log('[SOUMISSION] ✅ Produit rempli:', data.produit);
               }
             }
 
@@ -7032,13 +7039,13 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
             if (data.part) {
               const partHidden = document.getElementById('partTravauxHidden');
               const partTrigger = document.getElementById('partTravauxTrigger');
-              console.log('[SOUMISSION] 🔍 Champs part trouvés - Hidden:', partHidden ? 'Oui' : 'Non', 'Trigger:', partTrigger ? 'Oui' : 'Non');
+              log('[SOUMISSION] 🔍 Champs part trouvés - Hidden:', partHidden ? 'Oui' : 'Non', 'Trigger:', partTrigger ? 'Oui' : 'Non');
               if (partHidden) {
                 partHidden.value = data.part;
                 if (partTrigger) {
                   partTrigger.style.setProperty('border-right-color', '#4caf50', 'important');
                 }
-                console.log('[SOUMISSION] ✅ Part rempli:', data.part);
+                log('[SOUMISSION] ✅ Part rempli:', data.part);
               }
             }
 
@@ -7055,7 +7062,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
                 data.item.toLowerCase().includes(keyword.toLowerCase())
               );
 
-              console.log('[SOUMISSION] 🌍 Détection langue - Item:', data.item, 'Anglais:', isEnglish, 'Français:', isFrench);
+              log('[SOUMISSION] 🌍 Détection langue - Item:', data.item, 'Anglais:', isEnglish, 'Français:', isFrench);
 
               // Changer la province selon la langue détectée
               const langOptions = document.querySelectorAll('.lang-option');
@@ -7065,7 +7072,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
                   langOptions[0].classList.remove('active');
                   langOptions[0].removeAttribute('style'); // Enlever les styles inline de Québec
                   langOptions[1].classList.add('active');
-                  console.log('[SOUMISSION] ✅ Province changée: Ontario (anglais)');
+                  log('[SOUMISSION] ✅ Province changée: Ontario (anglais)');
 
                   // Déclencher le changement de langue si la fonction existe
                   if (typeof window.switchLanguage === 'function') {
@@ -7076,7 +7083,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
                   langOptions[0].classList.add('active');
                   langOptions[1].classList.remove('active');
                   langOptions[1].removeAttribute('style'); // Enlever les styles inline d'Ontario
-                  console.log('[SOUMISSION] ✅ Province changée: Québec (français)');
+                  log('[SOUMISSION] ✅ Province changée: Québec (français)');
 
                   // Déclencher le changement de langue si la fonction existe
                   if (typeof window.switchLanguage === 'function') {
@@ -7089,22 +7096,22 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
             // Stocker l'ID du client perdu si présent (pour suppression après soumission)
             if (data.client_perdu_id) {
               sessionStorage.setItem('client_perdu_id', data.client_perdu_id);
-              console.log('[SOUMISSION] ✅ ID client perdu stocké:', data.client_perdu_id);
+              log('[SOUMISSION] ✅ ID client perdu stocké:', data.client_perdu_id);
             }
 
             // Nettoyer le localStorage après chargement
             localStorage.removeItem('clientSoumission');
-            console.log('[SOUMISSION] ✅ Données chargées et localStorage nettoyé');
+            log('[SOUMISSION] ✅ Données chargées et localStorage nettoyé');
 
             // Déclencher la validation des champs
             setTimeout(() => validateRequiredFields(), 100);
           }, 500);
         } catch (error) {
-          console.error('[SOUMISSION] ❌ Erreur chargement données client:', error);
+          error('[SOUMISSION] ❌ Erreur chargement données client:', error);
           localStorage.removeItem('clientSoumission');
         }
       } else {
-        console.log('[SOUMISSION] ℹ️ Aucune donnée clientSoumission à charger');
+        log('[SOUMISSION] ℹ️ Aucune donnée clientSoumission à charger');
       }
     });
   </script>

@@ -2641,6 +2641,13 @@
 </div>
 
 <script>
+  // ⚡ DÉSACTIVATION DES LOGS - Performance optimization
+  window.log = () => {};
+  window.warn = () => {};
+  window.error = () => {};
+  window.info = () => {};
+  window.debug = () => {};
+
   // Variables globales
   let revenueChart;
   let lastSelectedShortcut = null; // Pour tracker le dernier raccourci sélectionné
@@ -2927,15 +2934,15 @@
 
     if (signeesLine) {
       signeesLine.style.width = signeesPercent + '%';
-      console.log('Ligne signées:', signeesPercent + '%');
+      log('Ligne signées:', signeesPercent + '%');
     }
     if (attenteLine) {
       attenteLine.style.width = attentePercent + '%';
-      console.log('Ligne attente:', attentePercent + '%');
+      log('Ligne attente:', attentePercent + '%');
     }
     if (perdusLine) {
       perdusLine.style.width = perdusPercent + '%';
-      console.log('Ligne perdus:', perdusPercent + '%');
+      log('Ligne perdus:', perdusPercent + '%');
     }
   }
   
@@ -2953,13 +2960,13 @@
         animateNumber('etoilesMoyennes', moyenneEtoiles, false, false, true); // isDecimal = true
         animateNumber('nombreAvis', nombreAvis, false);
       } else {
-        console.log('Aucune donnée de satisfaction trouvée');
+        log('Aucune donnée de satisfaction trouvée');
         animateNumber('tauxSatisfaction', 0, true);
         animateNumber('etoilesMoyennes', 0, false, false, true); // isDecimal = true
         animateNumber('nombreAvis', 0, false);
       }
     } catch (error) {
-      console.error('Erreur lors du chargement du taux de satisfaction:', error);
+      error('Erreur lors du chargement du taux de satisfaction:', error);
       animateNumber('tauxSatisfaction', 0, true);
       animateNumber('etoilesMoyennes', 0, false, false, true); // isDecimal = true
       animateNumber('nombreAvis', 0, false);
@@ -2968,13 +2975,13 @@
 
   // Chargement des données réelles
   async function loadDashboardData() {
-    console.log('[loadDashboardData] DEBUT - username:', username, 'window.username:', window.username, 'localStorage.username:', localStorage.getItem('username'));
+    log('[loadDashboardData] DEBUT - username:', username, 'window.username:', window.username, 'localStorage.username:', localStorage.getItem('username'));
 
     if (!username) {
-      console.error('[loadDashboardData] ERREUR - Username non défini!');
-      console.error('[loadDashboardData] window.username:', window.username);
-      console.error('[loadDashboardData] localStorage.username:', localStorage.getItem('username'));
-      console.error('[loadDashboardData] URL params:', new URLSearchParams(window.location.search).get('user'));
+      error('[loadDashboardData] ERREUR - Username non défini!');
+      error('[loadDashboardData] window.username:', window.username);
+      error('[loadDashboardData] localStorage.username:', localStorage.getItem('username'));
+      error('[loadDashboardData] URL params:', new URLSearchParams(window.location.search).get('user'));
       return;
     }
 
@@ -2985,7 +2992,7 @@
       const isDashboardParCoach = window.dashboardType === 'par-coach';
       const isDashboardQualiteEtudiants = window.dashboardType === 'qualite-etudiants';
 
-      console.log('[loadDashboardData] Chargement des données pour:', username, '| Role:', userRole, '| Dashboard type:', window.dashboardType);
+      log('[loadDashboardData] Chargement des données pour:', username, '| Role:', userRole, '| Dashboard type:', window.dashboardType);
 
       // Pour "Dashboard Qualité Étudiants", ajouter le paramètre ?all_teams=true
       // Pour "Dashboard par Coach", ajouter le paramètre ?team=true
@@ -3057,15 +3064,15 @@
       const panierMoyenNum = parseFloat(panierMoyenStr.replace(/[^0-9,]/g, '').replace(',', '.')) || 0;
 
       // Récupérer l'Objectif CA, le Taux Marketing, Prod Horaire et H de PÀP depuis les données RPO
-      console.log('[DEBUG] rpoData complet:', rpoData);
-      console.log('[DEBUG] rpoData.annual:', rpoData?.annual);
+      log('[DEBUG] rpoData complet:', rpoData);
+      log('[DEBUG] rpoData.annual:', rpoData?.annual);
       const objectifCA = rpoData?.annual?.objectif_ca || 0;
       const tauxMarketing = rpoData?.annual?.mktg_reel || 0;
 
       // Le montant produit vient du total des ventes produit (travaux terminés)
       const montantProduitStr = montantProduitData?.total || '0,00 $';
       const montantProduitTotal = montantProduitData?.montant || 0;
-      console.log('[DEBUG] Montant produit (ventes terminées):', montantProduitTotal, montantProduitStr);
+      log('[DEBUG] Montant produit (ventes terminées):', montantProduitTotal, montantProduitStr);
 
       // Calculer heures de PÀP - d'abord essayer de lire depuis l'élément total-mktg-reel
       let heuresPAP = 0;
@@ -3075,17 +3082,17 @@
       const totalMktgReelEl = document.getElementById('total-mktg-reel');
       if (totalMktgReelEl) {
         const totalMktgText = totalMktgReelEl.textContent.trim();
-        console.log('[DEBUG] total-mktg-reel text:', totalMktgText);
+        log('[DEBUG] total-mktg-reel text:', totalMktgText);
         const match = totalMktgText.match(/(\d+)/);
         if (match) {
           heuresPAP = parseFloat(match[1]);
-          console.log('[DEBUG] heuresPAP extrait depuis total-mktg-reel:', heuresPAP);
+          log('[DEBUG] heuresPAP extrait depuis total-mktg-reel:', heuresPAP);
         }
       }
 
       // Si pas trouvé, calculer depuis rpoData.weekly
       if (heuresPAP === 0 && rpoData?.weekly) {
-        console.log('[DEBUG] Calcul depuis rpoData.weekly');
+        log('[DEBUG] Calcul depuis rpoData.weekly');
         // Mois valides pour le calcul (déc 2025 à août 2026)
         const moisValides = ['0', '1', '2', '3', '4', '5', '6', '7'];
 
@@ -3104,16 +3111,16 @@
           }
         }
       }
-      console.log('[DEBUG DASHBOARD] heuresPAP final:', heuresPAP);
-      console.log('[DEBUG DASHBOARD] nombreSemaines:', nombreSemaines);
+      log('[DEBUG DASHBOARD] heuresPAP final:', heuresPAP);
+      log('[DEBUG DASHBOARD] nombreSemaines:', nombreSemaines);
 
       // Calculer la moyenne des heures PAP par semaine
       const heuresPAPSemaine = nombreSemaines > 0 ? heuresPAP / nombreSemaines : 0;
-      console.log('[DEBUG DASHBOARD] heuresPAPSemaine (moyenne):', heuresPAPSemaine);
+      log('[DEBUG DASHBOARD] heuresPAPSemaine (moyenne):', heuresPAPSemaine);
 
       // Calculer Prod Horaire dynamiquement: CA / Heures de PAP
       const prodHoraire = heuresPAP > 0 ? (montantSigneNum / heuresPAP) : 0;
-      console.log('[DEBUG] Prod Horaire calculé:', prodHoraire, '(CA:', montantSigneNum, '/ H PAP:', heuresPAP, ')');
+      log('[DEBUG] Prod Horaire calculé:', prodHoraire, '(CA:', montantSigneNum, '/ H PAP:', heuresPAP, ')');
 
       // Afficher Prod Horaire
       const prodHoraireEl = document.getElementById('prodHoraire');
@@ -3151,8 +3158,8 @@
       window.tauxMarketingReel = tauxMarketing;
       window.heuresPAPReel = heuresPAP;
       window.prodHoraireReel = Math.round(prodHoraire); // Arrondir sans décimales
-      console.log('[DEBUG] window.heuresPAPReel stocké:', window.heuresPAPReel);
-      console.log('[DEBUG] window.prodHoraireReel stocké:', window.prodHoraireReel);
+      log('[DEBUG] window.heuresPAPReel stocké:', window.heuresPAPReel);
+      log('[DEBUG] window.prodHoraireReel stocké:', window.prodHoraireReel);
 
       // Prod Horaire depuis RPO (moyenne des semaines mai-septembre)
       const prodHoraireElement = document.getElementById('prodHoraire');
@@ -3171,18 +3178,18 @@
       // Charger le graphique avec les vraies données
       setTimeout(updateChartData, 500);
 
-      console.log('[OK] Données du dashboard chargées avec succès');
-      console.log(`[DATA] Soumissions: ${totalSoumissions} total, ${soumissionsSignees} signées, ${soumissionsEnAttente} en attente, ${soumissionsPerdus} perdus`);
-      console.log(`[STATS] Taux de vente: ${tauxVente.toFixed(2)}%`);
-      console.log(`🔨 Ventes produit: ${ventesProduitData.count || 0} complétées`);
-      console.log(`[MONEY] Finances: Signé ${montantSigneStr}, Produit ${chiffreAffairesStr}, Non produit ${montantNonProduitStr}`);
+      log('[OK] Données du dashboard chargées avec succès');
+      log(`[DATA] Soumissions: ${totalSoumissions} total, ${soumissionsSignees} signées, ${soumissionsEnAttente} en attente, ${soumissionsPerdus} perdus`);
+      log(`[STATS] Taux de vente: ${tauxVente.toFixed(2)}%`);
+      log(`🔨 Ventes produit: ${ventesProduitData.count || 0} complétées`);
+      log(`[MONEY] Finances: Signé ${montantSigneStr}, Produit ${chiffreAffairesStr}, Non produit ${montantNonProduitStr}`);
 
       // Signal que les données RPO sont prêtes pour le classement
-      console.log('[DEBUG] tauxMarketingReel défini:', window.tauxMarketingReel);
+      log('[DEBUG] tauxMarketingReel défini:', window.tauxMarketingReel);
       window.rpoDataReady = true;
 
     } catch (error) {
-      console.error('[ERROR] Erreur lors du chargement des données:', error);
+      error('[ERROR] Erreur lors du chargement des données:', error);
       // Afficher des valeurs par défaut en cas d'erreur
       animateNumber('soumissionsSignees', 0);
       animateNumber('soumissionsEnAttente', 0);
@@ -3253,7 +3260,7 @@
         const endInput = document.getElementById('modalEndDate');
         
         if (!startInput || !startInput.value || !endInput || !endInput.value) {
-          console.warn('Dates personnalisées manquantes, utilisation des 30 derniers jours');
+          warn('Dates personnalisées manquantes, utilisation des 30 derniers jours');
           // Valeurs par défaut: 30 derniers jours
           end = new Date();
           start = new Date();
@@ -3264,7 +3271,7 @@
           
           // Vérifier que la date de fin est après la date de début
           if (!start || !end || end <= start) {
-            console.warn('Dates invalides, utilisation des 30 derniers jours');
+            warn('Dates invalides, utilisation des 30 derniers jours');
             end = new Date();
             start = new Date();
             start.setDate(end.getDate() - 30);
@@ -3309,7 +3316,7 @@
       revenueChart.update();
       
     } catch (error) {
-      console.error('Erreur mise à jour graphique:', error);
+      error('Erreur mise à jour graphique:', error);
       // Données de fallback
       revenueChart.data.labels = ['Aucune donnée'];
       revenueChart.data.datasets[0].data = [0];
@@ -3335,7 +3342,7 @@
       savePeriodSelection('shortcut', '30');
     }
     
-    console.log('[DATE] Dates par défaut initialisées: 30 derniers jours');
+    log('[DATE] Dates par défaut initialisées: 30 derniers jours');
   }
 
   // Gestion des boutons de période
@@ -3399,7 +3406,7 @@
           chartTypeDropdownMenu.classList.remove('show');
           chartTypeDropdown.classList.remove('active');
           
-          console.log(`[STATS] Changement type de données: ${value}`);
+          log(`[STATS] Changement type de données: ${value}`);
           
           // Mettre à jour la configuration de l'axe Y selon le type
           if (revenueChart) {
@@ -3474,7 +3481,7 @@
           mobileChartTypeDropdownMenu.classList.remove('show');
           mobileChartTypeDropdown.classList.remove('active');
 
-          console.log(`[STATS] Changement type de données mobile: ${value}`);
+          log(`[STATS] Changement type de données mobile: ${value}`);
 
           // Mettre à jour la configuration de l'axe Y selon le type
           if (revenueChart) {
@@ -3503,7 +3510,7 @@
     buttons.forEach(button => {
       button.addEventListener('click', function() {
         const period = this.getAttribute('data-period');
-        console.log(`[DATA] Sélection période: ${period}`);
+        log(`[DATA] Sélection période: ${period}`);
         
         if (period === 'custom') {
           // Ouvrir le modal pour les dates personnalisées
@@ -3643,17 +3650,17 @@
       buttons.forEach(btn => btn.classList.remove('active'));
       document.getElementById('customPeriodBtn').classList.add('active');
       
-      console.log(`[DATA] Application des dates: ${startInput.value} à ${endInput.value}`);
+      log(`[DATA] Application des dates: ${startInput.value} à ${endInput.value}`);
       
       // Sauvegarder selon le type (raccourci ou personnalisé)
       if (lastSelectedShortcut) {
         // C'était un raccourci, sauvegarder comme raccourci
         savePeriodSelection('shortcut', lastSelectedShortcut.value);
-        console.log(`[DATA] Sauvegarde raccourci: ${lastSelectedShortcut.value}`);
+        log(`[DATA] Sauvegarde raccourci: ${lastSelectedShortcut.value}`);
       } else {
         // Dates modifiées manuellement, sauvegarder comme personnalisé
         savePeriodSelection('custom', { start: startInput.value, end: endInput.value });
-        console.log(`[DATA] Sauvegarde dates personnalisées`);
+        log(`[DATA] Sauvegarde dates personnalisées`);
       }
       
       // Fermer le modal
@@ -4015,9 +4022,9 @@
       await renderClassement(sortedData);
 
       // Après le render (qui a ajouté les grades), appliquer le filtre si nécessaire
-      console.log('[SORT] Après renderClassement - currentGroupFilter:', currentGroupFilter);
+      log('[SORT] Après renderClassement - currentGroupFilter:', currentGroupFilter);
       if (currentGroupFilter && currentGroupFilter !== 'tous') {
-        console.log('[SORT] Application du filtre de groupe après render:', currentGroupFilter);
+        log('[SORT] Application du filtre de groupe après render:', currentGroupFilter);
         filterClassementByGroup(currentGroupFilter);
       }
     }
@@ -4067,7 +4074,7 @@
               gradeMetier = userInfo.grade || 'recrue';
             }
           } catch (err) {
-            console.log(`Grade métier par défaut pour ${entrepreneur.username}`);
+            log(`Grade métier par défaut pour ${entrepreneur.username}`);
           }
 
           // Récupérer le grade de gamification (pour le contour de photo)
@@ -4080,7 +4087,7 @@
               gradeGamification = profile.category || 'Démarrage';
             }
           } catch (err) {
-            console.log(`Grade gamification par défaut pour ${entrepreneur.username}`);
+            log(`Grade gamification par défaut pour ${entrepreneur.username}`);
           }
 
           return {
@@ -4090,7 +4097,7 @@
             gradeGamification: gradeGamification
           };
         } catch (error) {
-          console.error(`[ERROR] Erreur chargement données pour ${entrepreneur.username}:`, error);
+          error(`[ERROR] Erreur chargement données pour ${entrepreneur.username}:`, error);
           return {
             username: entrepreneur.username,
             photoUrl: null,
@@ -4108,18 +4115,18 @@
         photoMap[p.username] = p.photoUrl;
         gradeMap[p.username] = p.grade;
         gradeGamificationMap[p.username] = p.gradeGamification;
-        console.log(`📸 ${p.username}: photo=${p.photoUrl ? 'oui' : 'non'}, gradeMetier=${p.grade}, gradeGamif=${p.gradeGamification}`);
+        log(`📸 ${p.username}: photo=${p.photoUrl ? 'oui' : 'non'}, gradeMetier=${p.grade}, gradeGamif=${p.gradeGamification}`);
       });
-      console.log('🗺️ Photo map final:', photoMap);
-      console.log('🎖️ Grade métier map final:', gradeMap);
-      console.log('🏆 Grade gamification map final:', gradeGamificationMap);
+      log('🗺️ Photo map final:', photoMap);
+      log('🎖️ Grade métier map final:', gradeMap);
+      log('🏆 Grade gamification map final:', gradeGamificationMap);
 
       // Mettre à jour classementData avec les grades
       classementData = classementData.map(e => ({
         ...e,
         grade: gradeMap[e.username] || e.grade || 'recrue'
       }));
-      console.log('[RENDER] ✅ classementData mis à jour avec les grades. Échantillon:',
+      log('[RENDER] ✅ classementData mis à jour avec les grades. Échantillon:',
         classementData.slice(0, 3).map(e => ({ username: e.username, grade: e.grade }))
       );
 
@@ -4187,7 +4194,7 @@
       }).join('');
 
       // Générer les cartes mobiles (version simplifiée: rang + entrepreneur seulement)
-      console.log('[MOBILE] Génération des cartes mobiles pour', data.length, 'entrepreneurs');
+      log('[MOBILE] Génération des cartes mobiles pour', data.length, 'entrepreneurs');
       mobileCards.innerHTML = data.map((entrepreneur, index) => {
         // Médailles pour les 3 premières positions
         let rangDisplay = '';
@@ -4361,7 +4368,7 @@
         // Si pas dans une iframe, utiliser la fonction locale
         await window.openStatsModal(username);
       } else {
-        console.error('openStatsModal non disponible');
+        error('openStatsModal non disponible');
         alert('Erreur: modal de statistiques non disponible');
       }
     }
@@ -4402,7 +4409,7 @@
 
     // Fonction pour peupler le modal avec les données
     async function populateUserStatsModal(profile, username) {
-      console.log('Peuplement du modal avec:', { profile, username });
+      log('Peuplement du modal avec:', { profile, username });
 
       const gradeImageMap = {
         'Démarrage': 'https://i.ibb.co/v6PRQ6RX/2.png',
@@ -4439,7 +4446,7 @@
           statsPhoto.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
         }
       } catch (error) {
-        console.error('Erreur photo:', error);
+        error('Erreur photo:', error);
       }
 
       // Nom du grade dans la section du haut
@@ -4462,7 +4469,7 @@
 
         // Ajouter la nouvelle classe de grade
         photoContainer.classList.add(gradeClass);
-        console.log(`Contour de grade appliqué: ${gradeClass}`);
+        log(`Contour de grade appliqué: ${gradeClass}`);
       }
 
       // XP
@@ -4547,18 +4554,18 @@
           }
         }
       } catch (error) {
-        console.error('Erreur chargement stats business:', error);
+        error('Erreur chargement stats business:', error);
       }
 
       // Charger les badges obtenus
       try {
-        console.log(`Chargement des badges pour ${username}...`);
+        log(`Chargement des badges pour ${username}...`);
         const badgesResponse = await fetch(`/api/gamification/badges/user/${username}`);
-        console.log('Réponse badges status:', badgesResponse.status);
+        log('Réponse badges status:', badgesResponse.status);
 
         if (badgesResponse.ok) {
           const badgesData = await badgesResponse.json();
-          console.log('Données badges brutes:', badgesData);
+          log('Données badges brutes:', badgesData);
           const badgesGrid = document.getElementById('user-stats-badges-grid');
 
           let badges = [];
@@ -4570,7 +4577,7 @@
             badges = badgesData;
           }
 
-          console.log(`${badges.length} badges trouvés pour ${username}`);
+          log(`${badges.length} badges trouvés pour ${username}`);
 
           if (badges.length > 0) {
             // Fonction helper pour créer un badge item
@@ -4693,7 +4700,7 @@
           }
         }
       } catch (error) {
-        console.error('Erreur chargement badges:', error);
+        error('Erreur chargement badges:', error);
         document.getElementById('user-stats-badges-grid').innerHTML = '<div class="no-badges-message">Erreur de chargement des badges</div>';
       }
     }
@@ -4714,9 +4721,9 @@
     function filterClassementByGroup(groupValue) {
       currentGroupFilter = groupValue;
 
-      console.log('[FILTER] 🔍 Début filterClassementByGroup - groupValue:', groupValue);
-      console.log('[FILTER] classementData length:', classementData.length);
-      console.log('[FILTER] Échantillon des grades dans classementData:',
+      log('[FILTER] 🔍 Début filterClassementByGroup - groupValue:', groupValue);
+      log('[FILTER] classementData length:', classementData.length);
+      log('[FILTER] Échantillon des grades dans classementData:',
         classementData.slice(0, 3).map(e => ({ username: e.username, grade: e.grade }))
       );
 
@@ -4746,15 +4753,15 @@
           }
 
           if (matches) {
-            console.log(`[FILTER] ✅ ${entrepreneur.username} (grade: ${grade}) correspond au filtre ${groupValue}`);
+            log(`[FILTER] ✅ ${entrepreneur.username} (grade: ${grade}) correspond au filtre ${groupValue}`);
           } else {
-            console.log(`[FILTER] ❌ ${entrepreneur.username} (grade: ${grade}) ne correspond pas au filtre ${groupValue}`);
+            log(`[FILTER] ❌ ${entrepreneur.username} (grade: ${grade}) ne correspond pas au filtre ${groupValue}`);
           }
 
           return matches;
         });
 
-        console.log('[FILTER] Résultat: filteredData length:', filteredData.length);
+        log('[FILTER] Résultat: filteredData length:', filteredData.length);
       }
 
       // Trier les données filtrées avec le tri actuel
@@ -4779,28 +4786,28 @@
     }
 
     async function loadClassementData() {
-      console.log('[CLASSEMENT] 🚀 DEBUT loadClassementData');
+      log('[CLASSEMENT] 🚀 DEBUT loadClassementData');
       try {
         // Pour les entrepreneurs, ne pas attendre window.rpoDataReady (déjà chargé avant)
         const userRole = localStorage.getItem('userRole');
-        console.log('[CLASSEMENT] UserRole:', userRole);
+        log('[CLASSEMENT] UserRole:', userRole);
         if (userRole === 'coach' || userRole === 'direction') {
-          console.log('[CLASSEMENT] Mode coach/direction - attente window.rpoDataReady');
+          log('[CLASSEMENT] Mode coach/direction - attente window.rpoDataReady');
           // Attendre que les données RPO soient prêtes (jusqu'à 5 secondes max)
           let waitCount = 0;
           while (!window.rpoDataReady && waitCount < 50) {
             await new Promise(resolve => setTimeout(resolve, 100));
             waitCount++;
           }
-          console.log('[CLASSEMENT] window.rpoDataReady OK après', waitCount * 100, 'ms');
+          log('[CLASSEMENT] window.rpoDataReady OK après', waitCount * 100, 'ms');
         } else {
-          console.log('[CLASSEMENT] Mode entrepreneur - pas d\'attente');
+          log('[CLASSEMENT] Mode entrepreneur - pas d\'attente');
         }
 
         // Déterminer quel endpoint appeler selon le type de dashboard
         const isDashboardQualiteEtudiants = window.dashboardType === 'qualite-etudiants';
         const isDashboardParCoach = window.dashboardType === 'par-coach';
-        console.log('[CLASSEMENT] Dashboard type:', window.dashboardType, '| Qualite:', isDashboardQualiteEtudiants, '| ParCoach:', isDashboardParCoach);
+        log('[CLASSEMENT] Dashboard type:', window.dashboardType, '| Qualite:', isDashboardQualiteEtudiants, '| ParCoach:', isDashboardParCoach);
 
         let apiEndpoint;
         let classementDataSource;
@@ -4840,9 +4847,9 @@
           classementDataSource = 'entrepreneurs';
         }
 
-        console.log(`🔄 Chargement depuis ${apiEndpoint}...`);
-        console.log('[DEBUG] window.heuresPAPReel:', window.heuresPAPReel);
-        console.log('[DEBUG] window.tauxMarketingReel:', window.tauxMarketingReel);
+        log(`🔄 Chargement depuis ${apiEndpoint}...`);
+        log('[DEBUG] window.heuresPAPReel:', window.heuresPAPReel);
+        log('[DEBUG] window.tauxMarketingReel:', window.tauxMarketingReel);
         const response = await fetch(apiEndpoint);
 
         if (!response.ok) {
@@ -4857,12 +4864,12 @@
         } else {
           classementData = responseData;
         }
-        console.log('[DEBUG loadClassementData] Dashboard type:', window.dashboardType);
-        console.log('[DEBUG loadClassementData] API endpoint:', apiEndpoint);
-        console.log('[DEBUG loadClassementData] Data source:', classementDataSource);
-        console.log('[DEBUG loadClassementData] Raw data count:', classementData.length);
-        console.log('[DEBUG loadClassementData] Raw data:', classementData);
-        console.log('[OK] Entrepreneurs chargés:', classementData);
+        log('[DEBUG loadClassementData] Dashboard type:', window.dashboardType);
+        log('[DEBUG loadClassementData] API endpoint:', apiEndpoint);
+        log('[DEBUG loadClassementData] Data source:', classementDataSource);
+        log('[DEBUG loadClassementData] Raw data count:', classementData.length);
+        log('[DEBUG loadClassementData] Raw data:', classementData);
+        log('[OK] Entrepreneurs chargés:', classementData);
 
         // Initialiser heures_pap à 0 pour tous les entrepreneurs si le champ n'existe pas
         classementData = classementData.map(e => ({
@@ -4872,33 +4879,33 @@
 
         // IMPORTANT: Filtrer d'abord AVANT de charger les photos/grades
         // Filtrer uniquement les entrepreneurs avec nom complet (espace)
-        console.log('[DEBUG] isDashboardQualiteEtudiants:', isDashboardQualiteEtudiants);
+        log('[DEBUG] isDashboardQualiteEtudiants:', isDashboardQualiteEtudiants);
         if (!isDashboardQualiteEtudiants) {
-          console.log('[DEBUG] Filtrage des entrepreneurs (seulement nom complet)...');
+          log('[DEBUG] Filtrage des entrepreneurs (seulement nom complet)...');
           const beforeFilter = classementData.length;
           classementData = classementData.filter(e => {
             const username = e.username || '';
             const hasSpace = username.trim().includes(' ');
 
             if (!hasSpace) {
-              console.log(`[DEBUG] Entrepreneur "${username}" exclu (pas de nom complet)`);
+              log(`[DEBUG] Entrepreneur "${username}" exclu (pas de nom complet)`);
               return false;
             }
             return true;
           });
-          console.log(`[DEBUG] Après filtrage: ${beforeFilter} -> ${classementData.length} entrepreneurs`);
+          log(`[DEBUG] Après filtrage: ${beforeFilter} -> ${classementData.length} entrepreneurs`);
         } else {
           // Pour les coaches, afficher tous (pas de filtre)
-          console.log('[DEBUG] Filtrage des coaches sans données...');
+          log('[DEBUG] Filtrage des coaches sans données...');
           const beforeDataFilter = classementData.length;
           classementData = classementData.filter(e => {
             const hasData = (e.ca_actuel && e.ca_actuel > 0) || (e.soumissions_signees && e.soumissions_signees > 0);
             if (!hasData) {
-              console.log(`[DEBUG] Coach "${e.username}" exclu (aucune donnée)`);
+              log(`[DEBUG] Coach "${e.username}" exclu (aucune donnée)`);
             }
             return hasData;
           });
-          console.log(`[DEBUG] Après filtrage données: ${beforeDataFilter} -> ${classementData.length} coaches`);
+          log(`[DEBUG] Après filtrage données: ${beforeDataFilter} -> ${classementData.length} coaches`);
         }
 
         // Corriger les données de l'utilisateur actuel en lisant directement depuis les éléments HTML du dashboard
@@ -4906,7 +4913,7 @@
         const userIndex = classementData.findIndex(e => e.login_username === currentUsername || e.username === currentUsername);
 
         if (currentUsername && userIndex !== -1) {
-          console.log(`[FIX] Correction des données pour ${currentUsername} depuis les éléments HTML du dashboard`);
+          log(`[FIX] Correction des données pour ${currentUsername} depuis les éléments HTML du dashboard`);
 
           // Prod horaire depuis #prodHoraire (ex: "107 $/h" → 107)
           const prodHoraireElement = document.getElementById('prodHoraire');
@@ -4914,7 +4921,7 @@
             const prodHoraireText = prodHoraireElement.textContent.trim();
             const prodHoraireValue = parseFloat(prodHoraireText.replace(/[^0-9.-]/g, ''));
             if (!isNaN(prodHoraireValue)) {
-              console.log(`[FIX] Prod/h: ${classementData[userIndex].prod_horaire}$/h → ${Math.round(prodHoraireValue)}$/h (depuis #prodHoraire: "${prodHoraireText}")`);
+              log(`[FIX] Prod/h: ${classementData[userIndex].prod_horaire}$/h → ${Math.round(prodHoraireValue)}$/h (depuis #prodHoraire: "${prodHoraireText}")`);
               classementData[userIndex].prod_horaire = Math.round(prodHoraireValue);
             }
           }
@@ -4925,39 +4932,39 @@
             const tauxMarketingText = tauxMarketingElement.textContent.trim();
             const tauxMarketingValue = parseFloat(tauxMarketingText.replace('%', '').replace(/[^0-9.-]/g, ''));
             if (!isNaN(tauxMarketingValue)) {
-              console.log(`[FIX] Taux marketing: ${classementData[userIndex].taux_marketing}% → ${tauxMarketingValue}% (depuis #tauxMarketing: "${tauxMarketingText}")`);
+              log(`[FIX] Taux marketing: ${classementData[userIndex].taux_marketing}% → ${tauxMarketingValue}% (depuis #tauxMarketing: "${tauxMarketingText}")`);
               classementData[userIndex].taux_marketing = tauxMarketingValue;
             }
           }
 
           // H de PÀP depuis window.heuresPAPReel (déjà calculé dans loadDashboardData)
           if (window.heuresPAPReel !== undefined) {
-            console.log(`[FIX] H de PÀP: ${classementData[userIndex].heures_pap}h → ${window.heuresPAPReel}h (depuis window.heuresPAPReel)`);
+            log(`[FIX] H de PÀP: ${classementData[userIndex].heures_pap}h → ${window.heuresPAPReel}h (depuis window.heuresPAPReel)`);
             classementData[userIndex].heures_pap = window.heuresPAPReel;
           } else {
-            console.log(`[WARNING] window.heuresPAPReel non défini, essai de lecture depuis #total-mktg-reel`);
+            log(`[WARNING] window.heuresPAPReel non défini, essai de lecture depuis #total-mktg-reel`);
             // Fallback: essayer de lire depuis l'élément HTML
             const heuresPAPElement = document.getElementById('total-mktg-reel');
             if (heuresPAPElement && heuresPAPElement.textContent) {
               const heuresPAPText = heuresPAPElement.textContent.trim();
               const heuresPAPValue = parseFloat(heuresPAPText.replace(/[^0-9.-]/g, ''));
               if (!isNaN(heuresPAPValue) && heuresPAPValue > 0) {
-                console.log(`[FIX] H de PÀP: ${classementData[userIndex].heures_pap}h → ${heuresPAPValue}h (depuis #total-mktg-reel: "${heuresPAPText}")`);
+                log(`[FIX] H de PÀP: ${classementData[userIndex].heures_pap}h → ${heuresPAPValue}h (depuis #total-mktg-reel: "${heuresPAPText}")`);
                 classementData[userIndex].heures_pap = heuresPAPValue;
               }
             }
           }
 
-          console.log(`[OK] Après corrections:`, classementData[userIndex]);
+          log(`[OK] Après corrections:`, classementData[userIndex]);
         } else if (!currentUsername) {
-          console.log(`[WARNING] currentUsername non défini`);
+          log(`[WARNING] currentUsername non défini`);
         } else if (userIndex === -1) {
-          console.log(`[WARNING] Utilisateur ${currentUsername} non trouvé dans classementData`);
+          log(`[WARNING] Utilisateur ${currentUsername} non trouvé dans classementData`);
         }
 
         await sortClassement('ca'); // Trier par CA par défaut
       } catch (error) {
-        console.error('[ERROR] Erreur chargement classement:', error);
+        error('[ERROR] Erreur chargement classement:', error);
         document.getElementById('classementTableBody').innerHTML = `
           <tr>
             <td colspan="12" class="text-center py-8 text-red-500">
@@ -5070,7 +5077,7 @@
     window.reglerPlainte = function(plainteId) {
       // Pour l'instant, juste fermer le popup
       // Plus tard: envoyer requête au serveur pour marquer comme réglée
-      console.log('Plainte réglée:', plainteId);
+      log('Plainte réglée:', plainteId);
       // Ici on pourrait retirer la plainte de la liste dynamiquement
       // Réactiver le scroll avant de fermer
       document.body.style.overflow = '';
@@ -5132,22 +5139,22 @@
     // Pour les entrepreneurs, charger les données du dashboard
     const userRole = localStorage.getItem('userRole');
     if (userRole !== 'coach') {
-      console.log('[INIT] Entrepreneur détecté - Chargement des données pour:', window.username);
+      log('[INIT] Entrepreneur détecté - Chargement des données pour:', window.username);
       setTimeout(() => {
         if (window.username) {
-          console.log('[INIT] Username disponible, chargement des données...');
+          log('[INIT] Username disponible, chargement des données...');
           loadDashboardData();
           // Charger le classement après les données du dashboard (attendre 2s pour que les variables window.* soient définies)
           setTimeout(() => {
-            console.log('[INIT] Chargement du classement...');
+            log('[INIT] Chargement du classement...');
             loadClassementData();
           }, 2000);
         } else {
-          console.error('[INIT] ERREUR - Username non défini! localStorage username:', localStorage.getItem('username'));
+          error('[INIT] ERREUR - Username non défini! localStorage username:', localStorage.getItem('username'));
         }
       }, 200);
     } else {
-      console.log('[INIT] Coach détecté - Attente de la sélection d\'entrepreneur');
+      log('[INIT] Coach détecté - Attente de la sélection d\'entrepreneur');
     }
     // Pour les coaches, loadClassementData() sera appelé par selectDashboardType() après l'initialisation
   });
@@ -5292,7 +5299,7 @@
     document.querySelectorAll('.dashboard-shortcut-btn').forEach(b => b.classList.remove('active'));
     lastSelectedShortcut = null; // Reset car l'utilisateur a sélectionné une date custom
     
-    console.log(`[DATE] Date ${type} sélectionnée:`, formattedDate);
+    log(`[DATE] Date ${type} sélectionnée:`, formattedDate);
   }
   
   // Fonction pour parser une date d'affichage (format français)
@@ -5319,7 +5326,7 @@
   function activateCurrentPageMenu() {
     // Détecter la page actuelle
     const currentPath = window.location.pathname;
-    console.log('🌐 Page actuelle détectée:', currentPath);
+    log('🌐 Page actuelle détectée:', currentPath);
     
     // Enlever la classe menu-active de tous les liens
     const allMenuLinks = document.querySelectorAll('#sidebar a');
@@ -5348,7 +5355,7 @@
     
     if (targetPath) {
       targetLink = document.querySelector(`#sidebar a[data-path="${targetPath}"]`);
-      console.log('[TARGET] Page détectée - activation du menu pour:', targetPath);
+      log('[TARGET] Page détectée - activation du menu pour:', targetPath);
     }
     
     // Activer le lien correspondant
@@ -5356,10 +5363,10 @@
       targetLink.classList.add('menu-active');
       targetLink.setAttribute('data-menu-state', 'active');
       
-      console.log('[OK] Menu activé pour:', targetLink.textContent.trim());
-      console.log('[DEBUG] Classes actuelles:', targetLink.className);
+      log('[OK] Menu activé pour:', targetLink.textContent.trim());
+      log('[DEBUG] Classes actuelles:', targetLink.className);
     } else {
-      console.log('[WARN] Aucun menu trouvé pour la page:', currentPath);
+      log('[WARN] Aucun menu trouvé pour la page:', currentPath);
     }
   }
 
@@ -5554,20 +5561,20 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
       }
 
       // Charger les données du coach
-      console.log('[DEBUG INIT COACH] Préparation chargement pour coach:', currentUsername);
-      console.log('[DEBUG INIT COACH] coachUsername global:', coachUsername);
+      log('[DEBUG INIT COACH] Préparation chargement pour coach:', currentUsername);
+      log('[DEBUG INIT COACH] coachUsername global:', coachUsername);
 
       // Sélectionner le type de dashboard (depuis URL ou par défaut "Mon Équipe")
       setTimeout(() => {
-        console.log('[DEBUG INIT COACH] setTimeout - Début chargement');
-        console.log('[DEBUG INIT COACH] Sélection du type de dashboard:', window.dashboardType);
+        log('[DEBUG INIT COACH] setTimeout - Début chargement');
+        log('[DEBUG INIT COACH] Sélection du type de dashboard:', window.dashboardType);
         selectDashboardType(window.dashboardType);
 
         if (typeof loadCoaches === 'function') {
-          console.log('[DEBUG INIT COACH] Appel loadCoaches()');
+          log('[DEBUG INIT COACH] Appel loadCoaches()');
           loadCoaches();
         } else {
-          console.error('[DEBUG INIT COACH] loadCoaches N\'EST PAS une fonction!');
+          error('[DEBUG INIT COACH] loadCoaches N\'EST PAS une fonction!');
         }
       }, 500);
     }
@@ -5642,21 +5649,21 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
 
     // Vérifier si on vient de "Mon équipe" avec un entrepreneur pré-sélectionné
     const viewEntrepreneurUsername = sessionStorage.getItem('viewEntrepreneurUsername');
-    console.log('🔍 Vérification viewEntrepreneurUsername:', viewEntrepreneurUsername);
-    console.log('🔍 isCoach:', isCoach);
-    console.log('🔍 Tout le sessionStorage:', sessionStorage);
+    log('🔍 Vérification viewEntrepreneurUsername:', viewEntrepreneurUsername);
+    log('🔍 isCoach:', isCoach);
+    log('🔍 Tout le sessionStorage:', sessionStorage);
 
     if (viewEntrepreneurUsername) {
-      console.log('🎯 Entrepreneur pré-sélectionné depuis Mon Équipe:', viewEntrepreneurUsername);
+      log('🎯 Entrepreneur pré-sélectionné depuis Mon Équipe:', viewEntrepreneurUsername);
 
       // Sélectionner automatiquement "Dashboard par Entrepreneur"
       setTimeout(() => {
-        console.log('⏰ Timeout 1: Sélection du type dashboard entrepreneur');
+        log('⏰ Timeout 1: Sélection du type dashboard entrepreneur');
         selectDashboardType('entrepreneur');
 
         // Attendre que les entrepreneurs soient chargés, puis sélectionner l'entrepreneur
         setTimeout(() => {
-          console.log('⏰ Timeout 2: Sélection de l\'entrepreneur', viewEntrepreneurUsername);
+          log('⏰ Timeout 2: Sélection de l\'entrepreneur', viewEntrepreneurUsername);
           selectEntrepreneur(viewEntrepreneurUsername);
           // Nettoyer le sessionStorage
           sessionStorage.removeItem('viewEntrepreneurUsername');
@@ -5819,9 +5826,9 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
       }
     } else if (type === 'mon-equipe' || type === 'par-coach' || type === 'qualite-etudiants') {
       // Afficher le dashboard coach (Mon Équipe ou Qualité Étudiants)
-      console.log('[DEBUG selectDashboardType] Type:', type, '- Affichage dashboard coach');
-      console.log('[DEBUG selectDashboardType] coachDashboardContent:', coachDashboardContent);
-      console.log('[DEBUG selectDashboardType] Display AVANT:', coachDashboardContent ? coachDashboardContent.style.display : 'NULL');
+      log('[DEBUG selectDashboardType] Type:', type, '- Affichage dashboard coach');
+      log('[DEBUG selectDashboardType] coachDashboardContent:', coachDashboardContent);
+      log('[DEBUG selectDashboardType] Display AVANT:', coachDashboardContent ? coachDashboardContent.style.display : 'NULL');
 
       if (coachDevMessage) {
         coachDevMessage.style.display = 'none';
@@ -5833,17 +5840,17 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
         // Afficher le dashboard (styles padding et width déjà dans le HTML)
         coachDashboardContent.style.display = 'block';
 
-        console.log('[DEBUG selectDashboardType] Display APRÈS:', coachDashboardContent.style.display);
+        log('[DEBUG selectDashboardType] Display APRÈS:', coachDashboardContent.style.display);
 
         // Vérifier après un court délai pour laisser le navigateur appliquer les styles
         setTimeout(() => {
           const styles = window.getComputedStyle(coachDashboardContent);
-          console.log('[DEBUG APRÈS TIMEOUT] Computed display:', styles.display);
-          console.log('[DEBUG APRÈS TIMEOUT] Computed padding:', styles.padding);
-          console.log('[DEBUG APRÈS TIMEOUT] Computed width:', styles.width);
-          console.log('[DEBUG APRÈS TIMEOUT] Computed minHeight:', styles.minHeight);
-          console.log('[DEBUG APRÈS TIMEOUT] offsetHeight:', coachDashboardContent.offsetHeight);
-          console.log('[DEBUG APRÈS TIMEOUT] offsetWidth:', coachDashboardContent.offsetWidth);
+          log('[DEBUG APRÈS TIMEOUT] Computed display:', styles.display);
+          log('[DEBUG APRÈS TIMEOUT] Computed padding:', styles.padding);
+          log('[DEBUG APRÈS TIMEOUT] Computed width:', styles.width);
+          log('[DEBUG APRÈS TIMEOUT] Computed minHeight:', styles.minHeight);
+          log('[DEBUG APRÈS TIMEOUT] offsetHeight:', coachDashboardContent.offsetHeight);
+          log('[DEBUG APRÈS TIMEOUT] offsetWidth:', coachDashboardContent.offsetWidth);
         }, 100);
       }
 
@@ -5880,33 +5887,33 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
 
       // Charger les données pour "Mon Équipe"
       if (type === 'mon-equipe') {
-        console.log('[DEBUG selectDashboardType] Chargement données Mon Équipe');
+        log('[DEBUG selectDashboardType] Chargement données Mon Équipe');
         // Utiliser le coach actuel (coach3)
         const currentUsername = localStorage.getItem('username') || window.username;
-        console.log('[DEBUG selectDashboardType] currentUsername:', currentUsername);
+        log('[DEBUG selectDashboardType] currentUsername:', currentUsername);
         if (currentUsername) {
           coachUsername = currentUsername;
           if (typeof chargerEntrepreneurs === 'function') {
-            console.log('[DEBUG selectDashboardType] Appel chargerEntrepreneurs()');
+            log('[DEBUG selectDashboardType] Appel chargerEntrepreneurs()');
             chargerEntrepreneurs();
           } else {
-            console.error('[DEBUG selectDashboardType] chargerEntrepreneurs non défini!');
+            error('[DEBUG selectDashboardType] chargerEntrepreneurs non défini!');
           }
         }
       }
       // Charger les données pour "Dashboard Qualité Étudiants"
       else if (type === 'qualite-etudiants') {
-        console.log('[DEBUG selectDashboardType] Chargement données Qualité Étudiants (coaches)');
+        log('[DEBUG selectDashboardType] Chargement données Qualité Étudiants (coaches)');
         if (typeof chargerCoaches === 'function') {
-          console.log('[DEBUG selectDashboardType] Appel chargerCoaches()');
+          log('[DEBUG selectDashboardType] Appel chargerCoaches()');
           chargerCoaches();
         } else {
-          console.error('[DEBUG selectDashboardType] chargerCoaches non défini!');
+          error('[DEBUG selectDashboardType] chargerCoaches non défini!');
         }
       }
       // Pour 'par-coach': ne rien charger, attendre la sélection d'un coach
       else if (type === 'par-coach') {
-        console.log('[DEBUG selectDashboardType] Dashboard par coach - en attente de sélection');
+        log('[DEBUG selectDashboardType] Dashboard par coach - en attente de sélection');
         // Réinitialiser le sélecteur de coach au placeholder
         const coachSelectorToggle = document.getElementById('coach-selector-toggle');
         if (coachSelectorToggle) {
@@ -5942,7 +5949,7 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
       }
       // Pour 'entrepreneur': ne rien charger, attendre la sélection d'un entrepreneur
       else if (type === 'entrepreneur') {
-        console.log('[DEBUG selectDashboardType] Dashboard entrepreneur - en attente de sélection');
+        log('[DEBUG selectDashboardType] Dashboard entrepreneur - en attente de sélection');
         // Réinitialiser le sélecteur d'entrepreneur au placeholder
         const coachDropdownToggle = document.getElementById('coach-dropdown-toggle');
         if (coachDropdownToggle) {
@@ -5983,18 +5990,18 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
       }
     }
 
-    console.log(`${config.label} sélectionné`);
+    log(`${config.label} sélectionné`);
 
     // Recharger le classement avec les bonnes données selon le type de dashboard
-    console.log('[DEBUG selectDashboardType] Rechargement du classement pour type:', type);
-    console.log('[DEBUG selectDashboardType] window.dashboardType AVANT appel:', window.dashboardType);
+    log('[DEBUG selectDashboardType] Rechargement du classement pour type:', type);
+    log('[DEBUG selectDashboardType] window.dashboardType AVANT appel:', window.dashboardType);
     // Forcer un délai pour s'assurer que window.dashboardType est bien mis à jour
     setTimeout(() => {
-      console.log('[DEBUG selectDashboardType setTimeout] window.dashboardType:', window.dashboardType);
+      log('[DEBUG selectDashboardType setTimeout] window.dashboardType:', window.dashboardType);
       if (typeof window.loadClassementData === 'function') {
         window.loadClassementData();
       } else {
-        console.error('[ERROR] window.loadClassementData non disponible');
+        error('[ERROR] window.loadClassementData non disponible');
       }
     }, 100);
 
@@ -6071,7 +6078,7 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
         menu.appendChild(option);
       }
     } catch (error) {
-      console.error('Erreur chargement coachs:', error);
+      error('Erreur chargement coachs:', error);
     }
   }
 
@@ -6096,7 +6103,7 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
     coachUsername = selectedCoachUsername;
     window.selectedCoachUsername = selectedCoachUsername; // Pour le classement
     window.selectedCoachFullName = displayName; // Stocker le nom complet pour l'affichage
-    console.log('Coach sélectionné:', coachUsername);
+    log('Coach sélectionné:', coachUsername);
 
     // Mettre à jour le titre du dashboard
     const titleElement = document.getElementById('coach-dashboard-title');
@@ -6114,7 +6121,7 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
     if (typeof chargerEntrepreneurs === 'function') {
       chargerEntrepreneurs(false);
     } else {
-      console.error('Fonction chargerEntrepreneurs non définie');
+      error('Fonction chargerEntrepreneurs non définie');
     }
 
     // Recharger le classement entrepreneur (dashboard_user.html)
@@ -6135,7 +6142,7 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
       const coachUsername = urlParams.get('user');
 
       // Pour la direction sans coach username, charger tous les entrepreneurs
-      console.log('🔍 Chargement de TOUS les entrepreneurs');
+      log('🔍 Chargement de TOUS les entrepreneurs');
       const response = await fetch(`/api/entrepreneurs`);
       const entrepreneurs = await response.json();
 
@@ -6167,7 +6174,7 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
         if (viewEntrepreneurUsername && entrepreneurs.some(e => e.login_username === viewEntrepreneurUsername)) {
           // Si on vient de "Mon équipe", sélectionner l'entrepreneur demandé
           entrepreneurToSelect = viewEntrepreneurUsername;
-          console.log('✅ Sélection depuis sessionStorage:', entrepreneurToSelect);
+          log('✅ Sélection depuis sessionStorage:', entrepreneurToSelect);
 
           // Trouver le nom complet de l'entrepreneur sélectionné
           const selectedEntrepreneur = entrepreneurs.find(e => e.login_username === entrepreneurToSelect);
@@ -6202,7 +6209,7 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
         menu.appendChild(option);
       }
     } catch (error) {
-      console.error('Erreur chargement entrepreneurs:', error);
+      error('Erreur chargement entrepreneurs:', error);
     }
   }
 })();
@@ -6211,7 +6218,7 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
 
 // Charger les coaches pour le Dashboard Qualité Étudiants
 async function chargerCoaches() {
-  console.log('[DEBUG chargerCoaches] Début fonction - Dashboard Qualité Étudiants');
+  log('[DEBUG chargerCoaches] Début fonction - Dashboard Qualité Étudiants');
 
   // Afficher le spinner et cacher le contenu
   const loadingSpinner = document.getElementById('coach-dashboard-loading');
@@ -6226,7 +6233,7 @@ async function chargerCoaches() {
       throw new Error(`Erreur HTTP coaches: ${coachesResponse.status}`);
     }
     const coachesData = await coachesResponse.json();
-    console.log('[DEBUG chargerCoaches] Coaches chargés:', coachesData.length);
+    log('[DEBUG chargerCoaches] Coaches chargés:', coachesData.length);
 
     // Charger les stats de chaque coach (agrégées de leurs entrepreneurs)
     let coachesWithStats = [];
@@ -6324,13 +6331,13 @@ async function chargerCoaches() {
           }
         }
       } catch (e) {
-        console.error(`[ERROR] Erreur chargement stats coach ${coach.username}:`, e);
+        error(`[ERROR] Erreur chargement stats coach ${coach.username}:`, e);
       }
     }
 
     // Afficher les coaches avec leurs stats d'équipe dans les cartes
     entrepreneursData = coachesWithStats;
-    console.log('[DEBUG chargerCoaches] Total coaches chargés:', coachesWithStats.length);
+    log('[DEBUG chargerCoaches] Total coaches chargés:', coachesWithStats.length);
 
     // Charger le total des paiements récoltés depuis l'API de facturation QE
     let totalPaiementsRecoltes = 0;
@@ -6351,7 +6358,7 @@ async function chargerCoaches() {
         }
       }
     } catch (e) {
-      console.error('[ERROR] Erreur chargement paiements récoltés:', e);
+      error('[ERROR] Erreur chargement paiements récoltés:', e);
     }
 
     // Calculer les moyennes
@@ -6373,7 +6380,7 @@ async function chargerCoaches() {
       paiements_recoltes: totalPaiementsRecoltes
     };
 
-    console.log('[DEBUG chargerCoaches] teamStats calculé:', teamStats);
+    log('[DEBUG chargerCoaches] teamStats calculé:', teamStats);
 
     // Appeler les fonctions d'affichage
     afficherStatsGlobales();
@@ -6391,7 +6398,7 @@ async function chargerCoaches() {
     }
 
   } catch (error) {
-    console.error('[ERROR] chargerCoaches:', error);
+    error('[ERROR] chargerCoaches:', error);
 
     // Cacher le spinner même en cas d'erreur
     if (loadingSpinner) loadingSpinner.style.display = 'none';
@@ -6404,7 +6411,7 @@ async function chargerCoaches() {
 
 // Charger les entrepreneurs du coach
 async function chargerEntrepreneurs(showSpinner = true) {
-  console.log('[DEBUG chargerEntrepreneurs] Début fonction, coachUsername:', coachUsername);
+  log('[DEBUG chargerEntrepreneurs] Début fonction, coachUsername:', coachUsername);
 
   // Afficher le spinner et cacher le contenu (seulement si showSpinner est true)
   const loadingSpinner = document.getElementById('coach-dashboard-loading');
@@ -6419,22 +6426,22 @@ async function chargerEntrepreneurs(showSpinner = true) {
 
   try {
     const url = `/api/coach/${coachUsername}/equipe/dashboard?period=all`;
-    console.log('[DEBUG chargerEntrepreneurs] Fetch URL:', url);
+    log('[DEBUG chargerEntrepreneurs] Fetch URL:', url);
 
     const response = await fetch(url);
-    console.log('[DEBUG chargerEntrepreneurs] Response status:', response.status, response.ok);
+    log('[DEBUG chargerEntrepreneurs] Response status:', response.status, response.ok);
 
     if (!response.ok) {
       throw new Error('Erreur lors du chargement');
     }
 
     const data = await response.json();
-    console.log('[DEBUG chargerEntrepreneurs] Data reçue:', data);
+    log('[DEBUG chargerEntrepreneurs] Data reçue:', data);
 
     entrepreneursData = data.entrepreneurs || [];
     teamStats = data.team_stats || {};
-    console.log('[DEBUG chargerEntrepreneurs] entrepreneursData:', entrepreneursData.length, 'items');
-    console.log('[DEBUG chargerEntrepreneurs] teamStats:', teamStats);
+    log('[DEBUG chargerEntrepreneurs] entrepreneursData:', entrepreneursData.length, 'items');
+    log('[DEBUG chargerEntrepreneurs] teamStats:', teamStats);
 
     // Charger le total des paiements récoltés depuis l'API de facturation QE
     try {
@@ -6463,19 +6470,19 @@ async function chargerEntrepreneurs(showSpinner = true) {
       }
 
       teamStats.paiements_recoltes = totalPaiementsRecoltes;
-      console.log('[DEBUG chargerEntrepreneurs] Total paiements récoltés:', totalPaiementsRecoltes);
+      log('[DEBUG chargerEntrepreneurs] Total paiements récoltés:', totalPaiementsRecoltes);
     } catch (error) {
-      console.error('[ERROR] Erreur calcul paiements récoltés:', error);
+      error('[ERROR] Erreur calcul paiements récoltés:', error);
       teamStats.paiements_recoltes = 0;
     }
 
-    console.log('[DEBUG chargerEntrepreneurs] Appel afficherStatsGlobales()');
+    log('[DEBUG chargerEntrepreneurs] Appel afficherStatsGlobales()');
     afficherStatsGlobales();
-    console.log('[DEBUG chargerEntrepreneurs] Appel afficherGraphiques()');
+    log('[DEBUG chargerEntrepreneurs] Appel afficherGraphiques()');
     afficherGraphiques();
-    console.log('[DEBUG chargerEntrepreneurs] Appel afficherEntrepreneurs()');
+    log('[DEBUG chargerEntrepreneurs] Appel afficherEntrepreneurs()');
     afficherEntrepreneurs();
-    console.log('[DEBUG chargerEntrepreneurs] Toutes les fonctions d\'affichage terminées');
+    log('[DEBUG chargerEntrepreneurs] Toutes les fonctions d\'affichage terminées');
 
     // Cacher le spinner et afficher le contenu avec transition (seulement si showSpinner était activé)
     if (showSpinner) {
@@ -6490,7 +6497,7 @@ async function chargerEntrepreneurs(showSpinner = true) {
     }
 
   } catch (error) {
-    console.error('[DEBUG chargerEntrepreneurs] ERREUR:', error);
+    error('[DEBUG chargerEntrepreneurs] ERREUR:', error);
 
     // Cacher le spinner même en cas d'erreur (seulement si showSpinner était activé)
     if (showSpinner) {
@@ -6515,13 +6522,13 @@ async function chargerEntrepreneurs(showSpinner = true) {
 
 // Afficher les stats globales
 function afficherStatsGlobales() {
-  console.log('[DEBUG afficherStatsGlobales] Début fonction');
+  log('[DEBUG afficherStatsGlobales] Début fonction');
   const grid = document.getElementById('statsGrid');
   const objectifContainer = document.getElementById('objectifProgressContainer');
-  console.log('[DEBUG afficherStatsGlobales] statsGrid element:', grid);
-  console.log('[DEBUG afficherStatsGlobales] objectifContainer element:', objectifContainer);
+  log('[DEBUG afficherStatsGlobales] statsGrid element:', grid);
+  log('[DEBUG afficherStatsGlobales] objectifContainer element:', objectifContainer);
   if (!grid || !objectifContainer) {
-    console.error('[DEBUG afficherStatsGlobales] statsGrid or objectifContainer NOT FOUND!');
+    error('[DEBUG afficherStatsGlobales] statsGrid or objectifContainer NOT FOUND!');
     return;
   }
 
@@ -6533,7 +6540,7 @@ function afficherStatsGlobales() {
   const montantProduit = teamStats.montant_produit || 0;
   const totalCA = teamStats.total_ca || 0;
   const objectif = teamStats.objectif_total || 0;
-  console.log('[DEBUG MON EQUIPE] teamStats.objectif_total:', teamStats.objectif_total, 'objectif:', objectif);
+  log('[DEBUG MON EQUIPE] teamStats.objectif_total:', teamStats.objectif_total, 'objectif:', objectif);
   const estimationMoyenne = teamStats.estimation_moyenne || 0;
   const heuresPAP = teamStats.heures_pap_semaine || 0;
   const caMoyen = teamStats.ca_moyen || 0;
@@ -6821,8 +6828,8 @@ function afficherStatsGlobales() {
 
   // Insérer le reste dans le grid
   grid.innerHTML = caCard + rightSection;
-  console.log('[DEBUG afficherStatsGlobales] HTML inséré dans objectifContainer et grid');
-  console.log('[DEBUG afficherStatsGlobales] Premier enfant de grid:', grid.firstElementChild);
+  log('[DEBUG afficherStatsGlobales] HTML inséré dans objectifContainer et grid');
+  log('[DEBUG afficherStatsGlobales] Premier enfant de grid:', grid.firstElementChild);
 
   // Animer les chiffres principaux
   setTimeout(() => {
@@ -6971,7 +6978,7 @@ async function initCoachScopeDropdownText() {
         }
       }
     } catch (err) {
-      console.error('Erreur chargement nom du coach:', err);
+      error('Erreur chargement nom du coach:', err);
       if (scopeBtnText) {
         scopeBtnText.innerHTML = '<i class="fas fa-user-friends mr-2"></i>Mon équipe';
       }
@@ -7172,7 +7179,7 @@ async function loadCoachScopeOptions() {
         optionsHTML += `<div style="border-top: 1px solid var(--border-dark); margin: 0.5rem 0;"></div>`;
       }
     } catch (error) {
-      console.error('Erreur chargement coaches:', error);
+      error('Erreur chargement coaches:', error);
     }
 
     // Ajouter "Tous les entrepreneurs" avec sous-options
@@ -7555,7 +7562,7 @@ function getCoachClassementCoachPeriodParam() {
 
 // Fonction principale pour charger et afficher le classement des coachs
 async function renderCoachClassementCoachCards() {
-  console.log(`🔍 Chargement du classement coach - Période: ${currentCoachClassementCoachPeriode}`);
+  log(`🔍 Chargement du classement coach - Période: ${currentCoachClassementCoachPeriode}`);
 
   try {
     // Récupérer tous les coachs
@@ -7564,7 +7571,7 @@ async function renderCoachClassementCoachCards() {
       throw new Error(`Erreur API: ${response.status}`);
     }
     const allCoachs = await response.json();
-    console.log(`📊 ${allCoachs.length} coachs trouvés`);
+    log(`📊 ${allCoachs.length} coachs trouvés`);
 
     // Pour chaque coach, calculer les données cumulées de leurs entrepreneurs
     const coachsWithStats = await Promise.all(allCoachs.map(async (coach) => {
@@ -7573,7 +7580,7 @@ async function renderCoachClassementCoachCards() {
         const periodParam = getCoachClassementCoachPeriodParam();
         const equipeResponse = await fetch(`/api/coach/${coach.username}/equipe/dashboard?${periodParam}`);
         if (!equipeResponse.ok) {
-          console.warn(`Erreur lors du chargement de l'équipe pour ${coach.username}`);
+          warn(`Erreur lors du chargement de l'équipe pour ${coach.username}`);
           return null;
         }
         const equipeData = await equipeResponse.json();
@@ -7649,7 +7656,7 @@ async function renderCoachClassementCoachCards() {
           heures_pap: totalPAP
         };
       } catch (error) {
-        console.error(`Erreur pour le coach ${coach.username}:`, error);
+        error(`Erreur pour le coach ${coach.username}:`, error);
         return null;
       }
     }));
@@ -7667,7 +7674,7 @@ async function renderCoachClassementCoachCards() {
     // Sauvegarder les données pour le tri
     coachClassementCoachData = sortedData;
 
-    console.log(`✅ ${sortedData.length} coachs avec stats calculées`);
+    log(`✅ ${sortedData.length} coachs avec stats calculées`);
 
     // Rendre les données
     await renderCoachClassementCoachData(sortedData);
@@ -7682,7 +7689,7 @@ async function renderCoachClassementCoachCards() {
     }
 
   } catch (error) {
-    console.error('❌ Erreur chargement classement coach:', error);
+    error('❌ Erreur chargement classement coach:', error);
     const coachTableBody = document.getElementById('coachClassementCoachTableBody');
     if (coachTableBody) {
       coachTableBody.innerHTML = `
@@ -7702,7 +7709,7 @@ async function renderCoachClassementCoachData(data) {
   const mobileCards = document.getElementById('coachClassementCoachMobileCards');
 
   if (!tbody || !mobileCards) {
-    console.error('Elements not found');
+    error('Elements not found');
     return;
   }
 
@@ -7725,7 +7732,7 @@ async function renderCoachClassementCoachData(data) {
         grade: 'Coach' // Grade par défaut pour les coachs
       };
     } catch (error) {
-      console.error(`[ERROR] Erreur chargement données pour ${coach.username}:`, error);
+      error(`[ERROR] Erreur chargement données pour ${coach.username}:`, error);
       return {
         username: coach.username,
         photoUrl: null,
@@ -8077,7 +8084,7 @@ function setupCoachClassementCoachPeriodeDropdown() {
 
 // Render ranking cards for coach dashboard - Use existing renderClassement function
 async function renderCoachClassementCards() {
-  console.log(`🔍 Chargement du classement - Scope: ${currentCoachScope}, Filter: ${currentCoachFilter}, Période: ${currentCoachPeriode}`);
+  log(`🔍 Chargement du classement - Scope: ${currentCoachScope}, Filter: ${currentCoachFilter}, Période: ${currentCoachPeriode}`);
 
   try {
     // Récupérer le username du coach depuis l'URL
@@ -8090,7 +8097,7 @@ async function renderCoachClassementCards() {
     if (currentCoachScope === 'equipe' && coachUsername) {
       // Charger seulement l'équipe du coach (seulement si coach username existe)
       const periodParam = getCoachPeriodParam();
-      console.log(`📅 [PERIODE] Chargement équipe avec paramètre: ${periodParam}`);
+      log(`📅 [PERIODE] Chargement équipe avec paramètre: ${periodParam}`);
       const response = await fetch(`/api/coach/${coachUsername}/equipe/dashboard?${periodParam}`);
       if (!response.ok) {
         throw new Error(`Erreur API: ${response.status}`);
@@ -8122,11 +8129,11 @@ async function renderCoachClassementCards() {
           heures_pap: e.metriques?.heures_pap_semaine || 0
         };
       });
-      console.log(`📊 ${allEntrepreneurs.length} entrepreneurs de l'équipe chargés`);
+      log(`📊 ${allEntrepreneurs.length} entrepreneurs de l'équipe chargés`);
     } else if (currentCoachScope === 'coach' && currentCoachFilter) {
       // Charger l'équipe d'un coach spécifique (pour direction)
       const periodParam = getCoachPeriodParam();
-      console.log(`📅 [PERIODE] Chargement équipe coach avec paramètre: ${periodParam}`);
+      log(`📅 [PERIODE] Chargement équipe coach avec paramètre: ${periodParam}`);
       const response = await fetch(`/api/coach/${currentCoachFilter}/equipe/dashboard?${periodParam}`);
       if (!response.ok) {
         throw new Error(`Erreur API: ${response.status}`);
@@ -8157,24 +8164,24 @@ async function renderCoachClassementCards() {
           heures_pap: e.metriques?.heures_pap_semaine || 0
         };
       });
-      console.log(`📊 ${allEntrepreneurs.length} entrepreneurs de l'équipe ${currentCoachFilter} chargés`);
+      log(`📊 ${allEntrepreneurs.length} entrepreneurs de l'équipe ${currentCoachFilter} chargés`);
     } else {
       // Charger TOUS les entrepreneurs
       const periodParam = getCoachPeriodParam();
-      console.log(`📅 [PERIODE] Chargement tous entrepreneurs avec paramètre: ${periodParam}`);
+      log(`📅 [PERIODE] Chargement tous entrepreneurs avec paramètre: ${periodParam}`);
       const response = await fetch(`/api/entrepreneurs?${periodParam}`);
       if (!response.ok) {
         throw new Error(`Erreur API: ${response.status}`);
       }
       allEntrepreneurs = await response.json();
-      console.log(`📊 ${allEntrepreneurs.length} entrepreneurs chargés`);
+      log(`📊 ${allEntrepreneurs.length} entrepreneurs chargés`);
 
       // Filtrer pour ne garder que ceux avec nom complet
       allEntrepreneurs = allEntrepreneurs.filter(e => e.username && e.username.includes(' '));
 
       // Si on a un filtre de grade, filtrer par grade depuis user_info.json
       if (currentCoachScope === 'grade' && currentCoachFilter) {
-        console.log(`🎯 Filtrage par grade: ${currentCoachFilter}`);
+        log(`🎯 Filtrage par grade: ${currentCoachFilter}`);
         const filteredByGrade = [];
 
         for (const entrepreneur of allEntrepreneurs) {
@@ -8189,12 +8196,12 @@ async function renderCoachClassementCards() {
               }
             }
           } catch (err) {
-            console.log(`Erreur grade pour ${entrepreneur.username}`);
+            log(`Erreur grade pour ${entrepreneur.username}`);
           }
         }
 
         allEntrepreneurs = filteredByGrade;
-        console.log(`📊 ${allEntrepreneurs.length} entrepreneurs avec grade "${currentCoachFilter}"`);
+        log(`📊 ${allEntrepreneurs.length} entrepreneurs avec grade "${currentCoachFilter}"`);
       }
     }
 
@@ -8208,7 +8215,7 @@ async function renderCoachClassementCards() {
     // Sauvegarder les données pour le tri
     coachClassementData = sortedData;
 
-    console.log(`✅ ${sortedData.length} entrepreneurs filtrés et triés`);
+    log(`✅ ${sortedData.length} entrepreneurs filtrés et triés`);
 
     // Rendre les données directement dans le tableau coach
     await renderCoachClassementData(sortedData);
@@ -8224,7 +8231,7 @@ async function renderCoachClassementCards() {
     }
 
   } catch (error) {
-    console.error('❌ Erreur chargement classement coach:', error);
+    error('❌ Erreur chargement classement coach:', error);
     const coachTableBody = document.getElementById('coachClassementTableBody');
     if (coachTableBody) {
       coachTableBody.innerHTML = `
@@ -8244,7 +8251,7 @@ async function renderCoachClassementData(data) {
   const mobileCards = document.getElementById('coachClassementMobileCards');
 
   if (!tbody || !mobileCards) {
-    console.error('Elements not found');
+    error('Elements not found');
     return;
   }
 
@@ -8271,7 +8278,7 @@ async function renderCoachClassementData(data) {
           grade = profile.category || 'Démarrage';
         }
       } catch (err) {
-        console.log(`Grade par défaut pour ${entrepreneur.username}`);
+        log(`Grade par défaut pour ${entrepreneur.username}`);
       }
 
       return {
@@ -8280,7 +8287,7 @@ async function renderCoachClassementData(data) {
         grade: grade
       };
     } catch (error) {
-      console.error(`[ERROR] Erreur chargement données pour ${entrepreneur.username}:`, error);
+      error(`[ERROR] Erreur chargement données pour ${entrepreneur.username}:`, error);
       return {
         username: entrepreneur.username,
         photoUrl: null,
@@ -8295,7 +8302,7 @@ async function renderCoachClassementData(data) {
   photosGrades.forEach(p => {
     photoMap[p.username] = p.photoUrl;
     gradeMap[p.username] = p.grade;
-    console.log(`📸 ${p.username}: photo=${p.photoUrl ? 'oui' : 'non'}, grade=${p.grade}`);
+    log(`📸 ${p.username}: photo=${p.photoUrl ? 'oui' : 'non'}, grade=${p.grade}`);
   });
 
   // Obtenir le username de l'utilisateur connecté
@@ -8385,7 +8392,7 @@ async function renderCoachClassementData(data) {
   }).join('');
 
   // Générer les cartes mobiles avec les mêmes données filtrées
-  console.log('[MOBILE] Génération des cartes mobiles pour', displayData.length, 'entrepreneurs');
+  log('[MOBILE] Génération des cartes mobiles pour', displayData.length, 'entrepreneurs');
   mobileCards.innerHTML = displayData.map((entrepreneur, displayIndex) => {
     // L'index réel dans le classement complet
     const index = data.findIndex(e => e.username === entrepreneur.username);
@@ -8713,7 +8720,7 @@ function afficherEntrepreneurs() {
       const saved = JSON.parse(savedConfig);
       cardConfig.stats = saved.stats || cardConfig.stats;
     } catch (e) {
-      console.error('Erreur chargement config:', e);
+      error('Erreur chargement config:', e);
     }
   }
 
@@ -8721,12 +8728,12 @@ function afficherEntrepreneurs() {
     const rank = index + 1;
 
     // Debug complet de l'entrepreneur
-    console.log(`[DEBUG ENTREPRENEUR ${index}] Username:`, entrepreneur.username);
-    console.log(`[DEBUG ENTREPRENEUR ${index}] Prenom:`, entrepreneur.prenom);
-    console.log(`[DEBUG ENTREPRENEUR ${index}] Nom:`, entrepreneur.nom);
-    console.log(`[DEBUG ENTREPRENEUR ${index}] Grade:`, entrepreneur.grade);
-    console.log(`[DEBUG ENTREPRENEUR ${index}] Photo:`, entrepreneur.photo);
-    console.log(`[DEBUG ENTREPRENEUR ${index}] Full object:`, entrepreneur);
+    log(`[DEBUG ENTREPRENEUR ${index}] Username:`, entrepreneur.username);
+    log(`[DEBUG ENTREPRENEUR ${index}] Prenom:`, entrepreneur.prenom);
+    log(`[DEBUG ENTREPRENEUR ${index}] Nom:`, entrepreneur.nom);
+    log(`[DEBUG ENTREPRENEUR ${index}] Grade:`, entrepreneur.grade);
+    log(`[DEBUG ENTREPRENEUR ${index}] Photo:`, entrepreneur.photo);
+    log(`[DEBUG ENTREPRENEUR ${index}] Full object:`, entrepreneur);
 
     const photoUrl = entrepreneur.photo || `/api/get-file/${entrepreneur.username}/profile_photo_${entrepreneur.username}.png`;
     const nomComplet = `${entrepreneur.prenom || ''} ${entrepreneur.nom || entrepreneur.username}`.trim();
@@ -8739,11 +8746,11 @@ function afficherEntrepreneurs() {
     const metriques = entrepreneur.metriques || {};
 
     // Debug logging pour voir les données reçues
-    console.log(`[DEBUG ${entrepreneur.username}] CA:`, ca);
-    console.log(`[DEBUG ${entrepreneur.username}] Soumissions:`, soumissions);
-    console.log(`[DEBUG ${entrepreneur.username}] Satisfaction:`, satisfaction);
-    console.log(`[DEBUG ${entrepreneur.username}] Employés:`, employes);
-    console.log(`[DEBUG ${entrepreneur.username}] Métriques:`, metriques);
+    log(`[DEBUG ${entrepreneur.username}] CA:`, ca);
+    log(`[DEBUG ${entrepreneur.username}] Soumissions:`, soumissions);
+    log(`[DEBUG ${entrepreneur.username}] Satisfaction:`, satisfaction);
+    log(`[DEBUG ${entrepreneur.username}] Employés:`, employes);
+    log(`[DEBUG ${entrepreneur.username}] Métriques:`, metriques);
 
     // Badge pour le top 3
     let rankBadge = '';
@@ -8992,7 +8999,7 @@ function getStatData(statId, ca, soumissions, metriques, satisfaction, employes)
 }
 
 function voirDashboard(usernameParam) {
-  console.log('Redirection vers dashboard pour:', usernameParam);
+  log('Redirection vers dashboard pour:', usernameParam);
 
   // Stocker le username de l'entrepreneur à visualiser
   sessionStorage.setItem('viewEntrepreneurUsername', usernameParam);
@@ -9092,7 +9099,7 @@ function loadSavedConfig() {
       const config = JSON.parse(saved);
       activeStatsConfig = config.stats || [...defaultActiveStats];
     } catch (e) {
-      console.error('Erreur chargement config:', e);
+      error('Erreur chargement config:', e);
     }
   }
 }

@@ -27,10 +27,10 @@
       /* DISABLED - Service Worker
       navigator.serviceWorker.register('/sw.js')
         .then((registration) => {
-          console.log('SW registered: ', registration);
+          log('SW registered: ', registration);
         })
         .catch((registrationError) => {
-          console.log('SW registration failed: ', registrationError);
+          log('SW registration failed: ', registrationError);
         });
       */
     });
@@ -825,6 +825,13 @@
 
   <!-- Variables globales définies dans common.js -->
   <script>
+    // ⚡ DÉSACTIVATION DES LOGS - Performance optimization
+    window.log = window.log || (() => {});
+    window.warn = window.warn || (() => {});
+    window.error = window.error || (() => {});
+    window.info = window.info || (() => {});
+    window.debug = window.debug || (() => {});
+
     // Ces variables sont maintenant gérées par common.js
     // username, userRole, canEditParameters sont disponibles globalement
     
@@ -840,11 +847,11 @@
 
     // FONCTIONS CALENDRIER GLOBALES - DÉFINIES TÔT
     window.toggleCalendar = function(inputId) {
-      console.log('🗓️ toggleCalendar appelé avec:', inputId);
+      log('🗓️ toggleCalendar appelé avec:', inputId);
       const calendar = document.getElementById(`calendar-${inputId}`);
       
       if (!calendar) {
-        console.error('[ERROR] Calendrier non trouvé:', `calendar-${inputId}`);
+        error('[ERROR] Calendrier non trouvé:', `calendar-${inputId}`);
         return;
       }
       
@@ -864,10 +871,10 @@
         setTimeout(() => {
           if (window.renderCalendar) window.renderCalendar(inputId);
         }, 50);
-        console.log('[OK] Calendrier ouvert');
+        log('[OK] Calendrier ouvert');
       } else {
         calendar.classList.add('hidden');
-        console.log('🚪 Calendrier fermé');
+        log('🚪 Calendrier fermé');
       }
     };
 
@@ -3378,7 +3385,7 @@
     // Fonction pour activer le menu basé sur la page actuelle
     function activateCurrentPageMenu() {
       const currentPath = window.location.pathname;
-      console.log('🌐 Page actuelle détectée:', currentPath);
+      log('🌐 Page actuelle détectée:', currentPath);
       
       const allMenuLinks = document.querySelectorAll('#sidebar a');
       allMenuLinks.forEach(link => {
@@ -3408,15 +3415,15 @@
       
       if (targetPath) {
         targetLink = document.querySelector(`#sidebar a[data-path="${targetPath}"]`);
-        console.log('[TARGET] Page détectée - activation du menu pour:', targetPath);
+        log('[TARGET] Page détectée - activation du menu pour:', targetPath);
       }
       
       if (targetLink) {
         targetLink.classList.add('menu-active');
         targetLink.setAttribute('data-menu-state', 'active');
-        console.log('[OK] Menu activé pour:', targetLink.textContent.trim());
+        log('[OK] Menu activé pour:', targetLink.textContent.trim());
       } else {
-        console.log('[WARN] Aucun menu trouvé pour la page:', currentPath);
+        log('[WARN] Aucun menu trouvé pour la page:', currentPath);
       }
     }
 
@@ -3457,7 +3464,7 @@
       const options = menu.querySelectorAll('.dropdown-secondary-option');
 
       if (!dropdown || !menu || !selectedSpan || !hiddenInput) {
-        console.error('Éléments dropdown Genre introuvables');
+        error('Éléments dropdown Genre introuvables');
         return;
       }
 
@@ -3509,7 +3516,7 @@
       const options = menu.querySelectorAll('.dropdown-secondary-option');
 
       if (!dropdown || !menu || !selectedSpan || !hiddenInput) {
-        console.error('Éléments dropdown Genre Modifier introuvables');
+        error('Éléments dropdown Genre Modifier introuvables');
         return;
       }
 
@@ -3592,7 +3599,7 @@
       const calendar = document.getElementById('calendar-modifierDatePremiere');
 
       if (!input || !calendar) {
-        console.error('Éléments calendrier Modifier introuvables');
+        error('Éléments calendrier Modifier introuvables');
         return;
       }
 
@@ -3719,7 +3726,7 @@
       // Ouvrir le modal d'activation avec formulaire complet
       const modal = document.getElementById('modalActivation');
       if (!modal) {
-        console.error('Modal modalActivation non trouvé');
+        error('Modal modalActivation non trouvé');
         return;
       }
       modal.style.display = 'flex';
@@ -3734,20 +3741,20 @@
         preRemplirActivation(employeId);
 
         // Initialiser le calendrier personnalisé pour datePremiere (une seule fois)
-        console.log('Initialisation du calendrier datePremiere');
+        log('Initialisation du calendrier datePremiere');
         const inputElement = document.getElementById('datePremiere');
         const calendarElement = document.getElementById('calendar-datePremiere');
-        console.log('Input trouvé:', inputElement);
-        console.log('Calendar element trouvé:', calendarElement);
+        log('Input trouvé:', inputElement);
+        log('Calendar element trouvé:', calendarElement);
 
         if (inputElement && calendarElement && !calendarElement.dataset.initialized) {
           new CustomCalendar('datePremiere', 'calendar-datePremiere');
           calendarElement.dataset.initialized = 'true';
-          console.log('Calendrier initialisé');
+          log('Calendrier initialisé');
         } else if (calendarElement && calendarElement.dataset.initialized) {
-          console.log('Calendrier déjà initialisé');
+          log('Calendrier déjà initialisé');
         } else {
-          console.error('Éléments manquants pour le calendrier');
+          error('Éléments manquants pour le calendrier');
         }
 
         // Initialiser le dropdown Genre
@@ -4117,24 +4124,24 @@
     async function preRemplirActivation(employeId) {
       try {
         const username = window.selectedEntrepreneur || window.username || 'user';
-        console.log('[preRemplirActivation] Chargement pour employeId:', employeId, 'username:', username);
+        log('[preRemplirActivation] Chargement pour employeId:', employeId, 'username:', username);
         const response = await fetch(`/api/employes/${username}/nouveaux`);
         const data = await response.json();
-        console.log('[preRemplirActivation] Données reçues:', data);
+        log('[preRemplirActivation] Données reçues:', data);
 
         // L'API peut retourner soit un tableau soit un objet avec une propriété
         const employes = Array.isArray(data) ? data : (data.nouveaux || data.employes || []);
         const employe = employes.find(e => e.id === employeId);
-        console.log('[preRemplirActivation] Employé trouvé:', employe);
+        log('[preRemplirActivation] Employé trouvé:', employe);
         if (employe) {
-          console.log('[preRemplirActivation] Données employé pour activation:', employe);
+          log('[preRemplirActivation] Données employé pour activation:', employe);
 
           // Champs de base
           document.getElementById('nomComplet').value = employe.nom || '';
           document.getElementById('telephone').value = employe.telephone || '';
           document.getElementById('courriel').value = employe.courriel || '';
           document.getElementById('posteService').value = employe.posteService || employe.poste || '';
-          console.log('[preRemplirActivation] Champs de base remplis');
+          log('[preRemplirActivation] Champs de base remplis');
 
           // Champs supplémentaires (préremplir si existants - pour les refus/réessayer)
           if (employe.nas) document.getElementById('nas').value = employe.nas;
@@ -4152,7 +4159,7 @@
             if (dateNaissanceInput) dateNaissanceInput.value = employe.dateNaissance;
           }
 
-          console.log('Genre:', employe.genre, 'Poste:', employe.poste);
+          log('Genre:', employe.genre, 'Poste:', employe.poste);
 
           // Gérer le genre avec le nouveau dropdown-secondary
           setTimeout(() => {
@@ -4279,7 +4286,7 @@
           }, 200);
         }
       } catch (error) {
-        console.error('Erreur lors du pré-remplissage:', error);
+        error('Erreur lors du pré-remplissage:', error);
       }
     }
     
@@ -4329,7 +4336,7 @@
             activerEmployeAPI();
           } else {
             // Message plus discret pour les erreurs de validation
-            console.log('Veuillez remplir tous les champs obligatoires.');
+            log('Veuillez remplir tous les champs obligatoires.');
           }
         });
       }
@@ -4368,7 +4375,7 @@
           // Envoyer les données au serveur
           ajouterNouvelEmployeAPI();
         } else {
-          console.log('Veuillez remplir tous les champs obligatoires.');
+          log('Veuillez remplir tous les champs obligatoires.');
         }
       });
 
@@ -4476,7 +4483,7 @@
               statut: 'en_attente_modification' // Statut spécial pour validation par coach/direction
             };
 
-            console.log('Données préparées pour l\'API (en attente de modification):', employeModifie);
+            log('Données préparées pour l\'API (en attente de modification):', employeModifie);
 
             // Appeler l'API pour sauvegarder les modifications avec statut en attente
             const modal = document.getElementById('modalModifierEmploye');
@@ -4488,7 +4495,7 @@
               fermerModalModifier();
               chargerEmployes(); // Recharger la liste pour montrer le spinner
             } catch (error) {
-              console.error('Erreur lors de l\'envoi des modifications:', error);
+              error('Erreur lors de l\'envoi des modifications:', error);
               showNotification('Erreur lors de l\'envoi des modifications', 'error');
             }
           } else {
@@ -4638,8 +4645,8 @@
         
         const employe = data.employes.find(e => e.id === employeId);
         if (employe) {
-          console.log('Données employé pour modification:', employe);
-          console.log('Propriétés genre disponibles:', {
+          log('Données employé pour modification:', employe);
+          log('Propriétés genre disponibles:', {
             genre: employe.genre,
             sexe: employe.sexe,
             gender: employe.gender
@@ -4664,7 +4671,7 @@
             const element = document.getElementById(field.id);
             if (element && field.value) {
               element.value = field.value;
-              console.log(`Rempli ${field.id}: ${field.value}`);
+              log(`Rempli ${field.id}: ${field.value}`);
             }
           });
 
@@ -4704,15 +4711,15 @@
               genreValue = genreValue.toLowerCase();
             }
             
-            console.log('Genre trouvé dans les données:', genreValue, 'Données complètes:', employe);
+            log('Genre trouvé dans les données:', genreValue, 'Données complètes:', employe);
             
             if (genreSelect && genreValue) {
               // D'abord, sélectionner l'option dans le select natif
               genreSelect.value = genreValue;
-              console.log('Genre sélectionné dans le select natif:', genreValue);
+              log('Genre sélectionné dans le select natif:', genreValue);
               
               // Chercher le wrapper custom select créé par initCustomSelects
-              console.log('Recherche du wrapper pour genreSelect:', genreSelect);
+              log('Recherche du wrapper pour genreSelect:', genreSelect);
               
               // Chercher dans plusieurs endroits possibles
               const customSelectWrapper = genreSelect.closest('.custom-select') || 
@@ -4720,7 +4727,7 @@
                                          genreSelect.parentElement.querySelector('.custom-select') ||
                                          document.querySelector('#modifierGenre').parentElement.querySelector('.custom-select');
               
-              console.log('Wrapper trouvé:', customSelectWrapper);
+              log('Wrapper trouvé:', customSelectWrapper);
               
               if (customSelectWrapper) {
                 // Chercher le bouton et le texte sélectionné avec plus de flexibilité
@@ -4733,42 +4740,42 @@
                                    customButton?.querySelector('span') ||
                                    customButton;
                 
-                console.log('Éléments trouvés:', { customButton, selectedText });
+                log('Éléments trouvés:', { customButton, selectedText });
                 
                 if (selectedText && selectedText.textContent !== undefined) {
                   // Convertir la valeur normalisée en format d'affichage
                   const displayValue = genreValue.charAt(0).toUpperCase() + genreValue.slice(1);
                   selectedText.textContent = displayValue;
-                  console.log('Custom select mis à jour avec:', displayValue);
+                  log('Custom select mis à jour avec:', displayValue);
                 } else {
-                  console.log('Texte sélectionné non manipulable, tentative d\'événement change');
+                  log('Texte sélectionné non manipulable, tentative d\'événement change');
                   const event = new Event('change', { bubbles: true });
                   genreSelect.dispatchEvent(event);
                 }
                 
                 // Marquer l'option comme sélectionnée dans les options custom
                 const options = customSelectWrapper.querySelectorAll('.custom-select-option');
-                console.log('Options custom trouvées:', options.length);
+                log('Options custom trouvées:', options.length);
                 options.forEach(option => {
                   option.classList.remove('selected');
                   const optionValue = option.textContent.trim().toLowerCase();
                   if (optionValue === genreValue) {
                     option.classList.add('selected');
-                    console.log('Option marquée comme sélectionnée:', option.textContent.trim());
+                    log('Option marquée comme sélectionnée:', option.textContent.trim());
                   }
                 });
               } else {
-                console.log('[ERROR] Wrapper custom select non trouvé - initCustomSelects() peut ne pas avoir été appelé ou pas fonctionner');
-                console.log('Parent du select:', genreSelect.parentElement);
-                console.log('Classes du parent:', genreSelect.parentElement.className);
+                log('[ERROR] Wrapper custom select non trouvé - initCustomSelects() peut ne pas avoir été appelé ou pas fonctionner');
+                log('Parent du select:', genreSelect.parentElement);
+                log('Classes du parent:', genreSelect.parentElement.className);
               }
             } else {
-              console.log('Genre vide ou select non trouvé:', { genreSelect, genreValue });
+              log('Genre vide ou select non trouvé:', { genreSelect, genreValue });
             }
           }, 400);
         }
       } catch (error) {
-        console.error('Erreur lors du pré-remplissage de modification:', error);
+        error('Erreur lors du pré-remplissage de modification:', error);
       }
     }
     
@@ -4815,7 +4822,7 @@
           showNotification('Employé non trouvé', 'error');
         }
       } catch (error) {
-        console.error('Erreur lors du chargement de l\'employé:', error);
+        error('Erreur lors du chargement de l\'employé:', error);
         showNotification('Erreur de connexion', 'error');
       }
     }
@@ -4872,7 +4879,7 @@
           showNotification(error.detail || 'Erreur lors de la demande', 'error');
         }
       } catch (error) {
-        console.error('Erreur lors de la demande de fin d\'emploi:', error);
+        error('Erreur lors de la demande de fin d\'emploi:', error);
         showNotification('Erreur de connexion', 'error');
       }
     }
@@ -4970,7 +4977,7 @@
 
         const employe = data.employes.find(e => e.id === employeId);
         if (employe) {
-          console.log('Données employé terminé pour détails:', employe);
+          log('Données employé terminé pour détails:', employe);
 
           // Afficher le modal
           const modal = document.getElementById('modalDetailsEmployeTermine');
@@ -5042,11 +5049,11 @@
             document.getElementById('termine-carte-none').style.display = 'inline';
           }
         } else {
-          console.error('Employé terminé non trouvé avec ID:', employeId);
+          error('Employé terminé non trouvé avec ID:', employeId);
           showNotification('Employé non trouvé', 'error');
         }
       } catch (error) {
-        console.error('Erreur lors du chargement des détails employé terminé:', error);
+        error('Erreur lors du chargement des détails employé terminé:', error);
         showNotification('Erreur lors du chargement des détails', 'error');
       }
     }
@@ -5077,18 +5084,18 @@
         
         if (response.ok) {
           const result = await response.json();
-          console.log('Modification sauvegardée:', result.message);
+          log('Modification sauvegardée:', result.message);
           // Recharger les données pour s'assurer que tout est synchronisé
           chargerEmployes();
         } else {
           const error = await response.json();
-          console.error('Erreur lors de la sauvegarde:', error);
-          console.error('Status:', response.status);
-          console.error('Response complète:', error);
+          error('Erreur lors de la sauvegarde:', error);
+          error('Status:', response.status);
+          error('Response complète:', error);
           showNotification(`Erreur lors de la sauvegarde: ${error.detail || JSON.stringify(error)}`, 'error');
         }
       } catch (error) {
-        console.error('Erreur réseau lors de la sauvegarde:', error);
+        error('Erreur réseau lors de la sauvegarde:', error);
         showNotification('Erreur de connexion lors de la sauvegarde', 'error');
       }
     }
@@ -5280,7 +5287,7 @@
           showNotification(error.detail || 'Erreur lors de la validation', 'error');
         }
       } catch (error) {
-        console.error('Erreur lors de la validation:', error);
+        error('Erreur lors de la validation:', error);
         showNotification('Erreur de connexion', 'error');
       }
     }
@@ -5315,7 +5322,7 @@
           showNotification(error.detail || 'Erreur lors du refus', 'error');
         }
       } catch (error) {
-        console.error('Erreur lors du refus:', error);
+        error('Erreur lors du refus:', error);
         showNotification('Erreur de connexion', 'error');
       }
     }
@@ -5328,7 +5335,7 @@
 
         const employe = data.employes.find(e => e.id === employeId);
         if (employe) {
-          console.log('Données employé actif pour info:', employe);
+          log('Données employé actif pour info:', employe);
           // Afficher les détails dans le modal
           const modal = document.getElementById('modalDetailsEmploye');
           modal.style.display = 'flex';
@@ -5401,10 +5408,10 @@
             document.getElementById('details-carte-none').style.display = 'inline';
           }
         } else {
-          console.error('Employé actif non trouvé avec ID:', employeId);
+          error('Employé actif non trouvé avec ID:', employeId);
         }
       } catch (error) {
-        console.error('Erreur lors du chargement des détails employé actif:', error);
+        error('Erreur lors du chargement des détails employé actif:', error);
       }
     }
     
@@ -5506,7 +5513,7 @@
           showNotification('Employé non trouvé', 'error');
         }
       } catch (error) {
-        console.error('Erreur lors du chargement de l\'employé à réactiver:', error);
+        error('Erreur lors du chargement de l\'employé à réactiver:', error);
         showNotification('Erreur de connexion', 'error');
       }
     }
@@ -5544,7 +5551,7 @@
       const calendar = document.getElementById('calendar-reactiverDatePremiere');
 
       if (!input || !calendar) {
-        console.error('Éléments calendrier Réactiver introuvables');
+        error('Éléments calendrier Réactiver introuvables');
         return;
       }
 
@@ -5716,17 +5723,17 @@
 
         if (response.ok) {
           const result = await response.json();
-          console.log('Succès:', result.message);
+          log('Succès:', result.message);
           showNotification('Demande de réactivation envoyée avec succès', 'success');
           fermerModalReactiver();
           chargerEmployes(); // Recharger toutes les données
         } else {
           const error = await response.json();
-          console.error('Erreur:', error.detail);
+          error('Erreur:', error.detail);
           showNotification(error.detail || 'Erreur lors de l\'envoi de la demande', 'error');
         }
       } catch (error) {
-        console.error('Erreur lors de la demande de réactivation:', error);
+        error('Erreur lors de la demande de réactivation:', error);
         showNotification('Erreur de connexion', 'error');
       }
     }
@@ -5758,7 +5765,7 @@
     
     // Fonction pour créer des menus déroulants personnalisés
     function createCustomSelect(selectElement) {
-      console.log('🏗️ createCustomSelect() pour:', selectElement.id, selectElement);
+      log('🏗️ createCustomSelect() pour:', selectElement.id, selectElement);
       
       // Créer le conteneur personnalisé
       const customSelect = document.createElement('div');
@@ -5811,22 +5818,22 @@
       selectElement.parentNode.insertBefore(customSelect, selectElement.nextSibling);
       selectElement.style.display = 'none';
       
-      console.log('[OK] Custom select créé pour:', selectElement.id, customSelect);
+      log('[OK] Custom select créé pour:', selectElement.id, customSelect);
       
       return customSelect;
     }
     
     function initCustomSelects() {
-      console.log('🔄 initCustomSelects() appelé');
+      log('🔄 initCustomSelects() appelé');
       
       // Nettoyer les anciens événements et créer de nouveaux selects
       document.querySelectorAll('.custom-select').forEach(el => el.remove());
       
       const modalSelects = document.querySelectorAll('.modal-select');
-      console.log('[DEBUG] Selects .modal-select trouvés:', modalSelects.length);
+      log('[DEBUG] Selects .modal-select trouvés:', modalSelects.length);
       
       modalSelects.forEach((selectElement, index) => {
-        console.log(`[TARGET] Création custom select ${index + 1}:`, selectElement.id, selectElement);
+        log(`[TARGET] Création custom select ${index + 1}:`, selectElement.id, selectElement);
         createCustomSelect(selectElement);
       });
       
@@ -6137,7 +6144,7 @@
     function logout() {
       fetch('/logout', { method: 'POST' })
         .then(() => window.location.href = '/login')
-        .catch(err => console.error('Erreur logout:', err));
+        .catch(err => error('Erreur logout:', err));
     }
 
     // Fonction pour gérer l'état du bouton "Ajouter un employé" pour les coaches
@@ -6183,7 +6190,7 @@
       if (userRole !== 'coach') {
         // Pour les entrepreneurs, utiliser le username depuis localStorage
         window.username = localStorage.getItem('username') || 'user';
-        console.log('Entrepreneur username initialisé:', window.username);
+        log('Entrepreneur username initialisé:', window.username);
       }
 
       // Mettre à jour immédiatement l'état du bouton (il sera grisé par défaut pour les coaches)
@@ -6272,7 +6279,7 @@
         await loadRefusUnreadCounts();
 
       } catch (error) {
-        console.error('Erreur lors du chargement des employés:', error);
+        error('Erreur lors du chargement des employés:', error);
       }
     }
     
@@ -6340,7 +6347,7 @@
         const estCoachAvecInactivationComptable = (userRole === 'coach' && employe.statut === 'Inactivation en attente comptable');
         const estEntrepreneurAvecInactivation = (userRole === 'entrepreneur' && (employe.statut === 'Inactivation en attente de validation' || employe.statut === 'Inactivation en attente comptable'));
 
-        console.log('Employé:', nomComplet, 'Statut:', employe.statut, 'Role:', userRole, 'localStorage:', localStorage.getItem('userRole'), 'window:', window.userRole);
+        log('Employé:', nomComplet, 'Statut:', employe.statut, 'Role:', userRole, 'localStorage:', localStorage.getItem('userRole'), 'window:', window.userRole);
 
         // Vue Desktop: Table row
         const row = document.createElement('tr');
@@ -7004,16 +7011,16 @@
         
         if (response.ok) {
           const result = await response.json();
-          console.log(result.message);
+          log(result.message);
           fermerModalAjouter();
           chargerEmployes();
         } else {
           const error = await response.json();
-          console.error('Erreur: ' + error.detail);
+          error('Erreur: ' + error.detail);
         }
       } catch (error) {
-        console.error('Erreur:', error);
-        console.error('Erreur lors de l\'ajout de l\'employé');
+        error('Erreur:', error);
+        error('Erreur lors de l\'ajout de l\'employé');
       }
     }
     
@@ -7037,7 +7044,7 @@
         }
 
         if (!employe) {
-          console.error('Employé non trouvé dans nouveaux ni actifs');
+          error('Employé non trouvé dans nouveaux ni actifs');
           showNotification('Employé non trouvé', 'error');
           return;
         }
@@ -7045,7 +7052,7 @@
         // Ouvrir le nouveau modal simple
         ouvrirModalRefuserEmploye(employeId, employe.nom || employe.prenom, employe.poste || employe.posteService);
       } catch (error) {
-        console.error('Erreur:', error);
+        error('Erreur:', error);
       }
     }
     
@@ -7061,15 +7068,15 @@
         
         if (response.ok) {
           const result = await response.json();
-          console.log(result.message);
+          log(result.message);
           fermerModalRefus();
           chargerEmployes();
         } else {
           const error = await response.json();
-          console.error('Erreur: ' + error.detail);
+          error('Erreur: ' + error.detail);
         }
       } catch (error) {
-        console.error('Erreur:', error);
+        error('Erreur:', error);
       }
     }
     
@@ -7101,22 +7108,22 @@
         const specimenInput = document.getElementById('specimenCheque');
         if (specimenInput && specimenInput.files && specimenInput.files[0]) {
           formData.append('specimen', specimenInput.files[0]);
-          console.log('Fichier spécimen ajouté:', specimenInput.files[0].name);
+          log('Fichier spécimen ajouté:', specimenInput.files[0].name);
         }
 
         const certificatInput = document.getElementById('certificatSecurite');
         if (certificatInput && certificatInput.files && certificatInput.files[0]) {
           formData.append('certificat', certificatInput.files[0]);
-          console.log('Fichier certificat ajouté:', certificatInput.files[0].name);
+          log('Fichier certificat ajouté:', certificatInput.files[0].name);
         }
 
         const carteInput = document.getElementById('carteAssuranceMaladie');
         if (carteInput && carteInput.files && carteInput.files[0]) {
           formData.append('carte', carteInput.files[0]);
-          console.log('Fichier carte ajouté:', carteInput.files[0].name);
+          log('Fichier carte ajouté:', carteInput.files[0].name);
         }
 
-        console.log('Envoi des données avec fichiers...');
+        log('Envoi des données avec fichiers...');
 
         const response = await fetch(`/api/employes/${username}/activer/${employeId}`, {
           method: 'POST',
@@ -7124,20 +7131,20 @@
           // Ne PAS mettre Content-Type, le navigateur le fait automatiquement avec multipart/form-data
         });
 
-        console.log('Réponse reçue:', response.status);
+        log('Réponse reçue:', response.status);
 
         if (response.ok) {
           const result = await response.json();
-          console.log('Succès:', result.message);
+          log('Succès:', result.message);
           fermerModal();
           chargerEmployes(); // Recharger toutes les données
         } else {
           const error = await response.json();
-          console.error('Erreur:', error.detail);
+          error('Erreur:', error.detail);
           showNotification('Erreur: ' + error.detail, 'error');
         }
       } catch (error) {
-        console.error('Erreur:', error);
+        error('Erreur:', error);
         showNotification('Erreur de connexion: ' + error.message, 'error');
       }
     }
@@ -7205,16 +7212,16 @@
           btnElement.classList.remove('copied');
         }, 1500);
       }).catch(err => {
-        console.error('Erreur lors de la copie:', err);
+        error('Erreur lors de la copie:', err);
       });
     }
 
     // Fonction pour ouvrir le popup de validation
     function ouvrirPopupValidation(employeId, employeDataString) {
       try {
-        console.log('=== OUVERTURE POPUP VALIDATION ===');
-        console.log('employeId:', employeId);
-        console.log('employeDataString:', employeDataString);
+        log('=== OUVERTURE POPUP VALIDATION ===');
+        log('employeId:', employeId);
+        log('employeDataString:', employeDataString);
 
         // Parser les données de l'employé
         let employe;
@@ -7224,7 +7231,7 @@
           employe = employeDataString;
         }
 
-        console.log('Données employé parsées:', employe);
+        log('Données employé parsées:', employe);
 
         // Stocker les données pour les utiliser dans valider/refuser
         currentEmployeValidation = {
@@ -7312,9 +7319,9 @@
           document.body.style.overflow = 'hidden';
         }
 
-        console.log('Popup de validation ouvert avec succès');
+        log('Popup de validation ouvert avec succès');
       } catch (error) {
-        console.error('Erreur lors de l\'ouverture du popup de validation:', error);
+        error('Erreur lors de l\'ouverture du popup de validation:', error);
         showNotification('Erreur lors de l\'ouverture du popup de validation', 'error');
       }
     }
@@ -7374,18 +7381,18 @@
     async function validerEmployeCoach() {
       try {
         if (!currentEmployeValidation) {
-          console.error('Aucun employé en cours de validation');
+          error('Aucun employé en cours de validation');
           return;
         }
 
-        console.log('=== VALIDATION EMPLOYÉ PAR LE COACH ===');
-        console.log('Employé à valider:', currentEmployeValidation);
+        log('=== VALIDATION EMPLOYÉ PAR LE COACH ===');
+        log('Employé à valider:', currentEmployeValidation);
 
         const employeId = currentEmployeValidation.id;
         const entrepreneurUsername = window.selectedEntrepreneur || window.username;
 
-        console.log('ID employé:', employeId);
-        console.log('Username entrepreneur:', entrepreneurUsername);
+        log('ID employé:', employeId);
+        log('Username entrepreneur:', entrepreneurUsername);
 
         // Appeler l'API pour valider l'employé
         const response = await fetch(`/api/employes/${entrepreneurUsername}/valider/${employeId}`, {
@@ -7395,11 +7402,11 @@
           }
         });
 
-        console.log('Réponse API validation:', response.status);
+        log('Réponse API validation:', response.status);
 
         if (response.ok) {
           const result = await response.json();
-          console.log('Succès validation:', result.message);
+          log('Succès validation:', result.message);
 
           // Fermer le popup
           fermerPopupValidation();
@@ -7422,11 +7429,11 @@
           }, 1500);
         } else {
           const error = await response.json();
-          console.error('Erreur validation:', error.detail);
+          error('Erreur validation:', error.detail);
           showNotification('Erreur: ' + error.detail, 'error');
         }
       } catch (error) {
-        console.error('Erreur lors de la validation:', error);
+        error('Erreur lors de la validation:', error);
         showNotification('Erreur de connexion: ' + error.message, 'error');
       }
     }
@@ -7434,7 +7441,7 @@
     // Ouvrir le modal de refus coach
     function ouvrirModalRefusCoach() {
       if (!currentEmployeValidation) {
-        console.error('Aucun employé en cours de validation');
+        error('Aucun employé en cours de validation');
         return;
       }
       document.getElementById('motifRefusCoach').value = '';
@@ -7450,7 +7457,7 @@
     // Confirmer le refus avec la raison
     async function confirmerRefusCoach() {
       if (!currentEmployeValidation) {
-        console.error('Aucun employé en cours de validation');
+        error('Aucun employé en cours de validation');
         return;
       }
 
@@ -7465,11 +7472,11 @@
       const entrepreneurUsername = window.selectedEntrepreneur || window.username;
 
       try {
-        console.log('=== REFUS EMPLOYÉ PAR LE COACH ===');
-        console.log('Employé à refuser:', currentEmployeValidation);
-        console.log('ID employé:', employeId);
-        console.log('Username entrepreneur:', entrepreneurUsername);
-        console.log('Motif du refus:', motifRefus);
+        log('=== REFUS EMPLOYÉ PAR LE COACH ===');
+        log('Employé à refuser:', currentEmployeValidation);
+        log('ID employé:', employeId);
+        log('Username entrepreneur:', entrepreneurUsername);
+        log('Motif du refus:', motifRefus);
 
         // Appeler l'API pour refuser l'employé avec la raison
         const response = await fetch(`/api/employes/${entrepreneurUsername}/refuser/${employeId}`, {
@@ -7480,11 +7487,11 @@
           body: JSON.stringify({ motif_refus: motifRefus })
         });
 
-        console.log('Réponse API refus:', response.status);
+        log('Réponse API refus:', response.status);
 
         if (response.ok) {
           const result = await response.json();
-          console.log('Succès refus:', result.message);
+          log('Succès refus:', result.message);
 
           // Fermer les popups
           fermerModalRefusCoach();
@@ -7504,11 +7511,11 @@
           showNotification('Candidature refusée', 'success');
         } else {
           const error = await response.json();
-          console.error('Erreur refus:', error.detail);
+          error('Erreur refus:', error.detail);
           showNotification('Erreur: ' + error.detail, 'error');
         }
       } catch (error) {
-        console.error('Erreur lors du refus:', error);
+        error('Erreur lors du refus:', error);
         showNotification('Erreur de connexion: ' + error.message, 'error');
       }
     }
@@ -7590,7 +7597,7 @@
             }];
           }
         } catch (error) {
-          console.error('Erreur chargement conversation:', error);
+          error('Erreur chargement conversation:', error);
           currentRefusContext.conversation = [{
             de: 'comptable',
             message: motif || 'Aucune raison spécifiée',
@@ -7618,7 +7625,7 @@
           // Retirer le badge de l'employé
           delete refusUnreadCounts[employeId];
           updateRefusBadges();
-        }).catch(err => console.error('Erreur marquage messages lus:', err));
+        }).catch(err => error('Erreur marquage messages lus:', err));
       }
 
       document.getElementById('modalVoirRefus').style.display = 'flex';
@@ -7714,7 +7721,7 @@
         afficherConversationRefus();
 
       } catch (error) {
-        console.error('Erreur envoi message:', error);
+        error('Erreur envoi message:', error);
         showNotification('Erreur lors de l\'envoi du message', 'error');
       }
     }
@@ -7816,7 +7823,7 @@
           showNotification('Erreur: ' + (error.detail || 'Erreur lors de la suppression'), 'error');
         }
       } catch (error) {
-        console.error('Erreur lors de la suppression:', error);
+        error('Erreur lors de la suppression:', error);
         showNotification('Erreur de connexion', 'error');
       }
     }
@@ -7832,8 +7839,8 @@
     // Ouvrir le popup de validation d'inactivation (nouveau popup dédié)
     function ouvrirPopupValidationInactivation(employeId, employeDataString) {
       try {
-        console.log('=== OUVERTURE POPUP VALIDATION INACTIVATION ===');
-        console.log('employeId:', employeId);
+        log('=== OUVERTURE POPUP VALIDATION INACTIVATION ===');
+        log('employeId:', employeId);
 
         // Parser les données de l'employé
         let employe;
@@ -7843,7 +7850,7 @@
           employe = employeDataString;
         }
 
-        console.log('Données employé inactivation:', employe);
+        log('Données employé inactivation:', employe);
 
         // Stocker les données pour utiliser dans valider/refuser
         currentInactivationValidation = {
@@ -7868,9 +7875,9 @@
           document.body.style.overflow = 'hidden';
         }
 
-        console.log('Popup de validation inactivation ouvert avec succès');
+        log('Popup de validation inactivation ouvert avec succès');
       } catch (error) {
-        console.error('Erreur lors de l\'ouverture du popup d\'inactivation:', error);
+        error('Erreur lors de l\'ouverture du popup d\'inactivation:', error);
         showNotification('Erreur lors de l\'ouverture du popup', 'error');
       }
     }
@@ -7889,11 +7896,11 @@
     async function validerInactivationCoach() {
       try {
         if (!currentInactivationValidation) {
-          console.error('Aucune inactivation en cours de validation');
+          error('Aucune inactivation en cours de validation');
           return;
         }
 
-        console.log('=== VALIDATION INACTIVATION PAR LE COACH ===');
+        log('=== VALIDATION INACTIVATION PAR LE COACH ===');
         const employeId = currentInactivationValidation.id;
         const entrepreneurUsername = window.selectedEntrepreneur || window.username;
 
@@ -7922,7 +7929,7 @@
           showNotification('Erreur: ' + error.detail, 'error');
         }
       } catch (error) {
-        console.error('Erreur lors de la validation de l\'inactivation:', error);
+        error('Erreur lors de la validation de l\'inactivation:', error);
         showNotification('Erreur de connexion: ' + error.message, 'error');
       }
     }
@@ -7931,11 +7938,11 @@
     async function refuserInactivationCoach() {
       try {
         if (!currentInactivationValidation) {
-          console.error('Aucune inactivation en cours de validation');
+          error('Aucune inactivation en cours de validation');
           return;
         }
 
-        console.log('=== REFUS INACTIVATION PAR LE COACH ===');
+        log('=== REFUS INACTIVATION PAR LE COACH ===');
         const employeId = currentInactivationValidation.id;
         const entrepreneurUsername = window.selectedEntrepreneur || window.username;
 
@@ -7964,7 +7971,7 @@
           showNotification('Erreur: ' + error.detail, 'error');
         }
       } catch (error) {
-        console.error('Erreur lors du refus de l\'inactivation:', error);
+        error('Erreur lors du refus de l\'inactivation:', error);
         showNotification('Erreur de connexion: ' + error.message, 'error');
       }
     }
@@ -7975,8 +7982,8 @@
     // Ouvrir le popup de validation de réactivation
     async function ouvrirPopupValidationReactivation(employeId, employeDataString) {
       try {
-        console.log('=== OUVERTURE POPUP VALIDATION RÉACTIVATION ===');
-        console.log('employeId:', employeId);
+        log('=== OUVERTURE POPUP VALIDATION RÉACTIVATION ===');
+        log('employeId:', employeId);
 
         // Récupérer le username de l'entrepreneur (depuis l'URL ou les données de l'employé)
         let entrepreneurUsername = window.username || 'user';
@@ -7994,7 +8001,7 @@
           entrepreneurUsername = employeBasic.entrepreneur_username;
         }
 
-        console.log('Récupération des données de réactivation pour:', entrepreneurUsername, employeId);
+        log('Récupération des données de réactivation pour:', entrepreneurUsername, employeId);
 
         // Appeler l'API pour récupérer les données complètes de réactivation
         const response = await fetch(`/api/employes/${entrepreneurUsername}/reactivation/${employeId}`);
@@ -8003,10 +8010,10 @@
         let employe;
         if (result.success && result.data) {
           employe = result.data;
-          console.log('Données complètes de réactivation récupérées:', employe);
+          log('Données complètes de réactivation récupérées:', employe);
         } else {
           // Si l'API échoue, utiliser les données passées en paramètre
-          console.log('API échouée, utilisation des données locales');
+          log('API échouée, utilisation des données locales');
           employe = employeBasic;
         }
 
@@ -8073,9 +8080,9 @@
           document.body.style.overflow = 'hidden';
         }
 
-        console.log('Popup de validation réactivation ouvert avec succès');
+        log('Popup de validation réactivation ouvert avec succès');
       } catch (error) {
-        console.error('Erreur lors de l\'ouverture du popup de réactivation:', error);
+        error('Erreur lors de l\'ouverture du popup de réactivation:', error);
         showNotification('Erreur lors de l\'ouverture du popup', 'error');
       }
     }
@@ -8094,11 +8101,11 @@
     async function validerReactivationCoach() {
       try {
         if (!currentReactivationValidation) {
-          console.error('Aucune réactivation en cours de validation');
+          error('Aucune réactivation en cours de validation');
           return;
         }
 
-        console.log('=== VALIDATION RÉACTIVATION PAR LE COACH ===');
+        log('=== VALIDATION RÉACTIVATION PAR LE COACH ===');
         const employeId = currentReactivationValidation.id;
         const entrepreneurUsername = window.selectedEntrepreneur || window.username;
 
@@ -8122,7 +8129,7 @@
           showNotification('Erreur: ' + error.detail, 'error');
         }
       } catch (error) {
-        console.error('Erreur lors de la validation de la réactivation:', error);
+        error('Erreur lors de la validation de la réactivation:', error);
         showNotification('Erreur de connexion: ' + error.message, 'error');
       }
     }
@@ -8131,11 +8138,11 @@
     async function refuserReactivationCoach() {
       try {
         if (!currentReactivationValidation) {
-          console.error('Aucune réactivation en cours de validation');
+          error('Aucune réactivation en cours de validation');
           return;
         }
 
-        console.log('=== REFUS RÉACTIVATION PAR LE COACH ===');
+        log('=== REFUS RÉACTIVATION PAR LE COACH ===');
         const employeId = currentReactivationValidation.id;
         const entrepreneurUsername = window.selectedEntrepreneur || window.username;
 
@@ -8159,7 +8166,7 @@
           showNotification('Erreur: ' + error.detail, 'error');
         }
       } catch (error) {
-        console.error('Erreur lors du refus de la réactivation:', error);
+        error('Erreur lors du refus de la réactivation:', error);
         showNotification('Erreur de connexion: ' + error.message, 'error');
       }
     }
@@ -8403,28 +8410,28 @@
 
     // Générer le calendrier - FONCTION GLOBALE
     window.renderCalendar = function(inputId) {
-      console.log('🎨 renderCalendar appelé pour:', inputId);
+      log('🎨 renderCalendar appelé pour:', inputId);
       
       // Vérifier d'abord si le calendrier lui-même existe
       const calendar = document.getElementById(`calendar-${inputId}`);
-      console.log('[DATE] Calendrier principal:', calendar ? 'TROUVÉ' : 'NON TROUVÉ');
+      log('[DATE] Calendrier principal:', calendar ? 'TROUVÉ' : 'NON TROUVÉ');
       
       if (calendar) {
-        console.log('[BAN] Contenu HTML du calendrier:', calendar.innerHTML.substring(0, 200) + '...');
+        log('[BAN] Contenu HTML du calendrier:', calendar.innerHTML.substring(0, 200) + '...');
       }
       
       // Utiliser notre structure avec les bons IDs
       const monthYearSpan = document.getElementById(`calendar-month-year-${inputId}`);
       const daysContainer = document.getElementById(`calendar-days-${inputId}`);
       
-      console.log('[DEBUG] Éléments calendrier trouvés:', {
+      log('[DEBUG] Éléments calendrier trouvés:', {
         monthYearSpan: monthYearSpan ? 'OK' : 'NON TROUVÉ',
         daysContainer: daysContainer ? 'OK' : 'NON TROUVÉ'
       });
       
       if (!monthYearSpan || !daysContainer) {
-        console.error('[ERROR] Éléments calendrier manquants - structure inconnue');
-        console.log('[FIX] Structure HTML réelle:', calendar.innerHTML);
+        error('[ERROR] Éléments calendrier manquants - structure inconnue');
+        log('[FIX] Structure HTML réelle:', calendar.innerHTML);
         return;
       }
       
@@ -8510,7 +8517,7 @@
       currentMonth = today.getMonth();
       currentYear = today.getFullYear();
 
-      console.log('Calendrier initialisé:', { currentMonth, currentYear });
+      log('Calendrier initialisé:', { currentMonth, currentYear });
     });
 
     // Fonction de formatage de téléphone réutilisable (format: 000-000-0000)
@@ -8669,7 +8676,7 @@
         autocompleteInstances[addressInputId] = autocomplete;
         return autocomplete;
       } catch (error) {
-        console.error('Erreur création autocomplete:', error);
+        error('Erreur création autocomplete:', error);
         return null;
       }
     }
@@ -8764,7 +8771,7 @@
           showNotification(error.detail || 'Erreur lors de l\'ajout', 'error');
         }
       } catch (error) {
-        console.error('Erreur:', error);
+        error('Erreur:', error);
         showNotification('Erreur de connexion', 'error');
       }
     });
@@ -8788,7 +8795,7 @@
         updateRefusBadges();
       }
     } catch (error) {
-      console.error('Erreur chargement compteurs messages non lus:', error);
+      error('Erreur chargement compteurs messages non lus:', error);
     }
   }
 
@@ -8847,16 +8854,16 @@
 
       if (response.ok) {
         const result = await response.json();
-        console.log(result.message);
+        log(result.message);
         fermerModalRefuserEmploye();
         chargerEmployes(); // Rafraîchir la liste
       } else {
         const error = await response.json();
-        console.error('Erreur:', error.detail);
+        error('Erreur:', error.detail);
         alert('Erreur lors du refus: ' + error.detail);
       }
     } catch (error) {
-      console.error('Erreur:', error);
+      error('Erreur:', error);
       alert('Erreur lors du refus de l\'employé');
     }
   }
@@ -8870,7 +8877,7 @@
     const viewerContent = document.getElementById('centraleViewerContent');
 
     if (!viewerModal || !viewerContent) {
-      console.error('Modal viewer elements not found');
+      error('Modal viewer elements not found');
       return;
     }
 
@@ -9303,7 +9310,7 @@
 
   // Global function for entrepreneur selector to reload employee data
   window.loadEmployeesData = async function() {
-    console.log("🔄 Rechargement des données des employés pour l'entrepreneur sélectionné...");
+    log("🔄 Rechargement des données des employés pour l'entrepreneur sélectionné...");
     await chargerEmployes();
   };
   </script>

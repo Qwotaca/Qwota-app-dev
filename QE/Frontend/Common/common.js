@@ -3,6 +3,13 @@
  * À inclure dans toutes les pages de l'application
  */
 
+// ⚡ DÉSACTIVATION DES LOGS - Performance optimization
+window.log = window.log || (() => {});
+window.warn = window.warn || (() => {});
+window.error = window.error || (() => {});
+window.info = window.info || (() => {});
+window.debug = window.debug || (() => {});
+
 // ==========================================
 // DÉSACTIVATION DU SERVICE WORKER ET CACHE
 // ==========================================
@@ -17,7 +24,7 @@
         configurable: false
       });
     } catch(e) {
-      console.warn('[STORAGE] Impossible de désactiver service workers:', e);
+      warn('[STORAGE] Impossible de désactiver service workers:', e);
     }
   }
 
@@ -29,11 +36,11 @@
         configurable: false
       });
     } catch(e) {
-      console.warn('[STORAGE] Impossible de désactiver cache API:', e);
+      warn('[STORAGE] Impossible de désactiver cache API:', e);
     }
   }
 
-  console.log('[STORAGE] Service workers et cache API désactivés (localStorage conservé pour username)');
+  log('[STORAGE] Service workers et cache API désactivés (localStorage conservé pour username)');
 })();
 
 // Variables globales - éviter la redéclaration
@@ -54,39 +61,39 @@ var systemInitialized = window.systemInitialized;
 
 // Éviter la redéclaration si déjà définie
 // Charger le username depuis l'URL en priorité, sinon localStorage
-console.log('[COMMON.JS] Initialisation username - window.username actuel:', window.username);
-console.log('[COMMON.JS] URL actuelle:', window.location.href);
-console.log('[COMMON.JS] localStorage.username:', localStorage.getItem('username'));
+log('[COMMON.JS] Initialisation username - window.username actuel:', window.username);
+log('[COMMON.JS] URL actuelle:', window.location.href);
+log('[COMMON.JS] localStorage.username:', localStorage.getItem('username'));
 
 if (typeof window.username === 'undefined') {
   const urlParams = new URLSearchParams(window.location.search);
   const usernameFromUrl = urlParams.get('user');
-  console.log('[COMMON.JS] Paramètre ?user= de l\'URL:', usernameFromUrl);
+  log('[COMMON.JS] Paramètre ?user= de l\'URL:', usernameFromUrl);
 
   if (usernameFromUrl) {
     // Username passé en paramètre URL - l'utiliser et le sauvegarder
     window.username = usernameFromUrl;
     localStorage.setItem('username', usernameFromUrl);
-    console.log('[COMMON.JS] ✅ Username défini depuis URL:', usernameFromUrl);
+    log('[COMMON.JS] ✅ Username défini depuis URL:', usernameFromUrl);
   } else {
     // Pour les coaches: NE PAS définir window.username s'il n'y a pas de paramètre ?user=
     // Ils doivent sélectionner un entrepreneur d'abord
     const userRole = localStorage.getItem('userRole');
-    console.log('[COMMON.JS] Pas de paramètre URL - userRole:', userRole);
+    log('[COMMON.JS] Pas de paramètre URL - userRole:', userRole);
     if (userRole !== 'coach') {
       // Pour les entrepreneurs et admins: utiliser localStorage normalement
       window.username = localStorage.getItem('username') || "demo";
-      console.log('[COMMON.JS] ⚠️ Username défini depuis localStorage:', window.username);
+      log('[COMMON.JS] ⚠️ Username défini depuis localStorage:', window.username);
     }
     // Pour les coaches sans ?user=, window.username reste undefined
   }
 } else {
-  console.log('[COMMON.JS] ⚠️ window.username déjà défini, skip initialisation. Valeur:', window.username);
+  log('[COMMON.JS] ⚠️ window.username déjà défini, skip initialisation. Valeur:', window.username);
 }
 
 // Référence locale pour compatibilité
 var username = window.username;
-console.log('[COMMON.JS] Variable locale username définie:', username);
+log('[COMMON.JS] Variable locale username définie:', username);
 
 // ========================================
 // BLOCAGE MOBILE (DÉSACTIVÉ - apppc.html est maintenant responsive)
@@ -107,7 +114,7 @@ console.log('[COMMON.JS] Variable locale username définie:', username);
 
   // Si mobile ET pas dans le dossier QWOTA, rediriger vers page de blocage
   if (isMobileDevice() && !isQwotaPage()) {
-    // console.log('📱 Mobile détecté - Redirection vers page de développement');
+    // log('📱 Mobile détecté - Redirection vers page de développement');
     window.location.replace('/mobile-blocked');
   }
 })();
@@ -115,7 +122,7 @@ console.log('[COMMON.JS] Variable locale username définie:', username);
 
 // Vérification initiale du username
 if (!username || username === "demo") {
-  // console.warn('[WARN] Username non valide, redirection vers login');
+  // warn('[WARN] Username non valide, redirection vers login');
   window.location.href = "/";
 }
 
@@ -131,7 +138,7 @@ if (!username || username === "demo") {
     .then(userData => {
       // Direction et coach n'ont pas besoin d'onboarding
       if (userData.role === 'direction' || userData.role === 'coach') {
-        // console.log('[OK] Rôle', userData.role, '- onboarding non requis');
+        // log('[OK] Rôle', userData.role, '- onboarding non requis');
         return;
       }
 
@@ -165,7 +172,7 @@ if (!username || username === "demo") {
     })
     .catch(error => {
       // En cas d'erreur, ne pas bloquer direction et coach
-      // console.error('Erreur vérification onboarding:', error);
+      // error('Erreur vérification onboarding:', error);
     });
   }
 })();
@@ -174,14 +181,14 @@ if (!username || username === "demo") {
  * Initialise le système de permissions et l'interface commune
  */
 function initCommonSystem() {
-  // console.log('[LAUNCH] Initialisation système commun pour:', username);
+  // log('[LAUNCH] Initialisation système commun pour:', username);
 
   // Gérer les permissions
   setupUserPermissions();
 
   // updateAccountDisplay() sera appelé après fetchUserRole()
 
-  // console.log('[OK] Système commun initialisé');
+  // log('[OK] Système commun initialisé');
 }
 
 /**
@@ -192,7 +199,7 @@ function setupUserPermissions() {
   const userRole = localStorage.getItem('userRole');
   const usernameToUse = (userRole === 'coach') ? localStorage.getItem('username') : username;
 
-  // console.log('[FIX] Configuration des permissions pour:', usernameToUse);
+  // log('[FIX] Configuration des permissions pour:', usernameToUse);
 
   // Récupérer le rôle depuis l'API
   fetchUserRole(usernameToUse);
@@ -202,51 +209,51 @@ function setupUserPermissions() {
  * Récupère le rôle de l'utilisateur depuis l'API
  */
 async function fetchUserRole(username) {
-  // console.log('[DEBUG] Début fetchUserRole pour:', username);
+  // log('[DEBUG] Début fetchUserRole pour:', username);
 
   // Ne pas appeler l'API si le username est invalide ou "demo"
   if (!username || username === 'demo') {
-    console.warn('[WARN] Username invalide pour fetchUserRole:', username);
+    warn('[WARN] Username invalide pour fetchUserRole:', username);
     return;
   }
 
   try {
-    // console.log('📡 Appel API /api/me/' + username + '...');
+    // log('📡 Appel API /api/me/' + username + '...');
     const response = await fetch(`/api/me/${username}`);
-    // console.log('📡 Réponse API status:', response.status);
+    // log('📡 Réponse API status:', response.status);
 
     if (!response.ok) {
       throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
     }
 
     const userData = await response.json();
-    // console.log('[FILE] Données utilisateur reçues:', userData);
+    // log('[FILE] Données utilisateur reçues:', userData);
     const role = userData.role;
 
     // Définir le rôle et les permissions
     window.userRole = role;
-    // console.log('[OK] window.userRole défini à:', window.userRole);
+    // log('[OK] window.userRole défini à:', window.userRole);
 
     if (role === 'direction') {
       window.canEditParameters = true;
-      // console.log('[OK] Permissions direction activées pour:', username);
+      // log('[OK] Permissions direction activées pour:', username);
     } else if (role === 'coach') {
       window.canEditParameters = false;
-      // console.log('👨‍🏫 Permissions coach activées pour:', username, '- Role détecté:', role);
+      // log('👨‍🏫 Permissions coach activées pour:', username, '- Role détecté:', role);
     } else if (role === 'entrepreneur') {
       window.userRole = 'entrepreneur';
       window.canEditParameters = false;
       document.body.classList.add('entrepreneur-mode');
-      // console.log('👤 Permissions entrepreneur activées pour:', username);
+      // log('👤 Permissions entrepreneur activées pour:', username);
     } else {
       // Fallback vers entrepreneur pour tout rôle inconnu
       window.userRole = 'entrepreneur';
       window.canEditParameters = false;
       document.body.classList.add('entrepreneur-mode');
-      // console.log('[WARN] Rôle inconnu, fallback vers entrepreneur');
+      // log('[WARN] Rôle inconnu, fallback vers entrepreneur');
     }
 
-    // console.log('🔄 Appel updateAccountDisplay avec role:', window.userRole);
+    // log('🔄 Appel updateAccountDisplay avec role:', window.userRole);
     // Mettre à jour l'affichage
     updateAccountDisplay();
 
@@ -257,12 +264,12 @@ async function fetchUserRole(username) {
     applyGradeBorderToHeader(username);
 
   } catch (error) {
-    // console.error('[ERROR] Erreur lors de la récupération du rôle:', error);
+    // error('[ERROR] Erreur lors de la récupération du rôle:', error);
     // Fallback vers entrepreneur en cas d'erreur
     window.userRole = 'entrepreneur';
     window.canEditParameters = false;
     document.body.classList.add('entrepreneur-mode');
-    // console.log('[WARN] Fallback vers entrepreneur');
+    // log('[WARN] Fallback vers entrepreneur');
     updateAccountDisplay();
   }
   
@@ -272,12 +279,12 @@ async function fetchUserRole(username) {
       const adminTabButton = document.getElementById('parametres-admin-button');
       if (adminTabButton) {
         adminTabButton.style.display = 'block';
-        // console.log('📌 Onglet Paramètres activé');
+        // log('📌 Onglet Paramètres activé');
       }
     }, 100);
   }
   
-  // console.log('🔑 Résultat final:', { userRole, canEditParameters });
+  // log('🔑 Résultat final:', { userRole, canEditParameters });
 }
 
 
@@ -285,11 +292,11 @@ async function fetchUserRole(username) {
  * Applique les permissions de visibilité sur le menu existant
  */
 function applyMenuPermissions() {
-  // console.log('🎨 Application des permissions menu pour le rôle:', userRole);
+  // log('🎨 Application des permissions menu pour le rôle:', userRole);
 
   const sidebar = document.getElementById('sidebar');
   if (!sidebar || !userRole) {
-    // console.log('[ERROR] Sidebar introuvable ou userRole non défini');
+    // log('[ERROR] Sidebar introuvable ou userRole non défini');
     return;
   }
 
@@ -313,14 +320,14 @@ function applyMenuPermissions() {
 
     if (allowedRoles.includes(userRole)) {
       item.style.setProperty('display', 'block', 'important');
-      // console.log('[OK] Élément accessible:', link.textContent);
+      // log('[OK] Élément accessible:', link.textContent);
     } else {
       item.style.display = 'none';
-      // console.log('🚫 Élément caché:', link.textContent);
+      // log('🚫 Élément caché:', link.textContent);
     }
   });
 
-  // console.log('[OK] Permissions menu appliquées pour:', userRole);
+  // log('[OK] Permissions menu appliquées pour:', userRole);
 }
 
 /**
@@ -362,24 +369,24 @@ function updateActiveMenuItem(currentPath) {
  */
 async function loadProfilePhoto() {
   try {
-    console.log('[DEBUG] Chargement photo pour:', username);
+    log('[DEBUG] Chargement photo pour:', username);
     const response = await fetch(`/api/get-profile-photo/${username}`);
-    console.log('[DEBUG] Réponse API:', response.ok, response.status);
+    log('[DEBUG] Réponse API:', response.ok, response.status);
     if (!response.ok) return null;
 
     const result = await response.json();
-    console.log('[DEBUG] Résultat JSON:', result);
+    log('[DEBUG] Résultat JSON:', result);
     const profilePhotoUrl = result.photoUrl;
 
     if (profilePhotoUrl) {
-      console.log('[OK] Photo de profil trouvée:', profilePhotoUrl);
+      log('[OK] Photo de profil trouvée:', profilePhotoUrl);
       return profilePhotoUrl;
     }
 
-    console.log('[DEBUG] Pas de photoUrl dans le résultat');
+    log('[DEBUG] Pas de photoUrl dans le résultat');
     return null;
   } catch (error) {
-    console.error('[ERROR] Erreur chargement photo de profil:', error);
+    error('[ERROR] Erreur chargement photo de profil:', error);
     return null;
   }
 }
@@ -389,11 +396,11 @@ async function loadProfilePhoto() {
  */
 function updateAccountDisplay() {
   setTimeout(async () => {
-    console.log('[DEBUG] Mise à jour des comptes utilisateur...');
+    log('[DEBUG] Mise à jour des comptes utilisateur...');
 
     // Charger la photo de profil
     const profilePhotoUrl = await loadProfilePhoto();
-    console.log('[DEBUG] profilePhotoUrl reçu:', profilePhotoUrl);
+    log('[DEBUG] profilePhotoUrl reçu:', profilePhotoUrl);
 
     // Récupérer les informations utilisateur (prénom, nom)
     let displayName = username;
@@ -406,7 +413,7 @@ function updateAccountDisplay() {
         }
       }
     } catch (error) {
-      console.error('[ERROR] Erreur récupération nom/prénom:', error);
+      error('[ERROR] Erreur récupération nom/prénom:', error);
     }
 
     // Mettre à jour les éléments mobiles
@@ -416,7 +423,7 @@ function updateAccountDisplay() {
 
     if (mobileUsernameDisplay && username) {
       mobileUsernameDisplay.textContent = displayName;
-      // console.log('[OK] Mobile username mis à jour:', displayName);
+      // log('[OK] Mobile username mis à jour:', displayName);
     }
 
     if (mobileRoleDisplay && window.userRole) {
@@ -426,7 +433,7 @@ function updateAccountDisplay() {
                      window.userRole;
 
       mobileRoleDisplay.textContent = roleText;
-      // console.log('[OK] Mobile role mis à jour:', roleText);
+      // log('[OK] Mobile role mis à jour:', roleText);
     }
 
     // Mettre à jour l'icône créée par common.js
@@ -445,7 +452,7 @@ function updateAccountDisplay() {
   ${roleText}
 </div>
       `;
-      // console.log('[OK] Mobile account username mis à jour:', `${displayName} + ${roleText}`);
+      // log('[OK] Mobile account username mis à jour:', `${displayName} + ${roleText}`);
     }
 
     // Mettre à jour les éléments desktop (juste le nom, apppc.html gère le rôle)
@@ -453,31 +460,31 @@ function updateAccountDisplay() {
 
     if (desktopAccountUsername && username) {
       desktopAccountUsername.textContent = displayName;
-      // console.log('[OK] Desktop account username mis à jour:', displayName);
+      // log('[OK] Desktop account username mis à jour:', displayName);
     }
 
     // Mettre à jour les avatars/photos de profil
     if (profilePhotoUrl) {
-      console.log('🖼️ Mise à jour des avatars avec la photo de profil');
+      log('🖼️ Mise à jour des avatars avec la photo de profil');
 
       // Mobile profile icon
       const mobileProfileIcon = document.querySelector('.mobile-profile-icon');
       if (mobileProfileIcon) {
         mobileProfileIcon.innerHTML = `<img src="${profilePhotoUrl}" alt="Photo de profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-        console.log('[OK] Mobile profile icon mis à jour');
+        log('[OK] Mobile profile icon mis à jour');
       }
 
       // Desktop account avatar (dans le bouton header)
       const avatarContainer = document.querySelector('.account-avatar');
-      console.log('[DEBUG] avatarContainer trouvé:', avatarContainer);
+      log('[DEBUG] avatarContainer trouvé:', avatarContainer);
       if (avatarContainer) {
         // Remplacer le contenu par une image
         avatarContainer.innerHTML = `<img src="${profilePhotoUrl}" alt="Photo de profil">`;
         avatarContainer.classList.add('has-photo');
-        console.log('[OK] Desktop account avatar mis à jour avec innerHTML:', avatarContainer.innerHTML);
+        log('[OK] Desktop account avatar mis à jour avec innerHTML:', avatarContainer.innerHTML);
       }
     } else {
-      console.log('ℹ️ Aucune photo de profil - utilisation des icônes par défaut');
+      log('ℹ️ Aucune photo de profil - utilisation des icônes par défaut');
       // Retirer la classe "has-photo" et remettre l'icône
       const avatarContainer = document.querySelector('.account-avatar');
       if (avatarContainer) {
@@ -581,10 +588,10 @@ async function applyGradeBorderToHeader(username) {
 
       // Ajouter la nouvelle classe de grade
       avatarContainer.classList.add(gradeClass);
-      console.log(`Contour de grade appliqué au header: ${gradeClass}`);
+      log(`Contour de grade appliqué au header: ${gradeClass}`);
     }
   } catch (error) {
-    console.error('Erreur lors de l\'application du contour de grade:', error);
+    error('Erreur lors de l\'application du contour de grade:', error);
   }
 }
 

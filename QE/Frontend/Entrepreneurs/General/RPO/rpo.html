@@ -2142,12 +2142,19 @@
 
 <!-- Initialiser window.username AVANT common.js pour éviter la redirection -->
 <script>
+// ⚡ DÉSACTIVATION DES LOGS - Performance optimization
+window.log = () => {};
+window.warn = () => {};
+window.error = () => {};
+window.info = () => {};
+window.debug = () => {};
+
 (function() {
   const urlParams = new URLSearchParams(window.location.search);
   const userParam = urlParams.get('user');
   if (userParam) {
     window.username = userParam;
-    console.log('[RPO INIT] window.username initialisé depuis URL:', userParam);
+    log('[RPO INIT] window.username initialisé depuis URL:', userParam);
   }
 })();
 </script>
@@ -2157,6 +2164,13 @@
 <!-- Inline entrepreneur selector script removed - now handled by shared /entrepreneur-selector.js -->
 
 <script>
+// ⚡ DÉSACTIVATION DES LOGS - Performance optimization
+window.log = () => {};
+window.warn = () => {};
+window.error = () => {};
+window.info = () => {};
+window.debug = () => {};
+
 // ============================================
 // TIMEZONE HELPERS - TORONTO (America/Toronto)
 // ============================================
@@ -2269,8 +2283,8 @@ function getTorontoMonday(date) {
   return monday;
 }
 
-console.log('[OK] Timezone helpers Toronto chargés');
-console.log('📍 Heure actuelle Toronto:', formatTorontoDate(getTorontoNow()));
+log('[OK] Timezone helpers Toronto chargés');
+log('📍 Heure actuelle Toronto:', formatTorontoDate(getTorontoNow()));
 
 // Script minimal pour gérer les onglets
 function showPage(pageId) {
@@ -2375,10 +2389,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const nom = userInfo.nom || '';
         const fullName = `${prenom} ${nom}`.trim();
         usernameHeader.textContent = fullName || username;
-        console.log('[ETAT] Nom complet chargé:', fullName);
+        log('[ETAT] Nom complet chargé:', fullName);
       })
       .catch(error => {
-        console.warn('[ETAT] Impossible de charger user_info:', error);
+        warn('[ETAT] Impossible de charger user_info:', error);
         // Fallback: formater le username
         const formattedName = username
           .split(/[_\s]+/)
@@ -2438,7 +2452,7 @@ async function saveObjectif() {
     const tendanceValue = Math.round(objectifValue * 1.10); // Objectif CA + 10%
     tendanceViseInput.dataset.value = tendanceValue;
     tendanceViseInput.value = tendanceValue.toLocaleString('fr-CA').replace(/\s/g, ' ') + ' $';
-    console.log('[OK] Tendance visé synchronisé avec Objectif CA + 10%:', tendanceValue);
+    log('[OK] Tendance visé synchronisé avec Objectif CA + 10%:', tendanceValue);
   }
 
   // Désactiver l'édition
@@ -2809,7 +2823,7 @@ function updateAnnualChart() {
     monthlyData.push({ value: monthTotal, index: monthIndex });
   });
 
-  console.log('[DATA] [CHART] Valeurs mensuelles calculées:', monthlyData);
+  log('[DATA] [CHART] Valeurs mensuelles calculées:', monthlyData);
 
   // Trouver la valeur maximale pour normaliser les hauteurs
   const maxValue = Math.max(...monthlyData.map(d => d.value), 1);
@@ -3170,20 +3184,20 @@ async function updateDailyChart(weekNumber) {
     const weekEnd = new Date(selectedWeek.weekEnd);
     weekEnd.setHours(23, 59, 59, 999);
 
-    console.log('[DATE] Week range:', weekStart, 'to', weekEnd);
-    console.log('[BAN] Total soumissions signees:', soumissionsSignees.length);
+    log('[DATE] Week range:', weekStart, 'to', weekEnd);
+    log('[BAN] Total soumissions signees:', soumissionsSignees.length);
 
     soumissionsSignees.forEach((soumission, idx) => {
       const dateStr = soumission.date || soumission.dateEnvoi;
-      console.log(`[FILE] Soumission ${idx + 1}:`, dateStr, 'Prix:', soumission.prix);
+      log(`[FILE] Soumission ${idx + 1}:`, dateStr, 'Prix:', soumission.prix);
 
       const soumissionDate = parseDate(dateStr);
-      console.log('  -> Parsed date:', soumissionDate);
+      log('  -> Parsed date:', soumissionDate);
 
       if (soumissionDate) {
         soumissionDate.setHours(0, 0, 0, 0); // Normaliser à minuit
-        console.log('  -> Normalized:', soumissionDate);
-        console.log('  -> In range?', soumissionDate >= weekStart, '&&', soumissionDate <= weekEnd);
+        log('  -> Normalized:', soumissionDate);
+        log('  -> In range?', soumissionDate >= weekStart, '&&', soumissionDate <= weekEnd);
 
         if (soumissionDate >= weekStart && soumissionDate <= weekEnd) {
           const dateKey = getDateKey(soumissionDate);
@@ -3198,7 +3212,7 @@ async function updateDailyChart(weekNumber) {
             prix = 0;
           }
 
-          console.log('[MONEY] Soumission matched:', dateKey, prix + '$');
+          log('[MONEY] Soumission matched:', dateKey, prix + '$');
 
           // Ajouter au total du jour
           if (!dailyAmounts[dateKey]) {
@@ -3209,7 +3223,7 @@ async function updateDailyChart(weekNumber) {
       }
     });
 
-    console.log('[DATA] Daily amounts:', dailyAmounts);
+    log('[DATA] Daily amounts:', dailyAmounts);
 
     // Générer les 7 jours de la semaine avec leurs montants réels
     const dailyData = [];
@@ -3256,7 +3270,7 @@ async function updateDailyChart(weekNumber) {
     });
 
   } catch (error) {
-    console.error('Erreur chargement soumissions signées:', error);
+    error('Erreur chargement soumissions signées:', error);
     container.innerHTML = '<p style="color: var(--text-gray); text-align: center; margin: auto;">Erreur chargement des données</p>';
   }
 }
@@ -3336,7 +3350,7 @@ function autoCalculateViseFields(changedFieldId) {
   const vente = parseFloat(document.getElementById('vente-vise')?.dataset.value) || 0;
   const moyen = parseFloat(document.getElementById('moyen-vise')?.dataset.value) || 0;
 
-  console.log('🔄 Auto-calcul depuis:', changedFieldId);
+  log('🔄 Auto-calcul depuis:', changedFieldId);
 
   // Logique de calcul basée sur le champ modifié
   switch(changedFieldId) {
@@ -3436,7 +3450,7 @@ function updateViseField(fieldId, value, suffix) {
     input.value = Math.round(value);
   }
 
-  console.log(`[OK] ${fieldId} mis à jour:`, input.value);
+  log(`[OK] ${fieldId} mis à jour:`, input.value);
 }
 
 // Calculer les champs visés au chargement initial
@@ -3446,7 +3460,7 @@ function calculateInitialViseFields() {
   const contract = parseFloat(document.getElementById('contract-vise')?.dataset.value) || 0;
   const dollar = parseFloat(document.getElementById('dollar-vise')?.dataset.value) || 0;
 
-  console.log('🔢 Calcul initial des champs visés:', { hrpap, estimation, contract, dollar });
+  log('🔢 Calcul initial des champs visés:', { hrpap, estimation, contract, dollar });
 
   // Calculer taux mktg visé si les données de base existent
   if (hrpap > 0 && estimation > 0) {
@@ -3466,7 +3480,7 @@ function calculateInitialViseFields() {
     updateViseField('moyen-vise', moyen, '$');
   }
 
-  console.log('[OK] Calculs initiaux terminés');
+  log('[OK] Calculs initiaux terminés');
 }
 
 // Toggle edit mode for all metrics (sauf tendance-vise qui est lié à Objectif CA)
@@ -4270,19 +4284,19 @@ let currentWeeklyMonthIndex = 0;
 async function loadWeeklyDataForMonth(monthIndex) {
   const username = getCurrentUsername();
 
-  console.log(`[loadWeeklyDataForMonth] Loading data for month ${monthIndex}, user: ${username}`);
+  log(`[loadWeeklyDataForMonth] Loading data for month ${monthIndex}, user: ${username}`);
 
   try {
     const response = await fetch(`/api/rpo/${username}/weekly/${monthIndex}`);
     if (response.ok) {
       const weeklyData = await response.json();
 
-      console.log(`[loadWeeklyDataForMonth] Received data:`, weeklyData);
+      log(`[loadWeeklyDataForMonth] Received data:`, weeklyData);
 
       // Apply data to inputs
       Object.keys(weeklyData).forEach(weekNumber => {
         const data = weeklyData[weekNumber];
-        console.log(`[loadWeeklyDataForMonth] Week ${weekNumber}:`, data);
+        log(`[loadWeeklyDataForMonth] Week ${weekNumber}:`, data);
 
         // Load objectifs data
         if (data.h_marketing !== undefined && data.h_marketing !== null) {
@@ -5145,7 +5159,7 @@ function ensureAllMonthsInAllMonthlyData() {
 function calculateAllMonthlyTotalsFromWeekly() {
 
   if (!window.weeklyData) {
-    console.log('[MONTHLY] Pas de window.weeklyData');
+    log('[MONTHLY] Pas de window.weeklyData');
     return;
   }
 
@@ -5154,8 +5168,8 @@ function calculateAllMonthlyTotalsFromWeekly() {
     window.allMonthlyData = {};
   }
 
-  console.log('[MONTHLY] Début calcul monthly totals depuis weekly data');
-  console.log('[MONTHLY] window.weeklyData:', window.weeklyData);
+  log('[MONTHLY] Début calcul monthly totals depuis weekly data');
+  log('[MONTHLY] window.weeklyData:', window.weeklyData);
 
   // Inclure Décembre 2025 (index -2) + 12 mois 2026 (index 0-11)
   const allMonths = [-2, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
@@ -5167,7 +5181,7 @@ function calculateAllMonthlyTotalsFromWeekly() {
     const monthKey = String(monthIndex);
     const monthWeeklyData = window.weeklyData[monthKey];
 
-    console.log(`[MONTHLY] Mois ${monthIndex} (${abbr}, key="${monthKey}"):`, monthWeeklyData);
+    log(`[MONTHLY] Mois ${monthIndex} (${abbr}, key="${monthKey}"):`, monthWeeklyData);
 
     let totalHMarketing = 0;
     let totalEstimation = 0;
@@ -5180,15 +5194,15 @@ function calculateAllMonthlyTotalsFromWeekly() {
       Object.keys(monthWeeklyData).forEach(weekNumber => {
         const weekData = monthWeeklyData[weekNumber];
 
-        console.log(`[MONTHLY]   Semaine ${weekNumber}:`, weekData);
+        log(`[MONTHLY]   Semaine ${weekNumber}:`, weekData);
 
         // Ignorer les valeurs "-" mais compter les 0
         if (weekData.h_marketing !== '-' && weekData.h_marketing !== undefined) {
           const hValue = parseFloat(weekData.h_marketing) || 0;
           totalHMarketing += hValue;
-          console.log(`[MONTHLY]     -> h_marketing: ${hValue}h (total: ${totalHMarketing}h)`);
+          log(`[MONTHLY]     -> h_marketing: ${hValue}h (total: ${totalHMarketing}h)`);
         } else {
-          console.log(`[MONTHLY]     -> h_marketing ignoré: "${weekData.h_marketing}"`);
+          log(`[MONTHLY]     -> h_marketing ignoré: "${weekData.h_marketing}"`);
         }
         if (weekData.estimation !== '-' && weekData.estimation !== undefined) {
           totalEstimation += parseFloat(weekData.estimation) || 0;
@@ -5202,7 +5216,7 @@ function calculateAllMonthlyTotalsFromWeekly() {
       });
     }
 
-    console.log(`[MONTHLY] Mois ${monthIndex} (${abbr}) total H PAP: ${totalHMarketing}h`);
+    log(`[MONTHLY] Mois ${monthIndex} (${abbr}) total H PAP: ${totalHMarketing}h`);
 
     // Mettre à jour window.allMonthlyData
     if (!window.allMonthlyData[abbr]) {
@@ -5214,7 +5228,7 @@ function calculateAllMonthlyTotalsFromWeekly() {
     window.allMonthlyData[abbr].contract_reel = totalContract;
     window.allMonthlyData[abbr].dollar_reel = totalDollar;
 
-    console.log(`[MONTHLY] window.allMonthlyData[${abbr}].hrpap_reel = ${totalHMarketing}h`);
+    log(`[MONTHLY] window.allMonthlyData[${abbr}].hrpap_reel = ${totalHMarketing}h`);
 
     // Mettre à jour l'affichage si le div existe (mois actuellement affiché)
     const hrpapReelDiv = document.getElementById(`${abbr}-hrpap-reel`);
@@ -5262,8 +5276,8 @@ function calculateAnnualTotalsFromMonthly() {
   let totalContract = 0;
   let totalDollar = 0;
 
-  console.log('[ANNUAL] Début calcul totaux annuels depuis monthly data');
-  console.log('[ANNUAL] window.allMonthlyData:', window.allMonthlyData);
+  log('[ANNUAL] Début calcul totaux annuels depuis monthly data');
+  log('[ANNUAL] window.allMonthlyData:', window.allMonthlyData);
 
   // Additionner tous les mois depuis window.allMonthlyData
   // Inclure Décembre 2025 (index -2) + 12 mois 2026
@@ -5273,19 +5287,19 @@ function calculateAnnualTotalsFromMonthly() {
       const monthInfo = getMonthInfo(monthIndex);
       const abbr = monthInfo.abbr;
       const monthData = window.allMonthlyData[abbr];
-      console.log(`[ANNUAL] Mois ${monthIndex} (${abbr}):`, monthData);
+      log(`[ANNUAL] Mois ${monthIndex} (${abbr}):`, monthData);
       if (monthData) {
         const hrpap = parseFloat(monthData.hrpap_reel) || 0;
         totalHrpap += hrpap;
         totalEstimation += parseFloat(monthData.estimation_reel) || 0;
         totalContract += parseFloat(monthData.contract_reel) || 0;
         totalDollar += parseFloat(monthData.dollar_reel) || 0;
-        console.log(`[ANNUAL]   -> H PAP: ${hrpap}h, Total cumulé: ${totalHrpap}h`);
+        log(`[ANNUAL]   -> H PAP: ${hrpap}h, Total cumulé: ${totalHrpap}h`);
       }
     });
   }
 
-  console.log('[ANNUAL] Total final H PAP:', totalHrpap);
+  log('[ANNUAL] Total final H PAP:', totalHrpap);
 
   // Mettre à jour les totaux annuels
   const annualHrpapDiv = document.getElementById('annual-hrpap-reel');
@@ -5413,7 +5427,7 @@ function calculateAnnualMetrics() {
     tendanceReelDiv.dataset.value = tendanceCA;
   }
 
-  console.log(`[TENDANCE] Semaine actuelle: ${currentWeekIndex + 1} | $ Signé: ${dollarReel} | Cumul %: ${cumulPercent.toFixed(2)}% | Tendance: ${Math.round(tendanceCA)}`);
+  log(`[TENDANCE] Semaine actuelle: ${currentWeekIndex + 1} | $ Signé: ${dollarReel} | Cumul %: ${cumulPercent.toFixed(2)}% | Tendance: ${Math.round(tendanceCA)}`);
 
   // 5. Calculer la moyenne de prod horaire à partir des semaines hebdomadaires (décembre 2025 à décembre 2026)
   let totalProdHoraire = 0;
@@ -5443,7 +5457,7 @@ function calculateAnnualMetrics() {
   }
 
   const avgProdHoraire = countProdHoraire > 0 ? totalProdHoraire / countProdHoraire : 0;
-  console.log(`[DATA] Prod Horaire Moyenne: ${avgProdHoraire.toFixed(2)} $/h (${countProdHoraire} semaines)`);
+  log(`[DATA] Prod Horaire Moyenne: ${avgProdHoraire.toFixed(2)} $/h (${countProdHoraire} semaines)`);
 
   // Sauvegarder les métriques calculées automatiquement (avec prod horaire)
   saveCalculatedMetrics(tauxMktg, tauxVente, contratMoyen, avgProdHoraire);
@@ -5916,7 +5930,7 @@ function initCustomDropdowns() {
         // Trigger change for week selector (mobile)
         if (select.id === 'weekSelector') {
           const weekNumber = parseInt(option.dataset.week);
-          console.log('[initCustomDropdowns] Semaine sélectionnée:', weekNumber);
+          log('[initCustomDropdowns] Semaine sélectionnée:', weekNumber);
           if (typeof updateMobileWeeklyView === 'function') {
             updateMobileWeeklyView(weekNumber);
           }
@@ -5939,7 +5953,7 @@ function initCustomDropdowns() {
         // Trigger change for plan month selector (desktop)
         if (select.id === 'planMonthSelectorDesktop') {
           const selectedValue = option.dataset.value;
-          console.log('[Plan Desktop] Mois sélectionné:', selectedValue);
+          log('[Plan Desktop] Mois sélectionné:', selectedValue);
           filterPlanByPeriod(selectedValue);
         }
       });
@@ -5998,7 +6012,7 @@ function getCurrentUsername() {
     const urlUser = urlParams.get('user');
     // Si URL param existe ET qu'un username est défini ET qu'ils sont différents, utiliser le username sélectionné
     if (urlUser && window.username !== urlUser) {
-      console.log('[COACH] Utilisation du username sélectionné:', window.username);
+      log('[COACH] Utilisation du username sélectionné:', window.username);
       return window.username;
     }
   }
@@ -6051,13 +6065,13 @@ async function loadRPODataInternal() {
 // Exposer loadRPOData globalement pour entrepreneur-selector.js
 // Wrapper function to reload data AND reinitialize views (comme facturationqe)
 window.loadRPOData = async function() {
-  console.log('[RPO] Rechargement des données après sélection entrepreneur');
+  log('[RPO] Rechargement des données après sélection entrepreneur');
 
   // Supprimer l'anti-flash CSS pour rendre le contenu visible
   const antiFlashStyle = document.getElementById('coach-anti-flash-css');
   if (antiFlashStyle) {
     antiFlashStyle.remove();
-    console.log('[RPO] Anti-flash CSS supprimé');
+    log('[RPO] Anti-flash CSS supprimé');
   }
 
   await loadRPODataInternal();
@@ -6065,14 +6079,14 @@ window.loadRPOData = async function() {
   // Régénérer le plan d'affaire avec les nouvelles données
   if (typeof generatePlanWeeks === 'function') {
     generatePlanWeeks();
-    console.log('[RPO] Plan d\'affaire régénéré');
+    log('[RPO] Plan d\'affaire régénéré');
   }
 
   // Charger les données réelles dans le plan d'affaire depuis window.weeklyData
   setTimeout(() => {
     if (typeof loadWeeklyDataToPlan === 'function') {
       loadWeeklyDataToPlan();
-      console.log('[RPO] Données hebdomadaires chargées dans le plan d\'affaire');
+      log('[RPO] Données hebdomadaires chargées dans le plan d\'affaire');
     }
   }, 50);
 
@@ -6105,9 +6119,9 @@ function loadAnnualData(annual) {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).replace(/\s/g, ' ') + ' $';
-    console.log('[OK] Objectif CA synchronisé avec Plan d\'Affaire:', objectifCA);
+    log('[OK] Objectif CA synchronisé avec Plan d\'Affaire:', objectifCA);
   } else {
-    console.warn('[WARN] plan-objectif input non trouvé lors du chargement');
+    warn('[WARN] plan-objectif input non trouvé lors du chargement');
   }
 
   // Charger les paramètres du plan d'affaire (CM Prévision, Ratio Marketing, Taux de vente)
@@ -6358,7 +6372,7 @@ async function saveCalculatedMetrics(tauxMktg, tauxVente, contratMoyen, prodHora
       body: JSON.stringify(data)
     });
   } catch (error) {
-    console.error('Erreur sauvegarde métriques calculées:', error);
+    error('Erreur sauvegarde métriques calculées:', error);
   }
 }
 
@@ -6446,7 +6460,7 @@ async function saveMonthlyDataToBackend(monthIndex) {
       return true;
     }
   } catch (error) {
-    console.error('Error saving monthly data:', error);
+    error('Error saving monthly data:', error);
   }
 
   return false;
@@ -6486,21 +6500,21 @@ async function saveWeeklyDataToBackend(monthIndex, weekNumber) {
   const estimationInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="estimation"]`);
   if (estimationInput) {
     data.estimation = parseFloat(estimationInput.dataset.value) || 0;
-    console.log(`[SAVE] Semaine ${weekNumber} - Estimation dataset.value: ${estimationInput.dataset.value}, parsed: ${data.estimation}`);
+    log(`[SAVE] Semaine ${weekNumber} - Estimation dataset.value: ${estimationInput.dataset.value}, parsed: ${data.estimation}`);
   }
 
   // Get contract
   const contractInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="contract"]`);
   if (contractInput) {
     data.contract = parseFloat(contractInput.dataset.value) || 0;
-    console.log(`[SAVE] Semaine ${weekNumber} - Contract dataset.value: ${contractInput.dataset.value}, parsed: ${data.contract}`);
+    log(`[SAVE] Semaine ${weekNumber} - Contract dataset.value: ${contractInput.dataset.value}, parsed: ${data.contract}`);
   }
 
   // Get dollar
   const dollarInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="dollar"]`);
   if (dollarInput) {
     data.dollar = parseFloat(dollarInput.dataset.value) || 0;
-    console.log(`[SAVE] Semaine ${weekNumber} - Dollar dataset.value: ${dollarInput.dataset.value}, parsed: ${data.dollar}`);
+    log(`[SAVE] Semaine ${weekNumber} - Dollar dataset.value: ${dollarInput.dataset.value}, parsed: ${data.dollar}`);
   }
 
   // Get prod_horaire (if applicable)
@@ -6743,6 +6757,137 @@ function initAnnualStatsDropdown() {
   });
 }
 
+// ============================================
+// COACH SELECTOR FOR DIRECTION USERS
+// ============================================
+
+// Load coaches from API (for direction users)
+async function loadCoaches() {
+  try {
+    const response = await fetch('/api/users/coaches');
+    const data = await response.json();
+
+    if (data.success && data.coaches) {
+      log('[RPO] Coaches chargés:', data.coaches.length);
+      populateCoachDropdown(data.coaches);
+    } else {
+      showNoCoaches();
+    }
+  } catch (error) {
+    error('[RPO] Erreur chargement coaches:', error);
+    showNoCoaches();
+  }
+}
+
+// Populate coach dropdown (for direction users)
+function populateCoachDropdown(coaches) {
+  const dropdownMenu = document.getElementById('coach-dropdown-menu');
+
+  if (!dropdownMenu) {
+    error('[RPO] coach-dropdown-menu introuvable');
+    return;
+  }
+
+  if (coaches.length === 0) {
+    showNoCoaches();
+    return;
+  }
+
+  dropdownMenu.innerHTML = '';
+
+  coaches.forEach(coach => {
+    const option = document.createElement('div');
+    option.className = 'coach-dropdown-option';
+    option.dataset.username = coach.username;
+
+    const displayName = coach.prenom && coach.nom
+      ? `${coach.prenom} ${coach.nom} (${coach.username})`
+      : coach.username;
+
+    option.innerHTML = `
+      <span>
+        <i class="fas fa-user-graduate"></i>
+        <span>${displayName}</span>
+      </span>
+    `;
+
+    option.addEventListener('click', function() {
+      selectCoach(coach.username);
+    });
+
+    dropdownMenu.appendChild(option);
+  });
+
+  log('[RPO] ✅ Dropdown peuplé avec', coaches.length, 'coaches');
+}
+
+// Handle coach selection (for direction users)
+function selectCoach(username) {
+  log('[RPO] Coach sélectionné:', username);
+
+  // Update URL parameter
+  const url = new URL(window.location);
+  url.searchParams.set('user', username);
+  window.history.pushState({}, '', url);
+
+  // Update dropdown toggle text
+  const toggle = document.getElementById('coach-dropdown-toggle');
+  if (toggle) {
+    const placeholder = toggle.querySelector('.placeholder');
+    if (placeholder) {
+      placeholder.textContent = username;
+    }
+  }
+
+  // Close dropdown
+  const dropdownMenu = document.getElementById('coach-dropdown-menu');
+  if (dropdownMenu) {
+    dropdownMenu.classList.remove('show');
+  }
+  const toggleBtn = document.getElementById('coach-dropdown-toggle');
+  if (toggleBtn) {
+    toggleBtn.classList.remove('active');
+  }
+
+  // Hide selector and show content
+  const selector = document.getElementById('coach-entrepreneur-selector');
+  const backdrop = document.getElementById('coach-selector-backdrop');
+
+  if (selector) {
+    selector.classList.remove('visible');
+    setTimeout(() => {
+      selector.classList.add('in-header');
+    }, 300);
+  }
+
+  if (backdrop) {
+    backdrop.classList.remove('visible');
+  }
+
+  // Add has-selection class to body
+  document.body.classList.add('has-selection');
+
+  // Load RPO data for selected coach
+  setTimeout(async () => {
+    await loadRPODataInternal();
+
+    // Initialize views
+    changeMonthlyView(0);
+    changeMonth(0);
+    calculateMonthlyTotalsFromWeekly(0);
+
+    log('[RPO] ✅ Données chargées pour le coach:', username);
+  }, 100);
+}
+
+// Show "no coaches" message
+function showNoCoaches() {
+  const dropdownMenu = document.getElementById('coach-dropdown-menu');
+  if (dropdownMenu) {
+    dropdownMenu.innerHTML = '<div class="coach-dropdown-option-disabled">Aucun coach disponible</div>';
+  }
+}
+
 // Handle star rating clicks on page load
 document.addEventListener('DOMContentLoaded', async function() {
   // Détecter si on est en mode "embed" (affichage dans iframe du coach)
@@ -6760,6 +6905,30 @@ document.addEventListener('DOMContentLoaded', async function() {
   initAnnualStatsDropdown();
   setupWeeklyInputFormatting();
 
+  // Update selector text based on role
+  if (userRole === 'direction') {
+    // Update title and subtitle for direction users
+    const selectorTitle = document.querySelector('.selector-title');
+    const selectorSubtitle = document.querySelector('.selector-subtitle');
+    const selectorLabel = document.querySelector('.selector-label');
+    const placeholder = document.querySelector('#coach-dropdown-toggle .placeholder');
+
+    if (selectorTitle) {
+      selectorTitle.innerHTML = '<i class="fas fa-user-graduate"></i> Sélectionnez un coach';
+    }
+    if (selectorSubtitle) {
+      selectorSubtitle.textContent = 'Choisissez le coach dont vous souhaitez consulter le RPO';
+    }
+    if (selectorLabel) {
+      selectorLabel.innerHTML = '<i class="fas fa-user-graduate"></i><span>Coach:</span>';
+    }
+    if (placeholder) {
+      placeholder.textContent = '-- Sélectionner un coach --';
+    }
+
+    log('[INIT] Textes du sélecteur mis à jour pour le mode direction');
+  }
+
   // Skip data loading if coach hasn't selected an entrepreneur yet
   // (si pas de user param OU si le user param est le coach lui-même)
   // EXACTEMENT COMME FACTURATION QE
@@ -6767,8 +6936,19 @@ document.addEventListener('DOMContentLoaded', async function() {
   const isCoachModeWithoutSelection = isCoach && (!userParam || userParamIsCoach);
 
   if (isCoachModeWithoutSelection) {
-    console.log('[INIT] Mode coach détecté - Les données seront chargées après la sélection d\'entrepreneur');
+    log('[INIT] Mode coach détecté - Les données seront chargées après la sélection d\'entrepreneur');
     // Ne pas charger les données maintenant, elles seront chargées par entrepreneur-selector.js
+    return;
+  }
+
+  // Détecter si un utilisateur direction n'a pas encore sélectionné de coach
+  const isDirection = userRole === 'direction';
+  const isDirectionModeWithoutSelection = isDirection && !userParam;
+
+  if (isDirectionModeWithoutSelection) {
+    log('[INIT] Mode direction détecté - entrepreneur-selector.js chargera la liste des coaches');
+    // Ne pas charger les données maintenant - entrepreneur-selector.js s'occupe du chargement des coaches
+    // Les données RPO seront chargées après la sélection d'un coach
     return;
   }
 
@@ -6779,11 +6959,11 @@ document.addEventListener('DOMContentLoaded', async function() {
   setTimeout(() => {
     // Initialize monthly view
     changeMonthlyView(0);
-    console.log('✓ [INIT] Monthly view initialized with January (monthIndex: 0)');
+    log('✓ [INIT] Monthly view initialized with January (monthIndex: 0)');
 
     // Initialize weekly view - THIS loads the weekly data
     changeMonth(0);
-    console.log('✓ [INIT] Weekly view initialized with January (monthIndex: 0)');
+    log('✓ [INIT] Weekly view initialized with January (monthIndex: 0)');
 
     // Calculer les totaux hebdomadaires pour janvier
     calculateMonthlyTotalsFromWeekly(0);
@@ -6791,7 +6971,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   // Appliquer le mode embed APRÈS le chargement des données
   if (embedMode === 'weekly') {
-    console.log('[RPO EMBED] Mode embed détecté - initialisation...');
+    log('[RPO EMBED] Mode embed détecté - initialisation...');
 
     // Fonction pour forcer le masquage des éléments indésirables
     function hideUnwantedElements() {
@@ -6823,7 +7003,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         mainWrapper.style.setProperty('padding', '0', 'important');
       }
 
-      console.log('[RPO EMBED] Éléments cachés:', {
+      log('[RPO EMBED] Éléments cachés:', {
         selector: !!selector,
         backdrop: !!backdrop,
         nav: !!nav
@@ -6866,7 +7046,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     setTimeout(() => {
-      console.log('[RPO EMBED] Mode embed activé - affichage uniquement de la section hebdomadaire');
+      log('[RPO EMBED] Mode embed activé - affichage uniquement de la section hebdomadaire');
 
       // Réappliquer le masquage
       hideUnwantedElements();
@@ -6893,7 +7073,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         weeklySection.style.marginBottom = '0';
       }
 
-      console.log('[RPO EMBED] Section hebdomadaire affichée en mode embed');
+      log('[RPO EMBED] Section hebdomadaire affichée en mode embed');
     }, 600);
   }
 });
@@ -7222,7 +7402,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Générer les lignes du tableau hebdomadaire avec prévisions
 // Sauvegarder les objectifs "Visé" hebdomadaires dans le JSON
 async function saveWeeklyTargetsToJSON(mktgPattern, estimPattern, contratPattern, dollarPattern, startDate) {
-  console.log('[SAVE TARGETS] Début de la sauvegarde des objectifs hebdomadaires...');
+  log('[SAVE TARGETS] Début de la sauvegarde des objectifs hebdomadaires...');
 
   // Construire l'objet avec les données par mois et semaine
   const weeklyTargets = {};
@@ -7276,7 +7456,7 @@ async function saveWeeklyTargetsToJSON(mktgPattern, estimPattern, contratPattern
     };
   }
 
-  console.log('[SAVE TARGETS] Données préparées:', weeklyTargets);
+  log('[SAVE TARGETS] Données préparées:', weeklyTargets);
 
   // Envoyer au backend
   const username = getCurrentUsername();
@@ -7294,12 +7474,12 @@ async function saveWeeklyTargetsToJSON(mktgPattern, estimPattern, contratPattern
     });
 
     if (response.ok) {
-      console.log('[SAVE TARGETS] ✅ Objectifs hebdomadaires sauvegardés avec succès');
+      log('[SAVE TARGETS] ✅ Objectifs hebdomadaires sauvegardés avec succès');
     } else {
-      console.error('[SAVE TARGETS] ❌ Erreur lors de la sauvegarde:', response.status);
+      error('[SAVE TARGETS] ❌ Erreur lors de la sauvegarde:', response.status);
     }
   } catch (error) {
-    console.error('[SAVE TARGETS] ❌ Erreur réseau:', error);
+    error('[SAVE TARGETS] ❌ Erreur réseau:', error);
   }
 }
 
@@ -7487,7 +7667,7 @@ function generatePlanWeeks() {
     0, 0, 0, 0, 0, 0, 0, 0  // Index 44-51: reste
   ];
   const totalProdIntensity = productionIntensity.reduce((sum, val) => sum + val, 0);
-  console.log('[PROD] Total des pourcentages de production:', totalProdIntensity + '%');
+  log('[PROD] Total des pourcentages de production:', totalProdIntensity + '%');
 
   for (let i = 0; i < weeks; i++) {
     const intensity = intensityPattern[i];
@@ -7546,14 +7726,14 @@ function generatePlanWeeks() {
 
   // Ajuster la dernière valeur non nulle de prodPattern pour que le total soit exactement l'objectif + 10%
   const diffProd = (objectif * 1.10) - totalProdCalcule;
-  console.log('[DATA] Total production avant ajustement:', totalProdCalcule);
-  console.log('[TARGET] Objectif CA + 10%:', objectif * 1.10);
-  console.log('📐 Différence à ajuster:', diffProd);
+  log('[DATA] Total production avant ajustement:', totalProdCalcule);
+  log('[TARGET] Objectif CA + 10%:', objectif * 1.10);
+  log('📐 Différence à ajuster:', diffProd);
 
   if (diffProd !== 0) {
     for (let i = prodPattern.length - 1; i >= 0; i--) {
       if (prodPattern[i] > 0) {
-        console.log(`✏️ Ajustement dernière semaine (index ${i}): ${prodPattern[i]} -> ${prodPattern[i] + diffProd}`);
+        log(`✏️ Ajustement dernière semaine (index ${i}): ${prodPattern[i]} -> ${prodPattern[i] + diffProd}`);
         prodPattern[i] += diffProd;
         break;
       }
@@ -7563,10 +7743,10 @@ function generatePlanWeeks() {
   // Vérifier le total final
   const totalProdFinal = prodPattern.reduce((sum, val) => sum + val, 0);
   const semAvecProd = prodPattern.filter(v => v > 0).length;
-  console.log('[OK] Total production après ajustement:', totalProdFinal);
-  console.log('[CHECK] Égal à objectif + 10%?', totalProdFinal === (objectif * 1.10));
-  console.log('[DATE] Nombre de semaines avec production > 0:', semAvecProd);
-  console.log('[BAN] ProdPattern:', prodPattern);
+  log('[OK] Total production après ajustement:', totalProdFinal);
+  log('[CHECK] Égal à objectif + 10%?', totalProdFinal === (objectif * 1.10));
+  log('[DATE] Nombre de semaines avec production > 0:', semAvecProd);
+  log('[BAN] ProdPattern:', prodPattern);
 
   let html = '';
 
@@ -8171,7 +8351,7 @@ function initPlanMobileDropdowns() {
       if (s !== monthSelector) s.classList.remove('open');
     });
     monthSelector.classList.toggle('open');
-    console.log('[Plan Mobile] Dropdown mois clicked, open:', monthSelector.classList.contains('open'));
+    log('[Plan Mobile] Dropdown mois clicked, open:', monthSelector.classList.contains('open'));
   });
 
   // Gérer les options du mois
@@ -8184,7 +8364,7 @@ function initPlanMobileDropdowns() {
       monthSelector.querySelector('.custom-select-text').textContent = option.textContent;
       monthSelector.classList.remove('open');
 
-      console.log('[Plan Mobile] Mois sélectionné:', selectedMonth);
+      log('[Plan Mobile] Mois sélectionné:', selectedMonth);
       updatePlanWeekDropdown(selectedMonth, window.planWeeksByMonth);
     });
   });
@@ -8203,7 +8383,7 @@ function initPlanMobileDropdowns() {
       if (s !== weekSelector) s.classList.remove('open');
     });
     weekSelector.classList.toggle('open');
-    console.log('[Plan Mobile] Dropdown semaine clicked, open:', weekSelector.classList.contains('open'));
+    log('[Plan Mobile] Dropdown semaine clicked, open:', weekSelector.classList.contains('open'));
   });
 
   // Fermer les dropdowns en cliquant ailleurs
@@ -8217,7 +8397,7 @@ function initPlanMobileDropdowns() {
   monthSelector.querySelector('.custom-select-text').textContent = monthOptions[0].textContent;
   updatePlanWeekDropdown(firstMonth, weeksByMonth);
 
-  console.log('[Plan Mobile] Dropdowns initialisés - Mois:', firstMonth);
+  log('[Plan Mobile] Dropdowns initialisés - Mois:', firstMonth);
 }
 
 // Mettre à jour le dropdown semaine en fonction du mois sélectionné
@@ -8266,7 +8446,7 @@ function updatePlanWeekDropdown(selectedMonth, weeksByMonth) {
       // Close dropdown
       weekSelector.classList.remove('open');
 
-      console.log('[Plan Mobile] Semaine sélectionnée:', week.weekNumber);
+      log('[Plan Mobile] Semaine sélectionnée:', week.weekNumber);
       // Afficher uniquement cette semaine
       showOnlySelectedWeek(week.weekNumber);
     });
@@ -8627,7 +8807,7 @@ function calculatePlan() {
 
     // Debug: afficher le cumul pour la semaine 8 (19 janvier)
     if (i === 8) {
-      console.log(`[CUMUL SEMAINE ${i}] H. Marketing Cumul: ${cumulMktg.toFixed(1)} h | Cumul %: ${cumulPercentValue}%`);
+      log(`[CUMUL SEMAINE ${i}] H. Marketing Cumul: ${cumulMktg.toFixed(1)} h | Cumul %: ${cumulPercentValue}%`);
     }
 
     let tendanceMktg = '-';
@@ -8751,7 +8931,7 @@ function calculatePlan() {
 
 // Synchroniser les totaux du plan d'affaires avec les objectifs annuels RPO
 function syncPlanTotalsToAnnualObjectives(totalMktgPrev, totalEstimPrev, totalContratPrev, totalDollarPrev) {
-  console.log('🔄 Synchronisation des totaux Plan → Objectifs RPO annuels');
+  log('🔄 Synchronisation des totaux Plan → Objectifs RPO annuels');
 
   // Mettre à jour HEURES PÀP (H. Marketing Prév.)
   const hrpapInput = document.getElementById('hrpap-vise');
@@ -8759,7 +8939,7 @@ function syncPlanTotalsToAnnualObjectives(totalMktgPrev, totalEstimPrev, totalCo
     const hours = Math.round(totalMktgPrev);
     hrpapInput.value = hours + ' h';
     hrpapInput.dataset.value = hours;
-    console.log(`   ✓ HR PÀP: ${hours} h`);
+    log(`   ✓ HR PÀP: ${hours} h`);
   }
 
   // Mettre à jour # D'ESTIMATION
@@ -8768,7 +8948,7 @@ function syncPlanTotalsToAnnualObjectives(totalMktgPrev, totalEstimPrev, totalCo
     const estim = Math.round(totalEstimPrev);
     estimInput.value = estim.toString();
     estimInput.dataset.value = estim;
-    console.log(`   ✓ Estimation: ${estim}`);
+    log(`   ✓ Estimation: ${estim}`);
   }
 
   // Mettre à jour # CONTRACT SIGNÉ
@@ -8777,7 +8957,7 @@ function syncPlanTotalsToAnnualObjectives(totalMktgPrev, totalEstimPrev, totalCo
     const contracts = Math.round(totalContratPrev);
     contractInput.value = contracts.toString();
     contractInput.dataset.value = contracts;
-    console.log(`   ✓ Contrats: ${contracts}`);
+    log(`   ✓ Contrats: ${contracts}`);
   }
 
   // Mettre à jour $ SIGNÉ
@@ -8787,7 +8967,7 @@ function syncPlanTotalsToAnnualObjectives(totalMktgPrev, totalEstimPrev, totalCo
     const formatted = dollars.toLocaleString('fr-CA').replace(/\s/g, ' ');
     dollarInput.value = formatted + ' $';
     dollarInput.dataset.value = dollars;
-    console.log(`   ✓ $ Signé: ${formatted} $`);
+    log(`   ✓ $ Signé: ${formatted} $`);
   }
 
   // Synchroniser les paramètres du plan d'affaires vers les objectifs
@@ -8799,7 +8979,7 @@ function syncPlanTotalsToAnnualObjectives(totalMktgPrev, totalEstimPrev, totalCo
     const ratioValue = parseFloat(planRatioMktg.dataset.value) || 0;
     mktgViseInput.value = ratioValue + '%';
     mktgViseInput.dataset.value = ratioValue;
-    console.log(`   ✓ Taux MKTG: ${ratioValue}%`);
+    log(`   ✓ Taux MKTG: ${ratioValue}%`);
   }
 
   // TAUX DE VENTE (depuis le plan)
@@ -8809,7 +8989,7 @@ function syncPlanTotalsToAnnualObjectives(totalMktgPrev, totalEstimPrev, totalCo
     const tauxValue = parseFloat(planTauxVente.dataset.value) || 0;
     venteViseInput.value = tauxValue + '%';
     venteViseInput.dataset.value = tauxValue;
-    console.log(`   ✓ Taux de vente: ${tauxValue}%`);
+    log(`   ✓ Taux de vente: ${tauxValue}%`);
   }
 
   // CONTRAT MOYEN (CM Prévision depuis le plan)
@@ -8820,18 +9000,18 @@ function syncPlanTotalsToAnnualObjectives(totalMktgPrev, totalEstimPrev, totalCo
     const formatted = Math.round(cmValue).toLocaleString('fr-CA').replace(/\s/g, ' ');
     moyenViseInput.value = formatted + ' $';
     moyenViseInput.dataset.value = cmValue;
-    console.log(`   ✓ Contrat moyen: ${formatted} $`);
+    log(`   ✓ Contrat moyen: ${formatted} $`);
   }
 
   // Recalculer les pourcentages après la mise à jour
   ['hrpap', 'estimation', 'contract', 'dollar', 'mktg', 'vente', 'moyen'].forEach(metric => calculatePercentage(metric));
 
-  console.log('✅ Synchronisation terminée');
+  log('✅ Synchronisation terminée');
 }
 
 // Calculer "Devrait être à" basé sur les prévisions du plan jusqu'à aujourd'hui
 function calculateExpectedToDate() {
-  console.log('📅 Calcul "Devrait être à" jusqu\'à aujourd\'hui');
+  log('📅 Calcul "Devrait être à" jusqu\'à aujourd\'hui');
 
   const today = createTorontoDate(); // Date d'aujourd'hui
   const planStartDate = createTorontoDate(2025, 11, 1); // 1er décembre 2025
@@ -8871,7 +9051,7 @@ function calculateExpectedToDate() {
     }
   }
 
-  console.log(`   Attendu Mktg: ${expectedMktg}h, Estim: ${expectedEstim}, Contrat: ${expectedContrat}, Dollar: ${expectedDollar}$`);
+  log(`   Attendu Mktg: ${expectedMktg}h, Estim: ${expectedEstim}, Contrat: ${expectedContrat}, Dollar: ${expectedDollar}$`);
 
   // Mettre à jour les champs "Devrait être à" (tendance)
   const hrpapTendance = document.getElementById('hrpap-tendance');
@@ -8905,7 +9085,7 @@ function calculateExpectedToDate() {
   // Recalculer les pourcentages pour mettre à jour les couleurs
   ['hrpap', 'estimation', 'contract', 'dollar'].forEach(metric => calculatePercentage(metric));
 
-  console.log('✅ Calcul "Devrait être à" terminé');
+  log('✅ Calcul "Devrait être à" terminé');
 }
 
 // Afficher/cacher les badges "Conseils" si en retard
@@ -9029,7 +9209,7 @@ function syncPlanToRPO() {
   const rpoWeeks = getWeeksForMonth(currentWeeklyMonthIndex);
   if (!rpoWeeks || rpoWeeks.length === 0) return;
 
-  console.log(`🔄 Synchronisation pour mois ${currentWeeklyMonthIndex}, ${rpoWeeks.length} semaines RPO`);
+  log(`🔄 Synchronisation pour mois ${currentWeeklyMonthIndex}, ${rpoWeeks.length} semaines RPO`);
 
   // Pour chaque semaine RPO affichée
   rpoWeeks.forEach((rpoWeek, rpoIndex) => {
@@ -9037,7 +9217,7 @@ function syncPlanToRPO() {
 
     // Parser les dates de la semaine RPO depuis le label (ex: "2 mars - 8 mars")
     const rpoWeekLabel = rpoWeek.label;
-    console.log(`[DEBUG] Traitement RPO semaine: ${rpoWeekLabel}`);
+    log(`[DEBUG] Traitement RPO semaine: ${rpoWeekLabel}`);
     const [startStr, endStr] = rpoWeekLabel.split(' - ');
 
     // Extraire jour et mois
@@ -9057,11 +9237,11 @@ function syncPlanToRPO() {
     const rpoWeekStart = createTorontoDate(startYear, startMonthIdx, startDay);
     const rpoWeekEnd = createTorontoDate(endYear, endMonthIdx, endDay);
 
-    console.log(`   [DATE] RPO date: ${rpoWeekStart.toLocaleDateString('fr-CA')} (${rpoWeekStart.getFullYear()}-${rpoWeekStart.getMonth()+1}-${rpoWeekStart.getDate()})`);
+    log(`   [DATE] RPO date: ${rpoWeekStart.toLocaleDateString('fr-CA')} (${rpoWeekStart.getFullYear()}-${rpoWeekStart.getMonth()+1}-${rpoWeekStart.getDate()})`);
 
     // Exclure la semaine 5-11 janvier 2026
     if (startYear === 2026 && startMonthIdx === 0 && startDay === 5) {
-      console.log(`⏭️ Semaine ${rpoWeekLabel} exclue (5-11 janvier)`);
+      log(`⏭️ Semaine ${rpoWeekLabel} exclue (5-11 janvier)`);
       return;
     }
 
@@ -9079,20 +9259,20 @@ function syncPlanToRPO() {
 
       if (sameYear && sameMonth && sameDay) {
         matchedPlanWeek = planIdx + 1; // +1 car ligne 1 = test (6-12 oct)
-        console.log(`   [OK] Match trouvé: plan semaine ${matchedPlanWeek} (${planWeekStart.toLocaleDateString('fr-CA')})`);
+        log(`   [OK] Match trouvé: plan semaine ${matchedPlanWeek} (${planWeekStart.toLocaleDateString('fr-CA')})`);
         break;
       }
     }
 
     if (!matchedPlanWeek) {
-      console.log(`   [WARN] Aucune correspondance plan pour RPO ${rpoWeekLabel}`);
+      log(`   [WARN] Aucune correspondance plan pour RPO ${rpoWeekLabel}`);
       return;
     }
 
     // Récupérer les valeurs du plan d'affaire
     const planRow = document.querySelector(`#plan-w${matchedPlanWeek}-mktg-reel`)?.closest('tr');
     if (!planRow) {
-      console.log(`[WARN] plan-w${matchedPlanWeek} introuvable`);
+      log(`[WARN] plan-w${matchedPlanWeek} introuvable`);
       return;
     }
 
@@ -9103,7 +9283,7 @@ function syncPlanToRPO() {
     const dollarText = cells[11]?.textContent.replace(/[^\d]/g, '') || '0';
     const dollarPrev = parseFloat(dollarText) || 0;
 
-    console.log(`   [DATA] Valeurs plan: mktg=${mktgPrev}h, estim=${estimPrev}, contrat=${contratPrev}, $=${dollarPrev}`);
+    log(`   [DATA] Valeurs plan: mktg=${mktgPrev}h, estim=${estimPrev}, contrat=${contratPrev}, $=${dollarPrev}`);
 
     // Mettre à jour RPO
     const rpoInputReel = document.querySelector(`[data-week="${weekNum}"][data-field="h_marketing"]`);
@@ -9123,7 +9303,7 @@ function syncPlanToRPO() {
     if (rpoContratVise) rpoContratVise.value = `${Math.round(contratPrev)}`;
     if (rpoDollarVise) rpoDollarVise.value = `${dollarPrev.toLocaleString('fr-CA')} $`;
 
-    console.log(`[OK] ${rpoWeekLabel} ← plan-w${matchedPlanWeek}`);
+    log(`[OK] ${rpoWeekLabel} ← plan-w${matchedPlanWeek}`);
   });
 }
 
@@ -9200,11 +9380,11 @@ function syncRPOToPlan() {
 // Charger les données hebdomadaires depuis window.weeklyData vers le plan d'affaire
 function loadWeeklyDataToPlan() {
   if (!window.weeklyData) {
-    console.log('[PLAN] window.weeklyData non disponible');
+    log('[PLAN] window.weeklyData non disponible');
     return;
   }
 
-  console.log('[PLAN] Chargement des données depuis window.weeklyData...');
+  log('[PLAN] Chargement des données depuis window.weeklyData...');
 
   // Décembre 2025 (monthIndex -2): semaines 1-5 -> plan weeks 1-5
   if (window.weeklyData['-2']) {
@@ -9218,7 +9398,7 @@ function loadWeeklyDataToPlan() {
         if (input) {
           const val = weekData.h_marketing;
           input.value = (val !== null && val !== undefined && val !== '-') ? val + ' h' : '-';
-          console.log(`[PLAN] Décembre sem ${weekNumber} -> plan-w${planWeekIndex}-mktg-reel = ${input.value}`);
+          log(`[PLAN] Décembre sem ${weekNumber} -> plan-w${planWeekIndex}-mktg-reel = ${input.value}`);
         }
       }
 
@@ -9227,7 +9407,7 @@ function loadWeeklyDataToPlan() {
         const input = document.getElementById(`plan-w${planWeekIndex}-estim-reel`);
         if (input) {
           input.value = weekData.estimation;
-          console.log(`[PLAN] Décembre sem ${weekNumber} -> plan-w${planWeekIndex}-estim-reel = ${input.value}`);
+          log(`[PLAN] Décembre sem ${weekNumber} -> plan-w${planWeekIndex}-estim-reel = ${input.value}`);
         }
       }
 
@@ -9236,7 +9416,7 @@ function loadWeeklyDataToPlan() {
         const input = document.getElementById(`plan-w${planWeekIndex}-contrat-reel`);
         if (input) {
           input.value = weekData.contract;
-          console.log(`[PLAN] Décembre sem ${weekNumber} -> plan-w${planWeekIndex}-contrat-reel = ${input.value}`);
+          log(`[PLAN] Décembre sem ${weekNumber} -> plan-w${planWeekIndex}-contrat-reel = ${input.value}`);
         }
       }
 
@@ -9245,7 +9425,7 @@ function loadWeeklyDataToPlan() {
         const input = document.getElementById(`plan-w${planWeekIndex}-dollar-reel`);
         if (input) {
           input.value = Math.round(weekData.dollar).toLocaleString('fr-CA') + ' $';
-          console.log(`[PLAN] Décembre sem ${weekNumber} -> plan-w${planWeekIndex}-dollar-reel = ${input.value}`);
+          log(`[PLAN] Décembre sem ${weekNumber} -> plan-w${planWeekIndex}-dollar-reel = ${input.value}`);
         }
       }
     });
@@ -9299,14 +9479,14 @@ function loadWeeklyDataToPlan() {
   // Charger aussi les ventes produit pour la colonne Production Réel
   if (typeof loadVentesProduitIntoPlan === 'function') {
     loadVentesProduitIntoPlan().then(() => {
-      console.log('[PLAN] Ventes produit chargées');
+      log('[PLAN] Ventes produit chargées');
       // Recalculer le plan après avoir chargé toutes les données
-      console.log('[PLAN] Toutes les données chargées, recalcul du plan...');
+      log('[PLAN] Toutes les données chargées, recalcul du plan...');
       calculatePlan();
     });
   } else {
     // Recalculer le plan même si loadVentesProduitIntoPlan n'est pas disponible
-    console.log('[PLAN] Données chargées, recalcul du plan...');
+    log('[PLAN] Données chargées, recalcul du plan...');
     calculatePlan();
   }
 }
@@ -9314,20 +9494,20 @@ function loadWeeklyDataToPlan() {
 // Charger les données hebdomadaires du RPO dans le plan d'affaire
 async function loadRPODataIntoPlan() {
   const username = getCurrentUsername();
-  console.log('[PLAN] Chargement de toutes les données hebdomadaires pour le plan...');
+  log('[PLAN] Chargement de toutes les données hebdomadaires pour le plan...');
 
   try {
     // Charger Décembre 2025 (monthIndex -2)
     const decResponse = await fetch(`/api/rpo/${username}/weekly/-2`);
     if (decResponse.ok) {
       const decData = await decResponse.json();
-      console.log('[PLAN] Données Décembre 2025:', decData);
+      log('[PLAN] Données Décembre 2025:', decData);
 
       Object.keys(decData).forEach(weekNumber => {
         const weekData = decData[weekNumber];
         const planWeekIndex = parseInt(weekNumber);
 
-        console.log(`[PLAN] Décembre semaine ${weekNumber} -> plan-w${planWeekIndex}:`, weekData);
+        log(`[PLAN] Décembre semaine ${weekNumber} -> plan-w${planWeekIndex}:`, weekData);
 
         // H. Marketing
         if (weekData.h_marketing !== undefined) {
@@ -9363,7 +9543,7 @@ async function loadRPODataIntoPlan() {
       const monthResponse = await fetch(`/api/rpo/${username}/weekly/${monthIndex}`);
       if (monthResponse.ok) {
         const monthData = await monthResponse.json();
-        console.log(`[PLAN] Données mois ${monthIndex}:`, monthData);
+        log(`[PLAN] Données mois ${monthIndex}:`, monthData);
 
         Object.keys(monthData).forEach(weekNumber => {
           const weekData = monthData[weekNumber];
@@ -9373,7 +9553,7 @@ async function loadRPODataIntoPlan() {
           // Janvier 2026 (monthIndex 0) commence à la semaine 7
           const planWeekIndex = 6 + (monthIndex * 4) + parseInt(weekNumber);
 
-          console.log(`[PLAN] Mois ${monthIndex} semaine ${weekNumber} -> plan-w${planWeekIndex}:`, weekData);
+          log(`[PLAN] Mois ${monthIndex} semaine ${weekNumber} -> plan-w${planWeekIndex}:`, weekData);
 
           // H. Marketing
           if (weekData.h_marketing !== undefined) {
@@ -9409,11 +9589,11 @@ async function loadRPODataIntoPlan() {
     await loadVentesProduitIntoPlan();
 
     // Recalculer après avoir chargé les données
-    console.log('[PLAN] Toutes les données chargées, recalcul du plan...');
+    log('[PLAN] Toutes les données chargées, recalcul du plan...');
     calculatePlan();
 
   } catch (error) {
-    console.error('[PLAN] Erreur lors du chargement des données:', error);
+    error('[PLAN] Erreur lors du chargement des données:', error);
   }
 }
 
@@ -9479,7 +9659,7 @@ async function loadVentesProduitIntoPlan() {
     }
 
   } catch (error) {
-    console.error('Erreur chargement ventes produit:', error);
+    error('Erreur chargement ventes produit:', error);
   }
 }
 
@@ -9775,58 +9955,58 @@ function formatPercentValue(value) {
 // Charger le chiffre d'affaires depuis l'API du dashboard
 async function loadChiffreAffaires() {
   const username = getCurrentUsername();
-  console.log('[DEBUG] [DEBUG] loadChiffreAffaires - Username:', username);
+  log('[DEBUG] [DEBUG] loadChiffreAffaires - Username:', username);
 
   try {
     // Utiliser l'API du montant signé (comme dans dashboard)
     const url = `/api/chiffre-affaires-signes/${username}`;
-    console.log('[DEBUG] [DEBUG] Fetching CA signé from:', url);
+    log('[DEBUG] [DEBUG] Fetching CA signé from:', url);
 
     const response = await fetch(url);
-    console.log('[DEBUG] [DEBUG] Response status:', response.status, response.statusText);
+    log('[DEBUG] [DEBUG] Response status:', response.status, response.statusText);
 
     if (!response.ok) throw new Error('Erreur lors du chargement du CA');
 
     const data = await response.json();
-    console.log('[DEBUG] [DEBUG] Data received from API:', data);
-    console.log('[DEBUG] [DEBUG] data.total:', data.total);
+    log('[DEBUG] [DEBUG] Data received from API:', data);
+    log('[DEBUG] [DEBUG] data.total:', data.total);
 
     const caActuel = parseMoneyValue(data.total || '0');
-    console.log('[DEBUG] [DEBUG] CA signé parsed:', caActuel);
+    log('[DEBUG] [DEBUG] CA signé parsed:', caActuel);
 
     // Mettre à jour la cellule Ventes Actuel (Montant)
     const ventesActuelCell = document.querySelector('[data-category="ventes"][data-field="actuel-montant"]');
-    console.log('[DEBUG] [DEBUG] ventesActuelCell found:', ventesActuelCell);
+    log('[DEBUG] [DEBUG] ventesActuelCell found:', ventesActuelCell);
 
     if (ventesActuelCell) {
       const formattedValue = formatMoneyValue(caActuel);
-      console.log('[DEBUG] [DEBUG] Setting cell to:', formattedValue);
+      log('[DEBUG] [DEBUG] Setting cell to:', formattedValue);
       ventesActuelCell.textContent = formattedValue;
-      console.log('[DEBUG] [DEBUG] Cell content after update:', ventesActuelCell.textContent);
+      log('[DEBUG] [DEBUG] Cell content after update:', ventesActuelCell.textContent);
     } else {
-      console.error('[ERROR] [DEBUG] ventesActuelCell NOT FOUND!');
+      error('[ERROR] [DEBUG] ventesActuelCell NOT FOUND!');
     }
 
     // Mettre à jour le pourcentage Actuel (calculé par rapport au Budget)
     const ventesPercentCell = document.querySelector('[data-category="ventes"][data-field="actuel-percent"]');
     const ventesBudgetCell = document.querySelector('[data-category="ventes"][data-field="budget-montant"]');
-    console.log('[DEBUG] [DEBUG] ventesPercentCell found:', ventesPercentCell);
+    log('[DEBUG] [DEBUG] ventesPercentCell found:', ventesPercentCell);
 
     if (ventesPercentCell && ventesBudgetCell) {
       const ventesBudget = parseMoneyValue(ventesBudgetCell.textContent);
       const percent = ventesBudget > 0 ? (caActuel / ventesBudget) * 100 : 0;
       ventesPercentCell.textContent = formatPercentValue(percent);
-      console.log('[DEBUG] [DEBUG] Percent cell set to:', percent.toFixed(2) + '%');
+      log('[DEBUG] [DEBUG] Percent cell set to:', percent.toFixed(2) + '%');
     }
 
     // Recalculer les totaux et écarts
-    console.log('[DEBUG] [DEBUG] Calling updateAllCalculations...');
+    log('[DEBUG] [DEBUG] Calling updateAllCalculations...');
     updateAllCalculations();
 
-    console.log('[OK] Chiffre d\'affaires chargé:', caActuel);
+    log('[OK] Chiffre d\'affaires chargé:', caActuel);
   } catch (error) {
-    console.error('[ERROR] Erreur lors du chargement du CA:', error);
-    console.error('[ERROR] [DEBUG] Error stack:', error.stack);
+    error('[ERROR] Erreur lors du chargement du CA:', error);
+    error('[ERROR] [DEBUG] Error stack:', error.stack);
   }
 }
 
@@ -9956,7 +10136,7 @@ function calculateTotalEcart() {
     }
   }
 
-  console.log('[DATA] Total Écart calculé:', totalEcartMontant, totalEcartPercent + '%');
+  log('[DATA] Total Écart calculé:', totalEcartMontant, totalEcartPercent + '%');
 }
 
 // Recalculer les totaux (Total des dépenses et PROFIT)
@@ -10104,9 +10284,9 @@ async function saveEtatsResultatsData() {
       throw new Error('Erreur lors de la sauvegarde');
     }
 
-    console.log('💾 Données Actuel et CIBLÉ sauvegardées dans le backend:', { actuelData, cibleData });
+    log('💾 Données Actuel et CIBLÉ sauvegardées dans le backend:', { actuelData, cibleData });
   } catch (error) {
-    console.error('[ERROR] Erreur lors de la sauvegarde des données:', error);
+    error('[ERROR] Erreur lors de la sauvegarde des données:', error);
   }
 }
 
@@ -10157,7 +10337,7 @@ async function updateRedevancePercent() {
     // Récupérer le grade de l'utilisateur
     const infoResponse = await fetch(`/api/get-info/${username}`);
     if (!infoResponse.ok) {
-      console.log('[WARN] Impossible de récupérer le grade, utilisation de 20%');
+      log('[WARN] Impossible de récupérer le grade, utilisation de 20%');
       return;
     }
 
@@ -10175,11 +10355,11 @@ async function updateRedevancePercent() {
     const redevanceBudgetPercentCell = document.querySelector('[data-category="redevances"][data-field="budget-percent"]');
     if (redevanceBudgetPercentCell) {
       redevanceBudgetPercentCell.textContent = formatPercentValue(redevancePercent);
-      console.log(`[REDEVANCE] ${userGrade} | CA: ${ventesBudget}$ | Taux: ${redevancePercent}%`);
+      log(`[REDEVANCE] ${userGrade} | CA: ${ventesBudget}$ | Taux: ${redevancePercent}%`);
     }
 
   } catch (error) {
-    console.error('[ERROR] Erreur calcul redevance:', error);
+    error('[ERROR] Erreur calcul redevance:', error);
   }
 }
 
@@ -10191,7 +10371,7 @@ async function loadEtatsResultatsData() {
     const response = await fetch(`/api/etats-resultats/actuel/${username}`);
 
     if (!response.ok) {
-      console.log('ℹ️ Aucune donnée Actuel/CIBLÉ sauvegardée');
+      log('ℹ️ Aucune donnée Actuel/CIBLÉ sauvegardée');
       return;
     }
 
@@ -10220,12 +10400,12 @@ async function loadEtatsResultatsData() {
       }
     });
 
-    console.log('📂 Données Actuel et CIBLÉ chargées depuis le backend:', { actuelData, cibleData });
+    log('📂 Données Actuel et CIBLÉ chargées depuis le backend:', { actuelData, cibleData });
 
     // Recalculer les totaux CIBLÉ après chargement
     updateCibleCalculations();
   } catch (error) {
-    console.error('[ERROR] Erreur lors du chargement des données:', error);
+    error('[ERROR] Erreur lors du chargement des données:', error);
   }
 }
 
@@ -10241,7 +10421,7 @@ async function saveBudgetData() {
 
     // Ne PAS sauvegarder les redevances car elles sont calculées dynamiquement
     if (category === 'redevances') {
-      console.log('[INFO] Redevances exclues de la sauvegarde (calcul dynamique)');
+      log('[INFO] Redevances exclues de la sauvegarde (calcul dynamique)');
       return;
     }
 
@@ -10263,9 +10443,9 @@ async function saveBudgetData() {
       throw new Error('Erreur lors de la sauvegarde');
     }
 
-    console.log('💾 Budget % sauvegardé dans le backend:', data);
+    log('💾 Budget % sauvegardé dans le backend:', data);
   } catch (error) {
-    console.error('[ERROR] Erreur lors de la sauvegarde du budget:', error);
+    error('[ERROR] Erreur lors de la sauvegarde du budget:', error);
   }
 }
 
@@ -10277,7 +10457,7 @@ async function loadBudgetData() {
     const response = await fetch(`/api/etats-resultats/budget/${username}`);
 
     if (!response.ok) {
-      console.log('ℹ️ Aucune donnée Budget sauvegardée');
+      log('ℹ️ Aucune donnée Budget sauvegardée');
       return;
     }
 
@@ -10288,7 +10468,7 @@ async function loadBudgetData() {
     Object.keys(data).forEach(category => {
       // Ignorer les redevances car elles sont calculées dynamiquement selon le grade
       if (category === 'redevances') {
-        console.log('[INFO] Redevances ignorées lors du chargement (calcul dynamique activé)');
+        log('[INFO] Redevances ignorées lors du chargement (calcul dynamique activé)');
         return;
       }
 
@@ -10308,12 +10488,12 @@ async function loadBudgetData() {
       }
     });
 
-    console.log('📂 Budget % chargé depuis le backend:', data);
+    log('📂 Budget % chargé depuis le backend:', data);
 
     // Mettre à jour le pourcentage de redevance selon le grade (TOUJOURS calculé dynamiquement)
     await updateRedevancePercent();
   } catch (error) {
-    console.error('[ERROR] Erreur lors du chargement du budget:', error);
+    error('[ERROR] Erreur lors du chargement du budget:', error);
   }
 }
 
@@ -10345,7 +10525,7 @@ function syncObjectifCAWithVentesBudget() {
     calculateBudgetTotals();
   });
 
-  console.log('🔄 Objectif CA synchronisé avec Ventes Budget:', objectifValue);
+  log('🔄 Objectif CA synchronisé avec Ventes Budget:', objectifValue);
 }
 
 // Recalculer tous les montants Budget à partir des pourcentages
@@ -10374,7 +10554,7 @@ function recalculateBudgetAmounts() {
     }
   });
 
-  console.log('🔄 Montants Budget recalculés, Ventes Budget:', ventesBudget);
+  log('🔄 Montants Budget recalculés, Ventes Budget:', ventesBudget);
 }
 
 // Recalculer les totaux Budget (Total des dépenses et PROFIT)
@@ -10434,9 +10614,9 @@ function calculateBudgetTotals() {
 
 // Recalculer les totaux et pourcentages CIBLÉ automatiquement
 function updateCibleCalculations() {
-  console.log('========================================');
-  console.log('[CIBLÉ DEBUG] ✓ Function called');
-  console.log('========================================');
+  log('========================================');
+  log('[CIBLÉ DEBUG] ✓ Function called');
+  log('========================================');
 
   const categories = [
     'assurance-qe', 'concours', 'essence', 'entretien-voiture',
@@ -10447,46 +10627,46 @@ function updateCibleCalculations() {
 
   // Récupérer l'objectif CA (revenu total)
   const objectifCAInput = document.getElementById('objectifCA');
-  console.log('[CIBLÉ DEBUG] objectifCAInput:', objectifCAInput);
-  console.log('[CIBLÉ DEBUG] objectifCAInput.dataset.value:', objectifCAInput?.dataset.value);
+  log('[CIBLÉ DEBUG] objectifCAInput:', objectifCAInput);
+  log('[CIBLÉ DEBUG] objectifCAInput.dataset.value:', objectifCAInput?.dataset.value);
 
   const objectifCA = parseFloat(objectifCAInput?.dataset.value) || 400000;
-  console.log('[CIBLÉ DEBUG] objectifCA (parsed):', objectifCA);
+  log('[CIBLÉ DEBUG] objectifCA (parsed):', objectifCA);
 
   if (objectifCA <= 0) {
-    console.warn('[CIBLÉ] Objectif CA invalide, utilisation de 400,000$ par défaut');
+    warn('[CIBLÉ] Objectif CA invalide, utilisation de 400,000$ par défaut');
     return;
   }
 
   // Calculer le total des dépenses CIBLÉ et mettre à jour les pourcentages
   let totalDepensesCible = 0;
-  console.log('[CIBLÉ DEBUG] Starting category loop...');
+  log('[CIBLÉ DEBUG] Starting category loop...');
 
   categories.forEach(category => {
     // Récupérer l'input CIBLÉ pour cette catégorie (l'input est DANS le td)
     const input = document.querySelector(`td[data-category="${category}"][data-field="cible-montant"] .etats-resultats-cible-input`);
 
     if (!input) {
-      console.warn(`[CIBLÉ DEBUG] ✗ No input found for category: ${category}`);
+      warn(`[CIBLÉ DEBUG] ✗ No input found for category: ${category}`);
       return;
     }
 
-    console.log(`[CIBLÉ DEBUG] ✓ ${category} input found:`, input);
-    console.log(`[CIBLÉ DEBUG]   - input.value: "${input.value}"`);
+    log(`[CIBLÉ DEBUG] ✓ ${category} input found:`, input);
+    log(`[CIBLÉ DEBUG]   - input.value: "${input.value}"`);
 
     // Parser la valeur de l'input
     const montant = parseMoneyValue(input.value);
-    console.log(`[CIBLÉ DEBUG]   - parsed montant: ${montant}`);
+    log(`[CIBLÉ DEBUG]   - parsed montant: ${montant}`);
 
     totalDepensesCible += montant;
-    console.log(`[CIBLÉ DEBUG]   - running total: ${totalDepensesCible}`);
+    log(`[CIBLÉ DEBUG]   - running total: ${totalDepensesCible}`);
 
     // Calculer et afficher le pourcentage
     const percentCell = document.querySelector(`[data-category="${category}"][data-field="cible-percent"]`);
     if (percentCell) {
       const percent = (montant / objectifCA) * 100;
       percentCell.textContent = formatPercentValue(percent);
-      console.log(`[CIBLÉ DEBUG]   - percent calculated: ${percent.toFixed(2)}%`);
+      log(`[CIBLÉ DEBUG]   - percent calculated: ${percent.toFixed(2)}%`);
 
       // Colorier en rouge si > 0
       if (percent > 0) {
@@ -10495,75 +10675,75 @@ function updateCibleCalculations() {
         percentCell.style.color = 'var(--text-gray)';
       }
     } else {
-      console.warn(`[CIBLÉ DEBUG]   ✗ No percent cell found for ${category}`);
+      warn(`[CIBLÉ DEBUG]   ✗ No percent cell found for ${category}`);
     }
   });
 
-  console.log('========================================');
-  console.log('[CIBLÉ DEBUG] TOTAL CALCULATED:', totalDepensesCible);
-  console.log('========================================');
+  log('========================================');
+  log('[CIBLÉ DEBUG] TOTAL CALCULATED:', totalDepensesCible);
+  log('========================================');
 
   // Mettre à jour Total des dépenses CIBLÉ
   const totalDepensesCell = document.querySelector('[data-category="total-depenses"][data-field="cible-montant"]');
   const totalDepensesPercentCell = document.querySelector('[data-category="total-depenses"][data-field="cible-percent"]');
 
-  console.log('[CIBLÉ DEBUG] totalDepensesCell:', totalDepensesCell);
-  console.log('[CIBLÉ DEBUG] totalDepensesPercentCell:', totalDepensesPercentCell);
+  log('[CIBLÉ DEBUG] totalDepensesCell:', totalDepensesCell);
+  log('[CIBLÉ DEBUG] totalDepensesPercentCell:', totalDepensesPercentCell);
 
   if (totalDepensesCell) {
     const formattedTotal = formatMoneyValue(totalDepensesCible);
-    console.log('[CIBLÉ DEBUG] Setting total cell to:', formattedTotal);
+    log('[CIBLÉ DEBUG] Setting total cell to:', formattedTotal);
     totalDepensesCell.textContent = formattedTotal;
-    console.log('[CIBLÉ DEBUG] Total cell textContent after setting:', totalDepensesCell.textContent);
+    log('[CIBLÉ DEBUG] Total cell textContent after setting:', totalDepensesCell.textContent);
   } else {
-    console.error('[CIBLÉ DEBUG] ✗ totalDepensesCell NOT FOUND!');
+    error('[CIBLÉ DEBUG] ✗ totalDepensesCell NOT FOUND!');
   }
 
   if (totalDepensesPercentCell) {
     const totalPercent = (totalDepensesCible / objectifCA) * 100;
     const formattedPercent = formatPercentValue(totalPercent);
-    console.log('[CIBLÉ DEBUG] Setting percent cell to:', formattedPercent);
+    log('[CIBLÉ DEBUG] Setting percent cell to:', formattedPercent);
     totalDepensesPercentCell.textContent = formattedPercent;
-    console.log('[CIBLÉ DEBUG] Percent cell textContent after setting:', totalDepensesPercentCell.textContent);
+    log('[CIBLÉ DEBUG] Percent cell textContent after setting:', totalDepensesPercentCell.textContent);
   } else {
-    console.error('[CIBLÉ DEBUG] ✗ totalDepensesPercentCell NOT FOUND!');
+    error('[CIBLÉ DEBUG] ✗ totalDepensesPercentCell NOT FOUND!');
   }
 
   // Calculer le PROFIT CIBLÉ
   const profitCible = objectifCA - totalDepensesCible;
   const profitPercent = (profitCible / objectifCA) * 100;
 
-  console.log('[CIBLÉ DEBUG] Profit calculation:');
-  console.log('[CIBLÉ DEBUG]   - profitCible:', profitCible);
-  console.log('[CIBLÉ DEBUG]   - profitPercent:', profitPercent);
+  log('[CIBLÉ DEBUG] Profit calculation:');
+  log('[CIBLÉ DEBUG]   - profitCible:', profitCible);
+  log('[CIBLÉ DEBUG]   - profitPercent:', profitPercent);
 
   // Mettre à jour PROFIT CIBLÉ
   const profitCell = document.querySelector('[data-category="profit"][data-field="cible-montant"]');
   const profitPercentCell = document.querySelector('[data-category="profit"][data-field="cible-percent"]');
 
-  console.log('[CIBLÉ DEBUG] profitCell:', profitCell);
-  console.log('[CIBLÉ DEBUG] profitPercentCell:', profitPercentCell);
+  log('[CIBLÉ DEBUG] profitCell:', profitCell);
+  log('[CIBLÉ DEBUG] profitPercentCell:', profitPercentCell);
 
   if (profitCell) {
     const formattedProfit = formatMoneyValue(profitCible);
-    console.log('[CIBLÉ DEBUG] Setting profit cell to:', formattedProfit);
+    log('[CIBLÉ DEBUG] Setting profit cell to:', formattedProfit);
     profitCell.textContent = formattedProfit;
   } else {
-    console.error('[CIBLÉ DEBUG] ✗ profitCell NOT FOUND!');
+    error('[CIBLÉ DEBUG] ✗ profitCell NOT FOUND!');
   }
 
   if (profitPercentCell) {
     const formattedProfitPercent = formatPercentValue(profitPercent);
-    console.log('[CIBLÉ DEBUG] Setting profit percent cell to:', formattedProfitPercent);
+    log('[CIBLÉ DEBUG] Setting profit percent cell to:', formattedProfitPercent);
     profitPercentCell.textContent = formattedProfitPercent;
   } else {
-    console.error('[CIBLÉ DEBUG] ✗ profitPercentCell NOT FOUND!');
+    error('[CIBLÉ DEBUG] ✗ profitPercentCell NOT FOUND!');
   }
 
   // VALIDATION: Vérifier si le total dépasse 100%
   const totalPercentValue = (totalDepensesCible / objectifCA) * 100;
-  console.log('[CIBLÉ DEBUG] Validation check - totalPercentValue:', totalPercentValue);
-  console.log('========================================');
+  log('[CIBLÉ DEBUG] Validation check - totalPercentValue:', totalPercentValue);
+  log('========================================');
 
   // Trouver ou créer le conteneur de message d'avertissement
   let warningContainer = document.getElementById('cible-warning-message');
@@ -10631,7 +10811,7 @@ function updateCibleCalculations() {
     }
   }
 
-  console.log(`[CIBLÉ] Calculs mis à jour - Total: ${formatMoneyValue(totalDepensesCible)} (${totalPercentValue.toFixed(2)}%)`);
+  log(`[CIBLÉ] Calculs mis à jour - Total: ${formatMoneyValue(totalDepensesCible)} (${totalPercentValue.toFixed(2)}%)`);
 }
 
 // Ajouter les animations CSS pour le message d'avertissement
@@ -10729,7 +10909,7 @@ function toggleEditEtatsResultats() {
       }
     });
 
-    console.log('💾 Valeurs d\'origine sauvegardées:', originalEtatsResultatsValues);
+    log('💾 Valeurs d\'origine sauvegardées:', originalEtatsResultatsValues);
     // Activer le mode édition pour les inputs ACTUEL
     actuelInputs.forEach(input => {
       input.removeAttribute('readonly');
@@ -10774,7 +10954,7 @@ function toggleEditEtatsResultats() {
         input.style.cursor = 'not-allowed';
         input.style.opacity = '0.6';
         input.style.background = 'transparent';
-        console.log(`🔒 Catégorie NON-ÉDITABLE (toggle): ${category}`);
+        log(`🔒 Catégorie NON-ÉDITABLE (toggle): ${category}`);
         return; // Ne pas modifier ce champ
       }
 
@@ -10813,7 +10993,7 @@ function toggleEditEtatsResultats() {
     editBtn.classList.add('hidden');
     saveBtn.classList.remove('hidden');
     cancelBtn.classList.remove('hidden');
-    console.log('✏️ Mode édition États des Résultats activé (ACTUEL + CIBLÉ)');
+    log('✏️ Mode édition États des Résultats activé (ACTUEL + CIBLÉ)');
   } else {
     // Désactiver le mode édition pour les inputs ACTUEL
     actuelInputs.forEach(input => {
@@ -10876,7 +11056,7 @@ function toggleEditEtatsResultats() {
     editBtn.classList.remove('hidden');
     saveBtn.classList.add('hidden');
     cancelBtn.classList.add('hidden');
-    console.log('👁️ Mode édition États des Résultats désactivé');
+    log('👁️ Mode édition États des Résultats désactivé');
   }
 }
 
@@ -10885,7 +11065,7 @@ function cancelEtatsResultatsEdits() {
   const actuelInputs = document.querySelectorAll('.etats-resultats-input');
   const cibleInputs = document.querySelectorAll('.etats-resultats-cible-input');
 
-  console.log('↩️ Annulation des modifications, restauration des valeurs d\'origine...');
+  log('↩️ Annulation des modifications, restauration des valeurs d\'origine...');
 
   // Restaurer les valeurs ACTUEL
   actuelInputs.forEach(input => {
@@ -10910,11 +11090,11 @@ function cancelEtatsResultatsEdits() {
   // Désactiver le mode édition
   toggleEditEtatsResultats();
 
-  console.log('✓ Valeurs restaurées avec succès');
+  log('✓ Valeurs restaurées avec succès');
 }
 
 async function saveEtatsResultatsEdits() {
-  console.log('💾 Sauvegarde des modifications États des Résultats...');
+  log('💾 Sauvegarde des modifications États des Résultats...');
 
   const saveBtn = document.getElementById('saveEtatsResultatsBtn');
   const originalHTML = saveBtn.innerHTML;
@@ -10974,7 +11154,7 @@ async function saveEtatsResultatsEdits() {
       showNotification('États des Résultats sauvegardés avec succès!', 'success');
     }
 
-    console.log('[OK] États des Résultats sauvegardés');
+    log('[OK] États des Résultats sauvegardés');
   } finally {
     setTimeout(() => {
       saveBtn.innerHTML = originalHTML;
@@ -10987,7 +11167,7 @@ async function saveEtatsResultatsEdits() {
 
 // Reformater toutes les cellules de montant au format français
 function reformatAllMoneyValues() {
-  console.log('[MONEY] Reformatage de tous les montants au format français...');
+  log('[MONEY] Reformatage de tous les montants au format français...');
 
   // Trouver tous les inputs dans les cellules États des Résultats
   const allInputs = document.querySelectorAll('.etats-resultats-input');
@@ -11022,12 +11202,12 @@ function reformatAllMoneyValues() {
     }
   }
 
-  console.log('[OK] Tous les montants reformatés au format français');
+  log('[OK] Tous les montants reformatés au format français');
 }
 
 // Initialiser le système d'édition
 async function initEtatsResultatsEditor() {
-  console.log('[LAUNCH] Initialisation de l\'éditeur États des Résultats');
+  log('[LAUNCH] Initialisation de l\'éditeur États des Résultats');
 
   // Ajouter les attributs data-field aux cellules Budget et ÉCART
   addBudgetDataAttributes();
@@ -11065,7 +11245,7 @@ async function initEtatsResultatsEditor() {
     // Événement lors de la saisie (mise à jour en temps réel)
     cell.addEventListener('input', (e) => {
       const category = cell.getAttribute('data-category');
-      console.log(`✏️ Modification Actuel: ${category}`);
+      log(`✏️ Modification Actuel: ${category}`);
 
       // Calculer le pourcentage en temps réel pendant la saisie
       const value = parseMoneyValue(cell.textContent);
@@ -11126,7 +11306,7 @@ async function initEtatsResultatsEditor() {
       input.setAttribute('readonly', 'true');
       input.style.cursor = 'not-allowed';
       input.style.opacity = '0.6';
-      console.log(`🔒 Catégorie NON-ÉDITABLE: ${category}`);
+      log(`🔒 Catégorie NON-ÉDITABLE: ${category}`);
       return; // Ne pas ajouter d'event listeners
     }
 
@@ -11135,7 +11315,7 @@ async function initEtatsResultatsEditor() {
 
     // Événement lors de la saisie dans l'input CIBLÉ (mise à jour en temps réel)
     input.addEventListener('input', (e) => {
-      console.log(`✏️ Modification CIBLÉ: ${category}`);
+      log(`✏️ Modification CIBLÉ: ${category}`);
 
       // Recalculer les pourcentages en temps réel pendant la saisie
       updateCibleCalculations();
@@ -11153,7 +11333,7 @@ async function initEtatsResultatsEditor() {
       // Recalculer les écarts
       updateAllCalculations();
 
-      console.log(`💾 CIBLÉ sauvegardé: ${category} = ${formatMoneyValue(value)}`);
+      log(`💾 CIBLÉ sauvegardé: ${category} = ${formatMoneyValue(value)}`);
     });
 
     // Empêcher le collage de contenu formaté
@@ -11166,13 +11346,13 @@ async function initEtatsResultatsEditor() {
 
   // Les cellules Budget % ne sont plus éditables, donc pas besoin d'event listeners pour elles
 
-  console.log('[OK] Éditeur initialisé:', editableActuelCells.length, 'cellules Actuel,', editableCibleInputs.length, 'inputs CIBLÉ');
+  log('[OK] Éditeur initialisé:', editableActuelCells.length, 'cellules Actuel,', editableCibleInputs.length, 'inputs CIBLÉ');
 
   // Forcer le calcul initial des écarts après l'initialisation complète
   setTimeout(() => {
     updateCibleCalculations();
     updateAllCalculations();
-    console.log('🔄 Calculs initiaux des écarts et CIBLÉ effectués');
+    log('🔄 Calculs initiaux des écarts et CIBLÉ effectués');
   }, 200);
 }
 
@@ -11543,7 +11723,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     generateEtatsMobile();
 
     // Appeler updateCibleCalculations() APRÈS que les données soient chargées
-    console.log('[INIT] Appel de updateCibleCalculations() après chargement des données');
+    log('[INIT] Appel de updateCibleCalculations() après chargement des données');
     updateCibleCalculations();
   }, 500);
 });
@@ -11559,7 +11739,7 @@ function initMobileWeekly() {
   if (window.innerWidth <= 768) {
     const weekSelector = document.getElementById('weekSelector');
     if (weekSelector) {
-      console.log('[Mobile Weekly] WeekSelector initialisé');
+      log('[Mobile Weekly] WeekSelector initialisé');
 
       // Réinitialiser les event listeners pour ce dropdown
       const button = weekSelector.querySelector('.custom-select-button');
@@ -11578,7 +11758,7 @@ function initMobileWeekly() {
         });
 
         weekSelector.classList.toggle('open');
-        console.log('[Mobile Weekly] Dropdown toggled:', weekSelector.classList.contains('open'));
+        log('[Mobile Weekly] Dropdown toggled:', weekSelector.classList.contains('open'));
       });
 
       // Remplir le dropdown avec les vraies dates des semaines APRÈS avoir configuré les listeners
@@ -11598,7 +11778,7 @@ function initMobileWeekly() {
 function populateWeekDropdown() {
   const table = document.getElementById('objectifsTable');
   if (!table) {
-    console.log('[populateWeekDropdown] Table non trouvée');
+    log('[populateWeekDropdown] Table non trouvée');
     return;
   }
 
@@ -11607,11 +11787,11 @@ function populateWeekDropdown() {
   const weekSelector = document.getElementById('weekSelector');
 
   if (!dropdown || !weekSelector) {
-    console.log('[populateWeekDropdown] Dropdown ou weekSelector non trouvé');
+    log('[populateWeekDropdown] Dropdown ou weekSelector non trouvé');
     return;
   }
 
-  console.log('[populateWeekDropdown] Remplissage avec', rows.length, 'semaines');
+  log('[populateWeekDropdown] Remplissage avec', rows.length, 'semaines');
 
   // Vider le dropdown
   dropdown.innerHTML = '';
@@ -11640,7 +11820,7 @@ function populateWeekDropdown() {
       // Event listener pour cette option
       option.addEventListener('click', (e) => {
         e.stopPropagation();
-        console.log('[Mobile Weekly] Semaine sélectionnée:', weekNumber, weekLabel);
+        log('[Mobile Weekly] Semaine sélectionnée:', weekNumber, weekLabel);
 
         // Mettre à jour la sélection
         dropdown.querySelectorAll('.custom-select-option').forEach(opt => opt.classList.remove('selected'));
@@ -11666,7 +11846,7 @@ function populateWeekDropdown() {
     const text = weekSelector.querySelector('.custom-select-text');
     if (text) {
       text.textContent = firstWeekLabel;
-      console.log('[populateWeekDropdown] Texte du bouton mis à jour:', firstWeekLabel);
+      log('[populateWeekDropdown] Texte du bouton mis à jour:', firstWeekLabel);
     }
   }
 }
@@ -11686,11 +11866,11 @@ function updateMobileWeeklyView(weekNumber) {
   const weekRow = rows[weekNumber - 1]; // 0-indexed
 
   if (!weekRow) {
-    console.log('[Mobile Weekly] Semaine', weekNumber, 'introuvable dans le tableau');
+    log('[Mobile Weekly] Semaine', weekNumber, 'introuvable dans le tableau');
     return;
   }
 
-  console.log('[Mobile Weekly] Chargement de la semaine', weekNumber);
+  log('[Mobile Weekly] Chargement de la semaine', weekNumber);
 
   // Extraire les données de la semaine
   const cells = weekRow.querySelectorAll('td');
@@ -11883,7 +12063,7 @@ function handleMobileStarClick(weekNumber, rating) {
 
 // Initialiser la vue mobile au chargement
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('[Mobile Weekly] Initialisation de la vue mobile');
+  log('[Mobile Weekly] Initialisation de la vue mobile');
 
   // Initialiser la vue mobile (les event listeners sont gérés par initCustomDropdowns)
   initMobileWeekly();
@@ -11896,6 +12076,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </script>
 
-  <script src="/entrepreneur-selector.js"></script>
+<!-- Entrepreneur Selector - Pour coaches ET direction -->
+<script>
+(function() {
+  const userRole = localStorage.getItem('userRole');
+
+  // Charger entrepreneur-selector.js pour les coaches ET direction
+  // Pour direction sur RPO: entrepreneur-selector.js détectera la page RPO et chargera les COACHES
+  // Pour coach: entrepreneur-selector.js chargera les ENTREPRENEURS comme avant
+  if (userRole === 'coach' || userRole === 'direction') {
+    const script = document.createElement('script');
+    script.src = '/entrepreneur-selector.js';
+    script.onload = function() {
+      log('[RPO] ✅ entrepreneur-selector.js chargé pour', userRole);
+    };
+    script.onerror = function() {
+      error('[RPO] ❌ Erreur chargement entrepreneur-selector.js');
+    };
+    document.body.appendChild(script);
+  } else {
+    log('[RPO] entrepreneur-selector.js NON chargé (rôle:', userRole, ')');
+  }
+})();
+</script>
 </body>
 </html>

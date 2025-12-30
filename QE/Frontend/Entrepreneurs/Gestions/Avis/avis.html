@@ -27,10 +27,10 @@
       /* DISABLED - Service Worker
       navigator.serviceWorker.register('/sw.js')
         .then((registration) => {
-          console.log('SW registered: ', registration);
+          log('SW registered: ', registration);
         })
         .catch((registrationError) => {
-          console.log('SW registration failed: ', registrationError);
+          log('SW registration failed: ', registrationError);
         });
       */
     });
@@ -222,6 +222,13 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
+  // ⚡ DÉSACTIVATION DES LOGS - Performance optimization
+  window.log = window.log || (() => {});
+  window.warn = window.warn || (() => {});
+  window.error = window.error || (() => {});
+  window.info = window.info || (() => {});
+  window.debug = window.debug || (() => {});
+
   const reviewsContainer = document.getElementById('reviews-container');
   const stars = document.querySelectorAll('.star');
   let selectedRating = null; // Par défaut tous les avis (aucune étoile sélectionnée)
@@ -278,7 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
       btn.classList.add('btn-secondary-active');
     });
     
-    console.log('Filtrer les avis avec ' + rating + ' étoile(s)');
+    log('Filtrer les avis avec ' + rating + ' étoile(s)');
   }
   
   // Fonction pour afficher tous les avis
@@ -310,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     allReviews.forEach(renderReview);
-    console.log('Afficher tous les avis (' + allReviews.length + ' avis)');
+    log('Afficher tous les avis (' + allReviews.length + ' avis)');
   }
 
   // Crée un élément avis
@@ -346,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
       selectedRating = rating; // Modifie la sélection (pas de désélection possible)
       highlightStars(selectedRating);
       renderFilteredReviews(selectedRating);
-      console.log("Filtrer les avis avec " + selectedRating + " étoiles");
+      log("Filtrer les avis avec " + selectedRating + " étoiles");
     });
   });
 
@@ -364,12 +371,12 @@ document.addEventListener('DOMContentLoaded', function() {
       allReviews = data.reviews;
 
       showAllReviews();  // Affiche tous les avis par défaut
-      console.log("Affichage de tous les avis par défaut"); // Log par défaut au chargement
+      log("Affichage de tous les avis par défaut"); // Log par défaut au chargement
     } catch (err) {
       // En cas d'erreur, initialiser avec un tableau vide et afficher l'état "Tout" par défaut
       allReviews = [];
       showAllReviews(); // Ceci affichera "Aucun avis pour le moment" avec le bon style
-      console.error('Erreur lors du chargement des avis:', err);
+      error('Erreur lors du chargement des avis:', err);
     }
   }
 
@@ -425,24 +432,24 @@ document.addEventListener('DOMContentLoaded', function() {
   const btn = document.getElementById("account-dropdown-toggle");
   const dropdown = document.getElementById("account-dropdown");
 
-  console.log('[DEBUG] Bouton account trouvé:', btn);
-  console.log('[DEBUG] Dropdown trouvé:', dropdown);
+  log('[DEBUG] Bouton account trouvé:', btn);
+  log('[DEBUG] Dropdown trouvé:', dropdown);
 
   if (btn && dropdown) {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      console.log('👆 Click sur account button');
+      log('👆 Click sur account button');
       
       if (dropdown.classList.contains("hidden")) {
         dropdown.classList.remove("hidden");
-        console.log('[UNLOCK] Dropdown ouvert');
+        log('[UNLOCK] Dropdown ouvert');
       } else {
         dropdown.classList.add("hidden");
-        console.log('[LOCK] Dropdown fermé');
+        log('[LOCK] Dropdown fermé');
       }
       
-      console.log('[BAN] Dropdown classes:', dropdown.className);
+      log('[BAN] Dropdown classes:', dropdown.className);
     });
 
     window.addEventListener("click", (e) => {
@@ -450,9 +457,9 @@ document.addEventListener('DOMContentLoaded', function() {
         dropdown.classList.add("hidden");
       }
     });
-    console.log('[OK] Event listeners ajoutés');
+    log('[OK] Event listeners ajoutés');
   } else {
-    // console.error('[ERROR] Bouton ou dropdown non trouvé');
+    // error('[ERROR] Bouton ou dropdown non trouvé');
   }
 
   // Fonction de déconnexion
@@ -468,7 +475,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Fonction pour activer le menu basé sur la page actuelle
     function activateCurrentPageMenu() {
       const currentPath = window.location.pathname;
-      console.log('🌐 Page actuelle détectée:', currentPath);
+      log('🌐 Page actuelle détectée:', currentPath);
 
       const allMenuLinks = document.querySelectorAll('#sidebar a');
       allMenuLinks.forEach(link => {
@@ -494,15 +501,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (targetPath) {
         targetLink = document.querySelector(`#sidebar a[data-path="${targetPath}"]`);
-        console.log('[TARGET] Page détectée - activation du menu pour:', targetPath);
+        log('[TARGET] Page détectée - activation du menu pour:', targetPath);
       }
 
       if (targetLink) {
         targetLink.classList.add('menu-active');
         targetLink.setAttribute('data-menu-state', 'active');
-        console.log('[OK] Menu activé pour:', targetLink.textContent.trim());
+        log('[OK] Menu activé pour:', targetLink.textContent.trim());
       } else {
-        console.log('[WARN] Aucun menu trouvé pour la page:', currentPath);
+        log('[WARN] Aucun menu trouvé pour la page:', currentPath);
       }
     }
 

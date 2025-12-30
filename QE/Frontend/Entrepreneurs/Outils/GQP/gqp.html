@@ -441,6 +441,13 @@
   </div>
 
 <script>
+  // ⚡ DÉSACTIVATION DES LOGS - Performance optimization
+  window.log = window.log || (() => {});
+  window.warn = window.warn || (() => {});
+  window.error = window.error || (() => {});
+  window.info = window.info || (() => {});
+  window.debug = window.debug || (() => {});
+
   // Variables globales
   let selectedImages = [];
   let maxImages = 16;
@@ -700,24 +707,24 @@
     };
     const dateString = now.toLocaleDateString('fr-FR', options);
     
-    console.log('🔄 Mise à jour account info:', dateString);
+    log('🔄 Mise à jour account info:', dateString);
     
     // Mettre à jour l'affichage account avec la date
     const accountDisplay = document.getElementById('account-display');
     if (accountDisplay) {
       accountDisplay.textContent = dateString;
-      console.log('[OK] account-display mis à jour:', dateString);
+      log('[OK] account-display mis à jour:', dateString);
     } else {
-      console.log('[ERROR] Élément account-display non trouvé');
+      log('[ERROR] Élément account-display non trouvé');
     }
     
     // Mettre à jour le username dans le dropdown
     const accountUsername = document.getElementById('account-username');
     if (accountUsername && window.username) {
       accountUsername.textContent = window.username;
-      console.log('[OK] account-username mis à jour:', window.username);
+      log('[OK] account-username mis à jour:', window.username);
     } else {
-      console.log('[ERROR] Élément account-username non trouvé ou username non défini');
+      log('[ERROR] Élément account-username non trouvé ou username non défini');
     }
   }
 
@@ -903,7 +910,7 @@
     const menu = document.getElementById(menuId);
     
     if (!toggle || !menu) {
-      console.error(`[ERROR] Dropdown non trouvé: ${toggleId} ou ${menuId}`);
+      error(`[ERROR] Dropdown non trouvé: ${toggleId} ou ${menuId}`);
       return;
     }
 
@@ -930,7 +937,7 @@
   // Chargement des données
   async function loadData() {
     if (!window.username) {
-      console.error('Username non défini');
+      error('Username non défini');
       return;
     }
 
@@ -941,7 +948,7 @@
       await chargerClientsGQP();
       await loadEquipes();
     } catch (error) {
-      console.error('Erreur chargement données:', error);
+      error('Erreur chargement données:', error);
     }
   }
 
@@ -949,14 +956,14 @@
   let todosClients = [];
 
   async function chargerClientsGQP() {
-    console.log('🔄 Chargement clients acceptés depuis ventes_acceptees:', window.username);
+    log('🔄 Chargement clients acceptés depuis ventes_acceptees:', window.username);
     try {
       const username = window.username;
       const response = await fetch(`/ventes/acceptees/${username}`);
       if (!response.ok) throw new Error('Erreur chargement ventes acceptées');
 
       const ventesAcceptees = await response.json();
-      console.log('[BAN] Ventes acceptées reçues:', ventesAcceptees.length);
+      log('[BAN] Ventes acceptées reçues:', ventesAcceptees.length);
 
       // Filtrer les clients qui n'ont PAS encore de GQP envoyé
       const clientsSansGQP = ventesAcceptees.filter(client => {
@@ -969,7 +976,7 @@
         return !hasGQP;
       });
 
-      console.log(`[DEBUG] Filtrage: ${ventesAcceptees.length} clients acceptés -> ${clientsSansGQP.length} clients sans GQP`);
+      log(`[DEBUG] Filtrage: ${ventesAcceptees.length} clients acceptés -> ${clientsSansGQP.length} clients sans GQP`);
 
       // Formater les données pour l'affichage (identique à facturationqe)
       todosClients = clientsSansGQP.map(client => ({
@@ -978,13 +985,13 @@
         client_data: client
       }));
 
-      console.log('[OK] Clients GQP formatés:', todosClients.length);
-      console.log('[BAN] Exemple client:', todosClients[0]);
+      log('[OK] Clients GQP formatés:', todosClients.length);
+      log('[BAN] Exemple client:', todosClients[0]);
 
       // Afficher tous les clients au départ
       afficherClientsGQP(todosClients);
     } catch (error) {
-      console.error('[ERROR] Erreur chargement clients GQP:', error);
+      error('[ERROR] Erreur chargement clients GQP:', error);
       todosClients = [];
       // Afficher message d'erreur dans le dropdown
       const menu = document.getElementById('clientMenuGQP');
@@ -1065,7 +1072,7 @@
 
   // Fonction pour retirer un client du dropdown après envoi du GQP
   function retirerClientDuDropdown(numeroSoumission) {
-    console.log('🗑️ Retrait du client du dropdown:', numeroSoumission);
+    log('🗑️ Retrait du client du dropdown:', numeroSoumission);
 
     // Retirer de la liste locale
     todosClients = todosClients.filter(client => client.numero_soumission !== numeroSoumission);
@@ -1079,7 +1086,7 @@
       inputSearch.value = '';
     }
 
-    console.log('[OK] Client retiré, clients restants:', todosClients.length);
+    log('[OK] Client retiré, clients restants:', todosClients.length);
   }
 
   function ouvrirMenuGQP() {
@@ -1101,7 +1108,7 @@
   }
 
   async function selectionnerClientGQP(numeroSoumission, nomClient) {
-    console.log('[TARGET] Sélection client GQP:', numeroSoumission, nomClient);
+    log('[TARGET] Sélection client GQP:', numeroSoumission, nomClient);
     
     // Fermer le menu
     fermerMenuGQP();
@@ -1120,21 +1127,21 @@
       const soumissions = await response.json();
       
       // Trouver la soumission correspondante par numéro
-      console.log('[DEBUG] Recherche soumission:', numeroSoumission);
-      console.log('[DEBUG] Soumissions disponibles:', soumissions.map(s => ({num: s.num, numero: s.numero_soumission})));
+      log('[DEBUG] Recherche soumission:', numeroSoumission);
+      log('[DEBUG] Soumissions disponibles:', soumissions.map(s => ({num: s.num, numero: s.numero_soumission})));
       
       const soumissionData = soumissions.find(s => 
         s.num === numeroSoumission
       );
       if (!soumissionData) {
-        console.error('[ERROR] Soumission non trouvée pour:', numeroSoumission);
+        error('[ERROR] Soumission non trouvée pour:', numeroSoumission);
         throw new Error('Soumission non trouvée');
       }
       
-      console.log('[OK] Soumission trouvée:', soumissionData);
-      console.log('[DEBUG] Clés disponibles:', Object.keys(soumissionData));
-      console.log('[DEBUG] clientNom:', soumissionData.clientNom);
-      console.log('[DEBUG] clientPrenom:', soumissionData.clientPrenom);
+      log('[OK] Soumission trouvée:', soumissionData);
+      log('[DEBUG] Clés disponibles:', Object.keys(soumissionData));
+      log('[DEBUG] clientNom:', soumissionData.clientNom);
+      log('[DEBUG] clientPrenom:', soumissionData.clientPrenom);
       
       // Remplir les champs cachés avec les vraies données de la soumission
       document.getElementById('input-nom').value = soumissionData.clientNom || '';
@@ -1147,13 +1154,13 @@
       document.getElementById('input-numero-soumission').value = numeroSoumission || '';
 
       // Log pour vérifier les valeurs
-      console.log('[BAN] Valeurs remplies dans les champs cachés:');
-      console.log('  - Nom:', soumissionData.clientNom);
-      console.log('  - Prénom:', soumissionData.clientPrenom);
-      console.log('  - Courriel:', soumissionData.courriel);
-      console.log('  - Endroit:', soumissionData.endroit);
-      console.log('  - Adresse:', soumissionData.adresse);
-      console.log('  - Téléphone:', soumissionData.telephone);
+      log('[BAN] Valeurs remplies dans les champs cachés:');
+      log('  - Nom:', soumissionData.clientNom);
+      log('  - Prénom:', soumissionData.clientPrenom);
+      log('  - Courriel:', soumissionData.courriel);
+      log('  - Endroit:', soumissionData.endroit);
+      log('  - Adresse:', soumissionData.adresse);
+      log('  - Téléphone:', soumissionData.telephone);
       
       // Stocker la sélection complète
       selectedSoumission = {
@@ -1168,10 +1175,10 @@
         prix: soumissionData.prix || ''
       };
       
-      console.log('[OK] Client GQP sélectionné avec données complètes:', selectedSoumission);
+      log('[OK] Client GQP sélectionné avec données complètes:', selectedSoumission);
       
     } catch (error) {
-      console.error('[ERROR] Erreur récupération données soumission:', error);
+      error('[ERROR] Erreur récupération données soumission:', error);
       
       // Fallback: utiliser les données basiques
       document.getElementById('input-nom').value = '';
@@ -1193,19 +1200,19 @@
 
   // Chargement des équipes depuis connect_agenda
   async function loadEquipes() {
-    console.log('🔄 Chargement équipes pour:', window.username);
+    log('🔄 Chargement équipes pour:', window.username);
     try {
       const response = await fetch(`/get-equipes/${window.username}`);
       if (!response.ok) throw new Error('Erreur chargement équipes');
       
       const equipes = await response.json();
-      console.log('[BAN] Équipes reçues:', equipes);
+      log('[BAN] Équipes reçues:', equipes);
       const menu = document.getElementById('equipeMenu');
       
       menu.innerHTML = '';
       
       if (!equipes || equipes.length === 0) {
-        console.log('[WARN] Aucune équipe trouvée');
+        log('[WARN] Aucune équipe trouvée');
         const option = document.createElement('div');
         option.className = 'dropdown-option';
         option.textContent = 'Aucune équipe créée';
@@ -1215,17 +1222,17 @@
         return;
       }
       
-      console.log(`[OK] ${equipes.length} équipe(s) trouvée(s)`);
+      log(`[OK] ${equipes.length} équipe(s) trouvée(s)`);
       equipes.forEach(equipe => {
         const option = document.createElement('div');
         option.className = 'dropdown-option';
         option.textContent = equipe.name || 'Équipe sans nom';
         option.onclick = () => selectEquipe(equipe);
         menu.appendChild(option);
-        console.log('[ADD] Équipe ajoutée:', equipe.name);
+        log('[ADD] Équipe ajoutée:', equipe.name);
       });
     } catch (error) {
-      console.error('[ERROR] Erreur chargement équipes:', error);
+      error('[ERROR] Erreur chargement équipes:', error);
     }
   }
 
@@ -1251,13 +1258,13 @@
       badge.classList.remove('status-assigned');
       badge.classList.add('status-unassigned');
       badge.innerHTML = '<i class="fas fa-times-circle mr-1"></i>Non assigné';
-      console.log(`GQP ${gqpId} marqué comme non assigné`);
+      log(`GQP ${gqpId} marqué comme non assigné`);
     } else {
       // Changer vers "Assigné à une équipe"
       badge.classList.remove('status-unassigned');
       badge.classList.add('status-assigned');
       badge.innerHTML = '<i class="fas fa-check-circle mr-1"></i>Assigné';
-      console.log(`GQP ${gqpId} marqué comme assigné à une équipe`);
+      log(`GQP ${gqpId} marqué comme assigné à une équipe`);
     }
     
     // Ici tu pourras ajouter l'appel API pour sauvegarder le changement
@@ -1272,18 +1279,18 @@
     const btnText = document.getElementById('btnText');
     
     if (!assignToTeam || !noAssignment || !teamSelectionContainer || !btnText) {
-      console.error('[ERROR] Éléments d\'assignation non trouvés');
+      error('[ERROR] Éléments d\'assignation non trouvés');
       return;
     }
     
     function updateUI() {
-      console.log('🔄 UpdateUI appelé - assignToTeam.checked:', assignToTeam.checked);
+      log('🔄 UpdateUI appelé - assignToTeam.checked:', assignToTeam.checked);
 
       if (assignToTeam.checked) {
         teamSelectionContainer.classList.remove('hidden');
         teamSelectionContainer.style.display = 'block';
         btnText.textContent = "Envoyer à l'équipe";
-        console.log('[OK] Affichage sélection équipe activé');
+        log('[OK] Affichage sélection équipe activé');
       } else if (noAssignment.checked) {
         teamSelectionContainer.classList.add('hidden');
         teamSelectionContainer.style.display = 'none';
@@ -1299,14 +1306,14 @@
           }
         }
         selectedEquipe = null;
-        console.log('[OK] Sélection équipe masquée');
+        log('[OK] Sélection équipe masquée');
       }
       // Revalider les champs après changement de mode
       validateRequiredFields();
     }
     
     // Test direct des éléments
-    console.log('[DEBUG] Debug elements:', {
+    log('[DEBUG] Debug elements:', {
       assignToTeam: assignToTeam,
       noAssignment: noAssignment,
       teamContainer: teamSelectionContainer,
@@ -1315,12 +1322,12 @@
     
     // Ajouter les événements avec des logs
     assignToTeam.addEventListener('change', function(e) {
-      console.log('📻 Radio "Assigner à équipe" changé:', e.target.checked);
+      log('📻 Radio "Assigner à équipe" changé:', e.target.checked);
       updateUI();
     });
     
     noAssignment.addEventListener('change', function(e) {
-      console.log('📻 Radio "Ne pas assigner" changé:', e.target.checked);
+      log('📻 Radio "Ne pas assigner" changé:', e.target.checked);
       updateUI();
     });
     
@@ -1330,7 +1337,7 @@
     
     if (assignTeamOption) {
       assignTeamOption.addEventListener('click', function() {
-        console.log('🖱️ Clic sur div "Assigner à équipe"');
+        log('🖱️ Clic sur div "Assigner à équipe"');
         assignToTeam.checked = true;
         noAssignment.checked = false;
         updateUI();
@@ -1339,7 +1346,7 @@
     
     if (noAssignOption) {
       noAssignOption.addEventListener('click', function() {
-        console.log('🖱️ Clic sur div "Ne pas assigner"');
+        log('🖱️ Clic sur div "Ne pas assigner"');
         noAssignment.checked = true;
         assignToTeam.checked = false;
         updateUI();
@@ -1350,7 +1357,7 @@
     assignToTeam.checked = true;
     updateUI();
     
-    console.log('[OK] Options d\'assignation configurées avec debug');
+    log('[OK] Options d\'assignation configurées avec debug');
   }
 
   // Fonction pour mettre à jour le compteur de GQP (définie tôt pour être disponible)
@@ -1499,7 +1506,7 @@
           throw new Error('Erreur serveur lors de la suppression');
         }
 
-        console.log('[DELETE] GQP supprimé:', gqpId);
+        log('[DELETE] GQP supprimé:', gqpId);
 
         // Fermer le popup
         overlay.remove();
@@ -1543,7 +1550,7 @@
         updateGqpCount();
 
       } catch (error) {
-        console.error('[ERROR] Erreur suppression GQP:', error);
+        error('[ERROR] Erreur suppression GQP:', error);
         showError('Erreur lors de la suppression: ' + error.message);
         overlay.remove();
       }
@@ -1660,7 +1667,7 @@
     // Mettre à jour le compteur
     updateGqpCount();
 
-    console.log('[OK] GQP ajouté à la table et mobile:', clientName, numeroSoumission, 'ID:', finalGqpId);
+    log('[OK] GQP ajouté à la table et mobile:', clientName, numeroSoumission, 'ID:', finalGqpId);
   }
 
   // Sélection d'une équipe
@@ -1700,7 +1707,7 @@
     // Setup original functionality from gqp.html for "Envoyer à l'équipe" button
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      console.log("Soumission du formulaire");
+      log("Soumission du formulaire");
 
       document.getElementById("input-username").value = window.username;
 
@@ -1716,12 +1723,12 @@
         let response;
         
         // Debug des variables d'état
-        console.log('[DEBUG] DEBUG - isAutoFilledFromTable:', isAutoFilledFromTable);
-        console.log('[DEBUG] DEBUG - currentGqpId:', currentGqpId);
+        log('[DEBUG] DEBUG - isAutoFilledFromTable:', isAutoFilledFromTable);
+        log('[DEBUG] DEBUG - currentGqpId:', currentGqpId);
         
         // Si on vient d'un auto-fill depuis la table, utiliser l'endpoint pour données stockées
         if (isAutoFilledFromTable && currentGqpId) {
-          console.log('🔄 Génération PDF depuis données stockées pour GQP:', currentGqpId);
+          log('🔄 Génération PDF depuis données stockées pour GQP:', currentGqpId);
           
           const gqpData = {
             nom: document.getElementById('input-nom').value,
@@ -1746,11 +1753,11 @@
           });
         } else {
           // Sinon, utiliser l'endpoint classique avec FormData
-          console.log('🔄 Génération PDF classique avec FormData');
+          log('🔄 Génération PDF classique avec FormData');
           
           const formData = new FormData(document.getElementById("gqp-form"));
           allFiles.forEach(file => {
-            console.log("Fichier attaché :", file.name);
+            log("Fichier attaché :", file.name);
             formData.append("photos", file);
           });
           
@@ -1759,7 +1766,7 @@
             body: formData
           });
         }
-        console.log("Réponse serveur :", response);
+        log("Réponse serveur :", response);
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -1816,7 +1823,7 @@
             throw new Error(`Erreur lors de l'envoi des mails : ${errText}`);
           }
 
-          console.log('[OK] Email envoyé avec succès, maintenant liaison du GQP au client...');
+          log('[OK] Email envoyé avec succès, maintenant liaison du GQP au client...');
 
           // NOUVEAU: Lier le GQP au client après envoi email réussi
           try {
@@ -1827,7 +1834,7 @@
               gqp_url: lienPdf
             };
 
-            console.log('🔗 Tentative liaison GQP:', liaisonPayload);
+            log('🔗 Tentative liaison GQP:', liaisonPayload);
 
             const liaisonResponse = await fetch('/lier-gqp-simple', {
               method: 'POST',
@@ -1837,12 +1844,12 @@
 
             if (liaisonResponse.ok) {
               const liaisonResult = await liaisonResponse.json();
-              console.log('[OK] Liaison GQP réussie:', liaisonResult);
+              log('[OK] Liaison GQP réussie:', liaisonResult);
             } else {
-              console.warn('[WARN] Échec liaison GQP:', await liaisonResponse.text());
+              warn('[WARN] Échec liaison GQP:', await liaisonResponse.text());
             }
           } catch (liaisonError) {
-            console.error('[ERROR] Erreur lors de la liaison GQP:', liaisonError);
+            error('[ERROR] Erreur lors de la liaison GQP:', liaisonError);
             // Ne pas faire échouer le processus global si la liaison échoue
           }
 
@@ -1854,12 +1861,12 @@
           }
 
           // Recharger la liste des clients pour s'assurer de la synchronisation avec le serveur
-          console.log('🔄 Rechargement de la liste des clients après envoi GQP');
+          log('🔄 Rechargement de la liste des clients après envoi GQP');
           await chargerClientsGQP();
 
           // Si c'est un auto-fill depuis la table, supprimer le GQP de la queue serveur et de la table
           if (isAutoFilledFromTable && currentGqpId) {
-            console.log('[DELETE] Suppression du GQP de la queue après envoi:', currentGqpId);
+            log('[DELETE] Suppression du GQP de la queue après envoi:', currentGqpId);
             
             try {
               // Supprimer du serveur
@@ -1873,10 +1880,10 @@
               });
               
               if (removeResponse.ok) {
-                console.log('[OK] GQP supprimé de la queue serveur');
+                log('[OK] GQP supprimé de la queue serveur');
               }
             } catch (error) {
-              console.error('[WARN] Erreur suppression serveur:', error);
+              error('[WARN] Erreur suppression serveur:', error);
             }
             
             // Supprimer de la table UI
@@ -1931,7 +1938,7 @@
             }
             
             const saveResult = await saveResponse.json();
-            console.log('[OK] GQP sauvegardé en base:', saveResult.gqp_id);
+            log('[OK] GQP sauvegardé en base:', saveResult.gqp_id);
 
             // Ajouter à la table IMMÉDIATEMENT avec l'ID de la base et toutes les données
             const dateCreation = new Date().toISOString();
@@ -1940,7 +1947,7 @@
             addGqpToTable(clientName, numeroSoumission, lienPdf, saveResult.gqp_id, dateCreation, adresseDisplay, prixDisplay);
 
           } catch (error) {
-            console.error('[ERROR] Erreur sauvegarde GQP:', error);
+            error('[ERROR] Erreur sauvegarde GQP:', error);
             // Ajouter quand même à la table en mode fallback avec les données disponibles
             const dateCreation = new Date().toISOString();
             const adresseDisplay = gqpData.adresse || '';
@@ -1952,7 +1959,7 @@
         }
 
       } catch (err) {
-        console.error("Erreur réseau :", err);
+        error("Erreur réseau :", err);
         showError(err.message || "Erreur serveur");
         btnText.textContent = "Erreur serveur";
       } finally {
@@ -1986,9 +1993,9 @@
       allFiles.forEach(file => formData.append("photos", file));
 
       // Log pour debug - voir ce qui est envoyé
-      console.log('📤 FormData envoyée au backend:');
+      log('📤 FormData envoyée au backend:');
       for (let [key, value] of formData.entries()) {
-        console.log(`  ${key}: ${value}`);
+        log(`  ${key}: ${value}`);
       }
 
       try {
@@ -2025,7 +2032,7 @@
   // Fonction pour afficher le GQP (maintenant en HTML avec support vidéo)
   async function showPDFModal(lienGqp) {
     // Ouvrir le GQP HTML dans une modal popup intégrée
-    console.log('[GQP] Ouverture du GQP dans modal:', lienGqp);
+    log('[GQP] Ouverture du GQP dans modal:', lienGqp);
 
     const modal = document.getElementById('gqpPreviewModal');
     const iframe = document.getElementById('gqpPreviewFrame');
@@ -2042,7 +2049,7 @@
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
 
       const pdf = await pdfjsLib.getDocument(lienGqp).promise;
-      console.log('[FILE] PDF chargé avec', pdf.numPages, 'pages');
+      log('[FILE] PDF chargé avec', pdf.numPages, 'pages');
 
       const totalPages = pdf.numPages;
       const canvasContainer = document.getElementById("pdfCanvasContainer");
@@ -2210,7 +2217,7 @@
       document.getElementById("pdfOverlay").onclick = closePDF;
       
     } catch (error) {
-      console.error('[ERROR] Erreur affichage PDF:', error);
+      error('[ERROR] Erreur affichage PDF:', error);
       alert('Erreur lors de l\'affichage du PDF: ' + error.message);
     }
   }
@@ -2334,7 +2341,7 @@
   // Script pour gestion menu actif - EXACT COPY de new_dashboard.html
   function activateCurrentPageMenu() {
     const currentPath = window.location.pathname;
-    console.log('🌐 Page actuelle détectée:', currentPath);
+    log('🌐 Page actuelle détectée:', currentPath);
     
     const allMenuLinks = document.querySelectorAll('#sidebar a');
     allMenuLinks.forEach(link => {
@@ -2353,9 +2360,9 @@
     if (targetLink) {
       targetLink.classList.add('menu-active');
       targetLink.setAttribute('data-menu-state', 'active');
-      console.log('[OK] Menu activé pour:', targetLink.textContent.trim());
+      log('[OK] Menu activé pour:', targetLink.textContent.trim());
     } else {
-      console.log('[WARN] Aucun menu trouvé pour la page:', currentPath);
+      log('[WARN] Aucun menu trouvé pour la page:', currentPath);
     }
   }
 
@@ -2368,7 +2375,7 @@
 
   // Global function for entrepreneur selector to reload data
   window.loadGQPData = function() {
-    console.log("🔄 Rechargement des données GQP pour l'entrepreneur sélectionné...");
+    log("🔄 Rechargement des données GQP pour l'entrepreneur sélectionné...");
     loadData();
   };
 </script>
@@ -2390,24 +2397,24 @@ document.addEventListener('DOMContentLoaded', function() {
   const btn = document.getElementById("account-dropdown-toggle");
   const dropdown = document.getElementById("account-dropdown");
 
-  console.log('[DEBUG] Bouton account trouvé:', btn);
-  console.log('[DEBUG] Dropdown trouvé:', dropdown);
+  log('[DEBUG] Bouton account trouvé:', btn);
+  log('[DEBUG] Dropdown trouvé:', dropdown);
 
   if (btn && dropdown) {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      console.log('👆 Click sur account button');
+      log('👆 Click sur account button');
       
       if (dropdown.classList.contains("hidden")) {
         dropdown.classList.remove("hidden");
-        console.log('[UNLOCK] Dropdown ouvert');
+        log('[UNLOCK] Dropdown ouvert');
       } else {
         dropdown.classList.add("hidden");
-        console.log('[LOCK] Dropdown fermé');
+        log('[LOCK] Dropdown fermé');
       }
       
-      console.log('[BAN] Dropdown classes:', dropdown.className);
+      log('[BAN] Dropdown classes:', dropdown.className);
     });
 
     window.addEventListener("click", (e) => {
@@ -2415,9 +2422,9 @@ document.addEventListener('DOMContentLoaded', function() {
         dropdown.classList.add("hidden");
       }
     });
-    console.log('[OK] Event listeners ajoutés');
+    log('[OK] Event listeners ajoutés');
   } else {
-    // console.error('[ERROR] Bouton ou dropdown non trouvé');
+    // error('[ERROR] Bouton ou dropdown non trouvé');
   }
   
   // Variables globales pour le modal  
@@ -2427,7 +2434,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Fonction pour auto-remplir le formulaire depuis la table GQP
   async function assignToFormFromTable(clientName, numeroSoumission, gqpId) {
     try {
-      console.log('🔄 Auto-remplissage formulaire depuis table GQP:', { clientName, numeroSoumission, gqpId });
+      log('🔄 Auto-remplissage formulaire depuis table GQP:', { clientName, numeroSoumission, gqpId });
       
       // 1. Récupérer les données GQP depuis la queue (déjà chargée)
       const response = await fetch(`/get-gqp-queue/${window.username}`);
@@ -2444,7 +2451,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
       const gqpData = gqpItem.gqp_data;
-      console.log('[BAN] Données GQP récupérées:', gqpData);
+      log('[BAN] Données GQP récupérées:', gqpData);
       
       // 3. Auto-remplir tous les champs cachés
       document.getElementById('input-nom').value = gqpData.nom || '';
@@ -2486,7 +2493,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Charger les images réelles depuis le serveur
       if (gqpItem.images && gqpItem.images.length > 0) {
-        console.log(`📸 Chargement de ${gqpItem.images.length} image(s) stockée(s):`, gqpItem.images);
+        log(`📸 Chargement de ${gqpItem.images.length} image(s) stockée(s):`, gqpItem.images);
         
         for (const imageInfo of gqpItem.images) {
           try {
@@ -2513,25 +2520,25 @@ document.addEventListener('DOMContentLoaded', function() {
               };
               reader.readAsDataURL(file);
               
-              console.log(`[OK] Image "${imageInfo.original_name}" chargée avec succès`);
+              log(`[OK] Image "${imageInfo.original_name}" chargée avec succès`);
             } else {
-              console.warn(`[WARN] Impossible de charger l'image "${imageInfo.original_name}"`);
+              warn(`[WARN] Impossible de charger l'image "${imageInfo.original_name}"`);
             }
           } catch (error) {
-            console.error(`[ERROR] Erreur lors du chargement de l'image "${imageInfo.original_name}":`, error);
+            error(`[ERROR] Erreur lors du chargement de l'image "${imageInfo.original_name}":`, error);
           }
         }
         
-        console.log(`[OK] Images auto-remplies: ${gqpItem.images.length} image(s) chargée(s)`);
+        log(`[OK] Images auto-remplies: ${gqpItem.images.length} image(s) chargée(s)`);
       } else {
-        console.log('📸 Aucune image stockée trouvée pour ce GQP');
+        log('📸 Aucune image stockée trouvée pour ce GQP');
       }
       
       // 7.5. Marquer comme auto-rempli depuis la table
       isAutoFilledFromTable = true;
       currentGqpId = gqpId;
       
-      console.log('[FIX] Variables d\'état définies:', { isAutoFilledFromTable, currentGqpId });
+      log('[FIX] Variables d\'état définies:', { isAutoFilledFromTable, currentGqpId });
       
       // 8. Stocker la sélection
       selectedSoumission = {
@@ -2551,10 +2558,10 @@ document.addEventListener('DOMContentLoaded', function() {
       // 10. Valider les champs pour activer les boutons
       validateRequiredFields();
 
-      console.log('[OK] Formulaire auto-rempli avec succès');
+      log('[OK] Formulaire auto-rempli avec succès');
 
     } catch (error) {
-      console.error('[ERROR] Erreur auto-remplissage:', error);
+      error('[ERROR] Erreur auto-remplissage:', error);
       alert('Erreur lors du remplissage automatique: ' + error.message);
     }
   }
@@ -2672,7 +2679,7 @@ document.addEventListener('DOMContentLoaded', function() {
       });
       
     } catch (error) {
-      console.error('[ERROR] Erreur lors du chargement des équipes:', error);
+      error('[ERROR] Erreur lors du chargement des équipes:', error);
       modalMenu.innerHTML = '<div class="dropdown-option-disabled" style="padding: 12px 16px; color: var(--text-gray);">Erreur de chargement</div>';
     }
   }
@@ -2696,7 +2703,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     modalMenu.classList.add('hidden');
-    console.log('[OK] Équipe sélectionnée dans modal:', equipe.nom);
+    log('[OK] Équipe sélectionnée dans modal:', equipe.nom);
   }
 
   // Fonction pour voir le GQP dans le modal
@@ -2711,7 +2718,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!currentGqpData) return;
 
     try {
-      console.log('[GQP] Ouverture GQP pour:', currentGqpData);
+      log('[GQP] Ouverture GQP pour:', currentGqpData);
 
       // Si on a déjà un lien GQP, l'ouvrir dans la modal intégrée
       if (currentGqpData.lien_pdf) {
@@ -2723,7 +2730,7 @@ document.addEventListener('DOMContentLoaded', function() {
       showError('Aucun lien GQP disponible');
 
     } catch (error) {
-      console.error('[ERROR] Erreur ouverture GQP:', error);
+      error('[ERROR] Erreur ouverture GQP:', error);
       showError('Erreur lors de l\'ouverture du GQP');
     }
   }
@@ -2751,7 +2758,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     try {
-      console.log('📤 Envoi GQP à équipe:', modalSelectedEquipe.nom);
+      log('📤 Envoi GQP à équipe:', modalSelectedEquipe.nom);
       
       // Assigner le GQP à l'équipe via l'API
       const response = await fetch('/assign-gqp-to-team', {
@@ -2770,7 +2777,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
       const result = await response.json();
-      console.log('[OK] GQP assigné:', result);
+      log('[OK] GQP assigné:', result);
       
       showSuccess(`GQP assigné à l'équipe ${modalSelectedEquipe.nom}`);
       closeAssignModal();
@@ -2784,11 +2791,11 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       // Recharger la liste des clients pour s'assurer de la synchronisation avec le serveur
-      console.log('🔄 Rechargement de la liste des clients après assignation GQP');
+      log('🔄 Rechargement de la liste des clients après assignation GQP');
       await chargerClientsGQP();
 
     } catch (error) {
-      console.error('[ERROR] Erreur assignation GQP:', error);
+      error('[ERROR] Erreur assignation GQP:', error);
       showError('Erreur lors de l\'assignation du GQP: ' + error.message);
     }
   }
@@ -2816,7 +2823,7 @@ document.addEventListener('DOMContentLoaded', function() {
     for (let row of rows) {
       if (row.getAttribute('data-gqp-id') === gqpId.toString()) {
         row.remove();
-        console.log('[OK] Ligne supprimée de la table pour GQP:', gqpId);
+        log('[OK] Ligne supprimée de la table pour GQP:', gqpId);
         break;
       }
     }
@@ -2870,7 +2877,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
       const data = await response.json();
-      console.log('[BAN] GQP en attente chargés:', data.gqps.length);
+      log('[BAN] GQP en attente chargés:', data.gqps.length);
       
       // Vider la table d'abord
       const tbody = document.getElementById('gqp-envoys-body');
@@ -2897,7 +2904,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
     } catch (error) {
-      console.error('[ERROR] Erreur chargement queue GQP:', error);
+      error('[ERROR] Erreur chargement queue GQP:', error);
       // En cas d'erreur, laisser la table avec le message vide par défaut
     }
   }
@@ -2905,7 +2912,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Fonction pour charger les GQP en attente au démarrage
   async function loadGqpQueue() {
     try {
-      console.log('🔄 Chargement de la queue GQP...');
+      log('🔄 Chargement de la queue GQP...');
       
       const response = await fetch(`/get-gqp-queue/${window.username}`);
       if (!response.ok) {
@@ -2913,9 +2920,9 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
       const data = await response.json();
-      console.log('[BAN] Queue GQP récupérée:', data);
-      console.log('[BAN] Nombre de GQPs:', data.gqps ? data.gqps.length : 0);
-      console.log('[BAN] Premier GQP exemple:', data.gqps && data.gqps[0] ? data.gqps[0] : 'Aucun');
+      log('[BAN] Queue GQP récupérée:', data);
+      log('[BAN] Nombre de GQPs:', data.gqps ? data.gqps.length : 0);
+      log('[BAN] Premier GQP exemple:', data.gqps && data.gqps[0] ? data.gqps[0] : 'Aucun');
 
       const tbody = document.getElementById('gqp-envoys-body');
       if (!tbody) return;
@@ -2945,18 +2952,18 @@ document.addEventListener('DOMContentLoaded', function() {
       } else {
         // Ajouter chaque GQP à la table
         data.gqps.forEach((gqp, index) => {
-          console.log(`[BAN] Ajout GQP ${index + 1}:`, gqp.client_name, gqp.numero_soumission, gqp.id);
+          log(`[BAN] Ajout GQP ${index + 1}:`, gqp.client_name, gqp.numero_soumission, gqp.id);
           // Extraire adresse et prix de gqp_data (données de la soumission)
           const adresse = gqp.gqp_data?.adresse || '';
           const prix = gqp.gqp_data?.prix || '';
           addGqpToTable(gqp.client_name, gqp.numero_soumission, gqp.pdf_url, gqp.id, gqp.date_creation, adresse, prix);
         });
 
-        console.log(`[OK] ${data.gqps.length} GQP(s) chargé(s) dans la table`);
+        log(`[OK] ${data.gqps.length} GQP(s) chargé(s) dans la table`);
       }
       
     } catch (error) {
-      console.error('[ERROR] Erreur chargement queue GQP:', error);
+      error('[ERROR] Erreur chargement queue GQP:', error);
       // En cas d'erreur, laisser la table avec le message vide par défaut
     }
   }
@@ -3178,7 +3185,7 @@ async function loadEtapesUserTemplates() {
       updateEtapesTemplateSelect();
     }
   } catch (error) {
-    console.error('Erreur chargement templates étapes:', error);
+    error('Erreur chargement templates étapes:', error);
     etapesUserTemplates = [];
     updateEtapesTemplateSelect();
   }
@@ -3368,7 +3375,7 @@ async function confirmSaveEtapesTemplate() {
       }
     }
   } catch (error) {
-    console.error('Erreur sauvegarde template étapes:', error);
+    error('Erreur sauvegarde template étapes:', error);
   }
 }
 
@@ -3404,7 +3411,7 @@ async function confirmDeleteEtapesTemplate() {
       await loadEtapesUserTemplates();
     }
   } catch (error) {
-    console.error('Erreur suppression template étapes:', error);
+    error('Erreur suppression template étapes:', error);
   }
 }
 
@@ -3467,7 +3474,7 @@ async function confirmEditEtapesTemplate() {
       }
     }
   } catch (error) {
-    console.error('Erreur modification template étapes:', error);
+    error('Erreur modification template étapes:', error);
   }
 }
 
@@ -3670,7 +3677,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function loadEntrepreneursForCoach() {
       try {
         if (!window.username) {
-          console.error('Username non défini');
+          error('Username non défini');
           return;
         }
         const response = await fetch(`/api/users/entrepreneurs?coach_username=${window.username}`);
@@ -3700,7 +3707,7 @@ document.addEventListener('DOMContentLoaded', function() {
           menu.appendChild(option);
         }
       } catch (error) {
-        console.error('Erreur chargement entrepreneurs:', error);
+        error('Erreur chargement entrepreneurs:', error);
       }
     }
 

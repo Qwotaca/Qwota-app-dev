@@ -3132,6 +3132,13 @@
 
   <!-- Product Database & JavaScript -->
   <script>
+    // ⚡ DÉSACTIVATION DES LOGS - Performance optimization
+    window.log = window.log || (() => {});
+    window.warn = window.warn || (() => {});
+    window.error = window.error || (() => {});
+    window.info = window.info || (() => {});
+    window.debug = window.debug || (() => {});
+
     // Fonction pour retourner à la page Outils
     function goBackToOutils() {
       // Le calculateur est chargé DANS l'iframe outils
@@ -3161,7 +3168,7 @@
       // Forcer la vérification des permissions pour l'option Paramètres mobile
       if (typeof toggleParametersAdminTab === 'function') {
         toggleParametersAdminTab();
-        console.log('Role-based visibility enforced - User:', username, 'Role:', userRole, 'CanEdit:', canEditParameters);
+        log('Role-based visibility enforced - User:', username, 'Role:', userRole, 'CanEdit:', canEditParameters);
       }
     }
 
@@ -6133,7 +6140,7 @@
           // Vérifier si cette pièce a "Produit client = Oui"
           const clientCheckbox = document.getElementById(`product_client_${pieceId}`);
           if (clientCheckbox && clientCheckbox.checked) {
-            console.log('⏭️ Pièce', pieceId, 'exclue du calcul (produit client)');
+            log('⏭️ Pièce', pieceId, 'exclue du calcul (produit client)');
             return; // Skip cette pièce
           }
 
@@ -6919,7 +6926,7 @@
         const clientNom = urlParams.get('client');
 
         if (clientNom) {
-          console.log('[DEBUG] Recherche du projet pour le client:', clientNom);
+          log('[DEBUG] Recherche du projet pour le client:', clientNom);
 
           try {
             const username = localStorage.getItem('username') || 'default';
@@ -6931,19 +6938,19 @@
               const projet = projets.find(p => p.client && p.client.trim().toLowerCase() === clientNom.trim().toLowerCase());
 
               if (projet) {
-                console.log('[OK] Projet trouvé:', projet);
+                log('[OK] Projet trouvé:', projet);
                 // Charger le projet
                 await chargerProjet(projet.id);
                 // Ouvrir l'onglet estimation
                 switchTab('estimation');
                 showNotification(`Projet de ${clientNom} chargé`, 'success');
               } else {
-                console.log('[WARN] Aucun projet trouvé pour:', clientNom);
+                log('[WARN] Aucun projet trouvé pour:', clientNom);
                 showNotification(`Aucun projet trouvé pour ${clientNom}`, 'warning');
               }
             }
           } catch (error) {
-            console.error('[ERROR] Erreur chargement projet:', error);
+            error('[ERROR] Erreur chargement projet:', error);
           }
         }
       }, 1000);
@@ -7114,7 +7121,7 @@
             // sessionStorage.removeItem('submissionData'); // Sera nettoyé après "Compléter la soumission"
             
           } catch (error) {
-            console.error('[ERROR] Erreur lors du parsing des données prospect:', error);
+            error('[ERROR] Erreur lors du parsing des données prospect:', error);
           }
         } else {
         }
@@ -7258,41 +7265,41 @@ function toggleProductClient(pieceId, isClient) {
 }
 
 function clearAllProductsForPiece(pieceId) {
-  console.log('🧹 CLEAR PRODUCTS - Début pour piece:', pieceId);
+  log('🧹 CLEAR PRODUCTS - Début pour piece:', pieceId);
 
   // 1. Vider les inputs globaux des gallons intérieurs
   const lifemasterGallonsGlobal = document.getElementById('gallons_lifemaster_int');
-  console.log('🥤 Lifemaster gallons global:', lifemasterGallonsGlobal ? `TROUVÉ (${lifemasterGallonsGlobal.value})` : 'NON TROUVÉ');
+  log('🥤 Lifemaster gallons global:', lifemasterGallonsGlobal ? `TROUVÉ (${lifemasterGallonsGlobal.value})` : 'NON TROUVÉ');
   if (lifemasterGallonsGlobal) {
     lifemasterGallonsGlobal.value = '0';
-    console.log('[OK] Lifemaster gallons remis à 0');
+    log('[OK] Lifemaster gallons remis à 0');
   }
 
   const gliddenGallonsGlobal = document.getElementById('gallons_glidden_int');
-  console.log('🥤 Glidden gallons global:', gliddenGallonsGlobal ? `TROUVÉ (${gliddenGallonsGlobal.value})` : 'NON TROUVÉ');
+  log('🥤 Glidden gallons global:', gliddenGallonsGlobal ? `TROUVÉ (${gliddenGallonsGlobal.value})` : 'NON TROUVÉ');
   if (gliddenGallonsGlobal) {
     gliddenGallonsGlobal.value = '0';
-    console.log('[OK] Glidden gallons remis à 0');
+    log('[OK] Glidden gallons remis à 0');
   }
 
   // 2. Vider les affichages globaux des coûts
   const costProduitsInt = document.getElementById('costProduitsInt');
-  console.log('[MONEY] Cost produits int global:', costProduitsInt ? `TROUVÉ (${costProduitsInt.textContent})` : 'NON TROUVÉ');
+  log('[MONEY] Cost produits int global:', costProduitsInt ? `TROUVÉ (${costProduitsInt.textContent})` : 'NON TROUVÉ');
   if (costProduitsInt) {
     costProduitsInt.textContent = formatCurrency(0);
-    console.log('[OK] Cost produits int remis à $0.00');
+    log('[OK] Cost produits int remis à $0.00');
   }
 
   // 3. Forcer les variables costs à 0
   if (typeof window.costs !== 'undefined') {
-    console.log('[DATA] costs.produits_appliques_int avant:', window.costs.produits_appliques_int);
+    log('[DATA] costs.produits_appliques_int avant:', window.costs.produits_appliques_int);
     window.costs.produits_appliques_int = 0;
-    console.log('[OK] costs.produits_appliques_int remis à 0');
+    log('[OK] costs.produits_appliques_int remis à 0');
   }
 
   // 4. Vider piecesInterieur si elles existent
   if (typeof piecesInterieur !== 'undefined' && piecesInterieur.length > 0) {
-    console.log('🏠 Nettoyage de', piecesInterieur.length, 'pièces intérieures');
+    log('🏠 Nettoyage de', piecesInterieur.length, 'pièces intérieures');
     piecesInterieur.forEach(piece => {
       const id = piece.id;
 
@@ -7300,13 +7307,13 @@ function clearAllProductsForPiece(pieceId) {
       const lifemasterCheckbox = document.getElementById(`product_lifemaster_${id}`);
       if (lifemasterCheckbox) {
         lifemasterCheckbox.checked = false;
-        console.log('[ERROR] Décoché lifemaster pour pièce', id);
+        log('[ERROR] Décoché lifemaster pour pièce', id);
       }
 
       const gliddenCheckbox = document.getElementById(`product_glidden_${id}`);
       if (gliddenCheckbox) {
         gliddenCheckbox.checked = false;
-        console.log('[ERROR] Décoché glidden pour pièce', id);
+        log('[ERROR] Décoché glidden pour pièce', id);
       }
     });
   }
@@ -7315,16 +7322,16 @@ function clearAllProductsForPiece(pieceId) {
   const keysToDelete = Object.keys(selectedProducts).filter(key =>
     key.includes('lifemaster') || key.includes('glidden') || key.includes('int')
   );
-  console.log('[DATA] Clés à supprimer:', keysToDelete);
+  log('[DATA] Clés à supprimer:', keysToDelete);
   keysToDelete.forEach(key => {
     delete selectedProducts[key];
-    console.log('[DELETE] Supprimé:', key);
+    log('[DELETE] Supprimé:', key);
   });
 
   // 6. Mettre à jour l'affichage
-  console.log('🔄 Appel updateProductDetailsInt()');
+  log('🔄 Appel updateProductDetailsInt()');
   updateProductDetailsInt();
-  console.log('[OK] CLEAR PRODUCTS - Terminé pour piece:', pieceId);
+  log('[OK] CLEAR PRODUCTS - Terminé pour piece:', pieceId);
 }
 
 function updateCalculation() {
@@ -7591,7 +7598,7 @@ function updateCalculation() {
     }, 100);
 
   } catch (error) {
-    console.error('Erreur de calcul:', error);
+    error('Erreur de calcul:', error);
   }
 }
 
@@ -7761,20 +7768,20 @@ function selectProduct(sectionId, productType, productName, coverage, price, eve
         const gallons2emeCouche = gallons1ereCouche * facteurDeuxiemeCouche;
         gallonsNeeded = gallons1ereCouche + gallons2emeCouche;
 
-        console.log(`[DEBUG] CALCUL QUANTITÉ - ${sectionId}:`);
-        console.log(`   Quantité: ${quantite}`);
-        console.log(`   Ratio gallon: ${ratioGallon}`);
-        console.log(`   Facteur 2ème couche: ${facteurDeuxiemeCouche}`);
-        console.log(`   1ère couche: ${quantite} / ${ratioGallon} = ${gallons1ereCouche.toFixed(6)} gal`);
-        console.log(`   2ème couche: ${gallons1ereCouche.toFixed(6)} × ${facteurDeuxiemeCouche} = ${gallons2emeCouche.toFixed(6)} gal`);
-        console.log(`   Total avant arrondi: ${gallonsNeeded.toFixed(6)} gal`);
-        console.log(`   Total arrondi: ${Math.ceil(gallonsNeeded)} gal`);
+        log(`[DEBUG] CALCUL QUANTITÉ - ${sectionId}:`);
+        log(`   Quantité: ${quantite}`);
+        log(`   Ratio gallon: ${ratioGallon}`);
+        log(`   Facteur 2ème couche: ${facteurDeuxiemeCouche}`);
+        log(`   1ère couche: ${quantite} / ${ratioGallon} = ${gallons1ereCouche.toFixed(6)} gal`);
+        log(`   2ème couche: ${gallons1ereCouche.toFixed(6)} × ${facteurDeuxiemeCouche} = ${gallons2emeCouche.toFixed(6)} gal`);
+        log(`   Total avant arrondi: ${gallonsNeeded.toFixed(6)} gal`);
+        log(`   Total arrondi: ${Math.ceil(gallonsNeeded)} gal`);
 
         if (hasTroisiemeCouche) {
           const gallons3emeCouche = gallons1ereCouche * facteurDeuxiemeCouche;
           gallonsNeeded += gallons3emeCouche;
-          console.log(`   + 3ème couche: ${gallons3emeCouche.toFixed(6)} gal`);
-          console.log(`   Total avec 3ème: ${gallonsNeeded.toFixed(6)} gal`);
+          log(`   + 3ème couche: ${gallons3emeCouche.toFixed(6)} gal`);
+          log(`   Total avec 3ème: ${gallonsNeeded.toFixed(6)} gal`);
         }
 
       } else {
@@ -7842,16 +7849,16 @@ function recalculateSelectedProducts() {
     }
 
     if(productKey.includes('fenetre_3_6_carreaux') || productKey.includes('fenetre_carreaux_6plus')) {
-      console.log(`\n[DEBUG] RECALCUL - ${productKey}:`);
-      console.log(`   sectionId extrait: "${sectionId}"`);
-      console.log(`   productType: "${productType}"`);
+      log(`\n[DEBUG] RECALCUL - ${productKey}:`);
+      log(`   sectionId extrait: "${sectionId}"`);
+      log(`   productType: "${productType}"`);
     }
 
     const product = selectedProducts[productKey];
     const surfaceTotal = calculerSurfaceSection(sectionId);
 
     if(productKey.includes('fenetre_3_6_carreaux') || productKey.includes('fenetre_carreaux_6plus')) {
-      console.log(`   surfaceTotal: ${surfaceTotal}`);
+      log(`   surfaceTotal: ${surfaceTotal}`);
     }
 
 
@@ -7983,20 +7990,20 @@ function recalculateSelectedProducts() {
         const gallons2emeCouche = gallons1ereCouche * facteurDeuxiemeCouche;
         gallonsNeeded = gallons1ereCouche + gallons2emeCouche;
 
-        console.log(`[DEBUG] CALCUL QUANTITÉ - ${sectionId}:`);
-        console.log(`   Quantité: ${quantite}`);
-        console.log(`   Ratio gallon: ${ratioGallon}`);
-        console.log(`   Facteur 2ème couche: ${facteurDeuxiemeCouche}`);
-        console.log(`   1ère couche: ${quantite} / ${ratioGallon} = ${gallons1ereCouche.toFixed(6)} gal`);
-        console.log(`   2ème couche: ${gallons1ereCouche.toFixed(6)} × ${facteurDeuxiemeCouche} = ${gallons2emeCouche.toFixed(6)} gal`);
-        console.log(`   Total avant arrondi: ${gallonsNeeded.toFixed(6)} gal`);
-        console.log(`   Total arrondi: ${Math.ceil(gallonsNeeded)} gal`);
+        log(`[DEBUG] CALCUL QUANTITÉ - ${sectionId}:`);
+        log(`   Quantité: ${quantite}`);
+        log(`   Ratio gallon: ${ratioGallon}`);
+        log(`   Facteur 2ème couche: ${facteurDeuxiemeCouche}`);
+        log(`   1ère couche: ${quantite} / ${ratioGallon} = ${gallons1ereCouche.toFixed(6)} gal`);
+        log(`   2ème couche: ${gallons1ereCouche.toFixed(6)} × ${facteurDeuxiemeCouche} = ${gallons2emeCouche.toFixed(6)} gal`);
+        log(`   Total avant arrondi: ${gallonsNeeded.toFixed(6)} gal`);
+        log(`   Total arrondi: ${Math.ceil(gallonsNeeded)} gal`);
 
         if (hasTroisiemeCouche) {
           const gallons3emeCouche = gallons1ereCouche * facteurDeuxiemeCouche;
           gallonsNeeded += gallons3emeCouche;
-          console.log(`   + 3ème couche: ${gallons3emeCouche.toFixed(6)} gal`);
-          console.log(`   Total avec 3ème: ${gallonsNeeded.toFixed(6)} gal`);
+          log(`   + 3ème couche: ${gallons3emeCouche.toFixed(6)} gal`);
+          log(`   Total avec 3ème: ${gallonsNeeded.toFixed(6)} gal`);
         }
 
       } else {
@@ -8115,10 +8122,10 @@ function updateProductDetails() {
     const productName = product.name;
     productCounter++;
 
-    console.log(`\n[DEBUG] PRODUIT #${productCounter} - ${productName}:`);
-    console.log(`   gallonsExact: ${product.gallonsExact}`);
-    console.log(`   quantity (arrondi): ${product.quantity}`);
-    console.log(`   Valeur utilisée pour somme: ${product.gallonsExact || product.quantity}`);
+    log(`\n[DEBUG] PRODUIT #${productCounter} - ${productName}:`);
+    log(`   gallonsExact: ${product.gallonsExact}`);
+    log(`   quantity (arrondi): ${product.quantity}`);
+    log(`   Valeur utilisée pour somme: ${product.gallonsExact || product.quantity}`);
 
     // Regrouper par nom de produit
     if (!productGroups[productName]) {
@@ -8129,7 +8136,7 @@ function updateProductDetails() {
         price: product.price,
         total: 0 // Initialiser total à 0 pour éviter NaN
       };
-      console.log(`   -> NOUVEAU groupe créé pour ${productName}`);
+      log(`   -> NOUVEAU groupe créé pour ${productName}`);
     }
 
     const avantAjout = productGroups[productName].quantityExact;
@@ -8137,7 +8144,7 @@ function updateProductDetails() {
     productGroups[productName].quantityExact += product.gallonsExact || product.quantity;
     const apresAjout = productGroups[productName].quantityExact;
 
-    console.log(`   -> Cumul ${productName}: ${avantAjout.toFixed(6)} + ${(product.gallonsExact || product.quantity).toFixed(6)} = ${apresAjout.toFixed(6)} gal`);
+    log(`   -> Cumul ${productName}: ${avantAjout.toFixed(6)} + ${(product.gallonsExact || product.quantity).toFixed(6)} = ${apresAjout.toFixed(6)} gal`);
 
     // Pour fer forgé, reset total à 0 car il sera recalculé par la logique fer forgé
     if (productName === 'Peinture fer forgé') {
@@ -8206,12 +8213,12 @@ function updateProductDetails() {
     if (productName === 'Dulux Gripper' || productName === 'Cover Stain') {
       group.quantity = group.quantityExact; // Déjà arrondi dans updatePrimerCalculation
       // group.total est déjà calculé (pas besoin de recalculer)
-      console.log(`   Type: Primer (déjà arrondi)`);
-      console.log(`   Quantité finale: ${group.quantity} gal`);
+      log(`   Type: Primer (déjà arrondi)`);
+      log(`   Quantité finale: ${group.quantity} gal`);
     } else {
       group.quantity = Math.ceil(group.quantityExact); // Arrondir seulement le total final
-      console.log(`   Type: Produit standard`);
-      console.log(`   Arrondi: Math.ceil(${group.quantityExact.toFixed(6)}) = ${group.quantity} gal`);
+      log(`   Type: Produit standard`);
+      log(`   Arrondi: Math.ceil(${group.quantityExact.toFixed(6)}) = ${group.quantity} gal`);
 
       // Pour fer forgé, garder le coût exact au lieu de recalculer, mais arrondir à l'entier
       if (productName !== 'Peinture fer forgé') {
@@ -8477,7 +8484,7 @@ function updateProductDetailsInt() {
       const clientCheckbox = document.getElementById(`product_client_${piece.id}`);
 
       if (clientCheckbox && clientCheckbox.checked) {
-        console.log('🚫 Pièce', piece.id, '- Produit client activé, exclus du calcul');
+        log('🚫 Pièce', piece.id, '- Produit client activé, exclus du calcul');
         continue; // Skip cette pièce
       }
 
@@ -11019,7 +11026,7 @@ function switchTab(tabName, skipRefresh = false) {
   // Vérification des permissions pour l'onglet paramètres-admin
   // TEMPORAIRE: Accès libre aux paramètres pour développement
   // if (tabName === 'parametres-admin' && !canEditParameters) {
-  //   console.warn('Accès refusé: Permissions insuffisantes pour les Paramètres Admin');
+  //   warn('Accès refusé: Permissions insuffisantes pour les Paramètres Admin');
   //   showNotification('[ERROR] Accès refusé: Vous n\'avez pas les permissions pour accéder aux Paramètres Admin', 'error');
   //   return; // Empêcher l'accès
   // }
@@ -11287,7 +11294,7 @@ document.addEventListener('click', function(e) {
           if (duration > 0) {
             const surfaceKey = `int_${pieceType}_preparation`;
             data[surfaceKey] = duration * 100; // Convertir les heures en "surface" pour la cohérence
-            console.log(`DEBUG COLLECTE: Ajouté ${surfaceKey} = ${data[surfaceKey]}`);
+            log(`DEBUG COLLECTE: Ajouté ${surfaceKey} = ${data[surfaceKey]}`);
           }
         }
         
@@ -11300,13 +11307,13 @@ document.addEventListener('click', function(e) {
             if (surface > 0) {
               const surfaceKey = `int_${pieceType}_peinture`;
               data[surfaceKey] = surface;
-              console.log(`DEBUG COLLECTE: Ajouté ${surfaceKey} = ${surface} ft²`);
+              log(`DEBUG COLLECTE: Ajouté ${surfaceKey} = ${surface} ft²`);
             }
           }
         }
       });
       
-      console.log('DEBUG COLLECTE: Données finales collectées:', data);
+      log('DEBUG COLLECTE: Données finales collectées:', data);
       return data;
     }
 
@@ -11545,9 +11552,9 @@ document.addEventListener('click', function(e) {
       });
       
       // Apply minimum preparation hours
-      console.log(`[FIX] DEBUG HEURES MIN PREP: calculé=${totalHours.preparation}h, minimum=${params.heures_min_prep}h`);
+      log(`[FIX] DEBUG HEURES MIN PREP: calculé=${totalHours.preparation}h, minimum=${params.heures_min_prep}h`);
       totalHours.preparation = Math.max(totalHours.preparation, params.heures_min_prep);
-      console.log(`[FIX] APRÈS Math.max: ${totalHours.preparation}h`);
+      log(`[FIX] APRÈS Math.max: ${totalHours.preparation}h`);
       
       return totalHours;
     }
@@ -11876,9 +11883,9 @@ document.addEventListener('click', function(e) {
         const products = getAllProductsFromTable();
         const saveKey = `estimationProducts_${username}`;
         localStorage.setItem(saveKey, JSON.stringify(products));
-        console.log('Produits sauvegardés automatiquement');
+        log('Produits sauvegardés automatiquement');
       } catch (error) {
-        console.error('Erreur lors de la sauvegarde des produits:', error);
+        error('Erreur lors de la sauvegarde des produits:', error);
       }
     }
 
@@ -11890,10 +11897,10 @@ document.addEventListener('click', function(e) {
         if (saved) {
           const products = JSON.parse(saved);
           populateProductsTable(products);
-          console.log('Produits chargés depuis localStorage');
+          log('Produits chargés depuis localStorage');
         }
       } catch (error) {
-        console.error('Erreur lors du chargement des produits:', error);
+        error('Erreur lors du chargement des produits:', error);
       }
     }
 
@@ -12007,7 +12014,7 @@ document.addEventListener('click', function(e) {
       // Vérifier les permissions avant de sauvegarder
       if (!canEditParameters) {
         showNotification('[ERROR] Accès refusé: Vous n\'avez pas les permissions pour modifier les paramètres', 'error');
-        console.warn('Tentative de sauvegarde sans permissions:', username);
+        warn('Tentative de sauvegarde sans permissions:', username);
         return;
       }
       
@@ -12028,12 +12035,12 @@ document.addEventListener('click', function(e) {
         if (response.ok) {
           const result = await response.json();
           showNotification('[OK] Paramètres globaux sauvegardés et synchronisés pour tous les utilisateurs!', 'success');
-          console.log('Paramètres sauvegardés globalement:', params);
+          log('Paramètres sauvegardés globalement:', params);
         } else {
           throw new Error('Erreur réseau');
         }
       } catch (error) {
-        console.error('Erreur lors de la sauvegarde:', error);
+        error('Erreur lors de la sauvegarde:', error);
         showNotification('Erreur lors de la sauvegarde des paramètres.', 'error');
         // Fallback vers localStorage en cas d'erreur
         const saveKey = `estimationParams_${username}`;
@@ -12061,7 +12068,7 @@ document.addEventListener('click', function(e) {
               }
             });
             
-            console.log('Paramètres globaux chargés depuis l\'API:', params);
+            log('Paramètres globaux chargés depuis l\'API:', params);
           } else {
             loadDefaultParameters();
           }
@@ -12069,7 +12076,7 @@ document.addEventListener('click', function(e) {
           throw new Error('Erreur réseau');
         }
       } catch (error) {
-        console.error('Erreur lors du chargement des paramètres:', error);
+        error('Erreur lors du chargement des paramètres:', error);
         // Fallback vers localStorage puis defaults
         const saveKey = `estimationParams_${username}`;
         const saved = localStorage.getItem(saveKey);
@@ -12083,7 +12090,7 @@ document.addEventListener('click', function(e) {
                 element.value = params[key];
               }
             });
-            console.log('Fallback: Paramètres chargés depuis localStorage');
+            log('Fallback: Paramètres chargés depuis localStorage');
           } catch (localError) {
             loadDefaultParameters();
           }
@@ -12101,7 +12108,7 @@ document.addEventListener('click', function(e) {
         }
       });
       
-      console.log('Paramètres par défaut chargés');
+      log('Paramètres par défaut chargés');
       updateCalculation();
     }
 
@@ -12113,12 +12120,12 @@ document.addEventListener('click', function(e) {
   // Synchroniser tous les affichages avec la nouvelle fonction
   updateAllTauxHoraireDisplays();
 
-  console.log(`[MONEY] Taux horaire mis à jour: ${newTauxHoraire}$/h - Forcer recalcul des prix...`);
+  log(`[MONEY] Taux horaire mis à jour: ${newTauxHoraire}$/h - Forcer recalcul des prix...`);
 
   // Forcer le recalcul immédiat avec le nouveau taux horaire
   setTimeout(() => {
     updateCalculation();
-    console.log(`🔄 Recalcul forcé avec taux horaire ${newTauxHoraire}$/h`);
+    log(`🔄 Recalcul forcé avec taux horaire ${newTauxHoraire}$/h`);
   }, 100);
 }
 
@@ -12132,12 +12139,12 @@ function syncTauxHoraire(sourceId) {
   // Synchroniser tous les affichages
   updateAllTauxHoraireDisplays();
 
-  console.log(`[MONEY] Taux horaire synchronisé depuis ${sourceId}: ${sourceValue}$/h - Forcer recalcul des prix...`);
+  log(`[MONEY] Taux horaire synchronisé depuis ${sourceId}: ${sourceValue}$/h - Forcer recalcul des prix...`);
 
   // Forcer le recalcul immédiat avec le nouveau taux horaire
   setTimeout(() => {
     updateCalculation();
-    console.log(`🔄 Recalcul forcé depuis ${sourceId} avec taux horaire ${sourceValue}$/h`);
+    log(`🔄 Recalcul forcé depuis ${sourceId} avec taux horaire ${sourceValue}$/h`);
   }, 100);
 }
 
@@ -12167,7 +12174,7 @@ function autoSaveParameters() {
           document.body.appendChild(notificationEl);
           setTimeout(() => notificationEl.remove(), 1500);
         } catch (error) {
-          console.error('Erreur lors de la sauvegarde locale:', error);
+          error('Erreur lors de la sauvegarde locale:', error);
         }
       }, 1000);
     }
@@ -12199,13 +12206,13 @@ function autoSaveParameters() {
               });
               
               if (hasChanges) {
-                console.log('Paramètres synchronisés depuis le serveur');
+                log('Paramètres synchronisés depuis le serveur');
                 updateCalculation(); // Recalculer avec les nouveaux paramètres
               }
             }
           }
         } catch (error) {
-          console.error('Erreur lors de la synchronisation:', error);
+          error('Erreur lors de la synchronisation:', error);
         }
       }, 30000); // 30 secondes
     }
@@ -12220,22 +12227,22 @@ function autoSaveParameters() {
     // Fonction pour récupérer les permissions de l'utilisateur
     async function loadUserPermissions() {
       try {
-        console.log('[DEBUG] Chargement des permissions pour:', username);
-        console.log('🌐 URL complète:', `/api/user/${encodeURIComponent(username)}/permissions`);
-        console.log('🌐 Domaine actuel:', window.location.hostname);
+        log('[DEBUG] Chargement des permissions pour:', username);
+        log('🌐 URL complète:', `/api/user/${encodeURIComponent(username)}/permissions`);
+        log('🌐 Domaine actuel:', window.location.hostname);
         
         const response = await fetch(`/api/user/${encodeURIComponent(username)}/permissions`);
-        console.log('📡 Statut réponse API permissions:', response.status);
-        console.log('📡 Response headers:', [...response.headers.entries()]);
+        log('📡 Statut réponse API permissions:', response.status);
+        log('📡 Response headers:', [...response.headers.entries()]);
         
         if (response.ok) {
           const result = await response.json();
-          console.log('[OK] Réponse complète API permissions:', result);
+          log('[OK] Réponse complète API permissions:', result);
           
           userRole = result.role;
           canEditParameters = result.canEditParameters;
           
-          console.log('🔑 Permissions utilisateur chargées:', { 
+          log('🔑 Permissions utilisateur chargées:', { 
             username, 
             userRole, 
             canEditParameters,
@@ -12251,14 +12258,14 @@ function autoSaveParameters() {
           return result;
         } else {
           const errorText = await response.text();
-          console.error('[ERROR] Erreur API permissions:', response.status, errorText);
-          console.error('[ERROR] URL tentée:', `/api/user/${encodeURIComponent(username)}/permissions`);
+          error('[ERROR] Erreur API permissions:', response.status, errorText);
+          error('[ERROR] URL tentée:', `/api/user/${encodeURIComponent(username)}/permissions`);
           throw new Error(`Erreur ${response.status}: ${errorText}`);
         }
       } catch (error) {
-        console.error('💥 Erreur lors du chargement des permissions:', error);
-        console.error('💥 Utilisateur concerné:', username);
-        console.error('Stack trace:', error.stack);
+        error('💥 Erreur lors du chargement des permissions:', error);
+        error('💥 Utilisateur concerné:', username);
+        error('Stack trace:', error.stack);
         // Par défaut, pas d'accès aux paramètres admin
         userRole = 'entrepreneur';
         canEditParameters = false;
@@ -12279,12 +12286,12 @@ function autoSaveParameters() {
         // Afficher l'onglet SEULEMENT si l'utilisateur a les permissions
         if (adminTabButton) {
           adminTabButton.style.display = 'flex';
-          console.log('[UNLOCK] Onglet Paramètres Admin activé pour:', username, '- Rôle:', userRole, '- canEditParameters:', canEditParameters);
+          log('[UNLOCK] Onglet Paramètres Admin activé pour:', username, '- Rôle:', userRole, '- canEditParameters:', canEditParameters);
         }
         // Afficher l'option dans le menu dropdown mobile avec !important
         if (mobileParametresOption) {
           mobileParametresOption.style.setProperty('display', 'flex', 'important');
-          console.log('[UNLOCK MOBILE] Option Paramètres mobile activée');
+          log('[UNLOCK MOBILE] Option Paramètres mobile activée');
         }
         if (adminTabContent) {
           // Réactiver les champs pour les admins
@@ -12298,7 +12305,7 @@ function autoSaveParameters() {
         // Cacher l'option dans le menu dropdown mobile avec !important
         if (mobileParametresOption) {
           mobileParametresOption.style.setProperty('display', 'none', 'important');
-          console.log('[LOCK MOBILE] Option Paramètres mobile masquée pour:', username, '- Rôle:', userRole);
+          log('[LOCK MOBILE] Option Paramètres mobile masquée pour:', username, '- Rôle:', userRole);
         }
         if (adminTabContent) {
           adminTabContent.classList.add('hidden');
@@ -12311,13 +12318,13 @@ function autoSaveParameters() {
 
         // Désactiver tous les champs de paramètres pour les non-admins
         disableParameterInputs();
-        console.log('[LOCK] Onglet Paramètres Admin masqué pour:', username, '- Rôle:', userRole, '- canEditParameters:', canEditParameters);
+        log('[LOCK] Onglet Paramètres Admin masqué pour:', username, '- Rôle:', userRole, '- canEditParameters:', canEditParameters);
       }
     }
 
     // Fonction pour désactiver tous les champs de paramètres
     function disableParameterInputs() {
-      console.log('[LOCK] disableParameterInputs() appelée');
+      log('[LOCK] disableParameterInputs() appelée');
 
       document.querySelectorAll('[id^="param_"]').forEach(input => {
         if (input.tagName === 'INPUT' || input.tagName === 'SELECT') {
@@ -12329,14 +12336,14 @@ function autoSaveParameters() {
 
       // Griser aussi le taux horaire dans la section Configuration
       const tauxHoraireConfig = document.getElementById('tauxHoraire');
-      console.log('[LOCK] tauxHoraire trouvé:', tauxHoraireConfig);
+      log('[LOCK] tauxHoraire trouvé:', tauxHoraireConfig);
       if (tauxHoraireConfig) {
         tauxHoraireConfig.disabled = true;
         tauxHoraireConfig.style.opacity = '0.6';
         tauxHoraireConfig.style.cursor = 'not-allowed';
-        console.log('[LOCK] tauxHoraire désactivé');
+        log('[LOCK] tauxHoraire désactivé');
       } else {
-        console.log('[LOCK] tauxHoraire NON trouvé');
+        log('[LOCK] tauxHoraire NON trouvé');
       }
     }
 
@@ -12429,7 +12436,7 @@ function autoSaveParameters() {
       navigator.clipboard.writeText(dataStr).then(() => {
         showNotification('Paramètres copiés vers le presse-papier!', 'success');
       }).catch(err => {
-        console.error('Erreur lors de la copie:', err);
+        error('Erreur lors de la copie:', err);
         showNotification('Erreur lors de la copie vers le presse-papier.', 'error');
       });
     }
@@ -12647,7 +12654,7 @@ function convertToCustomDropdowns() {
     // === INITIALISATION ===
     
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('Initialisation des dropdowns...');
+      log('Initialisation des dropdowns...');
       
       // Convertir les selects en dropdowns custom
       convertToCustomDropdowns();
@@ -12658,7 +12665,7 @@ function convertToCustomDropdowns() {
       // Affichage initial
       updateTestDisplay();
       
-      console.log('Dropdowns initialisés avec succès!');
+      log('Dropdowns initialisés avec succès!');
     });
     function closeAllDropdowns() {
       document.querySelectorAll('.custom-select').forEach(select => {
@@ -12724,7 +12731,7 @@ function convertToCustomDropdowns() {
     // === INITIALISATION ===
     
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('Initialisation des dropdowns...');
+      log('Initialisation des dropdowns...');
       
       // Convertir les selects en dropdowns custom
       convertToCustomDropdowns();
@@ -12735,7 +12742,7 @@ function convertToCustomDropdowns() {
       // Affichage initial
       updateTestDisplay();
       
-      console.log('Dropdowns initialisés avec succès!');
+      log('Dropdowns initialisés avec succès!');
     });
 function closeAllDropdowns() {
   document.querySelectorAll('.custom-select').forEach(select => {
@@ -12763,12 +12770,12 @@ function initializeApp() {
   // Récupérer les données du prospect depuis sessionStorage avec un délai pour s'assurer que le DOM est prêt
   setTimeout(() => {
     const prospectData = sessionStorage.getItem('submissionData');
-    console.log('[DEBUG] Recherche des données prospect dans sessionStorage...');
+    log('[DEBUG] Recherche des données prospect dans sessionStorage...');
     
     if (prospectData) {
       try {
         const prospect = JSON.parse(prospectData);
-        console.log('[NOTE] Données prospect détectées:', prospect);
+        log('[NOTE] Données prospect détectées:', prospect);
         
         // Pré-remplir les champs client avec vérification des éléments
         const clientPrenomField = document.getElementById('clientPrenom');
@@ -12776,7 +12783,7 @@ function initializeApp() {
         const clientAddressField = document.getElementById('clientAddress');
         const clientPhoneField = document.getElementById('clientPhone');
         
-        console.log('[DEBUG] Éléments trouvés:', {
+        log('[DEBUG] Éléments trouvés:', {
           prenom: clientPrenomField ? 'OK' : 'MANQUANT',
           nom: clientNomField ? 'OK' : 'MANQUANT', 
           adresse: clientAddressField ? 'OK' : 'MANQUANT',
@@ -12786,7 +12793,7 @@ function initializeApp() {
         if (clientPrenomField && prospect.prenom) {
           clientPrenomField.value = prospect.prenom;
           clientPrenomField.style.setProperty('border-right-color', '#4caf50', 'important');
-          console.log('[OK] Prénom défini:', prospect.prenom);
+          log('[OK] Prénom défini:', prospect.prenom);
         }
         if (clientNomField && prospect.nom) {
           clientNomField.value = prospect.nom;
@@ -12795,12 +12802,12 @@ function initializeApp() {
         if (clientAddressField && prospect.adresse) {
           clientAddressField.value = prospect.adresse;
           clientAddressField.style.setProperty('border-right-color', '#4caf50', 'important');
-          console.log('[OK] Adresse définie:', prospect.adresse);
+          log('[OK] Adresse définie:', prospect.adresse);
         }
         if (clientPhoneField && prospect.telephone) {
           clientPhoneField.value = prospect.telephone;
           clientPhoneField.style.setProperty('border-right-color', '#4caf50', 'important');
-          console.log('[OK] Téléphone défini:', prospect.telephone);
+          log('[OK] Téléphone défini:', prospect.telephone);
         }
 
         // Mettre à jour le message de validation client et activer les boutons
@@ -12813,27 +12820,27 @@ function initializeApp() {
           }
         }, 100);
 
-        console.log('[OK] Pré-remplissage terminé avec bordures vertes');
+        log('[OK] Pré-remplissage terminé avec bordures vertes');
 
         // NE PAS nettoyer sessionStorage ici - il sera utilisé pour bypasser la validation d'adresse
         // sessionStorage.removeItem('submissionData'); // Sera nettoyé après "Compléter la soumission"
-        console.log('💾 SessionStorage conservé pour validation');
+        log('💾 SessionStorage conservé pour validation');
 
       } catch (error) {
-        console.error('[ERROR] Erreur lors du parsing des données prospect:', error);
+        error('[ERROR] Erreur lors du parsing des données prospect:', error);
       }
     } else {
-      console.log('ℹ️ Aucune donnée prospect trouvée dans sessionStorage');
+      log('ℹ️ Aucune donnée prospect trouvée dans sessionStorage');
     }
 
     // Vérifier également localStorage.clientEstimation (depuis page Ventes)
-    console.log('[DEBUG] Vérification localStorage.clientEstimation...');
+    log('[DEBUG] Vérification localStorage.clientEstimation...');
     const clientEstimationData = localStorage.getItem('clientEstimation');
-    console.log('[DEBUG] clientEstimationData:', clientEstimationData);
+    log('[DEBUG] clientEstimationData:', clientEstimationData);
     if (clientEstimationData) {
       try {
         const clientData = JSON.parse(clientEstimationData);
-        console.log('[VENTES] Données client estimation détectées:', clientData);
+        log('[VENTES] Données client estimation détectées:', clientData);
 
         // Pré-remplir les champs client
         const clientPrenomField = document.getElementById('clientPrenom');
@@ -12844,22 +12851,22 @@ function initializeApp() {
         if (clientPrenomField && clientData.prenom) {
           clientPrenomField.value = clientData.prenom;
           clientPrenomField.style.setProperty('border-right-color', '#4caf50', 'important');
-          console.log('[OK] Prénom défini:', clientData.prenom);
+          log('[OK] Prénom défini:', clientData.prenom);
         }
         if (clientNomField && clientData.nom) {
           clientNomField.value = clientData.nom;
           clientNomField.style.setProperty('border-right-color', '#4caf50', 'important');
-          console.log('[OK] Nom défini:', clientData.nom);
+          log('[OK] Nom défini:', clientData.nom);
         }
         if (clientAddressField && clientData.adresse) {
           clientAddressField.value = clientData.adresse;
           clientAddressField.style.setProperty('border-right-color', '#4caf50', 'important');
-          console.log('[OK] Adresse définie:', clientData.adresse);
+          log('[OK] Adresse définie:', clientData.adresse);
         }
         if (clientPhoneField && clientData.telephone) {
           clientPhoneField.value = clientData.telephone;
           clientPhoneField.style.setProperty('border-right-color', '#4caf50', 'important');
-          console.log('[OK] Téléphone défini:', clientData.telephone);
+          log('[OK] Téléphone défini:', clientData.telephone);
         }
 
         // Mettre à jour le message de validation client
@@ -12872,19 +12879,19 @@ function initializeApp() {
           }
         }, 100);
 
-        console.log('[OK] Client estimation pré-rempli avec bordures vertes');
+        log('[OK] Client estimation pré-rempli avec bordures vertes');
 
         // Nettoyer localStorage après utilisation
         localStorage.removeItem('clientEstimation');
-        console.log('🗑️ localStorage.clientEstimation nettoyé');
+        log('🗑️ localStorage.clientEstimation nettoyé');
 
       } catch (error) {
-        console.error('[ERROR] Erreur lors du parsing des données client estimation:', error);
+        error('[ERROR] Erreur lors du parsing des données client estimation:', error);
       }
     }
   }, 1000); // Délai de 1 seconde pour s'assurer que le DOM est prêt
   
-  console.log('Application initialisée avec succès');
+  log('Application initialisée avec succès');
 
   // Désactiver tous les champs de paramètres par défaut
   disableParameterInputs();
@@ -12925,7 +12932,7 @@ function initializeApp() {
           updateCalculation();
           
         } catch (error) {
-          console.error('Erreur lors de l\'importation:', error);
+          error('Erreur lors de l\'importation:', error);
           showNotification('Erreur lors de l\'importation: fichier invalide.', 'error');
         }
       };
@@ -13108,14 +13115,14 @@ function initializeApp() {
         const totalHeuresInt = parseFloat(document.getElementById('totalHeuresInt')?.textContent || '0');
         
         // Debug COMPLET des coûts intérieur depuis HTML
-        console.log(`DEBUG COLLECTE: === COÛTS INTÉRIEUR COMPLETS ===`);
-        console.log(`DEBUG COLLECTE: - Préparation int: $${costPreparationInt}`);
-        console.log(`DEBUG COLLECTE: - Main d'œuvre int: $${costMainOeuvreInt}`);
-        console.log(`DEBUG COLLECTE: - Peinture int: $${costPeintureInt}`);
-        console.log(`DEBUG COLLECTE: - Sous-total int: $${subTotalInt}`);
-        console.log(`DEBUG COLLECTE: - Marge profit int: $${profitAmountInt}`);
-        console.log(`DEBUG COLLECTE: - Total intérieur: $${totalInterieur}`);
-        console.log(`DEBUG COLLECTE: - Heures totales int: ${totalHeuresInt}h`);
+        log(`DEBUG COLLECTE: === COÛTS INTÉRIEUR COMPLETS ===`);
+        log(`DEBUG COLLECTE: - Préparation int: $${costPreparationInt}`);
+        log(`DEBUG COLLECTE: - Main d'œuvre int: $${costMainOeuvreInt}`);
+        log(`DEBUG COLLECTE: - Peinture int: $${costPeintureInt}`);
+        log(`DEBUG COLLECTE: - Sous-total int: $${subTotalInt}`);
+        log(`DEBUG COLLECTE: - Marge profit int: $${profitAmountInt}`);
+        log(`DEBUG COLLECTE: - Total intérieur: $${totalInterieur}`);
+        log(`DEBUG COLLECTE: - Heures totales int: ${totalHeuresInt}h`);
         
         const totalCosts = {
           lavage: getCostFromElement('costLavage'),
@@ -13191,19 +13198,19 @@ function initializeApp() {
           selectedProduct.totalCost = realProductData.products.reduce((sum, p) => sum + p.totalPrice, 0);
         }
         
-        console.log('=== PDF DATA FROM HTML ===');
-        console.log('totalCosts:', totalCosts);
-        console.log('actualHours:', actualHours);
-        console.log('realProductData:', realProductData);
-        console.log('selectedProduct:', selectedProduct);
-        console.log('==========================');
+        log('=== PDF DATA FROM HTML ===');
+        log('totalCosts:', totalCosts);
+        log('actualHours:', actualHours);
+        log('realProductData:', realProductData);
+        log('selectedProduct:', selectedProduct);
+        log('==========================');
         const params = getCurrentParameterValues();
         
         // Create PDF data structure
         // APPELER getSelectedProductData() JUSTE AVANT LE PDF pour éviter les conflits
         const pdfProductData = getSelectedProductData();
-        console.log('DEBUG: pdfProductData avant envoi PDF:', pdfProductData);
-        console.log('DEBUG: pdfProductData.products:', pdfProductData.products);
+        log('DEBUG: pdfProductData avant envoi PDF:', pdfProductData);
+        log('DEBUG: pdfProductData.products:', pdfProductData.products);
         
         const pdfData = {
           username: username,
@@ -13221,7 +13228,7 @@ function initializeApp() {
           }
         };
         
-        console.log('[DATA] Envoi des données PDF:', pdfData);
+        log('[DATA] Envoi des données PDF:', pdfData);
         showNotification('Génération du PDF en cours...', 'info');
         
         // Appel au backend pour générer le PDF
@@ -13258,16 +13265,16 @@ function initializeApp() {
           // Notification de succès
           showNotification('[OK] PDF généré et téléchargé avec succès! Projet créé automatiquement.', 'success');
           
-          console.log('[OK] PDF généré et téléchargé:', filename);
+          log('[OK] PDF généré et téléchargé:', filename);
           
         } else {
           const errorText = await response.text();
-          console.error('[ERROR] Erreur génération PDF:', errorText);
+          error('[ERROR] Erreur génération PDF:', errorText);
           showNotification('Erreur lors de la génération du PDF', 'error');
         }
         
       } catch (error) {
-        console.error('[ERROR] Erreur:', error);
+        error('[ERROR] Erreur:', error);
         showNotification('Erreur de connexion lors de la génération du PDF', 'error');
       }
     }
@@ -13400,7 +13407,7 @@ function initializeApp() {
         });
       });
       
-      console.log('Sections trouvées:', sections); // Debug
+      log('Sections trouvées:', sections); // Debug
       return sections;
     }
 
@@ -13566,7 +13573,7 @@ function initializeApp() {
       // Créer une nouvelle section produit dans "Endroit à peinturer"
       const endroitContainer = document.getElementById('endroits-container');
       if (!endroitContainer) {
-        console.error('Conteneur endroits-container non trouvé');
+        error('Conteneur endroits-container non trouvé');
         return;
       }
 
@@ -14003,7 +14010,7 @@ function initializeApp() {
     function retirerBoxType(endroitType) {
       const box = document.getElementById(`box-${endroitType}`);
       if (box) {
-        console.log('[DELETE] Suppression section:', endroitType);
+        log('[DELETE] Suppression section:', endroitType);
 
         // Approche différente : afficher une modal de confirmation qui liste les produits
         // et demande confirmation avant suppression
@@ -14043,16 +14050,16 @@ function initializeApp() {
       const modal = document.querySelector('.fixed.inset-0');
       if (modal) modal.remove();
 
-      console.log('[OK] Confirmation suppression section:', endroitType);
+      log('[OK] Confirmation suppression section:', endroitType);
 
       // 1. Trouver l'ID de l'endroit (ex: endroit_1) dans la box
       const endroitDiv = box.querySelector('[id^="endroit_"]');
       const endroitId = endroitDiv ? endroitDiv.id : null;
 
-      console.log('[DEBUG] ID de l\'endroit à supprimer:', endroitId);
+      log('[DEBUG] ID de l\'endroit à supprimer:', endroitId);
 
       if (!endroitId) {
-        console.error('[ERROR] Impossible de trouver l\'ID de l\'endroit');
+        error('[ERROR] Impossible de trouver l\'ID de l\'endroit');
         box.remove();
         return;
       }
@@ -14063,18 +14070,18 @@ function initializeApp() {
         if (productKey.includes(`_${endroitId}_`)) {
           productKeysToRemove.push(productKey);
           delete selectedProducts[productKey];
-          console.log('[OK] Produit retiré de selectedProducts:', productKey);
+          log('[OK] Produit retiré de selectedProducts:', productKey);
         }
       });
 
-      console.log('[PACKAGE] Clés produits supprimées:', productKeysToRemove);
+      log('[PACKAGE] Clés produits supprimées:', productKeysToRemove);
 
       // 3. Retirer la classe 'selected' des cartes produits correspondantes
       document.querySelectorAll('.product-card.selected').forEach(card => {
         const productKey = card.getAttribute('data-product-key');
         if (productKey && productKeysToRemove.includes(productKey)) {
           card.classList.remove('selected');
-          console.log('[OK] Carte produit désélectionnée:', productKey);
+          log('[OK] Carte produit désélectionnée:', productKey);
         }
       });
 
@@ -14383,8 +14390,8 @@ function initializeApp() {
       showNotification(`${preparationText} ajouté`, 'success');
 
       // Log immédiat après ajout
-      console.log(`[FIX] AJOUT PRÉPARATION: ${preparationText}`);
-      console.log('[FIX] Recalcul en cours...');
+      log(`[FIX] AJOUT PRÉPARATION: ${preparationText}`);
+      log('[FIX] Recalcul en cours...');
 
       updateCalculation();
     }
@@ -14839,7 +14846,7 @@ function initializeApp() {
     function chargerProduitsExistants() {
       const container = document.getElementById('produits-container');
       if (!container) {
-        console.log('DEBUG: Container produits-container non trouvé, fonction chargerProduitsExistants ignorée');
+        log('DEBUG: Container produits-container non trouvé, fonction chargerProduitsExistants ignorée');
         return;
       }
       container.innerHTML = ''; // Vider le container
@@ -15026,14 +15033,14 @@ function initializeApp() {
     }
 
     function updateProductPriceDisplays() {
-      console.log('DEBUG: Mise à jour de l\'affichage des prix dans les sections');
+      log('DEBUG: Mise à jour de l\'affichage des prix dans les sections');
       
       // Trouver toutes les sections extérieures
       const allSections = document.querySelectorAll('[id^="endroit_"][id*="_"][id*="_"]');
       
       allSections.forEach(section => {
         const sectionId = section.id;
-        console.log('DEBUG: Mise à jour prix pour section:', sectionId);
+        log('DEBUG: Mise à jour prix pour section:', sectionId);
         
         // Mapping des produits avec leurs éléments d'affichage
         const productMap = [
@@ -15054,7 +15061,7 @@ function initializeApp() {
           
           if (priceSpan) {
             priceSpan.textContent = `$${productParams.cost}/gal`;
-            console.log(`DEBUG: Prix ${product.name} mis à jour: $${productParams.cost}/gal`);
+            log(`DEBUG: Prix ${product.name} mis à jour: $${productParams.cost}/gal`);
           }
         });
         
@@ -15063,7 +15070,7 @@ function initializeApp() {
         const primerPriceSpan = section.querySelector(`#product_primer_${sectionId}`)?.parentElement?.parentElement?.querySelector('.font-semibold.text-white');
         if (primerPriceSpan) {
           primerPriceSpan.textContent = `$${primerParams.cost}/gal`;
-          console.log(`DEBUG: Prix Dulux Gripper mis à jour: $${primerParams.cost}/gal`);
+          log(`DEBUG: Prix Dulux Gripper mis à jour: $${primerParams.cost}/gal`);
         }
       });
     }
@@ -15108,13 +15115,13 @@ function initializeApp() {
       const sections = getAllCreatedSections();
       
       // Debug plus détaillé
-      console.log('Nombre de sections trouvées:', sections.length);
-      console.log('Endroits dans le DOM:', document.querySelectorAll('[id^="endroit_"]').length);
+      log('Nombre de sections trouvées:', sections.length);
+      log('Endroits dans le DOM:', document.querySelectorAll('[id^="endroit_"]').length);
       
       if (sections.length === 0) {
         // Essayer une méthode alternative pour trouver les sections
         const allEndroits = document.querySelectorAll('[id^="endroit_"]');
-        console.log('Tous les endroits trouvés:', allEndroits);
+        log('Tous les endroits trouvés:', allEndroits);
         
         showNotification('Aucune section créée. Créez d\'abord des sections dans "Endroit à peinturer".', 'warning');
         return;
@@ -15135,12 +15142,12 @@ function initializeApp() {
       const prixElement = document.getElementById(`${produitId}-prix`);
       const prix = prixElement ? parseFloat(prixElement.value) || 0 : 0;
       
-      console.log('Sections pour la modal:', sections);
-      console.log('Données de chaque section:', sections.map(s => ({id: s.id, title: s.sectionTitle, surface: s.totalSurface})));
+      log('Sections pour la modal:', sections);
+      log('Données de chaque section:', sections.map(s => ({id: s.id, title: s.sectionTitle, surface: s.totalSurface})));
       
       // Debug détaillé de chaque section
       sections.forEach((section, index) => {
-        console.log(`Section ${index}:`, {
+        log(`Section ${index}:`, {
           id: section.id,
           sectionTitle: section.sectionTitle,
           totalSurface: section.totalSurface,
@@ -15170,12 +15177,12 @@ function initializeApp() {
             </div>
           </label>
           `;
-          console.log('HTML généré pour section:', sectionHTML);
+          log('HTML généré pour section:', sectionHTML);
           return sectionHTML;
         }).join('');
       }
       
-      console.log('HTML final des sections:', sectionsHTML);
+      log('HTML final des sections:', sectionsHTML);
       
       modal.innerHTML = `
         <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-96 overflow-y-auto">
@@ -15205,11 +15212,11 @@ function initializeApp() {
       document.body.appendChild(modal);
       
       // Debug pour vérifier que la modal est bien insérée
-      console.log('Modal ajoutée au DOM');
+      log('Modal ajoutée au DOM');
       const modalInDOM = document.getElementById('section-selector-modal');
-      console.log('Modal trouvée dans DOM:', modalInDOM);
+      log('Modal trouvée dans DOM:', modalInDOM);
       const checkboxesInDOM = modalInDOM ? modalInDOM.querySelectorAll('.section-checkbox') : [];
-      console.log('Checkboxes dans DOM après insertion:', checkboxesInDOM.length);
+      log('Checkboxes dans DOM après insertion:', checkboxesInDOM.length);
     }
 
     function appliquerSectionsAuProduit(produitId, productName, couverture, productPrice) {
@@ -15217,9 +15224,9 @@ function initializeApp() {
       const allCheckboxes = modal.querySelectorAll('.section-checkbox');
       const checkedSections = modal.querySelectorAll('.section-checkbox:checked');
       
-      console.log('Total checkboxes trouvées:', allCheckboxes.length);
-      console.log('Checkboxes cochées:', checkedSections.length);
-      console.log('IDs des checkboxes cochées:', Array.from(checkedSections).map(cb => cb.value));
+      log('Total checkboxes trouvées:', allCheckboxes.length);
+      log('Checkboxes cochées:', checkedSections.length);
+      log('IDs des checkboxes cochées:', Array.from(checkedSections).map(cb => cb.value));
       
       if (checkedSections.length === 0) {
         showNotification('Veuillez sélectionner au moins une section.', 'warning');
@@ -16020,7 +16027,7 @@ function initializeApp() {
         });
       }
 
-      console.log('💾 Sections lavage sauvegardées:', data.lavagesSections);
+      log('💾 Sections lavage sauvegardées:', data.lavagesSections);
 
       // NOUVEAU: Collecter les sections de préparation créées
       data.preparationsSections = [];
@@ -16054,7 +16061,7 @@ function initializeApp() {
         });
       }
 
-      console.log('💾 Sections préparation sauvegardées:', data.preparationsSections);
+      log('💾 Sections préparation sauvegardées:', data.preparationsSections);
 
       // NOUVEAU: Collecter les sections de primer créées
       data.primersSections = [];
@@ -16103,7 +16110,7 @@ function initializeApp() {
         });
       }
 
-      console.log('💾 Sections primer sauvegardées:', data.primersSections);
+      log('💾 Sections primer sauvegardées:', data.primersSections);
 
       // NOUVEAU: Collecter les endroits à peinturer créés
       data.endroitsPeinturer = [];
@@ -16163,24 +16170,24 @@ function initializeApp() {
 
             // Utiliser l'objet global selectedProducts pour trouver les produits de cette section
             if (typeof selectedProducts !== 'undefined') {
-              console.log(`[DEBUG] Recherche de produits pour sectionId: ${sectionId}`);
-              console.log(`[DEBUG] selectedProducts complet:`, selectedProducts);
-              console.log(`[DEBUG] Keys de selectedProducts:`, Object.keys(selectedProducts));
+              log(`[DEBUG] Recherche de produits pour sectionId: ${sectionId}`);
+              log(`[DEBUG] selectedProducts complet:`, selectedProducts);
+              log(`[DEBUG] Keys de selectedProducts:`, Object.keys(selectedProducts));
 
               Object.keys(selectedProducts).forEach(productKey => {
-                console.log(`[DEBUG] Vérification clé: ${productKey} contient ${sectionId}?`, productKey.includes(sectionId));
+                log(`[DEBUG] Vérification clé: ${productKey} contient ${sectionId}?`, productKey.includes(sectionId));
                 // Le productKey est du format: productType_sectionId
                 // Ex: dulux_huile_st_endroit_1_latte_horizontale_4_1759773175795
                 if (productKey.includes(sectionId)) {
                   const product = selectedProducts[productKey];
-                  console.log(`[OK] Produit trouvé:`, product);
+                  log(`[OK] Produit trouvé:`, product);
                   produitsSelectionnes.push({
                     nom: product.name || '',
                     gallons: product.quantity || '0'
                   });
                 }
               });
-              console.log(`[PACKAGE] produitsSelectionnes final:`, produitsSelectionnes);
+              log(`[PACKAGE] produitsSelectionnes final:`, produitsSelectionnes);
             }
 
             // Collecter l'état de la 3ème couche (checkbox)
@@ -16212,7 +16219,7 @@ function initializeApp() {
         }
       });
 
-      console.log('💾 Endroits à peinturer sauvegardés:', data.endroitsPeinturer);
+      log('💾 Endroits à peinturer sauvegardés:', data.endroitsPeinturer);
 
       // NOUVEAU: Collecter les travaux additionnels intérieurs
       data.travauxAdditionnels = {
@@ -16342,7 +16349,7 @@ function initializeApp() {
               });
             }
 
-            console.log(`💾 Préparations sauvegardées pour pièce ${pieceId}:`, preparations);
+            log(`💾 Préparations sauvegardées pour pièce ${pieceId}:`, preparations);
 
             data.travauxAdditionnels.preparationPieces.push({
               pieceId: pieceId,
@@ -16374,9 +16381,9 @@ function initializeApp() {
         });
       }
 
-      console.log('💾 Apprêt sauvegardé:', data.travauxAdditionnels.appretPieces);
+      log('💾 Apprêt sauvegardé:', data.travauxAdditionnels.appretPieces);
 
-      console.log('💾 Travaux additionnels sauvegardés:', data.travauxAdditionnels);
+      log('💾 Travaux additionnels sauvegardés:', data.travauxAdditionnels);
 
       // Sauvegarder les totaux calculés (extérieur)
       data.totaux_ext = {
@@ -16406,7 +16413,7 @@ function initializeApp() {
 
     // Fonction pour restaurer les données de surfaces (extérieur)
     function restoreSurfaceData(surfacesData) {
-      console.log('🔄 Restauration des surfaces:', surfacesData);
+      log('🔄 Restauration des surfaces:', surfacesData);
 
       // Restaurer les surfaces de base (avant, droit, arriere, gauche)
       const sections = ['avant', 'droit', 'arriere', 'gauche'];
@@ -16426,41 +16433,41 @@ function initializeApp() {
                 input.value = value;
                 restoredCount++;
               });
-              console.log(`[OK] Surface restaurée: ${section} - ${type} = ${value} (${inputs.length} input(s))`);
+              log(`[OK] Surface restaurée: ${section} - ${type} = ${value} (${inputs.length} input(s))`);
             } else {
               notFoundCount++;
-              console.warn(`[WARN] Input surface non trouvé: ${section} - ${type}`);
+              warn(`[WARN] Input surface non trouvé: ${section} - ${type}`);
             }
           });
         }
       });
 
-      console.log(`[DATA] Surfaces: ${restoredCount} restaurées, ${notFoundCount} non trouvées`);
+      log(`[DATA] Surfaces: ${restoredCount} restaurées, ${notFoundCount} non trouvées`);
     }
 
     // Fonction pour restaurer les endroits personnalisés
     function restoreEndroitData(endroitsData) {
-      console.log('🔄 Restauration des endroits:', endroitsData);
+      log('🔄 Restauration des endroits:', endroitsData);
 
       // IMPORTANT: Les endroits sont dynamiques et peuvent ne pas exister
       // Les valeurs dans les inputs avec IDs seront restaurées par la restauration générale
       // Cette fonction n'est là que pour information
-      console.log('ℹ️ Les endroits dynamiques ne peuvent pas être recréés automatiquement');
-      console.log('ℹ️ Les valeurs des inputs avec ID ont déjà été restaurées');
+      log('ℹ️ Les endroits dynamiques ne peuvent pas être recréés automatiquement');
+      log('ℹ️ Les valeurs des inputs avec ID ont déjà été restaurées');
     }
 
     // Fonction pour restaurer les sections de lavage
     function restoreLavagesSections(lavagesSections) {
       if (!lavagesSections || lavagesSections.length === 0) {
-        console.log('ℹ️ Aucune section lavage à restaurer');
+        log('ℹ️ Aucune section lavage à restaurer');
         return;
       }
 
-      console.log('🔄 Restauration des sections lavage:', lavagesSections);
+      log('🔄 Restauration des sections lavage:', lavagesSections);
 
       const container = document.getElementById('lavages-container');
       if (!container) {
-        console.error('[ERROR] Container lavages-container non trouvé');
+        error('[ERROR] Container lavages-container non trouvé');
         return;
       }
 
@@ -16514,31 +16521,31 @@ function initializeApp() {
         `;
 
         container.appendChild(sectionDiv);
-        console.log(`[OK] Section lavage restaurée: ${lavageTitle} (${lavageType})`);
+        log(`[OK] Section lavage restaurée: ${lavageTitle} (${lavageType})`);
       });
 
-      console.log(`[OK] ${lavagesSections.length} section(s) lavage restaurée(s)`);
+      log(`[OK] ${lavagesSections.length} section(s) lavage restaurée(s)`);
     }
 
     // Fonction pour restaurer les sections de préparation
     function restorePreparationsSections(preparationsSections) {
       if (!preparationsSections || preparationsSections.length === 0) {
-        console.log('ℹ️ Aucune section préparation à restaurer');
+        log('ℹ️ Aucune section préparation à restaurer');
         return;
       }
 
-      console.log('🔄 Restauration des sections préparation:', preparationsSections);
+      log('🔄 Restauration des sections préparation:', preparationsSections);
 
       const container = document.getElementById('preparations-container');
       if (!container) {
-        console.error('[ERROR] Container preparations-container non trouvé');
+        error('[ERROR] Container preparations-container non trouvé');
         return;
       }
 
       // FORCER le vidage complet du container
-      console.log('🧹 Vidage container préparations, contenu actuel:', container.children.length);
+      log('🧹 Vidage container préparations, contenu actuel:', container.children.length);
       container.innerHTML = '';
-      console.log('[OK] Container vidé, nouveau contenu:', container.children.length);
+      log('[OK] Container vidé, nouveau contenu:', container.children.length);
 
       // Recréer chaque section de préparation
       preparationsSections.forEach((prepData, index) => {
@@ -16579,24 +16586,24 @@ function initializeApp() {
         `;
 
         container.appendChild(sectionDiv);
-        console.log(`[OK] Section préparation restaurée: ${preparationTitle} (${preparationType})`);
+        log(`[OK] Section préparation restaurée: ${preparationTitle} (${preparationType})`);
       });
 
-      console.log(`[OK] ${preparationsSections.length} section(s) préparation restaurée(s)`);
+      log(`[OK] ${preparationsSections.length} section(s) préparation restaurée(s)`);
     }
 
     // Fonction pour restaurer les sections de primer
     function restorePrimersSections(primersSections) {
       if (!primersSections || primersSections.length === 0) {
-        console.log('ℹ️ Aucune section primer à restaurer');
+        log('ℹ️ Aucune section primer à restaurer');
         return;
       }
 
-      console.log('🔄 Restauration des sections primer:', primersSections);
+      log('🔄 Restauration des sections primer:', primersSections);
 
       const container = document.getElementById('primers-container');
       if (!container) {
-        console.error('[ERROR] Container primers-container non trouvé');
+        error('[ERROR] Container primers-container non trouvé');
         return;
       }
 
@@ -16743,7 +16750,7 @@ function initializeApp() {
                     }
                   }, 50);
 
-                  console.log(`[OK] Produit primer auto-sélectionné: ${produit.nom}`);
+                  log(`[OK] Produit primer auto-sélectionné: ${produit.nom}`);
                 }
               }
             });
@@ -16755,20 +16762,20 @@ function initializeApp() {
           setTimeout(() => updatePrimerCalculation(sectionId), 100);
         }
 
-        console.log(`[OK] Section primer restaurée: ${primerTitle} (${primerType})`);
+        log(`[OK] Section primer restaurée: ${primerTitle} (${primerType})`);
       });
 
-      console.log(`[OK] ${primersSections.length} section(s) primer restaurée(s)`);
+      log(`[OK] ${primersSections.length} section(s) primer restaurée(s)`);
     }
 
     // Fonction pour restaurer les endroits à peinturer en utilisant les vraies fonctions
     function restoreEndroitsPeinturer(endroitsPeinturer) {
       if (!endroitsPeinturer || endroitsPeinturer.length === 0) {
-        console.log('ℹ️ Aucun endroit à peinturer à restaurer');
+        log('ℹ️ Aucun endroit à peinturer à restaurer');
         return;
       }
 
-      console.log('🔄 Restauration des endroits à peinturer:', endroitsPeinturer);
+      log('🔄 Restauration des endroits à peinturer:', endroitsPeinturer);
 
       // Supprimer toutes les boxes existantes
       const existingBoxes = document.querySelectorAll('[id^="box-"]');
@@ -16860,14 +16867,14 @@ function initializeApp() {
                                   }
 
                                   // Sélectionner les produits sauvegardés
-                                  console.log(`🔎 Vérification produits pour sous-section:`, sousSection);
-                                  console.log(`🔎 produitsSelectionnes:`, sousSection.produitsSelectionnes);
+                                  log(`🔎 Vérification produits pour sous-section:`, sousSection);
+                                  log(`🔎 produitsSelectionnes:`, sousSection.produitsSelectionnes);
 
                                   if (sousSection.produitsSelectionnes && sousSection.produitsSelectionnes.length > 0) {
-                                    console.log(`[DEBUG] Produits à sélectionner pour ${sousSectionId}:`, sousSection.produitsSelectionnes);
+                                    log(`[DEBUG] Produits à sélectionner pour ${sousSectionId}:`, sousSection.produitsSelectionnes);
 
                                     setTimeout(() => {
-                                      console.log(`[TIME] Tentative de sélection des produits pour ${sousSectionId}`);
+                                      log(`[TIME] Tentative de sélection des produits pour ${sousSectionId}`);
 
                                       sousSection.produitsSelectionnes.forEach(produit => {
                                         let productType = '';
@@ -16907,23 +16914,23 @@ function initializeApp() {
                                           price = 0;
                                         }
 
-                                        console.log(`[PACKAGE] Mapping: ${produit.nom} -> ${productType}`);
+                                        log(`[PACKAGE] Mapping: ${produit.nom} -> ${productType}`);
 
                                         if (productType && typeof selectProduct === 'function') {
                                           const container = document.getElementById(`produitsExt_${sousSectionId}`);
-                                          console.log(`📍 Container produitsExt_${sousSectionId}:`, container);
+                                          log(`📍 Container produitsExt_${sousSectionId}:`, container);
 
                                           const allCards = document.querySelectorAll(`#produitsExt_${sousSectionId} .product-card`);
-                                          console.log(`🎴 Cartes trouvées: ${allCards.length}`);
+                                          log(`🎴 Cartes trouvées: ${allCards.length}`);
 
                                           let productCard = null;
 
                                           allCards.forEach(card => {
                                             const onclick = card.getAttribute('onclick');
-                                            console.log(`🔎 Checking card onclick:`, onclick);
+                                            log(`🔎 Checking card onclick:`, onclick);
                                             if (onclick && onclick.includes(productType)) {
                                               productCard = card;
-                                              console.log(`[OK] Carte trouvée pour ${productType}`);
+                                              log(`[OK] Carte trouvée pour ${productType}`);
                                             }
                                           });
 
@@ -16935,11 +16942,11 @@ function initializeApp() {
                                               preventDefault: () => {}
                                             };
 
-                                            console.log(`[LAUNCH] Appel selectProduct(${sousSectionId}, ${productType}, ...)`);
+                                            log(`[LAUNCH] Appel selectProduct(${sousSectionId}, ${productType}, ...)`);
                                             selectProduct(sousSectionId, productType, productName, coverage, price, fakeEvent);
-                                            console.log(`[OK] Produit auto-sélectionné: ${produit.nom}`);
+                                            log(`[OK] Produit auto-sélectionné: ${produit.nom}`);
                                           } else {
-                                            console.warn(`[WARN] Carte non trouvée pour ${productType} dans ${sousSectionId}`);
+                                            warn(`[WARN] Carte non trouvée pour ${productType} dans ${sousSectionId}`);
                                           }
                                         }
                                       });
@@ -16960,17 +16967,17 @@ function initializeApp() {
         }
       });
 
-      console.log(`[OK] ${endroitsPeinturer.length} endroit(s) à peinturer en cours de restauration avec les vraies fonctions`);
+      log(`[OK] ${endroitsPeinturer.length} endroit(s) à peinturer en cours de restauration avec les vraies fonctions`);
     }
 
     // Fonction pour restaurer les travaux additionnels intérieurs
     function restoreTravauxAdditionnels(travauxData) {
       if (!travauxData) {
-        console.log('ℹ️ Aucun travaux additionnels à restaurer');
+        log('ℹ️ Aucun travaux additionnels à restaurer');
         return;
       }
 
-      console.log('🔄 Restauration des travaux additionnels:', travauxData);
+      log('🔄 Restauration des travaux additionnels:', travauxData);
 
       // Restaurer les toggles
       if (travauxData.toggles) {
@@ -17021,7 +17028,7 @@ function initializeApp() {
       setTimeout(() => {
         // Restaurer les portes
         if (travauxData.portes && travauxData.portes.length > 0) {
-          console.log('🚪 Restauration des portes:', travauxData.portes);
+          log('🚪 Restauration des portes:', travauxData.portes);
           travauxData.portes.forEach((porte, index) => {
             setTimeout(() => {
               if (typeof ajouterPorteGlobale === 'function') {
@@ -17033,13 +17040,13 @@ function initializeApp() {
                     const lastPorte = portesContainer.lastElementChild;
                     if (lastPorte) {
                       const porteId = lastPorte.id.replace('porteGlobale_', '');
-                      console.log(`[FIX] Restauration porte #${porteId}:`, porte);
+                      log(`[FIX] Restauration porte #${porteId}:`, porte);
 
                       const pieceSelect = document.getElementById(`piecePorteGlobal_${porteId}`);
                       const typeSelect = document.getElementById(`typePorteGlobal_${porteId}`);
                       const nombreInput = document.getElementById(`nombrePorteGlobal_${porteId}`);
 
-                      console.log('📍 Elements trouvés:', {
+                      log('📍 Elements trouvés:', {
                         pieceSelect: pieceSelect?.id,
                         typeSelect: typeSelect?.id,
                         nombreInput: nombreInput?.id
@@ -17047,7 +17054,7 @@ function initializeApp() {
 
                       if (pieceSelect) {
                         pieceSelect.value = porte.piece;
-                        console.log(`[OK] Pièce assignée: ${porte.piece}`);
+                        log(`[OK] Pièce assignée: ${porte.piece}`);
                         // Mettre à jour l'affichage du dropdown custom
                         const pieceCustomSelect = pieceSelect.previousElementSibling;
                         if (pieceCustomSelect && pieceCustomSelect.classList.contains('custom-select')) {
@@ -17060,7 +17067,7 @@ function initializeApp() {
                       }
                       if (typeSelect) {
                         typeSelect.value = porte.type;
-                        console.log(`[OK] Type assigné: ${porte.type}`);
+                        log(`[OK] Type assigné: ${porte.type}`);
                         // Mettre à jour l'affichage du dropdown custom
                         const typeCustomSelect = typeSelect.previousElementSibling;
                         if (typeCustomSelect && typeCustomSelect.classList.contains('custom-select')) {
@@ -17073,7 +17080,7 @@ function initializeApp() {
                       }
                       if (nombreInput) {
                         nombreInput.value = porte.nombre;
-                        console.log(`[OK] Nombre assigné: ${porte.nombre}`);
+                        log(`[OK] Nombre assigné: ${porte.nombre}`);
                       }
 
                       // Déclencher le calcul
@@ -17142,7 +17149,7 @@ function initializeApp() {
 
         // Restaurer les divers
         if (travauxData.divers && travauxData.divers.length > 0) {
-          console.log('[FIX] Restauration des divers:', travauxData.divers);
+          log('[FIX] Restauration des divers:', travauxData.divers);
           travauxData.divers.forEach((diversItem, index) => {
             setTimeout(() => {
               if (typeof ajouterDiversGlobal === 'function') {
@@ -17154,13 +17161,13 @@ function initializeApp() {
                     const lastDivers = diversContainer.lastElementChild;
                     if (lastDivers) {
                       const diversId = lastDivers.id.replace('diversGlobal_', '');
-                      console.log(`[FIX] Restauration divers #${diversId}:`, diversItem);
+                      log(`[FIX] Restauration divers #${diversId}:`, diversItem);
 
                       const pieceSelect = document.getElementById(`pieceDiversGlobal_${diversId}`);
                       const typeSelect = document.getElementById(`typeDiversGlobal_${diversId}`);
                       const quantiteInput = document.getElementById(`quantiteDiversGlobal_${diversId}`);
 
-                      console.log('[DEBUG] Éléments divers trouvés:', {
+                      log('[DEBUG] Éléments divers trouvés:', {
                         pieceSelect: pieceSelect?.id,
                         typeSelect: typeSelect?.id,
                         quantiteInput: quantiteInput?.id,
@@ -17254,24 +17261,24 @@ function initializeApp() {
         // Restaurer les checkboxes de préparation avec leurs préparations
         if (travauxData.preparationPieces && travauxData.preparationPieces.length > 0) {
           setTimeout(() => {
-            console.log('🎨 Restauration des préparations:', travauxData.preparationPieces);
+            log('🎨 Restauration des préparations:', travauxData.preparationPieces);
             travauxData.preparationPieces.forEach((pieceData, pieceIndex) => {
               setTimeout(() => {
-                console.log(`[DEBUG] Restauration préparation pour pièce ${pieceData.pieceId}`);
+                log(`[DEBUG] Restauration préparation pour pièce ${pieceData.pieceId}`);
                 const checkbox = document.getElementById(`prepGlobalPiece_${pieceData.pieceId}`);
-                console.log(`📍 Checkbox trouvée:`, checkbox);
+                log(`📍 Checkbox trouvée:`, checkbox);
 
                 if (checkbox) {
                   // VIDER LA LISTE EXISTANTE AVANT D'AJOUTER (évite les doublons)
                   const prepList = document.getElementById(`prepGlobalList_${pieceData.pieceId}`);
                   if (prepList) {
-                    console.log(`🧹 Vidage de la liste existante pour pièce ${pieceData.pieceId}:`, prepList.children.length, 'items');
+                    log(`🧹 Vidage de la liste existante pour pièce ${pieceData.pieceId}:`, prepList.children.length, 'items');
                     prepList.innerHTML = '';
                   }
 
                   // VIDER L'OBJET preparationsGlobales pour cette pièce
                   if (preparationsGlobales[pieceData.pieceId]) {
-                    console.log(`🧹 Vidage de preparationsGlobales[${pieceData.pieceId}]:`, preparationsGlobales[pieceData.pieceId].length, 'items');
+                    log(`🧹 Vidage de preparationsGlobales[${pieceData.pieceId}]:`, preparationsGlobales[pieceData.pieceId].length, 'items');
                     preparationsGlobales[pieceData.pieceId] = [];
                   }
 
@@ -17280,13 +17287,13 @@ function initializeApp() {
                   const prepsDiv = document.getElementById(`prepGlobalPreps_${pieceData.pieceId}`);
                   if (prepsDiv) {
                     prepsDiv.style.display = 'block';
-                    console.log(`[OK] Section préparations affichée pour pièce ${pieceData.pieceId}`);
+                    log(`[OK] Section préparations affichée pour pièce ${pieceData.pieceId}`);
                   }
                 }
 
                 // Ajouter les préparations de cette pièce
                 if (pieceData.preparations && pieceData.preparations.length > 0) {
-                  console.log(`[NOTE] ${pieceData.preparations.length} préparation(s) à restaurer pour pièce ${pieceData.pieceId}`);
+                  log(`[NOTE] ${pieceData.preparations.length} préparation(s) à restaurer pour pièce ${pieceData.pieceId}`);
 
                   // Attendre plus longtemps pour s'assurer que le toggle est activé
                   setTimeout(() => {
@@ -17294,12 +17301,12 @@ function initializeApp() {
                     const prepsDiv = document.getElementById(`prepGlobalPreps_${pieceData.pieceId}`);
                     if (prepsDiv) {
                       prepsDiv.style.display = 'block';
-                      console.log(`[OK] Div préparations affiché pour pièce ${pieceData.pieceId}`);
+                      log(`[OK] Div préparations affiché pour pièce ${pieceData.pieceId}`);
                     }
 
                     pieceData.preparations.forEach((prep, prepIndex) => {
                       setTimeout(() => {
-                        console.log(`[ADD] Ajout préparation ${prepIndex + 1}:`, prep);
+                        log(`[ADD] Ajout préparation ${prepIndex + 1}:`, prep);
 
                         // Créer directement avec les bonnes valeurs au lieu de créer puis modifier
                         if (!preparationsGlobales[pieceData.pieceId]) {
@@ -17313,12 +17320,12 @@ function initializeApp() {
                           type: prep.type,
                           heures: parseFloat(prep.heures)
                         });
-                        console.log(`[OK] Ajouté dans preparationsGlobales[${pieceData.pieceId}][${index}]:`, prep);
+                        log(`[OK] Ajouté dans preparationsGlobales[${pieceData.pieceId}][${index}]:`, prep);
 
                         // Créer le HTML directement avec les bonnes valeurs
                         if (typeof ajouterPreparationGlobaleHTML === 'function') {
                           ajouterPreparationGlobaleHTML(pieceData.pieceId, index, prep.type, prep.heures);
-                          console.log(`[OK] HTML créé avec type=${prep.type}, heures=${prep.heures}`);
+                          log(`[OK] HTML créé avec type=${prep.type}, heures=${prep.heures}`);
 
                           // Recalculer
                           setTimeout(() => {
@@ -17333,18 +17340,18 @@ function initializeApp() {
                 }
               }, pieceIndex * 500);
             });
-            console.log('[OK] Pièces de préparation restaurées:', travauxData.preparationPieces);
+            log('[OK] Pièces de préparation restaurées:', travauxData.preparationPieces);
           }, 800);
         }
 
         // Restaurer les checkboxes d'apprêt
         if (travauxData.appretPieces && travauxData.appretPieces.length > 0) {
           setTimeout(() => {
-            console.log('🎨 Restauration apprêt pour pièces:', travauxData.appretPieces);
+            log('🎨 Restauration apprêt pour pièces:', travauxData.appretPieces);
             travauxData.appretPieces.forEach(pieceData => {
               const pieceId = pieceData.pieceId || pieceData; // Support ancien format
               const checkbox = document.getElementById(`appretPiece_${pieceId}`);
-              console.log(`[DEBUG] Restauration apprêt pour pièce ${pieceId}:`, checkbox);
+              log(`[DEBUG] Restauration apprêt pour pièce ${pieceId}:`, checkbox);
 
               if (checkbox) {
                 // Toujours cocher la pièce
@@ -17353,15 +17360,15 @@ function initializeApp() {
                 // Appeler toggleAppretPieceSelection pour afficher les checkboxes des murs
                 if (typeof toggleAppretPieceSelection === 'function') {
                   toggleAppretPieceSelection(pieceId);
-                  console.log(`[OK] toggleAppretPieceSelection appelé pour ${pieceId}`);
+                  log(`[OK] toggleAppretPieceSelection appelé pour ${pieceId}`);
                 }
 
                 // Restaurer les surfaces sélectionnées si c'est le nouveau format
-                console.log(`[DEBUG] Type de pieceData:`, typeof pieceData, pieceData);
+                log(`[DEBUG] Type de pieceData:`, typeof pieceData, pieceData);
                 if (typeof pieceData === 'object') {
-                  console.log(`🔄 Démarrage setTimeout pour restaurer surfaces de ${pieceId}`);
+                  log(`🔄 Démarrage setTimeout pour restaurer surfaces de ${pieceId}`);
                   setTimeout(() => {
-                    console.log(`[TIME] Dans setTimeout pour ${pieceId}`);
+                    log(`[TIME] Dans setTimeout pour ${pieceId}`);
                     const mur1Checkbox = document.getElementById(`appretMur1_${pieceId}`);
                     const mur2Checkbox = document.getElementById(`appretMur2_${pieceId}`);
                     const mur3Checkbox = document.getElementById(`appretMur3_${pieceId}`);
@@ -17369,8 +17376,8 @@ function initializeApp() {
                     const plafondCheckbox = document.getElementById(`appretPlafond_${pieceId}`);
                     const mouluressCheckbox = document.getElementById(`appretMoulures_${pieceId}`);
 
-                    console.log(`[DEBUG] Checkboxes trouvées - Mur1:`, mur1Checkbox, `Mur2:`, mur2Checkbox, `Mur3:`, mur3Checkbox, `Mur4:`, mur4Checkbox);
-                    console.log(`[DEBUG] Restauration surfaces pour pièce ${pieceId}:`, pieceData);
+                    log(`[DEBUG] Checkboxes trouvées - Mur1:`, mur1Checkbox, `Mur2:`, mur2Checkbox, `Mur3:`, mur3Checkbox, `Mur4:`, mur4Checkbox);
+                    log(`[DEBUG] Restauration surfaces pour pièce ${pieceId}:`, pieceData);
 
                     // D'abord tout décocher (toggleAppretPieceSelection coche les 4 murs par défaut)
                     if (mur1Checkbox) mur1Checkbox.checked = false;
@@ -17383,27 +17390,27 @@ function initializeApp() {
                     // Puis cocher seulement ce qui était sélectionné
                     if (pieceData.mur1 && mur1Checkbox) {
                       mur1Checkbox.checked = true;
-                      console.log(`[OK] Mur 1 coché`);
+                      log(`[OK] Mur 1 coché`);
                     }
                     if (pieceData.mur2 && mur2Checkbox) {
                       mur2Checkbox.checked = true;
-                      console.log(`[OK] Mur 2 coché`);
+                      log(`[OK] Mur 2 coché`);
                     }
                     if (pieceData.mur3 && mur3Checkbox) {
                       mur3Checkbox.checked = true;
-                      console.log(`[OK] Mur 3 coché`);
+                      log(`[OK] Mur 3 coché`);
                     }
                     if (pieceData.mur4 && mur4Checkbox) {
                       mur4Checkbox.checked = true;
-                      console.log(`[OK] Mur 4 coché`);
+                      log(`[OK] Mur 4 coché`);
                     }
                     if (pieceData.plafond && plafondCheckbox) {
                       plafondCheckbox.checked = true;
-                      console.log(`[OK] Plafond coché`);
+                      log(`[OK] Plafond coché`);
                     }
                     if (pieceData.moulures && mouluressCheckbox) {
                       mouluressCheckbox.checked = true;
-                      console.log(`[OK] Moulures cochées`);
+                      log(`[OK] Moulures cochées`);
                     }
 
                     // Déclencher le calcul
@@ -17411,21 +17418,21 @@ function initializeApp() {
                       calculerAppretGlobal();
                     }
 
-                    console.log(`[OK] Surfaces apprêt restaurées pour pièce ${pieceId}`);
+                    log(`[OK] Surfaces apprêt restaurées pour pièce ${pieceId}`);
                   }, 100);
                 }
               }
             });
-            console.log('[OK] Pièces d\'apprêt restaurées:', travauxData.appretPieces);
+            log('[OK] Pièces d\'apprêt restaurées:', travauxData.appretPieces);
           }, 1000);
         }
 
-        console.log('[OK] Travaux additionnels restaurés');
+        log('[OK] Travaux additionnels restaurés');
       }, 300);
     }
 
     function reinitialiserCalculateur() {
-      console.log('🧹 DÉBUT RÉINITIALISATION COMPLÈTE DU CALCULATEUR');
+      log('🧹 DÉBUT RÉINITIALISATION COMPLÈTE DU CALCULATEUR');
 
       // Réinitialiser l'ID du projet chargé
       currentLoadedProjectId = null;
@@ -17481,25 +17488,25 @@ function initializeApp() {
       // 4. VIDER LES SECTIONS EXTÉRIEURES DYNAMIQUES
       const lavagesContainer = document.getElementById('lavages-container');
       if (lavagesContainer) {
-        console.log('🧹 Vidage lavages-container:', lavagesContainer.children.length, 'éléments');
+        log('🧹 Vidage lavages-container:', lavagesContainer.children.length, 'éléments');
         lavagesContainer.innerHTML = '';
       }
 
       const preparationsContainer = document.getElementById('preparations-container');
       if (preparationsContainer) {
-        console.log('🧹 Vidage preparations-container:', preparationsContainer.children.length, 'éléments');
+        log('🧹 Vidage preparations-container:', preparationsContainer.children.length, 'éléments');
         preparationsContainer.innerHTML = '';
       }
 
       const primersContainer = document.getElementById('primers-container');
       if (primersContainer) {
-        console.log('🧹 Vidage primers-container:', primersContainer.children.length, 'éléments');
+        log('🧹 Vidage primers-container:', primersContainer.children.length, 'éléments');
         primersContainer.innerHTML = '';
       }
 
       const endroitsContainer = document.getElementById('endroits-container');
       if (endroitsContainer) {
-        console.log('🧹 Vidage endroits-container:', endroitsContainer.children.length, 'éléments');
+        log('🧹 Vidage endroits-container:', endroitsContainer.children.length, 'éléments');
         endroitsContainer.innerHTML = '';
       }
 
@@ -17593,7 +17600,7 @@ function initializeApp() {
         }
       }, 100);
 
-      console.log('🧹 Calculateur complètement réinitialisé');
+      log('🧹 Calculateur complètement réinitialisé');
     }
 
     async function enregistrerProjetRapide() {
@@ -17649,7 +17656,7 @@ function initializeApp() {
         itemTravaux = prixExt > prixInt ? 'Travaux extérieurs' : 'Travaux intérieurs';
       }
 
-      console.log(`[MONEY] Calcul prix: Ext=${prixExt}$ Int=${prixInt}$ -> Final=${prix}$${typeTravauxText}`);
+      log(`[MONEY] Calcul prix: Ext=${prixExt}$ Int=${prixInt}$ -> Final=${prix}$${typeTravauxText}`);
 
       // 4. Arrondir au 5 ou 10 supérieur (même logique que completerSoumission)
       const prixBase = Math.ceil(parseFloat(prix));
@@ -17664,7 +17671,7 @@ function initializeApp() {
         prixArrondi = prixBase - dernierChiffre + 10; // Arrondir au 10 suivant
       }
 
-      console.log(`🔢 Prix arrondi au 5/10: ${prix} -> ${prixBase} -> ${prixArrondi}`);
+      log(`🔢 Prix arrondi au 5/10: ${prix} -> ${prixBase} -> ${prixArrondi}`);
 
       // 5. Créer l'objet projet
       const username = localStorage.getItem('username') || 'default';
@@ -17702,7 +17709,7 @@ function initializeApp() {
         });
 
         if (response.ok) {
-          console.log('[OK] Projet ' + (currentLoadedProjectId ? 'mis à jour' : 'sauvegardé') + ' dans le cloud');
+          log('[OK] Projet ' + (currentLoadedProjectId ? 'mis à jour' : 'sauvegardé') + ' dans le cloud');
           showNotification(currentLoadedProjectId ? 'Projet mis à jour!' : 'Projet enregistré!', 'success');
 
           // Basculer vers l'onglet Mes Projets AVANT le refresh
@@ -17721,7 +17728,7 @@ function initializeApp() {
           showNotification('Erreur lors de l\'enregistrement', 'error');
         }
       } catch (error) {
-        console.error('[ERROR] Erreur sauvegarde projet:', error);
+        error('[ERROR] Erreur sauvegarde projet:', error);
         showNotification('Erreur lors de l\'enregistrement', 'error');
       }
     }
@@ -17739,16 +17746,16 @@ function initializeApp() {
         // Charger les projets depuis l'API
         const response = await fetch(`/api/projets/${username}`);
         if (!response.ok) {
-          console.error('[ERROR] Erreur chargement projets:', response.status);
+          error('[ERROR] Erreur chargement projets:', response.status);
           alert('Erreur chargement projets');
           return;
         }
 
         const projets = await response.json();
-        console.log('[PACKAGE] Projets chargés:', projets);
+        log('[PACKAGE] Projets chargés:', projets);
 
         const projet = projets.find(p => p.id === String(projetId));
-        console.log('[TARGET] Projet trouvé:', projet);
+        log('[TARGET] Projet trouvé:', projet);
 
         if (!projet) {
           alert('Projet introuvable');
@@ -17757,7 +17764,7 @@ function initializeApp() {
 
         // Charger les données de base
         const formData = projet.formData;
-        console.log('[NOTE] FormData à restaurer:', formData);
+        log('[NOTE] FormData à restaurer:', formData);
 
         let restoredCount = 0;
         let notFoundCount = 0;
@@ -17788,7 +17795,7 @@ function initializeApp() {
             listePieces.innerHTML = '';
             piecesInterieur.forEach(piece => afficherPiece(piece));
           }
-          console.log('[OK] Pièces intérieures restaurées:', piecesInterieur.length);
+          log('[OK] Pièces intérieures restaurées:', piecesInterieur.length);
         }
 
         if (formData.travauxAdditionnels) {
@@ -17812,10 +17819,10 @@ function initializeApp() {
                   input.value = dynData.value;
                   restoredCount++;
                 });
-                console.log(`[OK] Input dynamique restauré: ${dynData.section} - ${dynData.type} = ${dynData.value}`);
+                log(`[OK] Input dynamique restauré: ${dynData.section} - ${dynData.type} = ${dynData.value}`);
               } else {
                 notFoundCount++;
-                console.warn(`[WARN] Input dynamique non trouvé: ${dynData.section} - ${dynData.type}`);
+                warn(`[WARN] Input dynamique non trouvé: ${dynData.section} - ${dynData.type}`);
               }
             }
             return;
@@ -17831,11 +17838,11 @@ function initializeApp() {
             restoredCount++;
           } else {
             notFoundCount++;
-            console.warn(`[WARN] Élément non trouvé: ${key}`);
+            warn(`[WARN] Élément non trouvé: ${key}`);
           }
         });
 
-        console.log(`[OK] Éléments restaurés: ${restoredCount}, Non trouvés: ${notFoundCount}`);
+        log(`[OK] Éléments restaurés: ${restoredCount}, Non trouvés: ${notFoundCount}`);
 
       // Restaurer les surfaces extérieures si elles existent
       if (formData.surfaces && typeof restoreSurfaceData === 'function') {
@@ -17877,7 +17884,7 @@ function initializeApp() {
         const totalExt = parseFloat(totalExtElement?.textContent.replace('$', '').replace(/\s+/g, '').replace(',', '.').trim() || '0');
         const totalInt = parseFloat(totalIntElement?.textContent.replace('$', '').replace(/\s+/g, '').replace(',', '.').trim() || '0');
 
-        console.log(`[DEBUG] Totaux projet: Ext=${totalExt}$, Int=${totalInt}$`);
+        log(`[DEBUG] Totaux projet: Ext=${totalExt}$, Int=${totalInt}$`);
 
         // Logique: si extérieur a des données -> extérieur, sinon si intérieur -> intérieur
         if (totalExt > 0) {
@@ -17886,7 +17893,7 @@ function initializeApp() {
           tabName = 'interieur'; // Intérieur seulement
         }
 
-        console.log(`🔄 Changement d'onglet vers: ${tabName}`);
+        log(`🔄 Changement d'onglet vers: ${tabName}`);
 
         if (typeof switchTab === 'function') {
           // skipRefresh = true pour éviter le double chargement des produits
@@ -17905,10 +17912,10 @@ function initializeApp() {
         validateCompleterButton();
       }
 
-      console.log('[OK] Projet chargé complètement!');
+      log('[OK] Projet chargé complètement!');
 
       } catch (error) {
-        console.error('[ERROR] Erreur chargement projet:', error);
+        error('[ERROR] Erreur chargement projet:', error);
         alert('Erreur lors du chargement: ' + error.message);
       }
     }
@@ -17932,7 +17939,7 @@ function initializeApp() {
 
               // Si le projet supprimé est celui actuellement chargé, réinitialiser le calculateur
               if (currentLoadedProjectId === String(projetId)) {
-                console.log('🧹 Projet supprimé était chargé, réinitialisation du calculateur');
+                log('🧹 Projet supprimé était chargé, réinitialisation du calculateur');
                 reinitialiserCalculateur();
                 currentLoadedProjectId = null;
               }
@@ -17942,7 +17949,7 @@ function initializeApp() {
               showNotification('Erreur lors de la suppression', 'error');
             }
           } catch (error) {
-            console.error('Erreur suppression projet:', error);
+            error('Erreur suppression projet:', error);
             showNotification('Erreur lors de la suppression', 'error');
           }
         }
@@ -17992,7 +17999,7 @@ function initializeApp() {
       try {
         const response = await fetch(`/api/projets/${username}`);
         if (!response.ok) {
-          console.error('Erreur chargement projets');
+          error('Erreur chargement projets');
           return;
         }
 
@@ -18095,7 +18102,7 @@ function initializeApp() {
         </div>
       `).join('');
       } catch (error) {
-        console.error('Erreur affichage projets:', error);
+        error('Erreur affichage projets:', error);
       }
     }
 
@@ -18217,7 +18224,7 @@ function initializeApp() {
       URL.revokeObjectURL(url);
       showNotification('Projets exportés avec succès!', 'success');
       } catch (error) {
-        console.error('Erreur export projets:', error);
+        error('Erreur export projets:', error);
         showNotification('Erreur lors de l\'export', 'error');
       }
     }
@@ -18268,7 +18275,7 @@ function initializeApp() {
     function activateCurrentPageMenu() {
       // Détecter la page actuelle
       const currentPath = window.location.pathname;
-      console.log('🌐 Page actuelle détectée:', currentPath);
+      log('🌐 Page actuelle détectée:', currentPath);
       
       // Enlever la classe menu-active de tous les liens
       const allMenuLinks = document.querySelectorAll('#sidebar a');
@@ -18281,10 +18288,10 @@ function initializeApp() {
       let targetLink = null;
       if (currentPath === '/calcul') {
         targetLink = document.querySelector('#sidebar a[data-path="/calcul"]');
-        console.log('[TARGET] Page Calculateur détectée - activation du menu calculateur');
+        log('[TARGET] Page Calculateur détectée - activation du menu calculateur');
       } else if (currentPath === '/centrale') {
         targetLink = document.querySelector('#sidebar a[data-path="/centrale"]');
-        console.log('[TARGET] Page Centrale détectée - activation du menu admin');
+        log('[TARGET] Page Centrale détectée - activation du menu admin');
       }
       
       // Activer le lien correspondant
@@ -18292,10 +18299,10 @@ function initializeApp() {
         targetLink.classList.add('menu-active');
         targetLink.setAttribute('data-menu-state', 'active');
         
-        console.log('[OK] Menu activé pour:', targetLink.textContent.trim());
-        console.log('[DEBUG] Classes actuelles:', targetLink.className);
+        log('[OK] Menu activé pour:', targetLink.textContent.trim());
+        log('[DEBUG] Classes actuelles:', targetLink.className);
       } else {
-        console.log('[WARN] Aucun menu trouvé pour la page:', currentPath);
+        log('[WARN] Aucun menu trouvé pour la page:', currentPath);
       }
     }
 
@@ -18322,7 +18329,7 @@ function initializeApp() {
         return data.blacklisted_event_ids || [];
       }
     } catch (error) {
-      console.error("Erreur lors du chargement de la blacklist des IDs:", error);
+      error("Erreur lors du chargement de la blacklist des IDs:", error);
     }
     return [];
   }
@@ -18345,8 +18352,8 @@ function initializeApp() {
         ]);
 
         const clientsData = await clientsResponse.json();
-        console.log("CLIENTS DATA:", clientsData);
-        console.log("BLACKLISTED EVENT IDS:", blacklistedEventIds);
+        log("CLIENTS DATA:", clientsData);
+        log("BLACKLISTED EVENT IDS:", blacklistedEventIds);
         
         const tbody = document.getElementById("clients-body");
         const mobileList = document.getElementById("mobile-clients-list");
@@ -18357,14 +18364,14 @@ function initializeApp() {
           // Filtrer les clients non bannis par ID unique
           const filteredClients = clientsData.filter(ev => {
             const isBanned = isEventIdBlacklisted(ev.id, blacklistedEventIds);
-            console.log(`[DEBUG] Vérification client ${ev.prenom} ${ev.nom} - ID: ${ev.id} - Banni: ${isBanned}`);
+            log(`[DEBUG] Vérification client ${ev.prenom} ${ev.nom} - ID: ${ev.id} - Banni: ${isBanned}`);
             if (isBanned) {
-              console.log(`🚫 Client banni filtré par ID: ${ev.id} (${ev.prenom} ${ev.nom})`);
+              log(`🚫 Client banni filtré par ID: ${ev.id} (${ev.prenom} ${ev.nom})`);
             }
             return !isBanned;
           });
 
-          console.log(`[DATA] Clients affichés: ${filteredClients.length}/${clientsData.length} (${clientsData.length - filteredClients.length} bannis)`);
+          log(`[DATA] Clients affichés: ${filteredClients.length}/${clientsData.length} (${clientsData.length - filteredClients.length} bannis)`);
 
           // Mettre à jour le compteur de clients
           const clientCounter = document.querySelector('.px-3.py-1.rounded-full.text-xs.font-medium');
@@ -18468,7 +18475,7 @@ function initializeApp() {
           mobileList.style.display = "block";
         }
       } catch (error) {
-        console.error("Erreur lors du chargement des clients:", error);
+        error("Erreur lors du chargement des clients:", error);
         // Afficher un message d'erreur dans le tableau
         const tbody = document.getElementById("clients-body");
         tbody.innerHTML = `
@@ -18563,7 +18570,7 @@ function initializeApp() {
     const totalExtElement = document.getElementById('subTotal');
     const totalIntElement = document.getElementById('subTotalInt');
 
-    console.log('[DEBUG] Debug éléments:', {
+    log('[DEBUG] Debug éléments:', {
       totalExtElement: totalExtElement,
       totalIntElement: totalIntElement,
       totalExtText: totalExtElement?.textContent,
@@ -18574,7 +18581,7 @@ function initializeApp() {
     const totalExt = totalExtElement?.textContent.replace('$', '').replace(',', '.').replace(/\s+/g, '').trim() || '0';
     const totalInt = totalIntElement?.textContent.replace('$', '').replace(',', '.').replace(/\s+/g, '').trim() || '0';
 
-    console.log('[DEBUG] Après nettoyage:', {
+    log('[DEBUG] Après nettoyage:', {
       totalExt: totalExt,
       totalInt: totalInt
     });
@@ -18582,7 +18589,7 @@ function initializeApp() {
     const prixExt = parseFloat(totalExt) || 0;
     const prixInt = parseFloat(totalInt) || 0;
 
-    console.log('[DEBUG] Après parseFloat:', {
+    log('[DEBUG] Après parseFloat:', {
       prixExt: prixExt,
       prixInt: prixInt
     });
@@ -18614,9 +18621,9 @@ function initializeApp() {
       itemTravaux = prixExt > prixInt ? 'Travaux extérieurs' : 'Travaux intérieurs';
     }
 
-    console.log(`[MONEY] Calcul prix: Ext=${prixExt}$ Int=${prixInt}$ -> Final=${prix}$${typeTravauxText}`);
+    log(`[MONEY] Calcul prix: Ext=${prixExt}$ Int=${prixInt}$ -> Final=${prix}$${typeTravauxText}`);
 
-    console.log('[DEBUG] Prix final qui sera sauvegardé:', prix, 'Type:', typeof prix);
+    log('[DEBUG] Prix final qui sera sauvegardé:', prix, 'Type:', typeof prix);
 
     // Récupérer les données client
     const client = JSON.parse(clientData);
@@ -18654,12 +18661,12 @@ function initializeApp() {
       });
 
       if (response.ok) {
-        console.log('[OK] Projet sauvegardé dans le cloud');
+        log('[OK] Projet sauvegardé dans le cloud');
       } else {
-        console.error('[ERROR] Erreur sauvegarde projet');
+        error('[ERROR] Erreur sauvegarde projet');
       }
     } catch (error) {
-      console.error('[ERROR] Erreur API sauvegarde projet:', error);
+      error('[ERROR] Erreur API sauvegarde projet:', error);
     }
     
     // Arrondir au 5 ou 10 supérieur (882.09 -> 885, 887 -> 890)
@@ -18675,8 +18682,8 @@ function initializeApp() {
       prixArrondi = prixBase - dernierChiffre + 10; // Arrondir au 10 suivant
     }
     
-    console.log(`🔢 Prix arrondi au 5/10: ${prix} -> ${prixBase} -> ${prixArrondi}`);
-    console.log(`🏗️ Type de travaux détecté: "${itemTravaux}"`);
+    log(`🔢 Prix arrondi au 5/10: ${prix} -> ${prixBase} -> ${prixArrondi}`);
+    log(`🏗️ Type de travaux détecté: "${itemTravaux}"`);
     
     // Calculer la durée des travaux basée sur les heures
     let heuresTotal = 0;
@@ -18686,14 +18693,14 @@ function initializeApp() {
       const heuresExtElement = document.getElementById('totalHours');
       const heuresExt = parseFloat(heuresExtElement?.textContent) || 0;
       heuresTotal += heuresExt;
-      console.log(`[TIME] Heures extérieur: ${heuresExt}h`);
+      log(`[TIME] Heures extérieur: ${heuresExt}h`);
     }
     
     if (prixInt >= 400) {
       const heuresIntElement = document.getElementById('totalHeuresInt');
       const heuresInt = parseFloat(heuresIntElement?.textContent) || 0;
       heuresTotal += heuresInt;
-      console.log(`[TIME] Heures intérieur: ${heuresInt}h`);
+      log(`[TIME] Heures intérieur: ${heuresInt}h`);
     }
     
     // Convertir heures en jours avec la logique spécifique
@@ -18713,7 +18720,7 @@ function initializeApp() {
         dureeTravaux = `${joursMinArrondi}-${joursMaxArrondi} jours`;
       }
       
-      console.log(`[TIME] Calcul durée: ${heuresTotal}h -> ${joursMin.toFixed(2)}/16 = ${joursMinArrondi}j min, ${joursMax.toFixed(2)}/8 = ${joursMaxArrondi}j max -> "${dureeTravaux}"`);
+      log(`[TIME] Calcul durée: ${heuresTotal}h -> ${joursMin.toFixed(2)}/16 = ${joursMinArrondi}j min, ${joursMax.toFixed(2)}/8 = ${joursMaxArrondi}j max -> "${dureeTravaux}"`);
     }
     
     // Stocker le prix calculé pour le préremplissage de la soumission
@@ -18758,7 +18765,7 @@ function initializeApp() {
     const prixInt = parseFloat(totalInt) || 0;
     const prixTotal = prixExt + prixInt;
 
-    console.log('[DEBUG] DEBUG LECTURE PRIX:', {
+    log('[DEBUG] DEBUG LECTURE PRIX:', {
       extText: totalExtElement?.textContent,
       intText: totalIntElement?.textContent,
       extCleaned: totalExt,
@@ -18805,10 +18812,10 @@ function initializeApp() {
       if (clientData) {
         const parsedClientData = JSON.parse(clientData);
         eventId = parsedClientData.eventId;
-        console.log('[DEBUG] EventId récupéré depuis clientData:', eventId);
+        log('[DEBUG] EventId récupéré depuis clientData:', eventId);
       }
     } catch (e) {
-      console.log('[WARN] Impossible de récupérer eventId depuis clientData');
+      log('[WARN] Impossible de récupérer eventId depuis clientData');
     }
     
     // Logique de seuil: seulement les travaux >= 400$ sont comptés (EXACTE de calcul.html)
@@ -18833,7 +18840,7 @@ function initializeApp() {
       itemTravaux = prixExt > prixInt ? 'Travaux extérieurs' : 'Travaux intérieurs';
     }
     
-    console.log('[DEBUG] DEBUG SEUILS:', {
+    log('[DEBUG] DEBUG SEUILS:', {
       prixExt: prixExt,
       prixInt: prixInt,
       extValid: prixExt >= 400,
@@ -18913,10 +18920,10 @@ function initializeApp() {
             ...newSubmissionData,
             fromProspect: true // Flag pour indiquer que l'adresse vient d'un prospect validé
           };
-          console.log('[OK] Données prospect détectées - flag fromProspect ajouté');
+          log('[OK] Données prospect détectées - flag fromProspect ajouté');
         }
       } catch (e) {
-        console.log('[WARN] Erreur parsing existingSubmissionData');
+        log('[WARN] Erreur parsing existingSubmissionData');
       }
     }
 
@@ -18959,12 +18966,12 @@ function initializeApp() {
       });
 
       if (response.ok) {
-        console.log('[OK] Projet ' + (currentLoadedProjectId ? 'mis à jour' : 'sauvegardé') + ' dans le cloud');
+        log('[OK] Projet ' + (currentLoadedProjectId ? 'mis à jour' : 'sauvegardé') + ' dans le cloud');
       } else {
-        console.error('[ERROR] Erreur sauvegarde projet:', response.status, response.statusText);
+        error('[ERROR] Erreur sauvegarde projet:', response.status, response.statusText);
       }
     } catch (error) {
-      console.error('[ERROR] Erreur API sauvegarde projet:', error);
+      error('[ERROR] Erreur API sauvegarde projet:', error);
     }
 
     // Programmer réinitialisation après redirection
@@ -18984,20 +18991,20 @@ function initializeApp() {
 
   // Fonction pour rafraîchir la liste des clients (utile après bannissement)
   window.refreshClientsList = function() {
-    console.log("🔄 Rafraîchissement de la liste des clients...");
+    log("🔄 Rafraîchissement de la liste des clients...");
     initClientsPage();
   };
 
   // Global function for entrepreneur selector to reload data
   window.loadCalculData = function() {
-    console.log("🔄 Rechargement des données du calculateur pour l'entrepreneur sélectionné...");
+    log("🔄 Rechargement des données du calculateur pour l'entrepreneur sélectionné...");
     initClientsPage();
   };
 
   // Écouter les changements de localStorage pour rafraîchir automatiquement
   window.addEventListener('storage', function(e) {
     if (e.key === 'clientsBannedUpdate') {
-      console.log("📡 Signal de bannissement reçu, rafraîchissement de la liste...");
+      log("📡 Signal de bannissement reçu, rafraîchissement de la liste...");
       setTimeout(() => {
         window.refreshClientsList();
       }, 1000); // Délai pour permettre la propagation des changements
@@ -19006,7 +19013,7 @@ function initializeApp() {
 
   // Écouter aussi l'événement personnalisé pour le même onglet
   window.addEventListener('clientBanned', function(e) {
-    console.log("📡 Événement clientBanned reçu dans le même onglet:", e.detail);
+    log("📡 Événement clientBanned reçu dans le même onglet:", e.detail);
     setTimeout(() => {
       window.refreshClientsList();
     }, 500);
@@ -19016,7 +19023,7 @@ function initializeApp() {
   function checkAndResetCalculator() {
     const shouldReset = localStorage.getItem('shouldResetCalculator');
     if (shouldReset === 'true') {
-      console.log('🔄 Réinitialisation du calculateur après retour de création de soumission');
+      log('🔄 Réinitialisation du calculateur après retour de création de soumission');
       
       // Supprimer le flag
       localStorage.removeItem('shouldResetCalculator');
@@ -19042,7 +19049,7 @@ function initializeApp() {
         // Recalculer
         updateCalculation();
         
-        console.log('[OK] Calculateur réinitialisé automatiquement');
+        log('[OK] Calculateur réinitialisé automatiquement');
       }, 100);
     }
   }
@@ -19067,7 +19074,7 @@ function initializeApp() {
     const arrow = document.getElementById('clients-arrow');
 
     if (!content || !arrow) {
-      console.error('Elements clients-content ou clients-arrow non trouvés');
+      error('Elements clients-content ou clients-arrow non trouvés');
       return;
     }
 
@@ -19086,7 +19093,7 @@ function initializeApp() {
 
       // Calculer la vraie hauteur du contenu
       const fullHeight = content.scrollHeight;
-      console.log('[DEBUG] Hauteur calculée pour ouverture:', fullHeight);
+      log('[DEBUG] Hauteur calculée pour ouverture:', fullHeight);
 
       // Remettre à 0 avant l'animation
       content.style.maxHeight = '0px';
@@ -19384,7 +19391,7 @@ function initializeApp() {
       autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
         if (!place.geometry) {
-          console.log("Adresse invalide");
+          log("Adresse invalide");
           window.googleClientAddressSelected = false;
           return;
         }

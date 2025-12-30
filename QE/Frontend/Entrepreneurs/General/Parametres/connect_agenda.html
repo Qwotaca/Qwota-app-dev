@@ -995,6 +995,13 @@
   </footer>
 
 <script>
+  // ⚡ DÉSACTIVATION DES LOGS - Performance optimization
+  window.log = () => {};
+  window.warn = () => {};
+  window.error = () => {};
+  window.info = () => {};
+  window.debug = () => {};
+
   // Variables globales - Username is handled by common.js
 
   // ================================================================
@@ -1222,7 +1229,7 @@
   // Script pour gestion menu actif
   function activateCurrentPageMenu() {
     const currentPath = window.location.pathname;
-    console.log('🌐 Page actuelle détectée:', currentPath);
+    log('🌐 Page actuelle détectée:', currentPath);
     
     const allMenuLinks = document.querySelectorAll('#sidebar a');
     allMenuLinks.forEach(link => {
@@ -1242,9 +1249,9 @@
     if (targetLink) {
       targetLink.classList.add('menu-active');
       targetLink.setAttribute('data-menu-state', 'active');
-      console.log('[OK] Menu activé pour:', targetLink.textContent.trim());
+      log('[OK] Menu activé pour:', targetLink.textContent.trim());
     } else {
-      console.log('[WARN] Aucun menu trouvé pour la page:', currentPath);
+      log('[WARN] Aucun menu trouvé pour la page:', currentPath);
     }
   }
 
@@ -1326,7 +1333,7 @@
   const teamsContainer = document.getElementById("teams-list");
 
   async function loadTeams() {
-    console.log('👥 Chargement équipes depuis user_info pour:', window.username);
+    log('👥 Chargement équipes depuis user_info pour:', window.username);
     // Les équipes sont chargées automatiquement par loadInfos()
     // Cette fonction ne fait que retourner les équipes déjà chargées
     return teams || [];
@@ -1362,16 +1369,16 @@
       });
 
       if (!response.ok) {
-        console.error('[TEAMS] Erreur sauvegarde backend:', response.status);
+        error('[TEAMS] Erreur sauvegarde backend:', response.status);
       } else {
         // Notifier le top window pour recharger l'iframe GQP
         if (window.top && window.top !== window) {
           window.top.postMessage({ type: 'reload-gqp' }, '*');
-          console.log('[TEAMS] Message envoyé à window.top pour recharger GQP');
+          log('[TEAMS] Message envoyé à window.top pour recharger GQP');
         }
       }
     } catch (error) {
-      console.error('[TEAMS] Erreur sauvegarde backend:', error);
+      error('[TEAMS] Erreur sauvegarde backend:', error);
     }
   }
 
@@ -1383,23 +1390,23 @@
     try {
       // Vérifier que window.username est défini
       if (!window.username) {
-        console.log('[WARN] Username non défini, nouvelle tentative dans 100ms...');
+        log('[WARN] Username non défini, nouvelle tentative dans 100ms...');
         await new Promise(resolve => setTimeout(resolve, 100));
         return loadActiveEmployees(); // Réessayer
       }
 
-      console.log('[DEBUG] Chargement employés pour username:', window.username);
+      log('[DEBUG] Chargement employés pour username:', window.username);
       const response = await fetch(`/get-employees-actifs/${window.username}`);
       if (response.ok) {
         const data = await response.json();
         activeEmployees = data.employees || [];
-        console.log('👥 Employés actifs chargés:', activeEmployees);
+        log('👥 Employés actifs chargés:', activeEmployees);
       } else {
-        console.log('[ERROR] Erreur lors du chargement des employés actifs');
+        log('[ERROR] Erreur lors du chargement des employés actifs');
         activeEmployees = [];
       }
     } catch (error) {
-      console.error('Erreur:', error);
+      error('Erreur:', error);
       activeEmployees = [];
     }
   }
@@ -2073,7 +2080,7 @@ function createPainterBadge(teamIndex, painterIndex, painter) {
   let isEditingTeams = false; // Variable pour suivre l'état d'édition
 
   function renderTeams() {
-    console.log('🎨 Rendu équipes:', teams.length, 'équipes à afficher');
+    log('🎨 Rendu équipes:', teams.length, 'équipes à afficher');
     teamsContainer.innerHTML = "";
 
     // Le bouton change selon le nombre d'équipes (sauf en mode édition)
@@ -2101,7 +2108,7 @@ function createPainterBadge(teamIndex, painterIndex, painter) {
 
     teams.forEach((team, i) => {
       teamsContainer.appendChild(createTeamBox(team, i));
-      console.log('[OK] Équipe', i, 'ajoutée:', team);
+      log('[OK] Équipe', i, 'ajoutée:', team);
     });
 
     // Réappliquer l'état d'édition après le rendu
@@ -2132,12 +2139,12 @@ function createPainterBadge(teamIndex, painterIndex, painter) {
   async function initializeTeamsSection() {
     // Vérifier que window.username est bien défini
     if (!window.username) {
-      console.log('[WARN] Attente de la définition de window.username...');
+      log('[WARN] Attente de la définition de window.username...');
       setTimeout(initializeTeamsSection, 100);
       return;
     }
 
-    console.log('[DEBUG] Initialisation section équipes pour:', window.username);
+    log('[DEBUG] Initialisation section équipes pour:', window.username);
     await loadActiveEmployees(); // Charger d'abord les employés actifs
 
     const loadedTeams = await loadTeams(); // Puis les équipes
@@ -2271,14 +2278,14 @@ async function saveTeamsToBackend() {
       // Notifier le top window pour recharger l'iframe GQP
       if (window.top && window.top !== window) {
         window.top.postMessage({ type: 'reload-gqp' }, '*');
-        console.log('[TEAMS] Message envoyé à window.top pour recharger GQP');
+        log('[TEAMS] Message envoyé à window.top pour recharger GQP');
       }
     } else {
       showToast("Une erreur s'est produite lors de la sauvegarde", "error");
     }
   } catch (error) {
     showToast("Une erreur s'est produite lors de la sauvegarde", "error");
-    console.error(error);
+    error(error);
   } finally {
     // Restaurer le bouton
     saveBtn.disabled = false;
@@ -2294,7 +2301,7 @@ async function saveTeamsToBackend() {
       const data = await response.json();
       const oauthUrl = data.oauth_url;
 
-      console.log('🔐 URL OAuth Calendar récupérée');
+      log('🔐 URL OAuth Calendar récupérée');
 
       // MOBILE: Redirection directe dans une nouvelle page (popups bloqués dans iframes)
       const isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -2322,7 +2329,7 @@ async function saveTeamsToBackend() {
       // Écouter le message de succès
       const messageHandler = (event) => {
         if (event.data === 'agenda_connected') {
-          console.log('✅ Google Calendar connecté avec succès');
+          log('✅ Google Calendar connecté avec succès');
           if (popup && !popup.closed) {
             popup.close();
           }
@@ -2334,7 +2341,7 @@ async function saveTeamsToBackend() {
       window.addEventListener('message', messageHandler);
 
     } catch (error) {
-      console.error('❌ Erreur lors de la connexion Google Calendar:', error);
+      error('❌ Erreur lors de la connexion Google Calendar:', error);
     }
   }
 
@@ -2356,18 +2363,18 @@ async function saveTeamsToBackend() {
         if (data.agenda_id) {
           lastSelectedId = data.agenda_id;
           localStorage.setItem(`selected-agenda-${username}`, data.agenda_id);
-          console.log('[DATE] Agenda sélectionné récupéré depuis backend:', data.agenda_id);
+          log('[DATE] Agenda sélectionné récupéré depuis backend:', data.agenda_id);
         }
         return lastSelectedId;
       })
       .catch(err => {
-        console.log('[DATE] Erreur récupération agenda backend, utilisation localStorage');
+        log('[DATE] Erreur récupération agenda backend, utilisation localStorage');
         return lastSelectedId;
       });
   }
 
   function loadCalendars() {
-    console.log('[DATE] Chargement agendars pour:', username);
+    log('[DATE] Chargement agendars pour:', username);
     const dropdown = document.getElementById("agenda-select");
     const dropdownButton = document.getElementById("agenda-select-button");
     const dropdownMenu = document.getElementById("agenda-dropdown-menu");
@@ -2380,11 +2387,11 @@ async function saveTeamsToBackend() {
     loadSelectedAgenda().then(() => {
       fetch(`/liste-agendas?username=${username}`)
         .then(res => {
-          console.log('[DATE] Réponse agendas:', res.status);
+          log('[DATE] Réponse agendas:', res.status);
           return res.json();
         })
         .then(data => {
-          console.log('[DATE] Données agendas reçues:', data, 'Selected ID:', lastSelectedId);
+          log('[DATE] Données agendas reçues:', data, 'Selected ID:', lastSelectedId);
           
           // Vider le menu dropdown
           dropdownMenu.innerHTML = "";
@@ -2424,7 +2431,7 @@ async function saveTeamsToBackend() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ username: username, agenda_id: cal.id })
               }).then(() => {
-                console.log('[OK] Agenda sauvegardé:', cal.nom);
+                log('[OK] Agenda sauvegardé:', cal.nom);
               });
 
               // Fermer le dropdown
@@ -2476,7 +2483,7 @@ async function saveTeamsToBackend() {
       const data = await response.json();
       const oauthUrl = data.oauth_url;
 
-      console.log('🔐 URL OAuth Gmail récupérée');
+      log('🔐 URL OAuth Gmail récupérée');
 
       // MOBILE: Redirection directe dans une nouvelle page (popups bloqués dans iframes)
       const isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -2504,7 +2511,7 @@ async function saveTeamsToBackend() {
       // Écouter le message de succès
       const messageHandler = (event) => {
         if (event.data === 'gmail_connected') {
-          console.log('✅ Gmail connecté avec succès');
+          log('✅ Gmail connecté avec succès');
           if (popup && !popup.closed) {
             popup.close();
           }
@@ -2516,7 +2523,7 @@ async function saveTeamsToBackend() {
       window.addEventListener('message', messageHandler);
 
     } catch (error) {
-      console.error('❌ Erreur lors de la connexion Gmail:', error);
+      error('❌ Erreur lors de la connexion Gmail:', error);
     }
   }
 
@@ -2593,7 +2600,7 @@ function showConfirm(message) {
   return new Promise((resolve) => {
     // Vérifier que les éléments existent
     if (!confirmMessage || !confirmPopup || !confirmYesBtn || !confirmNoBtn) {
-      console.error("Éléments du popup de confirmation non trouvés");
+      error("Éléments du popup de confirmation non trouvés");
       resolve(true); // Par défaut, accepter l'action
       return;
     }
@@ -2845,7 +2852,7 @@ async function saveInfo() {
     return;
   }
 
-  console.log("[DEBUG] Données à envoyer:", data);
+  log("[DEBUG] Données à envoyer:", data);
 
   const formData = new FormData();
   formData.append("username", username);
@@ -2904,7 +2911,7 @@ async function saveInfo() {
     btn.textContent = "Modifier";
   } catch (e) {
     showToast("Une erreur s'est produite lors de la sauvegarde", "error");
-    console.error(e);
+    error(e);
   } finally {
     // Restaurer le bouton
     btn.disabled = false;
@@ -2949,7 +2956,7 @@ function previewFile(field, input) {
         link.href = URL.createObjectURL(file);   // lien vers PDF complet
         previewBox.classList.remove("hidden");
       } catch (err) {
-        console.error("Erreur PDF.js:", err);
+        error("Erreur PDF.js:", err);
         img.src = "https://cdn-icons-png.flaticon.com/512/337/337946.png";
         link.href = URL.createObjectURL(file);
         previewBox.classList.remove("hidden");
@@ -2976,7 +2983,7 @@ function removeFile(field) {
 async function loadInfos(bust = false) {
   // Attendre que window.username soit défini
   if (!window.username) {
-    console.log('[WARN] Attente de window.username pour loadInfos...');
+    log('[WARN] Attente de window.username pour loadInfos...');
     setTimeout(() => loadInfos(bust), 100);
     return;
   }
@@ -2985,7 +2992,7 @@ async function loadInfos(bust = false) {
   if (!res.ok) return;
   const result = await res.json();
 
-  console.log("[DEBUG] Données reçues du backend:", result.data);
+  log("[DEBUG] Données reçues du backend:", result.data);
 
   // Vérifier que les éléments existent avant de les remplir
   const nomElement = document.getElementById("nom");
@@ -2993,7 +3000,7 @@ async function loadInfos(bust = false) {
   const telephoneElement = document.getElementById("telephone");
   const courrielElement = document.getElementById("courriel");
 
-  console.log("[DEBUG] Éléments trouvés:", {
+  log("[DEBUG] Éléments trouvés:", {
     nom: nomElement ? "[OK]" : "[ERROR]",
     prenom: prenomElement ? "[OK]" : "[ERROR]",
     telephone: telephoneElement ? "[OK]" : "[ERROR]",
@@ -3010,13 +3017,13 @@ async function loadInfos(bust = false) {
   const tpsElement = document.getElementById("tps");
   const tvqElement = document.getElementById("tvq");
 
-  console.log("[DEBUG] Éléments entreprise trouvés:", {
+  log("[DEBUG] Éléments entreprise trouvés:", {
     neq: neqElement ? "[OK]" : "[ERROR]",
     tps: tpsElement ? "[OK]" : "[ERROR]",
     tvq: tvqElement ? "[OK]" : "[ERROR]"
   });
 
-  console.log("[DEBUG] Valeurs entreprise reçues:", {
+  log("[DEBUG] Valeurs entreprise reçues:", {
     neq: result.data?.neq,
     tps: result.data?.tps,
     tvq: result.data?.tvq
@@ -3309,7 +3316,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     } catch (error) {
       showToast("Une erreur s'est produite lors de la sauvegarde", "error");
-      console.error(error);
+      error(error);
     } finally {
       saveBtn.disabled = false;
       saveBtn.innerHTML = originalText;
@@ -3343,7 +3350,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
       }
     } catch (error) {
-      console.log("Aucune signature existante trouvée");
+      log("Aucune signature existante trouvée");
     }
   }
 });
@@ -3446,7 +3453,7 @@ document.addEventListener("DOMContentLoaded", function() {
       video.srcObject = cameraStream;
       cameraModal.classList.remove("hidden");
     } catch (error) {
-      console.error("Erreur d'accès à la caméra:", error);
+      error("Erreur d'accès à la caméra:", error);
       showToast("Impossible d'accéder à la caméra", "error");
     }
   }
@@ -3558,12 +3565,12 @@ document.addEventListener("DOMContentLoaded", function() {
           handleImageFile(file);
         }
       } catch (error) {
-        console.error("Erreur lors du traitement de la photo:", error);
+        error("Erreur lors du traitement de la photo:", error);
       }
     };
 
     eventSource.onerror = (error) => {
-      console.error("Erreur SSE:", error);
+      error("Erreur SSE:", error);
       eventSource.close();
     };
 
@@ -3618,27 +3625,27 @@ document.addEventListener("DOMContentLoaded", function() {
       profilePhotoPlaceholder.style.display = "flex";
 
       // Réinitialiser les icônes du header
-      console.log('🔄 Réinitialisation des icônes du header');
+      log('🔄 Réinitialisation des icônes du header');
 
       // Mobile profile icon - remettre l'icône FontAwesome
       const mobileProfileIcon = document.querySelector('.mobile-profile-icon');
       if (mobileProfileIcon) {
         mobileProfileIcon.innerHTML = '<i class="fas fa-user"></i>';
-        console.log('[OK] Mobile profile icon réinitialisé');
+        log('[OK] Mobile profile icon réinitialisé');
       }
 
       // Desktop account avatar - remettre l'icône FontAwesome
       const accountAvatar = document.querySelector('.account-avatar');
       if (accountAvatar) {
         accountAvatar.innerHTML = '<i class="fas fa-user"></i>';
-        console.log('[OK] Desktop account avatar réinitialisé');
+        log('[OK] Desktop account avatar réinitialisé');
       }
 
       // Desktop dropdown avatar - remettre l'icône FontAwesome
       const userAvatar = document.querySelector('.user-avatar');
       if (userAvatar) {
         userAvatar.innerHTML = '<i class="fas fa-user"></i>';
-        console.log('[OK] Desktop dropdown avatar réinitialisé');
+        log('[OK] Desktop dropdown avatar réinitialisé');
       }
 
       showToast("Photo de profil supprimée", "success");
@@ -3648,7 +3655,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     } catch (error) {
       showToast("Erreur lors de la suppression", "error");
-      console.error(error);
+      error(error);
     }
   });
 
@@ -3913,7 +3920,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     } catch (error) {
       showToast("Une erreur s'est produite lors de la sauvegarde", "error");
-      console.error(error);
+      error(error);
     } finally {
       saveEditorBtn.disabled = false;
       saveEditorBtn.innerHTML = originalText;
@@ -3938,13 +3945,13 @@ document.addEventListener("DOMContentLoaded", function() {
         }
       }
     } catch (error) {
-      console.log("Aucune photo de profil existante trouvée");
+      log("Aucune photo de profil existante trouvée");
     }
   }
 
   // Fonction pour mettre à jour la photo dans le header
   function updateHeaderProfilePhoto(photoUrl) {
-    console.log('🖼️ Mise à jour de la photo de profil dans le header:', photoUrl);
+    log('🖼️ Mise à jour de la photo de profil dans le header:', photoUrl);
 
     // Si on est dans un iframe, mettre à jour le header de la page parent (apppc.html)
     if (window.parent && window.parent !== window) {
@@ -3955,17 +3962,17 @@ document.addEventListener("DOMContentLoaded", function() {
         const accountAvatar = parentDoc.querySelector('.account-avatar img');
         if (accountAvatar) {
           accountAvatar.src = photoUrl;
-          console.log('[OK] Desktop account avatar mis à jour (parent)');
+          log('[OK] Desktop account avatar mis à jour (parent)');
         }
 
         // Mobile profile icon (dans le header mobile du parent)
         const mobileProfileIcon = parentDoc.querySelector('.mobile-profile-icon');
         if (mobileProfileIcon) {
           mobileProfileIcon.innerHTML = `<img src="${photoUrl}" alt="Photo de profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-          console.log('[OK] Mobile profile icon mis à jour (parent)');
+          log('[OK] Mobile profile icon mis à jour (parent)');
         }
       } catch (e) {
-        console.log('[WARN] Impossible d\'accéder au parent (CORS):', e.message);
+        log('[WARN] Impossible d\'accéder au parent (CORS):', e.message);
       }
     }
 
@@ -3973,7 +3980,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const mobileProfileIcon = document.querySelector('.mobile-profile-icon');
     if (mobileProfileIcon) {
       mobileProfileIcon.innerHTML = `<img src="${photoUrl}" alt="Photo de profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-      console.log('[OK] Mobile profile icon mis à jour (local)');
+      log('[OK] Mobile profile icon mis à jour (local)');
     }
 
     const accountAvatar = document.querySelector('.account-avatar');
@@ -3984,7 +3991,7 @@ document.addEventListener("DOMContentLoaded", function() {
       } else {
         accountAvatar.innerHTML = `<img src="${photoUrl}" alt="Photo de profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
       }
-      console.log('[OK] Desktop account avatar mis à jour (local)');
+      log('[OK] Desktop account avatar mis à jour (local)');
     }
   }
 });
@@ -4154,13 +4161,13 @@ function toggleProfileProgress() {
 
 // Scroll vers une section spécifique
 function scrollToSection(section) {
-  console.log('[SCROLL] Tentative de scroll vers:', section);
+  log('[SCROLL] Tentative de scroll vers:', section);
   let targetElement = null;
 
   switch(section) {
     case 'grade':
       targetElement = document.querySelector('[onclick*="selectGrade"]');
-      console.log('[SCROLL] Recherche grade, élément trouvé:', !!targetElement);
+      log('[SCROLL] Recherche grade, élément trouvé:', !!targetElement);
       break;
     case 'personal':
     case 'business':
@@ -4168,16 +4175,16 @@ function scrollToSection(section) {
       // Personal, Business et Documents sont tous dans la section "Mes informations"
       // Utiliser directement l'ID de la section
       targetElement = document.getElementById('mes-informations-section');
-      console.log('[SCROLL] Recherche section "Mes informations", élément trouvé:', !!targetElement);
+      log('[SCROLL] Recherche section "Mes informations", élément trouvé:', !!targetElement);
       break;
     case 'signature':
       targetElement = document.getElementById('signature-pad');
-      console.log('[SCROLL] Recherche signature, élément trouvé:', !!targetElement);
+      log('[SCROLL] Recherche signature, élément trouvé:', !!targetElement);
       break;
   }
 
   if (targetElement) {
-    console.log('[SCROLL] Élément trouvé, scroll en cours...');
+    log('[SCROLL] Élément trouvé, scroll en cours...');
 
     // Fermer le widget si ouvert
     const stepsContainer = document.getElementById('profile-progress-steps');
@@ -4194,7 +4201,7 @@ function scrollToSection(section) {
       top: offsetPosition,
       behavior: 'smooth'
     });
-    console.log('[SCROLL] Scroll effectué');
+    log('[SCROLL] Scroll effectué');
 
     // Animation pour attirer l'attention sur l'élément
     targetElement.style.transition = 'all 0.3s ease';
@@ -4206,7 +4213,7 @@ function scrollToSection(section) {
       targetElement.style.boxShadow = '';
     }, 600);
   } else {
-    console.error('[SCROLL] Élément non trouvé pour la section:', section);
+    error('[SCROLL] Élément non trouvé pour la section:', section);
   }
 }
 
@@ -4214,17 +4221,17 @@ function scrollToSection(section) {
 async function updateProfileProgress() {
   try {
     if (!window.username) {
-      console.log('[PROGRESS] En attente du username...');
+      log('[PROGRESS] En attente du username...');
       setTimeout(updateProfileProgress, 100);
       return;
     }
 
-    console.log('[PROGRESS] Calcul de la progression pour:', window.username);
+    log('[PROGRESS] Calcul de la progression pour:', window.username);
 
     // Charger les données utilisateur
     const response = await fetch(`/api/get-info/${window.username}`);
     if (!response.ok) {
-      console.error('[PROGRESS] Erreur lors du chargement des données');
+      error('[PROGRESS] Erreur lors du chargement des données');
       return;
     }
 
@@ -4232,7 +4239,7 @@ async function updateProfileProgress() {
     const data = result.data || {};
     const files = result.files || {};
 
-    console.log('[PROGRESS] Données chargées:', { data, files });
+    log('[PROGRESS] Données chargées:', { data, files });
 
     // Étape 1: Connexion (Gmail, Agenda = 50% chacun)
     let connectionProgress = 0;
@@ -4320,7 +4327,7 @@ async function updateProfileProgress() {
         if (sigData.signatureUrl) signatureProgress += 50;
       }
     } catch (error) {
-      console.log('[PROGRESS] Aucune signature trouvée');
+      log('[PROGRESS] Aucune signature trouvée');
     }
 
     // Vérifier la photo via son endpoint dédié
@@ -4331,10 +4338,10 @@ async function updateProfileProgress() {
         if (photoData.photoUrl) signatureProgress += 50;
       }
     } catch (error) {
-      console.log('[PROGRESS] Aucune photo trouvée');
+      log('[PROGRESS] Aucune photo trouvée');
     }
 
-    console.log('[PROGRESS] Calculs:', {
+    log('[PROGRESS] Calculs:', {
       connection: connectionProgress,
       grade: gradeProgress,
       personal: personalProgress,
@@ -4405,7 +4412,7 @@ async function updateProfileProgress() {
       }
     }
 
-    console.log('[PROGRESS] Progression mise à jour:', {
+    log('[PROGRESS] Progression mise à jour:', {
       overall: Math.round(overallProgress),
       completed: completedSteps
     });
@@ -4423,7 +4430,7 @@ async function updateProfileProgress() {
         chevron.style.transform = 'rotate(0deg)';
         header.classList.remove('mb-0');
         header.classList.add('mb-6');
-        console.log('[PROGRESS] Widget ouvert - profil à', Math.round(overallProgress), '%');
+        log('[PROGRESS] Widget ouvert - profil à', Math.round(overallProgress), '%');
       } else {
         // Profil complet - fermer le widget
         stepsContainer.style.maxHeight = '0';
@@ -4431,13 +4438,13 @@ async function updateProfileProgress() {
         chevron.style.transform = 'rotate(-180deg)';
         header.classList.remove('mb-6');
         header.classList.add('mb-0');
-        console.log('[PROGRESS] Widget fermé - profil complet à 100%');
+        log('[PROGRESS] Widget fermé - profil complet à 100%');
       }
     }
 
     return overallProgress;
   } catch (error) {
-    console.error('[PROGRESS] Erreur lors du calcul de la progression:', error);
+    error('[PROGRESS] Erreur lors du calcul de la progression:', error);
     return 0;
   }
 }
@@ -4458,7 +4465,7 @@ async function loadGrade() {
     // Mettre à jour l'affichage
     updateGradeButtons();
   } catch (error) {
-    console.error('[GRADE] Erreur lors du chargement:', error);
+    error('[GRADE] Erreur lors du chargement:', error);
   }
 }
 
@@ -4506,9 +4513,9 @@ async function selectGrade(grade) {
     // Mettre à jour la progression du profil
     updateProfileProgress();
 
-    console.log('[GRADE] Grade enregistré:', grade);
+    log('[GRADE] Grade enregistré:', grade);
   } catch (error) {
-    console.error('[GRADE] Erreur lors de l\'enregistrement:', error);
+    error('[GRADE] Erreur lors de l\'enregistrement:', error);
     showToast('Erreur lors de l\'enregistrement du grade', 'error');
   }
 }
@@ -4544,7 +4551,7 @@ async function loadMondayConfig() {
       updateMondayUI(false);
     }
   } catch (error) {
-    console.error('[MONDAY] Erreur lors du chargement de la config:', error);
+    error('[MONDAY] Erreur lors du chargement de la config:', error);
     updateMondayUI(false);
   }
 }
@@ -4585,7 +4592,7 @@ async function testMondayConnection() {
       showToast(data.error || 'Erreur lors du test de connexion', 'error');
     }
   } catch (error) {
-    console.error('[MONDAY] Erreur lors du test:', error);
+    error('[MONDAY] Erreur lors du test:', error);
     showToast('Erreur lors du test de connexion', 'error');
   } finally {
     testBtn.innerHTML = originalText;
@@ -4632,7 +4639,7 @@ async function saveMondayConfig() {
       showToast(data.error || 'Erreur lors de la sauvegarde', 'error');
     }
   } catch (error) {
-    console.error('[MONDAY] Erreur lors de la sauvegarde:', error);
+    error('[MONDAY] Erreur lors de la sauvegarde:', error);
     showToast('Erreur lors de la sauvegarde', 'error');
   } finally {
     saveBtn.innerHTML = originalText;
@@ -4662,7 +4669,7 @@ async function disconnectMonday() {
       showToast('Erreur lors de la déconnexion', 'error');
     }
   } catch (error) {
-    console.error('[MONDAY] Erreur lors de la déconnexion:', error);
+    error('[MONDAY] Erreur lors de la déconnexion:', error);
     showToast('Erreur lors de la déconnexion', 'error');
   }
 }

@@ -3211,6 +3211,20 @@
     </div>
   </div>
 
+  <!-- ================================================================
+       NOUVEAU: Spinner de navigation entre pages (petit et fluide)
+       ================================================================ -->
+  <div id="page-loading-spinner" style="display: none; position: fixed; top: 90px; left: 260px; right: 0; bottom: 0; background: #0f172a; z-index: 9999; align-items: center; justify-content: center;">
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+      <!-- Spinner SVG animé -->
+      <svg width="64" height="64" viewBox="0 0 64 64" style="animation: spin 0.8s linear infinite;">
+        <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="6"/>
+        <circle cx="32" cy="32" r="28" fill="none" stroke="#3b82f6" stroke-width="6" stroke-dasharray="140" stroke-dashoffset="40" stroke-linecap="round" style="transform-origin: center; transform: rotate(-90deg);"/>
+      </svg>
+      <div style="margin-top: 16px; font-size: 14px; color: rgba(255,255,255,0.9); font-weight: 500; text-align: center;">Chargement...</div>
+    </div>
+  </div>
+
   <!-- Container principal de l'app - style inline pour garantir invisibilite immediate -->
   <div id="app-container" style="opacity: 0;">
 
@@ -3888,10 +3902,36 @@
           const forceReload = forceReloadSoumissions || forceReloadCalcul;
 
           if (needsLoading || forceReload) {
+            // ⚡ CACHER L'IFRAME IMMÉDIATEMENT pour éviter le flash
+            targetIframe.style.opacity = '0';
+
+            // ⚡ AFFICHER le spinner IMMÉDIATEMENT (pas de délai)
+            // MAIS seulement si le loading-overlay principal n'est pas visible (pas au premier lancement)
+            const pageSpinner = document.getElementById('page-loading-spinner');
+            const loadingOverlay = document.getElementById('loading-overlay');
+            const isInitialLoad = loadingOverlay && !loadingOverlay.classList.contains('hidden');
+
+            // ⚡ Ajuster la position du spinner selon la sidebar (desktop vs mobile)
+            if (pageSpinner && !isInitialLoad) {
+              const sidebar = document.querySelector('.sidebar');
+              const isMobile = window.innerWidth <= 768;
+
+              if (isMobile) {
+                pageSpinner.style.left = '0';
+                pageSpinner.style.top = '0';
+              } else {
+                const sidebarWidth = sidebar && sidebar.classList.contains('expanded') ? '260px' : '80px';
+                pageSpinner.style.left = sidebarWidth;
+                pageSpinner.style.top = '90px';
+              }
+
+              // Afficher le spinner pour la navigation entre pages
+              pageSpinner.style.display = 'flex';
+              console.log(`[APPPC] 🔄 Spinner affiché pour ${pageName}`);
+            }
+
             if (forceReload) {
               console.log(`[APPPC] 🔄 Rechargement forcé de soumissions (données calculateur détectées)`);
-              // Afficher un spinner de chargement
-              targetIframe.style.opacity = '0.5';
             } else {
               console.log(`[APPPC] Chargement initial de ${pageName}: ${url}`);
             }
@@ -3905,6 +3945,19 @@
               console.log(`[APPPC] Ajout du paramètre user à l'iframe: ${finalUrl}`);
             }
 
+            // ⚡ NOUVEAU: Listener pour cacher le spinner quand la page est chargée
+            const hideSpinnerOnLoad = function() {
+              // ⚡ Attendre 500ms APRÈS le load pour s'assurer que le JavaScript a fini de s'exécuter
+              setTimeout(() => {
+                if (pageSpinner) {
+                  pageSpinner.style.display = 'none';
+                  console.log(`[APPPC] ✅ Spinner caché - ${pageName} chargé`);
+                }
+                // ⚡ Remettre l'iframe visible maintenant que tout est chargé
+                targetIframe.style.opacity = '1';
+              }, 500); // Délai pour que le JS soit complètement chargé et visible
+            };
+
             // FORCER RELOAD COMPLET: Vider puis recharger facturationqe pour appliquer le fix
             if (pageName === 'facturationqe') {
               console.log(`[APPPC] Vidage et rechargement forcé de facturationqe`);
@@ -3912,10 +3965,12 @@
               // Attendre 10ms puis recharger
               setTimeout(() => {
                 targetIframe.src = finalUrl;
+                targetIframe.addEventListener('load', hideSpinnerOnLoad, { once: true });
                 console.log(`[APPPC] Facturationqe rechargé avec: ${finalUrl}`);
               }, 10);
             } else {
               targetIframe.src = finalUrl;
+              targetIframe.addEventListener('load', hideSpinnerOnLoad, { once: true });
             }
 
             // Sur mobile, injecter CSS pour cacher les scrollbars quand l'iframe est chargée
@@ -3958,7 +4013,61 @@
               }
               targetIframe.src = finalUrl;
             } else {
-              console.log(`[APPPC] ✅ Page ${pageName} déjà chargée - affichage instantané depuis le cache`);
+              // ⚡ TOUJOURS recharger le JavaScript pour avoir les données fraîches
+              // Le HTML/CSS restent en cache (rapide), mais le JS se réexécute
+              console.log(`[APPPC] 🔄 Rechargement du JavaScript pour: ${pageName}`);
+
+              // ⚡ CACHER L'IFRAME IMMÉDIATEMENT pour éviter le flash
+              targetIframe.style.opacity = '0';
+
+              // ⚡ AFFICHER le spinner IMMÉDIATEMENT (pas de délai)
+              // MAIS seulement si le loading-overlay principal n'est pas visible
+              const spinner = document.getElementById('page-loading-spinner');
+              const loadingOverlay = document.getElementById('loading-overlay');
+              const isInitialLoad = loadingOverlay && !loadingOverlay.classList.contains('hidden');
+
+              // ⚡ Ajuster la position du spinner selon la sidebar (desktop vs mobile)
+              if (spinner && !isInitialLoad) {
+                const sidebar = document.querySelector('.sidebar');
+                const isMobile = window.innerWidth <= 768;
+
+                if (isMobile) {
+                  // Mobile: pas de sidebar, spinner couvre toute la zone
+                  spinner.style.left = '0';
+                  spinner.style.top = '0';
+                } else {
+                  // Desktop: ajuster selon si sidebar expanded ou collapsed
+                  const sidebarWidth = sidebar && sidebar.classList.contains('expanded') ? '260px' : '80px';
+                  spinner.style.left = sidebarWidth;
+                  spinner.style.top = '90px'; // Hauteur du header
+                }
+
+                // Afficher le spinner pour la navigation entre pages
+                spinner.style.display = 'flex';
+              }
+
+              // ⚡ Fonction pour cacher le spinner après chargement
+              const hideSpinner = () => {
+                // ⚡ Attendre 500ms APRÈS le load pour s'assurer que le JavaScript a fini de s'exécuter
+                // (certaines pages comme Ventes ont beaucoup de JS à exécuter)
+                setTimeout(() => {
+                  if (spinner) {
+                    spinner.style.display = 'none';
+                  }
+                  // ⚡ Remettre l'iframe visible maintenant que tout est chargé
+                  targetIframe.style.opacity = '1';
+                }, 500); // Délai pour que le JS soit complètement chargé et visible
+              };
+
+              // ⚡ Écouter le chargement de l'iframe
+              targetIframe.addEventListener('load', hideSpinner, { once: true });
+
+              try {
+                targetIframe.contentWindow.location.reload();
+              } catch (e) {
+                console.log(`[APPPC] Impossible de recharger (cross-origin), rechargement via src`);
+                targetIframe.src = targetIframe.src; // Force reload via src
+              }
             }
           }
           targetIframe.style.display = 'block';
@@ -5030,211 +5139,223 @@
         doPreloadPages();
       }
 
-      // Fonction qui fait le prechargement reel
+      // ================================================================
+      // NOUVEAU SYSTÈME OPTIMISÉ - Chargement ultra-rapide
+      // ================================================================
       function doPreloadPages() {
-      // DESKTOP: Précharger les pages principales en chargeant les iframes en arrière-plan
-      if (window.innerWidth > 768) {
-        console.log('[DESKTOP] DEMARRAGE DU PRECHARGEMENT DE TOUTES LES PAGES');
-        let loadedPages = 0;
+      // DESKTOP & MOBILE: Chargement optimisé intelligent
+      console.log('[OPTIMIZED] 🚀 DÉMARRAGE DU SYSTÈME DE CHARGEMENT ULTRA-RAPIDE');
 
-        // Le contenu est deja cache via CSS (opacity: 0)
+      const isDesktop = window.innerWidth > 768;
+      const deviceType = isDesktop ? 'DESKTOP' : 'MOBILE';
 
-        // Fonction pour mettre a jour la barre de progression
-        const updateLoadingProgress = (loaded, total) => {
-          const percentage = Math.round((loaded / total) * 100);
-          const progressFill = document.getElementById('loading-progress-fill');
-          const progressText = document.getElementById('loading-progress-text');
+      // ⚡ IMPORTANT: Vider TOUTES les iframes au démarrage
+      // Pour que chaque refresh recharge tout avec des données fraîches
+      console.log(`[${deviceType}] 🗑️ Vidage de toutes les iframes (cache reset)...`);
+      document.querySelectorAll('.page-iframe').forEach(iframe => {
+        if (iframe.id !== 'iframe-dashboard') { // Garder dashboard
+          iframe.src = '';
+          iframe.style.display = 'none';
+        }
+      });
 
-          if (progressFill && progressText) {
-            progressFill.style.width = `${percentage}%`;
-            progressText.textContent = `${percentage}%`;
-          }
-        };
+      // Fonction pour masquer l'ecran de chargement
+      const hideLoadingScreen = () => {
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const appContainer = document.getElementById('app-container');
 
-        // Fonction pour masquer l'ecran de chargement
-        const hideLoadingScreen = () => {
-          const loadingOverlay = document.getElementById('loading-overlay');
-          const appContainer = document.getElementById('app-container');
+        if (loadingOverlay) {
+          console.log(`[${deviceType}] Masquage de l ecran de chargement`);
+          loadingOverlay.classList.add('hidden');
 
-          if (loadingOverlay) {
-            console.log('[DESKTOP] Masquage de l ecran de chargement');
-            // Ajouter la classe hidden qui fait le fade out de l'overlay
-            loadingOverlay.classList.add('hidden');
-
-            // Afficher tout le contenu en meme temps
-            if (appContainer) {
-              appContainer.classList.add('loaded');
-              // Style inline prioritaire - doit etre change directement
-              appContainer.style.opacity = '1';
-            }
-          }
-        };
-
-        // Pages a precharger sur desktop - Dashboard en premier!
-        const pagesToPreload = [
-          { id: 'dashboard', url: '/dashboard', name: 'Dashboard' },
-          { id: 'calcul', url: '/calcul', name: 'Calculateur' },
-          { id: 'connection', url: '/connection', name: 'Parametres' },
-          { id: 'soumissions', url: '/soumissions', name: 'Soumissions' },
-          { id: 'gqp', url: '/gqp', name: 'GQP' },
-          { id: 'travaux', url: '/travaux', name: 'Travaux' },
-          { id: 'facture', url: '/facture', name: 'Facture' },
-          { id: 'rpo', url: '/rpo', name: 'RPO' },
-          { id: 'centralevue', url: '/centralevue', name: 'Centrale Vue' },
-          { id: 'gamification', url: '/gamification', name: 'Gamification' },
-          { id: 'gestionemployes', url: '/gestionemployes', name: 'Gestion Employes' },
-          { id: 'facturationqe', url: '/facturationqe', name: 'Facturation QE' },
-          { id: 'avis', url: '/avis', name: 'Avis' },
-          { id: 'centrale', url: '/centrale', name: 'Centrale' },
-          { id: 'ventes', url: '/ventes', name: 'Ventes' }
-        ];
-
-        const totalPages = pagesToPreload.length;
-        console.log(`[DESKTOP] 📋 Total de pages à précharger: ${totalPages}`);
-        updateLoadingProgress(0, totalPages);
-
-        // Charger chaque iframe en arrière-plan
-        pagesToPreload.forEach((page, index) => {
-          const iframe = document.getElementById(`iframe-${page.id}`);
-          if (iframe) {
-            console.log(`[DESKTOP] ⏳ Chargement (${index + 1}/${totalPages}): ${page.name} (${page.url})`);
-
-            // Ecouter l'evenement load de l'iframe
-            iframe.addEventListener('load', function onLoad() {
-              loadedPages++;
-              updateLoadingProgress(loadedPages, totalPages);
-              console.log(`[DESKTOP] Page prechargee (${loadedPages}/${totalPages}): ${page.name}`);
-
-              // Quand toutes les pages sont chargées
-              if (loadedPages === totalPages) {
-                console.log('[DESKTOP] 🎉 TOUTES LES PAGES SONT PRÉCHARGÉES EN MÉMOIRE!');
-                hideLoadingScreen();
-              }
-
-              // Retirer l'event listener pour éviter qu'il se déclenche à nouveau
-              iframe.removeEventListener('load', onLoad);
-            }, { once: true });
-
-            // Démarrer le chargement de l'iframe
-            iframe.src = page.url;
-          }
-        });
-      }
-
-      // MOBILE UNIQUEMENT: Precharger les pages principales et cacher les scrollbars
-      if (window.innerWidth <= 768) {
-        console.log('[MOBILE] DEMARRAGE DU PRECHARGEMENT DE TOUTES LES PAGES');
-        let loadedPages = 0;
-
-        // Fonction pour mettre a jour la barre de progression
-        const updateLoadingProgress = (loaded, total) => {
-          const percentage = Math.round((loaded / total) * 100);
-          const progressFill = document.getElementById('loading-progress-fill');
-          const progressText = document.getElementById('loading-progress-text');
-
-          if (progressFill && progressText) {
-            progressFill.style.width = `${percentage}%`;
-            progressText.textContent = `${percentage}%`;
-          }
-        };
-
-        // Fonction pour masquer l'ecran de chargement ET afficher le contenu
-        const hideLoadingScreen = () => {
-          const loadingOverlay = document.getElementById('loading-overlay');
-          const appContainer = document.getElementById('app-container');
-
-          // IMPORTANT: Afficher le contenu (même logique que desktop)
           if (appContainer) {
             appContainer.classList.add('loaded');
             appContainer.style.opacity = '1';
-            console.log('[MOBILE] ✅ App container rendu visible');
           }
+        }
+      };
 
-          if (loadingOverlay) {
-            console.log('[MOBILE] Masquage de l ecran de chargement');
-            setTimeout(() => {
-              loadingOverlay.classList.add('hidden');
-            }, 300);
-          }
-        };
+      // ⚡ ÉTAPE 1: Charger SEULEMENT Dashboard au démarrage (< 2 secondes)
+      const dashboardIframe = document.getElementById('iframe-dashboard');
+      if (dashboardIframe) {
+        console.log(`[${deviceType}] ⚡ CHARGEMENT PRIORITAIRE: Dashboard uniquement`);
 
-        // Pages à précharger sur mobile - ordre prioritaire pour chargement optimal
-        const pagesToPreload = [
-          // Navigation principale (priorité haute)
-          { id: 'iframe-outils', url: '/outilsmobile', name: 'Outils Mobile' },
-          { id: 'iframe-gestions', url: '/gestionsmobile', name: 'Gestions Mobile' },
-          { id: 'iframe-rpo', url: '/rpo', name: 'RPO' },
-          { id: 'iframe-travaux', url: '/travaux', name: 'Travaux' },
-          { id: 'iframe-centralevue', url: '/centralevue', name: 'Centrale Vue' },
-          { id: 'iframe-gamification', url: '/gamification', name: 'Gamification' },
-          // Paramètres (accessible depuis header mobile)
-          { id: 'iframe-connection', url: '/connection', name: 'Paramètres' },
-          // Sous-pages Outils (très utilisées - priorité haute)
-          { id: 'iframe-calcul', url: '/calcul', name: 'Calcul' },
-          { id: 'iframe-soumissions', url: '/soumissions', name: 'Créer Soumission' },
-          { id: 'iframe-gqp', url: '/gqp', name: 'GQP' },
-          { id: 'iframe-facture', url: '/facture', name: 'Facture' },
-          // Sous-pages Gestions (priorité moyenne)
-          { id: 'iframe-gestionemployes', url: '/gestionemployes', name: 'Gestion Employés' },
-          { id: 'iframe-facturationqe', url: '/facturationqe', name: 'Facturation QE' },
-          { id: 'iframe-avis', url: '/avis', name: 'Avis' },
-          { id: 'iframe-centrale', url: '/centrale', name: 'Centrale' }
+        dashboardIframe.addEventListener('load', function() {
+          console.log(`[${deviceType}] ✅ Dashboard chargé - Démarrage du préchargement...`);
+          // ⚡ NE PAS masquer l'écran de chargement ici - attendre que TOUTES les pages soient préchargées
+
+          // 🔄 ÉTAPE 2: Précharger les autres pages en arrière-plan (par priorité)
+          setTimeout(() => {
+            startBackgroundPreloading();
+          }, 500); // Attendre 500ms que l'utilisateur voit le dashboard
+
+        }, { once: true });
+
+        // ⚡ Ajouter le paramètre ?user= au dashboard aussi
+        const username = window.username || localStorage.getItem('username');
+        const dashboardUrl = username ? `/dashboard?user=${username}` : '/dashboard';
+        dashboardIframe.src = dashboardUrl;
+        dashboardIframe.style.display = 'block';
+      }
+
+      // 🔄 PRÉCHARGEMENT EN ARRIÈRE-PLAN (pages par priorité)
+      function startBackgroundPreloading() {
+        console.log(`[${deviceType}] 🔄 Démarrage du préchargement en arrière-plan...`);
+
+        // ⚡ INITIALISER la barre de progression
+        const progressFill = document.getElementById('loading-progress-fill');
+        const progressText = document.getElementById('loading-progress-text');
+
+        if (progressFill) progressFill.style.width = '0%';
+        if (progressText) progressText.textContent = '0%';
+
+        // ⚡ IMPORTANT: Récupérer le username pour l'ajouter aux URLs
+        const username = window.username || localStorage.getItem('username');
+
+        // Pages par ordre de priorité
+        const preloadQueue = [
+          // PRIORITÉ 1: Pages les plus utilisées (charger en premier)
+          { id: 'rpo', url: '/rpo', name: 'RPO', priority: 1 },
+          { id: 'calcul', url: '/calcul', name: 'Calculateur', priority: 1 },
+          { id: 'facture', url: '/facture', name: 'Facture', priority: 1 },
+
+          // PRIORITÉ 2: Pages courantes
+          { id: 'soumissions', url: '/soumissions', name: 'Soumissions', priority: 2 },
+          { id: 'gqp', url: '/gqp', name: 'GQP', priority: 2 },
+          { id: 'connection', url: '/connection', name: 'Parametres', priority: 2 },
+
+          // PRIORITÉ 3: Pages secondaires
+          { id: 'gestionemployes', url: '/gestionemployes', name: 'Gestion Employes', priority: 3 },
+          { id: 'ventes', url: '/ventes', name: 'Ventes', priority: 3 },
+          { id: 'facturationqe', url: '/facturationqe', name: 'Facturation QE', priority: 3 },
+          { id: 'centralevue', url: '/centralevue', name: 'Centrale Vue', priority: 3 },
+          { id: 'gamification', url: '/gamification', name: 'Gamification', priority: 3 },
+
+          // PRIORITÉ 4: Pages rarement utilisées
+          { id: 'avis', url: '/avis', name: 'Avis', priority: 4 },
+          { id: 'travaux', url: '/travaux', name: 'Travaux', priority: 4 },
+          { id: 'centrale', url: '/centrale', name: 'Centrale', priority: 4 }
         ];
 
-        // Calculer le total (dashboard + toutes les pages)
-        const totalPages = 1 + pagesToPreload.length;
-        console.log(`[MOBILE] 📋 Total de pages à précharger: ${totalPages} (dashboard + ${pagesToPreload.length} autres)`);
+        let loadedCount = 0;
+        const totalPages = preloadQueue.length;
 
-        // Dashboard en premier (page par defaut)
-        const dashboardIframe = document.getElementById('iframe-dashboard');
-        if (dashboardIframe) {
-          console.log('[MOBILE] Chargement de: Dashboard');
-          dashboardIframe.src = '/dashboard';
-          dashboardIframe.style.display = 'block';
-          dashboardIframe.addEventListener('load', function() {
-            hideScrollbarsInIframe(dashboardIframe);
-            loadedPages++;
-            updateLoadingProgress(loadedPages, totalPages);
-            console.log(`[MOBILE] Page chargee (${loadedPages}/${totalPages}): Dashboard`);
+        // ⚡ NOUVEAU: Charger par BATCH (3-4 pages en parallèle à la fois)
+        // Plus rapide que une par une, mais moins lourd que tout en même temps
+        const BATCH_SIZE = 4; // Charger 4 pages en parallèle
+        let currentBatchIndex = 0;
 
-            // IMPORTANT: Afficher le contenu dès que le dashboard est chargé
-            // pour éviter une page blanche si les autres pages prennent du temps
-            const appContainer = document.getElementById('app-container');
-            if (appContainer && !appContainer.classList.contains('loaded')) {
-              appContainer.classList.add('loaded');
-              appContainer.style.opacity = '1';
-              console.log('[MOBILE] ✅ Dashboard chargé - App visible immédiatement');
+        function loadNextBatch() {
+          const startIndex = currentBatchIndex * BATCH_SIZE;
+          const endIndex = Math.min(startIndex + BATCH_SIZE, totalPages);
+
+          if (startIndex >= totalPages) {
+            console.log(`[${deviceType}] 🎉 TOUTES LES PAGES PRÉCHARGÉES (${loadedCount}/${totalPages})`);
+
+            // ⚡ MASQUER L'ÉCRAN DE CHARGEMENT maintenant que TOUT est préchargé
+            hideLoadingScreen();
+
+            // ⚡ HIGHLIGHTER le menu Dashboard (pas l'ancienne page)
+            if (typeof window.appShell !== 'undefined' && window.appShell.updateActiveMenu) {
+              window.appShell.updateActiveMenu('dashboard');
+            } else {
+              // Fallback: mettre à jour manuellement
+              document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.page === 'dashboard') {
+                  item.classList.add('active');
+                }
+              });
             }
 
-            if (loadedPages === totalPages) {
-              console.log('[MOBILE] TOUTES LES PAGES SONT PRECHARGEES ET PRETES!');
-              hideLoadingScreen();
+            return;
+          }
+
+          const batch = preloadQueue.slice(startIndex, endIndex);
+          console.log(`[${deviceType}] 📦 Chargement batch ${currentBatchIndex + 1} (${batch.length} pages)...`);
+
+          let batchLoaded = 0;
+          let batchCompleted = false; // ⚡ FIX: Empêcher le double-incrément
+
+          batch.forEach((page) => {
+            const iframe = document.getElementById(`iframe-${page.id}`);
+            const srcAttr = iframe ? iframe.getAttribute('src') : null;
+            const needsLoading = !srcAttr || srcAttr === '' || srcAttr === 'about:blank';
+
+            if (iframe && needsLoading) {
+              console.log(`[${deviceType}] ⏳ [P${page.priority}]: ${page.name}`);
+
+              // ⚡ CRUCIAL: Rendre l'iframe VRAIMENT visible (hors écran) pour forcer
+              // le téléchargement de TOUTES les ressources (HTML, CSS, JS, Google Maps, Tailwind, etc.)
+              // Si opacity:0 ou display:none, le navigateur optimise et skip le téléchargement!
+              iframe.style.display = 'block';
+              iframe.style.visibility = 'visible'; // IMPORTANT: pas hidden!
+              iframe.style.position = 'fixed';
+              iframe.style.top = '-9999px'; // Hors écran (invisible mais le navigateur charge tout)
+              iframe.style.left = '-9999px';
+              iframe.style.zIndex = '-9999';
+              iframe.style.pointerEvents = 'none';
+
+              iframe.addEventListener('load', function() {
+                loadedCount++;
+                batchLoaded++;
+                console.log(`[${deviceType}] ✓ (${loadedCount}/${totalPages}): ${page.name}`);
+
+                // ⚡ METTRE À JOUR LA BARRE DE PROGRESSION
+                const progress = Math.round((loadedCount / totalPages) * 100);
+                const progressFill = document.getElementById('loading-progress-fill');
+                const progressText = document.getElementById('loading-progress-text');
+
+                if (progressFill) {
+                  progressFill.style.width = `${progress}%`;
+                }
+                if (progressText) {
+                  progressText.textContent = `${progress}%`;
+                }
+
+                // Attendre 500ms APRÈS le load pour que TOUS les scripts/CSS se chargent
+                setTimeout(() => {
+                  // Re-cacher l'iframe maintenant que TOUT est en cache (HTML + CSS + JS)
+                  iframe.style.display = 'none';
+                  iframe.style.visibility = '';
+                  iframe.style.position = '';
+                  iframe.style.top = '';
+                  iframe.style.left = '';
+                  iframe.style.zIndex = '';
+                  iframe.style.pointerEvents = '';
+                  console.log(`[${deviceType}] 💾 HTML + CSS + JS en cache: ${page.name}`);
+
+                  // ⚡ FIX: Empêcher le double-incrément avec flag
+                  // Quand tout le batch est chargé, charger le batch suivant
+                  if (batchLoaded === batch.length && !batchCompleted) {
+                    batchCompleted = true; // Marquer comme complété
+                    currentBatchIndex++;
+                    // Petit délai entre les batchs pour ne pas surcharger
+                    setTimeout(loadNextBatch, 50);
+                  }
+                }, 500); // Attendre 500ms pour que TOUS les scripts/CSS async se chargent
+              }, { once: true });
+
+              // ⚡ IMPORTANT: Ajouter le paramètre ?user= pour éviter le rechargement lors de la navigation
+              const urlWithUser = username ? `${page.url}?user=${username}` : page.url;
+              iframe.src = urlWithUser;
+            } else {
+              // Si déjà chargée, compter quand même
+              batchLoaded++;
+              // ⚡ FIX: Empêcher le double-incrément avec flag
+              if (batchLoaded === batch.length && !batchCompleted) {
+                batchCompleted = true; // Marquer comme complété
+                currentBatchIndex++;
+                setTimeout(loadNextBatch, 10);
+              }
             }
           });
         }
 
-        pagesToPreload.forEach((page, index) => {
-          const iframe = document.getElementById(page.id);
-          if (iframe) {
-            console.log(`[MOBILE] Chargement (${index + 1}/${pagesToPreload.length}): ${page.name} (${page.url})`);
-            iframe.src = page.url;
-            iframe.addEventListener('load', function() {
-              hideScrollbarsInIframe(iframe);
-              loadedPages++;
-              updateLoadingProgress(loadedPages, totalPages);
-              console.log(`[MOBILE] Page chargee (${loadedPages}/${totalPages}): ${page.name}`);
-
-              // Quand toutes les pages sont chargées
-              if (loadedPages === totalPages) {
-                console.log('[MOBILE] 🎉 TOUTES LES PAGES SONT PRÉCHARGÉES ET PRÊTES!');
-                hideLoadingScreen();
-              }
-            });
-          } else {
-            console.error(`[MOBILE] Iframe non trouvee: ${page.id}`);
-          }
-        });
+        // Démarrer le préchargement par batch
+        loadNextBatch();
       }
+
       } // Fin de doPreloadPages()
 
       // Appeler startPreloading au lieu de precharger directement

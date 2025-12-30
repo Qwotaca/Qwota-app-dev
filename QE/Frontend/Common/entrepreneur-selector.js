@@ -42,7 +42,32 @@
       backdrop.classList.add('visible');
     }
 
-    // Load entrepreneurs
+    // Update selector text for direction on RPO page
+    const currentPath = window.location.pathname.toLowerCase();
+    const isRPOPage = currentPath.includes('rpo');
+    if (userRole === 'direction' && isRPOPage) {
+      const selectorTitle = document.querySelector('.selector-title');
+      const selectorSubtitle = document.querySelector('.selector-subtitle');
+      const selectorLabel = document.querySelector('.selector-label');
+      const placeholder = dropdownToggle.querySelector('.placeholder');
+
+      if (selectorTitle) {
+        selectorTitle.innerHTML = '<i class="fas fa-user-graduate"></i> Sélectionnez un coach';
+      }
+      if (selectorSubtitle) {
+        selectorSubtitle.textContent = 'Choisissez le coach dont vous souhaitez consulter le RPO';
+      }
+      if (selectorLabel) {
+        selectorLabel.innerHTML = '<i class="fas fa-user-graduate"></i><span>Coach:</span>';
+      }
+      if (placeholder) {
+        placeholder.textContent = '-- Sélectionner un coach --';
+      }
+
+      console.log('[ENTREPRENEUR-SELECTOR] Textes mis à jour pour mode direction sur RPO');
+    }
+
+    // Load entrepreneurs (or coaches for direction on RPO)
     loadEntrepreneurs();
 
     // Setup event listeners
@@ -50,12 +75,28 @@
   }
 
   // ============================================
-  // LOAD ENTREPRENEURS
+  // LOAD ENTREPRENEURS (or COACHES for direction on RPO)
   // ============================================
   async function loadEntrepreneurs() {
     try {
       const userRole = localStorage.getItem('userRole');
       const coachUsername = localStorage.getItem('username');
+      const currentPath = window.location.pathname.toLowerCase();
+      const isRPOPage = currentPath.includes('rpo');
+
+      // SPECIAL CASE: Direction users on RPO page should see COACHES, not entrepreneurs
+      if (userRole === 'direction' && isRPOPage) {
+        console.log('[ENTREPRENEUR-SELECTOR] Mode direction sur RPO - Chargement des COACHES');
+        const response = await fetch('/api/users/coaches');
+        const data = await response.json();
+
+        if (data.success && data.coaches) {
+          populateCoachesForRPO(data.coaches);
+        } else {
+          showNoEntrepreneurs();
+        }
+        return;
+      }
 
       // Direction sees ALL entrepreneurs, Coach sees only assigned ones
       const endpoint = userRole === 'direction'
@@ -134,6 +175,113 @@
 
       dropdownMenu.appendChild(option);
     });
+  }
+
+  // ============================================
+  // POPULATE COACHES FOR RPO (direction users only)
+  // ============================================
+  function populateCoachesForRPO(coaches) {
+    const dropdownMenu = document.getElementById('coach-dropdown-menu');
+    const dropdownToggle = document.getElementById('coach-dropdown-toggle');
+
+    if (coaches.length === 0) {
+      showNoEntrepreneurs();
+      return;
+    }
+
+    dropdownMenu.innerHTML = '';
+
+    coaches.forEach(coach => {
+      const option = document.createElement('div');
+      option.className = 'coach-dropdown-option';
+      option.dataset.username = coach.username;
+
+      const displayName = coach.prenom && coach.nom
+        ? `${coach.prenom} ${coach.nom} (${coach.username})`
+        : coach.username;
+
+      option.innerHTML = `
+        <span>
+          <i class="fas fa-user-graduate"></i>
+          <span>${displayName}</span>
+        </span>
+      `;
+
+      option.addEventListener('click', function() {
+        selectCoachForRPO(coach.username);
+      });
+
+      dropdownMenu.appendChild(option);
+    });
+
+    console.log('[ENTREPRENEUR-SELECTOR] ✅ Dropdown peuplé avec', coaches.length, 'coaches pour RPO');
+  }
+
+  // ============================================
+  // SELECT COACH FOR RPO (direction users only)
+  // ============================================
+  function selectCoachForRPO(username) {
+    console.log('[ENTREPRENEUR-SELECTOR] Coach sélectionné pour RPO:', username);
+
+    // Update URL parameter
+    const url = new URL(window.location);
+    url.searchParams.set('user', username);
+    window.history.pushState({}, '', url);
+
+    // Set the selected username globally (use coach's username as target)
+    window.username = username;
+    sessionStorage.setItem('username', username);
+    localStorage.setItem('username', username);
+
+    const dropdownToggle = document.getElementById('coach-dropdown-toggle');
+    const dropdownMenu = document.getElementById('coach-dropdown-menu');
+    const selector = document.getElementById('coach-entrepreneur-selector');
+    const backdrop = document.getElementById('coach-selector-backdrop');
+    const searchInput = document.getElementById('search-input');
+
+    // Update toggle display
+    let textElement = dropdownToggle.querySelector('.placeholder, .selected-text');
+    if (textElement) {
+      textElement.innerHTML = `<i class="fas fa-check-circle"></i> ${username}`;
+      textElement.classList.remove('placeholder');
+      textElement.classList.add('selected-text');
+      textElement.style.display = 'flex';
+    }
+
+    // Hide search input
+    if (searchInput) {
+      searchInput.style.display = 'none';
+      searchInput.value = '';
+    }
+
+    // Close dropdown
+    dropdownToggle.classList.remove('active');
+    dropdownMenu.classList.remove('show');
+
+    // IMPORTANT: Remove inline styles that keep menu visible
+    dropdownMenu.style.opacity = '';
+    dropdownMenu.style.transform = '';
+    dropdownMenu.style.pointerEvents = '';
+
+    if (searchInput) {
+      searchInput.blur();
+    }
+
+    // Move selector to header
+    selector.classList.add('in-header');
+    document.body.classList.add('has-selection');
+
+    // Hide backdrop
+    if (backdrop) {
+      backdrop.classList.remove('visible');
+    }
+
+    // Reload RPO data for selected coach
+    if (typeof window.loadRPOData === 'function') {
+      window.loadRPOData();
+    }
+
+    console.log('[ENTREPRENEUR-SELECTOR] ✅ RPO data rechargé pour le coach:', username);
   }
 
   // ============================================

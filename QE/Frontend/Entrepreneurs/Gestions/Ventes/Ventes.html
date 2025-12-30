@@ -37,6 +37,13 @@
 
   <!-- ANTI-FLASH: Détection coach AVANT le rendu du body -->
   <script>
+    // ⚡ DÉSACTIVATION DES LOGS - Performance optimization
+    window.log = window.log || (() => {});
+    window.warn = window.warn || (() => {});
+    window.error = window.error || (() => {});
+    window.info = window.info || (() => {});
+    window.debug = window.debug || (() => {});
+
     (function() {
       const userRole = localStorage.getItem('userRole');
       const isCoach = userRole === 'coach';
@@ -44,14 +51,14 @@
       const userParam = urlParams.get('user');
       const coachUsername = localStorage.getItem('username');
 
-      console.log('[VENTES ANTI-FLASH] userRole:', userRole, 'isCoach:', isCoach);
-      console.log('[VENTES ANTI-FLASH] userParam:', userParam, 'coachUsername:', coachUsername);
+      log('[VENTES ANTI-FLASH] userRole:', userRole, 'isCoach:', isCoach);
+      log('[VENTES ANTI-FLASH] userParam:', userParam, 'coachUsername:', coachUsername);
 
       // Afficher le sélecteur si:
       // - C'est un coach ET (pas de paramètre user OU le paramètre user est le coach lui-même)
       const shouldShowSelector = isCoach && (!userParam || userParam === coachUsername);
 
-      console.log('[VENTES ANTI-FLASH] shouldShowSelector:', shouldShowSelector);
+      log('[VENTES ANTI-FLASH] shouldShowSelector:', shouldShowSelector);
       if (shouldShowSelector) {
         // Injecter le CSS immédiatement pour cacher le contenu et afficher le sélecteur
         const style = document.createElement('style');
@@ -1245,6 +1252,13 @@
   </div>
 
 <script>
+  // ⚡ DÉSACTIVATION DES LOGS - Performance optimization
+  window.log = window.log || (() => {});
+  window.warn = window.warn || (() => {});
+  window.error = window.error || (() => {});
+  window.info = window.info || (() => {});
+  window.debug = window.debug || (() => {});
+
   // Attendre que common.js soit initialisé au lieu de rediriger
   function checkUsername() {
     if (!window.username) {
@@ -1253,7 +1267,7 @@
       return;
     }
     // Username disponible, continuer avec l'initialisation de la page
-    console.log('Username disponible:', window.username);
+    log('Username disponible:', window.username);
   }
   
   // Lancer la vérification avec un délai initial
@@ -1289,7 +1303,7 @@
     const modal = document.getElementById('ajouterProspectModal');
     if (modal) {
       modal.style.display = 'flex';
-      console.log('[VENTES] Modal prospect ouvert');
+      log('[VENTES] Modal prospect ouvert');
     }
   }
 
@@ -1300,7 +1314,7 @@
       // Reset form
       const form = document.getElementById('prospectForm');
       if (form) form.reset();
-      console.log('[VENTES] Modal prospect fermé');
+      log('[VENTES] Modal prospect fermé');
     }
   }
 
@@ -1360,30 +1374,30 @@
 
   async function loadClientsPerdus() {
     try {
-      console.log('[VENTES] 🔍 Username actuel:', window.username);
+      log('[VENTES] 🔍 Username actuel:', window.username);
       const url = `/clients-perdus/${window.username}`;
-      console.log('[VENTES] 📡 URL de chargement:', url);
+      log('[VENTES] 📡 URL de chargement:', url);
 
       const response = await fetch(url);
-      console.log('[VENTES] 📡 Réponse status:', response.status);
+      log('[VENTES] 📡 Réponse status:', response.status);
 
       if (!response.ok) {
-        console.error('[VENTES] ❌ Erreur chargement clients perdus, status:', response.status);
+        error('[VENTES] ❌ Erreur chargement clients perdus, status:', response.status);
         window.ventesData.perdus = [];
         renderClientsPerdusTable();
         return;
       }
 
       const clientsPerdus = await response.json();
-      console.log('[VENTES] 📦 Données brutes reçues:', clientsPerdus);
+      log('[VENTES] 📦 Données brutes reçues:', clientsPerdus);
 
       window.ventesData.perdus = clientsPerdus || [];
-      console.log('[VENTES] ✅ Clients perdus chargés:', window.ventesData.perdus.length);
-      console.log('[VENTES] 📊 window.ventesData.perdus:', window.ventesData.perdus);
+      log('[VENTES] ✅ Clients perdus chargés:', window.ventesData.perdus.length);
+      log('[VENTES] 📊 window.ventesData.perdus:', window.ventesData.perdus);
 
       renderClientsPerdusTable();
     } catch (error) {
-      console.error('[VENTES] ❌ Erreur chargement clients perdus:', error);
+      error('[VENTES] ❌ Erreur chargement clients perdus:', error);
       window.ventesData.perdus = [];
       renderClientsPerdusTable();
     }
@@ -1393,7 +1407,7 @@
     const tbody = document.getElementById('clientsPerdusTableBody');
     if (!tbody) return;
 
-    console.log('[VENTES] 📊 Rendu table clients perdus, total:', window.ventesData.perdus.length);
+    log('[VENTES] 📊 Rendu table clients perdus, total:', window.ventesData.perdus.length);
 
     if (window.ventesData.perdus.length === 0) {
       tbody.innerHTML = `
@@ -1408,7 +1422,7 @@
     }
 
     tbody.innerHTML = window.ventesData.perdus.map((client, index) => {
-      console.log(`[VENTES] 📋 Client ${index}:`, client.prenom, client.nom);
+      log(`[VENTES] 📋 Client ${index}:`, client.prenom, client.nom);
       const prenom = client.prenom || client.clientPrenom || '';
       const nom = client.nom || client.clientNom || '';
       const nomComplet = `${prenom} ${nom}`.trim();
@@ -1441,18 +1455,18 @@
   let clientPerduToRecuperer = null;
 
   window.recupererClientPerdu = function(clientIndex) {
-    console.log('[VENTES] 🔄 Récupérer client index:', clientIndex);
-    console.log('[VENTES] 📊 Total clients perdus:', window.ventesData.perdus.length);
-    console.log('[VENTES] 📋 Tous les clients perdus:', window.ventesData.perdus);
+    log('[VENTES] 🔄 Récupérer client index:', clientIndex);
+    log('[VENTES] 📊 Total clients perdus:', window.ventesData.perdus.length);
+    log('[VENTES] 📋 Tous les clients perdus:', window.ventesData.perdus);
 
     const client = window.ventesData.perdus[clientIndex];
     if (!client) {
-      console.error('[VENTES] ❌ Client perdu introuvable à l\'index', clientIndex);
-      console.error('[VENTES] 📋 Données disponibles:', window.ventesData.perdus);
+      error('[VENTES] ❌ Client perdu introuvable à l\'index', clientIndex);
+      error('[VENTES] 📋 Données disponibles:', window.ventesData.perdus);
       return;
     }
 
-    console.log('[VENTES] ✅ Client trouvé:', client);
+    log('[VENTES] ✅ Client trouvé:', client);
 
     // Stocker le client à récupérer
     clientPerduToRecuperer = client;
@@ -1461,11 +1475,11 @@
     const modal = document.getElementById('confirmRecupererModal');
     const message = document.getElementById('confirmRecupererText');
 
-    console.log('[VENTES] 🔍 Modal trouvé:', modal ? 'Oui' : 'Non');
-    console.log('[VENTES] 🔍 Message trouvé:', message ? 'Oui' : 'Non');
+    log('[VENTES] 🔍 Modal trouvé:', modal ? 'Oui' : 'Non');
+    log('[VENTES] 🔍 Message trouvé:', message ? 'Oui' : 'Non');
 
     if (!modal || !message) {
-      console.error('[VENTES] ❌ Éléments du modal introuvables');
+      error('[VENTES] ❌ Éléments du modal introuvables');
       return;
     }
 
@@ -1474,7 +1488,7 @@
 
     // Afficher le modal
     modal.style.display = 'flex';
-    console.log('[VENTES] ✅ Modal de confirmation affiché');
+    log('[VENTES] ✅ Modal de confirmation affiché');
   };
 
   window.closeConfirmRecupererModal = function() {
@@ -1484,10 +1498,10 @@
   };
 
   window.confirmRecupererClientPerdu = async function() {
-    console.log('[VENTES] 🚀 Confirmation récupération...');
+    log('[VENTES] 🚀 Confirmation récupération...');
 
     if (!clientPerduToRecuperer) {
-      console.error('[VENTES] ❌ Aucun client à récupérer');
+      error('[VENTES] ❌ Aucun client à récupérer');
       return;
     }
 
@@ -1495,7 +1509,7 @@
     modal.style.display = 'none';
 
     try {
-      console.log('[VENTES] 📋 Récupération du client perdu:', clientPerduToRecuperer);
+      log('[VENTES] 📋 Récupération du client perdu:', clientPerduToRecuperer);
 
       // Préparer les données pour la page soumission
       const dataToStore = {
@@ -1518,8 +1532,8 @@
 
       // Stocker dans localStorage pour la page soumission
       localStorage.setItem('clientSoumission', JSON.stringify(dataToStore));
-      console.log('[VENTES] ✅ Données stockées pour récupération:', dataToStore);
-      console.log('[VENTES] 🔍 Vérification localStorage:', localStorage.getItem('clientSoumission'));
+      log('[VENTES] ✅ Données stockées pour récupération:', dataToStore);
+      log('[VENTES] 🔍 Vérification localStorage:', localStorage.getItem('clientSoumission'));
 
       // Attendre un peu pour s'assurer que localStorage est bien écrit
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -1527,12 +1541,12 @@
       // Rediriger vers la page soumission
       fermerModalClientsPerdus();
 
-      console.log('[VENTES] 🔄 Redirection vers soumission...');
-      console.log('[VENTES] 🔍 window.parent:', window.parent);
-      console.log('[VENTES] 🔍 Dans iframe?', window.parent !== window);
+      log('[VENTES] 🔄 Redirection vers soumission...');
+      log('[VENTES] 🔍 window.parent:', window.parent);
+      log('[VENTES] 🔍 Dans iframe?', window.parent !== window);
 
       if (window.parent && window.parent !== window) {
-        console.log('[VENTES] 🎯 Redirection via hash: #/soumissions');
+        log('[VENTES] 🎯 Redirection via hash: #/soumissions');
         // Forcer le rechargement de l'iframe même si on est déjà sur soumissions
         const currentHash = window.parent.location.hash;
         if (currentHash === '#/soumissions') {
@@ -1545,11 +1559,11 @@
           window.parent.location.hash = '#/soumissions';
         }
       } else {
-        console.log('[VENTES] 🎯 Redirection directe: /soumissions');
+        log('[VENTES] 🎯 Redirection directe: /soumissions');
         window.location.href = '/soumissions';
       }
     } catch (error) {
-      console.error('[VENTES] ❌ Erreur récupération client perdu:', error);
+      error('[VENTES] ❌ Erreur récupération client perdu:', error);
     }
 
     clientPerduToRecuperer = null;
@@ -1561,7 +1575,7 @@
   window.supprimerClientPerdu = function(clientIndex) {
     const client = window.ventesData.perdus[clientIndex];
     if (!client) {
-      console.error('[VENTES] Client perdu introuvable');
+      error('[VENTES] Client perdu introuvable');
       return;
     }
 
@@ -1591,7 +1605,7 @@
     modal.style.display = 'none';
 
     try {
-      console.log('[VENTES] Suppression du client perdu:', clientPerduToDelete);
+      log('[VENTES] Suppression du client perdu:', clientPerduToDelete);
 
       // Appeler le backend pour supprimer
       const response = await fetch('/clients-perdus/supprimer', {
@@ -1604,14 +1618,14 @@
       });
 
       if (response.ok) {
-        console.log('[VENTES] ✅ Client perdu supprimé avec succès');
+        log('[VENTES] ✅ Client perdu supprimé avec succès');
         // Recharger les clients perdus
         await loadClientsPerdus();
       } else {
-        console.error('[VENTES] ❌ Erreur lors de la suppression');
+        error('[VENTES] ❌ Erreur lors de la suppression');
       }
     } catch (error) {
-      console.error('[VENTES] Erreur suppression client perdu:', error);
+      error('[VENTES] Erreur suppression client perdu:', error);
     }
 
     clientPerduToDelete = null;
@@ -1621,7 +1635,7 @@
   window.showClientDetails = async function(index, category) {
     const clientData = window.ventesData[category][index];
     if (!clientData) {
-      console.error('[VENTES] Données client introuvables');
+      error('[VENTES] Données client introuvables');
       return;
     }
     const modal = document.getElementById('clientInfoModal');
@@ -1880,7 +1894,7 @@
     closeClientInfo();
     try {
       const clientData = JSON.parse(decodeURIComponent(clientDataStr));
-      console.log('[VENTES] Commencer estimation pour:', clientData);
+      log('[VENTES] Commencer estimation pour:', clientData);
 
       // Store client data for prefill in calcul page
       const dataToStore = {
@@ -1891,8 +1905,8 @@
         courriel: clientData.courriel || clientData.email || ''
       };
       localStorage.setItem('clientEstimation', JSON.stringify(dataToStore));
-      console.log('[VENTES] ✅ Données stockées dans localStorage.clientEstimation:', dataToStore);
-      console.log('[VENTES] 🔍 Vérification immédiate:', localStorage.getItem('clientEstimation'));
+      log('[VENTES] ✅ Données stockées dans localStorage.clientEstimation:', dataToStore);
+      log('[VENTES] 🔍 Vérification immédiate:', localStorage.getItem('clientEstimation'));
 
       // Navigate to calcul page
       if (window.parent && window.parent !== window) {
@@ -1901,7 +1915,7 @@
         window.location.href = '/calcul';
       }
     } catch (error) {
-      console.error('[VENTES] Erreur commencer estimation:', error);
+      error('[VENTES] Erreur commencer estimation:', error);
     }
   };
 
@@ -1913,7 +1927,7 @@
 
     const prospect = window.ventesData.prospects[prospectIndex];
     if (!prospect) {
-      console.error('[VENTES] Prospect introuvable');
+      error('[VENTES] Prospect introuvable');
       return;
     }
 
@@ -1942,7 +1956,7 @@
     modal.style.display = 'none';
 
     try {
-      console.log('[VENTES] Suppression du prospect:', prospectToDelete);
+      log('[VENTES] Suppression du prospect:', prospectToDelete);
 
       // Appeler le backend pour supprimer
       const response = await fetch('/supprimer-prospect', {
@@ -1955,14 +1969,14 @@
       });
 
       if (response.ok) {
-        console.log('[VENTES] ✅ Prospect supprimé avec succès');
+        log('[VENTES] ✅ Prospect supprimé avec succès');
         // Recharger les données
         await loadVentesDataInternal();
       } else {
-        console.error('[VENTES] ❌ Erreur lors de la suppression');
+        error('[VENTES] ❌ Erreur lors de la suppression');
       }
     } catch (error) {
-      console.error('[VENTES] Erreur suppression prospect:', error);
+      error('[VENTES] Erreur suppression prospect:', error);
     }
 
     prospectToDelete = null;
@@ -1976,7 +1990,7 @@
 
     const vente = window.ventesData.attente[venteIndex];
     if (!vente) {
-      console.error('[VENTES] Vente introuvable');
+      error('[VENTES] Vente introuvable');
       return;
     }
 
@@ -2006,7 +2020,7 @@
     modal.style.display = 'none';
 
     try {
-      console.log('[VENTES] Marquer comme perdu:', venteToMarkPerdu);
+      log('[VENTES] Marquer comme perdu:', venteToMarkPerdu);
 
       // Appeler le backend pour marquer comme perdu
       const response = await fetch('/ventes/marquer-perdu', {
@@ -2019,14 +2033,14 @@
       });
 
       if (response.ok) {
-        console.log('[VENTES] ✅ Vente marquée comme perdue avec succès');
+        log('[VENTES] ✅ Vente marquée comme perdue avec succès');
         // Recharger les données
         await loadVentesDataInternal();
       } else {
-        console.error('[VENTES] ❌ Erreur lors du marquage comme perdu');
+        error('[VENTES] ❌ Erreur lors du marquage comme perdu');
       }
     } catch (error) {
-      console.error('[VENTES] Erreur marquer comme perdu:', error);
+      error('[VENTES] Erreur marquer comme perdu:', error);
     }
 
     venteToMarkPerdu = null;
@@ -2034,19 +2048,19 @@
 
   window.signerSoumission = function(venteId) {
     closeClientInfo();
-    console.log('[VENTES] Signer soumission:', venteId);
+    log('[VENTES] Signer soumission:', venteId);
     // TODO: Open signature modal or navigate
   };
 
   window.creerGQP = function(venteId) {
     closeClientInfo();
-    console.log('[VENTES] Créer GQP pour:', venteId);
+    log('[VENTES] Créer GQP pour:', venteId);
     // TODO: Navigate to GQP creation
   };
 
   window.terminerProduction = function(venteId) {
     closeClientInfo();
-    console.log('[VENTES] Terminer production:', venteId);
+    log('[VENTES] Terminer production:', venteId);
 
     // Afficher l'animation de succès
     showSuccessAnimation('production');
@@ -2088,11 +2102,11 @@
   }
 
   window.voirSoumission = function(pdfUrl, clientName) {
-    console.log('[VENTES] voirSoumission appelée avec:', pdfUrl, clientName);
+    log('[VENTES] voirSoumission appelée avec:', pdfUrl, clientName);
     closeClientInfo();
 
     if (!pdfUrl || pdfUrl === '') {
-      console.log('[VENTES] Aucun PDF disponible');
+      log('[VENTES] Aucun PDF disponible');
       return;
     }
 
@@ -2100,10 +2114,10 @@
     const iframe = document.getElementById('pdfViewerFrame');
     const title = document.getElementById('pdfViewerTitle');
 
-    console.log('[VENTES] Éléments trouvés:', { modal, iframe, title });
+    log('[VENTES] Éléments trouvés:', { modal, iframe, title });
 
     if (!modal || !iframe || !title) {
-      console.error('[VENTES] Éléments du modal PDF introuvables');
+      error('[VENTES] Éléments du modal PDF introuvables');
       return;
     }
 
@@ -2111,7 +2125,7 @@
     iframe.src = pdfUrl;
     modal.style.display = 'flex';
 
-    console.log('[VENTES] Modal PDF affiché');
+    log('[VENTES] Modal PDF affiché');
   };
 
   window.closePDFViewer = function() {
@@ -2140,7 +2154,7 @@
 
       return !!projetTrouve;
     } catch (error) {
-      console.error('[VENTES] Erreur vérification calcul:', error);
+      error('[VENTES] Erreur vérification calcul:', error);
       return false;
     }
   }
@@ -2152,7 +2166,7 @@
       // Récupérer les données de la vente
       const vente = window.ventesData.attente.find(v => v.id === venteId || v.num === venteId);
       if (!vente) {
-        console.error('[VENTES] Vente non trouvée');
+        error('[VENTES] Vente non trouvée');
         return;
       }
 
@@ -2162,7 +2176,7 @@
       // Récupérer la liste des projets
       const response = await fetch(`/api/projets/${window.username}`);
       if (!response.ok) {
-        console.error('[VENTES] Erreur chargement projets');
+        error('[VENTES] Erreur chargement projets');
         return;
       }
 
@@ -2170,7 +2184,7 @@
       const projet = projets.find(p => p.client === nomComplet && p.adresse === adresse);
 
       if (!projet) {
-        console.error('[VENTES] Projet non trouvé');
+        error('[VENTES] Projet non trouvé');
         return;
       }
 
@@ -2184,17 +2198,17 @@
         window.location.href = '/calcul';
       }
     } catch (error) {
-      console.error('[VENTES] Erreur voir calcul:', error);
+      error('[VENTES] Erreur voir calcul:', error);
     }
   };
 
   // Fonction pour voir soumission dans popup (pour Acceptées et Produit)
   window.voirPDF = function(pdfUrl, clientName) {
-    console.log('[VENTES] voirPDF appelée avec:', pdfUrl, clientName);
+    log('[VENTES] voirPDF appelée avec:', pdfUrl, clientName);
     closeClientInfo();
 
     if (!pdfUrl || pdfUrl === '') {
-      console.log('[VENTES] Aucun PDF disponible');
+      log('[VENTES] Aucun PDF disponible');
       return;
     }
 
@@ -2202,10 +2216,10 @@
     const iframe = document.getElementById('pdfViewerFrame');
     const title = document.getElementById('pdfViewerTitle');
 
-    console.log('[VENTES] Éléments trouvés:', { modal, iframe, title });
+    log('[VENTES] Éléments trouvés:', { modal, iframe, title });
 
     if (!modal || !iframe || !title) {
-      console.error('[VENTES] Éléments du modal PDF introuvables');
+      error('[VENTES] Éléments du modal PDF introuvables');
       return;
     }
 
@@ -2213,16 +2227,16 @@
     iframe.src = pdfUrl;
     modal.style.display = 'flex';
 
-    console.log('[VENTES] Modal PDF affiché');
+    log('[VENTES] Modal PDF affiché');
   };
 
   // Fonction pour voir GQP dans le même popup que voirSoumission
   window.voirGQP = function(gqpUrl, clientName) {
-    console.log('[VENTES] voirGQP appelée avec:', gqpUrl, clientName);
+    log('[VENTES] voirGQP appelée avec:', gqpUrl, clientName);
     closeClientInfo();
 
     if (!gqpUrl || gqpUrl === '') {
-      console.log('[VENTES] Aucun GQP disponible');
+      log('[VENTES] Aucun GQP disponible');
       return;
     }
 
@@ -2230,10 +2244,10 @@
     const iframe = document.getElementById('pdfViewerFrame');
     const title = document.getElementById('pdfViewerTitle');
 
-    console.log('[VENTES] Éléments trouvés:', { modal, iframe, title });
+    log('[VENTES] Éléments trouvés:', { modal, iframe, title });
 
     if (!modal || !iframe || !title) {
-      console.error('[VENTES] Éléments du modal PDF introuvables');
+      error('[VENTES] Éléments du modal PDF introuvables');
       return;
     }
 
@@ -2241,7 +2255,7 @@
     iframe.src = gqpUrl;
     modal.style.display = 'flex';
 
-    console.log('[VENTES] Modal GQP affiché');
+    log('[VENTES] Modal GQP affiché');
   };
 
 
@@ -2279,7 +2293,7 @@
         const adresse = document.getElementById('prospectAdresse').value.trim();
 
         if (!prenom || !nom || !telephone || !adresse) {
-          console.log('[VENTES] Tous les champs sont requis');
+          log('[VENTES] Tous les champs sont requis');
           return;
         }
 
@@ -2298,15 +2312,15 @@
           });
 
           if (response.ok) {
-            console.log('[VENTES] Prospect ajouté avec succès');
+            log('[VENTES] Prospect ajouté avec succès');
             fermerModalProspect();
             // Reload data to show new prospect
             await loadVentesDataInternal();
           } else {
-            console.error('[VENTES] Erreur ajout prospect:', await response.text());
+            error('[VENTES] Erreur ajout prospect:', await response.text());
           }
         } catch (error) {
-          console.error('[VENTES] Erreur réseau:', error);
+          error('[VENTES] Erreur réseau:', error);
         }
       });
     }
@@ -2347,7 +2361,7 @@
 
         afficherClientsPerdus(allClientsPerdus);
       } catch (error) {
-        console.error('Erreur chargement clients perdus:', error);
+        error('Erreur chargement clients perdus:', error);
       }
     }
 
@@ -2419,7 +2433,7 @@
     // Fonction pour activer le menu basé sur la page actuelle
     function activateCurrentPageMenu() {
       const currentPath = window.location.pathname;
-      console.log('🌐 Page actuelle détectée:', currentPath);
+      log('🌐 Page actuelle détectée:', currentPath);
       
       const allMenuLinks = document.querySelectorAll('#sidebar a');
       allMenuLinks.forEach(link => {
@@ -2445,15 +2459,15 @@
       
       if (targetPath) {
         targetLink = document.querySelector(`#sidebar a[data-path="${targetPath}"]`);
-        console.log('[TARGET] Page détectée - activation du menu pour:', targetPath);
+        log('[TARGET] Page détectée - activation du menu pour:', targetPath);
       }
       
       if (targetLink) {
         targetLink.classList.add('menu-active');
         targetLink.setAttribute('data-menu-state', 'active');
-        console.log('[OK] Menu activé pour:', targetLink.textContent.trim());
+        log('[OK] Menu activé pour:', targetLink.textContent.trim());
       } else {
-        console.log('[WARN] Aucun menu trouvé pour la page:', currentPath);
+        log('[WARN] Aucun menu trouvé pour la page:', currentPath);
       }
     }
 
@@ -2506,24 +2520,24 @@
       const btn = document.getElementById("account-dropdown-toggle");
       const dropdown = document.getElementById("account-dropdown");
 
-      console.log('[DEBUG] Bouton account trouvé:', btn);
-      console.log('[DEBUG] Dropdown trouvé:', dropdown);
+      log('[DEBUG] Bouton account trouvé:', btn);
+      log('[DEBUG] Dropdown trouvé:', dropdown);
 
       if (btn && dropdown) {
         btn.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
-          console.log('👆 Click sur account button');
+          log('👆 Click sur account button');
           
           if (dropdown.classList.contains("hidden")) {
             dropdown.classList.remove("hidden");
             dropdown.style.display = 'block';
             dropdown.style.visibility = 'visible';
-            console.log('[UNLOCK] Dropdown ouvert');
+            log('[UNLOCK] Dropdown ouvert');
           } else {
             dropdown.classList.add("hidden");
             dropdown.style.display = 'none';
-            console.log('[LOCK] Dropdown fermé');
+            log('[LOCK] Dropdown fermé');
           }
         });
 
@@ -2546,7 +2560,7 @@
     const userParam = urlParams.get('user');
     if (userParam) {
       window.username = userParam;
-      console.log('[VENTES INIT] window.username initialisé depuis URL:', userParam);
+      log('[VENTES INIT] window.username initialisé depuis URL:', userParam);
     }
   })();
   </script>
@@ -2595,7 +2609,7 @@
     autocomplete.addListener('place_changed', () => {
       const place = autocomplete.getPlace();
       if (!place.geometry) {
-        console.log("Adresse invalide");
+        log("Adresse invalide");
         window.googleProspectAddressSelected = false;
         return;
       }
@@ -2905,7 +2919,7 @@
       // Click handler
       option.addEventListener('click', async () => {
         if (statut.label !== currentStatut) {
-          console.log(`[VENTES] Changement statut paiement pour ${venteId}: ${currentStatut} → ${statut.label}`);
+          log(`[VENTES] Changement statut paiement pour ${venteId}: ${currentStatut} → ${statut.label}`);
 
           // Determine category from current table
           let category = 'acceptees'; // default
@@ -2937,14 +2951,14 @@
             });
 
             if (response.ok) {
-              console.log('[VENTES] Statut paiement sauvegardé avec succès');
+              log('[VENTES] Statut paiement sauvegardé avec succès');
               // Reload data to show updated status
               await loadVentesDataInternal();
             } else {
-              console.error('[VENTES] Erreur sauvegarde statut:', await response.text());
+              error('[VENTES] Erreur sauvegarde statut:', await response.text());
             }
           } catch (error) {
-            console.error('[VENTES] Erreur réseau:', error);
+            error('[VENTES] Erreur réseau:', error);
           }
         }
         dropdown.remove();
@@ -2981,11 +2995,11 @@
   async function loadVentesDataInternal() {
     const username = window.username;
     if (!username) {
-      console.error('[VENTES] Aucun username défini');
+      error('[VENTES] Aucun username défini');
       return;
     }
 
-    console.log('[VENTES] Chargement des données pour:', username);
+    log('[VENTES] Chargement des données pour:', username);
 
     // Load all categories
     await Promise.all([
@@ -2995,7 +3009,7 @@
       loadVentesCategory('produit', 'produit-tbody')
     ]);
 
-    console.log('[VENTES] Toutes les données chargées');
+    log('[VENTES] Toutes les données chargées');
   }
 
   async function loadProspects(tbodyId) {
@@ -3035,7 +3049,7 @@
         </tr>
       `}).join('');
 
-      console.log(`[VENTES] ${prospects.length} prospect(s) chargé(s)`);
+      log(`[VENTES] ${prospects.length} prospect(s) chargé(s)`);
 
     } catch (error) {
       // Silently handle network errors - file might not exist yet
@@ -3051,7 +3065,7 @@
       const response = await fetch(`/cloud/ventes_${category}/${window.username}/ventes.json`);
 
       if (!response.ok) {
-        console.log(`[VENTES] Pas de données ${category} pour ${window.username}`);
+        log(`[VENTES] Pas de données ${category} pour ${window.username}`);
         showEmptyTable(tbody, category);
         return;
       }
@@ -3101,10 +3115,10 @@
         </tr>
       `}).join('');
 
-      console.log(`[VENTES] ${ventes.length} vente(s) ${category} chargée(s)`);
+      log(`[VENTES] ${ventes.length} vente(s) ${category} chargée(s)`);
 
     } catch (error) {
-      console.error(`[VENTES] Erreur chargement ${category}:`, error);
+      error(`[VENTES] Erreur chargement ${category}:`, error);
       showEmptyTable(tbody, category);
     }
   }
@@ -3135,26 +3149,26 @@
 
   // Function called by entrepreneur-selector.js when coach selects an entrepreneur
   window.loadVentesData = async function() {
-    console.log('[VENTES] Chargement des données pour le nouvel entrepreneur:', window.username);
+    log('[VENTES] Chargement des données pour le nouvel entrepreneur:', window.username);
 
     // Supprimer l'anti-flash CSS pour rendre le contenu visible
     const antiFlashStyle = document.getElementById('coach-anti-flash-css');
     if (antiFlashStyle) {
       antiFlashStyle.remove();
-      console.log('[VENTES] Anti-flash CSS supprimé');
+      log('[VENTES] Anti-flash CSS supprimé');
     }
 
     // Load ventes data
     await loadVentesDataInternal();
 
-    console.log('[VENTES] Interface prête pour:', window.username);
+    log('[VENTES] Interface prête pour:', window.username);
   };
 
   // Load data on page load if username is already set
   window.addEventListener('DOMContentLoaded', function() {
     setTimeout(async function() {
       if (window.username) {
-        console.log('[VENTES] Chargement initial des données pour:', window.username);
+        log('[VENTES] Chargement initial des données pour:', window.username);
         await loadVentesDataInternal();
       }
     }, 500);

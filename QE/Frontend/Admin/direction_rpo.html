@@ -1944,16 +1944,18 @@ select:disabled {
             </h3>
 
             <!-- Sélecteur de semaine -->
-            <div style="position: relative; display: flex; align-items: center; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
               <span id="coach-current-week-badge" style="display: none; background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.15)); border: 1px solid #fbbf24; border-radius: 6px; padding: 0.25rem 0.5rem; color: #fbbf24; font-size: 0.75rem; font-weight: 600; white-space: nowrap;">
                 Semaine actuelle
               </span>
-              <button id="coach-week-selector-btn" onclick="toggleCoachWeekDropdown()" class="dropdown-secondary" style="min-width: 160px;">
-                <span id="coach-selected-week-text">Sélectionner une semaine</span>
-                <i class="fas fa-chevron-down"></i>
-              </button>
-              <div id="coach-week-dropdown" class="dropdown-secondary-menu" style="min-width: 180px;">
-                <!-- Options de semaines générées par JS -->
+              <div style="position: relative;">
+                <button id="coach-week-selector-btn" onclick="toggleCoachWeekDropdown()" class="dropdown-secondary" style="min-width: 160px;">
+                  <span id="coach-selected-week-text">Sélectionner une semaine</span>
+                  <i class="fas fa-chevron-down"></i>
+                </button>
+                <div id="coach-week-dropdown" class="dropdown-secondary-menu" style="min-width: 160px;">
+                  <!-- Options de semaines générées par JS -->
+                </div>
               </div>
             </div>
           </div>
@@ -6405,6 +6407,11 @@ async function openCoachRpoModal(buttonElement) {
 
   coachModalCurrentCoach = selectedCoachForView;
 
+  // Réinitialiser les filtres pour le nouveau coach
+  coachModalAllEntrepreneurs = [];
+  coachModalEntrepreneurFilter = null;
+  document.getElementById('coach-entrepreneur-filter-text').textContent = 'Tous les entrepreneurs';
+
   // Afficher le modal
   const modal = document.getElementById('coach-rpo-modal');
   const nameSpan = document.getElementById('coach-rpo-name');
@@ -6640,8 +6647,8 @@ async function loadCoachEntrepreneursTable() {
               <th class="rpo-col-standard" style="border-right: 2px solid rgba(96, 165, 250, 0.3);">$Vendu</th>
               <th class="rpo-col-wide" style="border-right: 1px solid rgba(96, 165, 250, 0.15);">Problème semaine</th>
               <th class="rpo-col-wide" style="border-right: 2px solid rgba(96, 165, 250, 0.3);">Racine problème</th>
-              <th class="rpo-col-medium" style="border-right: 1px solid rgba(96, 165, 250, 0.15);">Source problème</th>
-              <th class="rpo-col-standard" style="border-right: 1px solid rgba(96, 165, 250, 0.15);">Type coaching</th>
+              <th class="rpo-col-wide" style="border-right: 1px solid rgba(96, 165, 250, 0.15);">Source du problème</th>
+              <th class="rpo-col-wide" style="border-right: 1px solid rgba(96, 165, 250, 0.15);">Type coaching</th>
               <th class="rpo-col-wide">Plan de match</th>
             </tr>
           </thead>
@@ -6693,13 +6700,13 @@ async function loadCoachEntrepreneursTable() {
           </td>
 
           <!-- HPAP -->
-          <td class="rpo-col-standard" style="text-align: center; color: var(--text-gray);">${rpoData.objectif_hpap || '-'}</td>
+          <td class="rpo-col-standard" style="text-align: left; color: var(--text-gray);">${rpoData.objectif_hpap || '-'}</td>
 
           <!-- Estims -->
-          <td class="rpo-col-standard" style="text-align: center; color: var(--text-gray);">${rpoData.objectif_estims || '-'}</td>
+          <td class="rpo-col-standard" style="text-align: left; color: var(--text-gray);">${rpoData.objectif_estims || '-'}</td>
 
           <!-- $Vendu -->
-          <td class="rpo-col-standard" style="text-align: center; color: var(--text-gray);">${rpoData.objectif_vendu || '-'}</td>
+          <td class="rpo-col-standard" style="text-align: left; color: var(--text-gray);">${rpoData.objectif_vendu || '-'}</td>
 
           <!-- Problème semaine -->
           <td class="rpo-col-wide">
@@ -6716,10 +6723,18 @@ async function loadCoachEntrepreneursTable() {
           </td>
 
           <!-- Source problème -->
-          <td class="rpo-col-medium" style="text-align: center; color: var(--text-gray); font-size: 0.85rem;">${rpoData.source_probleme || '-'}</td>
+          <td class="rpo-col-wide">
+            <div style="padding: 0.5rem; color: var(--text-gray); font-size: 0.875rem; max-height: 80px; overflow-y: auto;">
+              ${rpoData.source_probleme || '-'}
+            </div>
+          </td>
 
           <!-- Type coaching -->
-          <td class="rpo-col-standard" style="text-align: center; color: var(--text-gray);">${rpoData.type_coaching || '-'}</td>
+          <td class="rpo-col-wide">
+            <div style="padding: 0.5rem; color: var(--text-gray); font-size: 0.875rem; max-height: 80px; overflow-y: auto;">
+              ${rpoData.type_coaching || '-'}
+            </div>
+          </td>
 
           <!-- Plan de match -->
           <td class="rpo-col-wide">

@@ -12661,6 +12661,44 @@ async def get_entrepreneur_rpo_data(username: str):
         print(f"Erreur lors de la récupération du RPO: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/entrepreneur/weekly-data")
+async def get_entrepreneur_weekly_data_for_week(username: str, week: str):
+    """Récupère les données RPO hebdomadaires d'un entrepreneur pour une semaine spécifique"""
+    try:
+        from QE.Backend.coach_access import get_coach_for_entrepreneur
+
+        # Trouver le coach de l'entrepreneur
+        coach_username = get_coach_for_entrepreneur(username)
+
+        if not coach_username:
+            return {"has_data": False, "data": None}
+
+        # Charger les données hebdomadaires du coach pour cette semaine
+        data_dir = os.path.join("data", "coach_weekly_entrepreneur_data")
+        data_file = os.path.join(data_dir, f"{coach_username}_{week}.json")
+
+        if not os.path.exists(data_file):
+            return {"has_data": False, "data": None}
+
+        with open(data_file, "r", encoding="utf-8") as f:
+            entries = json.load(f)
+
+        # Filtrer pour l'entrepreneur spécifique
+        entrepreneur_data = None
+        for entry in entries:
+            if entry.get("entrepreneur_username") == username:
+                entrepreneur_data = entry
+                break
+
+        if entrepreneur_data:
+            return {"has_data": True, "data": entrepreneur_data}
+        else:
+            return {"has_data": False, "data": None}
+
+    except Exception as e:
+        print(f"Erreur lors de la récupération des données hebdomadaires entrepreneur: {e}")
+        return {"has_data": False, "data": None}
+
 @app.get("/api/coach/entrepreneurs")
 async def get_coach_entrepreneurs_list(coach_username: str):
     """Récupère la liste des entrepreneurs assignés à un coach"""
@@ -12972,6 +13010,68 @@ async def get_direction_macro_micro_problem(direction_username: str, week: str):
         return data
     except Exception as e:
         print(f"Erreur lors de la récupération MACRO/MICRO/Problème direction: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================
+# ENDPOINTS DIRECTION - SUIVI HEBDOMADAIRE DES COACHES
+# ============================================
+
+@app.post("/api/direction/coach-weekly-data")
+async def save_direction_coach_weekly_data(request: Request):
+    """Sauvegarde les notes hebdomadaires pour un coach depuis la direction"""
+    try:
+        data = await request.json()
+        unique_id = data.get("id")
+        coach_username = data.get("coach_username")
+        week_label = data.get("week_label")
+        notes_hebdo = data.get("notes_hebdo", "")
+
+        if not unique_id or not coach_username or not week_label:
+            raise HTTPException(status_code=400, detail="id, coach_username et week_label requis")
+
+        # Créer le répertoire pour les données direction
+        data_dir = os.path.join("data", "direction_coach_weekly")
+        os.makedirs(data_dir, exist_ok=True)
+
+        # Fichier unique par coach + semaine
+        data_file = os.path.join(data_dir, f"{unique_id}.json")
+
+        save_data = {
+            "id": unique_id,
+            "coach_username": coach_username,
+            "week_label": week_label,
+            "notes_hebdo": notes_hebdo,
+            "updated_at": datetime.now().isoformat()
+        }
+
+        with open(data_file, "w", encoding="utf-8") as f:
+            json.dump(save_data, f, ensure_ascii=False, indent=2)
+
+        return {"success": True, "message": "Notes hebdomadaires sauvegardées"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erreur lors de la sauvegarde des notes hebdomadaires coach (direction): {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/direction/coach-weekly-data")
+async def get_direction_coach_weekly_data(id: str):
+    """Récupère les notes hebdomadaires pour un coach depuis la direction"""
+    try:
+        data_dir = os.path.join("data", "direction_coach_weekly")
+        data_file = os.path.join(data_dir, f"{id}.json")
+
+        if not os.path.exists(data_file):
+            return {"success": False, "data": None}
+
+        with open(data_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        return {"success": True, "data": data}
+    except Exception as e:
+        print(f"Erreur lors de la récupération des notes hebdomadaires coach (direction): {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

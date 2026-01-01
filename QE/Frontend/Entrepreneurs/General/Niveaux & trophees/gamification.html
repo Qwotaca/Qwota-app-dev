@@ -371,13 +371,30 @@
                   </div>
                 </div>
 
-                <div class="quest-streak">
-                  <div class="streak-info">
-                    <i class="fas fa-fire"></i>
-                    <span id="modalQuestStreakText">Streak: 0 side quests</span>
+                <!-- Semaine Prochaine -->
+                <div class="upcoming-weeks-section">
+                  <div class="upcoming-weeks-header">
+                    <h4 style="color: var(--text-light); font-size: 1rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                      <i class="fas fa-calendar-week" style="color: #60a5fa;"></i>
+                      Semaine Prochaine
+                    </h4>
                   </div>
-                  <div class="streak-bonus" id="modalQuestStreakBonus">
-                    Prochain bonus à 4 side quests: +5 XP
+
+                  <div class="week-card">
+                    <div class="week-card-header">
+                      <div class="week-number">Semaine du 5 - 11 janvier 2026</div>
+                    </div>
+                    <div class="week-quest">
+                      <div class="week-quest-icon">
+                        <i class="fas fa-phone-volume"></i>
+                      </div>
+                      <div class="week-quest-details">
+                        <div class="week-quest-title">Faire 15h de PAP</div>
+                        <div class="week-quest-reward">
+                          <i class="fas fa-star"></i> +10 XP
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -388,59 +405,75 @@
               <div class="quest-flames-section">
                 <div class="flames-header">
                   <h3><i class="fas fa-fire"></i> Streaks de Profil</h3>
-                  <p class="flames-subtitle" style="margin-bottom: 1rem;">Complétez des side quests consécutives pour débloquer des streaks</p>
-                  <div style="background: rgba(96, 165, 250, 0.1); border-left: 3px solid #60a5fa; padding: 0.75rem 1rem; border-radius: 8px; margin-top: 1rem;">
-                    <p style="color: var(--text-gray); font-size: 0.875rem; margin: 0; line-height: 1.5;">
-                      <i class="fas fa-info-circle" style="color: #60a5fa; margin-right: 0.5rem;"></i>
-                      <strong>Comment obtenir des streaks :</strong> Complétez chaque side quest de la semaine. Plus vous en complétez de manière consécutive, plus votre compteur de streaks augmente!
-                    </p>
-                  </div>
+                  <p class="flames-subtitle" style="margin-bottom: 1rem;">Comment obtenir des streaks : Complétez chaque side quest de la semaine. Plus vous en complétez de manière consécutive, plus votre compteur de streaks augmente!</p>
                 </div>
 
-                <div class="flames-progression" style="display: flex; gap: 3rem; justify-content: center; align-items: flex-start; padding: 2.5rem 2rem;">
-                  <!-- Photo de profil sans streak -->
-                  <div class="flame-tier" data-tier="0" style="text-align: center; flex: 1; max-width: 280px;">
-                    <h4 style="color: var(--text-light); font-size: 1rem; font-weight: 700; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
-                      <i class="fas fa-times-circle" style="color: #6b7280; margin-right: 0.5rem;"></i>
-                      Voici 0 Streak
+                <div class="flames-progression" style="display: flex; flex-direction: column; align-items: center; padding: 0;">
+                  <!-- Titre avec streak actuel -->
+                  <div style="text-align: center; width: 100%;">
+                    <h4 id="streakTitle" style="color: #fbbf24; font-size: 0.95rem; font-weight: 700; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                      <i class="fas fa-fire" style="color: #f59e0b; margin-right: 0.5rem;"></i>
+                      Streak actuel: <span id="currentStreakNumber">0</span>
                     </h4>
-                    <div class="flame-avatar-container">
-                      <div class="flame-avatar no-flame" style="width: 140px; height: 140px; position: relative; margin: 0 auto;">
-                        <img class="flame-user-avatar" id="flameAvatar0" src="" alt="Avatar">
+
+                    <!-- Vue progression : Streak actuel → Prochain palier -->
+                    <div id="streakProgressView" style="display: flex; align-items: center; justify-content: center; gap: 3rem; padding: 3rem;">
+                      <!-- Photo actuelle (gauche) -->
+                      <div style="text-align: center;">
+                        <div style="position: relative; width: 140px; height: 140px; margin: 0 auto 0.75rem auto; background: rgba(31, 41, 55, 0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);">
+                          <div class="flame-avatar-container" style="position: relative; width: 100px; height: 100px;">
+                            <div id="currentStreakAvatar" class="flame-avatar" style="width: 100%; height: 100%; position: relative; border-radius: 50%; z-index: 1;">
+                              <img id="currentStreakPhoto" src="" alt="Streak actuel" style="display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                            </div>
+                            <!-- Badge en dehors du cercle -->
+                            <div id="currentStreakBadge" style="position: absolute; bottom: 70px; right: -35px; background: linear-gradient(135deg, rgb(31, 41, 55), rgb(17, 24, 39)); color: white; min-width: 53px; height: 33px; border-radius: 20%; display: flex; align-items: center; justify-content: center; gap: 0.2rem; padding: 0px 0.35rem; border: 2px solid var(--bg-dark); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); z-index: 20;">
+                              <i class="fas fa-fire" style="font-size: 0.95rem; color: #9ca3af;"></i>
+                              <span id="currentStreakBadgeNum" style="font-size: 1rem; font-weight: 700;">0</span>
+                            </div>
+                          </div>
+                        </div>
+                        <p id="currentStreakLabel" style="margin: 0; color: var(--text-muted); font-size: 1rem; font-weight: 600;">Actuel</p>
+                      </div>
+
+                      <!-- Flèche -->
+                      <div style="display: flex; align-items: center; justify-content: center; padding: 0 1rem;">
+                        <i class="fas fa-arrow-right" style="font-size: 2.5rem; color: white;"></i>
+                      </div>
+
+                      <!-- Prochain palier (droite) -->
+                      <div style="text-align: center;">
+                        <div style="position: relative; width: 140px; height: 140px; margin: 0 auto 0.75rem auto; background: rgba(31, 41, 55, 0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);">
+                          <div class="flame-avatar-container" style="position: relative; width: 100px; height: 100px;">
+                            <div id="nextStreakAvatar" class="flame-avatar" style="width: 100%; height: 100%; position: relative; border-radius: 50%; z-index: 1;">
+                              <img id="nextStreakPhoto" src="" alt="Prochain palier" style="display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                            </div>
+                            <!-- Badge en dehors du cercle -->
+                            <div id="nextStreakBadge" style="position: absolute; bottom: 70px; right: -35px; background: linear-gradient(135deg, rgb(31, 41, 55), rgb(17, 24, 39)); color: white; min-width: 53px; height: 33px; border-radius: 20%; display: flex; align-items: center; justify-content: center; gap: 0.2rem; padding: 0px 0.35rem; border: 2px solid var(--bg-dark); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 12px rgba(245, 158, 11, 0.3); z-index: 20;">
+                              <i class="fas fa-fire" style="font-size: 0.95rem; color: #fbbf24;"></i>
+                              <span id="nextStreakBadgeNum" style="font-size: 1rem; font-weight: 700;">14</span>
+                            </div>
+                          </div>
+                        </div>
+                        <p id="nextStreakLabel" style="margin: 0; color: #fbbf24; font-size: 1rem; font-weight: 600;">Avec des Streak</p>
                       </div>
                     </div>
-                    <div class="flame-tier-info" style="margin-top: 1rem;">
-                      <div class="flame-tier-name" style="font-size: 0.9rem; color: rgba(148, 163, 184, 0.8); font-weight: 600;">Actuellement aucun streak</div>
-                      <p style="font-size: 0.75rem; color: var(--text-gray); margin-top: 0.5rem;">Complétez une side quest pour commencer!</p>
-                    </div>
-                  </div>
 
-                  <!-- Flèche pointant vers la droite -->
-                  <div style="display: flex; align-items: center; padding-top: 3rem;">
-                    <i class="fas fa-arrow-right" style="font-size: 3rem; color: #f59e0b; filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.6));"></i>
-                  </div>
-
-                  <!-- Photo de profil avec plusieurs streaks -->
-                  <div class="flame-tier active" data-tier="14" style="text-align: center; flex: 1; max-width: 280px;">
-                    <h4 style="color: #fbbf24; font-size: 1rem; font-weight: 700; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
-                      <i class="fas fa-fire" style="color: #f59e0b; margin-right: 0.5rem;"></i>
-                      Voici avec Plusieurs Streaks
-                    </h4>
-                    <div class="flame-avatar-container" style="position: relative;">
-                      <div class="flame-avatar" style="width: 140px; height: 140px; position: relative; margin: 0 auto;">
-                        <img class="flame-user-avatar" id="flameAvatar14" src="" alt="Avatar">
-                        <!-- Effet de flammes -->
-                        <div class="flame-effect" style="animation: flameAnimation 2s infinite;"></div>
-                        <!-- Badge de streak "14" en bas à droite - BEAUCOUP PLUS GROS -->
-                        <div style="position: absolute; bottom: -15px; right: -15px; background: linear-gradient(135deg, #1f2937, #111827); color: white; width: 58px; height: 58px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 4px solid var(--bg-dark); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 20px rgba(245, 158, 11, 0.3); z-index: 20;">
-                          <i class="fas fa-fire" style="font-size: 1.25rem; color: #f59e0b; margin-bottom: 2px;"></i>
-                          <span style="font-size: 1rem; font-weight: 800; line-height: 1;">14</span>
+                    <!-- Vue quand streak > 0 : 1 photo avec badge -->
+                    <div id="streakActiveView" style="display: none;">
+                      <div class="flame-tier active" id="streakAvatarContainer" style="position: relative; overflow: visible;">
+                        <div class="flame-avatar-container" style="position: relative;">
+                          <div class="flame-avatar" style="width: 120px; height: 120px; position: relative; margin: 0 auto;">
+                            <img class="flame-user-avatar" id="streakAvatar" src="" alt="Avatar" style="display: block;">
+                            <!-- Effet de flammes (affiché si streak > 0) -->
+                            <div class="flame-effect" id="flameEffect" style="animation: flameAnimation 2s infinite;"></div>
+                            <!-- Badge de streak en bas à droite -->
+                            <div id="streakBadge" style="position: absolute; bottom: 85px; right: -40px; background: linear-gradient(135deg, #1f2937, #111827); color: white; width: 65px; height: 38px; border-radius: 28%; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 0.2rem; border: 3px solid var(--bg-dark); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 20px rgba(245, 158, 11, 0.3); z-index: 20;">
+                              <i class="fas fa-fire" style="font-size: 1rem; color: #f59e0b;"></i>
+                              <span id="streakBadgeNumber" style="font-size: 1rem; font-weight: 800; line-height: 1;">0</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div class="flame-tier-info" style="margin-top: 1rem;">
-                      <div class="flame-tier-name" style="font-size: 0.9rem; color: #fbbf24; font-weight: 700;">14 Streaks Consécutifs!</div>
-                      <p style="font-size: 0.75rem; color: rgba(251, 191, 36, 0.8); margin-top: 0.5rem;">Votre profil brille de mille feux 🔥</p>
                     </div>
                   </div>
                 </div>
@@ -1130,43 +1163,43 @@
     // ================================================================
 
     const weeklyQuests = [
-      { title: "Faire 12h de PAP durant la semaine Internationale", deadline: "2026-01-12", target: 12, unit: "heures" },
-      { title: "Faire 12h de PAP durant la semaine", deadline: "2026-01-19", target: 12, unit: "heures" },
-      { title: "Faire 3 estimations ou plus cette semaine", deadline: "2026-01-26", target: 3, unit: "estimations" },
-      { title: "Avoir un taux marketing de 0,75 estimations par heure", deadline: "2026-02-02", target: 0.75, unit: "taux" },
-      { title: "Faire 5 estimations cette semaine", deadline: "2026-02-09", target: 5, unit: "estimations" },
-      { title: "Faire 5 estimations cette semaine", deadline: "2026-02-16", target: 5, unit: "estimations" },
-      { title: "Faire 7 estimations cette semaine", deadline: "2026-02-23", target: 7, unit: "estimations" },
-      { title: "Signer 5000$", deadline: "2026-03-02", target: 5000, unit: "$" },
-      { title: "Collecter plus de 1500$ en dépôt", deadline: "2026-03-09", target: 1500, unit: "$" },
-      { title: "Signer 7500$", deadline: "2026-03-16", target: 7500, unit: "$" },
-      { title: "Signer un contrat de plus de 4000$ avant taxes", deadline: "2026-03-23", target: 4000, unit: "$" },
-      { title: "Profiter de la folie de Pâques pour signer 15000$ cette semaine", deadline: "2026-03-30", target: 15000, unit: "$" },
-      { title: "Embaucher un premier peintre", deadline: "2026-04-06", target: 1, unit: "peintre" },
-      { title: "Signer 10000$", deadline: "2026-04-13", target: 10000, unit: "$" },
-      { title: "Signer 12000$", deadline: "2026-04-20", target: 12000, unit: "$" },
-      { title: "Signer 12000$", deadline: "2026-04-27", target: 12000, unit: "$" },
-      { title: "Signer 12000$", deadline: "2026-05-04", target: 12000, unit: "$" },
-      { title: "Signer 12000$", deadline: "2026-05-11", target: 12000, unit: "$" },
-      { title: "15 estimations cette semaine", deadline: "2026-05-18", target: 15, unit: "estimations" },
-      { title: "Atteindre 100000$ de ventes cumulatif depuis le début de l'année", deadline: "2026-05-25", target: 100000, unit: "$" },
-      { title: "Produire 5000$ de contrats", deadline: "2026-06-01", target: 5000, unit: "$" },
-      { title: "Productivité horaire de plus de 90", deadline: "2026-06-08", target: 90, unit: "productivité" },
-      { title: "Faire 10h de PAP cette semaine", deadline: "2026-06-15", target: 10, unit: "heures" },
-      { title: "Faire plus de 15 estimations cette semaine", deadline: "2026-06-22", target: 15, unit: "estimations" },
-      { title: "Productivité horaire de plus de 100", deadline: "2026-06-29", target: 100, unit: "productivité" },
-      { title: "Produire 15000$ cette semaine", deadline: "2026-07-06", target: 15000, unit: "$" },
-      { title: "Satisfaction client cumulative de plus de 4,5 étoiles", deadline: "2026-07-13", target: 4.5, unit: "étoiles" },
-      { title: "10 estimations cette semaine", deadline: "2026-07-20", target: 10, unit: "estimations" },
-      { title: "Signer 5000$", deadline: "2026-07-27", target: 5000, unit: "$" },
-      { title: "Productivité horaire de 110", deadline: "2026-08-03", target: 110, unit: "productivité" },
-      { title: "Produire 10000$", deadline: "2026-08-10", target: 10000, unit: "$" },
-      { title: "Produire 10000$", deadline: "2026-08-17", target: 10000, unit: "$" },
-      { title: "Faire 9h de PAP", deadline: "2026-09-28", target: 9, unit: "heures" },
-      { title: "Signer 5000$", deadline: "2026-10-05", target: 5000, unit: "$" },
-      { title: "Signer 10000$", deadline: "2026-10-12", target: 10000, unit: "$" },
-      { title: "Signer 10000$", deadline: "2026-10-19", target: 10000, unit: "$" },
-      { title: "Signer 5000$", deadline: "2026-10-26", target: 5000, unit: "$" }
+      { title: "Faire 12h de PAP durant la semaine Internationale", deadline: "2025-12-25", target: 12, unit: "heures" },  // Temporaire pour test streak
+      { title: "Faire 12h de PAP durant la semaine", deadline: "2026-01-18", target: 12, unit: "heures" },
+      { title: "Faire 3 estimations ou plus cette semaine", deadline: "2026-02-01", target: 3, unit: "estimations" },
+      { title: "Avoir un taux marketing de 0,75 estimations par heure", deadline: "2026-02-08", target: 0.75, unit: "taux" },
+      { title: "Faire 5 estimations cette semaine", deadline: "2026-02-15", target: 5, unit: "estimations" },
+      { title: "Faire 5 estimations cette semaine", deadline: "2026-02-22", target: 5, unit: "estimations" },
+      { title: "Faire 7 estimations cette semaine", deadline: "2026-03-01", target: 7, unit: "estimations" },
+      { title: "Signer 5000$", deadline: "2026-03-08", target: 5000, unit: "$" },
+      { title: "Collecter plus de 1500$ en dépôt", deadline: "2026-03-15", target: 1500, unit: "depot" },
+      { title: "Signer 7500$", deadline: "2026-03-22", target: 7500, unit: "$" },
+      { title: "Signer un contrat de plus de 4000$ avant taxes", deadline: "2026-03-29", target: 4000, unit: "$" },
+      { title: "Profiter de la folie de Pâques pour signer 15000$ cette semaine", deadline: "2026-04-05", target: 15000, unit: "$" },
+      { title: "Embaucher un premier peintre", deadline: "2026-04-12", target: 1, unit: "peintre" },
+      { title: "Signer 10000$", deadline: "2026-04-19", target: 10000, unit: "$" },
+      { title: "Signer 12000$", deadline: "2026-04-26", target: 12000, unit: "$" },
+      { title: "Signer 12000$", deadline: "2026-05-03", target: 12000, unit: "$" },
+      { title: "Signer 12000$", deadline: "2026-05-10", target: 12000, unit: "$" },
+      { title: "Signer 12000$", deadline: "2026-05-17", target: 12000, unit: "$" },
+      { title: "15 estimations cette semaine", deadline: "2026-05-24", target: 15, unit: "estimations" },
+      { title: "Atteindre 100000$ de ventes cumulatif depuis le début de l'année", deadline: "2026-05-31", target: 100000, unit: "ca_cumul" },
+      { title: "Produire 5000$ de contrats", deadline: "2026-06-07", target: 5000, unit: "$" },
+      { title: "Productivité horaire de plus de 90", deadline: "2026-06-14", target: 90, unit: "productivité" },
+      { title: "Faire 10h de PAP cette semaine", deadline: "2026-06-21", target: 10, unit: "heures" },
+      { title: "Faire plus de 15 estimations cette semaine", deadline: "2026-06-28", target: 15, unit: "estimations" },
+      { title: "Productivité horaire de plus de 100", deadline: "2026-07-05", target: 100, unit: "productivité" },
+      { title: "Produire 15000$ cette semaine", deadline: "2026-07-12", target: 15000, unit: "$" },
+      { title: "Satisfaction client cumulative de plus de 4,5 étoiles", deadline: "2026-07-19", target: 4.5, unit: "étoiles" },
+      { title: "10 estimations cette semaine", deadline: "2026-07-26", target: 10, unit: "estimations" },
+      { title: "Signer 5000$", deadline: "2026-08-02", target: 5000, unit: "$" },
+      { title: "Productivité horaire de 110", deadline: "2026-08-09", target: 110, unit: "productivité" },
+      { title: "Produire 10000$", deadline: "2026-08-16", target: 10000, unit: "$" },
+      { title: "Produire 10000$", deadline: "2026-08-23", target: 10000, unit: "$" },
+      { title: "Faire 9h de PAP", deadline: "2026-10-04", target: 9, unit: "heures" },
+      { title: "Signer 5000$", deadline: "2026-10-11", target: 5000, unit: "$" },
+      { title: "Signer 10000$", deadline: "2026-10-18", target: 10000, unit: "$" },
+      { title: "Signer 10000$", deadline: "2026-10-25", target: 10000, unit: "$" },
+      { title: "Signer 5000$", deadline: "2026-11-01", target: 5000, unit: "$" }
     ];
 
     // Paliers de streak et XP correspondants
@@ -1214,6 +1247,21 @@
       const today = new Date();
       const username = localStorage.getItem('username');
 
+      // Vérifier et récompenser les quests complétées automatiquement
+      try {
+        const rewardResponse = await fetch(`/api/gamification/check-quest-rewards/${username}`, {
+          method: 'POST'
+        });
+        if (rewardResponse.ok) {
+          const rewardData = await rewardResponse.json();
+          if (rewardData.newly_rewarded > 0) {
+            console.log(`${rewardData.newly_rewarded} nouvelle(s) quest(s) complétée(s)! XP ajouté.`);
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors de la vérification des récompenses:', error);
+      }
+
       // Récupérer le streak actuel depuis le backend (pour l'instant simulé)
       let currentStreak = 0;
       try {
@@ -1259,17 +1307,17 @@
         return;
       }
 
-      // Calculer la période de la semaine en cours (lundi à dimanche)
-      const currentDate = new Date();
-      const currentDay = currentDate.getDay(); // 0 = dimanche, 1 = lundi, etc.
+      // Calculer la période de la semaine à partir de la deadline de la quête
+      const questDeadline = new Date(nextQuest.deadline);
+      const questDay = questDeadline.getDay(); // 0 = dimanche, 1 = lundi, etc.
 
-      // Calculer le lundi de cette semaine
-      const monday = new Date(currentDate);
-      const daysToMonday = currentDay === 0 ? -6 : 1 - currentDay; // Si dimanche, reculer de 6 jours
-      monday.setDate(currentDate.getDate() + daysToMonday);
+      // Calculer le lundi de la semaine de la quête
+      const monday = new Date(questDeadline);
+      const daysToMonday = questDay === 0 ? -6 : 1 - questDay; // Si dimanche, reculer de 6 jours
+      monday.setDate(questDeadline.getDate() + daysToMonday);
       monday.setHours(0, 0, 0, 0);
 
-      // Calculer le dimanche de cette semaine
+      // Calculer le dimanche de la semaine de la quête
       const sunday = new Date(monday);
       sunday.setDate(monday.getDate() + 6);
       sunday.setHours(23, 59, 59, 999);
@@ -1288,7 +1336,7 @@
       document.getElementById('modalQuestTitle').textContent = nextQuest.title;
       document.getElementById('modalQuestDeadline').textContent = deadlineText;
 
-      // Progression
+      // Progression - Initialisé à 0, sera mis à jour par loadQuestProgress()
       document.getElementById('modalQuestProgressCurrent').textContent = "0";
       document.getElementById('modalQuestProgressTarget').textContent = nextQuest.target + " " + nextQuest.unit;
       document.getElementById('modalQuestProgressFill').style.width = "0%";
@@ -1296,28 +1344,24 @@
       // Récompense XP
       document.getElementById('modalQuestRewardXP').textContent = `+${streakInfo.xpPerQuest} XP`;
 
-      // Streak
-      if (currentStreak === 0) {
-        document.getElementById('modalQuestStreakText').textContent = "Streak: Aucune side quest complétée";
-      } else if (currentStreak === 1) {
-        document.getElementById('modalQuestStreakText').textContent = "Streak: 1 side quest";
-      } else {
-        document.getElementById('modalQuestStreakText').textContent = `Streak: ${currentStreak} side quests`;
-      }
+      // ANCIEN CODE STREAK (supprimé car la section quest-streak a été retirée)
+      // Le streak est maintenant affiché dans la section flames-progression
+      // document.getElementById('modalQuestStreakText').textContent = `Streak: ${currentStreak}`;
+      // if (nextBonus && nextBonus.bonusXP > 0) {
+      //   const questsNeeded = nextBonus.nextTarget - currentStreak;
+      //   if (questsNeeded === 1) {
+      //     document.getElementById('modalQuestStreakBonus').textContent = `Prochain bonus dans 1 side quest: +${nextBonus.bonusXP} XP (Total: ${streakInfo.xpPerQuest + nextBonus.bonusXP} XP)`;
+      //   } else {
+      //     document.getElementById('modalQuestStreakBonus').textContent = `Prochain bonus dans ${questsNeeded} side quests: +${nextBonus.bonusXP} XP (Total: ${streakInfo.xpPerQuest + nextBonus.bonusXP} XP)`;
+      //   }
+      // } else if (!nextBonus) {
+      //   document.getElementById('modalQuestStreakBonus').textContent = `Maximum atteint! Vous gagnez ${streakInfo.xpPerQuest} XP par side quest`;
+      // } else {
+      //   document.getElementById('modalQuestStreakBonus').textContent = '';
+      // }
 
-      // Prochain bonus
-      if (nextBonus && nextBonus.bonusXP > 0) {
-        const questsNeeded = nextBonus.nextTarget - currentStreak;
-        if (questsNeeded === 1) {
-          document.getElementById('modalQuestStreakBonus').textContent = `Prochain bonus dans 1 side quest: +${nextBonus.bonusXP} XP (Total: ${streakInfo.xpPerQuest + nextBonus.bonusXP} XP)`;
-        } else {
-          document.getElementById('modalQuestStreakBonus').textContent = `Prochain bonus dans ${questsNeeded} side quests: +${nextBonus.bonusXP} XP (Total: ${streakInfo.xpPerQuest + nextBonus.bonusXP} XP)`;
-        }
-      } else if (!nextBonus) {
-        document.getElementById('modalQuestStreakBonus').textContent = `Maximum atteint! Vous gagnez ${streakInfo.xpPerQuest} XP par side quest`;
-      } else {
-        document.getElementById('modalQuestStreakBonus').textContent = '';
-      }
+      // CHARGER LA PROGRESSION RÉELLE DEPUIS LES DONNÉES RPO
+      loadQuestProgress(nextQuest, username);
 
       // Afficher les flammes de profil si streak >= 4
       const streakRewardElement = document.getElementById('modalStreakReward');
@@ -1333,8 +1377,356 @@
       // Charger la photo de profil de l'utilisateur dans les flammes
       loadUserAvatarInFlames();
 
+      // CHARGER LA SIDE QUEST DE LA SEMAINE PROCHAINE
+      loadNextWeekQuest(nextQuest);
+
       // Ajouter l'événement click sur la bannière
       document.getElementById('questBannerFloat').onclick = openQuestModal;
+    }
+
+    async function loadQuestProgress(quest, username) {
+      /**
+       * Charge la progression réelle d'une quest depuis les données RPO
+       * Gère tous les types de quests: heures, estimations, dollars, taux
+       */
+      try {
+        console.log(`[Quest Progress] Chargement pour ${username}, deadline: ${quest.deadline}`);
+
+        // Appeler l'API backend pour récupérer les données RPO de cette semaine
+        const response = await fetch(`/api/gamification/quest-progress/${username}?quest_date=${quest.deadline}`);
+
+        if (!response.ok) {
+          console.error('[Quest Progress] Erreur API:', response.status);
+          return;
+        }
+
+        const data = await response.json();
+
+        if (data.status !== 'success') {
+          console.error('[Quest Progress] API retourne une erreur:', data.message);
+          return;
+        }
+
+        console.log('[Quest Progress] Données reçues:', data.progress);
+
+        // Déterminer quelle métrique utiliser selon le type de quest
+        let currentProgress = 0;
+        let targetValue = quest.target;
+
+        switch (quest.unit) {
+          case 'heures':
+            // Quest basée sur les heures de marketing
+            currentProgress = data.progress.h_marketing || 0;
+            break;
+
+          case 'estimations':
+            // Quest basée sur le nombre d'estimations
+            currentProgress = data.progress.estimation || 0;
+            break;
+
+          case '$':
+            // Quest basée sur les dollars signés
+            currentProgress = data.progress.dollar || 0;
+            break;
+
+          case 'depot':
+            // Quest basée sur les dépôts collectés
+            currentProgress = data.progress.depot || 0;
+            break;
+
+          case 'peintre':
+            // Quest basée sur le nombre de peintres embauchés
+            currentProgress = data.progress.peintre || 0;
+            break;
+
+          case 'ca_cumul':
+            // Quest basée sur le chiffre d'affaires cumulatif
+            currentProgress = data.progress.ca_cumul || 0;
+            break;
+
+          case 'produit':
+            // Quest basée sur les ventes produites
+            currentProgress = data.progress.produit || 0;
+            break;
+
+          case 'productivité':
+            // Quest basée sur la productivité horaire ($/h)
+            currentProgress = data.progress.prod_horaire || 0;
+            break;
+
+          case 'étoiles':
+            // Quest basée sur la satisfaction client cumulative
+            currentProgress = data.progress.satisfaction || 0;
+            break;
+
+          case 'taux':
+            // Quest basée sur le taux marketing (estimations/heure)
+            currentProgress = data.progress.taux_marketing || 0;
+            break;
+
+          case 'contrats':
+            // Quest basée sur le nombre de contrats signés
+            currentProgress = data.progress.contract || 0;
+            break;
+
+          default:
+            console.warn('[Quest Progress] Type de quest inconnu:', quest.unit);
+            currentProgress = 0;
+        }
+
+        // Calculer le pourcentage de progression (min 0%, max 100%)
+        const progressPercent = Math.min(100, Math.max(0, (currentProgress / targetValue) * 100));
+
+        console.log(`[Quest Progress] Progression: ${currentProgress}/${targetValue} (${progressPercent.toFixed(1)}%)`);
+
+        // Mettre à jour l'affichage - MODAL
+        const progressCurrentEl = document.getElementById('modalQuestProgressCurrent');
+        const progressFillEl = document.getElementById('modalQuestProgressFill');
+
+        if (progressCurrentEl) {
+          // Formater l'affichage selon le type
+          if (quest.unit === '$') {
+            progressCurrentEl.textContent = currentProgress.toLocaleString('fr-CA');
+          } else if (quest.unit === 'taux') {
+            progressCurrentEl.textContent = currentProgress.toFixed(2);
+          } else {
+            progressCurrentEl.textContent = currentProgress;
+          }
+        }
+
+        if (progressFillEl) {
+          progressFillEl.style.width = `${progressPercent}%`;
+        }
+
+        // Mettre à jour l'affichage - BANNIÈRE
+        const bannerProgressFillEl = document.getElementById('bannerProgressFill');
+        if (bannerProgressFillEl) {
+          bannerProgressFillEl.style.width = `${progressPercent}%`;
+        }
+
+        // Mettre à jour le statut de la quest si complétée
+        if (currentProgress >= targetValue) {
+          const statusBadge = document.querySelector('#modalQuestStatus .status-badge');
+          if (statusBadge) {
+            statusBadge.textContent = 'Complétée';
+            statusBadge.className = 'status-badge status-completed';
+          }
+        }
+
+        // Mettre à jour le streak depuis les données de l'API
+        const streak = data.streak || 0;
+
+        // Mettre à jour le streak dans la section Streaks de Profil
+        const currentStreakNumberEl = document.getElementById('currentStreakNumber');
+        if (currentStreakNumberEl) {
+          currentStreakNumberEl.textContent = streak;
+        }
+
+        const streakBadgeNumberEl = document.getElementById('streakBadgeNumber');
+        if (streakBadgeNumberEl) {
+          streakBadgeNumberEl.textContent = streak;
+        }
+
+        // Cacher le titre "Streak actuel" si streak = 0
+        const streakTitle = document.getElementById('streakTitle');
+        if (streakTitle) {
+          if (streak === 0) {
+            streakTitle.style.display = 'none';
+          } else {
+            streakTitle.style.display = 'block';
+          }
+        }
+
+        // Fonction pour obtenir le style de streak en fonction du nombre
+        function getStreakStyle(streakNum) {
+          const streakTiers = [
+            { min: 25, border: '#ef4444', badgeBg: 'linear-gradient(135deg, #7f1d1d, #991b1b)', badgeBorder: '#7f1d1d', fireColor: '#fca5a5', shadow: '0 4px 16px rgba(0, 0, 0, 0.7), 0 0 24px rgba(239, 68, 68, 0.7)', xp: 100 },
+            { min: 20, border: '#f59e0b', badgeBg: 'linear-gradient(135deg, #1f2937, #111827)', badgeBorder: 'var(--bg-dark)', fireColor: '#f59e0b', shadow: '0 4px 12px rgba(0, 0, 0, 0.5), 0 0 20px rgba(245, 158, 11, 0.6)', xp: 50 },
+            { min: 15, border: '#fbbf24', badgeBg: 'linear-gradient(135deg, #1f2937, #111827)', badgeBorder: 'var(--bg-dark)', fireColor: '#f59e0b', shadow: '0 2px 8px rgba(0, 0, 0, 0.5), 0 0 16px rgba(245, 158, 11, 0.5)', xp: 25 },
+            { min: 10, border: '#10b981', badgeBg: 'linear-gradient(135deg, #1f2937, #111827)', badgeBorder: 'var(--bg-dark)', fireColor: '#f59e0b', shadow: '0 2px 8px rgba(0, 0, 0, 0.5), 0 0 12px rgba(245, 158, 11, 0.3)', xp: 20 },
+            { min: 4, border: '#6b7280', badgeBg: 'linear-gradient(135deg, #1f2937, #111827)', badgeBorder: 'var(--bg-dark)', fireColor: '#fbbf24', shadow: '0 2px 8px rgba(0, 0, 0, 0.5)', xp: 15 },
+            { min: 1, border: 'var(--border-color)', badgeBg: 'linear-gradient(135deg, #1f2937, #111827)', badgeBorder: 'var(--bg-dark)', fireColor: '#fbbf24', shadow: '0 2px 8px rgba(0, 0, 0, 0.5)', xp: 10 },
+            { min: 0, border: 'var(--border-color)', badgeBg: 'linear-gradient(135deg, #1f2937, #111827)', badgeBorder: 'var(--bg-dark)', fireColor: '#f59e0b', shadow: '0 2px 8px rgba(0, 0, 0, 0.5)', xp: 0 }
+          ];
+
+          for (const tier of streakTiers) {
+            if (streakNum >= tier.min) return tier;
+          }
+          return streakTiers[streakTiers.length - 1];
+        }
+
+        // Fonction pour obtenir le prochain palier
+        function getNextStreakTier(currentStreak) {
+          const tiers = [1, 4, 10, 15, 20, 25];
+          for (const tier of tiers) {
+            if (currentStreak < tier) return tier;
+          }
+          return 25; // Max
+        }
+
+        // Afficher/cacher les vues en fonction du streak
+        const streakProgressView = document.getElementById('streakProgressView');
+        const streakActiveView = document.getElementById('streakActiveView');
+
+        // Toujours afficher la vue de progression (2 photos avec flèche)
+        if (streakProgressView) streakProgressView.style.display = 'flex';
+        if (streakActiveView) streakActiveView.style.display = 'none';
+
+        // Charger les photos de profil (username déjà défini au début de la fonction)
+        const profilePhotoUrl = `/cloud/signatures/${username}/profile_photo_${username}.png?v=${Date.now()}`;
+
+        // Mettre à jour la photo actuelle (gauche)
+        const currentStreakPhoto = document.getElementById('currentStreakPhoto');
+        const currentStreakAvatar = document.getElementById('currentStreakAvatar');
+        const currentStreakBadge = document.getElementById('currentStreakBadge');
+        const currentStreakBadgeNum = document.getElementById('currentStreakBadgeNum');
+
+        if (currentStreakPhoto) currentStreakPhoto.src = profilePhotoUrl;
+        if (currentStreakBadgeNum) currentStreakBadgeNum.textContent = streak;
+
+        const currentStyle = getStreakStyle(streak);
+        if (currentStreakAvatar) currentStreakAvatar.style.border = `3px solid ${currentStyle.border}`;
+
+        // Cacher le badge si streak = 0
+        if (currentStreakBadge) {
+          if (streak === 0) {
+            currentStreakBadge.style.display = 'none';
+          } else {
+            currentStreakBadge.style.display = 'flex';
+            currentStreakBadge.style.background = currentStyle.badgeBg;
+            currentStreakBadge.style.borderColor = currentStyle.badgeBorder;
+            currentStreakBadge.style.boxShadow = currentStyle.shadow;
+            currentStreakBadge.querySelector('.fa-fire').style.color = currentStyle.fireColor;
+          }
+        }
+
+        // Mettre à jour le prochain palier (droite)
+        const nextStreak = getNextStreakTier(streak);
+        const nextStreakPhoto = document.getElementById('nextStreakPhoto');
+        const nextStreakAvatar = document.getElementById('nextStreakAvatar');
+        const nextStreakBadge = document.getElementById('nextStreakBadge');
+        const nextStreakBadgeNum = document.getElementById('nextStreakBadgeNum');
+        const nextStreakLabel = document.getElementById('nextStreakLabel');
+
+        if (nextStreakPhoto) nextStreakPhoto.src = profilePhotoUrl;
+        if (nextStreakBadgeNum) nextStreakBadgeNum.textContent = 14;
+
+        const nextStyle = getStreakStyle(nextStreak);
+        if (nextStreakAvatar) nextStreakAvatar.style.border = `3px solid ${nextStyle.border}`;
+        if (nextStreakBadge) {
+          nextStreakBadge.style.background = nextStyle.badgeBg;
+          nextStreakBadge.style.borderColor = nextStyle.badgeBorder;
+          nextStreakBadge.style.boxShadow = nextStyle.shadow;
+          nextStreakBadge.querySelector('.fa-fire').style.color = nextStyle.fireColor;
+        }
+        if (nextStreakLabel) {
+          nextStreakLabel.textContent = 'Avec des Streak';
+          nextStreakLabel.style.color = '#fbbf24';
+        }
+
+        // Afficher/cacher le badge et l'effet de flammes si streak > 0
+        const streakBadgeEl = document.getElementById('streakBadge');
+        const flameEffectEl = document.getElementById('flameEffect');
+
+        if (streak > 0) {
+          if (streakBadgeEl) streakBadgeEl.style.display = 'flex';
+          if (flameEffectEl) flameEffectEl.style.display = 'block';
+        } else {
+          if (streakBadgeEl) streakBadgeEl.style.display = 'none';
+          if (flameEffectEl) flameEffectEl.style.display = 'none';
+        }
+
+        // Afficher/cacher l'indicateur de streak dans les récompenses
+        const streakRewardEl = document.getElementById('modalStreakReward');
+        if (streakRewardEl) {
+          if (streak > 0) {
+            streakRewardEl.style.display = 'flex';
+          } else {
+            streakRewardEl.style.display = 'none';
+          }
+        }
+
+      } catch (error) {
+        console.error('[Quest Progress] Erreur lors du chargement:', error);
+      }
+    }
+
+    function loadNextWeekQuest(currentQuest) {
+      // Trouver la prochaine quête après la quête actuelle
+      const currentDeadline = new Date(currentQuest.deadline);
+      let nextWeekQuest = null;
+      let minDiff = Infinity;
+
+      weeklyQuests.forEach(quest => {
+        const questDate = new Date(quest.deadline);
+        const diff = questDate - currentDeadline;
+
+        // Si la quête est après la quête actuelle et plus proche que la précédente
+        if (diff > 0 && diff < minDiff) {
+          minDiff = diff;
+          nextWeekQuest = quest;
+        }
+      });
+
+      if (!nextWeekQuest) {
+        // Pas de prochaine quête, masquer la section
+        const upcomingSection = document.querySelector('.upcoming-weeks-section');
+        if (upcomingSection) {
+          upcomingSection.style.display = 'none';
+        }
+        return;
+      }
+
+      // Calculer les dates de la semaine (lundi à dimanche)
+      const deadline = new Date(nextWeekQuest.deadline);
+      const monday = new Date(deadline);
+      const dayOfWeek = deadline.getDay();
+      const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      monday.setDate(deadline.getDate() + daysToMonday);
+      monday.setHours(0, 0, 0, 0);
+
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+
+      // Formater les dates
+      const mondayStr = monday.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+      const sundayStr = sunday.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+      // Déterminer l'icône selon le type de quête
+      let icon = 'fa-star';
+      const title = nextWeekQuest.title.toLowerCase();
+      if (title.includes('pap') || title.includes('porte')) {
+        icon = 'fa-phone-volume';
+      } else if (title.includes('estimation')) {
+        icon = 'fa-clipboard-list';
+      } else if (title.includes('signer') || title.includes('vente')) {
+        icon = 'fa-file-signature';
+      } else if (title.includes('produire') || title.includes('production')) {
+        icon = 'fa-hammer';
+      } else if (title.includes('embaucher')) {
+        icon = 'fa-user-plus';
+      } else if (title.includes('satisfaction')) {
+        icon = 'fa-star';
+      } else if (title.includes('productivité')) {
+        icon = 'fa-chart-line';
+      } else if (title.includes('collecte') || title.includes('dépôt')) {
+        icon = 'fa-coins';
+      }
+
+      // Calculer l'XP (utilise le même système de streak que la quête actuelle)
+      const streakInfo = getStreakXP(0); // Pour l'aperçu, on utilise le minimum
+      const xp = streakInfo.xpPerQuest;
+
+      // Mettre à jour l'HTML
+      const weekNumberEl = document.querySelector('.week-number');
+      const questTitleEl = document.querySelector('.week-quest-title');
+      const questRewardEl = document.querySelector('.week-quest-reward');
+      const questIconEl = document.querySelector('.week-quest-icon i');
+
+      if (weekNumberEl) weekNumberEl.textContent = `Semaine du ${mondayStr} - ${sundayStr}`;
+      if (questTitleEl) questTitleEl.textContent = nextWeekQuest.title;
+      if (questRewardEl) questRewardEl.innerHTML = `<i class="fas fa-star"></i> +${xp} XP`;
+      if (questIconEl) questIconEl.className = `fas ${icon}`;
     }
 
     function initializeLottieFlames() {

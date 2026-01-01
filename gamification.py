@@ -345,14 +345,21 @@ def get_user_progress(username: str) -> Dict:
     result = cursor.fetchone()
 
     if result:
-        # Recalculer l'XP total basé sur les badges actifs uniquement (avec leurs counts)
+        # Recalculer l'XP total basé sur l'historique complet (incluant badges ET side quests)
         cursor.execute("""
-            SELECT badge_id, count FROM user_badges
+            SELECT SUM(xp_earned) FROM xp_history
             WHERE username = ?
         """, (username,))
 
-        active_badges = cursor.fetchall()
-        recalculated_xp = sum(get_badge_xp(badge_id) * (count if count else 1) for badge_id, count in active_badges)
+        xp_sum_result = cursor.fetchone()
+        recalculated_xp = xp_sum_result[0] if xp_sum_result[0] is not None else 0
+
+        # Compter les badges actifs pour le retour
+        cursor.execute("""
+            SELECT COUNT(*) FROM user_badges
+            WHERE username = ?
+        """, (username,))
+        badges_count = cursor.fetchone()[0]
 
         # Calculer le niveau correspondant à l'XP recalculé
         level_info = calculate_level_from_xp(recalculated_xp)
@@ -376,7 +383,7 @@ def get_user_progress(username: str) -> Dict:
             **level_info,
             "created_at": created_at,
             "updated_at": updated_at,
-            "badges_count": len(active_badges)
+            "badges_count": badges_count
         }
     else:
         conn.close()
@@ -2532,11 +2539,233 @@ def get_level_info(level: int) -> Dict:
 def get_quest_streak(username: str) -> int:
     """
     Récupère le streak de side quests consécutifs d'un utilisateur
-    Retourne 0 pour l'instant (TODO: implémenter le tracking des quests)
     """
-    # TODO: Implémenter le système de tracking des side quests complétées
-    # Pour l'instant, retourner 0 par défaut
-    return 0
+    # Importer le module calculate_user_streak depuis main.py
+    try:
+        import sys
+        import os
+        # Ajouter le chemin du dossier parent au sys.path
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from main import calculate_user_streak
+        return calculate_user_streak(username)
+    except Exception as e:
+        print(f"[ERROR] Impossible de calculer le streak: {e}")
+        return 0
+
+
+def check_and_reward_completed_quests(username: str):
+    """
+    Vérifie les quests complétées et attribue l'XP correspondant
+    Retourne le nombre de nouvelles quests récompensées
+    """
+    from datetime import datetime
+
+    # Liste de toutes les side quests (même structure que dans check_all_sidequests.py et main.py)
+    WEEKLY_QUESTS = [
+        {"title": "Faire 12h de PAP durant la semaine Internationale", "deadline": "2025-12-25", "target": 12, "unit": "heures", "quest_id": "quest_2025_12_25"},
+        {"title": "Faire 12h de PAP durant la semaine", "deadline": "2026-01-18", "target": 12, "unit": "heures", "quest_id": "quest_2026_01_18"},
+        {"title": "Faire 3 estimations ou plus cette semaine", "deadline": "2026-02-01", "target": 3, "unit": "estimations", "quest_id": "quest_2026_02_01"},
+        {"title": "Avoir un taux marketing de 0,75 estimations par heure", "deadline": "2026-02-08", "target": 0.75, "unit": "taux", "quest_id": "quest_2026_02_08"},
+        {"title": "Faire 5 estimations cette semaine", "deadline": "2026-02-15", "target": 5, "unit": "estimations", "quest_id": "quest_2026_02_15"},
+        {"title": "Faire 5 estimations cette semaine", "deadline": "2026-02-22", "target": 5, "unit": "estimations", "quest_id": "quest_2026_02_22"},
+        {"title": "Faire 7 estimations cette semaine", "deadline": "2026-03-01", "target": 7, "unit": "estimations", "quest_id": "quest_2026_03_01"},
+        {"title": "Signer 5000$", "deadline": "2026-03-08", "target": 5000, "unit": "$", "quest_id": "quest_2026_03_08"},
+        {"title": "Collecter plus de 1500$ en dépôt", "deadline": "2026-03-15", "target": 1500, "unit": "depot", "quest_id": "quest_2026_03_15"},
+        {"title": "Signer 7500$", "deadline": "2026-03-22", "target": 7500, "unit": "$", "quest_id": "quest_2026_03_22"},
+        {"title": "Signer un contrat de plus de 4000$ avant taxes", "deadline": "2026-03-29", "target": 4000, "unit": "$", "quest_id": "quest_2026_03_29"},
+        {"title": "Profiter de la folie de Pâques pour signer 15000$ cette semaine", "deadline": "2026-04-05", "target": 15000, "unit": "$", "quest_id": "quest_2026_04_05"},
+        {"title": "Embaucher un premier peintre", "deadline": "2026-04-12", "target": 1, "unit": "peintre", "quest_id": "quest_2026_04_12"},
+        {"title": "Signer 10000$", "deadline": "2026-04-19", "target": 10000, "unit": "$", "quest_id": "quest_2026_04_19"},
+        {"title": "Signer 12000$", "deadline": "2026-04-26", "target": 12000, "unit": "$", "quest_id": "quest_2026_04_26"},
+        {"title": "Signer 12000$", "deadline": "2026-05-03", "target": 12000, "unit": "$", "quest_id": "quest_2026_05_03"},
+        {"title": "Signer 12000$", "deadline": "2026-05-10", "target": 12000, "unit": "$", "quest_id": "quest_2026_05_10"},
+        {"title": "Signer 12000$", "deadline": "2026-05-17", "target": 12000, "unit": "$", "quest_id": "quest_2026_05_17"},
+        {"title": "15 estimations cette semaine", "deadline": "2026-05-24", "target": 15, "unit": "estimations", "quest_id": "quest_2026_05_24"},
+        {"title": "Atteindre 100000$ de ventes cumulatif depuis le début de l'année", "deadline": "2026-05-31", "target": 100000, "unit": "ca_cumul", "quest_id": "quest_2026_05_31"},
+        {"title": "Produire 5000$ de contrats", "deadline": "2026-06-07", "target": 5000, "unit": "produit", "quest_id": "quest_2026_06_07"},
+        {"title": "Productivité horaire de plus de 90", "deadline": "2026-06-14", "target": 90, "unit": "productivité", "quest_id": "quest_2026_06_14"},
+        {"title": "Faire 10h de PAP cette semaine", "deadline": "2026-06-21", "target": 10, "unit": "heures", "quest_id": "quest_2026_06_21"},
+        {"title": "Faire plus de 15 estimations cette semaine", "deadline": "2026-06-28", "target": 15, "unit": "estimations", "quest_id": "quest_2026_06_28"},
+        {"title": "Productivité horaire de plus de 100", "deadline": "2026-07-05", "target": 100, "unit": "productivité", "quest_id": "quest_2026_07_05"},
+        {"title": "Produire 15000$ cette semaine", "deadline": "2026-07-12", "target": 15000, "unit": "produit", "quest_id": "quest_2026_07_12"},
+        {"title": "Satisfaction client cumulative de plus de 4,5 étoiles", "deadline": "2026-07-19", "target": 4.5, "unit": "étoiles", "quest_id": "quest_2026_07_19"},
+        {"title": "10 estimations cette semaine", "deadline": "2026-07-26", "target": 10, "unit": "estimations", "quest_id": "quest_2026_07_26"},
+        {"title": "Signer 5000$", "deadline": "2026-08-02", "target": 5000, "unit": "$", "quest_id": "quest_2026_08_02"},
+        {"title": "Productivité horaire de 110", "deadline": "2026-08-09", "target": 110, "unit": "productivité", "quest_id": "quest_2026_08_09"},
+        {"title": "Produire 10000$", "deadline": "2026-08-16", "target": 10000, "unit": "produit", "quest_id": "quest_2026_08_16"},
+        {"title": "Produire 10000$", "deadline": "2026-08-23", "target": 10000, "unit": "produit", "quest_id": "quest_2026_08_23"},
+        {"title": "Faire 9h de PAP", "deadline": "2026-10-04", "target": 9, "unit": "heures", "quest_id": "quest_2026_10_04"},
+        {"title": "Signer 5000$", "deadline": "2026-10-11", "target": 5000, "unit": "$", "quest_id": "quest_2026_10_11"},
+        {"title": "Signer 10000$", "deadline": "2026-10-18", "target": 10000, "unit": "$", "quest_id": "quest_2026_10_18"},
+        {"title": "Signer 10000$", "deadline": "2026-10-25", "target": 10000, "unit": "$", "quest_id": "quest_2026_10_25"},
+        {"title": "Signer 5000$", "deadline": "2026-11-01", "target": 5000, "unit": "$", "quest_id": "quest_2026_11_01"},
+    ]
+
+    # Paliers de streak et XP
+    STREAK_TIERS = [
+        {"min_streak": 25, "xp_per_quest": 100},
+        {"min_streak": 20, "xp_per_quest": 50},
+        {"min_streak": 15, "xp_per_quest": 25},
+        {"min_streak": 10, "xp_per_quest": 20},
+        {"min_streak": 4, "xp_per_quest": 15},
+        {"min_streak": 1, "xp_per_quest": 10}
+    ]
+
+    def get_xp_for_streak(streak):
+        """Retourne l'XP à donner en fonction du streak"""
+        for tier in STREAK_TIERS:
+            if streak >= tier["min_streak"]:
+                return tier["xp_per_quest"]
+        return 10  # Minimum
+
+    try:
+        # Charger les données RPO directement
+        from QE.Backend.rpo import load_user_rpo_data, get_week_number_from_date
+        from datetime import timedelta
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        today = datetime.now()
+        newly_rewarded = 0
+        current_streak = 0
+
+        # Parcourir les quests dans l'ordre chronologique
+        for quest in WEEKLY_QUESTS:
+            deadline = datetime.strptime(quest['deadline'], '%Y-%m-%d')
+
+            # Ne traiter que les quests dont la deadline est passée
+            if deadline > today:
+                continue
+
+            quest_id = quest['quest_id']
+            print(f"[DEBUG] Traitement quest {quest_id}: {quest['title']}")
+
+            # Vérifier si la quest est complétée
+            try:
+                # Calculer la progression de la quest
+                monday = deadline - timedelta(days=6)
+                monday_str = monday.strftime('%Y-%m-%d')
+                month_idx, week_num = get_week_number_from_date(monday_str)
+
+                rpo_data = load_user_rpo_data(username)
+                week_data = rpo_data.get('weekly', {}).get(str(month_idx), {}).get(str(week_num), {})
+
+                # Extraire les métriques selon le type
+                h_marketing = week_data.get('h_marketing', '-')
+                estimation = week_data.get('estimation', 0)
+                dollar = week_data.get('dollar', 0)
+                depot = week_data.get('depot', 0)
+                peintre = week_data.get('peintre', 0)
+                ca_cumul = week_data.get('ca_cumul', 0)
+                produit = week_data.get('produit', 0)
+                prod_horaire = week_data.get('prod_horaire', 0)
+                satisfaction = week_data.get('satisfaction', 0)
+
+                # Convertir h_marketing
+                try:
+                    h_marketing_num = float(h_marketing) if h_marketing != '-' else 0
+                except:
+                    h_marketing_num = 0
+
+                # Calculer le taux marketing
+                taux_marketing = 0
+                if h_marketing_num > 0:
+                    taux_marketing = round(estimation / h_marketing_num, 2)
+
+                # Déterminer la progression selon le type
+                current_progress = 0
+                if quest['unit'] == 'heures':
+                    current_progress = h_marketing_num
+                elif quest['unit'] == 'estimations':
+                    current_progress = estimation
+                elif quest['unit'] == '$':
+                    current_progress = dollar
+                elif quest['unit'] == 'depot':
+                    current_progress = depot
+                elif quest['unit'] == 'peintre':
+                    current_progress = peintre
+                elif quest['unit'] == 'ca_cumul':
+                    current_progress = ca_cumul
+                elif quest['unit'] == 'produit':
+                    current_progress = produit
+                elif quest['unit'] == 'taux':
+                    current_progress = taux_marketing
+                elif quest['unit'] == 'productivité':
+                    current_progress = prod_horaire
+                elif quest['unit'] == 'étoiles':
+                    current_progress = satisfaction
+
+                # Vérifier si complétée
+                target = quest['target']
+                percent = (current_progress / target * 100) if target > 0 else 0
+                is_completed = percent >= 100
+                print(f"[DEBUG] Quest {quest_id}: progress={current_progress}/{target} ({percent:.1f}%), completed={is_completed}")
+
+                if is_completed:
+                    current_streak += 1
+                    print(f"[DEBUG] Quest complétée! Streak actuel: {current_streak}")
+                else:
+                    current_streak = 0
+                    print(f"[DEBUG] Quest non complétée, streak reset à 0")
+                    continue
+
+                # Vérifier si déjà récompensée
+                cursor.execute("""
+                    SELECT completed FROM user_quests
+                    WHERE username = ? AND quest_id = ?
+                """, (username, quest_id))
+
+                result = cursor.fetchone()
+                print(f"[DEBUG] Résultat DB pour {quest_id}: {result}")
+
+                # Si pas encore enregistrée ou pas marquée comme complétée
+                if not result or not result[0]:
+                    print(f"[DEBUG] Quest non récompensée, attribution XP...")
+                    # Calculer l'XP basé sur le streak actuel
+                    xp_amount = get_xp_for_streak(current_streak)
+
+                    # Attribuer l'XP AVANT de marquer comme complété
+                    print(f"[DEBUG] Appel award_xp: username={username}, xp={xp_amount}, streak={current_streak}")
+                    try:
+                        award_xp(
+                            username,
+                            xp_amount,
+                            "complete_side_quest",
+                            f"Side Quest: {quest['title']} (Streak: {current_streak}x)"
+                        )
+                        print(f"[DEBUG] award_xp réussi!")
+                    except Exception as xp_error:
+                        print(f"[ERROR] Échec award_xp: {xp_error}")
+                        import traceback
+                        traceback.print_exc()
+                        # Ne pas marquer comme complété si l'XP n'a pas été ajouté
+                        continue
+
+                    # Marquer comme complété seulement si l'XP a été ajouté
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO user_quests
+                        (username, quest_id, progress, completed, completed_at)
+                        VALUES (?, ?, ?, 1, ?)
+                    """, (username, quest_id, 100, datetime.now().isoformat()))
+
+                    newly_rewarded += 1
+                    print(f"[QUEST REWARD] {username} - Quest '{quest['title']}' complétée! +{xp_amount} XP (Streak: {current_streak})")
+
+            except Exception as e:
+                print(f"[ERROR] Erreur traitement quest {quest_id}: {e}")
+                continue
+
+        conn.commit()
+        conn.close()
+
+        return newly_rewarded
+
+    except Exception as e:
+        print(f"[ERROR] Erreur check_and_reward_completed_quests: {e}")
+        import traceback
+        traceback.print_exc()
+        return 0
 
 
 # ============================================

@@ -359,7 +359,8 @@ def get_week_number_from_date(date_str: str) -> tuple:
                 week_number = 1  # Avant le premier lundi = semaine 1
             else:
                 days_since_first_monday = (date - first_monday).days
-                week_number = (days_since_first_monday // 7) + 1
+                # +2 car s'il y a des jours avant first_monday, ils sont en semaine 1, donc first_monday commence la semaine 2
+                week_number = (days_since_first_monday // 7) + 2
 
         else:
             # Default: dates hors période fiscale (décembre 2025 - décembre 2026)
@@ -416,6 +417,12 @@ def sync_soumissions_to_rpo(username: str) -> bool:
                 rpo_data['weekly'][month_key][week_key]['estimation'] = 0
                 rpo_data['weekly'][month_key][week_key]['contract'] = 0
                 rpo_data['weekly'][month_key][week_key]['dollar'] = 0
+                rpo_data['weekly'][month_key][week_key]['depot'] = 0
+                rpo_data['weekly'][month_key][week_key]['peintre'] = 0
+                rpo_data['weekly'][month_key][week_key]['ca_cumul'] = 0
+                rpo_data['weekly'][month_key][week_key]['produit'] = 0
+                rpo_data['weekly'][month_key][week_key]['prod_horaire'] = 0
+                rpo_data['weekly'][month_key][week_key]['satisfaction'] = 0
 
         # Déterminer le chemin de base selon l'OS
         if sys.platform == 'win32':
@@ -473,9 +480,9 @@ def sync_soumissions_to_rpo(username: str) -> bool:
                 prix_clean = prix_clean.replace('$', '').replace(',', '.')
                 try:
                     prix = float(prix_clean)
-                    print(f"  [PRIX] [RPO SYNC] Prix parsé: {prix_str} → {prix}", flush=True)
+                    print(f"  [PRIX] [RPO SYNC] Prix parse: {prix_str} = {prix}$", flush=True)
                 except Exception as e:
-                    print(f"  [ERREUR PRIX] [RPO SYNC] Impossible de parser '{prix_str}': {e}", flush=True)
+                    print(f"  [ERREUR PRIX] [RPO SYNC] Impossible de parser: {e}", flush=True)
                     prix = 0
 
                 print(f"  [DATE] [RPO SYNC] Soumission signee date: {date_str}", flush=True)
@@ -492,7 +499,194 @@ def sync_soumissions_to_rpo(username: str) -> bool:
                     else:
                         print(f"    [WARN] [RPO SYNC] Mois {month_key} ou semaine {week_key} non trouve dans RPO", flush=True)
 
-        # 3. Agréger les données hebdomadaires vers les totaux annuels
+        # 3. Synchroniser les dépôts depuis facturation_qe_periodes
+        periodes_path = os.path.join(base_cloud, "facturation_qe_periodes", "periodes.json")
+        if os.path.exists(periodes_path):
+            with open(periodes_path, 'r', encoding='utf-8') as f:
+                periodes_data = json.load(f)
+
+            print(f"[INFO] [RPO SYNC] Synchronisation des depots depuis facturation_qe_periodes", flush=True)
+            depot_count = 0
+
+            # Parcourir toutes les périodes
+            for periode_key, paiements in periodes_data.items():
+                for paiement in paiements:
+                    # Filtrer uniquement les dépôts pour cet entrepreneur
+                    if (paiement.get('entrepreneurUsername') == username and
+                        paiement.get('type') == 'depot' and
+                        paiement.get('statut') in ['valide', 'traite', 'traite_attente_final', 'attente_comptable']):
+
+                        date_str = paiement.get('date', '')
+                        montant_str = paiement.get('montant', '0')
+
+                        # Parser le montant (format: "431,16 $")
+                        import re
+                        montant_clean = re.sub(r'\s+', '', montant_str)
+                        montant_clean = montant_clean.replace('$', '').replace(',', '.')
+                        try:
+                            montant = float(montant_clean)
+                        except:
+                            montant = 0
+
+                        # Parser la date (format: "10/03/2026 16:25")
+                        if date_str and montant > 0:
+                            try:
+                                date_parts = date_str.split(' ')[0]  # Prendre juste la date sans l'heure
+                                # Convertir DD/MM/YYYY vers YYYY-MM-DD
+                                day, month, year = date_parts.split('/')
+                                date_formatted = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+
+                                month_idx, week_num = get_week_number_from_date(date_formatted)
+                                month_key = str(month_idx)
+                                week_key = str(week_num)
+
+                                if month_key in rpo_data['weekly'] and week_key in rpo_data['weekly'][month_key]:
+                                    rpo_data['weekly'][month_key][week_key]['depot'] += montant
+                                    depot_count += 1
+                                    print(f"  [DEPOT] [RPO SYNC] +{montant}$ depot a semaine {week_num} du mois {month_idx} (date: {date_formatted})", flush=True)
+                            except Exception as e:
+                                print(f"  [WARN] [RPO SYNC] Erreur parsing date depot '{date_str}': {e}", flush=True)
+
+            print(f"[INFO] [RPO SYNC] {depot_count} depots synchronises", flush=True)
+
+        # 3b. Synchroniser les ventes produites depuis data/ventes_produit
+        ventes_produit_path = os.path.join(base_cloud, "ventes_produit", username, "ventes.json")
+        if os.path.exists(ventes_produit_path):
+            with open(ventes_produit_path, 'r', encoding='utf-8') as f:
+                ventes_produit = json.load(f)
+
+            print(f"[INFO] [RPO SYNC] Synchronisation des ventes produites", flush=True)
+            produit_count = 0
+
+            for vente in ventes_produit:
+                date_str = vente.get('date', '')
+                prix_str = vente.get('prix', '0')
+
+                # Parser le prix (même logique que pour les contrats signés)
+                import re
+                prix_clean = re.sub(r'\s+', '', prix_str)
+                prix_clean = prix_clean.replace('$', '').replace(',', '.')
+                try:
+                    prix = float(prix_clean)
+                except:
+                    prix = 0
+
+                # Parser la date (format: DD/MM/YYYY)
+                if date_str and prix > 0:
+                    try:
+                        date_parts = date_str.split(' ')[0]  # Prendre juste la date sans l'heure
+                        # Convertir DD/MM/YYYY vers YYYY-MM-DD
+                        day, month, year = date_parts.split('/')
+                        date_formatted = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+
+                        month_idx, week_num = get_week_number_from_date(date_formatted)
+                        month_key = str(month_idx)
+                        week_key = str(week_num)
+
+                        if month_key in rpo_data['weekly'] and week_key in rpo_data['weekly'][month_key]:
+                            rpo_data['weekly'][month_key][week_key]['produit'] += prix
+                            produit_count += 1
+                            print(f"  [PRODUIT] [RPO SYNC] +{prix}$ produit a semaine {week_num} du mois {month_idx} (date: {date_formatted})", flush=True)
+                    except Exception as e:
+                        print(f"  [WARN] [RPO SYNC] Erreur parsing date vente produite '{date_str}': {e}", flush=True)
+
+            print(f"[INFO] [RPO SYNC] {produit_count} ventes produites synchronisees", flush=True)
+
+        # 4. Synchroniser les employés (peintres) depuis data/employes
+        employes_path_base = os.path.join(base_cloud, "employes", username)
+        if os.path.exists(employes_path_base):
+            print(f"[INFO] [RPO SYNC] Synchronisation des employes (peintres) - MODE CUMULATIF", flush=True)
+
+            # Collecter tous les peintres avec leur date d'activation
+            peintres_list = []
+            employe_files = ['nouveaux.json', 'actifs.json', 'inactifs.json']
+            statuts_valides = ['En attente de validation', 'En attente comptable', 'Actif']
+
+            for file_name in employe_files:
+                file_path = os.path.join(employes_path_base, file_name)
+                if os.path.exists(file_path):
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            employes = json.load(f)
+
+                        for employe in employes:
+                            poste = employe.get('poste', '').lower()
+                            poste_service = employe.get('posteService', '').lower()
+                            statut = employe.get('statut', '')
+                            date_activation_str = employe.get('dateActivation', '')
+
+                            if (('peintre' in poste or 'peintre' in poste_service) and
+                                statut in statuts_valides and
+                                date_activation_str):
+
+                                try:
+                                    # Parser la date d'activation
+                                    if '/' in date_activation_str:
+                                        day, month, year = date_activation_str.split('/')
+                                        date_formatted = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+                                    else:
+                                        date_formatted = date_activation_str
+
+                                    peintres_list.append({
+                                        'date': date_formatted,
+                                        'nom': employe.get('nom', 'Inconnu'),
+                                        'statut': statut
+                                    })
+                                except Exception as e:
+                                    print(f"  [WARN] [RPO SYNC] Erreur parsing date activation '{date_activation_str}': {e}", flush=True)
+
+                    except Exception as e:
+                        print(f"  [WARN] [RPO SYNC] Erreur lecture fichier employes '{file_name}': {e}", flush=True)
+
+            # Trier les peintres par date d'activation
+            peintres_list.sort(key=lambda x: x['date'])
+
+            print(f"[INFO] [RPO SYNC] {len(peintres_list)} peintres trouves au total", flush=True)
+
+            # Pour chaque semaine, compter CUMULATIVEMENT tous les peintres activés jusqu'à cette semaine
+            from datetime import datetime
+            for month_idx in all_months:
+                month_key = str(month_idx)
+                if month_key in rpo_data['weekly']:
+                    for week_number in range(1, 6):
+                        week_key = str(week_number)
+                        if week_key in rpo_data['weekly'][month_key]:
+                            # Trouver la date de fin de cette semaine
+                            # On utilise la date du dimanche de cette semaine pour comparer
+                            week_data_temp = rpo_data['weekly'][month_key][week_key]
+
+                            # Calculer une date approximative pour cette semaine
+                            # Mois -2 = Oct 2025, 0 = Jan 2026, 1 = Feb 2026, etc.
+                            if month_idx == -2:
+                                year = 2025
+                                month = 10
+                            elif month_idx == -1:
+                                year = 2025
+                                month = 11
+                            else:
+                                year = 2026
+                                month = month_idx + 1
+
+                            # Approximation: semaine X = jour (X * 7)
+                            day = min(week_number * 7, 28)
+
+                            try:
+                                week_end_date = datetime(year, month, day)
+                                week_end_str = week_end_date.strftime('%Y-%m-%d')
+
+                                # Compter tous les peintres activés jusqu'à cette date
+                                cumulative_count = sum(1 for p in peintres_list if p['date'] <= week_end_str)
+
+                                rpo_data['weekly'][month_key][week_key]['peintre'] = cumulative_count
+
+                                if cumulative_count > 0:
+                                    print(f"  [PEINTRE CUMULATIF] Mois {month_idx}, Semaine {week_number}: {cumulative_count} peintres au total", flush=True)
+                            except:
+                                pass
+
+            print(f"[INFO] [RPO SYNC] Synchronisation cumulative des peintres terminee", flush=True)
+
+        # 5. Agréger les données hebdomadaires vers les totaux annuels
         print(f"[SYNC] [RPO SYNC] Aggregation des donnees hebdomadaires vers annuel...", flush=True)
 
         total_estimation = 0
@@ -545,8 +739,9 @@ def sync_soumissions_to_rpo(username: str) -> bool:
         print(f"  - Taux vente: {rpo_data['annual']['vente_reel']}%", flush=True)
         print(f"  - Contrat moyen: {rpo_data['annual']['moyen_reel']}$", flush=True)
 
-        # Calculer prod_horaire automatiquement pour chaque semaine: $ / H marketing
-        print(f"[SYNC] [RPO SYNC] Calcul prod_horaire automatique...", flush=True)
+        # Calculer le chiffre d'affaires cumulatif (ca_cumul) pour chaque semaine
+        print(f"[SYNC] [RPO SYNC] Calcul chiffre d'affaires cumulatif...", flush=True)
+        cumulative_revenue = 0
         for month_idx in all_months:
             month_key = str(month_idx)
             if month_key in rpo_data['weekly']:
@@ -554,22 +749,76 @@ def sync_soumissions_to_rpo(username: str) -> bool:
                     week_key = str(week_number)
                     if week_key in rpo_data['weekly'][month_key]:
                         week_data = rpo_data['weekly'][month_key][week_key]
-                        h_marketing = week_data.get('h_marketing', '-')
                         dollar = week_data.get('dollar', 0)
 
-                        # Calculer prod_horaire seulement si h_marketing est un nombre valide et > 0
-                        if h_marketing not in ['-', '', None] and dollar > 0:
-                            try:
-                                h_marketing_float = float(h_marketing)
-                                if h_marketing_float > 0:
-                                    prod_horaire = round(dollar / h_marketing_float, 2)
-                                    rpo_data['weekly'][month_key][week_key]['prod_horaire'] = prod_horaire
-                                else:
-                                    rpo_data['weekly'][month_key][week_key]['prod_horaire'] = 0
-                            except (ValueError, TypeError):
-                                rpo_data['weekly'][month_key][week_key]['prod_horaire'] = 0
-                        else:
-                            rpo_data['weekly'][month_key][week_key]['prod_horaire'] = 0
+                        # Ajouter les dollars de cette semaine au cumul
+                        cumulative_revenue += dollar
+
+                        # Enregistrer le cumul dans cette semaine
+                        rpo_data['weekly'][month_key][week_key]['ca_cumul'] = cumulative_revenue
+
+                        if cumulative_revenue > 0:
+                            print(f"  [CA CUMUL] Mois {month_idx}, Semaine {week_number}: {cumulative_revenue:.0f}$ cumulatif", flush=True)
+
+        print(f"[INFO] [RPO SYNC] Chiffre d'affaires cumulatif final: {cumulative_revenue:.0f}$", flush=True)
+
+        # 6. Synchroniser les avis clients pour calculer la satisfaction cumulative
+        print(f"[SYNC] [RPO SYNC] Calcul satisfaction cumulative...", flush=True)
+        reviews_path = os.path.join(base_cloud, "reviews", username, "reviews.json")
+        all_reviews = []
+
+        if os.path.exists(reviews_path):
+            with open(reviews_path, 'r', encoding='utf-8') as f:
+                reviews_data = json.load(f)
+
+            # Collecter tous les avis avec leurs dates
+            for review in reviews_data:
+                timestamp_str = review.get('timestamp', '')
+                rating = review.get('rating', 0)
+
+                if timestamp_str and rating > 0:
+                    try:
+                        # Parser le timestamp ISO 8601
+                        review_date = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                        review_date_str = review_date.strftime('%Y-%m-%d')
+                        all_reviews.append({'date': review_date_str, 'rating': rating})
+                        print(f"  [REVIEW] Avis trouve: {rating} etoiles le {review_date_str}", flush=True)
+                    except Exception as e:
+                        print(f"  [WARNING] Erreur parsing timestamp review: {e}", flush=True)
+                        continue
+
+        # Trier les avis par date
+        all_reviews.sort(key=lambda x: x['date'])
+
+        # Pour chaque semaine, calculer la moyenne cumulative des avis jusqu'à cette semaine
+        # Créer une liste de toutes les semaines dans l'ordre chronologique
+        weeks_in_order = []
+        for month_idx in all_months:
+            for week_number in range(1, 6):
+                weeks_in_order.append((month_idx, week_number))
+
+        cumulative_reviews = []
+        for month_idx, week_number in weeks_in_order:
+            month_key = str(month_idx)
+            week_key = str(week_number)
+
+            if month_key in rpo_data['weekly'] and week_key in rpo_data['weekly'][month_key]:
+                # Ajouter tous les avis de cette semaine au cumul
+                for review in all_reviews:
+                    try:
+                        review_month, review_week = get_week_number_from_date(review['date'])
+                        if review_month == month_idx and review_week == week_number:
+                            cumulative_reviews.append(review['rating'])
+                    except:
+                        pass
+
+                # Calculer la moyenne cumulative
+                if cumulative_reviews:
+                    avg_rating = sum(cumulative_reviews) / len(cumulative_reviews)
+                    rpo_data['weekly'][month_key][week_key]['satisfaction'] = round(avg_rating, 2)
+                    print(f"  [SATISFACTION] Mois {month_idx}, Semaine {week_number}: {avg_rating:.2f} etoiles ({len(cumulative_reviews)} avis cumulatifs)", flush=True)
+                else:
+                    rpo_data['weekly'][month_key][week_key]['satisfaction'] = 0
 
         # Sauvegarder les données RPO mises à jour
         save_user_rpo_data(username, rpo_data)

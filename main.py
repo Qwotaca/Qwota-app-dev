@@ -19140,6 +19140,23 @@ def get_xp_history_endpoint(username: str, limit: int = 50):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/gamification/check-quest-rewards/{username}")
+def check_quest_rewards_endpoint(username: str):
+    """Vérifie et récompense les side quests complétées"""
+    try:
+        newly_rewarded = gamification.check_and_reward_completed_quests(username)
+        return {
+            "status": "success",
+            "newly_rewarded": newly_rewarded,
+            "message": f"{newly_rewarded} nouvelle(s) quest(s) récompensée(s)"
+        }
+    except Exception as e:
+        print(f"[ERROR] Erreur check_quest_rewards: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/gamification/leaderboard")
 def get_leaderboard_endpoint(limit: int = 100):
     """Récupère le classement des utilisateurs"""
@@ -19372,6 +19389,263 @@ def get_quest_streak(username: str):
             "username": username,
             "streak": 0
         }
+
+
+@app.get("/api/gamification/quest-progress/{username}")
+def get_quest_progress(username: str, quest_date: str):
+    """
+    Récupère la progression d'une side quest basée sur les données RPO
+
+    Args:
+        username: Nom d'utilisateur
+        quest_date: Date de deadline de la quest (format: YYYY-MM-DD)
+
+    Returns:
+        Données de progression pour la semaine de la quest
+    """
+    try:
+        from QE.Backend.rpo import load_user_rpo_data, get_week_number_from_date
+        from datetime import datetime, timedelta
+
+        print(f"[DEBUG] Quest progress pour {username}, date: {quest_date}", flush=True)
+
+        # Charger les données RPO
+        rpo_data = load_user_rpo_data(username)
+
+        # Déterminer la semaine de la quest (basée sur la deadline)
+        # La deadline est un dimanche, donc on calcule le lundi de cette semaine
+        deadline = datetime.strptime(quest_date, "%Y-%m-%d")
+
+        # Trouver le lundi de cette semaine (deadline - 6 jours)
+        monday = deadline - timedelta(days=6)
+        monday_str = monday.strftime("%Y-%m-%d")
+
+        print(f"[DEBUG] Deadline: {quest_date}, Lundi de la semaine: {monday_str}", flush=True)
+
+        # Mapper la date au mois et semaine RPO
+        month_idx, week_num = get_week_number_from_date(monday_str)
+        month_key = str(month_idx)
+        week_key = str(week_num)
+
+        print(f"[DEBUG] Mois RPO: {month_key}, Semaine RPO: {week_key}", flush=True)
+
+        # Récupérer les données de cette semaine
+        week_data = rpo_data.get('weekly', {}).get(month_key, {}).get(week_key, {})
+
+        print(f"[DEBUG] Données semaine trouvées: {week_data}", flush=True)
+
+        # Extraire les métriques
+        h_marketing = week_data.get('h_marketing', '-')
+        estimation = week_data.get('estimation', 0)
+        contract = week_data.get('contract', 0)
+        dollar = week_data.get('dollar', 0)
+        depot = week_data.get('depot', 0)
+        peintre = week_data.get('peintre', 0)
+        ca_cumul = week_data.get('ca_cumul', 0)
+        produit = week_data.get('produit', 0)
+        prod_horaire = week_data.get('prod_horaire', 0)
+        satisfaction = week_data.get('satisfaction', 0)
+
+        # Convertir h_marketing en nombre (gérer le cas '-')
+        h_marketing_num = 0
+        if h_marketing != '-' and h_marketing != '' and h_marketing is not None:
+            try:
+                h_marketing_num = float(h_marketing)
+            except (ValueError, TypeError):
+                h_marketing_num = 0
+
+        # Calculer le taux marketing (estimations par heure de cette semaine)
+        taux_marketing = 0
+        if h_marketing_num > 0:
+            taux_marketing = round(estimation / h_marketing_num, 2)
+
+        # Calculer le streak
+        streak = calculate_user_streak(username)
+
+        return {
+            "status": "success",
+            "username": username,
+            "quest_date": quest_date,
+            "week_info": {
+                "month_index": month_idx,
+                "week_number": week_num,
+                "monday": monday_str
+            },
+            "progress": {
+                "h_marketing": h_marketing_num,
+                "estimation": estimation,
+                "contract": contract,
+                "dollar": dollar,
+                "depot": depot,
+                "peintre": peintre,
+                "ca_cumul": ca_cumul,
+                "produit": produit,
+                "prod_horaire": prod_horaire,
+                "satisfaction": satisfaction,
+                "taux_marketing": taux_marketing
+            },
+            "streak": streak
+        }
+
+    except Exception as e:
+        print(f"[ERROR] Erreur get_quest_progress: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        return {
+            "status": "error",
+            "message": str(e),
+            "progress": {
+                "h_marketing": 0,
+                "estimation": 0,
+                "contract": 0,
+                "dollar": 0,
+                "depot": 0,
+                "peintre": 0,
+                "ca_cumul": 0,
+                "produit": 0,
+                "prod_horaire": 0,
+                "satisfaction": 0,
+                "taux_marketing": 0
+            }
+        }
+
+
+def calculate_user_streak(username: str):
+    """
+    Calcule le streak actuel de side quests complétées consécutivement.
+    Le streak se reset à 0 quand une quest dont la deadline est passée n'est pas complétée.
+
+    Returns:
+        int: Nombre de quests consécutives complétées
+    """
+    from datetime import datetime
+
+    # Liste des quests (même structure que check_all_sidequests.py)
+    WEEKLY_QUESTS = [
+        {"title": "Faire 12h de PAP durant la semaine Internationale", "deadline": "2025-12-25", "target": 12, "unit": "heures"},
+        {"title": "Faire 12h de PAP durant la semaine", "deadline": "2026-01-18", "target": 12, "unit": "heures"},
+        {"title": "Faire 3 estimations ou plus cette semaine", "deadline": "2026-02-01", "target": 3, "unit": "estimations"},
+        {"title": "Avoir un taux marketing de 0,75 estimations par heure", "deadline": "2026-02-08", "target": 0.75, "unit": "taux"},
+        {"title": "Faire 5 estimations cette semaine", "deadline": "2026-02-15", "target": 5, "unit": "estimations"},
+        {"title": "Faire 5 estimations cette semaine", "deadline": "2026-02-22", "target": 5, "unit": "estimations"},
+        {"title": "Faire 7 estimations cette semaine", "deadline": "2026-03-01", "target": 7, "unit": "estimations"},
+        {"title": "Signer 5000$", "deadline": "2026-03-08", "target": 5000, "unit": "$"},
+        {"title": "Collecter plus de 1500$ en dépôt", "deadline": "2026-03-15", "target": 1500, "unit": "depot"},
+        {"title": "Signer 7500$", "deadline": "2026-03-22", "target": 7500, "unit": "$"},
+        {"title": "Signer un contrat de plus de 4000$ avant taxes", "deadline": "2026-03-29", "target": 4000, "unit": "$"},
+        {"title": "Profiter de la folie de Pâques pour signer 15000$ cette semaine", "deadline": "2026-04-05", "target": 15000, "unit": "$"},
+        {"title": "Embaucher un premier peintre", "deadline": "2026-04-12", "target": 1, "unit": "peintre"},
+        {"title": "Signer 10000$", "deadline": "2026-04-19", "target": 10000, "unit": "$"},
+        {"title": "Signer 12000$", "deadline": "2026-04-26", "target": 12000, "unit": "$"},
+        {"title": "Signer 12000$", "deadline": "2026-05-03", "target": 12000, "unit": "$"},
+        {"title": "Signer 12000$", "deadline": "2026-05-10", "target": 12000, "unit": "$"},
+        {"title": "Signer 12000$", "deadline": "2026-05-17", "target": 12000, "unit": "$"},
+        {"title": "15 estimations cette semaine", "deadline": "2026-05-24", "target": 15, "unit": "estimations"},
+        {"title": "Atteindre 100000$ de ventes cumulatif depuis le début de l'année", "deadline": "2026-05-31", "target": 100000, "unit": "ca_cumul"},
+        {"title": "Produire 5000$ de contrats", "deadline": "2026-06-07", "target": 5000, "unit": "produit"},
+        {"title": "Productivité horaire de plus de 90", "deadline": "2026-06-14", "target": 90, "unit": "productivité"},
+        {"title": "Faire 10h de PAP cette semaine", "deadline": "2026-06-21", "target": 10, "unit": "heures"},
+        {"title": "Faire plus de 15 estimations cette semaine", "deadline": "2026-06-28", "target": 15, "unit": "estimations"},
+        {"title": "Productivité horaire de plus de 100", "deadline": "2026-07-05", "target": 100, "unit": "productivité"},
+        {"title": "Produire 15000$ cette semaine", "deadline": "2026-07-12", "target": 15000, "unit": "produit"},
+        {"title": "Satisfaction client cumulative de plus de 4,5 étoiles", "deadline": "2026-07-19", "target": 4.5, "unit": "étoiles"},
+        {"title": "10 estimations cette semaine", "deadline": "2026-07-26", "target": 10, "unit": "estimations"},
+        {"title": "Signer 5000$", "deadline": "2026-08-02", "target": 5000, "unit": "$"},
+        {"title": "Productivité horaire de 110", "deadline": "2026-08-09", "target": 110, "unit": "productivité"},
+        {"title": "Produire 10000$", "deadline": "2026-08-16", "target": 10000, "unit": "produit"},
+        {"title": "Produire 10000$", "deadline": "2026-08-23", "target": 10000, "unit": "produit"},
+        {"title": "Faire 9h de PAP", "deadline": "2026-10-04", "target": 9, "unit": "heures"},
+        {"title": "Signer 5000$", "deadline": "2026-10-11", "target": 5000, "unit": "$"},
+        {"title": "Signer 10000$", "deadline": "2026-10-18", "target": 10000, "unit": "$"},
+        {"title": "Signer 10000$", "deadline": "2026-10-25", "target": 10000, "unit": "$"},
+        {"title": "Signer 5000$", "deadline": "2026-11-01", "target": 5000, "unit": "$"},
+    ]
+
+    today = datetime.now()
+    streak = 0
+
+    # Parcourir les quests dans l'ordre chronologique
+    for quest in WEEKLY_QUESTS:
+        deadline = datetime.strptime(quest['deadline'], '%Y-%m-%d')
+
+        # Si la deadline est dans le futur, on arrête
+        if deadline > today:
+            break
+
+        # Vérifier si la quest est complétée (directement via RPO sans appeler get_quest_progress)
+        try:
+            from QE.Backend.rpo import load_user_rpo_data, get_week_number_from_date
+            from datetime import timedelta
+
+            # Calculer le lundi de la semaine
+            monday = deadline - timedelta(days=6)
+            monday_str = monday.strftime('%Y-%m-%d')
+            month_idx, week_num = get_week_number_from_date(monday_str)
+
+            # Charger les données RPO
+            rpo_data = load_user_rpo_data(username)
+            week_data = rpo_data.get('weekly', {}).get(str(month_idx), {}).get(str(week_num), {})
+
+            # Extraire les métriques selon le type de quest
+            h_marketing = week_data.get('h_marketing', '-')
+            estimation = week_data.get('estimation', 0)
+            dollar = week_data.get('dollar', 0)
+            depot = week_data.get('depot', 0)
+            peintre = week_data.get('peintre', 0)
+            ca_cumul = week_data.get('ca_cumul', 0)
+            produit = week_data.get('produit', 0)
+            prod_horaire = week_data.get('prod_horaire', 0)
+            satisfaction = week_data.get('satisfaction', 0)
+
+            # Convertir h_marketing en nombre
+            try:
+                h_marketing_num = float(h_marketing) if h_marketing != '-' else 0
+            except:
+                h_marketing_num = 0
+
+            # Calculer le taux marketing de la semaine
+            taux_marketing = 0
+            if h_marketing_num > 0:
+                taux_marketing = round(estimation / h_marketing_num, 2)
+
+            # Déterminer la progression selon le type
+            current_progress = 0
+            target = quest['target']
+
+            if quest['unit'] == 'heures':
+                current_progress = h_marketing_num
+            elif quest['unit'] == 'estimations':
+                current_progress = estimation
+            elif quest['unit'] == '$':
+                current_progress = dollar
+            elif quest['unit'] == 'depot':
+                current_progress = depot
+            elif quest['unit'] == 'peintre':
+                current_progress = peintre
+            elif quest['unit'] == 'ca_cumul':
+                current_progress = ca_cumul
+            elif quest['unit'] == 'produit':
+                current_progress = produit
+            elif quest['unit'] == 'taux':
+                current_progress = taux_marketing
+            elif quest['unit'] == 'productivité':
+                current_progress = prod_horaire
+            elif quest['unit'] == 'étoiles':
+                current_progress = satisfaction
+
+            # Vérifier si complétée (>= 100%)
+            percent = (current_progress / target * 100) if target > 0 else 0
+
+            if percent >= 100:
+                streak += 1
+            else:
+                streak = 0
+        except Exception as e:
+            # Erreur lors du chargement des données, on reset le streak
+            print(f"[DEBUG] Erreur calcul quest {quest['deadline']}: {e}")
+            streak = 0
+
+    return streak
 
 
 # ============================================================================

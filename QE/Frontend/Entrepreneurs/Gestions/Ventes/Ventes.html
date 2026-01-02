@@ -2148,15 +2148,39 @@
     // TODO: Navigate to GQP creation
   };
 
-  window.terminerProduction = function(venteId) {
+  window.terminerProduction = async function(venteId) {
     closeClientInfo();
     log('[VENTES] Terminer production:', venteId);
 
-    // Afficher l'animation de succès
-    showSuccessAnimation('production');
+    try {
+      // Appeler le backend pour marquer la production comme terminée
+      const response = await fetch('/ventes/production-terminee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: window.username,
+          id: venteId
+        })
+      });
 
-    // TODO: Envoyer au backend pour déplacer vers "Terminées"
-    // TODO: Recharger les données après 2 secondes
+      if (response.ok) {
+        log('[VENTES] ✅ Production terminée avec succès');
+
+        // Afficher l'animation de succès
+        showSuccessAnimation('production');
+
+        // Recharger les données après 2 secondes (pour laisser l'animation se terminer)
+        setTimeout(async () => {
+          await loadVentesDataInternal();
+        }, 2000);
+      } else {
+        error('[VENTES] ❌ Erreur lors de la finalisation de production');
+        alert('Erreur lors de la finalisation de production');
+      }
+    } catch (error) {
+      error('[VENTES] Erreur terminer production:', error);
+      alert('Erreur réseau lors de la finalisation');
+    }
   };
 
   // Animation de succès (même style que soumission.html)
@@ -2187,7 +2211,7 @@
     setTimeout(() => {
       overlay.remove();
       // Recharger les ventes
-      loadVentes();
+      loadVentesDataInternal();
     }, 2000);
   }
 
@@ -2890,8 +2914,11 @@
   <!-- <script src="/Ventes_sections.js"></script> -->
 
 <script>
-  // Create payment status badge (Monday.com style)
-  function createPaymentBadge(statut, venteId) {
+  // Initialisation immédiate des fonctions globales
+  log('[VENTES] 🚀 Initialisation des fonctions de paiement...');
+
+  // Create payment status badge (Monday.com style) - Fonction globale
+  window.createPaymentBadge = function(statut, venteId, category) {
     if (!statut || statut === '-') {
       return '<span style="color: var(--text-gray);">-</span>';
     }
@@ -2918,8 +2945,12 @@
       label = 'En attente';
     }
 
+    // Utiliser data attributes au lieu de onclick inline pour éviter les problèmes de timing
     return `<span
-      onclick="changerStatutPaiement('${venteId}', '${label}', event)"
+      class="payment-status-badge"
+      data-vente-id="${venteId}"
+      data-current-statut="${label}"
+      data-category="${category}"
       style="
       display: inline-block;
       padding: 4px 12px;
@@ -2937,12 +2968,14 @@
     >${label}</span>`;
   }
 
-  // Change payment status
-  function changerStatutPaiement(venteId, currentStatut, event) {
+  // Change payment status - Fonction globale
+  window.changerStatutPaiement = function(venteId, currentStatut, category, event) {
     // Prevent event bubbling
     if (event) {
       event.stopPropagation();
     }
+
+    log(`[VENTES] 🔵 Ouverture dropdown paiement - ID: ${venteId}, Statut: ${currentStatut}, Catégorie: ${category}`);
 
     // Remove any existing dropdown
     const existingDropdown = document.getElementById('payment-status-dropdown');
@@ -3024,25 +3057,9 @@
       // Click handler
       option.addEventListener('click', async () => {
         if (statut.label !== currentStatut) {
-          log(`[VENTES] Changement statut paiement pour ${venteId}: ${currentStatut} → ${statut.label}`);
+          log(`[VENTES] 💰 Changement statut paiement - ID: ${venteId}, ${currentStatut} → ${statut.label}, Catégorie: ${category}`);
 
-          // Determine category from current table
-          let category = 'acceptees'; // default
-          const clickedBadge = event && event.target;
-          if (clickedBadge) {
-            const row = clickedBadge.closest('tr');
-            if (row) {
-              const tbody = row.closest('tbody');
-              if (tbody) {
-                const tbodyId = tbody.id;
-                if (tbodyId === 'attente-tbody') category = 'attente';
-                else if (tbodyId === 'accepte-tbody') category = 'acceptees';
-                else if (tbodyId === 'produit-tbody') category = 'produit';
-              }
-            }
-          }
-
-          // Save to backend
+          // Save to backend - use the category passed as parameter
           try {
             const response = await fetch('/ventes/update-statut-paiement', {
               method: 'POST',
@@ -3056,14 +3073,17 @@
             });
 
             if (response.ok) {
-              log('[VENTES] Statut paiement sauvegardé avec succès');
+              log('[VENTES] ✅ Statut paiement sauvegardé avec succès');
               // Reload data to show updated status
               await loadVentesDataInternal();
             } else {
-              error('[VENTES] Erreur sauvegarde statut:', await response.text());
+              const errorText = await response.text();
+              error('[VENTES] ❌ Erreur sauvegarde statut:', errorText);
+              alert(`Erreur lors de la sauvegarde: ${errorText}`);
             }
-          } catch (error) {
-            error('[VENTES] Erreur réseau:', error);
+          } catch (err) {
+            error('[VENTES] ❌ Erreur réseau:', err);
+            alert('Erreur réseau lors de la mise à jour du statut');
           }
         }
         dropdown.remove();
@@ -3094,7 +3114,36 @@
         document.removeEventListener('click', closeDropdown);
       });
     }, 100);
-  }
+  };
+
+  // Confirmation que les fonctions sont chargées
+  log('[VENTES] ✅ Fonctions de paiement chargées:', {
+    createPaymentBadge: typeof window.createPaymentBadge,
+    changerStatutPaiement: typeof window.changerStatutPaiement
+  });
+
+  // DÉLÉGATION D'ÉVÉNEMENTS - Écouter les clics sur tous les badges de paiement
+  // Utiliser capture phase pour s'assurer que ça fonctionne même avec stopPropagation
+  document.addEventListener('click', function(event) {
+    // Vérifier si le clic est sur un badge de paiement
+    const badge = event.target.closest('.payment-status-badge');
+    if (badge) {
+      event.stopPropagation();
+      const venteId = badge.getAttribute('data-vente-id');
+      const currentStatut = badge.getAttribute('data-current-statut');
+      const category = badge.getAttribute('data-category');
+
+      log('[VENTES] 🎯 Clic sur badge paiement détecté:', { venteId, currentStatut, category });
+
+      if (venteId && currentStatut && category) {
+        window.changerStatutPaiement(venteId, currentStatut, category, event);
+      } else {
+        error('[VENTES] ❌ Données manquantes sur le badge:', { venteId, currentStatut, category });
+      }
+    }
+  }, true); // true = capture phase
+
+  log('[VENTES] 🎯 Délégation d\'événements activée pour les badges de paiement');
 
   // Load ventes data from backend
   async function loadVentesDataInternal() {
@@ -3205,10 +3254,10 @@
           }
         }
 
-        // Create payment badge with vente ID
+        // Create payment badge with vente ID and category
         const statutPaiement = vente.statut_paiement || vente.typePaiement || vente.payer_par || 'En attente';
         const venteId = vente.id || vente.num || `vente-${Math.random()}`;
-        const badgePaiement = createPaymentBadge(statutPaiement, venteId);
+        const badgePaiement = createPaymentBadge(statutPaiement, venteId, category);
 
         return `
         <tr style="cursor: pointer;" onclick='showClientDetails(${index}, "${category}")'>

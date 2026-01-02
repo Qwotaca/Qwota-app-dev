@@ -243,7 +243,6 @@
 
     #photo-editor-canvas {
       border: 1px solid var(--border-dark);
-      border-radius: 50%;
       cursor: move;
       background: #000;
     }
@@ -398,10 +397,6 @@
               <button id="upload-photo-option">
                 <i class="fas fa-upload" style="color: var(--primary-blue);"></i>
                 <span>Modifier photo de profil</span>
-              </button>
-              <button id="delete-photo-option" style="color: var(--primary-red);">
-                <i class="fas fa-trash"></i>
-                <span>Supprimer photo de profil</span>
               </button>
             </div>
           </div>
@@ -586,27 +581,6 @@
     </div>
   </div>
 
-  <!-- Modal de confirmation de suppression de photo -->
-  <div id="delete-photo-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.8);">
-    <div class="card p-6 w-full max-w-md mx-4">
-      <div class="flex flex-col items-center gap-4">
-        <div class="w-16 h-16 rounded-full flex items-center justify-center" style="background: rgba(239, 68, 68, 0.2);">
-          <i class="fas fa-exclamation-triangle text-3xl" style="color: var(--primary-red);"></i>
-        </div>
-        <h3 class="text-xl font-semibold text-center" style="color: var(--text-light);">Supprimer la photo de profil</h3>
-        <p class="text-center" style="color: var(--text-gray);">
-          Êtes-vous sûr de vouloir supprimer votre photo de profil ? Cette action ne peut pas être annulée.
-        </p>
-        <div class="flex gap-3 w-full mt-4">
-          <button id="cancel-delete-photo-btn" class="btn-secondary flex-1">Annuler</button>
-          <button id="confirm-delete-photo-btn" class="flex-1 px-4 py-2 rounded-lg font-semibold transition-colors" style="background: var(--primary-red); color: white;">
-            <i class="fas fa-trash mr-2"></i>Supprimer
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <script>
     // Fonction pour afficher les notifications (style calcul)
     function showNotification(message, type = 'success') {
@@ -741,7 +715,6 @@ document.addEventListener("DOMContentLoaded", function() {
   const photoMenuDropdown = document.getElementById("photo-menu-dropdown");
   const uploadPhotoOption = document.getElementById("upload-photo-option");
   const cameraPhotoOption = document.getElementById("camera-photo-option");
-  const deletePhotoOption = document.getElementById("delete-photo-option");
   const profilePhotoImage = document.getElementById("profile-photo-image");
   const profilePhotoPlaceholder = document.getElementById("profile-photo-placeholder");
 
@@ -971,71 +944,6 @@ document.addEventListener("DOMContentLoaded", function() {
   // Boutons fermer/annuler QR modal
   document.getElementById("close-qr-modal-btn").addEventListener("click", stopPhotoPolling);
   document.getElementById("cancel-qr-btn").addEventListener("click", stopPhotoPolling);
-
-  // Option: Supprimer photo - Afficher le modal de confirmation
-  deletePhotoOption.addEventListener("click", () => {
-    photoMenuDropdown.classList.add("hidden");
-    document.getElementById("delete-photo-modal").classList.remove("hidden");
-  });
-
-  // Annuler la suppression de photo
-  document.getElementById("cancel-delete-photo-btn").addEventListener("click", () => {
-    document.getElementById("delete-photo-modal").classList.add("hidden");
-  });
-
-  // Confirmer la suppression de photo
-  document.getElementById("confirm-delete-photo-btn").addEventListener("click", async () => {
-    const deleteModal = document.getElementById("delete-photo-modal");
-    deleteModal.classList.add("hidden");
-
-    try {
-      const response = await fetch('/api/delete-profile-photo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username })
-      });
-
-      if (!response.ok) throw new Error(`Erreur ${response.status}`);
-
-      // Réinitialiser l'affichage
-      profilePhotoImage.classList.add("hidden");
-      profilePhotoImage.src = "";
-      profilePhotoPlaceholder.style.display = "flex";
-
-      // Réinitialiser les icônes du header
-      console.log('🔄 Réinitialisation des icônes du header');
-
-      // Mobile profile icon - remettre l'icône FontAwesome
-      const mobileProfileIcon = document.querySelector('.mobile-profile-icon');
-      if (mobileProfileIcon) {
-        mobileProfileIcon.innerHTML = '<i class="fas fa-user"></i>';
-        console.log('[OK] Mobile profile icon réinitialisé');
-      }
-
-      // Desktop account avatar - remettre l'icône FontAwesome
-      const accountAvatar = document.querySelector('.account-avatar');
-      if (accountAvatar) {
-        accountAvatar.innerHTML = '<i class="fas fa-user"></i>';
-        console.log('[OK] Desktop account avatar réinitialisé');
-      }
-
-      // Desktop dropdown avatar - remettre l'icône FontAwesome
-      const userAvatar = document.querySelector('.user-avatar');
-      if (userAvatar) {
-        userAvatar.innerHTML = '<i class="fas fa-user"></i>';
-        console.log('[OK] Desktop dropdown avatar réinitialisé');
-      }
-
-      showToast("Photo de profil supprimée", "success");
-
-      // Mettre à jour la progression du profil
-      updateProfileProgress();
-
-    } catch (error) {
-      showToast("Erreur lors de la suppression", "error");
-      console.error(error);
-    }
-  });
 
   // Fonction commune pour traiter une image
   function handleImageFile(file) {

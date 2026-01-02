@@ -1841,31 +1841,31 @@
       width: calc(100% - 260px);
     }
 
-    /* PC: Une seule iframe normale */
-    #page-iframe {
+    /* DESKTOP & MOBILE: Iframes multiples pour navigation instantanée */
+    .page-iframe {
       width: 100%;
-      height: calc(100vh - 70px);
+      height: calc(100vh - 90px); /* Header height */
       border: none;
-      display: block;
-    }
-
-    /* Mobile: Iframes multiples pour swipe */
-    .page-iframe-mobile {
-      width: 100%;
-      height: calc(100vh - 70px);
-      border: none;
-      position: absolute;
-      top: 0;
-      left: 0;
-      pointer-events: auto;
-      transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-      will-change: transform;
       display: none;
+      transition: opacity 0.3s ease;
     }
 
-    /* Désactiver la transition pendant le swipe actif */
-    .page-iframe-mobile.swiping {
-      transition: none;
+    /* Mobile: Ajustements pour swipe */
+    @media (max-width: 768px) {
+      .page-iframe {
+        height: calc(100vh - 160px); /* Top + Bottom headers */
+        position: absolute;
+        top: 0;
+        left: 0;
+        pointer-events: auto;
+        transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        will-change: transform;
+      }
+
+      /* Désactiver la transition pendant le swipe actif */
+      .page-iframe.swiping {
+        transition: none;
+      }
     }
 
     /* Zones de swipe sur les bords */
@@ -2173,22 +2173,12 @@
         position: relative;
       }
 
-      /* Cacher l'iframe PC et afficher les iframes mobile */
-      #page-iframe {
-        display: none !important;
-      }
-
-      .page-iframe-mobile {
-        height: calc(100vh - 160px);
-        width: 100%;
-      }
-
       /* Cacher les scrollbars sur mobile */
-      .page-iframe-mobile::-webkit-scrollbar {
+      .page-iframe::-webkit-scrollbar {
         display: none;
       }
 
-      .page-iframe-mobile {
+      .page-iframe {
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
@@ -2320,10 +2310,10 @@
       font-weight: 600;
     }
 
-    /* Masquer sur desktop */
+    /* Afficher sur desktop aussi */
     @media (min-width: 769px) {
       #loading-overlay {
-        display: none;
+        display: flex;
       }
     }
 
@@ -2820,8 +2810,22 @@
     </div>
   </div>
 
-  <!-- Container principal de l'app -->
-  <div id="app-container">
+  <!-- ================================================================
+       NOUVEAU: Spinner de navigation entre pages (petit et fluide)
+       ================================================================ -->
+  <div id="page-loading-spinner" style="display: none; position: fixed; top: 90px; left: 260px; right: 0; bottom: 0; background: #0f172a; z-index: 9999; align-items: center; justify-content: center;">
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+      <!-- Spinner SVG animé -->
+      <svg width="64" height="64" viewBox="0 0 64 64" style="animation: spin 0.8s linear infinite;">
+        <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="6"/>
+        <circle cx="32" cy="32" r="28" fill="none" stroke="#3b82f6" stroke-width="6" stroke-dasharray="140" stroke-dashoffset="40" stroke-linecap="round" style="transform-origin: center; transform: rotate(-90deg);"/>
+      </svg>
+      <div style="margin-top: 16px; font-size: 14px; color: rgba(255,255,255,0.9); font-weight: 500; text-align: center;">Chargement...</div>
+    </div>
+  </div>
+
+  <!-- Container principal de l'app - style inline pour garantir invisibilite immediate -->
+  <div id="app-container" style="opacity: 0;">
 
     <!-- Sidebar - Style Qwota Lite -->
     <aside class="sidebar expanded">
@@ -3062,36 +3066,33 @@
       <!-- Overlay pour suivre le swipe une fois activé -->
       <div id="swipe-overlay"></div>
 
-      <!-- PC: Une seule iframe qui change de src -->
-      <iframe id="page-iframe" src="/coach_dashboard" style="display: block;"></iframe>
-
-      <!-- MOBILE: Iframes multiples pour swipe fluide (cachées sur PC) -->
-      <iframe id="iframe-rpo" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-travaux" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-dashboard" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-outils" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-gestions" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-connection" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-centralevue" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-gamification" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-calcul" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-soumissions" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-gqp" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-facture" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-validation_employes" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-gestion_employes_coach" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-gestionemployes" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-facturationqe" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-avis" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-centrale" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-dashboardcoach" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-parametrecoach" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-parametres" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-dashboard" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-rpo" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-central" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-calculateur" class="page-iframe-mobile" src="" style="display: none;"></iframe>
-      <iframe id="iframe-employes" class="page-iframe-mobile" src="" style="display: none;"></iframe>
+      <!-- DESKTOP & MOBILE: Iframes multiples pour navigation instantanée (une par page) -->
+      <!-- Les iframes sont préchargées au lancement et restent en mémoire -->
+      <iframe id="iframe-dashboard" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-rpo" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-coach_rpo" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-travaux" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-outils" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-gestions" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-connection" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-centralevue" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-gamification" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-calcul" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-soumissions" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-gqp" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-facture" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-validation_employes" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-gestion_employes_coach" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-gestionemployes" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-facturationqe" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-avis" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-centrale" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-dashboardcoach" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-parametrecoach" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-parametres" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-central" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-calculateur" class="page-iframe" src="" style="display: none;"></iframe>
+      <iframe id="iframe-employes" class="page-iframe" src="" style="display: none;"></iframe>
     </main>
 
     <!-- Chat Support (PC uniquement) - DISABLED FOR COACHES -->
@@ -3205,17 +3206,17 @@
             </div>
             <!-- Séparateur 3 -->
             <div class="w-px h-8 bg-slate-400 opacity-30"></div>
-            <!-- Case 4 - Outils -->
+            <!-- Case 4 - Outils (Calculateur) -->
             <div class="flex-1 case-container flex justify-center items-center h-full">
-              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg cursor-pointer icon-container" onclick="router.loadPage('outils')">
+              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg cursor-pointer icon-container" onclick="router.loadPage('calculateur')">
                 <i class="fas fa-tools text-sm text-white"></i>
               </div>
             </div>
             <!-- Séparateur 4 -->
             <div class="w-px h-8 bg-slate-400 opacity-30"></div>
-            <!-- Case 5 - Gestions -->
+            <!-- Case 5 - Gestions (Gestion Employés) -->
             <div class="flex-1 case-container flex justify-center items-center h-full">
-              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg cursor-pointer icon-container" onclick="router.loadPage('gestions')">
+              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg cursor-pointer icon-container" onclick="router.loadPage('gestionemployes')">
                 <i class="fas fa-briefcase text-sm text-white"></i>
               </div>
             </div>
@@ -3435,89 +3436,180 @@
         let url = this.routes[pageName];
 
         if (!url) {
-          console.error(`[APPPC] Route non trouvee pour: ${pageName}`);
+          console.error(`[APPPC-COACH] Route non trouvee pour: ${pageName}`);
           return;
         }
 
-        // Déterminer l'utilisateur à afficher
-        let targetUser = null;
+        console.log(`[APPPC-COACH] Navigation vers ${pageName}`);
 
-        // Pour la page RPO, comportement différent selon le rôle
-        if (pageName === 'rpo') {
-          const userRole = localStorage.getItem('userRole');
-          const selectedEntrepreneur = sessionStorage.getItem('viewEntrepreneurUsername');
+        // DESKTOP & MOBILE: Utiliser le système multi-iframes pour navigation instantanée
+        // Cacher toutes les iframes
+        document.querySelectorAll('.page-iframe').forEach(iframe => {
+          iframe.style.display = 'none';
+        });
 
-          if (userRole === 'coach') {
-            // Si coach: utiliser l'entrepreneur sélectionné, sinon le username du coach
-            if (selectedEntrepreneur) {
-              targetUser = selectedEntrepreneur;
-              console.log(`[APPPC] Coach - Navigation RPO pour entrepreneur sélectionné: ${targetUser}`);
-            } else {
-              // Pas d'entrepreneur sélectionné - utiliser le username du coach pour éviter redirect
-              // La page RPO affichera le sélecteur grâce à son anti-flash
-              const urlParams = new URLSearchParams(window.location.search);
-              targetUser = urlParams.get('user') || localStorage.getItem('username');
-              console.log(`[APPPC] Coach - Navigation RPO avec username coach: ${targetUser} (pour afficher sélecteur)`);
+        // Afficher l'iframe correspondante
+        const targetIframe = document.getElementById(`iframe-${pageName}`);
+        if (targetIframe) {
+          // Utiliser getAttribute pour avoir la vraie valeur de l'attribut HTML (pas la propriété résolue)
+          const srcAttr = targetIframe.getAttribute('src');
+          console.log(`[APPPC-COACH] Navigation vers ${pageName} - src attr: "${srcAttr}", src prop: "${targetIframe.src}"`);
+
+          // Si l'iframe n'a pas encore de src (chargement à la demande), la charger
+          // Vérifier l'attribut HTML car la propriété .src retourne toujours une URL absolue
+          const needsLoading = !srcAttr || srcAttr === '' || srcAttr === 'about:blank';
+
+          if (needsLoading) {
+            // ⚡ CACHER L'IFRAME IMMÉDIATEMENT pour éviter le flash
+            targetIframe.style.opacity = '0';
+
+            // ⚡ AFFICHER le spinner IMMÉDIATEMENT (pas de délai)
+            // MAIS seulement si le loading-overlay principal n'est pas visible (pas au premier lancement)
+            const pageSpinner = document.getElementById('page-loading-spinner');
+            const loadingOverlay = document.getElementById('loading-overlay');
+            const isInitialLoad = loadingOverlay && !loadingOverlay.classList.contains('hidden');
+
+            // ⚡ Ajuster la position du spinner selon la sidebar (desktop vs mobile)
+            if (pageSpinner && !isInitialLoad) {
+              const sidebar = document.querySelector('.sidebar');
+              const isMobile = window.innerWidth <= 768;
+
+              if (isMobile) {
+                pageSpinner.style.left = '0';
+                pageSpinner.style.top = '0';
+              } else {
+                const sidebarWidth = sidebar && sidebar.classList.contains('expanded') ? '260px' : '80px';
+                pageSpinner.style.left = sidebarWidth;
+                pageSpinner.style.top = '90px';
+              }
+
+              // Afficher le spinner pour la navigation entre pages
+              pageSpinner.style.display = 'flex';
+              console.log(`[APPPC-COACH] 🔄 Spinner affiché pour ${pageName}`);
             }
-          } else {
-            // Si entrepreneur: utiliser son propre username
+
+            console.log(`[APPPC-COACH] Chargement initial de ${pageName}: ${url}`);
+
+            // Passer le paramètre ?user= de l'URL parente à l'iframe si présent
             const urlParams = new URLSearchParams(window.location.search);
-            targetUser = urlParams.get('user');
-            console.log(`[APPPC] Entrepreneur - Navigation RPO avec username: ${targetUser}`);
-          }
-        } else {
-          // Pour toutes les autres pages, utiliser l'utilisateur actuel
-          const urlParams = new URLSearchParams(window.location.search);
-          targetUser = urlParams.get('user');
-        }
+            const username = urlParams.get('user');
+            let finalUrl = url;
+            if (username) {
+              finalUrl = url.includes('?') ? `${url}&user=${encodeURIComponent(username)}` : `${url}?user=${encodeURIComponent(username)}`;
+              console.log(`[APPPC-COACH] Ajout du paramètre user à l'iframe: ${finalUrl}`);
+            }
 
-        // Ajouter le paramètre user à l'URL seulement si targetUser existe
-        if (targetUser && !url.includes('?')) {
-          url += `?user=${targetUser}`;
-        } else if (targetUser && url.includes('?')) {
-          url += `&user=${targetUser}`;
-        }
+            // ⚡ NOUVEAU: Listener pour cacher le spinner quand la page est chargée
+            const hideSpinnerOnLoad = function() {
+              // ⚡ Attendre 500ms APRÈS le load pour s'assurer que le JavaScript a fini de s'exécuter
+              setTimeout(() => {
+                if (pageSpinner) {
+                  pageSpinner.style.display = 'none';
+                  console.log(`[APPPC-COACH] ✅ Spinner caché - ${pageName} chargé`);
+                }
+                // ⚡ Remettre l'iframe visible maintenant que tout est chargé
+                targetIframe.style.opacity = '1';
+              }, 500); // Délai pour que le JS soit complètement chargé et visible
+            };
 
-        console.log(`[APPPC] Navigation vers ${pageName}`);
+            targetIframe.src = finalUrl;
+            targetIframe.addEventListener('load', hideSpinnerOnLoad, { once: true });
 
-        // PC: Utiliser une seule iframe qui change de src
-        if (window.innerWidth > 768) {
-          const iframe = document.getElementById('page-iframe');
-          if (iframe) {
-            iframe.src = url;
-          }
-        }
-        // MOBILE: Utiliser le système multi-iframes pour swipe fluide
-        else {
-          // Cacher toutes les iframes mobile
-          document.querySelectorAll('.page-iframe-mobile').forEach(iframe => {
-            iframe.style.display = 'none';
-          });
-
-          // Afficher l'iframe correspondante
-          const targetIframe = document.getElementById(`iframe-${pageName}`);
-          if (targetIframe) {
-            console.log(`[APPPC] Navigation vers ${pageName} - src actuel: "${targetIframe.src}"`);
-
-            // Si l'iframe n'a pas encore de src (pages à la demande), la charger
-            if (!targetIframe.src || targetIframe.src === window.location.href || targetIframe.src === '') {
-              console.log(`[APPPC] ⏳ Chargement initial de ${pageName}: ${url}`);
-              targetIframe.src = url;
-
-              // Injecter CSS pour cacher les scrollbars quand l'iframe est chargée
+            // Sur mobile, injecter CSS pour cacher les scrollbars quand l'iframe est chargée
+            if (window.innerWidth <= 768) {
               targetIframe.addEventListener('load', function() {
                 hideScrollbarsInIframe(targetIframe);
               });
-            } else {
-              console.log(`[APPPC] ✅ Page ${pageName} déjà chargée - affichage instantané`);
             }
-            targetIframe.style.display = 'block';
           } else {
-            console.error(`[APPPC] Iframe non trouvée pour: ${pageName}`);
+            // Vérifier si le paramètre user a changé et forcer un reload si nécessaire
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentUsername = urlParams.get('user');
+            const iframeSrc = targetIframe.getAttribute('src');
+
+            // Vérifier si l'iframe a le bon paramètre user
+            let needsUserUpdate = false;
+            if (currentUsername) {
+              const iframeUrl = new URL(iframeSrc, window.location.origin);
+              const iframeUsername = iframeUrl.searchParams.get('user');
+
+              if (iframeUsername !== currentUsername) {
+                console.log(`[APPPC-COACH] ⚠️ Username changé (${iframeUsername} -> ${currentUsername}) - Rechargement forcé`);
+                needsUserUpdate = true;
+              }
+            }
+
+            if (needsUserUpdate) {
+              // Forcer le rechargement avec le bon username
+              let finalUrl = url;
+              if (currentUsername) {
+                finalUrl = url.includes('?') ? `${url}&user=${encodeURIComponent(currentUsername)}` : `${url}?user=${encodeURIComponent(currentUsername)}`;
+              }
+              targetIframe.src = finalUrl;
+            } else {
+              // ⚡ TOUJOURS recharger le JavaScript pour avoir les données fraîches
+              // Le HTML/CSS restent en cache (rapide), mais le JS se réexécute
+              console.log(`[APPPC-COACH] 🔄 Rechargement du JavaScript pour: ${pageName}`);
+
+              // ⚡ CACHER L'IFRAME IMMÉDIATEMENT pour éviter le flash
+              targetIframe.style.opacity = '0';
+
+              // ⚡ AFFICHER le spinner IMMÉDIATEMENT (pas de délai)
+              // MAIS seulement si le loading-overlay principal n'est pas visible
+              const spinner = document.getElementById('page-loading-spinner');
+              const loadingOverlay = document.getElementById('loading-overlay');
+              const isInitialLoad = loadingOverlay && !loadingOverlay.classList.contains('hidden');
+
+              // ⚡ Ajuster la position du spinner selon la sidebar (desktop vs mobile)
+              if (spinner && !isInitialLoad) {
+                const sidebar = document.querySelector('.sidebar');
+                const isMobile = window.innerWidth <= 768;
+
+                if (isMobile) {
+                  // Mobile: pas de sidebar, spinner couvre toute la zone
+                  spinner.style.left = '0';
+                  spinner.style.top = '0';
+                } else {
+                  // Desktop: ajuster selon si sidebar expanded ou collapsed
+                  const sidebarWidth = sidebar && sidebar.classList.contains('expanded') ? '260px' : '80px';
+                  spinner.style.left = sidebarWidth;
+                  spinner.style.top = '90px'; // Hauteur du header
+                }
+
+                // Afficher le spinner pour la navigation entre pages
+                spinner.style.display = 'flex';
+              }
+
+              // ⚡ Fonction pour cacher le spinner après chargement
+              const hideSpinner = () => {
+                // ⚡ Attendre 500ms APRÈS le load pour s'assurer que le JavaScript a fini de s'exécuter
+                // (certaines pages comme Ventes ont beaucoup de JS à exécuter)
+                setTimeout(() => {
+                  if (spinner) {
+                    spinner.style.display = 'none';
+                  }
+                  // ⚡ Remettre l'iframe visible maintenant que tout est chargé
+                  targetIframe.style.opacity = '1';
+                }, 500); // Délai pour que le JS soit complètement chargé et visible
+              };
+
+              // ⚡ Écouter le chargement de l'iframe
+              targetIframe.addEventListener('load', hideSpinner, { once: true });
+
+              try {
+                targetIframe.contentWindow.location.reload();
+              } catch (e) {
+                console.log(`[APPPC-COACH] Impossible de recharger (cross-origin), rechargement via src`);
+                targetIframe.src = targetIframe.src; // Force reload via src
+              }
+            }
           }
+          targetIframe.style.display = 'block';
+        } else {
+          console.error(`[APPPC-COACH] Iframe non trouvée pour: ${pageName}`);
         }
 
-        // Mettre a jour le menu actif
+        // Mettre à jour le menu actif
         this.updateActiveMenu(pageName);
         this.currentPage = pageName;
 
@@ -3574,8 +3666,15 @@
         const checkGuideAndLoadInitialPage = async () => {
           const initialPage = location.hash.slice(2) || 'dashboard';
 
-          // Charger la page directement
-          this.loadPage(initialPage);
+          // ⚡ NE PAS charger la page si c'est le chargement initial
+          // Le système de préchargement s'occupe déjà d'afficher le dashboard
+          // On charge seulement si l'URL a un hash différent de dashboard
+          if (initialPage !== 'dashboard') {
+            this.loadPage(initialPage);
+          } else {
+            // Juste mettre à jour le menu actif sans recharger
+            this.updateActiveMenu('dashboard');
+          }
 
           // Initialiser l'icône sélectionnée au chargement
           setTimeout(() => {
@@ -4568,13 +4667,15 @@
 
       console.log('[LAUNCH] Qwota SPA initialized');
 
-      // MOBILE UNIQUEMENT: Précharger les pages principales et cacher les scrollbars
-      if (window.innerWidth <= 768) {
-        console.log('[MOBILE] 🚀 DÉMARRAGE DU PRÉCHARGEMENT DE TOUTES LES PAGES');
-        let loadedPages = 0;
+      // DESKTOP & MOBILE: Précharger les pages principales
+      const isDesktop = window.innerWidth > 768;
+      const deviceType = isDesktop ? 'DESKTOP' : 'MOBILE';
 
-        // Fonction pour mettre à jour la barre de progression
-        const updateLoadingProgress = (loaded, total) => {
+      console.log(`[${deviceType}] 🚀 DÉMARRAGE DU PRÉCHARGEMENT DE TOUTES LES PAGES`);
+      let loadedPages = 0;
+
+      // Fonction pour mettre à jour la barre de progression
+      const updateLoadingProgress = (loaded, total) => {
           const percentage = Math.round((loaded / total) * 100);
           const progressFill = document.getElementById('loading-progress-fill');
           const progressText = document.getElementById('loading-progress-text');
@@ -4588,82 +4689,177 @@
         // Fonction pour masquer l'écran de chargement
         const hideLoadingScreen = () => {
           const loadingOverlay = document.getElementById('loading-overlay');
+          const appContainer = document.getElementById('app-container');
+
           if (loadingOverlay) {
-            console.log('[MOBILE] 🎉 Masquage de l\'écran de chargement');
+            console.log('[COACH] 🎉 Masquage de l\'écran de chargement');
             setTimeout(() => {
               loadingOverlay.classList.add('hidden');
+
+              if (appContainer) {
+                appContainer.classList.add('loaded');
+                appContainer.style.opacity = '1';
+              }
+
+              // ⚡ Le dashboard est déjà affiché et chargé par le préchargement
+              // NE PAS modifier le hash pour éviter de déclencher un rechargement
             }, 500); // Petit délai pour voir 100%
           }
         };
 
-        // Pages à précharger sur mobile - ordre prioritaire pour chargement optimal
-        const pagesToPreload = [
-          // Navigation principale (priorité haute)
-          { id: 'iframe-outils', url: '/outilsmobile', name: 'Outils Mobile' },
-          { id: 'iframe-gestions', url: '/gestionsmobile', name: 'Gestions Mobile' },
-          { id: 'iframe-rpo', url: '/rpo', name: 'RPO' },
-          { id: 'iframe-travaux', url: '/travaux', name: 'Travaux' },
-          { id: 'iframe-centralevue', url: '/centralevue', name: 'Centrale Vue' },
-          { id: 'iframe-gamification', url: '/gamification', name: 'Gamification' },
-          // Sous-pages Outils (très utilisées - priorité haute)
-          { id: 'iframe-calcul', url: '/calcul', name: 'Calcul' },
-          { id: 'iframe-soumissions', url: '/soumissions', name: 'Créer Soumission' },
-          { id: 'iframe-gqp', url: '/gqp', name: 'GQP' },
-          { id: 'iframe-facture', url: '/facture', name: 'Facture' },
-          // Sous-pages Gestions (priorité moyenne)
-          { id: 'iframe-validation_employes', url: '/coach_validation_employes', name: 'Validation Employés' },
-          { id: 'iframe-gestion_employes_coach', url: '/coach_gestionemployes', name: 'Gestion Employés Coach' },
-          { id: 'iframe-gestionemployes', url: '/gestionemployes', name: 'Gestion Employés' },
-          { id: 'iframe-facturationqe', url: '/facturationqe?page=status', name: 'Facturation QE' },
-          { id: 'iframe-avis', url: '/avis', name: 'Avis' },
-          { id: 'iframe-centrale', url: '/centrale', name: 'Centrale' },
-          { id: 'iframe-employes', url: '/coach_validation_employes', name: 'Employés Coach' }
+        // ⚡ BATCH LOADING: Pages par ordre de priorité (charger 4 à la fois)
+        const preloadQueue = [
+          // PRIORITÉ 1: Pages les plus utilisées (charger en premier)
+          { id: 'rpo', url: '/rpo', name: 'RPO', priority: 1 },
+          { id: 'coach_rpo', url: '/coach_rpo', name: 'Coach RPO', priority: 1 },
+          { id: 'calculateur', url: '/calcul', name: 'Calculateur', priority: 1 },
+          { id: 'facture', url: '/facture', name: 'Facture', priority: 1 },
+
+          // PRIORITÉ 2: Pages courantes
+          { id: 'soumissions', url: '/soumissions', name: 'Soumissions', priority: 2 },
+          { id: 'gqp', url: '/gqp', name: 'GQP', priority: 2 },
+          { id: 'parametres', url: '/coach_parametres', name: 'Paramètres', priority: 2 },
+          { id: 'gestionemployes', url: '/gestionemployes', name: 'Gestion Employés', priority: 2 },
+
+          // PRIORITÉ 3: Pages secondaires
+          { id: 'facturationqe', url: '/facturationqe?page=status', name: 'Facturation QE', priority: 3 },
+          { id: 'central', url: '/centralevue', name: 'Centrale Vue', priority: 3 },
+          { id: 'gamification', url: '/gamification', name: 'Gamification', priority: 3 },
+          { id: 'validation_employes', url: '/coach_validation_employes', name: 'Validation Employés', priority: 3 },
+
+          // PRIORITÉ 4: Pages rarement utilisées
+          { id: 'avis', url: '/avis', name: 'Avis', priority: 4 },
+          { id: 'travaux', url: '/travaux', name: 'Travaux', priority: 4 }
         ];
 
-        // Calculer le total (dashboard + toutes les pages)
-        const totalPages = 1 + pagesToPreload.length;
-        console.log(`[MOBILE] 📋 Total de pages à précharger: ${totalPages} (dashboard + ${pagesToPreload.length} autres)`);
+        let loadedCount = 0;
+        const totalPages = preloadQueue.length;
 
-        // Dashboard en premier (page par défaut)
-        const dashboardIframe = document.getElementById('iframe-dashboard');
-        if (dashboardIframe) {
-          console.log('[MOBILE] ⏳ Chargement de: dashboard');
-          dashboardIframe.src = '/dashboard';
-          dashboardIframe.style.display = 'block';
-          dashboardIframe.addEventListener('load', function() {
-            hideScrollbarsInIframe(dashboardIframe);
-            loadedPages++;
-            updateLoadingProgress(loadedPages, totalPages);
-            console.log(`[MOBILE] ✅ Page chargée (${loadedPages}/${totalPages}): dashboard`);
-            if (loadedPages === totalPages) {
-              console.log('[MOBILE] 🎉 TOUTES LES PAGES SONT PRÉCHARGÉES ET PRÊTES!');
-              hideLoadingScreen();
+        // ⚡ Charger par BATCH (4 pages en parallèle à la fois)
+        const BATCH_SIZE = 4;
+        let currentBatchIndex = 0;
+
+        function loadNextBatch() {
+          const startIndex = currentBatchIndex * BATCH_SIZE;
+          const endIndex = Math.min(startIndex + BATCH_SIZE, totalPages);
+
+          if (startIndex >= totalPages) {
+            console.log(`[${deviceType}] 🎉 TOUTES LES PAGES PRÉCHARGÉES (${loadedCount}/${totalPages})`);
+            hideLoadingScreen();
+            return;
+          }
+
+          const batch = preloadQueue.slice(startIndex, endIndex);
+          console.log(`[${deviceType}] 📦 Chargement batch ${currentBatchIndex + 1} (${batch.length} pages)...`);
+
+          let batchLoaded = 0;
+          let batchCompleted = false;
+
+          batch.forEach((page) => {
+            const iframe = document.getElementById(`iframe-${page.id}`);
+            const srcAttr = iframe ? iframe.getAttribute('src') : null;
+            const needsLoading = !srcAttr || srcAttr === '' || srcAttr === 'about:blank';
+
+            if (iframe && needsLoading) {
+              console.log(`[${deviceType}] ⏳ [P${page.priority}]: ${page.name}`);
+
+              // Rendre l'iframe visible hors écran pour forcer le chargement complet
+              iframe.style.display = 'block';
+              iframe.style.visibility = 'visible';
+              iframe.style.position = 'fixed';
+              iframe.style.top = '-9999px';
+              iframe.style.left = '-9999px';
+              iframe.style.zIndex = '-9999';
+              iframe.style.pointerEvents = 'none';
+
+              iframe.addEventListener('load', function() {
+                loadedCount++;
+                batchLoaded++;
+                console.log(`[${deviceType}] ✓ (${loadedCount}/${totalPages}): ${page.name}`);
+
+                // Mettre à jour la barre de progression
+                const progress = Math.round((loadedCount / totalPages) * 100);
+                updateLoadingProgress(loadedCount, totalPages);
+
+                // Attendre 500ms pour que tous les scripts/CSS se chargent
+                setTimeout(() => {
+                  // Re-cacher l'iframe maintenant que tout est en cache
+                  iframe.style.display = 'none';
+                  iframe.style.visibility = '';
+                  iframe.style.position = '';
+                  iframe.style.top = '';
+                  iframe.style.left = '';
+                  iframe.style.zIndex = '';
+                  iframe.style.pointerEvents = '';
+
+                  if (!isDesktop) hideScrollbarsInIframe(iframe);
+
+                  console.log(`[${deviceType}] 💾 HTML + CSS + JS en cache: ${page.name}`);
+
+                  // Quand tout le batch est chargé, charger le batch suivant
+                  if (batchLoaded === batch.length && !batchCompleted) {
+                    batchCompleted = true;
+                    currentBatchIndex++;
+                    setTimeout(loadNextBatch, 50); // Petit délai entre les batchs
+                  }
+                }, 500);
+              }, { once: true });
+
+              // Ajouter le paramètre ?user= si présent
+              const urlParams = new URLSearchParams(window.location.search);
+              const username = urlParams.get('user');
+              let finalUrl = page.url;
+              if (username) {
+                finalUrl = page.url.includes('?') ? `${page.url}&user=${encodeURIComponent(username)}` : `${page.url}?user=${encodeURIComponent(username)}`;
+              }
+
+              iframe.src = finalUrl;
+            } else if (!iframe) {
+              console.error(`[${deviceType}] ❌ Iframe non trouvée: iframe-${page.id}`);
+              // Compter quand même comme chargé pour ne pas bloquer
+              loadedCount++;
+              batchLoaded++;
+              if (batchLoaded === batch.length && !batchCompleted) {
+                batchCompleted = true;
+                currentBatchIndex++;
+                setTimeout(loadNextBatch, 50);
+              }
+            } else {
+              // Déjà chargé, compter
+              loadedCount++;
+              batchLoaded++;
+              console.log(`[${deviceType}] ↻ Déjà en cache: ${page.name}`);
+              if (batchLoaded === batch.length && !batchCompleted) {
+                batchCompleted = true;
+                currentBatchIndex++;
+                setTimeout(loadNextBatch, 50);
+              }
             }
           });
         }
 
-        pagesToPreload.forEach((page, index) => {
-          const iframe = document.getElementById(page.id);
-          if (iframe) {
-            console.log(`[MOBILE] ⏳ Chargement (${index + 1}/${pagesToPreload.length}): ${page.name} (${page.url})`);
-            iframe.src = page.url;
-            iframe.addEventListener('load', function() {
-              hideScrollbarsInIframe(iframe);
-              loadedPages++;
-              updateLoadingProgress(loadedPages, totalPages);
-              console.log(`[MOBILE] ✅ Page chargée (${loadedPages}/${totalPages}): ${page.name}`);
+        // Dashboard en premier, puis démarrer les batchs
+        const dashboardIframe = document.getElementById('iframe-dashboard');
+        if (dashboardIframe) {
+          console.log(`[${deviceType}] ⏳ Chargement de: Dashboard`);
 
-              // Quand toutes les pages sont chargées
-              if (loadedPages === totalPages) {
-                console.log('[MOBILE] 🎉 TOUTES LES PAGES SONT PRÉCHARGÉES ET PRÊTES!');
-                hideLoadingScreen();
-              }
-            });
-          } else {
-            console.error(`[MOBILE] ❌ Iframe non trouvée: ${page.id}`);
-          }
-        });
-      }
+          // ⚡ Ajouter le paramètre ?user= au dashboard (comme apppc entrepreneur)
+          const urlParams = new URLSearchParams(window.location.search);
+          const username = urlParams.get('user');
+          const dashboardUrl = username ? `/dashboard?user=${encodeURIComponent(username)}` : '/dashboard';
+
+          dashboardIframe.src = dashboardUrl;
+          dashboardIframe.style.display = 'block';
+          dashboardIframe.addEventListener('load', function() {
+            if (!isDesktop) hideScrollbarsInIframe(dashboardIframe);
+            console.log(`[${deviceType}] ✅ Dashboard chargé - Démarrage des batchs...`);
+            // Démarrer le chargement par batch après le dashboard
+            setTimeout(loadNextBatch, 100);
+          }, { once: true });
+        } else {
+          // Pas de dashboard, démarrer directement les batchs
+          setTimeout(loadNextBatch, 100);
+        }
 
       // ===== SWIPE NAVIGATION SUR MOBILE AVEC ANIMATION FLUIDE =====
       if (window.innerWidth <= 768) {
@@ -4678,7 +4874,7 @@
         }
 
         // Ordre des pages pour la navigation par swipe
-        const pageOrder = ['rpo', 'travaux', 'dashboard', 'outils', 'gestions'];
+        const pageOrder = ['rpo', 'travaux', 'dashboard', 'calculateur', 'gestionemployes'];
 
         // Variables pour le swipe
         let touchStartX = 0;

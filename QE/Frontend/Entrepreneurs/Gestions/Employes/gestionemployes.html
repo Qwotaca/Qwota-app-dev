@@ -1314,6 +1314,69 @@
     </div>
   </div>
 
+  <!-- Popup Validation Erreurs -->
+  <div id="popupValidationErreurs" class="fixed inset-0 flex items-center justify-center z-[60]" style="background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(8px); display: none;">
+    <div class="status-card" style="max-width: 500px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #ef4444; box-shadow: 0 20px 60px rgba(239, 68, 68, 0.3);">
+      <!-- Header -->
+      <div class="flex items-center justify-between p-6 pb-4" style="border-bottom: 1px solid rgba(239, 68, 68, 0.3);">
+        <h3 class="text-xl font-bold" style="color: #ef4444;">
+          <i class="fas fa-exclamation-triangle mr-2"></i>
+          Champs manquants
+        </h3>
+        <button onclick="fermerPopupValidation()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-6">
+        <p class="text-sm mb-4" style="color: #94a3b8;">
+          Veuillez remplir les champs obligatoires suivants avant de continuer :
+        </p>
+        <ul id="listeChampsManquants" class="space-y-2" style="color: #f1f5f9;">
+          <!-- Liste dynamique des champs manquants -->
+        </ul>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex justify-end gap-3 p-6 pt-0">
+        <button onclick="fermerPopupValidation()" class="btn-primary" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;">
+          <i class="fas fa-check mr-2"></i>Compris
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup Aucune modification détectée -->
+  <div id="popupAucuneModification" class="fixed inset-0 flex items-center justify-center z-[60]" style="background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(8px); display: none;">
+    <div class="status-card" style="max-width: 500px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #f59e0b; box-shadow: 0 20px 60px rgba(245, 158, 11, 0.3);">
+      <!-- Header -->
+      <div class="flex items-center justify-between p-6 pb-4" style="border-bottom: 1px solid rgba(245, 158, 11, 0.3);">
+        <h3 class="text-xl font-bold" style="color: #f59e0b;">
+          <i class="fas fa-info-circle mr-2"></i>
+          Aucune modification
+        </h3>
+        <button onclick="fermerPopupAucuneModification()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;" onmouseover="this.style.background='rgba(245, 158, 11, 0.3)'" onmouseout="this.style.background='rgba(245, 158, 11, 0.2)'">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-6">
+        <p class="text-sm mb-4" style="color: #94a3b8;">
+          Aucune modification n'a été détectée. Veuillez modifier au moins un champ ou ajouter un document pour envoyer une demande de modification.
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex justify-end gap-3 p-6 pt-0">
+        <button onclick="fermerPopupAucuneModification()" class="btn-secondary">
+          <i class="fas fa-arrow-left mr-2"></i>Retour aux modifications
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Activer un employé -->
   <div id="modalActivation" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none;">
     <div class="status-card w-full" style="max-width: 900px; max-height: 75vh; display: flex; flex-direction: column;">
@@ -1330,7 +1393,7 @@
 
       <!-- Body scrollable -->
       <div style="flex: 1; overflow-y: auto; padding: 1.5rem;">
-        <form id="formActivation" class="space-y-4" autocomplete="off">
+        <form id="formActivation" class="space-y-4" autocomplete="off" novalidate>
         <!-- Section: Informations personnelles -->
         <div>
           <h4 class="text-sm font-semibold mb-3" style="color: var(--text-light);">
@@ -1405,22 +1468,22 @@
               <input type="text" id="adresse" required class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="123 Rue Exemple">
             </div>
 
-            <!-- Appartement -->
-            <div>
-              <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Appartement (facultatif)</label>
-              <input type="text" id="appartement" class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="App. 101">
-            </div>
-
             <!-- Ville -->
             <div>
-              <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Ville *</label>
-              <input type="text" id="ville" required class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="Ville">
+              <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Ville * <span style="color: #64748b; font-size: 0.75rem;">(Auto)</span></label>
+              <input type="text" id="ville" required readonly class="w-full p-2 text-sm rounded-lg" style="background: #0a0f1a; border: 2px solid var(--border-dark); color: #64748b; cursor: not-allowed;" placeholder="Rempli automatiquement">
             </div>
 
             <!-- Code Postal -->
             <div>
-              <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Code Postal *</label>
-              <input type="text" id="codePostal" required maxlength="7" class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="H1H 1H1">
+              <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Code Postal * <span style="color: #64748b; font-size: 0.75rem;">(Auto)</span></label>
+              <input type="text" id="codePostal" required readonly maxlength="7" class="w-full p-2 text-sm rounded-lg" style="background: #0a0f1a; border: 2px solid var(--border-dark); color: #64748b; cursor: not-allowed;" placeholder="Rempli automatiquement">
+            </div>
+
+            <!-- Appartement -->
+            <div>
+              <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Appartement <span style="color: #64748b; font-size: 0.75rem;">(facultatif)</span></label>
+              <input type="text" id="appartement" class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="App. 101">
             </div>
           </div>
         </div>
@@ -1528,12 +1591,21 @@
   </div>
 
   <!-- Modal viewer (identique à celui de la Centrale) -->
-  <div id="centraleViewerModal" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px); display: none; z-index: 99999 !important;">
-    <div class="status-card" style="max-width: 90vw; max-height: 90vh; position: relative; overflow: visible;">
-      <button id="closeViewer" class="viewer-close" style="position: absolute; top: 10px; right: 10px; z-index: 100000; background: rgba(0,0,0,0.5); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 20px;">
-        <i class="fas fa-times"></i>
-      </button>
-      <div id="centraleViewerContent" class="viewer-content" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;"></div>
+  <div id="centraleViewerModal" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(8px); display: none; z-index: 99999 !important;">
+    <div class="flex flex-col p-6 mx-4" style="width: 90%; max-width: 1200px; height: 85vh; background: #1e293b; border: 1px solid var(--border-dark); border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-4" style="padding-bottom: 16px; border-bottom: 1px solid rgba(148, 163, 184, 0.1);">
+        <h3 class="text-lg font-semibold" style="color: var(--text-light);">
+          <i class="fas fa-file-alt mr-2" style="color: #60a5fa;"></i>
+          <span id="centraleViewerTitle">Aperçu du document</span>
+        </h3>
+        <button id="closeViewer" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div id="centraleViewerContent" class="viewer-content" style="flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.5); border-radius: 8px;"></div>
     </div>
   </div>
 
@@ -2589,7 +2661,7 @@
                 <div style="position: relative;">
                   <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Genre *</label>
                   <input type="hidden" id="reactiverGenreHidden" required>
-                  <div class="dropdown-secondary" id="reactiverGenre-dropdown" style="width: 100% !important; background: #172033; border: 2px solid var(--border-dark); color: var(--text-light); border-radius: 12px; padding: 0.5rem; font-size: 0.875rem; cursor: pointer;">
+                  <div class="dropdown-secondary" id="reactiverGenre-dropdown" style="width: 100% !important; background: #172033; border: 2px solid var(--border-dark); color: var(--text-light); border-radius: 12px; padding: 12px 16px; font-size: 0.875rem; cursor: pointer;">
                     <span id="reactiverGenre-selected">Sélectionner</span>
                     <i class="fas fa-chevron-down"></i>
                   </div>
@@ -2643,7 +2715,7 @@
                 </div>
                 <div>
                   <label class="block text-sm mb-1" style="color: #10b981; font-weight: 600;">Taux horaire ($) * <span style="color: #fbbf24; font-size: 0.75rem;">(À remplir)</span></label>
-                  <input type="text" id="reactiverTauxHoraire" required class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid #10b981; color: var(--text-light);" placeholder="25.00" oninput="formatTauxHoraire(this)" onblur="formatTauxHoraireComplet(this)">
+                  <input type="text" id="reactiverTauxHoraire" required class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid #10b981; color: var(--text-light);" placeholder="25,00">
                 </div>
                 <div>
                   <label class="block text-sm mb-1" style="color: #10b981; font-weight: 600;">Date première journée * <span style="color: #fbbf24; font-size: 0.75rem;">(À remplir)</span></label>
@@ -2669,12 +2741,16 @@
                   <input type="text" id="reactiverAdresse" required class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="123 Rue Exemple">
                 </div>
                 <div>
-                  <label class="block text-sm mb-1" style="color: rgba(148, 163, 184, 0.7);">Ville *</label>
-                  <input type="text" id="reactiverVille" required class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="Ville">
+                  <label class="block text-sm mb-1" style="color: rgba(148, 163, 184, 0.7);">Ville * <span style="color: #64748b; font-size: 0.75rem;">(Auto)</span></label>
+                  <input type="text" id="reactiverVille" required readonly class="w-full p-2 text-sm rounded-lg" style="background: #0a0f1a; border: 2px solid var(--border-dark); color: #64748b; cursor: not-allowed;" placeholder="Rempli automatiquement">
                 </div>
                 <div>
-                  <label class="block text-sm mb-1" style="color: rgba(148, 163, 184, 0.7);">Code postal *</label>
-                  <input type="text" id="reactiverCodePostal" required maxlength="7" class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="H1H 1H1">
+                  <label class="block text-sm mb-1" style="color: rgba(148, 163, 184, 0.7);">Code postal * <span style="color: #64748b; font-size: 0.75rem;">(Auto)</span></label>
+                  <input type="text" id="reactiverCodePostal" required readonly maxlength="7" class="w-full p-2 text-sm rounded-lg" style="background: #0a0f1a; border: 2px solid var(--border-dark); color: #64748b; cursor: not-allowed;" placeholder="Rempli automatiquement">
+                </div>
+                <div>
+                  <label class="block text-sm mb-1" style="color: rgba(148, 163, 184, 0.7);">Appartement <span style="color: #64748b; font-size: 0.75rem;">(facultatif)</span></label>
+                  <input type="text" id="reactiverAppartement" class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="Numéro d'appartement">
                 </div>
               </div>
             </div>
@@ -2705,10 +2781,9 @@
                 </button>
               </div>
               <div id="existingReactiverSpecimen" class="mt-2 hidden">
-                <a href="javascript:void(0)" class="text-xs flex items-center gap-1" style="color: #60a5fa;">
-                  <i class="fas fa-file-alt"></i>
-                  <span>Document actuel</span>
-                </a>
+                <button type="button" onclick="openFileModal(this.dataset.fileUrl, 'Spécimen chèque actuel')" data-file-url="" class="w-auto text-xs py-1.5 px-2 rounded transition-colors flex items-center justify-center gap-1" style="background: rgba(96, 165, 250, 0.1); border: 1px solid rgba(96, 165, 250, 0.3); color: #60a5fa; margin-bottom: 1rem;">
+                  <i class="fas fa-eye mr-1"></i> Voir actuel
+                </button>
               </div>
             </div>
 
@@ -2728,10 +2803,9 @@
                 </button>
               </div>
               <div id="existingReactiverCertificat" class="mt-2 hidden">
-                <a href="javascript:void(0)" class="text-xs flex items-center gap-1" style="color: #60a5fa;">
-                  <i class="fas fa-file-alt"></i>
-                  <span>Document actuel</span>
-                </a>
+                <button type="button" onclick="openFileModal(this.dataset.fileUrl, 'Certificat de sécurité actuel')" data-file-url="" class="w-auto text-xs py-1.5 px-2 rounded transition-colors flex items-center justify-center gap-1" style="background: rgba(96, 165, 250, 0.1); border: 1px solid rgba(96, 165, 250, 0.3); color: #60a5fa; margin-bottom: 1rem;">
+                  <i class="fas fa-eye mr-1"></i> Voir actuel
+                </button>
               </div>
             </div>
 
@@ -2751,10 +2825,9 @@
                 </button>
               </div>
               <div id="existingReactiverCarte" class="mt-2 hidden">
-                <a href="javascript:void(0)" class="text-xs flex items-center gap-1" style="color: #60a5fa;">
-                  <i class="fas fa-file-alt"></i>
-                  <span>Document actuel</span>
-                </a>
+                <button type="button" onclick="openFileModal(this.dataset.fileUrl, 'Carte d\'assurance maladie actuelle')" data-file-url="" class="w-auto text-xs py-1.5 px-2 rounded transition-colors flex items-center justify-center gap-1" style="background: rgba(96, 165, 250, 0.1); border: 1px solid rgba(96, 165, 250, 0.3); color: #60a5fa; margin-bottom: 1rem;">
+                  <i class="fas fa-eye mr-1"></i> Voir actuel
+                </button>
               </div>
             </div>
           </div>
@@ -2871,7 +2944,7 @@
                 </div>
                 <div>
                   <label class="block text-sm mb-1" style="color: rgba(148, 163, 184, 0.7);">Taux horaire ($) *</label>
-                  <input type="text" id="modifierTauxHoraire" required class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="25.00" oninput="formatTauxHoraire(this)" onblur="formatTauxHoraireComplet(this)">
+                  <input type="text" id="modifierTauxHoraire" required class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="25,00">
                 </div>
                 <div>
                   <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Date première journée *</label>
@@ -2897,12 +2970,16 @@
                   <input type="text" id="modifierAdresse" required class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="123 Rue Exemple">
                 </div>
                 <div>
-                  <label class="block text-sm mb-1" style="color: rgba(148, 163, 184, 0.7);">Ville *</label>
-                  <input type="text" id="modifierVille" required class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="Ville">
+                  <label class="block text-sm mb-1" style="color: rgba(148, 163, 184, 0.7);">Ville * <span style="color: #64748b; font-size: 0.75rem;">(Auto)</span></label>
+                  <input type="text" id="modifierVille" required readonly class="w-full p-2 text-sm rounded-lg" style="background: #0a0f1a; border: 2px solid var(--border-dark); color: #64748b; cursor: not-allowed;" placeholder="Rempli automatiquement">
                 </div>
                 <div>
-                  <label class="block text-sm mb-1" style="color: rgba(148, 163, 184, 0.7);">Code postal *</label>
-                  <input type="text" id="modifierCodePostal" required maxlength="7" class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="H1H 1H1">
+                  <label class="block text-sm mb-1" style="color: rgba(148, 163, 184, 0.7);">Code postal * <span style="color: #64748b; font-size: 0.75rem;">(Auto)</span></label>
+                  <input type="text" id="modifierCodePostal" required readonly maxlength="7" class="w-full p-2 text-sm rounded-lg" style="background: #0a0f1a; border: 2px solid var(--border-dark); color: #64748b; cursor: not-allowed;" placeholder="Rempli automatiquement">
+                </div>
+                <div>
+                  <label class="block text-sm mb-1" style="color: rgba(148, 163, 184, 0.7);">Appartement <span style="color: #64748b; font-size: 0.75rem;">(facultatif)</span></label>
+                  <input type="text" id="modifierAppartement" class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="Numéro d'appartement">
                 </div>
               </div>
             </div>
@@ -2917,9 +2994,9 @@
               <!-- Spécimen chèque -->
               <div class="py-2" style="border-bottom: 1px dashed rgba(148, 163, 184, 0.1);">
                 <label class="block text-sm font-medium mb-2" style="color: rgba(148, 163, 184, 0.7);">Spécimen chèque</label>
-                <div id="modifier-specimen-preview" style="display: none; text-align: center; margin-bottom: 0.5rem;">
-                  <button type="button" onclick="openFileModal(document.getElementById('modifier-specimen-link').href)" class="text-sm font-medium px-3 py-1.5 rounded-full" style="color: #60a5fa; background: rgba(96, 165, 250, 0.15); border: 1px solid rgba(96, 165, 250, 0.3); cursor: pointer;">
-                    <i class="fas fa-eye mr-1"></i>Voir actuel
+                <div id="modifier-specimen-preview" style="display: none; text-align: center;">
+                  <button type="button" onclick="openFileModal(document.getElementById('modifier-specimen-link').href)" class="text-sm font-medium px-3 py-1.5 rounded-full" style="color: #60a5fa; background: rgba(96, 165, 250, 0.15); border: 1px solid rgba(96, 165, 250, 0.3); cursor: pointer; margin-bottom: 1rem;">
+                    <i class="fas fa-eye mr-1"></i> Voir actuel
                   </button>
                   <a href="#" id="modifier-specimen-link" style="display: none;"></a>
                 </div>
@@ -2940,9 +3017,9 @@
               <!-- Certificat sécurité -->
               <div class="py-2" style="border-bottom: 1px dashed rgba(148, 163, 184, 0.1);">
                 <label class="block text-sm font-medium mb-2" style="color: rgba(148, 163, 184, 0.7);">Certificat sécurité</label>
-                <div id="modifier-certificat-preview" style="display: none; text-align: center; margin-bottom: 0.5rem;">
-                  <button type="button" onclick="openFileModal(document.getElementById('modifier-certificat-link').href)" class="text-sm font-medium px-3 py-1.5 rounded-full" style="color: #60a5fa; background: rgba(96, 165, 250, 0.15); border: 1px solid rgba(96, 165, 250, 0.3); cursor: pointer;">
-                    <i class="fas fa-eye mr-1"></i>Voir actuel
+                <div id="modifier-certificat-preview" style="display: none; text-align: center;">
+                  <button type="button" onclick="openFileModal(document.getElementById('modifier-certificat-link').href)" class="text-sm font-medium px-3 py-1.5 rounded-full" style="color: #60a5fa; background: rgba(96, 165, 250, 0.15); border: 1px solid rgba(96, 165, 250, 0.3); cursor: pointer; margin-bottom: 1rem;">
+                    <i class="fas fa-eye mr-1"></i> Voir actuel
                   </button>
                   <a href="#" id="modifier-certificat-link" style="display: none;"></a>
                 </div>
@@ -2963,9 +3040,9 @@
               <!-- Carte assurance maladie -->
               <div class="py-2">
                 <label class="block text-sm font-medium mb-2" style="color: rgba(148, 163, 184, 0.7);">Carte assurance maladie</label>
-                <div id="modifier-carte-preview" style="display: none; text-align: center; margin-bottom: 0.5rem;">
-                  <button type="button" onclick="openFileModal(document.getElementById('modifier-carte-link').href)" class="text-sm font-medium px-3 py-1.5 rounded-full" style="color: #60a5fa; background: rgba(96, 165, 250, 0.15); border: 1px solid rgba(96, 165, 250, 0.3); cursor: pointer;">
-                    <i class="fas fa-eye mr-1"></i>Voir actuel
+                <div id="modifier-carte-preview" style="display: none; text-align: center;">
+                  <button type="button" onclick="openFileModal(document.getElementById('modifier-carte-link').href)" class="text-sm font-medium px-3 py-1.5 rounded-full" style="color: #60a5fa; background: rgba(96, 165, 250, 0.15); border: 1px solid rgba(96, 165, 250, 0.3); cursor: pointer; margin-bottom: 1rem;">
+                    <i class="fas fa-eye mr-1"></i> Voir actuel
                   </button>
                   <a href="#" id="modifier-carte-link" style="display: none;"></a>
                 </div>
@@ -3774,31 +3851,32 @@
         // Initialiser le formatage automatique du téléphone
         initTelephoneFormatting();
 
-        // Formater le taux horaire à 2 décimales
+        // Formatage simple taux horaire: point → virgule et ajouter $
         const tauxHoraireInput = document.getElementById('tauxHoraire');
         if (tauxHoraireInput) {
           tauxHoraireInput.addEventListener('blur', function() {
-            let value = this.value.replace(/[^0-9.]/g, ''); // Garder seulement chiffres et point
+            let value = this.value.trim();
             if (value) {
-              // Limiter à 2 décimales
-              let parts = value.split('.');
-              if (parts.length > 2) {
-                value = parts[0] + '.' + parts.slice(1).join('');
+              // Enlever les $ et espaces pour traiter
+              value = value.replace(/[\$\s]/g, '');
+              // Remplacer point par virgule
+              value = value.replace(/\./g, ',');
+              // Si pas de virgule (pas de décimales), ajouter ,00
+              if (!value.includes(',')) {
+                value = value + ',00';
               }
-              if (parts.length > 1 && parts[1].length > 2) {
-                value = parts[0] + '.' + parts[1].substring(0, 2);
-              }
-              // Convertir en nombre et reformater avec 2 décimales
-              let num = parseFloat(value);
-              if (!isNaN(num)) {
-                this.value = num.toFixed(2);
-              }
+              // Ajouter $ à la fin
+              this.value = value + ' $';
             }
           });
+        }
 
-          // Permettre seulement chiffres, point et backspace pendant la saisie
-          tauxHoraireInput.addEventListener('input', function() {
-            this.value = this.value.replace(/[^0-9.]/g, '');
+        // NAS: seulement 9 chiffres, rien d'autre
+        const nasInput = document.getElementById('nas');
+        if (nasInput) {
+          nasInput.addEventListener('input', function() {
+            // Garder seulement les chiffres, max 9
+            this.value = this.value.replace(/\D/g, '').substring(0, 9);
           });
         }
 
@@ -4317,7 +4395,46 @@
         fileNameDisplay.classList.add('text-gray-600');
       }
     }
-    
+
+    // Afficher le popup de validation avec la liste des champs manquants
+    window.afficherPopupValidation = function(champsManquants) {
+      const popup = document.getElementById('popupValidationErreurs');
+      const liste = document.getElementById('listeChampsManquants');
+
+      if (popup && liste) {
+        // Vider la liste
+        liste.innerHTML = '';
+
+        // Ajouter chaque champ manquant
+        champsManquants.forEach(champ => {
+          const li = document.createElement('li');
+          li.innerHTML = `<i class="fas fa-exclamation-circle mr-2" style="color: #ef4444;"></i>${champ}`;
+          li.style.cssText = 'padding: 0.5rem; background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; border-radius: 4px; font-size: 0.875rem;';
+          liste.appendChild(li);
+        });
+
+        // Afficher le popup
+        popup.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      }
+    };
+
+    // Fermer le popup de validation
+    window.fermerPopupValidation = function() {
+      const popup = document.getElementById('popupValidationErreurs');
+      if (popup) {
+        popup.style.display = 'none';
+        document.body.style.overflow = '';
+      }
+    };
+
+    window.fermerPopupAucuneModification = function() {
+      const popup = document.getElementById('popupAucuneModification');
+      if (popup) {
+        popup.style.display = 'none';
+      }
+    };
+
     // Gérer la soumission du formulaire
     document.addEventListener('DOMContentLoaded', function() {
       const formActivation = document.getElementById('formActivation');
@@ -4325,26 +4442,65 @@
         formActivation.addEventListener('submit', function(e) {
           e.preventDefault();
 
-          // Validation des champs requis
-          const champsRequis = ['nas', 'genre', 'adresse', 'ville', 'codePostal', 'datePremiere', 'posteService', 'tauxHoraire'];
-          let valide = true;
+          // Validation des champs requis avec noms lisibles
+          const champsRequis = {
+            'nomComplet': 'Nom complet',
+            'telephone': 'Téléphone',
+            'courriel': 'Courriel',
+            'posteService': 'Poste',
+            'genre': 'Genre',
+            'nas': 'NAS',
+            'dateNaissance': 'Date de naissance',
+            'adresse': 'Adresse',
+            'ville': 'Ville',
+            'codePostal': 'Code Postal',
+            'datePremiere': 'Date première journée',
+            'tauxHoraire': 'Taux horaire',
+            'specimenCheque': 'Spécimen chèque',
+            'certificatSecurite': 'Certificat sécurité',
+            'carteAssuranceMaladie': 'Carte assurance maladie'
+          };
 
-          champsRequis.forEach(champ => {
-            const element = document.getElementById(champ);
-            if (!element.value.trim()) {
-              element.style.borderColor = '#ef4444'; // Rouge pour les erreurs
-              valide = false;
-            } else {
-              element.style.borderColor = '#d1d5db'; // Gris normal
+          let champsManquants = [];
+
+          Object.keys(champsRequis).forEach(champId => {
+            const element = document.getElementById(champId);
+            if (element) {
+              // Pour les fichiers, vérifier si un fichier est sélectionné
+              if (element.type === 'file') {
+                if (!element.files || element.files.length === 0) {
+                  element.style.borderColor = '#ef4444';
+                  champsManquants.push(champsRequis[champId]);
+                } else {
+                  element.style.borderColor = '';
+                }
+              }
+              // Pour le Genre, rejeter "Non spécifié" ou vide
+              else if (champId === 'genre') {
+                const value = element.value.trim().toLowerCase();
+                if (!value || value === '' || value === 'non spécifié' || value === 'sélectionner') {
+                  element.style.borderColor = '#ef4444';
+                  champsManquants.push(champsRequis[champId]);
+                } else {
+                  element.style.borderColor = '';
+                }
+              }
+              // Pour les autres champs, vérifier la valeur
+              else if (!element.value || !element.value.trim()) {
+                element.style.borderColor = '#ef4444';
+                champsManquants.push(champsRequis[champId]);
+              } else {
+                element.style.borderColor = '';
+              }
             }
           });
 
-          if (valide) {
+          if (champsManquants.length === 0) {
             // Activer via l'API
             activerEmployeAPI();
           } else {
-            // Message plus discret pour les erreurs de validation
-            log('Veuillez remplir tous les champs obligatoires.');
+            // Afficher le popup avec la liste des champs manquants
+            afficherPopupValidation(champsManquants);
           }
         });
       }
@@ -4481,6 +4637,7 @@
               dateNaissance: document.getElementById('modifierDateNaissance').value,
               genre: document.getElementById('modifierGenre').value,
               adresse: document.getElementById('modifierAdresse').value,
+              appartement: document.getElementById('modifierAppartement').value || '',
               ville: document.getElementById('modifierVille').value,
               codePostal: document.getElementById('modifierCodePostal').value,
               telephone: document.getElementById('modifierTelephone').value,
@@ -4490,6 +4647,54 @@
               tauxHoraire: tauxHoraireClean,
               statut: 'en_attente_modification' // Statut spécial pour validation par coach/direction
             };
+
+            // Vérifier si des modifications ont été faites
+            let modificationDetectee = false;
+
+            if (employeDataOriginal) {
+              console.log('Données originales:', employeDataOriginal);
+              console.log('Données modifiées:', employeModifie);
+
+              // Comparer chaque champ (insensible à la casse)
+              const champsAComparer = ['nom', 'nas', 'dateNaissance', 'genre', 'adresse', 'appartement', 'ville', 'codePostal', 'telephone', 'courriel', 'datePremiere', 'posteService'];
+
+              for (const champ of champsAComparer) {
+                const valeurOriginale = (employeDataOriginal[champ] || '').toString().trim().toLowerCase();
+                const valeurActuelle = (employeModifie[champ] || '').toString().trim().toLowerCase();
+
+                console.log(`Comparaison ${champ}: "${valeurOriginale}" vs "${valeurActuelle}"`);
+
+                if (valeurOriginale !== valeurActuelle) {
+                  console.log(`Modification détectée sur le champ: ${champ}`);
+                  modificationDetectee = true;
+                  break;
+                }
+              }
+
+              // Comparer le taux horaire (en float)
+              if (!modificationDetectee) {
+                const tauxOriginal = parseFloat(employeDataOriginal.tauxHoraire) || 0;
+                console.log(`Comparaison taux horaire: ${tauxOriginal} vs ${tauxHoraireClean}`);
+                if (Math.abs(tauxOriginal - tauxHoraireClean) > 0.01) {
+                  console.log('Modification détectée sur le taux horaire');
+                  modificationDetectee = true;
+                }
+              }
+
+              console.log('Modification détectée:', modificationDetectee);
+            }
+
+            // Vérifier si des fichiers ont été ajoutés
+            const fichiersAjoutes = !!(specimenFile || certificatFile || carteFile);
+
+            // Si aucune modification et aucun fichier, afficher le popup
+            if (!modificationDetectee && !fichiersAjoutes) {
+              const popup = document.getElementById('popupAucuneModification');
+              if (popup) {
+                popup.style.display = 'flex';
+              }
+              return;
+            }
 
             log('Données préparées pour l\'API (en attente de modification):', employeModifie);
 
@@ -4502,8 +4707,8 @@
               showNotification('Modifications envoyées pour validation au coach et à la direction', 'success');
               fermerModalModifier();
               chargerEmployes(); // Recharger la liste pour montrer le spinner
-            } catch (error) {
-              error('Erreur lors de l\'envoi des modifications:', error);
+            } catch (err) {
+              console.error('Erreur lors de l\'envoi des modifications:', err);
               showNotification('Erreur lors de l\'envoi des modifications', 'error');
             }
           } else {
@@ -4642,6 +4847,30 @@
         if (googleMapsLoaded && typeof google !== 'undefined' && google.maps && google.maps.places) {
           setupAddressAutocomplete('modifierAdresse', 'modifierVille', 'modifierCodePostal');
         }
+
+        // Formatage simple taux horaire: point → virgule et ajouter $
+        const modifierTauxInput = document.getElementById('modifierTauxHoraire');
+        if (modifierTauxInput) {
+          modifierTauxInput.addEventListener('blur', function() {
+            let value = this.value.trim();
+            if (value) {
+              value = value.replace(/[\$\s]/g, '');
+              value = value.replace(/\./g, ',');
+              if (!value.includes(',')) {
+                value = value + ',00';
+              }
+              this.value = value + ' $';
+            }
+          });
+        }
+
+        // NAS: seulement 9 chiffres, rien d'autre
+        const modifierNasInput = document.getElementById('modifierNas');
+        if (modifierNasInput) {
+          modifierNasInput.addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, '').substring(0, 9);
+          });
+        }
       }, 100);
     }
     
@@ -4659,6 +4888,26 @@
             sexe: employe.sexe,
             gender: employe.gender
           });
+
+          // Sauvegarder les données originales pour comparaison
+          // Normaliser l'appartement: traiter "-" comme vide
+          const appartementOriginal = employe.appartement && employe.appartement !== '-' ? employe.appartement : '';
+
+          employeDataOriginal = {
+            nom: employe.nom,
+            nas: employe.nas,
+            dateNaissance: employe.dateNaissance,
+            genre: employe.genre || employe.sexe,
+            adresse: employe.adresse,
+            appartement: appartementOriginal,
+            ville: employe.ville,
+            codePostal: employe.codePostal,
+            telephone: employe.telephone,
+            courriel: employe.courriel,
+            datePremiere: employe.datePremiere,
+            posteService: employe.posteService,
+            tauxHoraire: employe.tauxHoraire
+          };
           
           // Remplir tous les champs qui existent
           const fields = [
@@ -4667,6 +4916,7 @@
             { id: 'modifierAdresse', value: employe.adresse },
             { id: 'modifierVille', value: employe.ville },
             { id: 'modifierCodePostal', value: employe.codePostal },
+            { id: 'modifierAppartement', value: appartementOriginal },
             { id: 'modifierTelephone', value: employe.telephone },
             { id: 'modifierCourriel', value: employe.courriel },
             { id: 'modifierDatePremiere', value: employe.datePremiere },
@@ -4680,6 +4930,17 @@
             if (element && field.value) {
               element.value = field.value;
               log(`Rempli ${field.id}: ${field.value}`);
+
+              // Formater le taux horaire immédiatement après remplissage
+              if (field.id === 'modifierTauxHoraire') {
+                let value = field.value.toString().replace(/[\$\s]/g, '');
+                value = value.replace(/\./g, ',');
+                if (!value.includes(',')) {
+                  value = value + ',00';
+                }
+                element.value = value + ' $';
+                log(`Taux horaire formaté: ${element.value}`);
+              }
             }
           });
 
@@ -4709,60 +4970,32 @@
             document.getElementById('modifier-carte-preview').style.display = 'none';
           }
 
-          // Gérer le genre (dropdown custom) - chercher dans plusieurs propriétés possibles
+          // Gérer le genre (dropdown custom)
           setTimeout(() => {
-            const genreSelect = document.getElementById('modifierGenre');
+            const hiddenInput = document.getElementById('modifierGenre');
+            const selectedSpan = document.getElementById('modifierGenre-selected');
+            const menu = document.getElementById('modifierGenre-menu');
+
             let genreValue = employe.genre || employe.sexe || '';
-            
-            // Normaliser la valeur pour correspondre aux options (en minuscule)
+
+            // Normaliser la valeur (minuscule)
             if (genreValue) {
               genreValue = genreValue.toLowerCase();
             }
-            
-            log('Genre trouvé dans les données:', genreValue, 'Données complètes:', employe);
-            
-            if (genreSelect && genreValue) {
-              // D'abord, sélectionner l'option dans le select natif
-              genreSelect.value = genreValue;
-              log('Genre sélectionné dans le select natif:', genreValue);
-              
-              // Chercher le wrapper custom select créé par initCustomSelects
-              log('Recherche du wrapper pour genreSelect:', genreSelect);
-              
-              // Chercher dans plusieurs endroits possibles
-              const customSelectWrapper = genreSelect.closest('.custom-select') || 
-                                         genreSelect.closest('.custom-select-wrapper') ||
-                                         genreSelect.parentElement.querySelector('.custom-select') ||
-                                         document.querySelector('#modifierGenre').parentElement.querySelector('.custom-select');
-              
-              log('Wrapper trouvé:', customSelectWrapper);
-              
-              if (customSelectWrapper) {
-                // Chercher le bouton et le texte sélectionné avec plus de flexibilité
-                const customButton = customSelectWrapper.querySelector('.custom-select-button') ||
-                                   customSelectWrapper.querySelector('button') ||
-                                   customSelectWrapper.querySelector('.selected-text')?.parentElement;
-                
-                const selectedText = customSelectWrapper.querySelector('.selected-text') || 
-                                   customButton?.querySelector('.selected-text') ||
-                                   customButton?.querySelector('span') ||
-                                   customButton;
-                
-                log('Éléments trouvés:', { customButton, selectedText });
-                
-                if (selectedText && selectedText.textContent !== undefined) {
-                  // Convertir la valeur normalisée en format d'affichage
-                  const displayValue = genreValue.charAt(0).toUpperCase() + genreValue.slice(1);
-                  selectedText.textContent = displayValue;
-                  log('Custom select mis à jour avec:', displayValue);
-                } else {
-                  log('Texte sélectionné non manipulable, tentative d\'événement change');
-                  const event = new Event('change', { bubbles: true });
-                  genreSelect.dispatchEvent(event);
-                }
-                
-                // Marquer l'option comme sélectionnée dans les options custom
-                const options = customSelectWrapper.querySelectorAll('.custom-select-option');
+
+            log('Genre trouvé dans les données:', genreValue);
+
+            if (hiddenInput && selectedSpan && genreValue) {
+              // Mettre à jour l'input caché
+              hiddenInput.value = genreValue;
+
+              // Mettre à jour l'affichage (première lettre en majuscule)
+              const displayValue = genreValue.charAt(0).toUpperCase() + genreValue.slice(1);
+              selectedSpan.textContent = displayValue;
+
+              // Marquer l'option comme sélectionnée dans le menu
+              if (menu) {
+                const options = menu.querySelectorAll('.dropdown-secondary-option');
                 log('Options custom trouvées:', options.length);
                 options.forEach(option => {
                   option.classList.remove('selected');
@@ -4772,13 +5005,11 @@
                     log('Option marquée comme sélectionnée:', option.textContent.trim());
                   }
                 });
-              } else {
-                log('[ERROR] Wrapper custom select non trouvé - initCustomSelects() peut ne pas avoir été appelé ou pas fonctionner');
-                log('Parent du select:', genreSelect.parentElement);
-                log('Classes du parent:', genreSelect.parentElement.className);
               }
+
+              log(`Genre pré-rempli: ${displayValue}`);
             } else {
-              log('Genre vide ou select non trouvé:', { genreSelect, genreValue });
+              log('Genre vide ou éléments dropdown non trouvés');
             }
           }, 400);
         }
@@ -5114,9 +5345,16 @@
 
       const formData = new FormData();
 
+      // Nettoyer le taux horaire (enlever $, espaces, et convertir virgule en point)
+      let tauxHoraireClean = employeData.tauxHoraire || '';
+      if (tauxHoraireClean) {
+        tauxHoraireClean = tauxHoraireClean.toString().replace(/[\$\s]/g, '').replace(',', '.');
+      }
+
       // Ajouter tous les champs de données
       formData.append('nom', employeData.nom);
       formData.append('nas', employeData.nas);
+      formData.append('dateNaissance', employeData.dateNaissance);
       formData.append('genre', employeData.genre);
       formData.append('adresse', employeData.adresse);
       formData.append('appartement', employeData.appartement || '');
@@ -5126,7 +5364,7 @@
       formData.append('courriel', employeData.courriel);
       formData.append('datePremiere', employeData.datePremiere);
       formData.append('posteService', employeData.posteService);
-      formData.append('tauxHoraire', employeData.tauxHoraire);
+      formData.append('tauxHoraire', tauxHoraireClean);
 
       // Ajouter les fichiers s'ils sont fournis
       if (specimenFile) {
@@ -5145,8 +5383,27 @@
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Erreur lors de l\'envoi des modifications');
+        let errorMessage = 'Erreur lors de l\'envoi des modifications';
+        try {
+          const error = await response.json();
+          console.error('Erreur serveur complète:', error);
+
+          // Si detail est un tableau, afficher tous les messages
+          if (Array.isArray(error.detail)) {
+            errorMessage = error.detail.map(e => {
+              if (typeof e === 'string') return e;
+              if (e.msg) return `${e.loc ? e.loc.join('.') + ': ' : ''}${e.msg}`;
+              return JSON.stringify(e);
+            }).join(', ');
+          } else {
+            errorMessage = error.detail || error.message || errorMessage;
+          }
+
+          console.error('Message d\'erreur:', errorMessage);
+        } catch (e) {
+          console.error('Impossible de parser l\'erreur serveur');
+        }
+        throw new Error(errorMessage);
       }
 
       return await response.json();
@@ -5154,6 +5411,9 @@
 
     // Variable pour stocker l'ID de l'employé en cours de validation de modification
     let employeModificationEnCours = null;
+
+    // Variable pour stocker les données originales de l'employé en modification
+    let employeDataOriginal = null;
 
     // Fonction pour ouvrir le popup de validation des modifications (coach)
     function ouvrirPopupValidationModification(employeId, employe) {
@@ -5442,6 +5702,7 @@
           // Pré-remplir tous les champs
           document.getElementById('reactiverNomComplet').value = employe.nom || '';
           document.getElementById('reactiverNas').value = employe.nas || '';
+          document.getElementById('reactiverDateNaissance').value = employe.dateNaissance || '';
           document.getElementById('reactiverCourriel').value = employe.courriel || '';
           document.getElementById('reactiverTelephone').value = employe.telephone || '';
 
@@ -5452,12 +5713,20 @@
           document.getElementById('reactiverVille').value = employe.ville || '';
           document.getElementById('reactiverCodePostal').value = employe.codePostal || '';
 
+          // Appartement (traiter "-" comme vide)
+          const appartement = employe.appartement && employe.appartement !== '-' ? employe.appartement : '';
+          document.getElementById('reactiverAppartement').value = appartement;
+
           // Vider les champs à remplir (taux horaire et date première journée)
           document.getElementById('reactiverTauxHoraire').value = '';
           document.getElementById('reactiverDatePremiere').value = '';
 
           // Pré-remplir le genre via le dropdown
-          const genreValue = employe.genre || '';
+          let genreValue = employe.genre || employe.sexe || '';
+          // Traiter "non spécifié" comme vide
+          if (genreValue.toLowerCase() === 'non spécifié') {
+            genreValue = '';
+          }
           document.getElementById('reactiverGenreHidden').value = genreValue;
           const genreSelected = document.getElementById('reactiverGenre-selected');
           if (genreValue) {
@@ -5475,9 +5744,9 @@
           const existingSpecimen = document.getElementById('existingReactiverSpecimen');
           if (specimenFile && existingSpecimen) {
             existingSpecimen.classList.remove('hidden');
-            const link = existingSpecimen.querySelector('a');
-            if (link) {
-              link.href = `/api/employes/${username}/documents/${employeId}/${specimenFile}`;
+            const button = existingSpecimen.querySelector('button');
+            if (button) {
+              button.dataset.fileUrl = `/api/employes/${username}/documents/${employeId}/${specimenFile}`;
             }
           } else if (existingSpecimen) {
             existingSpecimen.classList.add('hidden');
@@ -5487,9 +5756,9 @@
           const existingCertificat = document.getElementById('existingReactiverCertificat');
           if (certificatFile && existingCertificat) {
             existingCertificat.classList.remove('hidden');
-            const link = existingCertificat.querySelector('a');
-            if (link) {
-              link.href = `/api/employes/${username}/documents/${employeId}/${certificatFile}`;
+            const button = existingCertificat.querySelector('button');
+            if (button) {
+              button.dataset.fileUrl = `/api/employes/${username}/documents/${employeId}/${certificatFile}`;
             }
           } else if (existingCertificat) {
             existingCertificat.classList.add('hidden');
@@ -5499,9 +5768,9 @@
           const existingCarte = document.getElementById('existingReactiverCarte');
           if (carteFile && existingCarte) {
             existingCarte.classList.remove('hidden');
-            const link = existingCarte.querySelector('a');
-            if (link) {
-              link.href = `/api/employes/${username}/documents/${employeId}/${carteFile}`;
+            const button = existingCarte.querySelector('button');
+            if (button) {
+              button.dataset.fileUrl = `/api/employes/${username}/documents/${employeId}/${carteFile}`;
             }
           } else if (existingCarte) {
             existingCarte.classList.add('hidden');
@@ -5516,6 +5785,30 @@
             initReactiverDateCalendar();
             initReactiverGenreDropdown();
             initReactiverFileDropzones();
+
+            // Formatage simple taux horaire: point → virgule et ajouter $
+            const reactiverTauxInput = document.getElementById('reactiverTauxHoraire');
+            if (reactiverTauxInput) {
+              reactiverTauxInput.addEventListener('blur', function() {
+                let value = this.value.trim();
+                if (value) {
+                  value = value.replace(/[\$\s]/g, '');
+                  value = value.replace(/\./g, ',');
+                  if (!value.includes(',')) {
+                    value = value + ',00';
+                  }
+                  this.value = value + ' $';
+                }
+              });
+            }
+
+            // NAS: seulement 9 chiffres, rien d'autre
+            const reactiverNasInput = document.getElementById('reactiverNas');
+            if (reactiverNasInput) {
+              reactiverNasInput.addEventListener('input', function() {
+                this.value = this.value.replace(/\D/g, '').substring(0, 9);
+              });
+            }
           }, 100);
         } else {
           showNotification('Employé non trouvé', 'error');
@@ -8320,64 +8613,7 @@
       return true;
     }
 
-    function formatTauxHoraire(input) {
-      // Sauvegarder la position du curseur
-      const cursorPosition = input.selectionStart;
-      let value = input.value;
-      const oldLength = value.length;
-
-      // Retirer tout sauf les chiffres, points et virgules
-      value = value.replace(/[^0-9.,]/g, '');
-
-      // Remplacer TOUS les points par des virgules (format québécois)
-      value = value.replace(/\./g, ',');
-
-      // S'assurer qu'il n'y a qu'une seule virgule
-      const firstComma = value.indexOf(',');
-      if (firstComma !== -1) {
-        // Garder seulement la première virgule
-        value = value.substring(0, firstComma + 1) + value.substring(firstComma + 1).replace(/,/g, '');
-      }
-
-      // Limiter à 2 décimales après la virgule
-      const parts = value.split(',');
-      if (parts.length === 2 && parts[1].length > 2) {
-        value = parts[0] + ',' + parts[1].substring(0, 2);
-      }
-
-      input.value = value;
-
-      // Restaurer la position du curseur
-      const newLength = value.length;
-      const newCursorPosition = cursorPosition + (newLength - oldLength);
-      input.setSelectionRange(newCursorPosition, newCursorPosition);
-    }
-
-    function formatTauxHoraireComplet(value) {
-      // Enlever tout sauf les chiffres et points/virgules
-      const cleanValue = value.replace(/[^\d.,]/g, '');
-
-      // Convertir en nombre
-      const number = parseFloat(cleanValue.replace(',', '.'));
-
-      if (isNaN(number)) return '';
-
-      // Formater avec espaces pour les milliers et virgule pour les décimales
-      const formatted = new Intl.NumberFormat('fr-CA', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }).format(number);
-
-      return formatted + ' $';
-    }
-
-    // Fonction pour enlever le formatage au focus (pour édition)
-    function removeTauxHoraireFormat(input) {
-      let value = input.value;
-      // Retirer le " $" à la fin
-      value = value.replace(/\s*\$\s*$/g, '');
-      input.value = value.trim();
-    }
+    // Fonction formatTauxHoraire retirée - aucun formatage nécessaire
 
     // Custom Select pour le dropdown - fonction simplifiée
     function toggleCustomSelect(selectId) {
@@ -8629,32 +8865,8 @@
       setupDateNaissanceFormatting('modifierDateNaissance');  // Modal de modification d'employé
     });
 
-    // Ajouter le listener sur le champ taux horaire (même pattern que Prix dans soumission.html)
-    document.addEventListener('DOMContentLoaded', function() {
-      const tauxHoraireField = document.getElementById('tauxHoraire');
-
-      if (tauxHoraireField) {
-        // Format sur blur
-        tauxHoraireField.addEventListener('blur', function(e) {
-          const value = e.target.value.trim();
-          if (value && value !== '') {
-            e.target.value = formatTauxHoraireComplet(value);
-          }
-        });
-
-        // Retirer le formatage sur focus
-        tauxHoraireField.addEventListener('focus', function(e) {
-          removeTauxHoraireFormat(e.target);
-        });
-
-        // Permettre seulement les chiffres, points, virgules et $
-        tauxHoraireField.addEventListener('input', function(e) {
-          const value = e.target.value;
-          // Garder seulement les caractères valides pour un prix
-          e.target.value = value.replace(/[^0-9.,$ ]/g, '');
-        });
-      }
-    });
+    // AUCUN FORMATAGE pour taux horaire - champ texte normal
+    // (Formatage retiré à la demande de l'utilisateur)
 
     // Variable pour stocker les instances d'autocomplete
     let autocompleteInstances = {};
@@ -8945,15 +9157,17 @@
       const img = document.createElement('img');
       img.src = url;
       img.style.maxWidth = '100%';
-      img.style.maxHeight = '85vh';
+      img.style.maxHeight = '100%';
       img.style.objectFit = 'contain';
       viewerContent.appendChild(img);
     } else {
+      // Pour les PDFs - utiliser iframe qui remplit le conteneur
       const iframe = document.createElement('iframe');
       iframe.src = url;
       iframe.style.width = '100%';
-      iframe.style.height = '85vh';
+      iframe.style.height = '100%';
       iframe.style.border = 'none';
+      iframe.style.borderRadius = '8px';
       viewerContent.appendChild(iframe);
     }
 

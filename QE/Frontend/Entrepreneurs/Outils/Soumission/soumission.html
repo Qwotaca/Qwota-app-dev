@@ -584,12 +584,12 @@
   </div><!-- Fin de .main-content pour extraction SPA -->
 
 <script>
-// ⚡ DÉSACTIVATION DES LOGS - Performance optimization
-window.log = window.log || (() => {});
-window.warn = window.warn || (() => {});
-window.error = window.error || (() => {});
-window.info = window.info || (() => {});
-window.debug = window.debug || (() => {});
+// ⚡ ACTIVATION DES LOGS - Pour debugging et monitoring
+window.log = window.log || ((...args) => console.log('[SOUMISSION]', ...args));
+window.warn = window.warn || ((...args) => console.warn('[SOUMISSION]', ...args));
+window.error = window.error || ((...args) => console.error('[SOUMISSION]', ...args));
+window.info = window.info || ((...args) => console.info('[SOUMISSION]', ...args));
+window.debug = window.debug || ((...args) => console.debug('[SOUMISSION]', ...args));
 
 // Fonction pour retourner à la page Outils
 function goBackToOutils() {
@@ -7003,6 +7003,35 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
               log('[SOUMISSION] ✅ Payé par (toggle) rempli:', payerPar);
             }
 
+            // Prix - CHAMP CRITIQUE
+            if (data.prix) {
+              log('[SOUMISSION] 💰 Prix détecté dans data:', data.prix, 'Type:', typeof data.prix);
+              const prixField = document.querySelector('input[name="prix"]');
+              log('[SOUMISSION] 🔍 Champ prix trouvé:', prixField ? 'Oui' : 'Non');
+              if (prixField) {
+                // Formater le prix: enlever .00 si présent, enlever $ si présent (le champ le formate automatiquement)
+                let prixFormate = data.prix.toString();
+                // Enlever le $ s'il est présent
+                prixFormate = prixFormate.replace('$', '').trim();
+                // Enlever .00 si présent
+                if (prixFormate.endsWith('.00')) {
+                  prixFormate = prixFormate.replace('.00', '');
+                }
+                log('[SOUMISSION] 💰 Prix formaté:', prixFormate);
+                prixField.value = prixFormate;
+
+                // Déclencher les événements pour activer le formatage automatique
+                prixField.dispatchEvent(new Event('input', { bubbles: true }));
+                prixField.dispatchEvent(new Event('blur', { bubbles: true }));
+                prixField.dispatchEvent(new Event('change', { bubbles: true }));
+
+                prixField.style.setProperty('border-right-color', '#4caf50', 'important');
+                log('[SOUMISSION] ✅ Prix rempli:', data.prix, '→', prixFormate, 'Valeur dans champ:', prixField.value);
+              }
+            } else {
+              log('[SOUMISSION] ⚠️ Aucun prix dans les données');
+            }
+
             if (data.temps) {
               const tempsField = document.querySelector('input[name="temps"]');
               log('[SOUMISSION] 🔍 Champ temps trouvé:', tempsField ? 'Oui' : 'Non');
@@ -7025,9 +7054,16 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
             if (data.produit) {
               const produitHidden = document.getElementById('produitCouleursHidden');
               const produitTrigger = document.getElementById('productTrigger');
-              log('[SOUMISSION] 🔍 Champs produit trouvés - Hidden:', produitHidden ? 'Oui' : 'Non', 'Trigger:', produitTrigger ? 'Oui' : 'Non');
+              const produitDisplay = document.getElementById('productDisplay');
+              log('[SOUMISSION] 🔍 Champs produit trouvés - Hidden:', produitHidden ? 'Oui' : 'Non', 'Trigger:', produitTrigger ? 'Oui' : 'Non', 'Display:', produitDisplay ? 'Oui' : 'Non');
               if (produitHidden) {
                 produitHidden.value = data.produit;
+                // METTRE À JOUR L'AFFICHAGE VISIBLE
+                if (produitDisplay) {
+                  produitDisplay.textContent = data.produit;
+                  produitDisplay.style.color = 'var(--text-light)';
+                  log('[SOUMISSION] 🎨 Affichage produit mis à jour');
+                }
                 if (produitTrigger) {
                   produitTrigger.style.setProperty('border-right-color', '#4caf50', 'important');
                 }
@@ -7039,9 +7075,16 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
             if (data.part) {
               const partHidden = document.getElementById('partTravauxHidden');
               const partTrigger = document.getElementById('partTravauxTrigger');
-              log('[SOUMISSION] 🔍 Champs part trouvés - Hidden:', partHidden ? 'Oui' : 'Non', 'Trigger:', partTrigger ? 'Oui' : 'Non');
+              const partDisplay = document.getElementById('partTravauxDisplay');
+              log('[SOUMISSION] 🔍 Champs part trouvés - Hidden:', partHidden ? 'Oui' : 'Non', 'Trigger:', partTrigger ? 'Oui' : 'Non', 'Display:', partDisplay ? 'Oui' : 'Non');
               if (partHidden) {
                 partHidden.value = data.part;
+                // METTRE À JOUR L'AFFICHAGE VISIBLE
+                if (partDisplay) {
+                  partDisplay.textContent = data.part;
+                  partDisplay.style.color = 'var(--text-light)';
+                  log('[SOUMISSION] 📋 Affichage particularités mis à jour');
+                }
                 if (partTrigger) {
                   partTrigger.style.setProperty('border-right-color', '#4caf50', 'important');
                 }
@@ -7070,8 +7113,14 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
                 if (isEnglish) {
                   // Ontario (anglais)
                   langOptions[0].classList.remove('active');
-                  langOptions[0].removeAttribute('style'); // Enlever les styles inline de Québec
+                  langOptions[0].style.background = 'transparent';
+                  langOptions[0].style.color = 'var(--text-gray)';
+
                   langOptions[1].classList.add('active');
+                  langOptions[1].style.background = 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)';
+                  langOptions[1].style.color = 'var(--text-light)';
+                  langOptions[1].style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.3)';
+
                   log('[SOUMISSION] ✅ Province changée: Ontario (anglais)');
 
                   // Déclencher le changement de langue si la fonction existe
@@ -7081,8 +7130,14 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
                 } else if (isFrench) {
                   // Québec (français)
                   langOptions[0].classList.add('active');
+                  langOptions[0].style.background = 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)';
+                  langOptions[0].style.color = 'var(--text-light)';
+                  langOptions[0].style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.3)';
+
                   langOptions[1].classList.remove('active');
-                  langOptions[1].removeAttribute('style'); // Enlever les styles inline d'Ontario
+                  langOptions[1].style.background = 'transparent';
+                  langOptions[1].style.color = 'var(--text-gray)';
+
                   log('[SOUMISSION] ✅ Province changée: Québec (français)');
 
                   // Déclencher le changement de langue si la fonction existe
@@ -7101,7 +7156,65 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
             // Nettoyer le localStorage après chargement
             localStorage.removeItem('clientSoumission');
-            log('[SOUMISSION] ✅ Données chargées et localStorage nettoyé');
+
+            // ========== LOGS DÉTAILLÉS DE PRE-FILL COMPLÉTÉ ==========
+            log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            log('[SOUMISSION] ✅✅✅ PRE-FILL COMPLÉTÉ AVEC SUCCÈS ✅✅✅');
+            log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+            // Résumé des champs remplis
+            const champsRemplis = [];
+            const champsCritiques = {
+              prix: data.prix || null,
+              produit: data.produit || null,
+              part: data.part || null
+            };
+
+            if (data.prenom) champsRemplis.push('✓ Prénom: ' + data.prenom);
+            if (data.nom) champsRemplis.push('✓ Nom: ' + data.nom);
+            if (data.telephone) champsRemplis.push('✓ Téléphone: ' + data.telephone);
+            if (data.adresse) champsRemplis.push('✓ Adresse: ' + data.adresse);
+            if (data.courriel) champsRemplis.push('✓ Courriel: ' + data.courriel);
+            if (data.date2) champsRemplis.push('✓ Date travaux: ' + data.date2);
+            if (data.item) champsRemplis.push('✓ Type travaux: ' + data.item);
+            if (data.payer_par) champsRemplis.push('✓ Payé par: ' + data.payer_par);
+            if (data.temps) champsRemplis.push('✓ Temps: ' + data.temps);
+            if (data.endroit) champsRemplis.push('✓ Endroit: ' + data.endroit);
+
+            // Logs pour les champs critiques
+            log('[CHAMPS CRITIQUES] Vérification des champs problématiques:');
+            log('  💰 PRIX:', champsCritiques.prix ? '✅ ' + champsCritiques.prix : '❌ NON REMPLI');
+            log('  🎨 PRODUIT/COULEURS:', champsCritiques.produit ? '✅ ' + (champsCritiques.produit.length > 50 ? champsCritiques.produit.substring(0, 50) + '...' : champsCritiques.produit) : '❌ NON REMPLI');
+            log('  📋 PARTICULARITÉS:', champsCritiques.part ? '✅ ' + (champsCritiques.part.length > 50 ? champsCritiques.part.substring(0, 50) + '...' : champsCritiques.part) : '❌ NON REMPLI');
+
+            // Log de tous les champs standards
+            log('[CHAMPS STANDARDS] Total de champs remplis:', champsRemplis.length);
+            champsRemplis.forEach(champ => log('  ' + champ));
+
+            // Vérifier les valeurs dans les champs DOM
+            log('[VÉRIFICATION DOM] Valeurs réelles dans les champs:');
+            const prixFieldDOM = document.querySelector('input[name="prix"]');
+            const produitHiddenDOM = document.getElementById('produitCouleursHidden');
+            const partHiddenDOM = document.getElementById('partTravauxHidden');
+
+            if (prixFieldDOM) {
+              log('  💰 Prix (DOM):', prixFieldDOM.value || '❌ VIDE');
+            }
+            if (produitHiddenDOM) {
+              log('  🎨 Produit (DOM):', produitHiddenDOM.value ? produitHiddenDOM.value.substring(0, 50) + '...' : '❌ VIDE');
+            }
+            if (partHiddenDOM) {
+              log('  📋 Part (DOM):', partHiddenDOM.value ? partHiddenDOM.value.substring(0, 50) + '...' : '❌ VIDE');
+            }
+
+            // Log de l'ID client perdu si présent
+            if (data.client_perdu_id) {
+              log('[CLIENT PERDU] 🔗 ID stocké en session:', data.client_perdu_id);
+            }
+
+            log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            log('[SOUMISSION] 🧹 localStorage nettoyé');
+            log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
             // Déclencher la validation des champs
             setTimeout(() => validateRequiredFields(), 100);

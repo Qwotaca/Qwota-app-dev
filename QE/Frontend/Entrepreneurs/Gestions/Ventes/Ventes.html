@@ -1000,6 +1000,24 @@
     </div>
   </div>
 
+  <!-- Modal Google Maps -->
+  <div id="mapsModal" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px); display: none;" onclick="if(event.target === this) fermerMapsModal()">
+    <div class="p-4 w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-strong); max-width: 900px; max-height: 90vh;" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i class="fas fa-map-marked-alt mr-2" style="color: var(--primary-blue);"></i>
+          Localisation
+        </h3>
+        <button onclick="fermerMapsModal()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);" onmouseover="this.style.background='rgba(96, 165, 250, 0.3)'" onmouseout="this.style.background='rgba(96, 165, 250, 0.2)'">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div id="mapsIframeContainer" style="width: 100%; height: 600px; border-radius: 8px; overflow: hidden;">
+        <!-- L'iframe sera injectée ici -->
+      </div>
+    </div>
+  </div>
+
   <!-- Modal confirmation Marquer comme perdu -->
   <div id="confirmPerduModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
     <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
@@ -1302,6 +1320,9 @@
   function ouvrirModalProspect() {
     const modal = document.getElementById('ajouterProspectModal');
     if (modal) {
+      // Bloquer le scroll en arrière-plan
+      document.body.style.overflow = 'hidden';
+
       modal.style.display = 'flex';
       log('[VENTES] Modal prospect ouvert');
     }
@@ -1311,10 +1332,62 @@
     const modal = document.getElementById('ajouterProspectModal');
     if (modal) {
       modal.style.display = 'none';
+
+      // Réactiver le scroll
+      document.body.style.overflow = '';
+
       // Reset form
       const form = document.getElementById('prospectForm');
       if (form) form.reset();
       log('[VENTES] Modal prospect fermé');
+    }
+  }
+
+  // Fonctions pour le modal Google Maps
+  function ouvrirMapsModal(adresse) {
+    const modal = document.getElementById('mapsModal');
+    const container = document.getElementById('mapsIframeContainer');
+
+    if (modal && container) {
+      // Bloquer le scroll en arrière-plan
+      document.body.style.overflow = 'hidden';
+
+      // Créer l'URL Google Maps embed
+      const mapsEmbedUrl = `https://www.google.com/maps?q=${encodeURIComponent(adresse)}&output=embed`;
+
+      // Injecter l'iframe
+      container.innerHTML = `
+        <iframe
+          src="${mapsEmbedUrl}"
+          width="100%"
+          height="100%"
+          style="border:0; border-radius: 8px;"
+          allowfullscreen=""
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade">
+        </iframe>
+      `;
+
+      modal.style.display = 'flex';
+      log('[VENTES] Modal Maps ouvert pour:', adresse);
+    }
+  }
+
+  function fermerMapsModal() {
+    const modal = document.getElementById('mapsModal');
+    const container = document.getElementById('mapsIframeContainer');
+
+    if (modal) {
+      modal.style.display = 'none';
+
+      // Réactiver le scroll
+      document.body.style.overflow = '';
+
+      // Nettoyer l'iframe pour économiser les ressources
+      if (container) {
+        container.innerHTML = '';
+      }
+      log('[VENTES] Modal Maps fermé');
     }
   }
 
@@ -1511,6 +1584,14 @@
     try {
       log('[VENTES] 📋 Récupération du client perdu:', clientPerduToRecuperer);
 
+      // DEBUG: Afficher toutes les données du client perdu
+      log('[VENTES] 🔍 Toutes les clés disponibles dans clientPerduToRecuperer:', Object.keys(clientPerduToRecuperer));
+      log('[VENTES] 🔍 Prix:', clientPerduToRecuperer.prix);
+      log('[VENTES] 🔍 Produit:', clientPerduToRecuperer.produit);
+      log('[VENTES] 🔍 Part:', clientPerduToRecuperer.part);
+      log('[VENTES] 🔍 ProduitCouleurs:', clientPerduToRecuperer.produitCouleurs);
+      log('[VENTES] 🔍 PartTravaux:', clientPerduToRecuperer.partTravaux);
+
       // Préparer les données pour la page soumission
       const dataToStore = {
         prenom: clientPerduToRecuperer.prenom || clientPerduToRecuperer.clientPrenom || '',
@@ -1518,14 +1599,14 @@
         telephone: clientPerduToRecuperer.telephone || '',
         adresse: clientPerduToRecuperer.adresse || '',
         courriel: clientPerduToRecuperer.courriel || clientPerduToRecuperer.email || '',
-        // Garder les anciennes informations si disponibles
+        // Garder les anciennes informations si disponibles - vérifier plusieurs noms possibles
         prix: clientPerduToRecuperer.prix || '',
-        date2: clientPerduToRecuperer.date2 || '',
+        date2: clientPerduToRecuperer.date2 || clientPerduToRecuperer.date_travaux || '',
         item: clientPerduToRecuperer.item || '',
         temps: clientPerduToRecuperer.temps || '',
-        endroit: clientPerduToRecuperer.endroit || '',
-        produit: clientPerduToRecuperer.produit || '',
-        part: clientPerduToRecuperer.part || '',
+        endroit: clientPerduToRecuperer.endroit || clientPerduToRecuperer.endroit_peinture || '',
+        produit: clientPerduToRecuperer.produit || clientPerduToRecuperer.produitCouleurs || '',
+        part: clientPerduToRecuperer.part || clientPerduToRecuperer.partTravaux || '',
         payer_par: clientPerduToRecuperer.payer_par || 'Virement Interac',
         client_perdu_id: clientPerduToRecuperer.id || clientPerduToRecuperer.num // Pour supprimer après création de la nouvelle soumission
       };
@@ -1753,8 +1834,8 @@
           <i class="fas fa-map-marker-alt" style="color: var(--primary-blue); width: 20px; text-align: center;"></i>
           <div style="flex: 1;">
             <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 0.25rem;">Adresse</div>
-            <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-blue); text-decoration: none; display: flex; align-items: center; gap: 0.5rem; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-              <i class="fas fa-external-link-alt" style="font-size: 0.75rem;"></i>
+            <a href="javascript:void(0)" onclick="ouvrirMapsModal('${adresse.replace(/'/g, "\\'")}')" style="color: var(--primary-blue); text-decoration: none; display: flex; align-items: center; gap: 0.5rem; transition: opacity 0.2s; cursor: pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+              <i class="fas fa-map-marker-alt" style="font-size: 0.75rem;"></i>
               <span style="font-weight: 500;">${adresse}</span>
             </a>
           </div>
@@ -1881,12 +1962,21 @@
 
     html += `</div>`;
     content.innerHTML = html;
+
+    // Bloquer le scroll en arrière-plan
+    document.body.style.overflow = 'hidden';
+
     modal.style.display = 'flex';
   };
 
   window.closeClientInfo = function() {
     const modal = document.getElementById('clientInfoModal');
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+      modal.style.display = 'none';
+
+      // Réactiver le scroll
+      document.body.style.overflow = '';
+    }
   };
 
   // Action functions
@@ -2123,6 +2213,10 @@
 
     title.textContent = `Soumission - ${clientName}`;
     iframe.src = pdfUrl;
+
+    // Bloquer le scroll en arrière-plan
+    document.body.style.overflow = 'hidden';
+
     modal.style.display = 'flex';
 
     log('[VENTES] Modal PDF affiché');
@@ -2134,6 +2228,9 @@
 
     modal.style.display = 'none';
     iframe.src = '';
+
+    // Réactiver le scroll
+    document.body.style.overflow = '';
   };
 
   async function checkIfCalculExists(clientData) {
@@ -2225,6 +2322,10 @@
 
     title.textContent = `Soumission - ${clientName}`;
     iframe.src = pdfUrl;
+
+    // Bloquer le scroll en arrière-plan
+    document.body.style.overflow = 'hidden';
+
     modal.style.display = 'flex';
 
     log('[VENTES] Modal PDF affiché');
@@ -2253,6 +2354,10 @@
 
     title.textContent = `GQP - ${clientName}`;
     iframe.src = gqpUrl;
+
+    // Bloquer le scroll en arrière-plan
+    document.body.style.overflow = 'hidden';
+
     modal.style.display = 'flex';
 
     log('[VENTES] Modal GQP affiché');

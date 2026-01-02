@@ -733,326 +733,646 @@
     // GESTION PHOTO DE PROFIL (style connect_agenda)
     // ===========================================
 
-    const photoInput = document.getElementById("profile-photo-input");
-    const cameraInput = document.getElementById("camera-capture-input");
-    const photoMenuBtn = document.getElementById("photo-menu-btn");
-    const photoMenuDropdown = document.getElementById("photo-menu-dropdown");
-    const uploadPhotoOption = document.getElementById("upload-photo-option");
-    const cameraPhotoOption = document.getElementById("camera-photo-option");
-    const deletePhotoOption = document.getElementById("delete-photo-option");
-    const profilePhotoImage = document.getElementById("profile-photo-image");
-    const profilePhotoPlaceholder = document.getElementById("profile-photo-placeholder");
+// Gestion de la photo de profil avec éditeur circulaire
+document.addEventListener("DOMContentLoaded", function() {
+  const photoInput = document.getElementById("profile-photo-input");
+  const cameraInput = document.getElementById("camera-capture-input");
+  const photoMenuBtn = document.getElementById("photo-menu-btn");
+  const photoMenuDropdown = document.getElementById("photo-menu-dropdown");
+  const uploadPhotoOption = document.getElementById("upload-photo-option");
+  const cameraPhotoOption = document.getElementById("camera-photo-option");
+  const deletePhotoOption = document.getElementById("delete-photo-option");
+  const profilePhotoImage = document.getElementById("profile-photo-image");
+  const profilePhotoPlaceholder = document.getElementById("profile-photo-placeholder");
 
-    // Modal et éditeur
-    const editorModal = document.getElementById("photo-editor-modal");
-    const closeEditorBtn = document.getElementById("close-editor-btn");
-    const cancelEditorBtn = document.getElementById("cancel-editor-btn");
-    const saveEditorBtn = document.getElementById("save-editor-btn");
-    const canvas = document.getElementById("photo-editor-canvas");
-    const ctx = canvas.getContext("2d");
-    const zoomSlider = document.getElementById("zoom-slider");
+  // Modal et éditeur
+  const editorModal = document.getElementById("photo-editor-modal");
+  const closeEditorBtn = document.getElementById("close-editor-btn");
+  const cancelEditorBtn = document.getElementById("cancel-editor-btn");
+  const saveEditorBtn = document.getElementById("save-editor-btn");
+  const canvas = document.getElementById("photo-editor-canvas");
+  const ctx = canvas.getContext("2d");
+  const zoomSlider = document.getElementById("zoom-slider");
 
-    // Modals
-    const cameraChoiceModal = document.getElementById("camera-choice-modal");
-    const closeChoiceModalBtn = document.getElementById("close-choice-modal-btn");
-    const usePcCameraBtn = document.getElementById("use-pc-camera-btn");
-    const useMobileQrBtn = document.getElementById("use-mobile-qr-btn");
+  let currentImage = null;
+  let imageScale = 1;
+  let imageX = 0;
+  let imageY = 0;
+  let isDragging = false;
+  let startX, startY;
 
-    const cameraModal = document.getElementById("camera-modal");
-    const closeCameraBtn = document.getElementById("close-camera-btn");
-    const cancelCameraBtn = document.getElementById("cancel-camera-btn");
-    const capturePhotoBtn = document.getElementById("capture-photo-btn");
-    const cameraVideo = document.getElementById("camera-video");
-    const cameraCanvas = document.getElementById("camera-canvas");
+  // Détection mobile
+  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
 
-    const qrModal = document.getElementById("qr-modal");
-    const closeQrModalBtn = document.getElementById("close-qr-modal-btn");
-    const cancelQrBtn = document.getElementById("cancel-qr-btn");
+  // Toggle menu dropdown
+  photoMenuBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
 
-    const deletePhotoModal = document.getElementById("delete-photo-modal");
-    const cancelDeletePhotoBtn = document.getElementById("cancel-delete-photo-btn");
-    const confirmDeletePhotoBtn = document.getElementById("confirm-delete-photo-btn");
-
-    let currentImage = null;
-    let zoom = 1;
-    let offsetX = 0;
-    let offsetY = 0;
-    let isDragging = false;
-    let startX, startY;
-    let stream = null;
-
-    // Toggle menu photo
-    photoMenuBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      photoMenuDropdown.classList.toggle("hidden");
-    });
-
-    // Fermer le menu en cliquant ailleurs
-    document.addEventListener("click", () => {
-      photoMenuDropdown.classList.add("hidden");
-    });
-
-    // Option: Prendre une photo
-    cameraPhotoOption.addEventListener("click", () => {
-      photoMenuDropdown.classList.add("hidden");
-      cameraChoiceModal.classList.remove("hidden");
-    });
-
-    // Option: Modifier photo
-    uploadPhotoOption.addEventListener("click", () => {
-      photoMenuDropdown.classList.add("hidden");
+    // Sur mobile, ouvrir directement le sélecteur de fichiers natif
+    if (isMobileDevice) {
       photoInput.click();
-    });
+    } else {
+      // Sur desktop, afficher le menu
+      photoMenuDropdown.classList.toggle("hidden");
+    }
+  });
 
-    // Option: Supprimer photo
-    deletePhotoOption.addEventListener("click", () => {
-      photoMenuDropdown.classList.add("hidden");
-      deletePhotoModal.classList.remove("hidden");
-    });
+  // Fermer le menu en cliquant ailleurs
+  document.addEventListener("click", () => {
+    photoMenuDropdown.classList.add("hidden");
+  });
 
-    // Upload photo depuis galerie
-    photoInput.addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          currentImage = new Image();
-          currentImage.onload = () => {
-            openEditor();
-          };
-          currentImage.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
-      }
-    });
+  // Option: Modifier photo
+  uploadPhotoOption.addEventListener("click", () => {
+    photoMenuDropdown.classList.add("hidden");
+    photoInput.click();
+  });
 
-    // Choisir caméra PC
-    usePcCameraBtn.addEventListener("click", async () => {
-      cameraChoiceModal.classList.add("hidden");
-      cameraModal.classList.remove("hidden");
+  // Variable pour stocker le stream de la caméra
+  let cameraStream = null;
+  let qrCheckInterval = null;
+  let currentSessionId = null;
 
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-        cameraVideo.srcObject = stream;
-      } catch (error) {
-        showNotification("Impossible d'accéder à la caméra", "error");
-        cameraModal.classList.add("hidden");
-      }
-    });
+  // Option: Prendre photo - Ouvrir le modal de choix
+  cameraPhotoOption.addEventListener("click", () => {
+    photoMenuDropdown.classList.add("hidden");
+    document.getElementById("camera-choice-modal").classList.remove("hidden");
+  });
 
-    // Choisir QR Code mobile
-    useMobileQrBtn.addEventListener("click", () => {
-      cameraChoiceModal.classList.add("hidden");
-      qrModal.classList.remove("hidden");
+  // Fermer le modal de choix
+  document.getElementById("close-choice-modal-btn").addEventListener("click", () => {
+    document.getElementById("camera-choice-modal").classList.add("hidden");
+  });
 
-      // Générer QR code
-      const qrContainer = document.getElementById("qrcode-container");
-      qrContainer.innerHTML = "";
-      const qrUrl = window.location.origin + "/mobile-photo-upload?session=" + Date.now();
-      new QRCode(qrContainer, {
-        text: qrUrl,
-        width: 200,
-        height: 200
+  // Choix caméra PC
+  document.getElementById("use-pc-camera-btn").addEventListener("click", async () => {
+    document.getElementById("camera-choice-modal").classList.add("hidden");
+    await openCamera();
+  });
+
+  // Choix QR Code Mobile
+  document.getElementById("use-mobile-qr-btn").addEventListener("click", () => {
+    document.getElementById("camera-choice-modal").classList.add("hidden");
+    openQRModal();
+  });
+
+  // Fonction pour ouvrir la caméra
+  async function openCamera() {
+    const cameraModal = document.getElementById("camera-modal");
+    const video = document.getElementById("camera-video");
+
+    try {
+      // Demander l'accès à la caméra (préférence pour la caméra frontale sur mobile)
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false
       });
-    });
 
-    // Capturer photo depuis webcam
-    capturePhotoBtn.addEventListener("click", () => {
-      const videoCanvas = document.createElement("canvas");
-      videoCanvas.width = cameraVideo.videoWidth;
-      videoCanvas.height = cameraVideo.videoHeight;
-      const videoCtx = videoCanvas.getContext("2d");
-      videoCtx.drawImage(cameraVideo, 0, 0);
-
-      currentImage = new Image();
-      currentImage.onload = () => {
-        stopCamera();
-        cameraModal.classList.add("hidden");
-        openEditor();
-      };
-      currentImage.src = videoCanvas.toDataURL();
-    });
-
-    // Fermer caméra
-    function stopCamera() {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-      }
+      video.srcObject = cameraStream;
+      cameraModal.classList.remove("hidden");
+    } catch (error) {
+      console.error("Erreur d'accès à la caméra:", error);
+      showToast("Impossible d'accéder à la caméra", "error");
     }
+  }
 
-    closeCameraBtn.addEventListener("click", () => {
+  // Fonction pour arrêter la caméra
+  function stopCamera() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      cameraStream = null;
+    }
+    document.getElementById("camera-modal").classList.add("hidden");
+  }
+
+  // Bouton fermer caméra
+  document.getElementById("close-camera-btn").addEventListener("click", stopCamera);
+  document.getElementById("cancel-camera-btn").addEventListener("click", stopCamera);
+
+  // Bouton capturer photo
+  document.getElementById("capture-photo-btn").addEventListener("click", () => {
+    const video = document.getElementById("camera-video");
+    const canvas = document.getElementById("camera-canvas");
+    const ctx = canvas.getContext("2d");
+
+    // Définir la taille du canvas basée sur la vidéo
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    // Dessiner l'image de la vidéo sur le canvas
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Convertir en blob et traiter comme un fichier
+    canvas.toBlob((blob) => {
       stopCamera();
-      cameraModal.classList.add("hidden");
-    });
 
-    cancelCameraBtn.addEventListener("click", () => {
-      stopCamera();
-      cameraModal.classList.add("hidden");
-    });
+      // Créer un objet File depuis le blob
+      const file = new File([blob], "camera-photo.jpg", { type: "image/jpeg" });
+      handleImageFile(file);
+    }, "image/jpeg", 0.95);
+  });
 
-    // Fermer modals
-    closeChoiceModalBtn.addEventListener("click", () => {
-      cameraChoiceModal.classList.add("hidden");
-    });
+  // Fonction pour ouvrir le modal QR
+  function openQRModal() {
+    const qrModal = document.getElementById("qr-modal");
+    const qrcodeContainer = document.getElementById("qrcode-container");
 
-    closeQrModalBtn.addEventListener("click", () => {
-      qrModal.classList.add("hidden");
-    });
+    // Générer un ID de session unique
+    currentSessionId = 'photo_' + Date.now() + '_' + Math.random().toString(36).substring(7);
 
-    cancelQrBtn.addEventListener("click", () => {
-      qrModal.classList.add("hidden");
-    });
+    // Nettoyer le container QR
+    qrcodeContainer.innerHTML = '';
 
-    // Ouvrir l'éditeur
-    function openEditor() {
-      editorModal.classList.remove("hidden");
-      zoom = 1;
-      offsetX = 0;
-      offsetY = 0;
-      zoomSlider.value = 1;
-      drawCanvas();
+    // Utiliser l'adresse IP locale pour que le mobile puisse se connecter
+    const hostname = window.location.hostname;
+    const port = window.location.port;
+    const protocol = window.location.protocol;
+
+    // Si on est sur localhost, utiliser l'IP locale
+    let baseUrl;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      baseUrl = `${protocol}//192.168.2.231:${port}`;
+    } else {
+      baseUrl = window.location.origin;
     }
 
-    // Dessiner sur le canvas
-    function drawCanvas() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const mobileUrl = `${baseUrl}/mobile-camera?session=${currentSessionId}&username=${encodeURIComponent(username)}`;
 
-      const imgRatio = currentImage.width / currentImage.height;
-      const canvasRatio = 1; // Circulaire
+    // Générer le QR code
+    new QRCode(qrcodeContainer, {
+      text: mobileUrl,
+      width: 256,
+      height: 256,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.H
+    });
 
-      let drawWidth, drawHeight;
-      if (imgRatio > canvasRatio) {
-        drawHeight = canvas.height * zoom;
-        drawWidth = drawHeight * imgRatio;
-      } else {
-        drawWidth = canvas.width * zoom;
-        drawHeight = drawWidth / imgRatio;
-      }
+    // Afficher le modal
+    qrModal.classList.remove("hidden");
 
-      const x = (canvas.width - drawWidth) / 2 + offsetX;
-      const y = (canvas.height - drawHeight) / 2 + offsetY;
+    // Commencer à vérifier si une photo a été uploadée
+    startPhotoPolling();
+  }
 
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.drawImage(currentImage, x, y, drawWidth, drawHeight);
-      ctx.restore();
+  // Fonction pour démarrer le polling avec SSE
+  function startPhotoPolling() {
+    // Arrêter tout polling existant
+    if (qrCheckInterval) {
+      qrCheckInterval.close();
+      qrCheckInterval = null;
     }
 
-    // Zoom slider
-    zoomSlider.addEventListener("input", (e) => {
-      zoom = parseFloat(e.target.value);
-      drawCanvas();
-    });
+    // Utiliser Server-Sent Events pour recevoir la notification
+    const eventSource = new EventSource(`/api/wait-mobile-photo/${currentSessionId}`);
 
-    // Drag sur le canvas
-    canvas.addEventListener("mousedown", (e) => {
-      isDragging = true;
-      startX = e.offsetX;
-      startY = e.offsetY;
-    });
-
-    canvas.addEventListener("mousemove", (e) => {
-      if (isDragging) {
-        const dx = e.offsetX - startX;
-        const dy = e.offsetY - startY;
-        offsetX += dx;
-        offsetY += dy;
-        startX = e.offsetX;
-        startY = e.offsetY;
-        drawCanvas();
-      }
-    });
-
-    canvas.addEventListener("mouseup", () => {
-      isDragging = false;
-    });
-
-    canvas.addEventListener("mouseleave", () => {
-      isDragging = false;
-    });
-
-    // Annuler l'édition
-    closeEditorBtn.addEventListener("click", () => {
-      editorModal.classList.add("hidden");
-    });
-
-    cancelEditorBtn.addEventListener("click", () => {
-      editorModal.classList.add("hidden");
-    });
-
-    // Sauvegarder la photo
-    saveEditorBtn.addEventListener("click", async () => {
-      canvas.toBlob(async (blob) => {
-        const formData = new FormData();
-        formData.append("photo", blob, "profile.jpg");
-        formData.append("username", currentUsername);
-
-        try {
-          const response = await fetch("/api/profile/upload-photo", {
-            method: "POST",
-            body: formData
-          });
-
-          const data = await response.json();
-
-          if (data.success) {
-            profilePhotoImage.src = data.photo_url + "?t=" + Date.now();
-            profilePhotoImage.classList.remove("hidden");
-            profilePhotoPlaceholder.classList.add("hidden");
-
-            showNotification("Photo mise à jour avec succès", "success");
-            editorModal.classList.add("hidden");
-
-            // Update header if in iframe
-            if (window.parent && window.parent.document) {
-              try {
-                const headerPhoto = window.parent.document.querySelector('.header-user-photo');
-                if (headerPhoto) {
-                  headerPhoto.src = data.photo_url + '?t=' + Date.now();
-                }
-              } catch(e) {
-                console.log('Cannot update parent header photo');
-              }
-            }
-          } else {
-            showNotification("Erreur lors de l'upload", "error");
-          }
-        } catch (error) {
-          showNotification("Erreur lors de l'upload", "error");
-        }
-      }, "image/jpeg", 0.9);
-    });
-
-    // Supprimer la photo
-    confirmDeletePhotoBtn.addEventListener("click", async () => {
+    eventSource.onmessage = async (event) => {
       try {
-        const response = await fetch("/api/profile/delete-photo", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username: currentUsername })
-        });
+        const data = JSON.parse(event.data);
 
-        const data = await response.json();
+        if (data.photo) {
+          // Photo reçue!
+          eventSource.close();
+          stopPhotoPolling();
 
-        if (data.success) {
-          profilePhotoImage.classList.add("hidden");
-          profilePhotoPlaceholder.classList.remove("hidden");
-          showNotification("Photo supprimée", "success");
-          deletePhotoModal.classList.add("hidden");
-        } else {
-          showNotification("Erreur lors de la suppression", "error");
+          // Convertir la base64 en blob
+          const photoBlob = await fetch(data.photo).then(r => r.blob());
+          const file = new File([photoBlob], "mobile-photo.jpg", { type: "image/jpeg" });
+
+          // Traiter la photo
+          handleImageFile(file);
         }
       } catch (error) {
-        showNotification("Erreur lors de la suppression", "error");
+        console.error("Erreur lors du traitement de la photo:", error);
       }
-    });
+    };
 
-    cancelDeletePhotoBtn.addEventListener("click", () => {
-      deletePhotoModal.classList.add("hidden");
-    });
+    eventSource.onerror = (error) => {
+      console.error("Erreur SSE:", error);
+      eventSource.close();
+    };
+
+    // Stocker la référence
+    qrCheckInterval = eventSource;
+  }
+
+  // Fonction pour arrêter le polling
+  function stopPhotoPolling() {
+    if (qrCheckInterval) {
+      if (qrCheckInterval.close) {
+        qrCheckInterval.close();
+      }
+      qrCheckInterval = null;
+    }
+    document.getElementById("qr-modal").classList.add("hidden");
+    currentSessionId = null;
+  }
+
+  // Boutons fermer/annuler QR modal
+  document.getElementById("close-qr-modal-btn").addEventListener("click", stopPhotoPolling);
+  document.getElementById("cancel-qr-btn").addEventListener("click", stopPhotoPolling);
+
+  // Option: Supprimer photo - Afficher le modal de confirmation
+  deletePhotoOption.addEventListener("click", () => {
+    photoMenuDropdown.classList.add("hidden");
+    document.getElementById("delete-photo-modal").classList.remove("hidden");
+  });
+
+  // Annuler la suppression de photo
+  document.getElementById("cancel-delete-photo-btn").addEventListener("click", () => {
+    document.getElementById("delete-photo-modal").classList.add("hidden");
+  });
+
+  // Confirmer la suppression de photo
+  document.getElementById("confirm-delete-photo-btn").addEventListener("click", async () => {
+    const deleteModal = document.getElementById("delete-photo-modal");
+    deleteModal.classList.add("hidden");
+
+    try {
+      const response = await fetch('/api/delete-profile-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username })
+      });
+
+      if (!response.ok) throw new Error(`Erreur ${response.status}`);
+
+      // Réinitialiser l'affichage
+      profilePhotoImage.classList.add("hidden");
+      profilePhotoImage.src = "";
+      profilePhotoPlaceholder.style.display = "flex";
+
+      // Réinitialiser les icônes du header
+      console.log('🔄 Réinitialisation des icônes du header');
+
+      // Mobile profile icon - remettre l'icône FontAwesome
+      const mobileProfileIcon = document.querySelector('.mobile-profile-icon');
+      if (mobileProfileIcon) {
+        mobileProfileIcon.innerHTML = '<i class="fas fa-user"></i>';
+        console.log('[OK] Mobile profile icon réinitialisé');
+      }
+
+      // Desktop account avatar - remettre l'icône FontAwesome
+      const accountAvatar = document.querySelector('.account-avatar');
+      if (accountAvatar) {
+        accountAvatar.innerHTML = '<i class="fas fa-user"></i>';
+        console.log('[OK] Desktop account avatar réinitialisé');
+      }
+
+      // Desktop dropdown avatar - remettre l'icône FontAwesome
+      const userAvatar = document.querySelector('.user-avatar');
+      if (userAvatar) {
+        userAvatar.innerHTML = '<i class="fas fa-user"></i>';
+        console.log('[OK] Desktop dropdown avatar réinitialisé');
+      }
+
+      showToast("Photo de profil supprimée", "success");
+
+      // Mettre à jour la progression du profil
+      updateProfileProgress();
+
+    } catch (error) {
+      showToast("Erreur lors de la suppression", "error");
+      console.error(error);
+    }
+  });
+
+  // Fonction commune pour traiter une image
+  function handleImageFile(file) {
+    if (file && file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+          currentImage = img;
+          imageScale = 1;
+
+          // Centrer l'image
+          const canvasSize = canvas.width;
+          const minScale = canvasSize / Math.min(img.width, img.height);
+          imageScale = minScale;
+          imageX = (canvasSize - img.width * imageScale) / 2;
+          imageY = (canvasSize - img.height * imageScale) / 2;
+
+          zoomSlider.value = 1;
+
+          // Ouvrir le modal
+          editorModal.classList.remove("hidden");
+          drawImage();
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  // Quand une image est sélectionnée (upload)
+  photoInput.addEventListener("change", function(e) {
+    const file = e.target.files[0];
+    handleImageFile(file);
+  });
+
+  // Quand une photo est prise avec la caméra
+  cameraInput.addEventListener("change", function(e) {
+    const file = e.target.files[0];
+    handleImageFile(file);
+  });
+
+  // Fermer le modal
+  function closeModal() {
+    editorModal.classList.add("hidden");
+    photoInput.value = "";
+    currentImage = null;
+  }
+
+  closeEditorBtn.addEventListener("click", closeModal);
+  cancelEditorBtn.addEventListener("click", closeModal);
+
+  // Fonction pour contraindre la position de l'image (toujours couvrir le canvas)
+  function constrainImagePosition() {
+    const canvasSize = canvas.width;
+    const scaledWidth = currentImage.width * imageScale;
+    const scaledHeight = currentImage.height * imageScale;
+
+    // L'image doit toujours couvrir le canvas entièrement
+    // Limite à droite/bas (l'image ne peut pas laisser d'espace vide)
+    const maxX = 0;
+    const maxY = 0;
+    // Limite à gauche/haut (l'image ne peut pas laisser d'espace vide)
+    const minX = canvasSize - scaledWidth;
+    const minY = canvasSize - scaledHeight;
+
+    // Contraindre X
+    if (imageX > maxX) imageX = maxX;
+    if (imageX < minX) imageX = minX;
+
+    // Contraindre Y
+    if (imageY > maxY) imageY = maxY;
+    if (imageY < minY) imageY = minY;
+  }
+
+  // Zoom avec le slider
+  zoomSlider.addEventListener("input", function(e) {
+    if (!currentImage) return;
+
+    const canvasSize = canvas.width;
+    const minScale = canvasSize / Math.min(currentImage.width, currentImage.height);
+    const newScale = minScale * parseFloat(e.target.value);
+
+    // Ajuster la position pour garder le centre
+    const centerX = canvasSize / 2;
+    const centerY = canvasSize / 2;
+    const imageCenterX = imageX + (currentImage.width * imageScale) / 2;
+    const imageCenterY = imageY + (currentImage.height * imageScale) / 2;
+
+    imageX = centerX - (imageCenterX - imageX) * (newScale / imageScale);
+    imageY = centerY - (imageCenterY - imageY) * (newScale / imageScale);
+    imageScale = newScale;
+
+    // Contraindre la position après le zoom
+    constrainImagePosition();
+
+    drawImage();
+  });
+
+  // Drag pour déplacer l'image
+  canvas.addEventListener("mousedown", function(e) {
+    isDragging = true;
+    startX = e.offsetX;
+    startY = e.offsetY;
+  });
+
+  canvas.addEventListener("mousemove", function(e) {
+    if (!isDragging || !currentImage) return;
+
+    const dx = e.offsetX - startX;
+    const dy = e.offsetY - startY;
+
+    imageX += dx;
+    imageY += dy;
+
+    // Contraindre la position
+    constrainImagePosition();
+
+    startX = e.offsetX;
+    startY = e.offsetY;
+
+    drawImage();
+  });
+
+  canvas.addEventListener("mouseup", () => {
+    isDragging = false;
+  });
+
+  canvas.addEventListener("mouseleave", () => {
+    isDragging = false;
+  });
+
+  // Support tactile pour mobile
+  canvas.addEventListener("touchstart", function(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    isDragging = true;
+    startX = touch.clientX - rect.left;
+    startY = touch.clientY - rect.top;
+  });
+
+  canvas.addEventListener("touchmove", function(e) {
+    if (!isDragging || !currentImage) return;
+    e.preventDefault();
+
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const currentX = touch.clientX - rect.left;
+    const currentY = touch.clientY - rect.top;
+
+    const dx = currentX - startX;
+    const dy = currentY - startY;
+
+    imageX += dx;
+    imageY += dy;
+
+    // Contraindre la position
+    constrainImagePosition();
+
+    startX = currentX;
+    startY = currentY;
+
+    drawImage();
+  });
+
+  canvas.addEventListener("touchend", () => {
+    isDragging = false;
+  });
+
+  // Dessiner l'image avec masque circulaire
+  function drawImage() {
+    if (!currentImage) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Dessiner l'image
+    ctx.save();
+    ctx.drawImage(currentImage, imageX, imageY, currentImage.width * imageScale, currentImage.height * imageScale);
+    ctx.restore();
+
+    // Appliquer un masque circulaire (overlay sombre avec cercle transparent)
+    ctx.save();
+    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = canvas.width / 2;
+
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Dessiner le contour du cercle
+    ctx.strokeStyle = "#60a5fa";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Sauvegarder la photo croppée
+  saveEditorBtn.addEventListener("click", async () => {
+    if (!currentImage) return;
+
+    const originalText = saveEditorBtn.innerHTML;
+
+    try {
+      saveEditorBtn.disabled = true;
+      saveEditorBtn.innerHTML = '<span class="spinner"></span> Sauvegarde...';
+
+      // Créer un canvas temporaire pour le crop circulaire
+      const tempCanvas = document.createElement("canvas");
+      const tempCtx = tempCanvas.getContext("2d");
+      const size = canvas.width;
+      tempCanvas.width = size;
+      tempCanvas.height = size;
+
+      // Dessiner l'image croppée en cercle
+      tempCtx.save();
+      tempCtx.beginPath();
+      tempCtx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+      tempCtx.clip();
+      tempCtx.drawImage(currentImage, imageX, imageY, currentImage.width * imageScale, currentImage.height * imageScale);
+      tempCtx.restore();
+
+      // Convertir en base64
+      const photoDataUrl = tempCanvas.toDataURL("image/png");
+
+      // Sauvegarder via l'API
+      const response = await fetch('/api/save-profile-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: username,
+          photoData: photoDataUrl
+        })
+      });
+
+      if (!response.ok) throw new Error(`Erreur ${response.status}`);
+
+      // Afficher la photo
+      profilePhotoImage.src = photoDataUrl;
+      profilePhotoImage.classList.remove("hidden");
+      profilePhotoPlaceholder.style.display = "none";
+
+      // Mettre à jour la photo dans le header
+      updateHeaderProfilePhoto(photoDataUrl);
+
+      // Fermer le modal
+      closeModal();
+
+      showToast("Photo de profil sauvegardée avec succès", "success");
+
+      // Mettre à jour la progression du profil
+      updateProfileProgress();
+
+    } catch (error) {
+      showToast("Une erreur s'est produite lors de la sauvegarde", "error");
+      console.error(error);
+    } finally {
+      saveEditorBtn.disabled = false;
+      saveEditorBtn.innerHTML = originalText;
+    }
+  });
+
+  // Charger la photo existante au démarrage
+  loadExistingProfilePhoto();
+
+  async function loadExistingProfilePhoto() {
+    try {
+      const response = await fetch(`/api/get-profile-photo/${window.username}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.photoUrl) {
+          profilePhotoImage.src = data.photoUrl;
+          profilePhotoImage.classList.remove("hidden");
+          profilePhotoPlaceholder.style.display = "none";
+
+          // Mettre à jour la photo dans le header
+          updateHeaderProfilePhoto(data.photoUrl);
+        }
+      }
+    } catch (error) {
+      console.log("Aucune photo de profil existante trouvée");
+    }
+  }
+
+  // Fonction pour mettre à jour la photo dans le header
+  function updateHeaderProfilePhoto(photoUrl) {
+    console.log('🖼️ Mise à jour de la photo de profil dans le header:', photoUrl);
+
+    // Si on est dans un iframe, mettre à jour le header de la page parent (apppc.html)
+    if (window.parent && window.parent !== window) {
+      try {
+        const parentDoc = window.parent.document;
+
+        // Desktop account avatar (dans le bouton header du parent)
+        const accountAvatar = parentDoc.querySelector('.account-avatar img');
+        if (accountAvatar) {
+          accountAvatar.src = photoUrl;
+          console.log('[OK] Desktop account avatar mis à jour (parent)');
+        }
+
+        // Mobile profile icon (dans le header mobile du parent)
+        const mobileProfileIcon = parentDoc.querySelector('.mobile-profile-icon');
+        if (mobileProfileIcon) {
+          mobileProfileIcon.innerHTML = `<img src="${photoUrl}" alt="Photo de profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+          console.log('[OK] Mobile profile icon mis à jour (parent)');
+        }
+      } catch (e) {
+        console.log('[WARN] Impossible d\'accéder au parent (CORS):', e.message);
+      }
+    }
+
+    // Aussi mettre à jour localement si les éléments existent dans cette page
+    const mobileProfileIcon = document.querySelector('.mobile-profile-icon');
+    if (mobileProfileIcon) {
+      mobileProfileIcon.innerHTML = `<img src="${photoUrl}" alt="Photo de profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+      console.log('[OK] Mobile profile icon mis à jour (local)');
+    }
+
+    const accountAvatar = document.querySelector('.account-avatar');
+    if (accountAvatar) {
+      const img = accountAvatar.querySelector('img');
+      if (img) {
+        img.src = photoUrl;
+      } else {
+        accountAvatar.innerHTML = `<img src="${photoUrl}" alt="Photo de profil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+      }
+      console.log('[OK] Desktop account avatar mis à jour (local)');
+    }
+  }
+});
   </script>
 
   <script>

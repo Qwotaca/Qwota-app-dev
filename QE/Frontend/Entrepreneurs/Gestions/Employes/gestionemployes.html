@@ -682,6 +682,14 @@
       z-index: 9999 !important;
     }
 
+    /* Calendrier datePremiere s'ouvre vers le haut */
+    #calendar-datePremiere {
+      top: auto !important;
+      bottom: 100% !important;
+      margin-top: 0 !important;
+      margin-bottom: 4px !important;
+    }
+
     .custom-calendar.hidden {
       display: none;
     }
@@ -1399,7 +1407,7 @@
 
             <!-- Appartement -->
             <div>
-              <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Appartement</label>
+              <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Appartement (facultatif)</label>
               <input type="text" id="appartement" class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="App. 101">
             </div>
 
@@ -1439,7 +1447,7 @@
             <!-- Taux horaire -->
             <div>
               <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Taux horaire ($) *</label>
-              <input type="text" id="tauxHoraire" required class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="25.00">
+              <input type="text" id="tauxHoraire" required class="w-full p-2 text-sm rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light);" placeholder="25,00">
             </div>
           </div>
         </div>
@@ -8313,41 +8321,62 @@
     }
 
     function formatTauxHoraire(input) {
+      // Sauvegarder la position du curseur
+      const cursorPosition = input.selectionStart;
       let value = input.value;
-      // Retirer tout sauf les chiffres et le point/virgule décimal
+      const oldLength = value.length;
+
+      // Retirer tout sauf les chiffres, points et virgules
       value = value.replace(/[^0-9.,]/g, '');
-      
-      // Remplacer les virgules par des points pour les calculs
-      value = value.replace(/,/g, '.');
-      
-      // S'assurer qu'il n'y a qu'un seul point décimal
-      const parts = value.split('.');
-      if (parts.length > 2) {
-        value = parts[0] + '.' + parts.slice(1).join('');
+
+      // Remplacer TOUS les points par des virgules (format québécois)
+      value = value.replace(/\./g, ',');
+
+      // S'assurer qu'il n'y a qu'une seule virgule
+      const firstComma = value.indexOf(',');
+      if (firstComma !== -1) {
+        // Garder seulement la première virgule
+        value = value.substring(0, firstComma + 1) + value.substring(firstComma + 1).replace(/,/g, '');
       }
-      
-      // Limiter à 2 décimales pendant la saisie
-      if (parts[1] && parts[1].length > 2) {
-        value = parts[0] + '.' + parts[1].substring(0, 2);
+
+      // Limiter à 2 décimales après la virgule
+      const parts = value.split(',');
+      if (parts.length === 2 && parts[1].length > 2) {
+        value = parts[0] + ',' + parts[1].substring(0, 2);
       }
-      
+
       input.value = value;
+
+      // Restaurer la position du curseur
+      const newLength = value.length;
+      const newCursorPosition = cursorPosition + (newLength - oldLength);
+      input.setSelectionRange(newCursorPosition, newCursorPosition);
     }
 
-    function formatTauxHoraireComplet(input) {
-      let value = input.value.replace(/[^0-9.,]/g, '').replace(/,/g, '.');
+    function formatTauxHoraireComplet(value) {
+      // Enlever tout sauf les chiffres et points/virgules
+      const cleanValue = value.replace(/[^\d.,]/g, '');
 
-      if (value === '') {
-        input.value = '';
-        return;
-      }
+      // Convertir en nombre
+      const number = parseFloat(cleanValue.replace(',', '.'));
 
-      // Convertir en nombre et formater
-      const number = parseFloat(value);
-      if (!isNaN(number)) {
-        // Formater avec 2 décimales et point comme séparateur décimal
-        input.value = number.toFixed(2);
-      }
+      if (isNaN(number)) return '';
+
+      // Formater avec espaces pour les milliers et virgule pour les décimales
+      const formatted = new Intl.NumberFormat('fr-CA', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(number);
+
+      return formatted + ' $';
+    }
+
+    // Fonction pour enlever le formatage au focus (pour édition)
+    function removeTauxHoraireFormat(input) {
+      let value = input.value;
+      // Retirer le " $" à la fin
+      value = value.replace(/\s*\$\s*$/g, '');
+      input.value = value.trim();
     }
 
     // Custom Select pour le dropdown - fonction simplifiée
@@ -8598,6 +8627,33 @@
       setupDateNaissanceFormatting('dateNaissance');  // Modal d'activation d'employé
       setupDateNaissanceFormatting('reactiverDateNaissance');  // Modal de réactivation d'employé
       setupDateNaissanceFormatting('modifierDateNaissance');  // Modal de modification d'employé
+    });
+
+    // Ajouter le listener sur le champ taux horaire (même pattern que Prix dans soumission.html)
+    document.addEventListener('DOMContentLoaded', function() {
+      const tauxHoraireField = document.getElementById('tauxHoraire');
+
+      if (tauxHoraireField) {
+        // Format sur blur
+        tauxHoraireField.addEventListener('blur', function(e) {
+          const value = e.target.value.trim();
+          if (value && value !== '') {
+            e.target.value = formatTauxHoraireComplet(value);
+          }
+        });
+
+        // Retirer le formatage sur focus
+        tauxHoraireField.addEventListener('focus', function(e) {
+          removeTauxHoraireFormat(e.target);
+        });
+
+        // Permettre seulement les chiffres, points, virgules et $
+        tauxHoraireField.addEventListener('input', function(e) {
+          const value = e.target.value;
+          // Garder seulement les caractères valides pour un prix
+          e.target.value = value.replace(/[^0-9.,$ ]/g, '');
+        });
+      }
     });
 
     // Variable pour stocker les instances d'autocomplete

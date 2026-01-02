@@ -12869,21 +12869,33 @@ async function saveQuickFillData() {
 
     const { monthIndex, weekNumber, h_marketing, probleme, focus, rating } = weekData;
 
-    // Préparer les données pour cette semaine
+    // CHARGER les données existantes de cette semaine (si elles existent)
+    const existingData = window.weeklyData?.[String(monthIndex)]?.[String(weekNumber)] || {};
+
+    // Préparer les données pour cette semaine - FUSIONNER avec les données existantes
     const data = {
-      h_marketing: h_marketing !== null && h_marketing !== undefined ? h_marketing : '-',
-      estimation: 0,
-      contract: 0,
-      dollar: 0,
-      prod_horaire: 0,
-      rating: rating || 0,
+      h_marketing: h_marketing !== null && h_marketing !== undefined ? h_marketing : (existingData.h_marketing || '-'),
+      estimation: existingData.estimation || 0,
+      contract: existingData.contract || 0,
+      dollar: existingData.dollar || 0,
+      depot: existingData.depot || 0,
+      peintre: existingData.peintre || 0,
+      ca_cumul: existingData.ca_cumul || 0,
+      produit: existingData.produit || 0,
+      prod_horaire: existingData.prod_horaire || 0,
+      satisfaction: existingData.satisfaction || 0,
+      rating: rating || existingData.rating || 0,
       commentaire: ''
     };
 
-    // Construire le commentaire
-    let problemeText = probleme && probleme.trim() !== '' ? probleme.trim() : '-';
-    let focusText = focus && focus.trim() !== '' ? focus.trim() : '-';
+    // Construire le commentaire - utiliser les données existantes si non remplies
+    let problemeText = probleme && probleme.trim() !== '' ? probleme.trim() : (existingData.probleme || '-');
+    let focusText = focus && focus.trim() !== '' ? focus.trim() : (existingData.focus || '-');
     data.commentaire = `Problème: ${problemeText} | Focus: ${focusText}`;
+
+    // Ajouter probleme et focus séparément pour qu'ils soient sauvegardés dans le fichier JSON
+    data.probleme = problemeText;
+    data.focus = focusText;
 
     // Sauvegarder cette semaine via l'API
     try {

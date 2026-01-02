@@ -8654,6 +8654,17 @@ async def get_users_entrepreneurs_api(coach_username: Optional[str] = None):
                                 if client_statuts.get("statutAutresPaiements") == "traitement":
                                     pending_facturations_count += 1
 
+                # Compter les remboursements en attente validation coach
+                if coach_username:
+                    remb_file = os.path.join(base_cloud, "remboursements", username, "remboursements.json")
+                    if os.path.exists(remb_file):
+                        with open(remb_file, "r", encoding="utf-8") as f:
+                            content = f.read().strip()
+                            if content:
+                                remboursements = json.loads(content)
+                                remb_en_attente = sum(1 for r in remboursements if r.get("statut") == "en_attente_coach")
+                                pending_facturations_count += remb_en_attente
+
                 entrepreneurs.append({
                     "username": username,
                     "email": row[1],
@@ -11847,7 +11858,7 @@ async def liste_modifications_en_attente(coach_username: str):
 # Compter les facturations en traitement pour un coach
 @app.get("/api/coach/{coach_username}/facturation-en-traitement/count")
 async def count_facturation_en_traitement(coach_username: str):
-    """Compte le nombre total de facturations en traitement pour les entrepreneurs du coach (depot, paiement_final, autres_paiements)"""
+    """Compte le nombre total de facturations en traitement pour les entrepreneurs du coach (depot, paiement_final, autres_paiements, remboursements)"""
     try:
         total_count = 0
         details_par_entrepreneur = {}
@@ -11862,6 +11873,9 @@ async def count_facturation_en_traitement(coach_username: str):
 
         # Parcourir uniquement les entrepreneurs du coach
         for username in coach_entrepreneur_usernames:
+            entrepreneur_count = 0
+
+            # Compter les paiements en traitement
             user_path = os.path.join(statuts_dir, username)
             if os.path.isdir(user_path):
                 statuts_file = os.path.join(user_path, "statuts_clients.json")
@@ -11869,7 +11883,6 @@ async def count_facturation_en_traitement(coach_username: str):
                     with open(statuts_file, "r", encoding="utf-8") as f:
                         statuts = json.load(f)
 
-                    entrepreneur_count = 0
                     for num_soumission, client_statuts in statuts.items():
                         # Vérifier si le client a un paiement refusé (urgent)
                         # Si oui, ne pas compter ses paiements "traitement" car il est dans la colonne Urgent
@@ -11900,8 +11913,20 @@ async def count_facturation_en_traitement(coach_username: str):
                             entrepreneur_count += 1
                             total_count += 1
 
-                    if entrepreneur_count > 0:
-                        details_par_entrepreneur[username] = entrepreneur_count
+            # Compter les remboursements en attente validation coach
+            remb_file = os.path.join(base_cloud, "remboursements", username, "remboursements.json")
+            if os.path.exists(remb_file):
+                with open(remb_file, "r", encoding="utf-8") as f:
+                    content = f.read().strip()
+                    if content:
+                        remboursements = json.loads(content)
+                        remb_en_attente = sum(1 for r in remboursements if r.get("statut") == "en_attente_coach")
+                        entrepreneur_count += remb_en_attente
+                        total_count += remb_en_attente
+                        print(f"[COACH NOTIF] {username}: {remb_en_attente} remboursements en attente coach")
+
+            if entrepreneur_count > 0:
+                details_par_entrepreneur[username] = entrepreneur_count
 
         return {"success": True, "count": total_count, "details": details_par_entrepreneur}
     except Exception as e:
@@ -13355,6 +13380,60 @@ async def liste_facturation_en_traitement_comptable():
                                             "dateMiseAJour": client_statuts.get("dateMiseAJour")
                                         })
 
+        # Charger les remboursements en attente comptable
+        remboursements_dir = os.path.join(base_cloud, "remboursements")
+        if os.path.exists(remboursements_dir):
+            for username in os.listdir(remboursements_dir):
+                user_remb_dir = os.path.join(remboursements_dir, username)
+                if os.path.isdir(user_remb_dir):
+                    remb_file = os.path.join(user_remb_dir, "remboursements.json")
+                    if os.path.exists(remb_file):
+                        try:
+                            with open(remb_file, "r", encoding="utf-8") as f:
+                                content = f.read().strip()
+                                if content:
+                                    remboursements = json.loads(content)
+
+                                    # Récupérer le nom de l'entrepreneur et sa photo
+                                    entrepreneur_nom = username
+                                    entrepreneur_photo = None
+                                    try:
+                                        user_info = get_user_info(username)
+                                        if user_info and user_info.get("success"):
+                                            data = user_info.get("data", {})
+                                            prenom = data.get("prenom", "")
+                                            nom = data.get("nom", "")
+                                            if prenom or nom:
+                                                entrepreneur_nom = f"{prenom} {nom}".strip()
+                                            files = user_info.get("files", {})
+                                            entrepreneur_photo = files.get("profile_photo")
+                                    except:
+                                        pass
+
+                                    # Ajouter les remboursements en attente comptable
+                                    for remb in remboursements:
+                                        if remb.get("statut") == "en_attente_comptable":
+                                            # Vérifier si ce remboursement n'est pas déjà dans l'historique
+                                            if (username, remb.get("num"), "remboursement") not in historique_set:
+                                                paiements_en_traitement.append({
+                                                    "entrepreneur": entrepreneur_nom,
+                                                    "entrepreneurUsername": username,
+                                                    "entrepreneurPhoto": entrepreneur_photo,
+                                                    "client": remb.get("client", "Client inconnu"),
+                                                    "numeroSoumission": remb.get("num", ""),
+                                                    "type": "remboursement",
+                                                    "montant": remb.get("montant", "0,00 $"),
+                                                    "date": remb.get("date", ""),
+                                                    "courriel": remb.get("courriel", ""),
+                                                    "paiement_source": remb.get("paiement_source", ""),
+                                                    "date_demande": remb.get("date_demande", ""),
+                                                    "date_validation_coach": remb.get("date_validation_coach", ""),
+                                                    "remboursementId": remb.get("id", ""),
+                                                    "dateMiseAJour": remb.get("date_validation_coach", "")
+                                                })
+                        except Exception as e:
+                            print(f"[REMB] Erreur lecture remboursements pour {username}: {e}")
+
         return {"success": True, "paiements": paiements_en_traitement}
     except Exception as e:
         print(f"Erreur lors du chargement de la liste des facturations comptable: {e}")
@@ -13370,6 +13449,34 @@ async def valider_facturation_comptable(username: str, numero_soumission: str, r
         data = await request.json()
         type_paiement = data.get("type", "depot")
 
+        # Traitement spécial pour les remboursements
+        if type_paiement == "remboursement":
+            remb_file = os.path.join(base_cloud, "remboursements", username, "remboursements.json")
+            if not os.path.exists(remb_file):
+                raise HTTPException(status_code=404, detail="Fichier de remboursements non trouvé")
+
+            with open(remb_file, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if not content:
+                    raise HTTPException(status_code=404, detail="Aucun remboursement trouvé")
+                remboursements = json.loads(content)
+
+            # Trouver le remboursement
+            remb_found = None
+            for remb in remboursements:
+                if remb.get("num") == numero_soumission:
+                    remb_found = remb
+                    break
+
+            if not remb_found:
+                raise HTTPException(status_code=404, detail="Remboursement non trouvé")
+
+            # Ajouter à l'historique (passer un dict vide pour client_statuts car pas applicable)
+            await ajouter_historique_facturation(username, numero_soumission, type_paiement, "attente_comptable", {})
+
+            return {"success": True, "message": "Remboursement validé - En attente de rapprochement QBO"}
+
+        # Pour les autres types de paiements (depot, paiement_final, autres_paiements)
         statuts_file = os.path.join(base_cloud, "facturation_qe_statuts", username, "statuts_clients.json")
         if not os.path.exists(statuts_file):
             raise HTTPException(status_code=404, detail="Fichier de statuts non trouvé")
@@ -13708,6 +13815,8 @@ async def ajouter_historique_facturation(username: str, numero_soumission: str, 
         # Récupérer le montant et le lien virement selon le type
         montant = "0,00 $"
         lien_virement = ""
+        courriel = ""
+
         if type_paiement == "depot":
             montant = client_statuts.get("depot", {}).get("montant", "0,00 $")
             lien_virement = client_statuts.get("depot", {}).get("lienVirement", "")
@@ -13719,9 +13828,27 @@ async def ajouter_historique_facturation(username: str, numero_soumission: str, 
             if autres:
                 montant = autres[-1].get("montant", "0,00 $")
                 lien_virement = autres[-1].get("lienVirement", "")
+        elif type_paiement == "remboursement":
+            # Pour les remboursements, récupérer les infos depuis remboursements.json
+            remb_file = os.path.join(base_cloud, "remboursements", username, "remboursements.json")
+            if os.path.exists(remb_file):
+                try:
+                    with open(remb_file, "r", encoding="utf-8") as f:
+                        content = f.read().strip()
+                        if content:
+                            remboursements = json.loads(content)
+                            # Trouver le remboursement avec le bon numéro de soumission
+                            for remb in remboursements:
+                                if remb.get("num") == numero_soumission:
+                                    montant = remb.get("montant", "0,00 $")
+                                    courriel = remb.get("courriel", "")
+                                    client_nom = remb.get("client", client_nom)
+                                    break
+                except Exception as e:
+                    print(f"[HISTORIQUE] Erreur lecture remboursement: {e}")
 
         # Ajouter l'entrée
-        historique.insert(0, {
+        entry = {
             "entrepreneur": entrepreneur_nom,
             "entrepreneurUsername": username,
             "entrepreneurPhoto": entrepreneur_photo,
@@ -13732,7 +13859,13 @@ async def ajouter_historique_facturation(username: str, numero_soumission: str, 
             "lienVirement": lien_virement,
             "statut": statut,
             "date": datetime.now().strftime("%d/%m/%Y %H:%M")
-        })
+        }
+
+        # Ajouter le courriel pour les remboursements
+        if type_paiement == "remboursement" and courriel:
+            entry["courriel"] = courriel
+
+        historique.insert(0, entry)
 
         # Sauvegarder (garder les 500 dernières entrées)
         historique = historique[:500]
@@ -19088,6 +19221,32 @@ async def delete_remboursement(username: str, num_soumission: str):
     except Exception as e:
         print(f"[ERROR] ERREUR delete_remboursement: {e}")
         raise HTTPException(status_code=500, detail=f"Erreur suppression remboursement: {e}")
+
+
+@app.put("/api/remboursements/{username}/update")
+async def update_remboursements(username: str, remboursements: list = Body(...)):
+    """
+    Met à jour tous les remboursements pour un utilisateur (utilisé pour la validation coach)
+    """
+    try:
+        print(f"[UPDATE] Mise à jour des remboursements pour {username}")
+
+        remb_dir = f"{base_cloud}/remboursements/{username}"
+        remb_file = os.path.join(remb_dir, "remboursements.json")
+
+        # Créer le dossier s'il n'existe pas
+        os.makedirs(remb_dir, exist_ok=True)
+
+        # Sauvegarder les remboursements mis à jour
+        with open(remb_file, "w", encoding="utf-8") as f:
+            json.dump(remboursements, f, indent=2, ensure_ascii=False)
+
+        print(f"[OK] Remboursements mis à jour pour {username}")
+        return {"status": "success", "message": "Remboursements mis à jour"}
+
+    except Exception as e:
+        print(f"[ERROR] ERREUR update_remboursements: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur mise à jour remboursements: {e}")
 
 
 # ============================================================================

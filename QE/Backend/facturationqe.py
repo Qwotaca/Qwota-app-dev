@@ -716,6 +716,25 @@ def get_facturations_a_traiter_count_direction():
                         print(f"[ERREUR] Lecture statuts {user_dir.name}: {e}")
                         continue
 
+        # Compter les remboursements en attente comptable
+        remboursements_dir = Path("data/remboursements")
+        if remboursements_dir.exists():
+            for user_dir in remboursements_dir.iterdir():
+                if user_dir.is_dir():
+                    remb_file = user_dir / "remboursements.json"
+                    if remb_file.exists():
+                        try:
+                            with open(remb_file, "r", encoding="utf-8") as f:
+                                content = f.read().strip()
+                                if content:
+                                    remboursements = json.loads(content)
+                                    remb_en_attente = sum(1 for r in remboursements if r.get("statut") == "en_attente_comptable")
+                                    total_count += remb_en_attente
+                                    print(f"[REMB COUNT] {user_dir.name}: {remb_en_attente} remboursements en attente comptable")
+                        except Exception as e:
+                            print(f"[ERREUR] Lecture remboursements {user_dir.name}: {e}")
+                            continue
+
         return {"count": total_count}
 
     except Exception as e:

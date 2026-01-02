@@ -45,6 +45,73 @@
   <!-- Styles spécifiques à Facturation QE -->
   <link rel="stylesheet" href="/FacturationQE.css">
 
+  <style>
+    /* Animation de succès pour l'envoi de remboursement */
+    @keyframes successFadeIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.8);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes checkmarkDraw {
+      0% {
+        stroke-dashoffset: 100;
+      }
+      100% {
+        stroke-dashoffset: 0;
+      }
+    }
+
+    .success-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: successFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .success-content {
+      text-align: center;
+      color: white;
+      animation: successFadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+    }
+
+    .success-checkmark {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      margin: 0 auto 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4);
+    }
+
+    .success-checkmark svg {
+      stroke: white;
+      stroke-width: 3;
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      animation: checkmarkDraw 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.4s forwards;
+    }
+  </style>
+
   <!-- Script anti-flash: détecte page=status AVANT le rendu et inverse les classes CSS -->
   <script>
     (function() {
@@ -119,12 +186,12 @@
 
   <!-- Variables globales définies dans common.js -->
   <script>
-    // ⚡ DÉSACTIVATION DES LOGS - Performance optimization
-    window.log = window.log || (() => {});
-    window.warn = window.warn || (() => {});
-    window.error = window.error || (() => {});
-    window.info = window.info || (() => {});
-    window.debug = window.debug || (() => {});
+    // ⚡ ACTIVATION DES LOGS - Debug mode
+    window.log = window.log || console.log.bind(console);
+    window.warn = window.warn || console.warn.bind(console);
+    window.error = window.error || console.error.bind(console);
+    window.info = window.info || console.info.bind(console);
+    window.debug = window.debug || console.debug.bind(console);
 
     // Ces variables sont maintenant gérées par common.js
     // username, userRole, canEditParameters sont disponibles globalement
@@ -1566,14 +1633,54 @@
         const clientData = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
 
         log('[BAN] Données client pour remboursement:', clientData);
+        log('[DEBUG REMB] depot:', clientData.depot);
+        log('[DEBUG REMB] paiementFinal:', clientData.paiementFinal);
+        log('[DEBUG REMB] autresPaiements:', clientData.autresPaiements);
 
-        // Vérifier si au moins un paiement a été traité
-        const statutDepot = clientData.statutDepot || 'non_envoye';
-        const statutPaiementFinal = clientData.statutPaiementFinal || 'attente';
+        // Vérifier si au moins un paiement a été traité (vérifier les statuts INDIVIDUELS des paiements)
+        const depot = clientData.depot || {};
+        const paiementFinal = clientData.paiementFinal || {};
         const autresPaiements = Array.isArray(clientData.autresPaiements) ? clientData.autresPaiements : [];
-        const hasAutresPaiementsTraites = autresPaiements.some(p => p.statut === 'traite');
 
-        const aucunPaiementTraite = statutDepot !== 'traite' && statutPaiementFinal !== 'traite' && !hasAutresPaiementsTraites;
+        log('[DEBUG REMB] depot.statut:', depot.statut);
+        log('[DEBUG REMB] paiementFinal.statut:', paiementFinal.statut);
+
+        // Collecter tous les paiements traités
+        const paiementsTraites = [];
+
+        // Statuts acceptés pour remboursement: paiements complètement traités
+        const statutsAcceptes = ['traite', 'traite_attente_final'];
+
+        // Vérifier le dépôt
+        if (statutsAcceptes.includes(depot.statut) && depot.montant) {
+          paiementsTraites.push({
+            type: 'Dépôt',
+            montant: depot.montant,
+            montantNum: parseFloat(depot.montant.replace(/[^\d,]/g, '').replace(',', '.')) || 0
+          });
+        }
+
+        // Vérifier le paiement final
+        if (statutsAcceptes.includes(paiementFinal.statut) && paiementFinal.montant) {
+          paiementsTraites.push({
+            type: 'Paiement final',
+            montant: paiementFinal.montant,
+            montantNum: parseFloat(paiementFinal.montant.replace(/[^\d,]/g, '').replace(',', '.')) || 0
+          });
+        }
+
+        // Vérifier les autres paiements
+        autresPaiements.forEach((p, index) => {
+          if (statutsAcceptes.includes(p.statut) && p.montant) {
+            paiementsTraites.push({
+              type: `Autre paiement ${index + 1}`,
+              montant: p.montant,
+              montantNum: parseFloat(p.montant.replace(/[^\d,]/g, '').replace(',', '.')) || 0
+            });
+          }
+        });
+
+        const aucunPaiementTraite = paiementsTraites.length === 0;
 
         if (aucunPaiementTraite) {
           // Construire le nom du client
@@ -1603,10 +1710,119 @@
           log('[WARN] Aucun client sélectionné');
         }
 
+        // Peupler le dropdown des paiements traités
+        const montantMenu = document.getElementById('remb-montant-menu');
+        const montantSelected = document.getElementById('remb-montant-selected');
+        const montantHidden = document.getElementById('remb-montant');
+
+        if (montantMenu) {
+          // Vider le dropdown menu
+          montantMenu.innerHTML = '';
+
+          // Ajouter chaque paiement traité au dropdown
+          paiementsTraites.forEach((paiement, index) => {
+            const option = document.createElement('div');
+            option.className = 'dropdown-secondary-option';
+            option.dataset.value = paiement.montant;
+            option.dataset.montantNum = paiement.montantNum;
+            option.textContent = `${paiement.type} - ${paiement.montant}`;
+            montantMenu.appendChild(option);
+          });
+
+          // Si 2 paiements ou plus, ajouter l'option "Totalité" à la fin
+          if (paiementsTraites.length >= 2) {
+            const montantTotal = paiementsTraites.reduce((sum, p) => sum + p.montantNum, 0);
+            const montantTotalFormate = montantTotal.toFixed(2).replace('.', ',') + ' $';
+
+            const optionTotal = document.createElement('div');
+            optionTotal.className = 'dropdown-secondary-option';
+            optionTotal.dataset.value = montantTotalFormate;
+            optionTotal.dataset.montantNum = montantTotal;
+            optionTotal.textContent = `Totalité des paiements traités - ${montantTotalFormate}`;
+            montantMenu.appendChild(optionTotal);
+          }
+
+          // Réinitialiser la sélection
+          if (montantSelected && montantHidden) {
+            montantSelected.textContent = 'Sélectionner un paiement';
+            montantHidden.value = '';
+          }
+
+          // Initialiser le dropdown après avoir ajouté les options
+          setTimeout(() => {
+            initRembMontantDropdown();
+          }, 100);
+        }
+
         modal.classList.remove('hidden');
         // Bloquer le scroll de la page
         document.body.style.overflow = 'hidden';
       }
+    }
+
+    // Variable pour tracker si le dropdown a été initialisé
+    let rembMontantDropdownInitialized = false;
+
+    // Fonction pour initialiser le dropdown de montant (une seule fois)
+    function initRembMontantDropdown() {
+      if (rembMontantDropdownInitialized) return;
+
+      const dropdown = document.getElementById('remb-montant-dropdown');
+      const menu = document.getElementById('remb-montant-menu');
+      const selected = document.getElementById('remb-montant-selected');
+      const hidden = document.getElementById('remb-montant');
+
+      if (!dropdown || !menu || !selected || !hidden) return;
+
+      // Toggle menu au clic sur le dropdown
+      dropdown.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const isVisible = menu.style.display === 'block';
+        menu.style.display = isVisible ? 'none' : 'block';
+
+        // Rotation de l'icône
+        const icon = dropdown.querySelector('.fa-chevron-down');
+        if (icon) {
+          icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+      });
+
+      // Utiliser la délégation d'événements pour les options (gère dynamiquement les options ajoutées)
+      menu.addEventListener('click', function(e) {
+        const option = e.target.closest('.dropdown-secondary-option');
+        if (!option) return;
+
+        e.stopPropagation();
+        const value = option.dataset.value;
+        const text = option.textContent;
+
+        // Mettre à jour l'affichage et la valeur
+        selected.textContent = text;
+        hidden.value = value;
+
+        // Fermer le menu
+        menu.style.display = 'none';
+        const icon = dropdown.querySelector('.fa-chevron-down');
+        if (icon) {
+          icon.style.transform = 'rotate(0deg)';
+        }
+
+        log('[REMB] Paiement sélectionné:', text, 'Valeur:', value);
+      });
+
+      // Fermer le menu si on clique ailleurs
+      document.addEventListener('click', function(e) {
+        if (!dropdown.contains(e.target) && !menu.contains(e.target)) {
+          menu.style.display = 'none';
+          const icon = dropdown.querySelector('.fa-chevron-down');
+          if (icon) {
+            icon.style.transform = 'rotate(0deg)';
+          }
+        }
+      });
+
+      rembMontantDropdownInitialized = true;
+      log('[REMB] Dropdown initialisé avec succès');
     }
 
     // Fonction pour fermer le popup de procédure de remboursement
@@ -1618,6 +1834,17 @@
         document.body.style.overflow = '';
         // Réinitialiser le formulaire
         document.getElementById('formRemboursement').reset();
+
+        // Réinitialiser le dropdown de montant
+        const montantSelected = document.getElementById('remb-montant-selected');
+        const montantMenu = document.getElementById('remb-montant-menu');
+        if (montantSelected) {
+          montantSelected.textContent = 'Sélectionner un paiement';
+        }
+        if (montantMenu) {
+          montantMenu.style.display = 'none';
+        }
+
         // Réinitialiser le dropdown de méthode
         const placeholder = document.querySelector('#rembMethodeToggle .placeholder');
         if (placeholder) {
@@ -1675,27 +1902,41 @@
           const client = document.getElementById('remb-client').value;
           const numSoumission = document.getElementById('remb-num-soumission').value;
           const montant = document.getElementById('remb-montant').value;
-          const date = document.getElementById('remb-date').value;
-          const cause = document.getElementById('remb-cause').value;
-          const notes = document.getElementById('remb-notes').value;
+          const courriel = document.getElementById('remb-courriel').value;
 
-          if (!rembMethodeSelectionnee) {
-            alert('Veuillez sélectionner une méthode de remboursement');
+          // Valider que tous les champs sont remplis
+          if (!montant) {
+            customAlert('Veuillez sélectionner un paiement à rembourser', 'error');
             return;
           }
 
+          if (!courriel) {
+            customAlert('Veuillez entrer le courriel du client pour le remboursement', 'error');
+            return;
+          }
+
+          // Récupérer le montant numérique du paiement sélectionné
+          const montantOption = document.querySelector('#remb-montant-menu .dropdown-secondary-option[data-value="' + montant + '"]');
+          const montantNum = montantOption ? parseFloat(montantOption.dataset.montantNum) : 0;
+
+          // Générer un ID unique pour le remboursement
+          const remboursementId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
+
           const remboursement = {
+            id: remboursementId,
             client: client,
             num: numSoumission,
             montant: montant,
-            date: date,
-            methode: rembMethodeSelectionnee,
-            cause: cause,
-            notes: notes,
+            montantNum: montantNum,
+            courriel: courriel,
+            date_demande: new Date().toISOString(),
+            statut: 'en_attente_coach',
+            paiement_source: montantOption ? montantOption.textContent : montant,
+            date: new Date().toLocaleDateString('fr-CA'),
             timestamp: new Date().toISOString()
           };
 
-          log('[MONEY] REMBOURSEMENT:', remboursement);
+          log('[MONEY] REMBOURSEMENT EN ATTENTE COACH:', remboursement);
 
           // Sauvegarder le remboursement via l'API
           try {
@@ -1707,16 +1948,332 @@
             });
 
             if (response.ok) {
-              alert('[OK] Remboursement enregistré avec succès!');
               fermerPopupRemboursement();
+              showSuccessAnimation('Remboursement envoyé en attente validation coach!');
             } else {
-              alert('[ERROR] Erreur lors de l\'enregistrement du remboursement');
+              customAlert('Erreur lors de l\'enregistrement du remboursement', 'error');
             }
           } catch (error) {
             error('Erreur:', error);
-            alert('[ERROR] Erreur lors de l\'enregistrement du remboursement');
+            customAlert('Erreur lors de l\'enregistrement du remboursement', 'error');
           }
         });
+      }
+    });
+
+    // ============================================
+    // ANIMATION DE SUCCÈS (comme soumission.html)
+    // ============================================
+
+    function showSuccessAnimation(message) {
+      const overlay = document.createElement('div');
+      overlay.className = 'success-overlay';
+      overlay.innerHTML = `
+        <div class="success-content">
+          <div class="success-checkmark">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+              <path d="M8 20 L16 28 L32 12" stroke="white" stroke-width="3"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">${message}</h2>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+
+      setTimeout(() => {
+        overlay.remove();
+        // Recharger pour mettre à jour l'interface
+        if (typeof chargerClientsFacturation === 'function') {
+          chargerClientsFacturation();
+        }
+      }, 2000);
+    }
+
+    // ============================================
+    // POPUPS PERSONNALISÉS (remplace alert et confirm)
+    // ============================================
+
+    let customConfirmCallback = null;
+
+    // Fonction pour afficher un popup de confirmation personnalisé
+    function customConfirm(message, callback) {
+      const modal = document.getElementById('customConfirmModal');
+      const messageEl = document.getElementById('customConfirmMessage');
+      const confirmBtn = document.getElementById('customConfirmBtn');
+
+      if (!modal || !messageEl || !confirmBtn) return;
+
+      messageEl.textContent = message;
+      customConfirmCallback = callback;
+
+      // Ajouter l'event listener au bouton de confirmation
+      confirmBtn.onclick = function() {
+        customConfirmAccept();
+      };
+
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function customConfirmAccept() {
+      const modal = document.getElementById('customConfirmModal');
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+
+      if (customConfirmCallback) {
+        customConfirmCallback(true);
+        customConfirmCallback = null;
+      }
+    }
+
+    function customConfirmCancel() {
+      const modal = document.getElementById('customConfirmModal');
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+
+      if (customConfirmCallback) {
+        customConfirmCallback(false);
+        customConfirmCallback = null;
+      }
+    }
+
+    // Fonction pour afficher un popup d'alerte personnalisé
+    function customAlert(message, type = 'info') {
+      const modal = document.getElementById('customAlertModal');
+      const messageEl = document.getElementById('customAlertMessage');
+      const titleEl = document.getElementById('customAlertTitle');
+      const iconEl = document.getElementById('customAlertIcon');
+
+      if (!modal || !messageEl || !titleEl || !iconEl) return;
+
+      messageEl.textContent = message;
+
+      // Configurer selon le type
+      if (type === 'success') {
+        titleEl.textContent = 'Succès';
+        iconEl.innerHTML = '<i class="fas fa-check-circle text-2xl text-green-500"></i>';
+        iconEl.style.background = 'rgba(16, 185, 129, 0.2)';
+      } else if (type === 'error') {
+        titleEl.textContent = 'Erreur';
+        iconEl.innerHTML = '<i class="fas fa-exclamation-circle text-2xl text-red-500"></i>';
+        iconEl.style.background = 'rgba(239, 68, 68, 0.2)';
+      } else {
+        titleEl.textContent = 'Information';
+        iconEl.innerHTML = '<i class="fas fa-info-circle text-2xl text-blue-500"></i>';
+        iconEl.style.background = 'rgba(59, 130, 246, 0.2)';
+      }
+
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function customAlertClose() {
+      const modal = document.getElementById('customAlertModal');
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    // ============================================
+    // VALIDATION COACH DES REMBOURSEMENTS
+    // ============================================
+
+    // Fonction pour charger les remboursements en attente pour l'entrepreneur sélectionné
+    async function chargerRemboursementsEnAttenteCoach() {
+      const userRole = localStorage.getItem('userRole');
+      if (userRole !== 'coach' && userRole !== 'direction') {
+        return; // Cette fonction est uniquement pour les coaches
+      }
+
+      const username = getFacturationUsername();
+      if (!username) {
+        log('[COACH REMB] Pas de username trouvé');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${window.location.origin}/api/remboursements/${username}`);
+        if (!response.ok) {
+          throw new Error('Erreur lors du chargement des remboursements');
+        }
+
+        const remboursements = await response.json();
+        const rembEnAttente = remboursements.filter(r => r.statut === 'en_attente_coach');
+
+        log('[COACH REMB] Remboursements en attente coach:', rembEnAttente);
+
+        if (rembEnAttente.length > 0) {
+          afficherPopupValidationCoach(rembEnAttente);
+        }
+      } catch (error) {
+        console.error('[COACH REMB] Erreur:', error);
+      }
+    }
+
+    // Fonction pour afficher le popup de validation coach
+    function afficherPopupValidationCoach(remboursements) {
+      const modal = document.getElementById('coachRemboursementValidationModal');
+      const liste = document.getElementById('listeRemboursementsCoach');
+
+      if (!modal || !liste) return;
+
+      // Vider la liste
+      liste.innerHTML = '';
+
+      // Créer une carte pour chaque remboursement
+      remboursements.forEach(remb => {
+        const card = document.createElement('div');
+        card.className = 'p-6 rounded-lg border-2 border-yellow-600 bg-opacity-10';
+        card.style.background = 'rgba(202, 138, 4, 0.1)';
+        card.style.borderColor = 'var(--border-dark)';
+
+        const dateFormatted = new Date(remb.date_demande).toLocaleDateString('fr-CA', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        card.innerHTML = `
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <h4 class="text-lg font-bold mb-2" style="color: var(--text-light);">
+                <i class="fas fa-user mr-2 text-blue-500"></i>
+                ${remb.client}
+              </h4>
+              <p class="text-sm" style="color: var(--text-gray);">
+                <i class="fas fa-hashtag mr-1"></i>
+                Soumission ${remb.num}
+              </p>
+            </div>
+            <div class="px-3 py-1 rounded-full text-xs font-semibold" style="background: rgba(234, 179, 8, 0.2); color: #facc15;">
+              <i class="fas fa-clock mr-1"></i>
+              En attente
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <p class="text-sm mb-1" style="color: var(--text-gray);">Montant à rembourser</p>
+              <p class="text-xl font-bold" style="color: #ef4444;">
+                <i class="fas fa-dollar-sign mr-1"></i>
+                ${remb.montant}
+              </p>
+            </div>
+            <div>
+              <p class="text-sm mb-1" style="color: var(--text-gray);">Paiement source</p>
+              <p class="font-medium" style="color: var(--text-light);">
+                ${remb.paiement_source}
+              </p>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <p class="text-sm mb-1" style="color: var(--text-gray);">Courriel pour le virement</p>
+            <p class="font-medium" style="color: var(--text-light);">
+              <i class="fas fa-envelope mr-2 text-blue-500"></i>
+              ${remb.courriel}
+            </p>
+          </div>
+
+          <div class="mb-4">
+            <p class="text-sm mb-1" style="color: var(--text-gray);">Date de demande</p>
+            <p class="font-medium" style="color: var(--text-light);">
+              <i class="fas fa-calendar mr-2"></i>
+              ${dateFormatted}
+            </p>
+          </div>
+
+          <div class="flex justify-end gap-3 pt-4 border-t" style="border-color: var(--border-dark);">
+            <button onclick="validerRemboursementCoach('${remb.id}')" class="btn-primary px-4 py-2" style="background: #10b981 !important;">
+              <i class="fas fa-check mr-2"></i>
+              Valider le remboursement
+            </button>
+          </div>
+        `;
+
+        liste.appendChild(card);
+      });
+
+      // Afficher le modal
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    // Fonction pour fermer le popup de validation coach
+    function fermerPopupCoachValidation() {
+      const modal = document.getElementById('coachRemboursementValidationModal');
+      if (modal) {
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+    }
+
+    // Fonction pour valider un remboursement (coach)
+    async function validerRemboursementCoach(remboursementId) {
+      customConfirm('Êtes-vous sûr de vouloir valider ce remboursement? Il sera envoyé au comptable.', async function(confirmed) {
+        if (!confirmed) return;
+
+        const username = getFacturationUsername();
+
+        try {
+          // Charger tous les remboursements
+          const response = await fetch(`${window.location.origin}/api/remboursements/${username}`);
+          if (!response.ok) {
+            throw new Error('Erreur lors du chargement des remboursements');
+          }
+
+          let remboursements = await response.json();
+
+          // Trouver et mettre à jour le remboursement
+          const index = remboursements.findIndex(r => r.id === remboursementId);
+          if (index === -1) {
+            customAlert('Remboursement non trouvé', 'error');
+            return;
+          }
+
+          remboursements[index].statut = 'en_attente_comptable';
+          remboursements[index].date_validation_coach = new Date().toISOString();
+
+          // Sauvegarder via l'API (on doit mettre à jour tout le fichier)
+          const updateResponse = await fetch(`${window.location.origin}/api/remboursements/${username}/update`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(remboursements)
+          });
+
+          if (updateResponse.ok) {
+            customAlert('Remboursement validé et envoyé au comptable!', 'success');
+            fermerPopupCoachValidation();
+            // Recharger pour mettre à jour les notifications
+            if (typeof chargerClientsFacturation === 'function') {
+              chargerClientsFacturation();
+            }
+            // Vérifier s'il reste d'autres remboursements en attente
+            setTimeout(() => {
+              chargerRemboursementsEnAttenteCoach();
+            }, 500);
+          } else {
+            customAlert('Erreur lors de la validation du remboursement', 'error');
+          }
+        } catch (error) {
+          console.error('Erreur:', error);
+          customAlert('Erreur lors de la validation du remboursement', 'error');
+        }
+      });
+    }
+
+    // Écouter l'événement de sélection d'entrepreneur
+    document.addEventListener('entrepreneurSelected', function(event) {
+      const userRole = localStorage.getItem('userRole');
+      if (userRole === 'coach' || userRole === 'direction') {
+        log('[COACH REMB] Entrepreneur sélectionné, vérification des remboursements...');
+        // Attendre un peu que les données soient chargées
+        setTimeout(() => {
+          chargerRemboursementsEnAttenteCoach();
+        }, 1000);
       }
     });
 
@@ -10466,7 +11023,7 @@
 
   <!-- Modal pour procéder à un remboursement -->
   <div id="remboursementProcedureModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50" style="backdrop-filter: blur(5px);">
-    <div class="bg-white p-8 w-[60vw] mx-4 max-h-[85vh] overflow-y-auto relative" style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: 20px;">
+    <div class="bg-white p-8 w-[40vw] mx-4 max-h-[85vh] overflow-y-auto relative" style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: 20px;">
       <!-- En-tête avec titre et bouton fermer sur la même ligne -->
       <div class="flex justify-between items-center mb-6">
         <h3 class="text-2xl font-bold" style="color: var(--text-light);">
@@ -10481,63 +11038,128 @@
 
       <!-- Formulaire de remboursement -->
       <form id="formRemboursement" class="space-y-6">
-        <!-- Ligne 1: Client et N° Soumission (auto-remplis et non modifiables) -->
-        <div class="grid grid-cols-2 gap-6">
-          <div>
-            <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
-              <i class="fas fa-user mr-2 text-blue-500"></i>
-              Nom du client
-            </label>
-            <input type="text" id="remb-client" placeholder="Nom du client" class="modern-input w-full" style="background: rgba(55, 65, 81, 0.3) !important; color: var(--text-light) !important; border-color: rgba(75, 85, 99, 0.3) !important; cursor: not-allowed !important; opacity: 0.7 !important; pointer-events: none !important;" readonly>
-          </div>
-          <div>
-            <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
-              <i class="fas fa-hashtag mr-2 text-gray-500"></i>
-              N° Soumission
-            </label>
-            <input type="text" id="remb-num-soumission" placeholder="24-0001" class="modern-input w-full" style="background: rgba(55, 65, 81, 0.3) !important; color: var(--text-light) !important; border-color: rgba(75, 85, 99, 0.3) !important; cursor: not-allowed !important; opacity: 0.7 !important; pointer-events: none !important;" readonly>
-          </div>
+        <!-- Nom du client -->
+        <div>
+          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-user mr-2 text-blue-500"></i>
+            Nom du client
+          </label>
+          <input type="text" id="remb-client" placeholder="Nom du client" class="modern-input w-full" style="background: rgba(55, 65, 81, 0.3) !important; color: var(--text-light) !important; border-color: rgba(75, 85, 99, 0.3) !important; cursor: not-allowed !important; opacity: 0.7 !important; pointer-events: none !important;" readonly>
         </div>
 
-        <!-- Ligne 2: Montant -->
+        <!-- N° Soumission -->
         <div>
+          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-hashtag mr-2 text-gray-500"></i>
+            N° Soumission
+          </label>
+          <input type="text" id="remb-num-soumission" placeholder="24-0001" class="modern-input w-full" style="background: rgba(55, 65, 81, 0.3) !important; color: var(--text-light) !important; border-color: rgba(75, 85, 99, 0.3) !important; cursor: not-allowed !important; opacity: 0.7 !important; pointer-events: none !important;" readonly>
+        </div>
+
+        <!-- Paiement à rembourser -->
+        <div style="position: relative;">
           <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
             <i class="fas fa-dollar-sign mr-2 text-red-500"></i>
-            Montant à rembourser
+            Paiement à rembourser
           </label>
-          <input type="text" id="remb-montant" placeholder="0,00 $" class="modern-input w-full" required>
+          <input type="hidden" id="remb-montant" required>
+          <div class="dropdown-secondary" id="remb-montant-dropdown" style="width: 100% !important; background: #172033; border: 2px solid var(--border-dark); color: var(--text-light); border-radius: 12px; padding: 12px 16px; font-size: 0.875rem; cursor: pointer;">
+            <span id="remb-montant-selected">Sélectionner un paiement</span>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+          <div class="dropdown-secondary-menu" id="remb-montant-menu" style="background: #0f172a; border: 2px solid var(--border-dark); border-radius: 12px; display: none;">
+          </div>
         </div>
 
-        <!-- Ligne 3: Cause du remboursement -->
+        <!-- Courriel pour le virement -->
         <div>
           <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
-            <i class="fas fa-exclamation-circle mr-2 text-yellow-500"></i>
-            Cause du remboursement
+            <i class="fas fa-envelope mr-2 text-blue-500"></i>
+            Courriel du client pour le remboursement
           </label>
-          <textarea id="remb-cause" placeholder="Expliquez la raison du remboursement..." class="modern-input w-full" rows="3" required style="resize: none;"></textarea>
-        </div>
-
-        <!-- Ligne 5: Notes additionnelles (optionnel) -->
-        <div>
-          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
-            <i class="fas fa-sticky-note mr-2 text-orange-500"></i>
-            Notes additionnelles <span style="color: var(--text-gray); font-weight: normal;">(optionnel)</span>
-          </label>
-          <textarea id="remb-notes" placeholder="Informations complémentaires..." class="modern-input w-full" rows="2" style="resize: none;"></textarea>
+          <input type="email" id="remb-courriel" placeholder="client@exemple.com" class="modern-input w-full" required>
         </div>
 
         <!-- Boutons d'action -->
         <div class="flex justify-end gap-4 pt-4 border-t" style="border-color: var(--border-dark);">
-          <button type="button" onclick="fermerPopupRemboursement()" class="btn-secondary px-6 py-2 rounded-lg font-medium transition-all duration-300">
+          <button type="button" onclick="fermerPopupRemboursement()" class="btn-secondary px-3 py-1.5">
             <i class="fas fa-times mr-2"></i>
             Annuler
           </button>
-          <button type="submit" class="button-remb-confirm">
+          <button type="submit" class="btn-primary px-3 py-1.5" style="background: #dc2626 !important;">
             <i class="fas fa-check mr-2"></i>
             Confirmer le remboursement
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal de confirmation personnalisé -->
+  <div id="customConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-[60]" style="backdrop-filter: blur(5px);">
+    <div class="bg-white p-6 w-[450px] mx-4 relative" style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);">
+      <div class="flex items-start gap-4 mb-6">
+        <div class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center" style="background: rgba(234, 179, 8, 0.2);">
+          <i class="fas fa-question-circle text-2xl text-yellow-500"></i>
+        </div>
+        <div class="flex-1">
+          <h3 class="text-lg font-bold mb-2" style="color: var(--text-light);">Confirmation</h3>
+          <p id="customConfirmMessage" style="color: var(--text-gray);"></p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3">
+        <button onclick="customConfirmCancel()" class="btn-secondary px-4 py-2">
+          <i class="fas fa-times mr-2"></i>
+          Annuler
+        </button>
+        <button id="customConfirmBtn" class="btn-primary px-4 py-2" style="background: #10b981 !important;">
+          <i class="fas fa-check mr-2"></i>
+          Confirmer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal d'alerte personnalisé -->
+  <div id="customAlertModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-[60]" style="backdrop-filter: blur(5px);">
+    <div class="bg-white p-6 w-[450px] mx-4 relative" style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);">
+      <div class="flex items-start gap-4 mb-6">
+        <div class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center" id="customAlertIcon">
+          <i class="fas fa-info-circle text-2xl text-blue-500"></i>
+        </div>
+        <div class="flex-1">
+          <h3 class="text-lg font-bold mb-2" id="customAlertTitle" style="color: var(--text-light);">Information</h3>
+          <p id="customAlertMessage" style="color: var(--text-gray);"></p>
+        </div>
+      </div>
+      <div class="flex justify-end">
+        <button onclick="customAlertClose()" class="btn-primary px-4 py-2">
+          <i class="fas fa-check mr-2"></i>
+          OK
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de validation coach pour les remboursements -->
+  <div id="coachRemboursementValidationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50" style="backdrop-filter: blur(5px);">
+    <div class="bg-white p-8 w-[50vw] mx-4 max-h-[85vh] overflow-y-auto relative" style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: 20px;">
+      <!-- En-tête avec titre et bouton fermer -->
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-2xl font-bold" style="color: var(--text-light);">
+          <i class="fas fa-exclamation-circle mr-2 text-yellow-500"></i>
+          Remboursements en attente de validation
+        </h3>
+        <button onclick="fermerPopupCoachValidation()" class="px-3 py-1.5 rounded-lg font-medium transition-all duration-300 text-sm flex items-center gap-2 btn-secondary hover:opacity-80">
+          <i class="fas fa-times"></i>
+          Fermer
+        </button>
+      </div>
+
+      <!-- Liste des remboursements en attente -->
+      <div id="listeRemboursementsCoach" class="space-y-4">
+        <!-- Les remboursements seront insérés ici par JavaScript -->
+      </div>
     </div>
   </div>
 

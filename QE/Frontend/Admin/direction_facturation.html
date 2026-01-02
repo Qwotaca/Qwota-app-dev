@@ -219,6 +219,11 @@
       color: #a855f7;
     }
 
+    .type-badge.remboursement {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+    }
+
     /* Custom Checkbox Styles */
     .custom-checkbox {
       appearance: none;
@@ -979,6 +984,15 @@
 
     .modal-details-footer .btn-accepter.autres-style:hover {
       box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
+    }
+
+    /* Style rouge pour remboursement */
+    .modal-details-footer .btn-accepter.remboursement-style {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+    }
+
+    .modal-details-footer .btn-accepter.remboursement-style:hover {
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
     }
 
     /* Modal Soumission PDF */
@@ -1953,6 +1967,17 @@
               <div id="stat-autres" style="font-size: 1.25rem; font-weight: 700; color: var(--text-light); margin-top: 1px;">0</div>
             </div>
           </div>
+
+          <!-- Remboursements -->
+          <div style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: 10px; padding: 0.875rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+            <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-undo" style="color: #ef4444; font-size: 0.9rem;"></i>
+            </div>
+            <div style="flex: 1;">
+              <div style="font-size: 0.7rem; font-weight: 500; color: var(--text-gray); text-transform: uppercase; letter-spacing: 0.3px;">Remboursements</div>
+              <div id="stat-remboursements" style="font-size: 1.25rem; font-weight: 700; color: var(--text-light); margin-top: 1px;">0</div>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -2329,6 +2354,7 @@
         document.getElementById('stat-depots').textContent = allPayments.filter(p => p.type === 'depot').length;
         document.getElementById('stat-paiements-finaux').textContent = allPayments.filter(p => p.type === 'paiement_final').length;
         document.getElementById('stat-autres').textContent = allPayments.filter(p => p.type === 'autres_paiements').length;
+        document.getElementById('stat-remboursements').textContent = allPayments.filter(p => p.type === 'remboursement').length;
 
         // Mettre à jour le badge des paiements dans les sous-tabs
         document.getElementById('paiements-count-badge').textContent = allPayments.length;
@@ -2471,8 +2497,8 @@
       table.style.display = 'table';
 
       tbody.innerHTML = paiements.map(p => {
-        const typeClass = p.type === 'depot' ? 'depot' : (p.type === 'paiement_final' ? 'paiement-final' : 'autres');
-        let typeLabel = p.type === 'depot' ? 'Dépôt' : (p.type === 'paiement_final' ? 'Paiement final' : 'Autre');
+        const typeClass = p.type === 'depot' ? 'depot' : (p.type === 'paiement_final' ? 'paiement-final' : (p.type === 'remboursement' ? 'remboursement' : 'autres'));
+        let typeLabel = p.type === 'depot' ? 'Dépôt' : (p.type === 'paiement_final' ? 'Paiement final' : (p.type === 'remboursement' ? 'Remboursement' : 'Autre'));
         // Pour les autres paiements, afficher le type spécifique
         if (p.type === 'autres_paiements') {
           // FALLBACK: Si typePaiementAutres est absent, déduire selon statutDepot
@@ -2504,7 +2530,7 @@
                 ${typeLabel}
               </span>
             </td>
-            <td style="font-weight: 600;">${p.montant || '0,00 $'}</td>
+            <td style="font-weight: 600;">${p.type === 'remboursement' ? '-' + (p.montant || '0,00 $') : (p.montant || '0,00 $')}</td>
             <td style="color: var(--text-gray);">${p.date || 'N/A'}</td>
             <td>
               <div class="action-buttons" style="justify-content: center;">
@@ -2806,6 +2832,54 @@
         });
       }
 
+      // Section Remboursement - seulement si c'est le type cliqué (droite)
+      if (typePaiement === 'remboursement') {
+        contentHTML += `
+          <div class="modal-section">
+            <div class="modal-section-title">
+              <i class="fas fa-undo" style="color: #ef4444;"></i>
+              Remboursement
+            </div>
+            <div class="modal-info-row">
+              <span class="modal-info-label">Nom complet</span>
+              <span class="modal-info-value">
+                <span>${paiement.client || 'Client inconnu'}</span>
+                <button class="btn-copy" onclick="copierTexte('${paiement.client || 'Client inconnu'}', this)">
+                  <i class="fas fa-copy"></i> Copier
+                </button>
+              </span>
+            </div>
+            <div class="modal-info-row">
+              <span class="modal-info-label">N° Département</span>
+              <span class="modal-info-value">
+                <span>0</span>
+                <button class="btn-copy" onclick="copierTexte('0', this)">
+                  <i class="fas fa-copy"></i> Copier
+                </button>
+              </span>
+            </div>
+            <div class="modal-info-row">
+              <span class="modal-info-label">Montant à rembourser</span>
+              <span class="modal-info-value highlight">
+                <span>-${paiement.montant || 'N/A'}</span>
+                <button class="btn-copy" onclick="copierTexte('-${paiement.montant || 'N/A'}', this)">
+                  <i class="fas fa-copy"></i> Copier
+                </button>
+              </span>
+            </div>
+            <div class="modal-info-row">
+              <span class="modal-info-label">Courriel pour le virement</span>
+              <span class="modal-info-value">
+                <span>${paiement.courriel || 'N/A'}</span>
+                <button class="btn-copy" onclick="copierTexte('${paiement.courriel || 'N/A'}', this)">
+                  <i class="fas fa-copy"></i> Copier
+                </button>
+              </span>
+            </div>
+          </div>
+        `;
+      }
+
       // Fermer le container modal-bottom-sections
       contentHTML += `</div>`;
 
@@ -2816,7 +2890,7 @@
       const headerIcon = document.getElementById('modalHeaderIcon');
       const headerTitle = document.getElementById('modalHeaderTitle');
 
-      btnAccepter.classList.remove('depot-style', 'paiement-final-style', 'autres-style');
+      btnAccepter.classList.remove('depot-style', 'paiement-final-style', 'autres-style', 'remboursement-style');
 
       if (typePaiement === 'depot') {
         btnAccepter.classList.add('depot-style');
@@ -2828,6 +2902,11 @@
         headerIcon.className = 'fas fa-check-circle';
         headerIcon.style.color = '#22c55e';
         headerTitle.textContent = 'Validation paiement final';
+      } else if (typePaiement === 'remboursement') {
+        btnAccepter.classList.add('remboursement-style');
+        headerIcon.className = 'fas fa-undo';
+        headerIcon.style.color = '#ef4444';
+        headerTitle.textContent = 'Validation remboursement';
       } else if (typePaiement === 'autres') {
         btnAccepter.classList.add('autres-style');
         headerIcon.className = 'fas fa-money-bill-wave';
@@ -3102,6 +3181,12 @@
 
         const container = document.getElementById('derniers-traites');
 
+        // Vérifier si le container existe
+        if (!container) {
+          console.error('[Direction Facturation] Element derniers-traites non trouvé');
+          return;
+        }
+
         if (historique.length === 0) {
           container.innerHTML = `
             <div style="color: var(--text-gray); font-size: 0.8rem; text-align: center; padding: 1rem;">
@@ -3114,6 +3199,7 @@
         container.innerHTML = historique.map(h => {
           const statusColor = h.statut === 'valide' ? '#22c55e' : '#ef4444';
           const statusIcon = h.statut === 'valide' ? 'check-circle' : 'times-circle';
+          const montantDisplay = h.type === 'remboursement' ? `-${h.montant}` : h.montant;
 
           return `
             <div style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(71, 85, 105, 0.2); display: flex; align-items: center; gap: 0.5rem;">
@@ -3122,7 +3208,7 @@
                 <div style="font-size: 0.75rem; color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${h.entrepreneur} - ${h.numeroSoumission}</div>
                 <div style="font-size: 0.65rem; color: var(--text-gray);">${h.date || ''}</div>
               </div>
-              <div style="font-size: 0.7rem; font-weight: 600; color: ${statusColor};">${h.montant}</div>
+              <div style="font-size: 0.7rem; font-weight: 600; color: ${statusColor};">${montantDisplay}</div>
             </div>
           `;
         }).join('');
@@ -3221,15 +3307,15 @@
           rapprochementEmpty.style.display = 'none';
 
           rapprochementTbody.innerHTML = historique.map((h, index) => {
-            const typeClass = h.type === 'depot' ? 'depot' : (h.type === 'paiement_final' ? 'paiement-final' : 'autres');
-            const typeLabel = h.type === 'depot' ? 'Dépôt' : (h.type === 'paiement_final' ? 'Paiement final' : 'Autre');
+            const typeClass = h.type === 'depot' ? 'depot' : (h.type === 'paiement_final' ? 'paiement-final' : (h.type === 'remboursement' ? 'remboursement' : 'autres'));
+            const typeLabel = h.type === 'depot' ? 'Dépôt' : (h.type === 'paiement_final' ? 'Paiement final' : (h.type === 'remboursement' ? 'Remboursement' : 'Autre'));
 
             const avatarHtml = h.entrepreneurPhoto
               ? `<img src="${h.entrepreneurPhoto}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(59, 130, 246, 0.3);">`
               : `<div style="width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.7rem;">${h.entrepreneur ? h.entrepreneur.charAt(0).toUpperCase() : '?'}</div>`;
 
             return `
-              <tr data-payment-index="${index}" style="border-bottom: 1px solid var(--border-dark);">
+              <tr data-payment-index="${index}">
                 <td style="padding: 0.75rem; color: var(--text-gray); font-size: 0.85rem;">${h.date || 'N/A'}</td>
                 <td style="padding: 0.75rem;">
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -3244,7 +3330,7 @@
                     ${typeLabel}
                   </span>
                 </td>
-                <td style="padding: 0.75rem; font-weight: 600; font-size: 0.85rem; color: var(--text-light);">${h.montant || '0,00 $'}</td>
+                <td style="padding: 0.75rem; font-weight: 600; font-size: 0.85rem; color: var(--text-light);">${h.type === 'remboursement' ? '-' + (h.montant || '0,00 $') : (h.montant || '0,00 $')}</td>
                 <td style="padding: 0.75rem 1.5rem; text-align: center;">
                   <input type="checkbox" class="payment-checkbox custom-checkbox" data-payment-index="${index}" onchange="updateActionBar()">
                 </td>
@@ -3291,15 +3377,15 @@
         rapprochementEmpty.style.display = 'none';
 
         rapprochementTbody.innerHTML = historique.map((h, index) => {
-          const typeClass = h.type === 'depot' ? 'depot' : (h.type === 'paiement_final' ? 'paiement-final' : 'autres');
-          const typeLabel = h.type === 'depot' ? 'Dépôt' : (h.type === 'paiement_final' ? 'Paiement final' : 'Autre');
+          const typeClass = h.type === 'depot' ? 'depot' : (h.type === 'paiement_final' ? 'paiement-final' : (h.type === 'remboursement' ? 'remboursement' : 'autres'));
+          const typeLabel = h.type === 'depot' ? 'Dépôt' : (h.type === 'paiement_final' ? 'Paiement final' : (h.type === 'remboursement' ? 'Remboursement' : 'Autre'));
 
           const avatarHtml = h.entrepreneurPhoto
             ? `<img src="${h.entrepreneurPhoto}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(59, 130, 246, 0.3);">`
             : `<div style="width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.7rem;">${h.entrepreneur ? h.entrepreneur.charAt(0).toUpperCase() : '?'}</div>`;
 
           return `
-            <tr data-payment-index="${index}" style="border-bottom: 1px solid var(--border-dark);">
+            <tr data-payment-index="${index}">
               <td style="padding: 0.75rem; color: var(--text-gray); font-size: 0.85rem;">${h.date || 'N/A'}</td>
               <td style="padding: 0.75rem;">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -3314,7 +3400,7 @@
                   ${typeLabel}
                 </span>
               </td>
-              <td style="padding: 0.75rem; font-weight: 600; font-size: 0.85rem; color: var(--text-light);">${h.montant || '0,00 $'}</td>
+              <td style="padding: 0.75rem; font-weight: 600; font-size: 0.85rem; color: var(--text-light);">${h.type === 'remboursement' ? '-' + (h.montant || '0,00 $') : (h.montant || '0,00 $')}</td>
               <td style="padding: 0.75rem 1.5rem; text-align: center;">
                 <input type="checkbox" class="payment-checkbox custom-checkbox" data-payment-index="${index}" onchange="updateActionBar()">
               </td>
@@ -3434,10 +3520,23 @@
 
       // Ajouter les lignes de données
       selected.forEach(p => {
+        // Convertir le montant en nombre
+        let montantNumeric = 0;
+        if (p.montant) {
+          // Extraire le nombre du format "431,16 $"
+          const montantStr = p.montant.replace(/\s/g, '').replace('$', '').replace(',', '.');
+          montantNumeric = parseFloat(montantStr) || 0;
+
+          // Si c'est un remboursement, rendre négatif
+          if (p.type === 'remboursement') {
+            montantNumeric = -montantNumeric;
+          }
+        }
+
         data.push([
           p.entrepreneur || '',
           p.client || '',
-          p.montant || ''
+          montantNumeric
         ]);
       });
 
@@ -3465,6 +3564,16 @@
           ws[cell].s = headerStyle;
         }
       });
+
+      // Appliquer le format devise à la colonne Montant (colonne C)
+      // Format: #,##0.00 $ (nombre avec 2 décimales et symbole $)
+      for (let row = 2; row <= data.length; row++) {
+        const cellRef = `C${row}`;
+        if (ws[cellRef]) {
+          ws[cellRef].t = 'n';  // Type numérique
+          ws[cellRef].z = '#,##0.00 $';  // Format devise
+        }
+      }
 
       // Ajouter la feuille au workbook
       XLSX.utils.book_append_sheet(wb, ws, 'Paiements');
@@ -3738,8 +3847,8 @@
               </thead>
               <tbody>
                 ${paiements.map((p, index) => {
-                  const typeClass = p.type === 'depot' ? 'depot' : (p.type === 'paiement_final' ? 'paiement-final' : 'autres');
-                  const typeLabel = p.type === 'depot' ? 'Dépôt' : (p.type === 'paiement_final' ? 'Paiement final' : 'Autre');
+                  const typeClass = p.type === 'depot' ? 'depot' : (p.type === 'paiement_final' ? 'paiement-final' : (p.type === 'remboursement' ? 'remboursement' : 'autres'));
+                  const typeLabel = p.type === 'depot' ? 'Dépôt' : (p.type === 'paiement_final' ? 'Paiement final' : (p.type === 'remboursement' ? 'Remboursement' : 'Autre'));
                   const lienVirement = p.lienVirement || '';
 
                   const avatarHtml = p.entrepreneurPhoto
@@ -3747,7 +3856,7 @@
                     : `<div style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.65rem;">${p.entrepreneur ? p.entrepreneur.charAt(0).toUpperCase() : '?'}</div>`;
 
                   return `
-                    <tr style="border-bottom: 1px solid var(--border-dark); transition: background 0.2s;" onmouseover="this.style.background='rgba(59, 130, 246, 0.03)'" onmouseout="this.style.background=''">
+                    <tr style="transition: background 0.2s;" onmouseover="this.style.background='rgba(59, 130, 246, 0.03)'" onmouseout="this.style.background=''">
                       <td style="padding: 0.65rem; color: var(--text-light); font-size: 0.8rem;">${p.date || 'N/A'}</td>
                       <td style="padding: 0.65rem;">
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -3760,7 +3869,7 @@
                       <td style="padding: 0.65rem;">
                         <span class="type-badge ${typeClass}" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;">${typeLabel}</span>
                       </td>
-                      <td style="padding: 0.65rem; font-weight: 600; color: var(--text-light); font-size: 0.85rem;">${p.montant || '0,00 $'}</td>
+                      <td style="padding: 0.65rem; font-weight: 600; color: var(--text-light); font-size: 0.85rem;">${p.type === 'remboursement' ? '-' + (p.montant || '0,00 $') : (p.montant || '0,00 $')}</td>
                       <td style="padding: 0.65rem;">
                         ${lienVirement ? `
                           <a href="${lienVirement.startsWith('http') ? lienVirement : 'https://' + lienVirement}" target="_blank" style="color: #60a5fa; text-decoration: none; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 0.25rem;">
@@ -4076,8 +4185,8 @@
               </thead>
               <tbody>
                 ${paiements.map((p, index) => {
-                  const typeClass = p.type === 'depot' ? 'depot' : (p.type === 'paiement_final' ? 'paiement-final' : 'autres');
-                  const typeLabel = p.type === 'depot' ? 'Dépôt' : (p.type === 'paiement_final' ? 'Paiement final' : 'Autre');
+                  const typeClass = p.type === 'depot' ? 'depot' : (p.type === 'paiement_final' ? 'paiement-final' : (p.type === 'remboursement' ? 'remboursement' : 'autres'));
+                  const typeLabel = p.type === 'depot' ? 'Dépôt' : (p.type === 'paiement_final' ? 'Paiement final' : (p.type === 'remboursement' ? 'Remboursement' : 'Autre'));
                   const lienVirement = p.lienVirement || '';
 
                   const avatarHtml = p.entrepreneurPhoto
@@ -4088,7 +4197,7 @@
                   const realIndex = window.periodePaiements[periodeId].indexOf(p);
 
                   return `
-                    <tr style="border-bottom: 1px solid var(--border-dark); transition: background 0.2s;" onmouseover="this.style.background='rgba(59, 130, 246, 0.03)'" onmouseout="this.style.background=''">
+                    <tr style="transition: background 0.2s;" onmouseover="this.style.background='rgba(59, 130, 246, 0.03)'" onmouseout="this.style.background=''">
                       <td style="padding: 0.65rem; color: var(--text-light); font-size: 0.8rem;">${p.date || 'N/A'}</td>
                       <td style="padding: 0.65rem;">
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -4101,7 +4210,7 @@
                       <td style="padding: 0.65rem;">
                         <span class="type-badge ${typeClass}" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;">${typeLabel}</span>
                       </td>
-                      <td style="padding: 0.65rem; font-weight: 600; color: var(--text-light); font-size: 0.85rem;">${p.montant || '0,00 $'}</td>
+                      <td style="padding: 0.65rem; font-weight: 600; color: var(--text-light); font-size: 0.85rem;">${p.type === 'remboursement' ? '-' + (p.montant || '0,00 $') : (p.montant || '0,00 $')}</td>
                       <td style="padding: 0.65rem;">
                         ${lienVirement ? `
                           <a href="${lienVirement.startsWith('http') ? lienVirement : 'https://' + lienVirement}" target="_blank" style="color: #60a5fa; text-decoration: none; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 0.25rem;">

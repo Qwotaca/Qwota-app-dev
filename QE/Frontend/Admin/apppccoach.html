@@ -4079,7 +4079,7 @@
         const username = window.username || localStorage.getItem('username');
 
         // Charger les compteurs en parallèle
-        // Note: /api/coach/employes-en-attente/count inclut les activations, inactivations et modifications
+        // Note: /api/coach/employes-en-attente/count inclut les activations, réactivations, inactivations et modifications
         // en attente de VALIDATION COACH (pas ceux en attente comptable)
         const [responseEmployes] = await Promise.all([
           fetch(`/api/coach/${username}/employes-en-attente/count`)
@@ -4090,13 +4090,11 @@
 
         if (responseEmployes.ok) {
           const dataEmployes = await responseEmployes.json();
-          // Ce count inclut activations + inactivations + modifications EN ATTENTE COACH
+          // Ce count inclut activations + réactivations + inactivations + modifications EN ATTENTE COACH
           countEmployes = dataEmployes.count || 0;
           totalCount += countEmployes;
         }
 
-        // NOTE: On ne compte PAS les réactivations car elles sont déjà validées par le coach
-        // et sont en attente comptable uniquement
         // NOTE: On ne compte PAS les messages de refus non lus car ce ne sont pas des actions requises
 
         console.log(`[BADGE EMPLOYÉS] Coach ${username}:`, {

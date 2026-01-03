@@ -8620,6 +8620,19 @@ async def get_users_entrepreneurs_api(coach_username: Optional[str] = None):
                             if employe.get("statut") == "Modification en attente de validation":
                                 pending_employes_count += 1
 
+                        # Compter les réactivations en attente de validation coach
+                        # IMPORTANT: Chercher dans inactifs ET termines, pas dans reactivations.json
+                        # car le statut est mis à jour dans ces fichiers, pas dans reactivations.json
+                        employes_inactifs = load_employes(username, "inactifs")
+                        for emp in employes_inactifs:
+                            if emp.get("statut") == "Réactivation en attente de validation":
+                                pending_employes_count += 1
+
+                        employes_termines = load_employes(username, "termines")
+                        for emp in employes_termines:
+                            if emp.get("statut") == "Réactivation en attente de validation":
+                                pending_employes_count += 1
+
                 # Calculer le nombre de facturations en traitement pour cet entrepreneur (seulement si coach_username fourni)
                 if coach_username and os.path.exists(statuts_dir):
                     user_path = os.path.join(statuts_dir, username)
@@ -11102,6 +11115,26 @@ def save_employes(username: str, type_employe: str, employes: list):
         print(f"Erreur lors de la sauvegarde des employés {type_employe}: {e}")
         return False
 
+# Récupérer les réactivations en attente d'un entrepreneur (DOIT être avant la route générique)
+@app.get("/api/employes/{username}/reactivations")
+async def get_reactivations(username: str):
+    """Récupère les réactivations en attente de validation pour un entrepreneur"""
+    try:
+        reactivations = load_reactivations(username)
+        return {"success": True, "employes": reactivations}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Récupérer les inactivations en attente d'un entrepreneur (DOIT être avant la route générique)
+@app.get("/api/employes/{username}/inactivations")
+async def get_inactivations(username: str):
+    """Récupère les inactivations en attente de validation pour un entrepreneur"""
+    try:
+        inactivations = load_inactivations(username)
+        return {"success": True, "employes": inactivations}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Récupérer tous les employés d'un utilisateur
 @app.get("/api/employes/{username}/{type_employe}")
 async def get_employes(username: str, type_employe: str):
@@ -11775,15 +11808,16 @@ async def get_employe_document(username: str, employe_id: str, filename: str):
 # Compter les employés en attente de validation pour un coach (activations + inactivations)
 @app.get("/api/coach/{coach_username}/employes-en-attente/count")
 async def count_employes_en_attente(coach_username: str):
-    """Compte le nombre total d'employés en attente de validation pour les entrepreneurs du coach (activations + inactivations + modifications)"""
+    """Compte le nombre total d'employés en attente de validation pour les entrepreneurs du coach (activations + réactivations + inactivations + modifications)"""
     try:
         total_activations = 0
+        total_reactivations = 0
         total_inactivations = 0
         total_modifications = 0
         employes_dir = os.path.join(base_cloud, "employes")
 
         if not os.path.exists(employes_dir):
-            return {"success": True, "count": 0, "activations": 0, "inactivations": 0, "modifications": 0}
+            return {"success": True, "count": 0, "activations": 0, "reactivations": 0, "inactivations": 0, "modifications": 0}
 
         # Récupérer les entrepreneurs assignés à ce coach
         entrepreneurs_list = get_entrepreneurs_for_coach(coach_username)
@@ -11799,6 +11833,19 @@ async def count_employes_en_attente(coach_username: str):
                     if employe.get("statut") == "En attente de validation":
                         total_activations += 1
 
+                # Compter les réactivations en attente de validation coach
+                # IMPORTANT: Chercher dans inactifs ET termines, pas dans reactivations.json
+                # car le statut est mis à jour dans ces fichiers, pas dans reactivations.json
+                employes_inactifs = load_employes(username, "inactifs")
+                for emp in employes_inactifs:
+                    if emp.get("statut") == "Réactivation en attente de validation":
+                        total_reactivations += 1
+
+                employes_termines = load_employes(username, "termines")
+                for emp in employes_termines:
+                    if emp.get("statut") == "Réactivation en attente de validation":
+                        total_reactivations += 1
+
                 # Compter les inactivations en attente de validation coach
                 inactivations = load_inactivations(username)
                 for inact in inactivations:
@@ -11811,8 +11858,8 @@ async def count_employes_en_attente(coach_username: str):
                     if employe.get("statut") == "Modification en attente de validation":
                         total_modifications += 1
 
-        total = total_activations + total_inactivations + total_modifications
-        return {"success": True, "count": total, "activations": total_activations, "inactivations": total_inactivations, "modifications": total_modifications}
+        total = total_activations + total_reactivations + total_inactivations + total_modifications
+        return {"success": True, "count": total, "activations": total_activations, "reactivations": total_reactivations, "inactivations": total_inactivations, "modifications": total_modifications}
     except Exception as e:
         print(f"Erreur lors du comptage des employés en attente: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -14613,7 +14660,47 @@ async def refuser_employe(username: str, employe_id: str):
             return {"success": True, "message": "Employé refusé"}
         else:
             raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
-        
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/employes/{username}/reactivations/{employe_id}")
+async def refuser_reactivation(username: str, employe_id: str):
+    """Refuse une réactivation et la supprime"""
+    try:
+        reactivations = load_reactivations(username)
+
+        # Filtrer pour supprimer la réactivation
+        reactivations_restantes = [e for e in reactivations if e.get("id") != employe_id]
+
+        if len(reactivations_restantes) == len(reactivations):
+            raise HTTPException(status_code=404, detail="Réactivation non trouvée")
+
+        if save_reactivations(username, reactivations_restantes):
+            return {"success": True, "message": "Réactivation refusée"}
+        else:
+            raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/employes/{username}/actifs/{employe_id}")
+async def refuser_employe_actif(username: str, employe_id: str):
+    """Refuse une modification d'employé actif et supprime l'employé"""
+    try:
+        employes_actifs = load_employes(username, "actifs")
+
+        # Filtrer pour supprimer l'employé
+        employes_actifs_restants = [e for e in employes_actifs if e.get("id") != employe_id]
+
+        if len(employes_actifs_restants) == len(employes_actifs):
+            raise HTTPException(status_code=404, detail="Employé actif non trouvé")
+
+        if save_employes(username, "actifs", employes_actifs_restants):
+            return {"success": True, "message": "Employé actif refusé"}
+        else:
+            raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -16250,12 +16337,35 @@ async def valider_reactivation_comptable(username: str, employe_id: str):
         reactivations_restantes = []
         source = None
 
+        # Chercher d'abord dans reactivations.json
         for react in reactivations:
             if react.get("id") == employe_id and react.get("statut") == "Réactivation en attente comptable":
                 employe_a_reactiver = react.copy()
                 source = react.get("source_reactivation", "inactifs")
             else:
                 reactivations_restantes.append(react)
+
+        # Si pas trouvé dans reactivations.json, chercher dans inactifs et termines
+        if not employe_a_reactiver:
+            for source_name in ["inactifs", "termines"]:
+                employes_source = load_employes(username, source_name)
+                for emp in employes_source:
+                    if emp.get("id") == employe_id and emp.get("statut") == "Réactivation en attente comptable":
+                        employe_a_reactiver = emp.copy()
+                        source = source_name
+                        # Récupérer les documents depuis reactivations.json si disponibles
+                        for react in reactivations:
+                            if react.get("id") == employe_id:
+                                if react.get("specimenCheque"):
+                                    employe_a_reactiver["specimenCheque"] = react.get("specimenCheque")
+                                if react.get("certificatSecurite"):
+                                    employe_a_reactiver["certificatSecurite"] = react.get("certificatSecurite")
+                                if react.get("carteAssurance"):
+                                    employe_a_reactiver["carteAssurance"] = react.get("carteAssurance")
+                                break
+                        break
+                if employe_a_reactiver:
+                    break
 
         if not employe_a_reactiver:
             raise HTTPException(status_code=404, detail="Demande de réactivation non trouvée")

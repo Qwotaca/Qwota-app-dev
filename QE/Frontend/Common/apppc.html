@@ -3672,6 +3672,11 @@
                 <div class="stats-profile-photo-wrapper">
                   <div class="stats-profile-photo-container">
                     <img id="stats-profile-photo" src="" alt="Photo de profil" class="stats-profile-photo">
+                    <!-- Badge de streak (affiché si streak >= 1) -->
+                    <div id="statsStreakBadge" style="position: absolute; top: -17px; right: -34px; background: linear-gradient(135deg, rgb(31, 41, 55), rgb(17, 24, 39)); color: white; min-width: 49px; height: 30px; border-radius: 20%; display: none; flex-direction: row; align-items: center; justify-content: center; gap: 0.15rem; padding: 0px 0.35rem; border: 2px solid var(--bg-dark); box-shadow: rgba(0, 0, 0, 0.5) 0px 2px 8px, rgba(245, 158, 11, 0.3) 0px 0px 12px; z-index: 20;">
+                      <i class="fas fa-fire" style="font-size: 1rem !important; color: #f59e0b;"></i>
+                      <span id="statsStreakNumber" style="font-size: 1rem; font-weight: 800; line-height: 1;">0</span>
+                    </div>
                   </div>
                   <div class="stats-photo-level-banner">
                     <span>Niv. <span id="stats-photo-level-text">1</span></span>
@@ -4526,7 +4531,7 @@
 
     // === FONCTIONS MODAL STATISTIQUES ===
 
-    async function openStatsModal(username = null, photoUrl = null) {
+    async function openStatsModal(username = null, fullName = null, entrepreneurData = null) {
       const modal = document.getElementById('stats-modal');
       if (!modal) return;
 
@@ -4556,8 +4561,8 @@
         const data = await response.json();
 
         if (data.status === 'success') {
-          // Passer la photoUrl déjà chargée à populateStatsModal
-          await populateStatsModal(data.profile, targetUsername, photoUrl);
+          // Passer le fullName ET entrepreneurData à populateStatsModal
+          await populateStatsModal(data.profile, targetUsername, fullName, entrepreneurData);
 
           // Calculer le temps écoulé
           const elapsedTime = Date.now() - startTime;
@@ -4620,10 +4625,12 @@
       }
     }
 
-    async function populateStatsModal(profile, targetUsername = null, preloadedPhotoUrl = null) {
+    async function populateStatsModal(profile, targetUsername = null, fullName = null, entrepreneurData = null) {
       // Utiliser le username passé en paramètre ou celui du localStorage
       const username = targetUsername || localStorage.getItem('username');
       const role = localStorage.getItem('role');
+
+      console.log('[STATS MODAL APPPC] populateStatsModal appelé avec entrepreneurData:', entrepreneurData);
 
       const gradeImageMap = {
         'Démarrage': 'https://i.ibb.co/v6PRQ6RX/2.png',
@@ -4645,22 +4652,19 @@
         { name: 'Prestige', minLevel: 91, maxLevel: 100 }
       ];
 
-      // Profil
-      document.getElementById('stats-username').textContent = username;
+      // Profil - Utiliser le nom complet si fourni, sinon username
+      document.getElementById('stats-username').textContent = fullName || username;
 
       // Photo de profil
       const statsPhoto = document.getElementById('stats-profile-photo');
 
       // Log pour déboguer
-      log('[APPPC DEBUG] populateStatsModal - username:', username, 'preloadedPhotoUrl:', preloadedPhotoUrl);
+      log('[APPPC DEBUG] populateStatsModal - username:', username, 'fullName:', fullName);
 
-      // Si une photoUrl préchargée est fournie, l'utiliser directement
-      if (preloadedPhotoUrl) {
-        log('[APPPC DEBUG] Utilisation de la photo préchargée:', preloadedPhotoUrl);
-        statsPhoto.src = preloadedPhotoUrl;
-      } else {
-        log('[APPPC DEBUG] Pas de photo préchargée, chargement via API');
-        // Sinon, charger via l'API
+      // Charger la photo de profil
+      {
+        log('[APPPC DEBUG] Chargement photo via API');
+        // Charger via l'API
         try {
           const photoResponse = await fetch(`/api/get-profile-photo/${username}`);
 
@@ -4712,6 +4716,34 @@
         console.log(`Contour de grade appliqué: ${gradeClass}`);
       }
 
+      // Charger et afficher le streak
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const streakResponse = await fetch(`/api/gamification/quest-progress/${username}?quest_date=${today}`);
+        const streakData = await streakResponse.json();
+
+        if (streakData.status === 'success' && streakData.streak !== undefined) {
+          const streak = streakData.streak;
+          const statsStreakBadge = document.getElementById('statsStreakBadge');
+          const statsStreakNumber = document.getElementById('statsStreakNumber');
+
+          if (statsStreakNumber) {
+            statsStreakNumber.textContent = streak;
+          }
+
+          // Afficher le badge si streak >= 1
+          if (statsStreakBadge) {
+            if (streak >= 1) {
+              statsStreakBadge.style.display = 'flex';
+            } else {
+              statsStreakBadge.style.display = 'none';
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Erreur chargement streak stats modal:', error);
+      }
+
       // XP
       document.getElementById('stats-xp-current').textContent = profile.xp_progress;
       document.getElementById('stats-xp-next').textContent = profile.xp_for_next_level;
@@ -4750,14 +4782,24 @@
       document.getElementById('stats-total-xp').textContent = profile.total_xp || 0;
       document.getElementById('stats-badges').textContent = profile.badges_count || 0;
 
-      // Stats Business - Fetch from /api/entrepreneurs
+      // Stats Business - Utiliser les données passées OU fetch from /api/entrepreneurs
       try {
-        const entrepreneurResponse = await fetch('/api/entrepreneurs');
-        if (entrepreneurResponse.ok) {
-          const entrepreneurs = await entrepreneurResponse.json();
-          const currentEntrepreneur = entrepreneurs.find(e => e.login_username === username || e.username === username);
+        let currentEntrepreneur = null;
 
-          if (currentEntrepreneur) {
+        // Si entrepreneurData est fourni, l'utiliser directement (vient du classement)
+        if (entrepreneurData) {
+          console.log('[STATS MODAL APPPC] Utilisation des données du classement:', entrepreneurData);
+          currentEntrepreneur = entrepreneurData;
+        } else {
+          // Sinon, fetch depuis l'API
+          const entrepreneurResponse = await fetch('/api/entrepreneurs');
+          if (entrepreneurResponse.ok) {
+            const entrepreneurs = await entrepreneurResponse.json();
+            currentEntrepreneur = entrepreneurs.find(e => e.login_username === username || e.username === username);
+          }
+        }
+
+        if (currentEntrepreneur) {
             // CA Actuel
             document.getElementById('stats-ca-actuel').textContent = `${(currentEntrepreneur.ca_actuel || 0).toLocaleString()} $`;
 
@@ -4804,7 +4846,6 @@
             document.getElementById('stats-prod-horaire').textContent = '0 $/h';
             document.getElementById('stats-heures-pap').textContent = '0.0 h';
           }
-        }
       } catch (error) {
         console.error('Erreur chargement stats business:', error);
         // En cas d'erreur, mettre des valeurs par défaut

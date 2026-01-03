@@ -455,6 +455,7 @@
 
     // Set the selected username globally
     window.selectedEntrepreneurUsername = username;
+    window.selectedEntrepreneur = username; // For compatibility with gestionemployes.html
     window.username = username; // For compatibility with existing code
 
     // IMPORTANT: Update sessionStorage and localStorage too
@@ -462,6 +463,16 @@
     sessionStorage.setItem('username', username);
     localStorage.setItem('username', username);
     console.log('[ENTREPRENEUR-SELECTOR] Username updated:', username);
+
+    // Activer le flag pour afficher le modal de notification lors du prochain chargement
+    window.shouldShowNotificationModal = true;
+    console.log('[ENTREPRENEUR-SELECTOR] Flag notification modal activé');
+
+    // Appeler updateAddEmployeeButtonState() si elle existe (pour gestionemployes.html)
+    if (typeof updateAddEmployeeButtonState === 'function') {
+      updateAddEmployeeButtonState();
+      console.log('[ENTREPRENEUR-SELECTOR] updateAddEmployeeButtonState() appelé');
+    }
 
     // Update toggle display
     let textElement = dropdownToggle.querySelector('.placeholder, .selected-text');

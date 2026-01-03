@@ -1120,6 +1120,71 @@
       opacity: 0.3;
       color: var(--text-gray);
     }
+
+    /* Animation de succès pour la validation d'employé */
+    @keyframes successFadeIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.8);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes checkmarkDraw {
+      0% {
+        stroke-dashoffset: 100;
+      }
+      100% {
+        stroke-dashoffset: 0;
+      }
+    }
+
+    .success-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: successFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .success-content {
+      text-align: center;
+      color: white;
+      animation: successFadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+    }
+
+    .success-checkmark {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      margin: 0 auto 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4);
+    }
+
+    .success-checkmark svg {
+      stroke: white;
+      stroke-width: 3;
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      animation: checkmarkDraw 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.4s forwards;
+    }
   </style>
 </head>
 
@@ -1784,6 +1849,30 @@
     let allEmployesData = {}; // Stockage des données complètes
     let historiqueComplet = []; // Stockage de l'historique pour filtrage
 
+    // Fonction pour afficher l'animation de succès
+    function showSuccessAnimation(message) {
+      const overlay = document.createElement('div');
+      overlay.className = 'success-overlay';
+      overlay.innerHTML = `
+        <div class="success-content">
+          <div class="success-checkmark">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+              <path d="M8 20 L16 28 L32 12" stroke="white" stroke-width="3"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">${message}</h2>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+
+      // Supprimer l'overlay après l'animation
+      setTimeout(() => {
+        overlay.remove();
+      }, 1500);
+    }
+
     // Fonction pour copier le texte dans le presse-papiers
     function copierTexte(texte, btnElement) {
       navigator.clipboard.writeText(texte).then(() => {
@@ -1871,7 +1960,11 @@
           successMessage = `La demande de fin d'emploi pour "${employeNom}" a été refusée`;
           break;
         case 'reactivation':
-          url = `/api/comptable/reactivations/refuser/${entrepreneur}/${employeId}`;
+          // Utiliser l'endpoint selon le rôle
+          const userRole = localStorage.getItem('userRole');
+          url = (userRole === 'coach')
+            ? `/api/coach/reactivations/refuser/${entrepreneur}/${employeId}`
+            : `/api/comptable/reactivations/refuser/${entrepreneur}/${employeId}`;
           successMessage = `La demande de réactivation pour "${employeNom}" a été refusée`;
           break;
         case 'modification':
@@ -3007,10 +3100,16 @@
       openModal();
     }
 
-    // Valider une inactivation (comptable - validation finale)
+    // Valider une inactivation (coach ou comptable selon le rôle)
     async function validerInactivation(entrepreneur, employeId, employeNom) {
       try {
-        const response = await fetch(`/api/employes/${entrepreneur}/valider-inactivation-comptable/${employeId}`, {
+        // Déterminer l'endpoint selon le rôle
+        const userRole = localStorage.getItem('userRole');
+        const endpoint = (userRole === 'coach')
+          ? `/api/employes/${entrepreneur}/valider-inactivation/${employeId}`
+          : `/api/employes/${entrepreneur}/valider-inactivation-comptable/${employeId}`;
+
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });
@@ -3019,18 +3118,22 @@
           throw new Error('Erreur lors de la validation');
         }
 
-        // Recharger la liste (inclut les validations ET inactivations)
-        await loadEmployesEnAttente();
+        // Afficher l'animation de succès
+        showSuccessAnimation(`Fin d'emploi validée avec succès!`);
 
-        // Mettre à jour les statistiques immédiatement
-        await loadStats();
+        // Attendre la fin de l'animation avant de recharger
+        setTimeout(async () => {
+          // Recharger la liste (inclut les validations ET inactivations)
+          await loadEmployesEnAttente();
 
-        // Notifier le parent pour mettre à jour le badge
-        if (window.parent && window.parent !== window) {
-          window.parent.postMessage({ type: 'updateEmployesBadge' }, '*');
-        }
+          // Mettre à jour les statistiques immédiatement
+          await loadStats();
 
-        showSuccessMessage(`L'employé "${employeNom}" a été rendu inactif avec succès`);
+          // Notifier le parent pour mettre à jour le badge
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'updateEmployesBadge' }, '*');
+          }
+        }, 2000);
 
       } catch (error) {
         console.error('Erreur:', error);
@@ -3271,10 +3374,16 @@
       openModal();
     }
 
-    // Valider une réactivation (comptable - validation finale)
+    // Valider une réactivation (coach ou comptable selon le rôle)
     async function validerReactivation(entrepreneur, employeId, employeNom) {
       try {
-        const response = await fetch(`/api/comptable/reactivations/valider/${entrepreneur}/${employeId}`, {
+        // Déterminer l'endpoint selon le rôle
+        const userRole = localStorage.getItem('userRole');
+        const endpoint = (userRole === 'coach')
+          ? `/api/coach/reactivations/valider/${entrepreneur}/${employeId}`
+          : `/api/comptable/reactivations/valider/${entrepreneur}/${employeId}`;
+
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });

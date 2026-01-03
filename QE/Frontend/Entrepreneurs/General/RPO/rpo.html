@@ -4730,13 +4730,17 @@ function updateIncompleteWeeksBadge() {
 
   // NE PAS afficher le modal si c'est un coach sans sélection d'entrepreneur
   const userRole = localStorage.getItem('userRole');
-  const isCoach = userRole === 'coach';
-  const urlParams = new URLSearchParams(window.location.search);
-  const userParam = urlParams.get('user');
-  const coachUsername = localStorage.getItem('username');
-  const isCoachModeWithoutSelection = isCoach && (!userParam || userParam === coachUsername);
+  const isCoach = userRole === 'coach' || userRole === 'direction';
 
-  if (isCoachModeWithoutSelection) {
+  // Vérifier si un entrepreneur est sélectionné en regardant:
+  // 1. Si le body a la classe 'has-selection'
+  // 2. Si le sélecteur est en mode header
+  // 3. Si window.selectedEntrepreneurUsername est défini
+  const hasSelection = document.body.classList.contains('has-selection') ||
+                      window.selectedEntrepreneurUsername ||
+                      document.getElementById('coach-entrepreneur-selector')?.classList.contains('in-header');
+
+  if (isCoach && !hasSelection) {
     console.log('[RPO NOTIFICATIONS] Coach sans sélection - modal non affiché');
     return;
   }
@@ -12288,13 +12292,14 @@ function closeNotificationsModal() {
 function showNotificationsModal() {
   // NE PAS afficher le modal si c'est un coach sans sélection d'entrepreneur
   const userRole = localStorage.getItem('userRole');
-  const isCoach = userRole === 'coach';
-  const urlParams = new URLSearchParams(window.location.search);
-  const userParam = urlParams.get('user');
-  const coachUsername = localStorage.getItem('username');
-  const isCoachModeWithoutSelection = isCoach && (!userParam || userParam === coachUsername);
+  const isCoach = userRole === 'coach' || userRole === 'direction';
 
-  if (isCoachModeWithoutSelection) {
+  // Vérifier si un entrepreneur est sélectionné
+  const hasSelection = document.body.classList.contains('has-selection') ||
+                      window.selectedEntrepreneurUsername ||
+                      document.getElementById('coach-entrepreneur-selector')?.classList.contains('in-header');
+
+  if (isCoach && !hasSelection) {
     console.log('[RPO NOTIFICATIONS] Coach sans sélection - modal bloqué');
     return;
   }

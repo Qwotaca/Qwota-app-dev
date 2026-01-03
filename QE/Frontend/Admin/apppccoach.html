@@ -3041,8 +3041,8 @@
             <span class="nav-icon">
               <i class="fas fa-calendar-check"></i>
             </span>
-            <span class="nav-label">RPO</span>
-            <span class="tooltip">RPO</span>
+            <span class="nav-label">Mon RPO</span>
+            <span class="tooltip">Mon RPO</span>
           </a>
           <a href="#/central" class="nav-item" data-page="central">
             <span class="nav-icon">
@@ -3873,22 +3873,24 @@
 
         // Direction n'a pas de guide - charger directement la page initiale
         const checkGuideAndLoadInitialPage = async () => {
-          const initialPage = location.hash.slice(2) || 'dashboard';
+          // ⚡ TOUJOURS démarrer sur le dashboard, peu importe le hash dans l'URL
+          const initialPage = 'dashboard';
 
-          // ⚡ NE PAS charger la page si c'est le chargement initial
-          // Le système de préchargement s'occupe déjà d'afficher le dashboard
-          // On charge seulement si l'URL a un hash différent de dashboard
-          if (initialPage !== 'dashboard') {
-            this.loadPage(initialPage);
-          } else {
-            // Juste mettre à jour le menu actif sans recharger
-            this.updateActiveMenu('dashboard');
+          // Réinitialiser le hash à dashboard SANS déclencher hashchange
+          // Utiliser replaceState pour éviter de déclencher l'événement hashchange
+          if (location.hash !== '#/dashboard') {
+            console.log('[INIT] Réinitialisation du hash vers dashboard (sans hashchange)');
+            history.replaceState(null, '', '#/dashboard');
           }
 
-          // Initialiser l'icône sélectionnée au chargement
+          // ⚡ NE PAS charger la page car le système de préchargement s'en occupe déjà
+          // Juste mettre à jour le menu actif
+          this.updateActiveMenu('dashboard');
+
+          // Initialiser l'icône sélectionnée au chargement (toujours dashboard)
           setTimeout(() => {
             if (typeof setActiveNavIcon === 'function') {
-              setActiveNavIcon(initialPage);
+              setActiveNavIcon('dashboard');
             }
           }, 300);
         };

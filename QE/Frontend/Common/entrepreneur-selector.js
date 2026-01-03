@@ -41,9 +41,11 @@
     const searchInput = document.getElementById('search-input');
 
     if (!selector || !dropdownToggle || !dropdownMenu) {
-      console.error('Entrepreneur selector elements not found');
+      console.error('[ENTREPRENEUR-SELECTOR] ❌ Éléments du sélecteur non trouvés');
       return;
     }
+
+    console.log('[ENTREPRENEUR-SELECTOR] ✅ Éléments du sélecteur trouvés');
 
     // Show selector and backdrop
     selector.classList.add('visible');
@@ -76,11 +78,72 @@
       console.log('[ENTREPRENEUR-SELECTOR] Textes mis à jour pour mode direction sur RPO');
     }
 
-    // Load entrepreneurs (or coaches for direction on RPO)
-    loadEntrepreneurs();
+    // Load entrepreneurs (or coaches for direction on RPO) with retry logic
+    loadEntrepreneursWithRetry();
 
-    // Setup event listeners
-    setupEventListeners(dropdownToggle, dropdownMenu, searchInput, selector, backdrop);
+    // Setup event listeners (only once)
+    if (!dropdownToggle.hasAttribute('data-listeners-attached')) {
+      setupEventListeners(dropdownToggle, dropdownMenu, searchInput, selector, backdrop);
+      dropdownToggle.setAttribute('data-listeners-attached', 'true');
+      console.log('[ENTREPRENEUR-SELECTOR] Event listeners attachés');
+    }
+
+    // Check for auto-selection (from navigation like Ventes → Calculateur)
+    checkAutoSelectEntrepreneur();
+  }
+
+  // ============================================
+  // AUTO-SELECT ENTREPRENEUR (if set from previous page)
+  // ============================================
+  function checkAutoSelectEntrepreneur() {
+    const autoSelectUsername = sessionStorage.getItem('autoSelectEntrepreneur');
+
+    if (autoSelectUsername) {
+      console.log('[ENTREPRENEUR-SELECTOR] 🎯 Auto-sélection détectée:', autoSelectUsername);
+
+      // Wait for entrepreneurs to load, then auto-select
+      setTimeout(() => {
+        const option = document.querySelector(`.coach-dropdown-option[data-username="${autoSelectUsername}"]`);
+
+        if (option) {
+          console.log('[ENTREPRENEUR-SELECTOR] ✅ Auto-sélection de:', autoSelectUsername);
+          option.click(); // Simulate click to select
+          sessionStorage.removeItem('autoSelectEntrepreneur'); // Clear flag
+        } else {
+          console.log('[ENTREPRENEUR-SELECTOR] ⚠️ Entrepreneur non trouvé pour auto-sélection:', autoSelectUsername);
+        }
+      }, 500); // Wait for dropdown to be populated
+    }
+  }
+
+  // ============================================
+  // LOAD ENTREPRENEURS WITH RETRY
+  // ============================================
+  async function loadEntrepreneursWithRetry(retryCount = 0) {
+    const maxRetries = 3;
+
+    try {
+      await loadEntrepreneurs();
+
+      // Vérifier si le dropdown a été peuplé
+      const dropdownMenu = document.getElementById('coach-dropdown-menu');
+      const hasOptions = dropdownMenu && dropdownMenu.querySelector('.coach-dropdown-option');
+      const hasDisabled = dropdownMenu && dropdownMenu.querySelector('.coach-dropdown-option-disabled');
+
+      // Si le dropdown est vide ou montre "Aucun entrepreneur", retry
+      if (!hasOptions && retryCount < maxRetries) {
+        console.log(`[ENTREPRENEUR-SELECTOR] ⚠️ Dropdown vide, retry ${retryCount + 1}/${maxRetries}...`);
+        setTimeout(() => loadEntrepreneursWithRetry(retryCount + 1), 500);
+      } else if (hasOptions) {
+        console.log('[ENTREPRENEUR-SELECTOR] ✅ Dropdown peuplé avec succès');
+      }
+    } catch (error) {
+      console.error('[ENTREPRENEUR-SELECTOR] ❌ Erreur lors du chargement:', error);
+      if (retryCount < maxRetries) {
+        console.log(`[ENTREPRENEUR-SELECTOR] Retry ${retryCount + 1}/${maxRetries}...`);
+        setTimeout(() => loadEntrepreneursWithRetry(retryCount + 1), 500);
+      }
+    }
   }
 
   // ============================================
@@ -89,9 +152,19 @@
   async function loadEntrepreneurs() {
     try {
       const userRole = localStorage.getItem('userRole');
-      const coachUsername = localStorage.getItem('username');
+
+      // IMPORTANT: Get coach username from URL parameter, not localStorage
+      // localStorage('username') can be overwritten when an entrepreneur is selected
+      const urlParams = new URLSearchParams(window.location.search);
+      const coachUsername = urlParams.get('user') || localStorage.getItem('username');
+
       const currentPath = window.location.pathname.toLowerCase();
       const isRPOPage = currentPath.includes('rpo');
+
+      console.log('[ENTREPRENEUR-SELECTOR] 📊 loadEntrepreneurs() appelé');
+      console.log('[ENTREPRENEUR-SELECTOR] userRole:', userRole);
+      console.log('[ENTREPRENEUR-SELECTOR] coachUsername:', coachUsername);
+      console.log('[ENTREPRENEUR-SELECTOR] currentPath:', currentPath);
 
       // SPECIAL CASE: Direction users on RPO page should see COACHES, not entrepreneurs
       if (userRole === 'direction' && isRPOPage) {
@@ -99,9 +172,12 @@
         const response = await fetch('/api/users/coaches');
         const data = await response.json();
 
+        console.log('[ENTREPRENEUR-SELECTOR] Réponse coaches:', data);
+
         if (data.success && data.coaches) {
           populateCoachesForRPO(data.coaches);
         } else {
+          console.log('[ENTREPRENEUR-SELECTOR] ❌ Pas de coaches trouvés');
           showNoEntrepreneurs();
         }
         return;
@@ -112,16 +188,22 @@
         ? '/api/users/entrepreneurs'
         : `/api/users/entrepreneurs?coach_username=${coachUsername}`;
 
+      console.log('[ENTREPRENEUR-SELECTOR] 🌐 Fetching:', endpoint);
+
       const response = await fetch(endpoint);
       const data = await response.json();
 
+      console.log('[ENTREPRENEUR-SELECTOR] 📦 Réponse API:', data);
+
       if (data.success && data.entrepreneurs) {
+        console.log('[ENTREPRENEUR-SELECTOR] ✅ Entrepreneurs trouvés:', data.entrepreneurs.length);
         populateDropdown(data.entrepreneurs);
       } else {
+        console.log('[ENTREPRENEUR-SELECTOR] ❌ Pas d\'entrepreneurs trouvés ou erreur API');
         showNoEntrepreneurs();
       }
     } catch (error) {
-      console.error('Error loading entrepreneurs:', error);
+      console.error('[ENTREPRENEUR-SELECTOR] ❌ Erreur lors du chargement:', error);
       showNoEntrepreneurs();
     }
   }
@@ -130,10 +212,21 @@
   // POPULATE DROPDOWN
   // ============================================
   function populateDropdown(entrepreneurs) {
+    console.log('[ENTREPRENEUR-SELECTOR] 🎨 populateDropdown() appelé avec', entrepreneurs?.length, 'entrepreneurs');
+
     const dropdownMenu = document.getElementById('coach-dropdown-menu');
     const dropdownToggle = document.getElementById('coach-dropdown-toggle');
 
+    console.log('[ENTREPRENEUR-SELECTOR] dropdownMenu trouvé:', !!dropdownMenu);
+    console.log('[ENTREPRENEUR-SELECTOR] dropdownToggle trouvé:', !!dropdownToggle);
+
+    if (!dropdownMenu) {
+      console.error('[ENTREPRENEUR-SELECTOR] ❌ coach-dropdown-menu non trouvé!');
+      return;
+    }
+
     if (entrepreneurs.length === 0) {
+      console.log('[ENTREPRENEUR-SELECTOR] ⚠️ Aucun entrepreneur dans la liste');
       showNoEntrepreneurs();
       return;
     }
@@ -141,22 +234,35 @@
     dropdownMenu.innerHTML = '';
 
     // Determine which count field to use based on page
-    // Facturation QE uses pending_facturations_count, others use pending_count
-    const isFacturationPage = window.location.pathname.toLowerCase().includes('facturation');
-    const countField = isFacturationPage ? 'pending_facturations_count' : 'pending_count';
+    // ONLY show badges on specific pages: Gestion Employés and Facturation QE
+    const pathname = window.location.pathname.toLowerCase();
+    const isFacturationPage = pathname.includes('facturation');
+    const isGestionEmployesPage = pathname.includes('gestionemployes') || pathname.includes('employes');
+    const shouldShowBadge = isFacturationPage || isGestionEmployesPage;
 
-    console.log('[ENTREPRENEUR-SELECTOR] pathname:', window.location.pathname);
+    let countField = null;
+    if (isFacturationPage) {
+      countField = 'pending_facturations_count';
+    } else if (isGestionEmployesPage) {
+      countField = 'pending_count';
+    }
+
+    console.log('[ENTREPRENEUR-SELECTOR] pathname:', pathname);
     console.log('[ENTREPRENEUR-SELECTOR] isFacturationPage:', isFacturationPage);
+    console.log('[ENTREPRENEUR-SELECTOR] isGestionEmployesPage:', isGestionEmployesPage);
+    console.log('[ENTREPRENEUR-SELECTOR] shouldShowBadge:', shouldShowBadge);
     console.log('[ENTREPRENEUR-SELECTOR] countField:', countField);
     console.log('[ENTREPRENEUR-SELECTOR] entrepreneurs:', entrepreneurs);
 
-    // Calculate total pending count across all entrepreneurs
+    // Calculate total pending count across all entrepreneurs (only on badge pages)
     let totalPendingCount = 0;
-    entrepreneurs.forEach(entrepreneur => {
-      totalPendingCount += entrepreneur[countField] || 0;
-    });
+    if (shouldShowBadge && countField) {
+      entrepreneurs.forEach(entrepreneur => {
+        totalPendingCount += entrepreneur[countField] || 0;
+      });
+    }
 
-    // Update or create total badge in dropdown toggle
+    // Update or create total badge in dropdown toggle (only on badge pages)
     updateToggleBadge(dropdownToggle, totalPendingCount);
 
     entrepreneurs.forEach(entrepreneur => {
@@ -164,9 +270,11 @@
       option.className = 'coach-dropdown-option';
       option.dataset.username = entrepreneur.username;
 
-      // Check for pending badge (employees or facturations depending on page)
-      const count = entrepreneur[countField] || 0;
-      const badge = count > 0
+      // Get count for this entrepreneur (if applicable)
+      const count = (shouldShowBadge && countField) ? (entrepreneur[countField] || 0) : 0;
+
+      // Create badge HTML (only on Gestion Employés and Facturation QE pages)
+      const badge = (shouldShowBadge && count > 0)
         ? `<span class="entrepreneur-badge">${count}</span>`
         : '';
 
@@ -184,6 +292,8 @@
 
       dropdownMenu.appendChild(option);
     });
+
+    console.log('[ENTREPRENEUR-SELECTOR] ✅ Dropdown peuplé avec', entrepreneurs.length, 'options');
   }
 
   // ============================================

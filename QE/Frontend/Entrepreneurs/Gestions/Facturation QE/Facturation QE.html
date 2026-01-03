@@ -2274,16 +2274,38 @@
           });
 
           if (updateResponse.ok) {
-            customAlert('Remboursement validé et envoyé au comptable!', 'success');
+            // Fermer le popup de confirmation et de validation
             fermerPopupCoachValidation();
-            // Recharger pour mettre à jour les notifications
-            if (typeof chargerClientsFacturation === 'function') {
-              chargerClientsFacturation();
-            }
-            // Vérifier s'il reste d'autres remboursements en attente
+
+            // Afficher l'animation de succès
+            showSuccessAnimation('Remboursement validé et envoyé au comptable!');
+
+            // Recharger les données après l'animation (2 secondes)
             setTimeout(() => {
+              // Recharger pour mettre à jour les notifications
+              if (typeof chargerClientsFacturation === 'function') {
+                chargerClientsFacturation();
+              }
+              // Vérifier s'il reste d'autres remboursements en attente
               chargerRemboursementsEnAttenteCoach();
-            }, 500);
+
+              // Recharger les badges du sélecteur entrepreneur si on est un coach
+              const userRole = localStorage.getItem('userRole');
+              if (userRole === 'coach') {
+                if (window.EntrepreneurSelector) {
+                  window.EntrepreneurSelector.reload();
+                  log('[REMB COACH] Badges entrepreneur rechargés après validation');
+                }
+
+                // Notifier le parent (apppccoach) pour rafraîchir le badge du menu latéral
+                window.parent.postMessage({ type: 'updateFacturationBadge' }, '*');
+              }
+
+              // Déclencher la mise à jour des notifications dans apppc coach
+              if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'UPDATE_REMBOURSEMENT_NOTIFICATIONS' }, '*');
+              }
+            }, 2000);
           } else {
             customAlert('Erreur lors de la validation du remboursement', 'error');
           }

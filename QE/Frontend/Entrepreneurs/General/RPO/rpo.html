@@ -48,9 +48,13 @@
       const userParam = urlParams.get('user');
       const coachUsername = localStorage.getItem('username');
 
+      console.log('[RPO ANTI-FLASH] userRole:', userRole, 'isCoach:', isCoach, 'userParam:', userParam, 'coachUsername:', coachUsername);
+
       // Afficher le sélecteur si:
       // - C'est un coach ET (pas de paramètre user OU le paramètre user est le coach lui-même)
       const shouldShowSelector = isCoach && (!userParam || userParam === coachUsername);
+
+      console.log('[RPO ANTI-FLASH] shouldShowSelector:', shouldShowSelector);
 
       if (shouldShowSelector) {
         // Injecter le CSS immédiatement pour cacher le contenu et afficher le sélecteur
@@ -69,9 +73,13 @@
           #coach-entrepreneur-selector {
             display: block !important;
             opacity: 1 !important;
+            pointer-events: all !important;
           }
         `;
         document.head.appendChild(style);
+        console.log('[RPO ANTI-FLASH] ✅ CSS injecté pour afficher le sélecteur');
+      } else {
+        console.log('[RPO ANTI-FLASH] ⚠️ Sélecteur NON affiché - conditions non remplies');
       }
     })();
   </script>
@@ -4718,6 +4726,19 @@ function updateIncompleteWeeksBadge() {
   console.log('[RPO BADGE DEBUG] Total incomplete:', totalIncomplete);
 
   updateMenuBadge(totalIncomplete);
+
+  // NE PAS afficher le modal si c'est un coach sans sélection d'entrepreneur
+  const userRole = localStorage.getItem('userRole');
+  const isCoach = userRole === 'coach';
+  const urlParams = new URLSearchParams(window.location.search);
+  const userParam = urlParams.get('user');
+  const coachUsername = localStorage.getItem('username');
+  const isCoachModeWithoutSelection = isCoach && (!userParam || userParam === coachUsername);
+
+  if (isCoachModeWithoutSelection) {
+    console.log('[RPO NOTIFICATIONS] Coach sans sélection - modal non affiché');
+    return;
+  }
 
   // Afficher le modal automatiquement si on vient de charger la page ET qu'il y a des données incomplètes
   if (!window.rpoNotificationModalShown && totalIncomplete > 0) {
@@ -12264,6 +12285,19 @@ function closeNotificationsModal() {
 
 // Afficher le modal avec les semaines incomplètes
 function showNotificationsModal() {
+  // NE PAS afficher le modal si c'est un coach sans sélection d'entrepreneur
+  const userRole = localStorage.getItem('userRole');
+  const isCoach = userRole === 'coach';
+  const urlParams = new URLSearchParams(window.location.search);
+  const userParam = urlParams.get('user');
+  const coachUsername = localStorage.getItem('username');
+  const isCoachModeWithoutSelection = isCoach && (!userParam || userParam === coachUsername);
+
+  if (isCoachModeWithoutSelection) {
+    console.log('[RPO NOTIFICATIONS] Coach sans sélection - modal bloqué');
+    return;
+  }
+
   // Combiner les semaines incomplètes des deux sources
   const allIncompleteWeeks = [];
 

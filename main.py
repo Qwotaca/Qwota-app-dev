@@ -9833,6 +9833,97 @@ async def annuler_client_accepte(data: dict = Body(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/ventes/marquer-perdu")
+async def marquer_vente_perdue(data: dict = Body(...)):
+    """
+    Marque un client comme perdu depuis n'importe quelle catégorie (attente, acceptees, produit)
+    et le déplace vers clients_perdus
+    """
+    try:
+        username = data.get("username")
+        vente_id = data.get("vente_id")
+
+        if not username or not vente_id:
+            raise HTTPException(status_code=400, detail="Username et vente_id requis")
+
+        print(f"[VENTES] Marquage comme perdu pour {username}, ID: {vente_id}")
+
+        # Créer le dossier clients_perdus
+        perdus_dir = f"{base_cloud}/clients_perdus/{username}"
+        os.makedirs(perdus_dir, exist_ok=True)
+        perdus_file = os.path.join(perdus_dir, "clients.json")
+
+        # Essayer de trouver le client dans les 3 catégories possibles
+        categories = [
+            ("attente", "ventes_attente"),
+            ("acceptees", "ventes_acceptees"),
+            ("produit", "ventes_produit")
+        ]
+
+        client_trouve = None
+        category_source = None
+
+        for category_name, folder_name in categories:
+            category_dir = f"{base_cloud}/{folder_name}/{username}"
+            category_file = os.path.join(category_dir, "ventes.json")
+
+            if os.path.exists(category_file):
+                with open(category_file, "r", encoding="utf-8") as f:
+                    ventes = json.load(f)
+
+                # Chercher le client par ID ou num
+                for i, vente in enumerate(ventes):
+                    if vente.get("id") == vente_id or vente.get("num") == vente_id:
+                        client_trouve = vente
+                        category_source = (category_name, folder_name, category_file, ventes, i)
+                        break
+
+            if client_trouve:
+                break
+
+        if not client_trouve:
+            raise HTTPException(status_code=404, detail="Client introuvable dans aucune catégorie")
+
+        # Retirer le client de sa catégorie d'origine
+        category_name, folder_name, category_file, ventes, index = category_source
+        ventes.pop(index)
+
+        # Sauvegarder la liste mise à jour
+        with open(category_file, "w", encoding="utf-8") as f:
+            json.dump(ventes, f, ensure_ascii=False, indent=2)
+
+        # Charger les clients perdus existants
+        clients_perdus = []
+        if os.path.exists(perdus_file):
+            with open(perdus_file, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if content:
+                    clients_perdus = json.loads(content)
+
+        # Ajouter le client dans clients_perdus avec date de marquage
+        client_trouve["date_perdu"] = datetime.now().isoformat()
+        client_trouve["statut"] = "perdu"
+        client_trouve["category_origine"] = category_name
+        clients_perdus.append(client_trouve)
+
+        # Sauvegarder les clients perdus
+        with open(perdus_file, "w", encoding="utf-8") as f:
+            json.dump(clients_perdus, f, ensure_ascii=False, indent=2)
+
+        client_nom = f"{client_trouve.get('prenom', client_trouve.get('clientPrenom', ''))} {client_trouve.get('nom', client_trouve.get('clientNom', ''))}".strip()
+        print(f"[OK] Client {client_nom} marqué comme perdu depuis {category_name}")
+
+        return {"success": True, "message": f"{client_nom} marqué comme perdu", "category": category_name}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Erreur marquer comme perdu: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/clients-perdus/{username}")
 async def get_clients_perdus(username: str):
     """

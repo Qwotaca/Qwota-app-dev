@@ -470,6 +470,18 @@
       pointer-events: all;
     }
 
+    /* Décaler les modals de 10px vers le bas pour éviter la barre coach */
+    body.coach-mode.has-selection #clientInfoModal,
+    body.coach-mode.has-selection #pdfViewerModal,
+    body.coach-mode.has-selection #clientsPerdusModal,
+    body.coach-mode.has-selection #clients-perdus-modal,
+    body.coach-mode.has-selection #mapsModal,
+    body.coach-mode.has-selection #confirmMarquerPerduModal,
+    body.coach-mode.has-selection #confirmDeletePerduModal,
+    body.coach-mode.has-selection #confirmRecupererModal {
+      padding-top: 10px !important;
+    }
+
     /* Pour mobile overlay et autres éléments directs du body */
     body.coach-mode > .mobile-overlay,
     body.coach-mode > div:not(#coach-entrepreneur-selector):not(.mobile-overlay) {
@@ -1177,7 +1189,7 @@
   </div>
 
   <!-- Modal confirmation suppression client perdu -->
-  <div id="confirmDeletePerduModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
+  <div id="confirmDeletePerduModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 90;">
     <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
       <div class="mb-6">
         <h3 class="text-xl font-bold mb-2" style="color: var(--text-light);">
@@ -1719,6 +1731,11 @@
       error('[VENTES] Données client introuvables');
       return;
     }
+
+    // Store current category and index globally for marquerCommePerdu function
+    window.currentClientIndex = index;
+    window.currentClientCategory = category;
+
     const modal = document.getElementById('clientInfoModal');
     const content = document.getElementById('clientInfoContent');
     const modalHeader = modal.querySelector('.flex.items-center.justify-between');
@@ -1749,7 +1766,7 @@
           Informations client
         </h3>
         <div class="flex items-center gap-2">
-          <button onclick="marquerCommePerdu(${index})" class="px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'" title="Marquer comme perdu">
+          <button onclick="marquerCommePerdu()" class="px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'" title="Marquer comme perdu">
             <i class="fas fa-times-circle"></i>
             <span>Marquer comme perdu</span>
           </button>
@@ -1766,7 +1783,7 @@
           Informations client
         </h3>
         <div class="flex items-center gap-2">
-          <button onclick="marquerCommePerdu(${index})" class="px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'" title="Marquer comme perdu">
+          <button onclick="marquerCommePerdu()" class="px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'" title="Marquer comme perdu">
             <i class="fas fa-times-circle"></i>
             <span>Marquer comme perdu</span>
           </button>
@@ -2086,17 +2103,30 @@
   // Variables globales pour marquer comme perdu
   let venteToMarkPerdu = null;
 
-  window.marquerCommePerdu = function(venteIndex) {
+  window.marquerCommePerdu = function() {
     closeClientInfo();
 
-    const vente = window.ventesData.attente[venteIndex];
+    // Use stored category and index from showClientDetails()
+    const category = window.currentClientCategory;
+    const venteIndex = window.currentClientIndex;
+
+    if (!category || venteIndex === undefined) {
+      error('[VENTES] Catégorie ou index non défini');
+      return;
+    }
+
+    const vente = window.ventesData[category][venteIndex];
     if (!vente) {
       error('[VENTES] Vente introuvable');
       return;
     }
 
-    // Stocker la vente à marquer comme perdue
-    venteToMarkPerdu = vente;
+    // Stocker la vente à marquer comme perdue avec sa catégorie et son index
+    venteToMarkPerdu = {
+      vente: vente,
+      category: category,
+      index: venteIndex
+    };
 
     // Mettre à jour le message du modal
     const modal = document.getElementById('confirmMarquerPerduModal');
@@ -2120,8 +2150,11 @@
     const modal = document.getElementById('confirmMarquerPerduModal');
     modal.style.display = 'none';
 
+    // Extract vente data, category and index
+    const { vente, category, index } = venteToMarkPerdu;
+
     try {
-      log('[VENTES] Marquer comme perdu:', venteToMarkPerdu);
+      log('[VENTES] Marquer comme perdu:', vente);
 
       // Appeler le backend pour marquer comme perdu
       const response = await fetch('/ventes/marquer-perdu', {
@@ -2129,13 +2162,36 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: window.username,
-          vente_id: venteToMarkPerdu.id || venteToMarkPerdu.num
+          vente_id: vente.id || vente.num
         })
       });
 
       if (response.ok) {
         log('[VENTES] ✅ Vente marquée comme perdue avec succès');
-        // Recharger les données
+
+        // ⚡ INSTANT REMOVAL - Remove the row from DOM immediately
+        const tbodyMap = {
+          'attente': 'attente-tbody',
+          'acceptees': 'accepte-tbody',
+          'produit': 'produit-tbody'
+        };
+
+        const tbodyId = tbodyMap[category];
+        if (tbodyId) {
+          const tbody = document.getElementById(tbodyId);
+          if (tbody && tbody.children[index]) {
+            // Remove the row at the specified index
+            tbody.children[index].remove();
+            log(`[VENTES] 🗑️ Ligne ${index} retirée de ${category}`);
+
+            // If no rows left, show empty state
+            if (tbody.children.length === 0) {
+              showEmptyTable(tbody, category);
+            }
+          }
+        }
+
+        // Recharger les données pour la persistance
         await loadVentesDataInternal();
       } else {
         error('[VENTES] ❌ Erreur lors du marquage comme perdu');

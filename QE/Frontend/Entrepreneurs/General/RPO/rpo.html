@@ -48,7 +48,8 @@
       const userParam = urlParams.get('user');
       const coachUsername = localStorage.getItem('username');
 
-      console.log('[RPO ANTI-FLASH] userRole:', userRole, 'isCoach:', isCoach, 'userParam:', userParam, 'coachUsername:', coachUsername);
+      console.log('[RPO ANTI-FLASH] userRole:', userRole, 'isCoach:', isCoach);
+      console.log('[RPO ANTI-FLASH] userParam:', userParam, 'coachUsername:', coachUsername);
 
       // Afficher le sélecteur si:
       // - C'est un coach ET (pas de paramètre user OU le paramètre user est le coach lui-même)
@@ -57,6 +58,7 @@
       console.log('[RPO ANTI-FLASH] shouldShowSelector:', shouldShowSelector);
 
       if (shouldShowSelector) {
+        console.log('[RPO ANTI-FLASH] ✅ Application du CSS pour afficher le sélecteur coach');
         // Injecter le CSS immédiatement pour cacher le contenu et afficher le sélecteur
         const style = document.createElement('style');
         style.id = 'coach-anti-flash-css';
@@ -73,13 +75,12 @@
           #coach-entrepreneur-selector {
             display: block !important;
             opacity: 1 !important;
-            pointer-events: all !important;
+            z-index: 10001 !important;
           }
         `;
         document.head.appendChild(style);
-        console.log('[RPO ANTI-FLASH] ✅ CSS injecté pour afficher le sélecteur');
       } else {
-        console.log('[RPO ANTI-FLASH] ⚠️ Sélecteur NON affiché - conditions non remplies');
+        console.log('[RPO ANTI-FLASH] ❌ Pas de sélecteur coach - affichage normal du RPO');
       }
     })();
   </script>
@@ -13052,21 +13053,25 @@ function updateMenuBadge(count) {
 (function() {
   const userRole = localStorage.getItem('userRole');
 
+  console.log('[RPO SCRIPT LOAD] userRole détecté:', userRole);
+
   // Charger entrepreneur-selector.js pour les coaches ET direction
   // Pour direction sur RPO: entrepreneur-selector.js détectera la page RPO et chargera les COACHES
   // Pour coach: entrepreneur-selector.js chargera les ENTREPRENEURS comme avant
   if (userRole === 'coach' || userRole === 'direction') {
+    console.log('[RPO SCRIPT LOAD] Chargement de entrepreneur-selector.js...');
     const script = document.createElement('script');
     script.src = '/entrepreneur-selector.js';
     script.onload = function() {
-      log('[RPO] ✅ entrepreneur-selector.js chargé pour', userRole);
+      console.log('[RPO SCRIPT LOAD] ✅ entrepreneur-selector.js chargé avec succès pour', userRole);
     };
     script.onerror = function() {
-      error('[RPO] ❌ Erreur chargement entrepreneur-selector.js');
+      console.error('[RPO SCRIPT LOAD] ❌ Erreur chargement entrepreneur-selector.js');
     };
     document.body.appendChild(script);
+    console.log('[RPO SCRIPT LOAD] Script ajouté au body');
   } else {
-    log('[RPO] entrepreneur-selector.js NON chargé (rôle:', userRole, ')');
+    console.log('[RPO SCRIPT LOAD] entrepreneur-selector.js NON chargé (rôle:', userRole, ')');
   }
 })();
 </script>

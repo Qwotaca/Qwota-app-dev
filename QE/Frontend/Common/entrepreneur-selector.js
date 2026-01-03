@@ -9,9 +9,18 @@
   // ============================================
   // INITIALIZATION
   // ============================================
-  document.addEventListener('DOMContentLoaded', function() {
+  // Vérifier si le DOM est déjà chargé
+  if (document.readyState === 'loading') {
+    // DOM pas encore chargé, attendre l'événement
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('[ENTREPRENEUR-SELECTOR] Init via DOMContentLoaded');
+      initEntrepreneurSelector();
+    });
+  } else {
+    // DOM déjà chargé, initialiser immédiatement
+    console.log('[ENTREPRENEUR-SELECTOR] Init immédiate (DOM déjà chargé)');
     initEntrepreneurSelector();
-  });
+  }
 
   function initEntrepreneurSelector() {
     const userRole = localStorage.getItem('userRole');

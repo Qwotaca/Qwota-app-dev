@@ -3591,6 +3591,9 @@ async function saveMetrics() {
 
     // Sauvegarder les données annuelles
     await saveAnnualData();
+
+    // Régénérer le plan d'affaire avec animation
+    await reloadPlanWithAnimation();
   } finally {
     // Restaurer le bouton
     saveBtn.innerHTML = originalHTML;
@@ -3860,6 +3863,9 @@ async function saveWeekJan() {
 
   // Sortir du mode édition APRÈS que les données soient sauvegardées
   toggleEditWeekJan();
+
+  // Régénérer le plan d'affaire avec animation
+  await reloadPlanWithAnimation();
 }
 
 // Show objectifs table
@@ -5655,6 +5661,9 @@ async function saveMonthly(monthIndex) {
 
     // Vérifier si l'alerte doit être affichée ou masquée
     checkMonthlyObjectivesAlert(abbr);
+
+    // Régénérer le plan d'affaire avec animation
+    await reloadPlanWithAnimation();
   } finally {
     // Restaurer le bouton
     setTimeout(() => {
@@ -8750,11 +8759,8 @@ async function savePlan() {
     // Sauvegarder les données annuelles (incluant cm_prevision, ratio_mktg, taux_vente)
     await saveAnnualData();
 
-    // Régénérer uniquement les prévisions (sans perdre les données réelles)
-    await regeneratePlanForecasts();
-
-    // Synchroniser les prévisions vers RPO hebdo
-    syncPlanToRPO();
+    // Régénérer le plan d'affaire avec animation
+    await reloadPlanWithAnimation();
 
     // Les données RÉEL ne doivent JAMAIS être sauvegardées!
     // Elles sont toujours en lecture seule et chargées depuis RPO hebdo
@@ -8806,6 +8812,9 @@ function calculatePlan() {
   let totalProdVise = 0;
   let totalProdReel = 0;
   let totalPctSem = 0; // Total des % hebdomadaires
+
+  // Cumuls progressifs pour les calculs de tendance
+  let cumulProd = 0; // Cumul de production pour tendance
   let totalProdPctDistribution = 0; // Total des % de distribution de production
   let totalTV = 0; // Somme des TV%
   let countTV = 0; // Nombre de semaines avec TV
@@ -8834,10 +8843,15 @@ function calculatePlan() {
 
     if (row) {
       const cells = row.querySelectorAll('td');
+      // Structure des colonnes:
+      // 0: Semaine, 1: Mktg Obj, 2: Mktg Réel, 3: Mktg Cumul, 4: Mktg Tendance
+      // 5: Estim Obj, 6: Estim Réel, 7: Estim Cumul, 8: Estim Tendance, 9: Ratio
+      // 10: Contrat Obj, 11: Contrat Réel, 12: Contrat Cumul, 13: Contrat Tendance
+      // 14: Dollar Obj, 15: Dollar Réel, 16: Dollar Cumul, 17: Dollar Tendance
       mktgPrev = parseFloat(cells[1]?.textContent) || 0;
-      estimPrev = parseFloat(cells[4]?.textContent) || 0;
-      contratPrev = parseFloat(cells[8]?.textContent) || 0;
-      const dollarText = cells[11]?.textContent.replace(/[^\d]/g, '') || '0';
+      estimPrev = parseFloat(cells[5]?.textContent) || 0;
+      contratPrev = parseFloat(cells[10]?.textContent) || 0;
+      const dollarText = cells[14]?.textContent.replace(/[^\d]/g, '') || '0';
       dollarPrev = parseFloat(dollarText) || 0;
     }
 
@@ -8846,6 +8860,7 @@ function calculatePlan() {
     cumulEstim += estimReel;
     cumulContrat += contratReel;
     cumulDollar += dollarReel;
+    cumulProd += prodReel;
 
     // Lire le % de la semaine depuis l'élément (valeur fixe du pattern)
     const pctSemElem = document.getElementById(`plan-w${i}-pct-sem`);
@@ -8998,25 +9013,30 @@ function calculatePlan() {
     // prodPctElem déjà déclaré plus haut dans la boucle
     if (prodPctElem) prodPctElem.textContent = prodPctDistribution + '%';
 
-    // Production tendance (calculé séparément car basé sur un pattern différent)
-    // On affichera "-" pour l'instant
+    // Production tendance: (cumul prod / % cumul) × 100
+    let tendanceProd = '-';
+    if (cumulPercentValue > 0 && cumulProd > 0) {
+      const tendanceProdVal = (cumulProd / cumulPercentValue) * 100;
+      tendanceProd = Math.round(tendanceProdVal).toLocaleString('fr-CA') + ' $';
+    }
+
     const prodTendanceElem = document.getElementById(`plan-w${i}-prod-tendance`);
-    if (prodTendanceElem) prodTendanceElem.textContent = '-';
+    if (prodTendanceElem) prodTendanceElem.textContent = tendanceProd;
   }
 
   // Mettre à jour la ligne TOTAL
   document.getElementById('total-mktg-prev').textContent = parseFloat(totalMktgPrev.toFixed(1)) + ' h';
   document.getElementById('total-mktg-reel').textContent = parseFloat(totalMktgReel.toFixed(1)) + ' h';
-  document.getElementById('total-mktg-cumul').textContent = parseFloat(totalMktgCumul.toFixed(1)) + ' h';
+  document.getElementById('total-mktg-cumul').textContent = '-';
   document.getElementById('total-estim-prev').textContent = Math.round(totalEstimPrev);
   document.getElementById('total-estim-reel').textContent = Math.round(totalEstimReel);
-  document.getElementById('total-estim-cumul').textContent = Math.round(totalEstimCumul);
+  document.getElementById('total-estim-cumul').textContent = '-';
   document.getElementById('total-contrat-prev').textContent = parseFloat(totalContratPrev.toFixed(1));
   document.getElementById('total-contrat-reel').textContent = parseFloat(totalContratReel.toFixed(1));
-  document.getElementById('total-contrat-cumul').textContent = parseFloat(totalContratCumul.toFixed(1));
+  document.getElementById('total-contrat-cumul').textContent = '-';
   document.getElementById('total-dollar-prev').textContent = Math.round(totalDollarPrev).toLocaleString('fr-CA') + ' $';
   document.getElementById('total-dollar-reel').textContent = Math.round(totalDollarReel).toLocaleString('fr-CA') + ' $';
-  document.getElementById('total-dollar-cumul').textContent = Math.round(totalDollarCumul).toLocaleString('fr-CA') + ' $';
+  document.getElementById('total-dollar-cumul').textContent = '-';
   document.getElementById('total-prod-vise').textContent = Math.round(totalProdVise).toLocaleString('fr-CA') + ' $';
   document.getElementById('total-prod-reel').textContent = Math.round(totalProdReel).toLocaleString('fr-CA') + ' $';
 
@@ -9029,12 +9049,19 @@ function calculatePlan() {
   const totalPctCumul = cumulPctPattern.toFixed(2);
   document.getElementById('total-pct-cumul').textContent = totalPctCumul + '%';
 
+  // Production tendance total: (cumul prod / % cumul) × 100
+  let totalProdTendance = '-';
+  if (parseFloat(totalPctCumul) > 0 && cumulProd > 0) {
+    const totalProdTendanceVal = (cumulProd / parseFloat(totalPctCumul)) * 100;
+    totalProdTendance = Math.round(totalProdTendanceVal).toLocaleString('fr-CA') + ' $';
+  }
+  document.getElementById('total-prod-tendance').textContent = totalProdTendance;
+
   // % objectif sem. total (somme des % hebdomadaires visibles)
   document.getElementById('total-pct-sem').textContent = totalPctSem.toFixed(1) + '%';
 
-  // TV% total (moyenne des TV%)
-  const avgTV = countTV > 0 ? (totalTV / countTV).toFixed(1) : '0.0';
-  document.getElementById('total-tv').textContent = avgTV + '%';
+  // TV% total (afficher "-" pour le total)
+  document.getElementById('total-tv').textContent = '-';
 
   // % production total (somme des % de distribution)
   document.getElementById('total-prod-pct').textContent = totalProdPctDistribution.toFixed(1) + '%';

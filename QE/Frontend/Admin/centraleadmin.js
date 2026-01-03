@@ -49,6 +49,23 @@ function addTypeParam(url) {
   return `${url}${separator}type=${currentCentraleType}`;
 }
 
+// Fonction de debounce pour l'auto-save
+let saveTimeouts = {};
+function debouncedSave(sectionId, rowId, delay = 500) {
+  const key = `${sectionId}-${rowId}`;
+
+  // Annuler le timeout précédent s'il existe
+  if (saveTimeouts[key]) {
+    clearTimeout(saveTimeouts[key]);
+  }
+
+  // Créer un nouveau timeout
+  saveTimeouts[key] = setTimeout(() => {
+    saveRowData(sectionId, rowId);
+    delete saveTimeouts[key];
+  }, delay);
+}
+
 // DOM Elements
 const sectionsContainer = document.getElementById('sections-container');
 const addSectionBtn = document.getElementById('add-section-btn');
@@ -267,6 +284,9 @@ async function deleteSection(sectionId) {
   const confirmed = await showConfirm('Supprimer cette section et toutes ses données?');
   if (!confirmed) return;
 
+  // Sauvegarder toutes les valeurs actuelles avant de modifier
+  await saveAllInputValues();
+
   try {
     const response = await fetch(addTypeParam(`/api/centrale/sections/${sectionId}`), {
       method: 'DELETE'
@@ -332,6 +352,9 @@ async function saveColumn() {
   const section = sections.find(s => s.id === currentColumnSectionId);
   if (!section) return;
 
+  // Sauvegarder toutes les valeurs actuelles avant de modifier
+  saveAllInputValues();
+
   const newColumnIndex = section.columns.length;
   section.columns.push({ name: defaultName, type });
 
@@ -379,6 +402,60 @@ async function updateColumnName(sectionId, columnIndex, newName) {
   }
 }
 
+// Fonction pour sauvegarder toutes les valeurs des inputs avant de re-render
+async function saveAllInputValues() {
+  console.log('💾 SAUVEGARDE AUTOMATIQUE - Début');
+  const savePromises = [];
+
+  sections.forEach(section => {
+    section.rows.forEach(row => {
+      const tr = document.querySelector(`tr[data-row-id="${row.id}"]`);
+      if (!tr) return;
+
+      const inputs = tr.querySelectorAll('input[type="text"]');
+      let hasChanges = false;
+      const changes = {};
+
+      inputs.forEach((input) => {
+        const columnName = input.dataset.columnName;
+        if (columnName) {
+          // C'est une colonne avec data-column-name
+          if (row[columnName] !== input.value) {
+            changes[columnName] = { old: row[columnName], new: input.value };
+            row[columnName] = input.value;
+            hasChanges = true;
+          }
+        } else {
+          // C'est le champ element
+          if (row.element !== input.value) {
+            changes['element'] = { old: row.element, new: input.value };
+            row.element = input.value;
+            hasChanges = true;
+          }
+        }
+      });
+
+      // Si des changements ont été détectés, sauvegarder sur le serveur
+      if (hasChanges) {
+        console.log(`  📝 Changements détectés pour ligne ${row.id}:`, changes);
+        console.log(`  📤 Données envoyées:`, JSON.stringify(row, null, 2));
+
+        const promise = fetch(addTypeParam(`/api/centrale/sections/${section.id}/rows/${row.id}`), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(row)
+        }).catch(err => console.error('Erreur sauvegarde:', err));
+
+        savePromises.push(promise);
+      }
+    });
+  });
+
+  // Attendre que toutes les sauvegardes soient terminées
+  await Promise.all(savePromises);
+  console.log(`💾 SAUVEGARDE AUTOMATIQUE - Terminée (${savePromises.length} lignes sauvegardées)\n`);
+}
+
 async function deleteColumn(sectionId, columnIndex) {
   const section = sections.find(s => s.id === sectionId);
   if (!section || columnIndex < 0 || columnIndex >= section.columns.length) return;
@@ -387,6 +464,20 @@ async function deleteColumn(sectionId, columnIndex) {
   const confirmed = await showConfirm(`Supprimer la colonne "${columnName}" et toutes ses données?`);
   if (!confirmed) return;
 
+  console.log('═══════════════════════════════════════');
+  console.log('🗑️ SUPPRESSION DE COLONNE - AVANT');
+  console.log('═══════════════════════════════════════');
+  console.log('Section:', section.title);
+  console.log('Colonne à supprimer:', `${columnName} (index: ${columnIndex})`);
+  console.log('Colonnes AVANT:', section.columns.map(c => `${c.name} (${c.type})`));
+  console.log('Nombre de lignes:', section.rows.length);
+  section.rows.forEach((row, idx) => {
+    console.log(`Ligne ${idx + 1}:`, JSON.stringify(row, null, 2));
+  });
+
+  // Sauvegarder toutes les valeurs actuelles avant de modifier
+  await saveAllInputValues();
+
   // Supprimer la colonne
   section.columns.splice(columnIndex, 1);
 
@@ -394,6 +485,15 @@ async function deleteColumn(sectionId, columnIndex) {
   section.rows.forEach(row => {
     delete row[columnName];
   });
+
+  console.log('═══════════════════════════════════════');
+  console.log('🗑️ SUPPRESSION DE COLONNE - APRÈS');
+  console.log('═══════════════════════════════════════');
+  console.log('Colonnes APRÈS:', section.columns.map(c => `${c.name} (${c.type})`));
+  section.rows.forEach((row, idx) => {
+    console.log(`Ligne ${idx + 1}:`, JSON.stringify(row, null, 2));
+  });
+  console.log('═══════════════════════════════════════\n');
 
   try {
     await fetch(addTypeParam('/api/centrale/sections'), {
@@ -838,7 +938,21 @@ function createTableRow(section, row) {
   elementInput.className = 'input-field';
   elementInput.placeholder = section.columns[0]?.name || 'Élément';
   elementInput.value = row.element || '';
-  elementInput.addEventListener('blur', () => saveRowData(section.id, row.id));
+
+  // Auto-save avec debounce pendant la saisie
+  elementInput.addEventListener('input', () => debouncedSave(section.id, row.id, 500));
+
+  // Sauvegarder immédiatement quand on quitte le champ
+  elementInput.addEventListener('blur', () => {
+    // Annuler le debounce et sauvegarder tout de suite
+    const key = `${section.id}-${row.id}`;
+    if (saveTimeouts[key]) {
+      clearTimeout(saveTimeouts[key]);
+      delete saveTimeouts[key];
+    }
+    saveRowData(section.id, row.id);
+  });
+
   tdElement.appendChild(elementInput);
   tr.appendChild(tdElement);
 
@@ -908,6 +1022,11 @@ function createTableRow(section, row) {
 }
 
 function createFileColumn(sectionId, rowId, files = []) {
+  // S'assurer que files est un tableau
+  if (!Array.isArray(files)) {
+    files = [];
+  }
+
   const container = document.createElement('div');
   container.className = 'file-upload-container';
 
@@ -949,7 +1068,22 @@ function createNumeroColumn(sectionId, rowId, colName, value) {
   input.className = 'input-field';
   input.placeholder = 'Numéro...';
   input.value = value;
-  input.addEventListener('blur', () => saveRowData(sectionId, rowId));
+  input.dataset.columnName = colName; // IMPORTANT: pour identifier la colonne
+
+  // Auto-save avec debounce pendant la saisie
+  input.addEventListener('input', () => debouncedSave(sectionId, rowId, 500));
+
+  // Sauvegarder immédiatement quand on quitte le champ
+  input.addEventListener('blur', () => {
+    // Annuler le debounce et sauvegarder tout de suite
+    const key = `${sectionId}-${rowId}`;
+    if (saveTimeouts[key]) {
+      clearTimeout(saveTimeouts[key]);
+      delete saveTimeouts[key];
+    }
+    saveRowData(sectionId, rowId);
+  });
+
   return input;
 }
 
@@ -959,7 +1093,22 @@ function createTexteColumn(sectionId, rowId, colName, value) {
   input.className = 'input-field';
   input.placeholder = 'Texte...';
   input.value = value;
-  input.addEventListener('blur', () => saveRowData(sectionId, rowId));
+  input.dataset.columnName = colName; // IMPORTANT: pour identifier la colonne
+
+  // Auto-save avec debounce pendant la saisie
+  input.addEventListener('input', () => debouncedSave(sectionId, rowId, 500));
+
+  // Sauvegarder immédiatement quand on quitte le champ
+  input.addEventListener('blur', () => {
+    // Annuler le debounce et sauvegarder tout de suite
+    const key = `${sectionId}-${rowId}`;
+    if (saveTimeouts[key]) {
+      clearTimeout(saveTimeouts[key]);
+      delete saveTimeouts[key];
+    }
+    saveRowData(sectionId, rowId);
+  });
+
   return input;
 }
 
@@ -1029,6 +1178,21 @@ function createFileIcon(file, sectionId, rowId, container) {
         method: 'DELETE'
       });
       iconWrapper.remove();
+
+      // IMPORTANT: Mettre à jour les données locales dans sections
+      const section = sections.find(s => s.id === sectionId);
+      if (section) {
+        const row = section.rows.find(r => r.id === rowId);
+        if (row) {
+          // Trouver la colonne de type fichier
+          const fileColumn = section.columns.find(col => col.type === 'fichier');
+          if (fileColumn && Array.isArray(row[fileColumn.name])) {
+            // Retirer le fichier du tableau
+            row[fileColumn.name] = row[fileColumn.name].filter(f => f.name !== file.name);
+            console.log(`🗑️ Fichier supprimé localement de la ligne ${rowId}:`, file.name);
+          }
+        }
+      }
 
       // Update counter
       const counter = container.querySelector('.file-counter');
@@ -1100,15 +1264,38 @@ async function deleteRow(sectionId, rowId) {
   const confirmed = await showConfirm('Supprimer cette ligne?');
   if (!confirmed) return;
 
+  console.log('═══════════════════════════════════════');
+  console.log('🗑️ SUPPRESSION DE LIGNE - AVANT');
+  console.log('═══════════════════════════════════════');
+  const section = sections.find(s => s.id === sectionId);
+  if (section) {
+    console.log('Section:', section.title);
+    console.log('Colonnes:', section.columns.map(c => `${c.name} (${c.type})`));
+    console.log('Nombre de lignes AVANT:', section.rows.length);
+    section.rows.forEach((row, idx) => {
+      console.log(`Ligne ${idx + 1}:`, JSON.stringify(row, null, 2));
+    });
+  }
+
+  // Sauvegarder toutes les valeurs actuelles avant de modifier
+  await saveAllInputValues();
+
   try {
     const response = await fetch(addTypeParam(`/api/centrale/sections/${sectionId}/rows/${rowId}`), {
       method: 'DELETE'
     });
 
     if (response.ok) {
-      const section = sections.find(s => s.id === sectionId);
       if (section) {
         section.rows = section.rows.filter(r => r.id !== rowId);
+        console.log('═══════════════════════════════════════');
+        console.log('🗑️ SUPPRESSION DE LIGNE - APRÈS');
+        console.log('═══════════════════════════════════════');
+        console.log('Nombre de lignes APRÈS:', section.rows.length);
+        section.rows.forEach((row, idx) => {
+          console.log(`Ligne ${idx + 1}:`, JSON.stringify(row, null, 2));
+        });
+        console.log('═══════════════════════════════════════\n');
         renderSections();
       }
     }
@@ -1125,20 +1312,28 @@ async function saveRowData(sectionId, rowId) {
   const tr = document.querySelector(`tr[data-row-id="${rowId}"]`);
   if (!tr) return;
 
-  const rowData = { id: rowId };
+  // Récupérer les données existantes de la ligne pour préserver les fichiers
+  const existingRow = section.rows.find(r => r.id === rowId);
+  if (!existingRow) return;
 
-  // Récupérer toutes les valeurs
+  // Créer une copie des données existantes
+  const rowData = { ...existingRow };
+
+  // Mettre à jour seulement les valeurs des champs texte
   const inputs = tr.querySelectorAll('input[type="text"]');
-  inputs.forEach((input, index) => {
-    if (index === 0) {
-      rowData.element = input.value;
+  inputs.forEach((input) => {
+    // Utiliser data-column-name pour identifier la colonne, sinon c'est le champ element
+    const columnName = input.dataset.columnName;
+    if (columnName) {
+      rowData[columnName] = input.value;
     } else {
-      const col = section.columns[index];
-      if (col) {
-        rowData[col.name] = input.value;
-      }
+      // C'est le champ element (qui n'a pas de data-column-name)
+      rowData.element = input.value;
     }
   });
+
+  // Mettre à jour les données locales
+  Object.assign(existingRow, rowData);
 
   try {
     await fetch(addTypeParam(`/api/centrale/sections/${sectionId}/rows/${rowId}`), {
@@ -1176,6 +1371,25 @@ async function handleFileUpload(e, sectionId, rowId, container) {
         const data = await response.json();
         const fileIcon = createFileIcon(data.file, sectionId, rowId, container);
         fileList.appendChild(fileIcon);
+
+        // IMPORTANT: Mettre à jour les données locales dans sections
+        const section = sections.find(s => s.id === sectionId);
+        if (section) {
+          const row = section.rows.find(r => r.id === rowId);
+          if (row) {
+            // Trouver la colonne de type fichier
+            const fileColumn = section.columns.find(col => col.type === 'fichier');
+            if (fileColumn) {
+              // Initialiser le tableau de fichiers s'il n'existe pas
+              if (!Array.isArray(row[fileColumn.name])) {
+                row[fileColumn.name] = [];
+              }
+              // Ajouter le nouveau fichier
+              row[fileColumn.name].push(data.file);
+              console.log(`📎 Fichier ajouté localement à la ligne ${rowId}:`, data.file);
+            }
+          }
+        }
 
         // Update counter
         const counter = container.querySelector('.file-counter');

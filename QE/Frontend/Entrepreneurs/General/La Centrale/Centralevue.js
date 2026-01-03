@@ -36,7 +36,7 @@ const sectionColors = [
 
 // Fonction pour créer l'affichage des fichiers
 function createFilesList(files) {
-  if (!files || files.length === 0) {
+  if (!files || !Array.isArray(files) || files.length === 0) {
     return '<span class="text-gray-400 italic">Aucun fichier</span>';
   }
 
@@ -86,16 +86,20 @@ function createTableCell(column, rowData) {
 function createSectionHTML(section, colorIndex) {
   const color = sectionColors[colorIndex % sectionColors.length];
 
-  // Créer les headers de colonnes
-  const columnHeaders = section.columns.map(col =>
+  // Créer les headers de colonnes (avec Élément en premier)
+  const elementHeader = `<th>${section.columns[0]?.name || 'Élément'}</th>`;
+  const otherHeaders = section.columns.slice(1).map(col =>
     `<th>${col.name}</th>`
   ).join('');
+  const columnHeaders = elementHeader + otherHeaders;
 
-  // Créer les lignes
+  // Créer les lignes (avec element en premier)
   const rows = (section.rows || []).map(row => {
-    const cells = section.columns.map(col =>
+    const elementCell = `<td>${row.element || '<span class="text-gray-400 italic">Aucun élément</span>'}</td>`;
+    const otherCells = section.columns.slice(1).map(col =>
       `<td>${createTableCell(col, row)}</td>`
     ).join('');
+    const cells = elementCell + otherCells;
     return `<tr>${cells}</tr>`;
   }).join('');
 
@@ -141,7 +145,16 @@ function createMobileCards(section) {
   }
 
   return section.rows.map(row => {
-    const fields = section.columns.map(col => {
+    // Champ élément en premier
+    const elementField = `
+      <div class="mobile-card-row">
+        <div class="mobile-card-label">${section.columns[0]?.name || 'Élément'}</div>
+        <div class="mobile-card-value">${row.element || '<span class="text-gray-400 italic">Aucun élément</span>'}</div>
+      </div>
+    `;
+
+    // Autres champs
+    const otherFields = section.columns.slice(1).map(col => {
       const value = createTableCell(col, row);
       return `
         <div class="mobile-card-row">
@@ -151,11 +164,13 @@ function createMobileCards(section) {
       `;
     }).join('');
 
+    const fields = elementField + otherFields;
+
     return `
       <div class="mobile-card">
         <div class="mobile-card-title">
           <i class="fas fa-${section.icon}"></i>
-          <span>${row.element || row[section.columns[0]?.name] || 'Sans titre'}</span>
+          <span>${row.element || 'Sans titre'}</span>
         </div>
         <div class="mobile-card-info">
           ${fields}

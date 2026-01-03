@@ -20026,7 +20026,8 @@ async def upload_centrale_file(section_id: str, row_id: str, file: UploadFile = 
                         # Trouver la colonne fichier
                         for col in section.get("columns", []):
                             if col.get("type") == "fichier":
-                                if col["name"] not in row:
+                                # S'assurer que c'est une liste (pas un string ou autre)
+                                if not isinstance(row.get(col["name"]), list):
                                     row[col["name"]] = []
                                 row[col["name"]].append({
                                     "name": file.filename,

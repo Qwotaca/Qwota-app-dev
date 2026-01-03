@@ -336,7 +336,20 @@
 
         const autresPaiementsEnTraitement = autresPaiements.some(p => p.statut === 'traitement' || p.statut === 'traite');
 
-        if (statutPaiementFinal === 'traitement' || statutPaiementFinal === 'attente_comptable') {
+        // Vérifier si tous les paiements sont complets/traités
+        const depotTraite = statutDepot === 'traite' || statutDepot === 'traite_attente_final';
+        const paiementFinalTraite = statutPaiementFinal === 'traite';
+        const tousAutresPaiementsTraites = autresPaiements.length > 0 && autresPaiements.every(p => p.statut === 'traite');
+        const paiementsComplets = depotTraite && (paiementFinalTraite || tousAutresPaiementsTraites);
+
+        if (paiementsComplets) {
+          // Désactiver si tous les paiements sont complets/traités
+          btnAutresPaiements.disabled = true;
+          btnAutresPaiements.style.opacity = '0.3';
+          btnAutresPaiements.style.cursor = 'not-allowed';
+          btnAutresPaiements.style.pointerEvents = 'none';
+          log('🚫 Bouton "Autres paiements" désactivé (paiements complets)');
+        } else if (statutPaiementFinal === 'traitement' || statutPaiementFinal === 'attente_comptable') {
           // Désactiver "autres paiements" si paiement final en traitement ou attente_comptable
           btnAutresPaiements.disabled = true;
           btnAutresPaiements.style.opacity = '0.3';
@@ -1377,7 +1390,8 @@
     // Function to load facturations in columns format
     function chargerFacturationsColonnes() {
       log('Chargement des facturations en colonnes...');
-      // Les compteurs et contenus sont déjà définis dans le HTML avec les données fictives
+      // Peupler les sections avec les données chargées
+      peuplerSectionsFacturations();
     }
 
     // ===== SYSTÈME DE PAIEMENTS PARTIELS DYNAMIQUES =====
@@ -1922,14 +1936,30 @@
           // Générer un ID unique pour le remboursement
           const remboursementId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
 
+          // Récupérer les données complètes du client depuis sessionStorage
+          const clientData = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
+          log('[REMB] Données client:', clientData);
+
           const remboursement = {
             id: remboursementId,
             client: client,
             num: numSoumission,
+            numeroSoumission: numSoumission,
+            // Informations client détaillées
+            prenom: clientData.prenom || '',
+            nom: clientData.nom || '',
+            clientPrenom: clientData.prenom || '',
+            clientNom: clientData.nom || '',
+            telephone: clientData.tel || clientData.telephone || '',
+            adresse: clientData.adresse || '',
+            // Informations financières
             montant: montant,
             montantNum: montantNum,
             courriel: courriel,
+            // Dates et statut
             date_demande: new Date().toISOString(),
+            date_remboursement: new Date().toISOString(),
+            dateRemboursement: new Date().toISOString(),
             statut: 'en_attente_coach',
             paiement_source: montantOption ? montantOption.textContent : montant,
             date: new Date().toLocaleDateString('fr-CA'),
@@ -2124,9 +2154,10 @@
       // Créer une carte pour chaque remboursement
       remboursements.forEach(remb => {
         const card = document.createElement('div');
-        card.className = 'p-6 rounded-lg border-2 border-yellow-600 bg-opacity-10';
-        card.style.background = 'rgba(202, 138, 4, 0.1)';
-        card.style.borderColor = 'var(--border-dark)';
+        card.className = 'p-6 rounded-xl transition-all';
+        card.style.background = 'rgba(23, 32, 51, 0.6)';
+        card.style.border = '1px solid var(--border-dark)';
+        card.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
 
         const dateFormatted = new Date(remb.date_demande).toLocaleDateString('fr-CA', {
           year: 'numeric',
@@ -2136,58 +2167,56 @@
           minute: '2-digit'
         });
 
+        // Extraire prenom et nom
+        const prenom = remb.prenom || remb.clientPrenom || '';
+        const nom = remb.nom || remb.clientNom || '';
+        const clientNom = `${prenom} ${nom}`.trim() || remb.client || 'Client';
+
         card.innerHTML = `
-          <div class="flex justify-between items-start mb-4">
+          <div class="flex justify-between items-start mb-5">
             <div>
-              <h4 class="text-lg font-bold mb-2" style="color: var(--text-light);">
-                <i class="fas fa-user mr-2 text-blue-500"></i>
-                ${remb.client}
+              <h4 class="text-xl font-bold mb-2" style="color: var(--text-light);">
+                ${clientNom}
               </h4>
-              <p class="text-sm" style="color: var(--text-gray);">
-                <i class="fas fa-hashtag mr-1"></i>
-                Soumission ${remb.num}
-              </p>
+              <div class="flex items-center gap-3 text-sm" style="color: var(--text-gray);">
+                <span><i class="fas fa-hashtag mr-1"></i>${remb.num}</span>
+                ${remb.telephone ? `<span><i class="fas fa-phone mr-1"></i>${remb.telephone}</span>` : ''}
+              </div>
             </div>
-            <div class="px-3 py-1 rounded-full text-xs font-semibold" style="background: rgba(234, 179, 8, 0.2); color: #facc15;">
+            <div class="px-3 py-1.5 rounded-full text-xs font-semibold" style="background: rgba(251, 191, 36, 0.2); color: #fbbf24;">
               <i class="fas fa-clock mr-1"></i>
-              En attente
+              En attente validation
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <p class="text-sm mb-1" style="color: var(--text-gray);">Montant à rembourser</p>
-              <p class="text-xl font-bold" style="color: #ef4444;">
+          <div class="space-y-3 mb-5">
+            <div class="p-4 rounded-lg" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2);">
+              <p class="text-xs mb-1" style="color: var(--text-gray);">Montant à rembourser</p>
+              <p class="text-2xl font-bold" style="color: #ef4444;">
                 <i class="fas fa-dollar-sign mr-1"></i>
                 ${remb.montant}
               </p>
             </div>
-            <div>
-              <p class="text-sm mb-1" style="color: var(--text-gray);">Paiement source</p>
-              <p class="font-medium" style="color: var(--text-light);">
-                ${remb.paiement_source}
-              </p>
+
+            <div class="flex items-center gap-2 p-3 rounded-lg" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2);">
+              <i class="fas fa-envelope" style="color: #3b82f6; font-size: 1.1rem;"></i>
+              <div class="flex-1">
+                <p class="text-xs mb-0.5" style="color: var(--text-gray);">Courriel pour virement</p>
+                <p class="font-medium" style="color: var(--text-light);">${remb.courriel}</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 p-3 rounded-lg" style="background: rgba(148, 163, 184, 0.1); border: 1px solid rgba(148, 163, 184, 0.2);">
+              <i class="fas fa-calendar-alt" style="color: var(--text-gray); font-size: 1.1rem;"></i>
+              <div class="flex-1">
+                <p class="text-xs mb-0.5" style="color: var(--text-gray);">Date de demande</p>
+                <p class="font-medium" style="color: var(--text-light);">${dateFormatted}</p>
+              </div>
             </div>
           </div>
 
-          <div class="mb-4">
-            <p class="text-sm mb-1" style="color: var(--text-gray);">Courriel pour le virement</p>
-            <p class="font-medium" style="color: var(--text-light);">
-              <i class="fas fa-envelope mr-2 text-blue-500"></i>
-              ${remb.courriel}
-            </p>
-          </div>
-
-          <div class="mb-4">
-            <p class="text-sm mb-1" style="color: var(--text-gray);">Date de demande</p>
-            <p class="font-medium" style="color: var(--text-light);">
-              <i class="fas fa-calendar mr-2"></i>
-              ${dateFormatted}
-            </p>
-          </div>
-
           <div class="flex justify-end gap-3 pt-4 border-t" style="border-color: var(--border-dark);">
-            <button onclick="validerRemboursementCoach('${remb.id}')" class="btn-primary px-4 py-2" style="background: #10b981 !important;">
+            <button onclick="validerRemboursementCoach('${remb.id}')" class="btn-primary px-6 py-3 rounded-lg font-semibold transition-all duration-300 flex items-center gap-2" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; border-color: #10b981 !important;">
               <i class="fas fa-check mr-2"></i>
               Valider le remboursement
             </button>
@@ -2369,28 +2398,33 @@
         if (!response.ok) {
           throw new Error(`Erreur API: ${response.status}`);
         }
-        
+
         const statusData = await response.json();
         const urgentes = statusData.urgentes?.clients || [];
         const enCours = statusData.en_traitement?.clients || [];
         const traitement = statusData.en_traitement?.clients || [];
         const traitees = statusData.traitees?.clients || [];
 
-        facturationsUrgentes = urgentes || [];
-        facturationsEnCours = enCours || [];
-        facturationsTraitement = traitement || [];
-        facturationsTraitees = traitees || [];
+        // IMPORTANT: Ne PAS peupler les tableaux Status ici car les données ne sont pas transformées
+        // Les tableaux facturationsUrgentes/Traitement/Traitees doivent être peuplés par utiliserDonneesTestStatus()
+        // qui appelle transformerPaiementPourStatus() pour chaque paiement
+        // facturationsUrgentes = urgentes || [];
+        // facturationsEnCours = enCours || [];
+        // facturationsTraitement = traitement || [];
+        // facturationsTraitees = traitees || [];
 
         // Construire l'objet facturationsData pour compatibilité avec le code existant
         facturationsData = {};
-        
-        [...facturationsUrgentes, ...facturationsEnCours, ...facturationsTraitement, ...facturationsTraitees].forEach(facturation => {
-          if (facturation.numeroSoumission) {
-            facturationsData[facturation.numeroSoumission] = {
-              numero: facturation.numeroSoumission,
-              client: `${facturation.clientPrenom || ''} ${facturation.clientNom || ''}`.trim(),
-              montantPaiement: facturation.montantPaiement || '0,00 $',
-              totalTravaux: facturation.montantPaiement || '0,00 $', // Assume same as payment
+
+        const allPayments = [...urgentes, ...enCours, ...traitement, ...traitees];
+        allPayments.forEach(facturation => {
+          if (facturation.numeroSoumission || facturation.num) {
+            const numero = facturation.numeroSoumission || facturation.num;
+            facturationsData[numero] = {
+              numero: numero,
+              client: `${facturation.clientPrenom || facturation.prenom || ''} ${facturation.clientNom || facturation.nom || ''}`.trim(),
+              montantPaiement: facturation.montantPaiement || facturation.montant || '0,00 $',
+              totalTravaux: facturation.totalTravaux || facturation.montantPaiement || facturation.montant || '0,00 $',
               typePaiement: facturation.typePaiement || '',
               payePar: facturation.methodePaiement || '',
               dateDepot: facturation.dateDepot ? formatDateFromISO(facturation.dateDepot) : '',
@@ -2398,22 +2432,19 @@
               lienVirement: facturation.lienVirement || '',
               numeroCheque: facturation.numeroCheque || '',
               message: facturation.message || '',
-              status: facturation.statut || 'en_cours'
+              status: facturation.statut || facturation.statutPaiement || 'en_cours'
             };
           }
         });
 
-        log('Données de facturations chargées:', {
-          urgentes: facturationsUrgentes.length,
-          enCours: facturationsEnCours.length,
-          traitement: facturationsTraitement.length,
-          traitees: facturationsTraitees.length,
+        log('Données de facturationsData chargées (pour compatibilité):', {
           total: Object.keys(facturationsData).length
         });
 
-        // Mettre à jour les compteurs dans l'interface
-        mettreAJourCompteursInterface();
-        
+        // NOTE: Ne pas appeler mettreAJourCompteursInterface() ici car les tableaux Status
+        // ne sont plus peuplés par cette fonction. Ils seront peuplés par utiliserDonneesTestStatus()
+        // qui transforme correctement les données avec transformerPaiementPourStatus()
+
         return true;
       } catch (error) {
         error('Erreur lors du chargement des facturations:', error);
@@ -3352,11 +3383,11 @@
       if (traitementBadge) traitementBadge.textContent = facturationsTraitement.length;
       
       // Mettre à jour les compteurs des sections
-      const urgentCount = document.getElementById('urgent-count');
+      const urgenteCount = document.getElementById('urgente-count');
       const traitementCount = document.getElementById('traitement-count');
       const traiteesCount = document.getElementById('traitees-count');
-      
-      if (urgentCount) urgentCount.textContent = facturationsUrgentes.length;
+
+      if (urgenteCount) urgenteCount.textContent = facturationsUrgentes.length;
       if (traitementCount) traitementCount.textContent = facturationsTraitement.length;
       if (traiteesCount) traiteesCount.textContent = facturationsTraitees.length;
 
@@ -3376,8 +3407,17 @@
       // NOTE: La colonne Traitées affiche maintenant les périodes via chargerPeriodesTraiter()
       // Ne pas remplir traitees-content ici pour éviter d'écraser les périodes
 
-      // Mettre à jour le compteur de la colonne Traitées
+      // Mettre à jour les compteurs de toutes les colonnes
+      const urgenteCount = document.getElementById('urgente-count');
+      const traitementCount = document.getElementById('traitement-count');
       const traiteesCount = document.getElementById('traitees-count');
+
+      if (urgenteCount) {
+        urgenteCount.textContent = facturationsUrgentes.length;
+      }
+      if (traitementCount) {
+        traitementCount.textContent = facturationsTraitement.length;
+      }
       if (traiteesCount) {
         traiteesCount.textContent = facturationsTraitees.length;
       }
@@ -10035,9 +10075,15 @@
         const statutPaiementFinalCheck = clientDataEnriched.paiementFinal?.statut || clientDataEnriched.statutPaiementFinal;
         const paiementFinalEnTraitementOuAttente = statutPaiementFinalCheck === 'traitement' || statutPaiementFinalCheck === 'attente_comptable';
 
-        log('[DEBUG GRISAGE] statutPaiementFinalCheck:', statutPaiementFinalCheck, 'paiementFinalEnTraitementOuAttente:', paiementFinalEnTraitementOuAttente);
+        // Vérifier si tous les paiements sont complets/traités
+        const depotTraiteCheck = statutDepot === 'traite' || statutDepot === 'traite_attente_final';
+        const paiementFinalTraiteCheck = statutPaiementFinalCheck === 'traite';
+        const tousAutresPaiementsTraitesCheck = autresPaiementsCheck.length > 0 && autresPaiementsCheck.every(p => p.statut === 'traite');
+        const paiementsCompletsCheck = depotTraiteCheck && (paiementFinalTraiteCheck || tousAutresPaiementsTraitesCheck);
 
-        if (btnAutresPaiements && (statutDepot === 'traite' || paiementFinalEnTraitementOuAttente || (isUnSeulPaiementCheck && autresPaiementsEnTraitementCheck))) {
+        log('[DEBUG GRISAGE] statutPaiementFinalCheck:', statutPaiementFinalCheck, 'paiementFinalEnTraitementOuAttente:', paiementFinalEnTraitementOuAttente, 'paiementsComplets:', paiementsCompletsCheck);
+
+        if (btnAutresPaiements && (paiementsCompletsCheck || statutDepot === 'traite' || paiementFinalEnTraitementOuAttente || (isUnSeulPaiementCheck && autresPaiementsEnTraitementCheck))) {
           btnAutresPaiements.disabled = true;
           btnAutresPaiements.style.setProperty('opacity', '0.3', 'important');
           btnAutresPaiements.style.setProperty('cursor', 'not-allowed', 'important');
@@ -10387,6 +10433,11 @@
 
         log(`[OK] ${remboursements.length} remboursements chargés`);
 
+        // Afficher les données brutes pour debug
+        if (remboursements.length > 0) {
+          log('[DEBUG REMB] Premier remboursement:', remboursements[0]);
+        }
+
         // Créer le popup modal
         const modal = document.createElement('div');
         modal.id = 'remboursementsModal';
@@ -10407,10 +10458,50 @@
           contentHTML = '<div class="space-y-3">';
 
           remboursements.forEach((rembours, index) => {
-            const clientNom = `${rembours.prenom || ''} ${rembours.nom || ''}`.trim() || 'Client sans nom';
-            const dateRemboursement = rembours.date_remboursement ? new Date(rembours.date_remboursement).toLocaleDateString('fr-CA') : 'Date inconnue';
-            const montant = rembours.montant || '0';
-            const statut = rembours.statut || 'En attente';
+            // Support pour différents formats de champs API
+            let prenom = rembours.prenom || rembours.clientPrenom || '';
+            let nom = rembours.nom || rembours.clientNom || '';
+
+            // Fallback: si prenom/nom vides, essayer de diviser le champ 'client'
+            if (!prenom && !nom && rembours.client) {
+              const parts = rembours.client.split(' ');
+              if (parts.length >= 2) {
+                prenom = parts[0];
+                nom = parts.slice(1).join(' ');
+              } else {
+                prenom = rembours.client;
+              }
+            }
+
+            const clientNom = `${prenom} ${nom}`.trim() || 'Client sans nom';
+
+            // Support pour différents formats de date
+            const dateSource = rembours.date_remboursement || rembours.dateRemboursement || rembours.date || rembours.date_demande;
+            const dateRemboursement = dateSource ?
+              new Date(dateSource).toLocaleDateString('fr-CA') :
+              'Date inconnue';
+
+            // Gérer le montant avec ou sans $ déjà présent
+            let montant = rembours.montant || '0';
+            if (typeof montant === 'number') {
+              montant = montant.toFixed(2).replace('.', ',');
+            } else if (typeof montant === 'string') {
+              montant = montant.replace('$', '').trim();
+            }
+
+            // Traduire le statut en français
+            const statutsTraduction = {
+              'en_attente_coach': 'En attente coach',
+              'en_attente_comptable': 'En attente comptable',
+              'traite': 'Traité',
+              'refuse': 'Refusé'
+            };
+            const statut = statutsTraduction[rembours.statut] || rembours.statut || 'En attente';
+
+            // Support pour différents formats de champs
+            const telephone = rembours.telephone || rembours.tel || rembours.clientTelephone || 'N/A';
+            const adresse = rembours.adresse || rembours.clientAdresse || '';
+            const numeroSoumission = rembours.num || rembours.numeroSoumission || '';
 
             contentHTML += `
               <div class="p-4 rounded-lg border transition-all relative" style="background: rgba(251, 191, 36, 0.05); border: 1px solid rgba(251, 191, 36, 0.2);">
@@ -10431,14 +10522,20 @@
                       </span>
                     </div>
                     <div class="space-y-1 text-sm mb-3">
+                      ${numeroSoumission ? `
+                      <div class="flex items-center" style="color: var(--text-gray);">
+                        <i class="fas fa-hashtag w-4 mr-1"></i>
+                        <span>${numeroSoumission}</span>
+                      </div>
+                      ` : ''}
                       <div class="flex items-center" style="color: var(--text-gray);">
                         <i class="fas fa-phone w-4 mr-1"></i>
-                        <span>${rembours.telephone || 'N/A'}</span>
+                        <span>${telephone}</span>
                       </div>
-                      ${rembours.adresse ? `
+                      ${adresse ? `
                       <div class="flex items-center" style="color: var(--text-gray);">
                         <i class="fas fa-map-marker-alt w-4 mr-1"></i>
-                        <span>${rembours.adresse}</span>
+                        <span>${adresse}</span>
                       </div>
                       ` : ''}
                       <div class="flex items-center" style="color: var(--text-gray);">
@@ -11142,17 +11239,19 @@
   </div>
 
   <!-- Modal de validation coach pour les remboursements -->
-  <div id="coachRemboursementValidationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50" style="backdrop-filter: blur(5px);">
-    <div class="bg-white p-8 w-[50vw] mx-4 max-h-[85vh] overflow-y-auto relative" style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: 20px;">
+  <div id="coachRemboursementValidationModal" class="fixed inset-0 flex items-center justify-center hidden z-50" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px);">
+    <div class="p-8 w-[55vw] mx-4 max-h-[85vh] overflow-y-auto relative" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid var(--border-dark); border-radius: 24px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);">
       <!-- En-tête avec titre et bouton fermer -->
-      <div class="flex justify-between items-center mb-6">
-        <h3 class="text-2xl font-bold" style="color: var(--text-light);">
-          <i class="fas fa-exclamation-circle mr-2 text-yellow-500"></i>
-          Remboursements en attente de validation
-        </h3>
-        <button onclick="fermerPopupCoachValidation()" class="px-3 py-1.5 rounded-lg font-medium transition-all duration-300 text-sm flex items-center gap-2 btn-secondary hover:opacity-80">
+      <div class="flex justify-between items-center mb-8 pb-6 border-b" style="border-color: var(--border-dark);">
+        <div>
+          <h3 class="text-2xl font-bold mb-1" style="color: var(--text-light);">
+            <i class="fas fa-undo mr-3" style="color: #fbbf24;"></i>
+            Remboursements en attente
+          </h3>
+          <p class="text-sm ml-10" style="color: var(--text-gray);">Validation coach requise</p>
+        </div>
+        <button onclick="fermerPopupCoachValidation()" class="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300" style="background: rgba(148, 163, 184, 0.2); color: var(--text-gray);" onmouseover="this.style.background='rgba(239, 68, 68, 0.2)'; this.style.color='#ef4444'" onmouseout="this.style.background='rgba(148, 163, 184, 0.2)'; this.style.color='var(--text-gray)'">
           <i class="fas fa-times"></i>
-          Fermer
         </button>
       </div>
 
@@ -11346,6 +11445,11 @@
         // Recharger les facturations du nouvel entrepreneur (après avoir chargé les données)
         if (typeof chargerFacturationsColonnes === 'function') {
           chargerFacturationsColonnes();
+        }
+
+        // Charger aussi les périodes dans la colonne Traitées
+        if (typeof chargerPeriodesTraiter === 'function') {
+          chargerPeriodesTraiter();
         }
       }
     }
@@ -13476,6 +13580,20 @@
     window.loadFacturationData = async function() {
       await chargerClientsDepuisAPI();
       await chargerFacturationsDepuisAPI();
+
+      // Recharger les colonnes Status si on est sur cet onglet
+      const statusTab = document.getElementById('page2');
+      if (statusTab && !statusTab.classList.contains('hidden')) {
+        if (typeof utiliserDonneesTestStatus === 'function') {
+          await utiliserDonneesTestStatus();
+        }
+        if (typeof chargerFacturationsColonnes === 'function') {
+          chargerFacturationsColonnes();
+        }
+        if (typeof chargerPeriodesTraiter === 'function') {
+          chargerPeriodesTraiter();
+        }
+      }
     };
 
     // ============================================

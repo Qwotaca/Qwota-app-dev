@@ -2256,12 +2256,6 @@ select:disabled {
         <div id="entrepreneur-selection-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
           <!-- Les entrepreneurs seront ajoutés ici -->
         </div>
-
-        <!-- Message si aucun entrepreneur disponible pour suivi -->
-        <div id="no-entrepreneur-available-message" style="display: none; text-align: center; padding: 2rem; color: var(--text-gray);">
-          <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;"></i>
-          <p style="margin: 0; font-style: italic;">Tous les entrepreneurs ont déjà un suivi cette semaine</p>
-        </div>
       </div>
 
     </div>
@@ -4605,27 +4599,33 @@ function closeEntrepreneurSelectionModal() {
 // Charger tous les entrepreneurs du coach
 async function loadAvailableEntrepreneurs() {
   const list = document.getElementById('entrepreneur-selection-list');
-  const noMessage = document.getElementById('no-entrepreneur-available-message');
 
   list.innerHTML = '<div style="padding: 1rem; color: var(--text-gray); text-align: center;"><i class="fas fa-spinner fa-spin" style=""></i> Chargement...</div>';
-  noMessage.style.display = 'none';
 
   try {
-    // Charger les entrepreneurs assignés à ce coach
-    const response = await fetch(`/api/coach/available-entrepreneurs?coach_username=${coachUsername}&week=${selectedWeekValue}`);
+    // Charger TOUS les entrepreneurs assignés à ce coach (pas de filtre par semaine)
+    const response = await fetch(`/api/users/entrepreneurs?coach_username=${coachUsername}`);
 
     if (response.ok) {
       const data = await response.json();
       list.innerHTML = '';
 
-      if (data.entrepreneurs && data.entrepreneurs.length > 0) {
-        data.entrepreneurs.forEach(entrepreneur => {
+      // Vérifier les deux formats possibles de réponse
+      const entrepreneurs = data.entrepreneurs || data;
+
+      if (entrepreneurs && entrepreneurs.length > 0) {
+        entrepreneurs.forEach(entrepreneur => {
           const card = document.createElement('div');
           card.style.cssText = 'padding: 1rem; background: rgba(51, 65, 85, 0.3); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.75rem;';
 
+          // Créer le nom d'affichage
+          const displayName = entrepreneur.prenom && entrepreneur.nom
+            ? `${entrepreneur.prenom} ${entrepreneur.nom}`
+            : entrepreneur.username;
+
           card.innerHTML = `
             <i class="fas fa-user-circle" style="color: #10b981; font-size: 1.5rem;"></i>
-            <span style="color: var(--text-light); font-weight: 500;">${entrepreneur.display_name || entrepreneur.username}</span>
+            <span style="color: var(--text-light); font-weight: 500;">${displayName}</span>
           `;
 
           card.onmouseover = () => {
@@ -4639,14 +4639,13 @@ async function loadAvailableEntrepreneurs() {
           };
 
           card.onclick = () => {
-            selectEntrepreneur(entrepreneur.username, entrepreneur.display_name || entrepreneur.username);
+            selectEntrepreneur(entrepreneur.username, displayName);
           };
 
           list.appendChild(card);
         });
       } else {
-        list.innerHTML = '';
-        noMessage.style.display = 'block';
+        list.innerHTML = '<div style="padding: 1rem; color: var(--text-gray); text-align: center; font-style: italic;">Aucun entrepreneur assigné</div>';
       }
     } else {
       list.innerHTML = '<div style="padding: 1rem; color: #ef4444; text-align: center;"><i class="fas fa-exclamation-triangle" style=""></i> Erreur de chargement</div>';
@@ -7436,7 +7435,7 @@ const productionIntensityPattern = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   // Index 22-43: 4 mai - 4 octobre (22 semaines de production)
   1, 4, 5, 5,
-  5, 6, 7, 7, 7,
+  5, 7, 7, 7, 7,
   7, 7, 7, 7,
   6, 5, 5, 4, 3.6,
   0.1, 0.1, 0.1, 0.1,

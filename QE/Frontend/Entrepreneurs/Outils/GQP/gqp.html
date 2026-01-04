@@ -1719,6 +1719,9 @@
       btnText.textContent = "Envoi en cours...";
       generateButton.disabled = true;
 
+      // Afficher l'animation de chargement
+      showLoadingAnimation('Génération du GQP...');
+
       try {
         let response;
         
@@ -1853,6 +1856,9 @@
             // Ne pas faire échouer le processus global si la liaison échoue
           }
 
+          // Afficher l'animation de succès
+          showSuccessAnimation(`GQP envoyé à l'équipe ${selectedEquipe.nom}!`);
+
           btnText.innerHTML = `Envoyé <svg class="w-4 h-4 inline ml-1 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>`;
 
           // Retirer immédiatement le client du dropdown
@@ -1954,12 +1960,16 @@
             const prixDisplay = gqpData.prix || '';
             addGqpToTable(clientName, numeroSoumission, lienPdf, null, dateCreation, adresseDisplay, prixDisplay);
           }
-          
+
+          // Afficher l'animation de succès
+          showSuccessAnimation('GQP enregistré avec succès!');
           btnText.innerHTML = `GQP généré <svg class="w-4 h-4 inline ml-1 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>`;
         }
 
       } catch (err) {
         error("Erreur réseau :", err);
+        // Masquer l'animation de chargement
+        hideLoadingAnimation();
         showError(err.message || "Erreur serveur");
         btnText.textContent = "Erreur serveur";
       } finally {
@@ -2759,7 +2769,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     try {
       log('📤 Envoi GQP à équipe:', modalSelectedEquipe.nom);
-      
+
+      // Afficher l'animation de chargement
+      showLoadingAnimation(`Envoi à l'équipe ${modalSelectedEquipe.nom}...`);
+
       // Assigner le GQP à l'équipe via l'API
       const response = await fetch('/assign-gqp-to-team', {
         method: 'POST',
@@ -2778,7 +2791,10 @@ document.addEventListener('DOMContentLoaded', function() {
       
       const result = await response.json();
       log('[OK] GQP assigné:', result);
-      
+
+      // Afficher l'animation de succès
+      showSuccessAnimation(`GQP assigné à l'équipe ${modalSelectedEquipe.nom}!`);
+
       showSuccess(`GQP assigné à l'équipe ${modalSelectedEquipe.nom}`);
       closeAssignModal();
 
@@ -2796,6 +2812,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     } catch (error) {
       error('[ERROR] Erreur assignation GQP:', error);
+      // Masquer l'animation de chargement
+      hideLoadingAnimation();
       showError('Erreur lors de l\'assignation du GQP: ' + error.message);
     }
   }
@@ -3125,9 +3143,191 @@ document.addEventListener('DOMContentLoaded', function() {
     border: none;
     background: #0f172a;
   }
+
+  /* Animation de chargement */
+  .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .loading-content {
+    text-align: center;
+    color: white;
+    animation: scaleIn 0.5s ease;
+  }
+
+  .loading-spinner {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+    animation: pulse 1.5s ease infinite;
+  }
+
+  .loading-spinner i {
+    font-size: 32px;
+    color: white;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes scaleIn {
+    from {
+      transform: scale(0.8);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+    }
+    50% {
+      transform: scale(1.05);
+      box-shadow: 0 0 50px rgba(59, 130, 246, 0.7);
+    }
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* Animation de succès */
+  @keyframes successFadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes checkmarkDraw {
+    0% {
+      stroke-dashoffset: 100;
+    }
+    100% {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  .success-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: successFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .success-content {
+    text-align: center;
+    color: white;
+    animation: successFadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+  }
+
+  .success-checkmark {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    margin: 0 auto 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4);
+  }
+
+  .success-checkmark svg {
+    stroke: white;
+    stroke-width: 3;
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    animation: checkmarkDraw 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.4s forwards;
+  }
 </style>
 
 <script>
+  // Animation de chargement
+  function showLoadingAnimation(message = 'Envoi en cours...') {
+    const overlay = document.createElement('div');
+    overlay.className = 'loading-overlay';
+    overlay.id = 'loadingOverlay';
+    overlay.innerHTML = `
+      <div class="loading-content">
+        <div class="loading-spinner">
+          <i class="fas fa-paper-plane"></i>
+        </div>
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">${message}</h2>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+  }
+
+  function hideLoadingAnimation() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+      overlay.remove();
+    }
+  }
+
+  // Animation de succès avec checkmark vert
+  function showSuccessAnimation(message = 'GQP envoyé avec succès!') {
+    // Masquer l'animation de chargement d'abord
+    hideLoadingAnimation();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'success-overlay';
+    overlay.innerHTML = `
+      <div class="success-content">
+        <div class="success-checkmark">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <path d="M8 20 L16 28 L32 12" stroke="white" stroke-width="3"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">${message}</h2>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Retirer l'overlay après 2 secondes
+    setTimeout(() => {
+      overlay.remove();
+    }, 2000);
+  }
+
   // Fonction globale pour fermer la modal GQP Preview
   function closeGqpPreviewModal(event) {
     const modal = document.getElementById('gqpPreviewModal');

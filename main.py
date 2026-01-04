@@ -3583,19 +3583,44 @@ async def generate_gqp_from_stored(
         # Récupérer les images stockées
         images_dir = f"{base_cloud}/gqp_images/{username}/{gqp_id}"
         image_files = []
-        
+
+        # Extensions d'images supportées
+        IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.tif')
+
         if os.path.exists(images_dir):
             for filename in os.listdir(images_dir):
+                # Ignorer les fichiers non-images
+                if not filename.lower().endswith(IMAGE_EXTENSIONS):
+                    print(f"[GQP] Fichier ignoré (non-image): {filename}")
+                    continue
+
                 image_path = os.path.join(images_dir, filename)
                 if os.path.isfile(image_path):
                     try:
                         with open(image_path, 'rb') as f:
                             content = f.read()
+                            # Vérifier que le fichier n'est pas vide
+                            if len(content) == 0:
+                                print(f"[GQP] Image vide ignorée: {filename}")
+                                continue
+
                             bio = BytesIO(content)
-                            bio.seek(0)  # Important: remettre le pointeur au début
+                            bio.seek(0)
+
+                            # Valider que c'est bien une image valide avec PIL
+                            try:
+                                from PIL import Image as PILImage
+                                test_img = PILImage.open(bio)
+                                test_img.verify()  # Vérifier l'intégrité de l'image
+                                bio.seek(0)  # Remettre au début après verify()
+                                print(f"[GQP] Image valide chargée: {filename} ({len(content)} bytes)")
+                            except Exception as img_error:
+                                print(f"[GQP] Image corrompue ignorée {filename}: {img_error}")
+                                continue
+
                             image_files.append(bio)
                     except Exception as e:
-                        print(f"Erreur lecture image {filename}: {e}")
+                        print(f"[GQP] Erreur lecture image {filename}: {e}")
         
         # Générer le PDF avec les données et images
         pdf_buffer = generate_gqp_pdf(image_files, gqp_data)

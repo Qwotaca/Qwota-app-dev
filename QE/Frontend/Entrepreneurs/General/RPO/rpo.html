@@ -3155,11 +3155,16 @@ async function updateDailyChart(weekNumber) {
   const username = getCurrentUsername();
 
   try {
+    console.log('[RPO DAILY] Fetching soumissions for user:', username);
     const response = await fetch(`/soumissions_signees/${username}`);
     if (!response.ok) {
-      throw new Error('Erreur chargement soumissions');
+      throw new Error('Erreur chargement soumissions: ' + response.status);
     }
     const soumissionsSignees = await response.json();
+    console.log('[RPO DAILY] Received', soumissionsSignees.length, 'soumissions');
+    if (soumissionsSignees.length > 0) {
+      console.log('[RPO DAILY] Sample soumission:', soumissionsSignees[0]);
+    }
 
     // Créer un objet pour stocker les montants par jour
     const dailyAmounts = {};
@@ -3172,19 +3177,22 @@ async function updateDailyChart(weekNumber) {
           // Format ISO avec timestamp: "2025-10-10T17:00:49.241874"
           const datePart = dateStr.split('T')[0];
           const [year, month, day] = datePart.split('-').map(Number);
-          return new Date(year, month - 1, day);
+          return new Date(year, month - 1, day, 12, 0, 0);  // Midi pour éviter les problèmes de timezone
         } else if (dateStr.includes('/')) {
           // Format DD/MM/YYYY
           const [day, month, year] = dateStr.split('/').map(Number);
-          return new Date(year, month - 1, day);
+          return new Date(year, month - 1, day, 12, 0, 0);  // Midi pour éviter les problèmes de timezone
         } else if (dateStr.includes('-')) {
           // Format YYYY-MM-DD
           const [year, month, day] = dateStr.split('-').map(Number);
-          return new Date(year, month - 1, day);
+          return new Date(year, month - 1, day, 12, 0, 0);  // Midi pour éviter les problèmes de timezone
         } else {
-          return new Date(dateStr);
+          const d = new Date(dateStr);
+          d.setHours(12, 0, 0, 0);
+          return d;
         }
-      } catch {
+      } catch (e) {
+        console.error('[RPO] Erreur parsing date:', dateStr, e);
         return null;
       }
     };
@@ -3198,29 +3206,29 @@ async function updateDailyChart(weekNumber) {
     };
 
     // Filtrer les soumissions pour la semaine sélectionnée
+    // Utiliser des dates à midi pour éviter les problèmes de timezone
     const weekStart = new Date(selectedWeek.weekStart);
     weekStart.setHours(0, 0, 0, 0);
     const weekEnd = new Date(selectedWeek.weekEnd);
     weekEnd.setHours(23, 59, 59, 999);
 
-    log('[DATE] Week range:', weekStart, 'to', weekEnd);
-    log('[BAN] Total soumissions signees:', soumissionsSignees.length);
+    // Créer des clés de date pour la plage de la semaine (pour comparaison simple)
+    const weekStartKey = getDateKey(weekStart);
+    const weekEndKey = getDateKey(weekEnd);
+
+    console.log('[RPO DAILY] Week range:', weekStartKey, 'to', weekEndKey);
+    console.log('[RPO DAILY] Total soumissions signees:', soumissionsSignees.length);
 
     soumissionsSignees.forEach((soumission, idx) => {
       const dateStr = soumission.date || soumission.dateEnvoi;
-      log(`[FILE] Soumission ${idx + 1}:`, dateStr, 'Prix:', soumission.prix);
 
       const soumissionDate = parseDate(dateStr);
-      log('  -> Parsed date:', soumissionDate);
 
       if (soumissionDate) {
-        soumissionDate.setHours(0, 0, 0, 0); // Normaliser à minuit
-        log('  -> Normalized:', soumissionDate);
-        log('  -> In range?', soumissionDate >= weekStart, '&&', soumissionDate <= weekEnd);
+        const dateKey = getDateKey(soumissionDate);
 
-        if (soumissionDate >= weekStart && soumissionDate <= weekEnd) {
-          const dateKey = getDateKey(soumissionDate);
-
+        // Comparer les clés de date (YYYY-MM-DD) au lieu des objets Date
+        if (dateKey >= weekStartKey && dateKey <= weekEndKey) {
           // Parser le prix
           let prix = 0;
           const prixStr = soumission.prix || soumission.montant || '0';
@@ -3231,7 +3239,7 @@ async function updateDailyChart(weekNumber) {
             prix = 0;
           }
 
-          log('[MONEY] Soumission matched:', dateKey, prix + '$');
+          console.log('[RPO DAILY] Soumission matched:', dateKey, prix + '$', 'from:', dateStr);
 
           // Ajouter au total du jour
           if (!dailyAmounts[dateKey]) {
@@ -3239,10 +3247,12 @@ async function updateDailyChart(weekNumber) {
           }
           dailyAmounts[dateKey] += prix;
         }
+      } else {
+        console.warn('[RPO DAILY] Could not parse date:', dateStr, 'for soumission', idx);
       }
     });
 
-    log('[DATA] Daily amounts:', dailyAmounts);
+    console.log('[RPO DAILY] Daily amounts:', dailyAmounts);
 
     // Générer les 7 jours de la semaine avec leurs montants réels
     const dailyData = [];
@@ -3289,8 +3299,8 @@ async function updateDailyChart(weekNumber) {
     });
 
   } catch (error) {
-    error('Erreur chargement soumissions signées:', error);
-    container.innerHTML = '<p style="color: var(--text-gray); text-align: center; margin: auto;">Erreur chargement des données</p>';
+    console.error('[RPO DAILY] Erreur chargement soumissions signées:', error);
+    container.innerHTML = '<p style="color: var(--text-gray); text-align: center; margin: auto;">Erreur chargement des données: ' + error.message + '</p>';
   }
 }
 

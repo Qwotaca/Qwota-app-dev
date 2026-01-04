@@ -2324,7 +2324,29 @@
                     <i class="fas fa-chevron-down custom-select-arrow"></i>
                   </button>
                   <div class="custom-select-dropdown" id="coachScopeDropdown">
-                    <!-- Options dynamiques chargées par JavaScript -->
+                    <!-- Options pour Dashboard Qualité Étudiants (grades) -->
+                    <div class="custom-select-option coach-scope-grade-option" data-scope="tous" style="display: none;">
+                      <i class="fas fa-users mr-2"></i>Tous les entrepreneurs
+                    </div>
+                    <div class="custom-select-option coach-scope-grade-option" data-scope="grade" data-grade="recrue" style="padding-left: 2.5rem; display: none;">
+                      <i class="fas fa-seedling mr-2"></i>Recrue
+                    </div>
+                    <div class="custom-select-option coach-scope-grade-option" data-scope="grade" data-grade="senior1" style="padding-left: 2.5rem; display: none;">
+                      <i class="fas fa-star mr-2"></i>Sénior 1
+                    </div>
+                    <div class="custom-select-option coach-scope-grade-option" data-scope="grade" data-grade="senior2" style="padding-left: 2.5rem; display: none;">
+                      <i class="fas fa-star mr-2"></i>Sénior 2
+                    </div>
+                    <div class="custom-select-option coach-scope-grade-option" data-scope="grade" data-grade="senior3" style="padding-left: 2.5rem; display: none;">
+                      <i class="fas fa-star mr-2"></i>Sénior 3
+                    </div>
+                    <!-- Options pour Mon Équipe / Par Coach (coaches) -->
+                    <div class="custom-select-option coach-scope-team-option" data-scope="equipe">
+                      <i class="fas fa-user-friends mr-2"></i>Mon équipe
+                    </div>
+                    <div class="custom-select-option coach-scope-team-option" data-scope="tous">
+                      <i class="fas fa-users mr-2"></i>Tous les entrepreneurs
+                    </div>
                   </div>
                 </div>
                 <!-- Dropdown Période -->
@@ -4308,16 +4330,32 @@
 
     // Variables globales pour le modal
     let currentClassementData = [];
+    let currentCoachClassementData = []; // Données spécifiques au classement coach (pour éviter les écrasements)
+    window.coachClassementDataMap = new Map(); // Map pour stocker les données par username (plus fiable que l'array) - GLOBAL
 
-    // Fonction pour afficher les stats d'un entrepreneur dans le modal
+    // Fonction pour afficher les stats d'un entrepreneur dans le modal (classement entrepreneur)
     window.showEntrepreneurStats = function(index) {
+      console.log('[SHOW ENTREPRENEUR STATS] Index cliqué:', index);
+      console.log('[SHOW ENTREPRENEUR STATS] currentClassementData length:', currentClassementData.length);
+      console.log('[SHOW ENTREPRENEUR STATS] Premiers 3 entrepreneurs:', currentClassementData.slice(0, 3).map(e => ({
+        username: e.username,
+        login_username: e.login_username,
+        prenom: e.prenom,
+        nom: e.nom
+      })));
+
       const entrepreneur = currentClassementData[index];
-      if (!entrepreneur) return;
+      if (!entrepreneur) {
+        console.error('[SHOW ENTREPRENEUR STATS] Entrepreneur non trouvé à l\'index:', index);
+        return;
+      }
 
       // Log pour déboguer
       log('[MODAL DEBUG] Entrepreneur cliqué:', {
         username: entrepreneur.username,
         login_username: entrepreneur.login_username,
+        prenom: entrepreneur.prenom,
+        nom: entrepreneur.nom,
         photoUrl: entrepreneur.photoUrl
       });
 
@@ -4325,9 +4363,11 @@
       if (window.innerWidth > 768) {
         // Utiliser login_username si disponible, sinon username
         const targetUsername = entrepreneur.login_username || entrepreneur.username;
-        // Passer aussi la photoUrl déjà chargée
-        log('[MODAL DEBUG] Passage au modal - username:', targetUsername, 'photoUrl:', entrepreneur.photoUrl);
-        openUserStatsModal(targetUsername, entrepreneur.photoUrl);
+        // Construire le nom complet (prenom + nom)
+        const fullName = [entrepreneur.prenom, entrepreneur.nom].filter(Boolean).join(' ') || entrepreneur.username;
+        // Passer le nom complet ET les données de l'entrepreneur
+        log('[MODAL DEBUG] Passage au modal - username:', targetUsername, 'fullName:', fullName, 'data:', entrepreneur);
+        openUserStatsModal(targetUsername, fullName, entrepreneur);
         return;
       }
 
@@ -4437,18 +4477,82 @@
     }
 
     // ================================================================
+    // FONCTION POUR LE CLASSEMENT COACH (utilise currentCoachClassementData)
+    // ================================================================
+
+    window.showCoachClassementEntrepreneurStats = function(username) {
+      console.log('[SHOW COACH CLASSEMENT STATS] Username cliqué:', username);
+      console.log('[SHOW COACH CLASSEMENT STATS] coachClassementDataMap size:', window.coachClassementDataMap.size);
+      console.log('[SHOW COACH CLASSEMENT STATS] Clés disponibles dans la Map:', Array.from(window.coachClassementDataMap.keys()));
+
+      // Chercher dans la Map d'abord (plus fiable)
+      let entrepreneur = window.coachClassementDataMap.get(username);
+
+      if (!entrepreneur) {
+        console.error('[SHOW COACH CLASSEMENT STATS] Entrepreneur non trouvé dans la Map pour username:', username);
+        console.log('[SHOW COACH CLASSEMENT STATS] Tentative de recherche dans l\'array...');
+
+        // Fallback: chercher dans l'array
+        entrepreneur = currentCoachClassementData.find(e =>
+          e.login_username === username || e.username === username
+        );
+
+        if (!entrepreneur) {
+          console.error('[SHOW COACH CLASSEMENT STATS] Entrepreneur non trouvé dans l\'array non plus!');
+          console.log('[SHOW COACH CLASSEMENT STATS] currentCoachClassementData:', currentCoachClassementData);
+          return;
+        }
+      }
+
+      console.log('[SHOW COACH CLASSEMENT STATS] Entrepreneur trouvé:', entrepreneur);
+
+      // Si desktop, ouvrir le modal complet de statistiques
+      if (window.innerWidth > 768) {
+        // Utiliser login_username si disponible, sinon username
+        const targetUsername = entrepreneur.login_username || entrepreneur.username;
+        // Construire le nom complet (prenom + nom)
+        const fullName = [entrepreneur.prenom, entrepreneur.nom].filter(Boolean).join(' ') || entrepreneur.username;
+        // Passer le nom complet ET les données de l'entrepreneur
+        console.log('[SHOW COACH CLASSEMENT STATS] Ouverture modal - username:', targetUsername, 'fullName:', fullName);
+        openUserStatsModal(targetUsername, fullName, entrepreneur);
+        return;
+      }
+
+      // Mobile: utiliser le modal mobile (même logique que showEntrepreneurStats)
+      const modal = document.getElementById('entrepreneurStatsModal');
+      // ... code mobile si nécessaire
+      modal.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+
+    // ================================================================
     // FONCTIONS DU MODAL DE STATISTIQUES UTILISATEUR
     // ================================================================
 
     // Fonction pour ouvrir le modal de stats d'un utilisateur
-    async function openUserStatsModal(username, photoUrl = null) {
+    async function openUserStatsModal(username, fullName = null, entrepreneurData = null) {
       // UTILISER LE MODAL D'APPPC.HTML (même modal que les statistiques du menu)
       if (parent && parent.openStatsModal) {
-        // Appeler la fonction du parent (apppc.html) avec la photoUrl
-        await parent.openStatsModal(username, photoUrl);
+        // Appeler la fonction du parent (apppc.html) avec le fullName ET les données
+        await parent.openStatsModal(username, fullName, entrepreneurData);
       } else if (window.openStatsModal) {
         // Si pas dans une iframe, utiliser la fonction locale
-        await window.openStatsModal(username);
+        await window.openStatsModal(username, fullName, entrepreneurData);
+      } else {
+        error('openStatsModal non disponible');
+        alert('Erreur: modal de statistiques non disponible');
+      }
+    }
+
+    // Fonction pour ouvrir le modal de stats d'un coach depuis le classement coach
+    window.openCoachStatsModal = async function(username, fullName = null) {
+      // UTILISER LE MODAL D'APPPC/APPPCCOACH.HTML (même modal que les statistiques du menu)
+      if (parent && parent.openStatsModal) {
+        // Appeler la fonction du parent (apppc.html ou apppccoach.html) avec le fullName
+        await parent.openStatsModal(username, fullName);
+      } else if (window.openStatsModal) {
+        // Si pas dans une iframe, utiliser la fonction locale
+        await window.openStatsModal(username, fullName);
       } else {
         error('openStatsModal non disponible');
         alert('Erreur: modal de statistiques non disponible');
@@ -7061,16 +7165,35 @@ async function initCoachScopeDropdownText() {
   const userRole = localStorage.getItem('userRole');
   const dashboardType = window.dashboardType;
 
-  // Si on est sur Dashboard Qualité Étudiants, forcer "Tous les entrepreneurs"
+  console.log('[INIT COACH SCOPE DROPDOWN] dashboardType:', dashboardType);
+
+  // IMPORTANT: Recharger les options du dropdown selon le type de dashboard
+  await loadCoachScopeOptions();
+
+  // Afficher/masquer les options selon le type de dashboard
+  const gradeOptions = document.querySelectorAll('.coach-scope-grade-option');
+  const teamOptions = document.querySelectorAll('.coach-scope-team-option');
+
+  // Si on est sur Dashboard Qualité Étudiants, afficher les options de grade
   if (dashboardType === 'qualite-etudiants') {
     if (scopeSelect) scopeSelect.style.display = 'block';
+
+    // Afficher les options de grade, cacher les options d'équipe
+    gradeOptions.forEach(opt => opt.style.display = 'flex');
+    teamOptions.forEach(opt => opt.style.display = 'none');
+
     if (scopeBtnText) {
       scopeBtnText.innerHTML = '<i class="fas fa-users mr-2"></i>Tous les entrepreneurs';
     }
     currentCoachScope = 'tous';
+    currentCoachFilter = null;
   } else if (dashboardType === 'par-coach' && window.selectedCoachUsername) {
     // Dashboard par coach spécifique : afficher "Équipe de [Nom du Coach]"
     if (scopeSelect) scopeSelect.style.display = 'block';
+
+    // Afficher les options d'équipe, cacher les options de grade
+    gradeOptions.forEach(opt => opt.style.display = 'none');
+    teamOptions.forEach(opt => opt.style.display = 'flex');
 
     // Récupérer le nom du coach depuis l'API /api/coaches (a les vrais noms)
     try {
@@ -7107,6 +7230,11 @@ async function initCoachScopeDropdownText() {
   } else if (userRole === 'coach' || userRole === 'direction') {
     // Pour les coachs/direction sur Mon Équipe: afficher le dropdown et mettre "Mon équipe" par défaut
     if (scopeSelect) scopeSelect.style.display = 'block';
+
+    // Afficher les options d'équipe, cacher les options de grade
+    gradeOptions.forEach(opt => opt.style.display = 'none');
+    teamOptions.forEach(opt => opt.style.display = 'flex');
+
     if (scopeBtnText) {
       scopeBtnText.innerHTML = '<i class="fas fa-user-friends mr-2"></i>Mon équipe';
     }
@@ -7271,12 +7399,40 @@ function setupCoachClassementSorting() {
 async function loadCoachScopeOptions() {
   const dropdown = document.getElementById('coachScopeDropdown');
   const userRole = localStorage.getItem('userRole');
+  const dashboardType = window.dashboardType;
+
+  console.log('[LOAD COACH SCOPE OPTIONS] Appelée avec dashboardType:', dashboardType, 'userRole:', userRole);
 
   if (!dropdown) return;
 
   let optionsHTML = '';
 
+  // Pour Dashboard Qualité Étudiants, afficher SEULEMENT les options de grade
+  if (dashboardType === 'qualite-etudiants') {
+    console.log('[LOAD COACH SCOPE OPTIONS] Dashboard Qualité Étudiants - chargement options de grade');
+    optionsHTML = `
+      <div class="custom-select-option coach-scope-grade-option" data-scope="tous" style="display: flex;">
+        <i class="fas fa-users mr-2"></i>Tous les entrepreneurs
+      </div>
+      <div class="custom-select-option coach-scope-grade-option" data-scope="grade" data-grade="recrue" style="padding-left: 2.5rem; display: flex;">
+        <i class="fas fa-seedling mr-2"></i>Recrue
+      </div>
+      <div class="custom-select-option coach-scope-grade-option" data-scope="grade" data-grade="senior1" style="padding-left: 2.5rem; display: flex;">
+        <i class="fas fa-star mr-2"></i>Sénior 1
+      </div>
+      <div class="custom-select-option coach-scope-grade-option" data-scope="grade" data-grade="senior2" style="padding-left: 2.5rem; display: flex;">
+        <i class="fas fa-star mr-2"></i>Sénior 2
+      </div>
+      <div class="custom-select-option coach-scope-grade-option" data-scope="grade" data-grade="senior3" style="padding-left: 2.5rem; display: flex;">
+        <i class="fas fa-star mr-2"></i>Sénior 3
+      </div>
+    `;
+    dropdown.innerHTML = optionsHTML;
+    return;
+  }
+
   if (userRole === 'direction') {
+    console.log('[LOAD COACH SCOPE OPTIONS] Branche DIRECTION');
     // Pour la direction: charger toutes les équipes de coaches + filtres par grade
     try {
       const response = await fetch('/api/coaches/list');
@@ -7319,6 +7475,7 @@ async function loadCoachScopeOptions() {
       </div>
     `;
   } else if (userRole === 'coach') {
+    console.log('[LOAD COACH SCOPE OPTIONS] Branche COACH');
     // Pour les coaches: seulement Mon équipe et Tous
     optionsHTML = `
       <div class="custom-select-option" data-scope="equipe">
@@ -7328,8 +7485,11 @@ async function loadCoachScopeOptions() {
         <i class="fas fa-users mr-2"></i>Tous les entrepreneurs
       </div>
     `;
+  } else {
+    console.log('[LOAD COACH SCOPE OPTIONS] Branche AUTRE (userRole inconnu)');
   }
 
+  console.log('[LOAD COACH SCOPE OPTIONS] HTML généré, longueur:', optionsHTML.length);
   dropdown.innerHTML = optionsHTML;
 }
 
@@ -7844,17 +8004,30 @@ async function renderCoachClassementCoachData(data) {
         photoUrl = photoResult.photoUrl || null;
       }
 
+      // Récupérer le grade de gamification
+      let grade = 'Démarrage'; // Défaut
+      try {
+        const gradeResponse = await fetch(`/api/gamification/profile/${loginUsername}`);
+        if (gradeResponse.ok) {
+          const gradeData = await gradeResponse.json();
+          const profile = gradeData.status === 'success' && gradeData.profile ? gradeData.profile : gradeData;
+          grade = profile.category || 'Démarrage';
+        }
+      } catch (err) {
+        console.log(`Grade par défaut pour coach ${coach.username}`);
+      }
+
       return {
         username: coach.username,
         photoUrl: photoUrl,
-        grade: 'Coach' // Grade par défaut pour les coachs
+        grade: grade
       };
     } catch (error) {
       error(`[ERROR] Erreur chargement données pour ${coach.username}:`, error);
       return {
         username: coach.username,
         photoUrl: null,
-        grade: 'Coach'
+        grade: 'Démarrage'
       };
     }
   });
@@ -7867,12 +8040,14 @@ async function renderCoachClassementCoachData(data) {
 
   // Générer le HTML du tableau desktop
   tbody.innerHTML = data.map((coach, index) => {
-    const photoGrade = photoGradeMap[coach.username] || { photoUrl: null, grade: 'Coach' };
+    const photoGrade = photoGradeMap[coach.username] || { photoUrl: null, grade: 'Démarrage' };
     const photoUrl = photoGrade.photoUrl;
     const grade = photoGrade.grade;
 
     const rang = index + 1;
-    const nomComplet = coach.username;
+    // Construire le nom complet (prenom + nom)
+    const nomComplet = [coach.prenom, coach.nom].filter(Boolean).join(' ') || coach.username;
+    const loginUsername = coach.login_username || coach.username;
     const ca = coach.ca_actuel || 0;
     const pap = coach.heures_pap || 0;
     const tauxMarketing = coach.taux_marketing || 0;
@@ -7885,6 +8060,11 @@ async function renderCoachClassementCoachData(data) {
     const produit = coach.montant_produit || 0;
     const prodHoraire = coach.prod_horaire || 0;
     const etoiles = coach.etoiles || 0;
+
+    // Créer la classe de grade
+    const gradeClass = 'grade-' + grade.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '-');
 
     // Médailles pour les 3 premières positions
     let rangDisplay = '';
@@ -7899,15 +8079,15 @@ async function renderCoachClassementCoachData(data) {
     }
 
     return `
-      <tr class="border-b hover:bg-opacity-5 hover:bg-white transition-colors" style="border-color: var(--border-dark);">
+      <tr class="border-b hover:bg-opacity-5 hover:bg-white transition-colors" style="border-color: var(--border-dark); cursor: pointer;" onclick="openCoachStatsModal('${loginUsername}', '${nomComplet.replace(/'/g, "\\'")}')">
         <td class="text-center py-2 px-3" style="color: var(--text-light); font-weight: 600;">
           ${rangDisplay}
         </td>
         <td class="py-2 px-3" style="padding-left: 1.5rem !important; padding-right: 0.25rem !important;">
           <div style="display: flex; align-items: center; gap: 16px;">
             ${photoUrl
-              ? `<img src="${photoUrl}" alt="${nomComplet}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">`
-              : `<div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">${nomComplet.charAt(0).toUpperCase()}</div>`
+              ? `<div class="profile-photo-small ${gradeClass}"><img src="${photoUrl}" alt="${nomComplet}"></div>`
+              : `<div class="profile-photo-small ${gradeClass}"><div style="width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">${nomComplet.charAt(0).toUpperCase()}</div></div>`
             }
             <div>
               <div style="color: var(--text-light); font-weight: 600; font-size: 0.8125rem;">${nomComplet}</div>
@@ -7934,22 +8114,30 @@ async function renderCoachClassementCoachData(data) {
 
   // Générer les cartes mobiles (similaire au desktop)
   mobileCards.innerHTML = data.map((coach, index) => {
-    const photoGrade = photoGradeMap[coach.username] || { photoUrl: null, grade: 'Coach' };
+    const photoGrade = photoGradeMap[coach.username] || { photoUrl: null, grade: 'Démarrage' };
     const photoUrl = photoGrade.photoUrl;
     const grade = photoGrade.grade;
     const rang = index + 1;
+    // Construire le nom complet (prenom + nom)
+    const nomComplet = [coach.prenom, coach.nom].filter(Boolean).join(' ') || coach.username;
+    const loginUsername = coach.login_username || coach.username;
+
+    // Créer la classe de grade pour mobile
+    const gradeClass = 'grade-' + grade.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '-');
 
     return `
-      <div class="classement-mobile-card">
+      <div class="classement-mobile-card" onclick="openCoachStatsModal('${loginUsername}', '${nomComplet.replace(/'/g, "\\'")}')">
         <div class="card-header">
           <div class="card-rank">#${rang}</div>
           <div class="card-profile">
             ${photoUrl
-              ? `<img src="${photoUrl}" alt="${coach.username}" class="card-avatar">`
-              : `<div class="card-avatar-placeholder">${coach.username.charAt(0).toUpperCase()}</div>`
+              ? `<div class="profile-photo-small ${gradeClass}" style="width: 40px; height: 40px;"><img src="${photoUrl}" alt="${nomComplet}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"></div>`
+              : `<div class="profile-photo-small ${gradeClass}" style="width: 40px; height: 40px;"><div style="width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 16px;">${nomComplet.charAt(0).toUpperCase()}</div></div>`
             }
             <div>
-              <div class="card-name">${coach.username}</div>
+              <div class="card-name">${nomComplet}</div>
               <div class="card-grade">${grade}</div>
             </div>
           </div>
@@ -8229,9 +8417,20 @@ async function renderCoachClassementCards() {
           ? `${e.prenom} ${e.nom}`
           : (e.prenom || e.nom || e.username);
 
+        // Log pour déboguer les champs disponibles
+        console.log('[EQUIPE] Entrepreneur de l\'équipe:', {
+          username: e.username,
+          prenom: e.prenom,
+          nom: e.nom,
+          login_username: e.login_username,
+          nomComplet: nomComplet
+        });
+
         return {
           username: nomComplet, // Utiliser le nom complet pour l'affichage
-          login_username: e.username, // Garder le username original pour les API calls
+          login_username: e.login_username || e.username, // Essayer login_username en premier, puis username
+          prenom: e.prenom, // Ajouter prenom pour construire le nom complet plus tard
+          nom: e.nom, // Ajouter nom pour construire le nom complet plus tard
           ca_actuel: e.chiffre_affaires?.ca_actuel || 0,
           objectif: e.chiffre_affaires?.objectif || 0,
           montant_produit: e.chiffre_affaires?.montant_produit || 0,
@@ -8266,7 +8465,9 @@ async function renderCoachClassementCards() {
 
         return {
           username: nomComplet,
-          login_username: e.username,
+          login_username: e.login_username || e.username, // Essayer login_username en premier, puis username
+          prenom: e.prenom, // Ajouter prenom pour construire le nom complet plus tard
+          nom: e.nom, // Ajouter nom pour construire le nom complet plus tard
           ca_actuel: e.chiffre_affaires?.ca_actuel || 0,
           objectif: e.chiffre_affaires?.objectif || 0,
           montant_produit: e.chiffre_affaires?.montant_produit || 0,
@@ -8348,8 +8549,8 @@ async function renderCoachClassementCards() {
       coachDropdownsInitialized = true;
     }
 
-  } catch (error) {
-    error('❌ Erreur chargement classement coach:', error);
+  } catch (err) {
+    console.error('❌ Erreur chargement classement coach:', err);
     const coachTableBody = document.getElementById('coachClassementTableBody');
     if (coachTableBody) {
       coachTableBody.innerHTML = `
@@ -8427,16 +8628,40 @@ async function renderCoachClassementData(data) {
     log(`📸 ${p.username}: photo=${p.photoUrl ? 'oui' : 'non'}, grade=${p.grade}, loginUsername=${p.loginUsername}`);
   });
 
-  // Mettre à jour currentClassementData avec les photos (IMPORTANT pour le modal!)
-  currentClassementData = data.map(e => ({
+  // Mettre à jour currentCoachClassementData avec les photos (IMPORTANT pour le modal coach!)
+  currentCoachClassementData = data.map(e => ({
     ...e,
     login_username: loginUsernameMap[e.username] || e.username,
     photoUrl: photoMap[e.username] || null,
     grade: gradeMap[e.username] || e.grade || 'Démarrage'
   }));
 
-  log('[DEBUG COACH] currentClassementData mis à jour avec photos:',
-    currentClassementData.slice(0, 3).map(e => ({
+  // AUSSI stocker dans la Map par username ET login_username pour un accès plus fiable
+  window.coachClassementDataMap.clear(); // Vider la Map d'abord
+  currentCoachClassementData.forEach(e => {
+    // Stocker par login_username (le vrai username de connexion)
+    if (e.login_username) {
+      window.coachClassementDataMap.set(e.login_username, e);
+    }
+    // AUSSI stocker par username (le nom complet) au cas où
+    if (e.username && e.username !== e.login_username) {
+      window.coachClassementDataMap.set(e.username, e);
+    }
+  });
+
+  console.log('[RENDER COACH CLASSEMENT] currentCoachClassementData mis à jour. Longueur:', currentCoachClassementData.length);
+  console.log('[RENDER COACH CLASSEMENT] coachClassementDataMap size:', window.coachClassementDataMap.size);
+  console.log('[RENDER COACH CLASSEMENT] Clés dans la Map:', Array.from(window.coachClassementDataMap.keys()));
+  console.log('[RENDER COACH CLASSEMENT] Premiers 3:', currentCoachClassementData.slice(0, 3).map(e => ({
+    username: e.username,
+    login_username: e.login_username,
+    prenom: e.prenom,
+    nom: e.nom,
+    photoUrl: e.photoUrl
+  })));
+
+  log('[DEBUG COACH] currentCoachClassementData mis à jour avec photos:',
+    currentCoachClassementData.slice(0, 3).map(e => ({
       username: e.username,
       login_username: e.login_username,
       photoUrl: e.photoUrl
@@ -8501,7 +8726,7 @@ async function renderCoachClassementData(data) {
     const dollarsProduit = Math.round(entrepreneur.montant_produit || 0);
 
     return separatorRow + `
-      <tr class="border-b hover:bg-opacity-5 hover:bg-blue-500 transition-colors" style="border-color: var(--border-dark); cursor: pointer;" onclick="showEntrepreneurStats(${index})">
+      <tr class="border-b hover:bg-opacity-5 hover:bg-blue-500 transition-colors" style="border-color: var(--border-dark); cursor: pointer;" onclick="showCoachClassementEntrepreneurStats('${(entrepreneur.login_username || entrepreneur.username).replace(/'/g, "\\'")}')">
         <td class="py-2 px-3 text-center" style="border-right: 1px solid var(--border-dark);">
           ${rangDisplay}
         </td>
@@ -8575,7 +8800,7 @@ async function renderCoachClassementData(data) {
       : '';
 
     return separatorDiv + `
-      <div class="classement-card" onclick="showEntrepreneurStats(${index})" style="${isCurrentUser ? 'background: rgba(96, 165, 250, 0.08); border-color: rgba(96, 165, 250, 0.3);' : ''}">
+      <div class="classement-card" onclick="showCoachClassementEntrepreneurStats('${(entrepreneur.login_username || entrepreneur.username).replace(/'/g, "\\'")}')" style="${isCurrentUser ? 'background: rgba(96, 165, 250, 0.08); border-color: rgba(96, 165, 250, 0.3);' : ''}">
         <div class="classement-card-rang">
           ${rangDisplay}
         </div>

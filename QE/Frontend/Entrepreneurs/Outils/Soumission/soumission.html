@@ -316,8 +316,7 @@
                  readonly
                  onfocus="this.removeAttribute('readonly');"
                  data-form-type="other"
-                 style="border-right: 2px solid #e57373 !important;"
-                 oninput="const regex = /^.+,\s*.+,\s*(QC|Quebec|Québec)\s+[A-Z]\d[A-Z]\s*\d[A-Z]\d\s*$/i; this.style.setProperty('border-right-color', regex.test(this.value.trim()) ? '#4caf50' : '#e57373', 'important'); if(typeof validateRequiredFields === 'function') validateRequiredFields();">
+                 style="border-right: 2px solid #e57373 !important;">
         </div>
         <div>
           <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
@@ -1296,6 +1295,16 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
       const appContainer = window.parent.document.querySelector('#app-container');
       if (appContainer) appContainer.style.display = '';
 
+      // Ramener le modal et overlay dans l'iframe pour permettre une nouvelle présentation
+      if (pdfModal && pdfModal.parentElement === parentBody) {
+        document.body.appendChild(pdfModal);
+        log('[DEBUG] Modal ramené dans l\'iframe');
+      }
+      if (pdfOverlay && pdfOverlay.parentElement === parentBody) {
+        document.body.appendChild(pdfOverlay);
+        log('[DEBUG] Overlay ramené dans l\'iframe');
+      }
+
       // Restaurer le scroll de l'arrière-plan (iframe et parent)
       document.body.style.overflow = "";
       document.body.classList.remove('modal-open');
@@ -2058,8 +2067,16 @@ if (e.key === "Delete" && document.activeElement === input && selected.length > 
 
     switch(fieldType) {
       case 'adresse':
-        const adresseRegex = /^.+,\s*.+,\s*(QC|Quebec|Québec)\s+[A-Z]\d[A-Z]\s*\d[A-Z]\d\s*$/i;
-        isValid = adresseRegex.test(el.value?.trim() || '');
+        // Si l'adresse a été sélectionnée via Google, elle est valide
+        if (window.googleProspectAddressSelected && el.value?.trim()) {
+          isValid = true;
+          console.log('[RECALCULATE] Adresse valide car Google sélectionné');
+        } else {
+          // Sinon, valider avec regex (accepte QC et ON)
+          const adresseRegex = /^.+,\s*.+,\s*(QC|Quebec|Québec|ON|Ontario)\s+[A-Z]\d[A-Z]\s+\d[A-Z]\d\s*$/i;
+          isValid = adresseRegex.test(el.value?.trim() || '');
+          console.log('[RECALCULATE] Adresse validée par regex:', isValid, '| Value:', el.value?.trim());
+        }
         break;
       case 'telephone':
         const telRegex = /^\d{3}-\d{3}-\d{4}$/;
@@ -3442,13 +3459,13 @@ function initFormulaire() {
     });
 
     if (adresseInput && adresseInput.value.trim() !== '' && !window.googleProspectAddressSelected) {
-      // Vérifier si l'adresse est au format canadien valide
+      // Vérifier si l'adresse est au format canadien valide (QC ou ON)
       const adresse = adresseInput.value.trim();
-      const formatCanadienRegex = /^.+,\s*.+,\s*(QC|Quebec|Québec)\s+[A-Za-z]\d[A-Za-z]\s*\d[A-Za-z]\d$/i;
+      const formatCanadienRegex = /^.+,\s*.+,\s*(QC|Quebec|Québec|ON|Ontario)\s+[A-Za-z]\d[A-Za-z]\s+\d[A-Za-z]\d$/i;
 
       if (!formatCanadienRegex.test(adresse)) {
         log('[ERROR] Adresse invalide:', adresse);
-        alert('Veuillez sélectionner une adresse valide dans les suggestions Google ou entrer une adresse au format : "123 Rue Example, Ville, QC J7E 4S9"');
+        alert('Veuillez sélectionner une adresse valide dans les suggestions Google ou entrer une adresse au format : "123 Rue Example, Ville, QC J7E 4S9" ou "123 Queen Street, Toronto, ON M5H 3M9"');
         const btn = document.getElementById("submitBtn");
         const btnText = document.getElementById("btnText");
         btn.disabled = false;
@@ -3967,9 +3984,9 @@ window.openSignatureZoomPopup = async function() {
     }
   }
 
-  // Rendre le PDF zoomé en arrière-plan
+  // Initialiser le canvas de signature (sans PDF en arrière-plan)
   setTimeout(async () => {
-    await renderZoomedPdfBackground();
+    // Plus besoin de rendre le PDF zoomé - case de signature simple
     initPresentationSignatureCanvas();
 
     // Effacer complètement le canvas après init pour être sûr qu'il est vide
@@ -4141,7 +4158,7 @@ window.validateSignature = function() {
   const ratio = Math.max(window.devicePixelRatio || 1, 2);
 
   // Le rectangle de signature dans le PDF original (taille réelle, pas zoomée)
-  const originalSignatureRect = window.originalSignatureRect || {width: 200, height: 50};
+  const originalSignatureRect = window.originalSignatureRect || {width: 150, height: 35};
 
   // Sur mobile, utiliser la taille du container parent (qui a été ajustée par updateSignatureOverlayPosition)
   let signaturePreviewParent = previewCanvas.parentElement;
@@ -4177,21 +4194,38 @@ window.validateSignature = function() {
   // Effacer d'abord
   previewCtx.clearRect(0, 0, previewWidth, previewHeight);
 
-  // Extraire la zone de signature du canvas zoom et la réduire pour fit dans le petit rectangle
-  if (window.signatureZoomBounds) {
-    const bounds = window.signatureZoomBounds;
+  // Copier la signature du canvas popup vers le preview
+  // Garder l'aspect ratio pour ne pas déformer la signature
+  const sourceWidth = presentationSignatureCanvas.width;
+  const sourceHeight = presentationSignatureCanvas.height;
 
-    // Le canvas interne est ratio fois plus grand, donc multiplier les coordonnées source
-    // Destination: réduit à la taille du petit rectangle original
-    previewCtx.drawImage(
-      presentationSignatureCanvas,
-      bounds.x * ratio, bounds.y * ratio, bounds.width * ratio, bounds.height * ratio, // Source: zone de signature zoomée avec ratio
-      0, 0, previewWidth, previewHeight // Destination: taille du petit rectangle (réduit)
-    );
+  // Calculer le ratio d'aspect
+  const sourceAspect = sourceWidth / sourceHeight;
+  const targetAspect = previewWidth / previewHeight;
+
+  let drawWidth, drawHeight, offsetX, offsetY;
+
+  // Ajuster pour garder l'aspect ratio et centrer
+  if (sourceAspect > targetAspect) {
+    // Source plus large - fit par la largeur
+    drawWidth = previewWidth;
+    drawHeight = previewWidth / sourceAspect;
+    offsetX = 0;
+    offsetY = (previewHeight - drawHeight) / 2;
   } else {
-    // Fallback: copier tout le canvas si pas de bounds
-    previewCtx.drawImage(presentationSignatureCanvas, 0, 0, presentationSignatureCanvas.width, presentationSignatureCanvas.height, 0, 0, previewWidth, previewHeight);
+    // Source plus haute - fit par la hauteur
+    drawHeight = previewHeight;
+    drawWidth = previewHeight * sourceAspect;
+    offsetX = (previewWidth - drawWidth) / 2;
+    offsetY = 0;
   }
+
+  // Copier en gardant l'aspect ratio
+  previewCtx.drawImage(
+    presentationSignatureCanvas,
+    0, 0, sourceWidth, sourceHeight,  // Source: tout le canvas
+    offsetX, offsetY, drawWidth, drawHeight  // Destination: centré avec bon aspect ratio
+  );
 
   // Afficher le preview, cacher le hint
   previewCanvas.style.display = 'block';
@@ -4270,32 +4304,15 @@ function initPresentationSignatureCanvas() {
 
   presentationSignatureCtx.scale(ratio, ratio);
 
-  // Recalculer les bounds si les dimensions du canvas de signature diffèrent du canvas PDF zoom
-  if (window.signatureZoomBounds) {
-    // Récupérer aussi les dimensions du canvas PDF zoom pour comparaison
-    let pdfZoomCanvas = document.getElementById('pdfZoomCanvas');
-    if (!pdfZoomCanvas) pdfZoomCanvas = window.parent.document.getElementById('pdfZoomCanvas');
-
-    if (pdfZoomCanvas) {
-      const pdfRect = pdfZoomCanvas.getBoundingClientRect();
-      const scaleX = canvasWidth / pdfRect.width;
-      const scaleY = canvasHeight / pdfRect.height;
-
-      // Toujours recalculer les bounds pour s'adapter aux dimensions du canvas de signature
-      // Les coordonnées sont en pixels CSS (pas internes au canvas)
-      window.signatureZoomBounds = {
-        x: window.signatureZoomBounds.x * scaleX,
-        y: window.signatureZoomBounds.y * scaleY,
-        width: window.signatureZoomBounds.width * scaleX,
-        height: window.signatureZoomBounds.height * scaleY
-      };
-      log('[DEBUG] Bounds recalculés pour signature canvas:', window.signatureZoomBounds, 'scale:', { scaleX, scaleY });
-    }
-  }
+  // Configuration du style de dessin - comme signature standard
   presentationSignatureCtx.lineCap = 'round';
   presentationSignatureCtx.lineJoin = 'round';
-  presentationSignatureCtx.lineWidth = 1.5; // Trait fin pour signature mobile
+  presentationSignatureCtx.lineWidth = 2.5; // Trait moyen pour signature lisible
   presentationSignatureCtx.strokeStyle = '#000000';
+
+  // Qualité de rendu maximale pour un trait smooth
+  presentationSignatureCtx.imageSmoothingEnabled = true;
+  presentationSignatureCtx.imageSmoothingQuality = 'high';
 
   // IMPORTANT: S'assurer que le fond reste transparent
   presentationSignatureCtx.clearRect(0, 0, presentationSignatureCanvas.width, presentationSignatureCanvas.height);
@@ -4337,20 +4354,12 @@ function drawPresentation(e) {
   e.preventDefault();
 
   const rect = presentationSignatureCanvas.getBoundingClientRect();
-  let x = e.clientX - rect.left;
-  let y = e.clientY - rect.top;
-
-  // Contraindre (clamp) les coordonnées à rester dans la zone de signature
-  // Le trait reste dans la boîte mais on n'arrête pas de signer si le doigt sort
-  if (window.signatureZoomBounds) {
-    const bounds = window.signatureZoomBounds;
-    x = Math.max(bounds.x, Math.min(x, bounds.x + bounds.width));
-    y = Math.max(bounds.y, Math.min(y, bounds.y + bounds.height));
-  }
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
 
   presentationPoints.push({ x, y });
 
-  // Dessin EXACTEMENT comme Connect Agenda
+  // Dessin smooth avec courbes quadratiques
   if (presentationPoints.length >= 3) {
     const [p0, p1, p2] = presentationPoints.slice(-3);
     const cpx = (p0.x + p1.x) / 2;
@@ -4454,8 +4463,10 @@ window.clearPresentationSignature = function() {
 window.closePdfModal = function() {
   // Chercher les éléments dans l'iframe d'abord, puis dans le parent
   let pdfModal = document.getElementById("pdfModal");
+  let modalWasInParent = false;
   if (!pdfModal && window.parent && window.parent.document) {
     pdfModal = window.parent.document.getElementById("pdfModal");
+    modalWasInParent = true;
   }
 
   let pdfOverlay = document.getElementById("pdfOverlay");
@@ -4473,6 +4484,16 @@ window.closePdfModal = function() {
   if (closePdfBtn) closePdfBtn.classList.add("hidden");
 
   document.body.style.overflow = "auto";
+
+  // Ramener le modal et overlay dans l'iframe si ils étaient dans le parent
+  if (modalWasInParent && pdfModal && pdfModal.parentElement === window.parent.document.body) {
+    document.body.appendChild(pdfModal);
+    console.log('[closePdfModal] Modal ramené dans l\'iframe');
+  }
+  if (modalWasInParent && pdfOverlay && pdfOverlay.parentElement === window.parent.document.body) {
+    document.body.appendChild(pdfOverlay);
+    console.log('[closePdfModal] Overlay ramené dans l\'iframe');
+  }
 
   // Restaurer AppPC
   const appContainer = window.parent.document.querySelector('#app-container');
@@ -4716,31 +4737,34 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
   </div>
 </div>
 
-<!-- Popup Signature Zoom -->
+<!-- Popup Signature Simple -->
 <div id="signatureZoomPopup" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.85); z-index: 999999; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
-  <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 24px; max-width: 700px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(148, 163, 184, 0.2);">
+  <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 24px; width: 680px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(148, 163, 184, 0.2);">
     <div style="text-align: center; margin-bottom: 20px;">
       <div style="font-size: 18px; font-weight: 600; color: #e2e8f0; margin-bottom: 8px;">
-        <i class="fas fa-search-plus" style="color: #60a5fa; margin-right: 8px;"></i>
-        Zone de signature - Zoom
+        <i class="fas fa-pen" style="color: #60a5fa; margin-right: 8px;"></i>
+        Signature du client
       </div>
       <div style="font-size: 12px; color: #94a3b8;">
-        Signez dans la zone indiquée sur le PDF
+        Veuillez signer dans la case ci-dessous
       </div>
     </div>
 
-    <div style="position: relative; background: white; border-radius: 8px; padding: 12px; margin-bottom: 20px; overflow: hidden;">
-      <!-- Canvas du PDF zoomé (arrière-plan) -->
-      <canvas id="pdfZoomCanvas" style="width: 100%; height: 300px; display: block; border-radius: 6px;"></canvas>
+    <!-- Case de signature blanche simple - même ratio que la case sur le PDF (150x35 = 4.3:1) -->
+    <div style="position: relative; background: white; border-radius: 8px; padding: 0; margin-bottom: 20px; border: 3px solid #e2e8f0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); width: 600px;">
+      <!-- Canvas de signature - 600x140 = même ratio que 150x35 mais 4x plus grand -->
+      <canvas id="presentationSignaturePad" style="width: 600px; height: 140px; display: block; border-radius: 6px; cursor: crosshair; touch-action: none; min-width: 600px; max-width: 600px; min-height: 140px; max-height: 140px;"></canvas>
 
-      <!-- Canvas de signature transparent par-dessus -->
-      <canvas id="presentationSignaturePad" style="position: absolute; top: 12px; left: 12px; width: calc(100% - 24px); height: 300px; border-radius: 6px; cursor: crosshair; touch-action: none; display: block;"></canvas>
-
-      <div id="signatureZoomHint" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(100, 100, 100, 0.4); font-size: 14px; pointer-events: none; font-style: italic; text-align: center;">
+      <!-- Hint "Signez ici" -->
+      <div id="signatureZoomHint" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(150, 150, 150, 0.4); font-size: 16px; pointer-events: none; font-style: italic; text-align: center;">
         ✍️ Signez ici
       </div>
+
+      <!-- Ligne de signature en bas -->
+      <div style="position: absolute; bottom: 30px; left: 10%; right: 10%; border-bottom: 2px dashed rgba(0,0,0,0.1); pointer-events: none;"></div>
     </div>
 
+    <!-- Boutons -->
     <div style="display: flex; gap: 12px; justify-content: space-between;">
       <button type="button" class="btn-secondary" onclick="clearSignatureZoom()">
         <i class="fas fa-eraser"></i>
@@ -4849,19 +4873,101 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     const input = document.getElementById('adresseAutocomplete');
     if (!input) return;
 
+    // Si un autocomplete existe déjà, le supprimer
+    if (window.prospectAutocompleteInstance) {
+      google.maps.event.clearInstanceListeners(input);
+      log('[AUTOCOMPLETE] Instance précédente supprimée');
+    }
+
+    // Retirer les anciens event listeners JavaScript si ils existent
+    if (window.adresseInputListener) {
+      input.removeEventListener('input', window.adresseInputListener);
+      log('[AUTOCOMPLETE] Ancien listener input retiré');
+    }
+    if (window.adresseFocusListener) {
+      input.removeEventListener('focus', window.adresseFocusListener);
+      log('[AUTOCOMPLETE] Ancien listener focus retiré');
+    }
+
     // Forcer la désactivation de l'autocomplete navigateur
     input.setAttribute('autocomplete', 'new-password');
     input.setAttribute('autocorrect', 'off');
     input.setAttribute('autocapitalize', 'off');
     input.setAttribute('spellcheck', 'false');
 
+    // Déterminer la province actuelle pour biaiser les résultats Google
+    const currentLang = localStorage.getItem('language') || 'fr';
+    const isOntario = currentLang === 'en';
+
+    console.log('═══════════════════════════════════════════════════');
+    console.log('[AUTOCOMPLETE INIT] 🌐 Langue dans localStorage:', currentLang);
+    console.log('[AUTOCOMPLETE INIT] 🗺️ Est Ontario?', isOntario);
+    console.log('═══════════════════════════════════════════════════');
+
+    // Créer les bounds pour biaiser les résultats selon la province
+    let bounds = null;
+    let strictBounds = true;  // Forcer les suggestions dans les bounds
+
+    if (isOntario) {
+      // Bounds pour tout l'Ontario (pas juste Toronto)
+      bounds = new google.maps.LatLngBounds(
+        new google.maps.LatLng(41.7, -95.2),  // Sud-Ouest de l'Ontario
+        new google.maps.LatLng(56.9, -74.3)   // Nord-Est de l'Ontario
+      );
+      console.log('[AUTOCOMPLETE INIT] ✅ BOUNDS ONTARIO créés');
+      console.log('[AUTOCOMPLETE INIT] SW:', '41.7, -95.2');
+      console.log('[AUTOCOMPLETE INIT] NE:', '56.9, -74.3');
+    } else {
+      // Bounds pour tout le Québec
+      bounds = new google.maps.LatLngBounds(
+        new google.maps.LatLng(44.99, -79.76),  // Sud-Ouest du Québec
+        new google.maps.LatLng(62.58, -57.10)   // Nord-Est du Québec
+      );
+      console.log('[AUTOCOMPLETE INIT] ✅ BOUNDS QUÉBEC créés');
+      console.log('[AUTOCOMPLETE INIT] SW:', '44.99, -79.76');
+      console.log('[AUTOCOMPLETE INIT] NE:', '62.58, -57.10');
+    }
+
+    console.log('[AUTOCOMPLETE INIT] strictBounds:', strictBounds);
+
     const autocomplete = new google.maps.places.Autocomplete(input, {
       types: ['address'],
-      componentRestrictions: { country: 'ca' }
+      componentRestrictions: { country: 'ca' },
+      bounds: bounds,
+      strictBounds: strictBounds  // true = suggère SEULEMENT dans les bounds
     });
 
-    // Reset flag when user types manually (mais pas si c'est un auto-fill)
-    input.addEventListener('input', (e) => {
+    // Stocker l'instance globalement pour pouvoir la supprimer plus tard
+    window.prospectAutocompleteInstance = autocomplete;
+
+    // Créer et stocker le listener input
+    window.adresseInputListenerCallCount = 0;
+    window.adresseInputListener = (e) => {
+      window.adresseInputListenerCallCount++;
+      console.log('═══════════════════════════════════════════════════');
+      console.log(`🔔 [INPUT EVENT #${window.adresseInputListenerCallCount}] DÉCLENCHÉ`);
+      console.log('[INPUT EVENT] Adresse value:', input.value);
+      console.log('[INPUT EVENT] Flag googleProspectAddressSelected:', window.googleProspectAddressSelected);
+      console.log('[INPUT EVENT] Bordure AVANT traitement:', input.style.borderRightColor);
+
+      // Si une adresse Google a été sélectionnée et le champ n'est pas vide, bordure verte
+      if (window.googleProspectAddressSelected && input.value.trim().length > 0) {
+        console.log('[INPUT EVENT] ✅ Condition Google TRUE - mise bordure VERTE');
+        input.style.setProperty('border-right-color', '#4caf50', 'important');
+        console.log('[INPUT EVENT] Bordure APRÈS mise en vert:', input.style.borderRightColor);
+      } else {
+        console.log('[INPUT EVENT] ❌ Condition Google FALSE - validation regex');
+        console.log('[INPUT EVENT]    - Flag:', window.googleProspectAddressSelected);
+        console.log('[INPUT EVENT]    - Value length:', input.value.trim().length);
+        // Sinon, valider avec le regex
+        const regex = /^.+,\s*.+,\s*(QC|Quebec|Québec|ON|Ontario)\s+[A-Z]\d[A-Z]\s+\d[A-Z]\d\s*$/i;
+        const isValid = regex.test(input.value.trim());
+        console.log('[INPUT EVENT]    - Regex match:', isValid);
+        input.style.setProperty('border-right-color', isValid ? '#4caf50' : '#e57373', 'important');
+        console.log('[INPUT EVENT] Bordure mise en', isValid ? 'VERT (regex)' : 'ROUGE (regex)');
+        console.log('[INPUT EVENT] Bordure APRÈS:', input.style.borderRightColor);
+      }
+
       // Si l'utilisateur modifie l'adresse auto-remplie, reset le flag
       if (window.googleProspectAddressSelected && window.initialAutofilledAddress) {
         if (input.value !== window.initialAutofilledAddress) {
@@ -4869,15 +4975,28 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
           log('[WARN] Adresse modifiée manuellement, validation Google requise');
         }
       }
+
       // Réappliquer les attributs anti-autocomplete
       input.setAttribute('autocomplete', 'new-password');
-    });
 
-    // Supprimer l'autocomplete navigateur sur focus
-    input.addEventListener('focus', () => {
+      // Appeler la validation globale si disponible
+      if (typeof validateRequiredFields === 'function') {
+        validateRequiredFields();
+      }
+
+      console.log(`🔔 [INPUT EVENT #${window.adresseInputListenerCallCount}] FIN - Bordure finale:`, input.style.borderRightColor);
+      console.log('═══════════════════════════════════════════════════');
+    };
+
+    // Créer et stocker le listener focus
+    window.adresseFocusListener = () => {
       input.setAttribute('autocomplete', 'new-password');
       input.removeAttribute('readonly');
-    });
+    };
+
+    // Ajouter les listeners
+    input.addEventListener('input', window.adresseInputListener);
+    input.addEventListener('focus', window.adresseFocusListener);
 
     autocomplete.addListener('place_changed', () => {
       const place = autocomplete.getPlace();
@@ -4889,6 +5008,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
       // Marquer qu'une adresse Google a été sélectionnée
       window.googleProspectAddressSelected = true;
+      console.log('🎯 [PLACE_CHANGED] FLAG SET À TRUE');
 
       const components = place.address_components;
       let streetNumber = '';
@@ -4918,7 +5038,11 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       });
 
       const fullAddress = `${streetNumber} ${route}, ${city}, ${province} ${postalCode}`;
+      console.log('📝 [PLACE_CHANGED] Avant set input.value:', fullAddress.trim());
+      console.log('📝 [PLACE_CHANGED] Flag AVANT set value:', window.googleProspectAddressSelected);
+
       input.value = fullAddress.trim();
+      console.log('📝 [PLACE_CHANGED] APRÈS set input.value - ceci va déclencher event INPUT');
 
       log('[GOOGLE AUTOCOMPLETE] Adresse sélectionnée:', fullAddress.trim());
       log('[GOOGLE AUTOCOMPLETE] Province détectée:', province);
@@ -4930,13 +5054,21 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       updateCNESSTOption(province);
 
       // Mettre la bordure en vert car adresse sélectionnée via Google (format valide)
+      console.log('🟢 [PLACE_CHANGED] Mise de la bordure en VERT');
       input.style.setProperty('border-right-color', '#4caf50', 'important');
+      console.log('🟢 [PLACE_CHANGED] Bordure mise - couleur actuelle:', input.style.borderRightColor);
 
       // Déclencher la validation après que Google ait rempli l'adresse
       if (typeof validateRequiredFields === 'function') {
         // Utiliser setTimeout pour s'assurer que la valeur est bien définie avant validation
+        console.log('⏰ [PLACE_CHANGED] setTimeout pour validateRequiredFields dans 100ms');
+        console.log('⏰ [PLACE_CHANGED] Bordure actuelle AVANT setTimeout:', input.style.borderRightColor);
         setTimeout(() => {
+          console.log('⏰ [VALIDATE] setTimeout déclenché - appel de validateRequiredFields');
+          console.log('⏰ [VALIDATE] Bordure AVANT validateRequiredFields:', input.style.borderRightColor);
+          console.log('⏰ [VALIDATE] Flag avant validation:', window.googleProspectAddressSelected);
           validateRequiredFields();
+          console.log('⏰ [VALIDATE] APRÈS validateRequiredFields - bordure:', input.style.borderRightColor);
         }, 100);
       }
     });
@@ -6310,6 +6442,18 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
         }
       });
 
+      // Mettre à jour le placeholder de l'adresse selon la province
+      const adresseInput = document.getElementById('adresseAutocomplete');
+      if (adresseInput) {
+        if (lang === 'en') {
+          // Ontario - exemple Toronto
+          adresseInput.setAttribute('placeholder', 'E.g.: 123 Queen Street West, Toronto, ON M5H 3M9');
+        } else {
+          // Québec - exemple Montréal
+          adresseInput.setAttribute('placeholder', 'Ex: 123 Rue de la Paix, Montréal, QC H2T 2L2');
+        }
+      }
+
       // Traduire les titres de section (h2.section-title)
       document.querySelectorAll('h2.section-title').forEach(title => {
         const text = title.textContent.trim();
@@ -6855,9 +6999,21 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
           const savedLang = data.language || 'fr';
           log(`[LANG] Préférence chargée: ${savedLang}`);
 
+          // Déterminer la province selon la langue
+          const province = savedLang === 'en' ? 'ON' : 'QC';
+          log('[LANG] Province déterminée au chargement:', province);
+
           // Appliquer la langue sauvegardée
           if (savedLang !== 'fr') {
             changeLanguage(savedLang);
+          }
+
+          // Mettre à jour l'option CNESST/WSIB selon la province
+          if (typeof window.updateCNESSTOption === 'function') {
+            window.updateCNESSTOption(province);
+            log('[LANG] updateCNESSTOption appelé avec province:', province);
+          } else {
+            warn('[LANG] updateCNESSTOption n\'est pas disponible au chargement');
           }
         }
       } catch (error) {
@@ -6887,6 +7043,12 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
           log('[TOGGLE PROVINCE] 🌐 Appel de changeLanguage avec langue:', lang);
           changeLanguage(lang);
+
+          // Réinitialiser Google autocomplete avec les nouveaux bounds
+          if (typeof window.initProspectAutocomplete === 'function') {
+            window.initProspectAutocomplete();
+            log('[TOGGLE PROVINCE] 🗺️ Google autocomplete réinitialisé pour', province);
+          }
         });
       });
 
@@ -6957,6 +7119,32 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
                 adresseField.value = data.adresse;
                 adresseField.style.setProperty('border-right-color', '#4caf50', 'important');
                 log('[SOUMISSION] ✅ Adresse remplie:', data.adresse);
+
+                // Extraire la province de l'adresse et mettre à jour CNESST/WSIB
+                const address = data.adresse.toUpperCase();
+                let province = 'QC'; // Par défaut Québec
+
+                // Détecter Ontario
+                if (address.includes('ONTARIO') || address.includes(', ON') || address.includes(' ON ')) {
+                  province = 'ON';
+                }
+                // Détecter autres provinces si nécessaire
+                else if (address.includes('QUEBEC') || address.includes('QUÉBEC') || address.includes(', QC') || address.includes(' QC ')) {
+                  province = 'QC';
+                }
+
+                log('[SOUMISSION] 🗺️ Province extraite de l\'adresse:', province);
+
+                // Stocker la province globalement
+                window.clientProvince = province;
+
+                // Mettre à jour l'option CNESST/WSIB
+                if (typeof window.updateCNESSTOption === 'function') {
+                  window.updateCNESSTOption(province);
+                  log('[SOUMISSION] ✅ updateCNESSTOption appelé avec province:', province);
+                } else {
+                  log('[SOUMISSION] ⚠️ updateCNESSTOption n\'est pas disponible');
+                }
               }
             }
             if (data.courriel) {

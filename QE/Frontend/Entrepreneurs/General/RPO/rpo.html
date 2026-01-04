@@ -3156,14 +3156,32 @@ async function updateDailyChart(weekNumber) {
 
   try {
     console.log('[RPO DAILY] Fetching soumissions for user:', username);
-    const response = await fetch(`/soumissions_signees/${username}`);
-    if (!response.ok) {
-      throw new Error('Erreur chargement soumissions: ' + response.status);
+
+    // Charger les soumissions signées ET les produits livrés pour le RPO
+    const [soumissionsResponse, produitsResponse] = await Promise.all([
+      fetch(`/soumissions_signees/${username}`),
+      fetch(`/api/ventes_produit/${username}`)
+    ]);
+
+    if (!soumissionsResponse.ok) {
+      throw new Error('Erreur chargement soumissions: ' + soumissionsResponse.status);
     }
-    const soumissionsSignees = await response.json();
-    console.log('[RPO DAILY] Received', soumissionsSignees.length, 'soumissions');
-    if (soumissionsSignees.length > 0) {
-      console.log('[RPO DAILY] Sample soumission:', soumissionsSignees[0]);
+
+    const soumissionsSignees = await soumissionsResponse.json();
+    console.log('[RPO DAILY] Received', soumissionsSignees.length, 'soumissions signées');
+
+    // Charger aussi les produits livrés (pour RPO, on veut TOUTES les ventes)
+    let produitsLivres = [];
+    if (produitsResponse.ok) {
+      produitsLivres = await produitsResponse.json();
+      console.log('[RPO DAILY] Received', produitsLivres.length, 'produits livrés');
+    }
+
+    // Combiner les deux listes
+    const toutesLesVentes = [...soumissionsSignees, ...produitsLivres];
+    console.log('[RPO DAILY] Total ventes:', toutesLesVentes.length);
+    if (toutesLesVentes.length > 0) {
+      console.log('[RPO DAILY] Sample vente:', toutesLesVentes[0]);
     }
 
     // Créer un objet pour stocker les montants par jour
@@ -3217,9 +3235,9 @@ async function updateDailyChart(weekNumber) {
     const weekEndKey = getDateKey(weekEnd);
 
     console.log('[RPO DAILY] Week range:', weekStartKey, 'to', weekEndKey);
-    console.log('[RPO DAILY] Total soumissions signees:', soumissionsSignees.length);
+    console.log('[RPO DAILY] Processing', toutesLesVentes.length, 'ventes total');
 
-    soumissionsSignees.forEach((soumission, idx) => {
+    toutesLesVentes.forEach((soumission, idx) => {
       const dateStr = soumission.date || soumission.dateEnvoi;
 
       const soumissionDate = parseDate(dateStr);

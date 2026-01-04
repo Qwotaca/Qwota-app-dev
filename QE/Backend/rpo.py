@@ -340,8 +340,6 @@ def get_week_number_from_date(date_str: str) -> tuple:
                 week_number = (days_since_first_monday // 7) + 1
 
         elif date.year == 2026 and 1 <= date.month <= 12:  # Janvier-Décembre 2026
-            month_index = date.month - 1  # 0-11 pour janvier-décembre 2026
-
             # Trouver le premier lundi du mois (avec timezone de Toronto)
             first_day = datetime(date.year, date.month, 1, tzinfo=TORONTO_TZ)
             if first_day.weekday() == 0:  # Si le 1er est déjà un lundi
@@ -349,6 +347,13 @@ def get_week_number_from_date(date_str: str) -> tuple:
             else:
                 days_until_monday = 7 - first_day.weekday()
                 first_monday = first_day + timedelta(days=days_until_monday)
+
+            # CAS SPÉCIAL: Janvier 1-4 2026 appartiennent à la semaine 5 de Décembre (29 déc - 4 jan)
+            if date.month == 1 and date < first_monday:
+                print(f"[DEBUG] Date {date_str} est avant le premier lundi de janvier -> Décembre semaine 5")
+                return (-2, 5)  # Décembre 2025, semaine 5
+
+            month_index = date.month - 1  # 0-11 pour janvier-décembre 2026
 
             # Déterminer dans quelle semaine du mois tombe cette date
             # basé sur le jeudi (ISO 8601: la semaine appartient au mois qui contient le jeudi)

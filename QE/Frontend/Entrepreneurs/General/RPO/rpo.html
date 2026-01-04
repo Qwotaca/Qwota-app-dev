@@ -3177,9 +3177,29 @@ async function updateDailyChart(weekNumber) {
       console.log('[RPO DAILY] Received', produitsLivres.length, 'produits livrés');
     }
 
-    // Combiner les deux listes
-    const toutesLesVentes = [...soumissionsSignees, ...produitsLivres];
-    console.log('[RPO DAILY] Total ventes:', toutesLesVentes.length);
+    // Combiner les deux listes en évitant les doublons (même ID)
+    const idsVus = new Set();
+    const toutesLesVentes = [];
+
+    // Ajouter soumissions signées
+    soumissionsSignees.forEach(s => {
+      const id = s.id || s.num;
+      if (id && !idsVus.has(id)) {
+        toutesLesVentes.push(s);
+        idsVus.add(id);
+      }
+    });
+
+    // Ajouter produits livrés (sans doublons)
+    produitsLivres.forEach(p => {
+      const id = p.id || p.num;
+      if (id && !idsVus.has(id)) {
+        toutesLesVentes.push(p);
+        idsVus.add(id);
+      }
+    });
+
+    console.log('[RPO DAILY] Total ventes (sans doublons):', toutesLesVentes.length);
     if (toutesLesVentes.length > 0) {
       console.log('[RPO DAILY] Sample vente:', toutesLesVentes[0]);
     }
@@ -3238,7 +3258,19 @@ async function updateDailyChart(weekNumber) {
     console.log('[RPO DAILY] Processing', toutesLesVentes.length, 'ventes total');
 
     toutesLesVentes.forEach((soumission, idx) => {
-      const dateStr = soumission.date || soumission.dateEnvoi;
+      // Pour ventes_produit, utiliser date_completion si disponible (date vraie de signature)
+      // Sinon utiliser date (peut être modifiée)
+      let dateStr = soumission.date || soumission.dateEnvoi;
+
+      // Si c'est un produit livré avec date_completion, extraire la date de là
+      if (soumission.date_completion) {
+        // date_completion est en format ISO: "2025-12-10T13:54:19.645559"
+        // Extraire juste la partie date et convertir en DD/MM/YYYY
+        const datePart = soumission.date_completion.split('T')[0]; // "2025-12-10"
+        const [year, month, day] = datePart.split('-');
+        dateStr = `${day}/${month}/${year}`; // Convertir en DD/MM/YYYY
+        console.log('[RPO DAILY] Using date_completion:', soumission.date_completion, '-> converted to:', dateStr);
+      }
 
       const soumissionDate = parseDate(dateStr);
 

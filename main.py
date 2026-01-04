@@ -9848,6 +9848,52 @@ async def marquer_comme_perdu(data: dict = Body(...)):
         client_nom = f"{client_trouve.get('prenom', '')} {client_trouve.get('nom', '')}".strip()
         print(f"[OK] Client {client_nom} marqué comme perdu")
 
+        # Retirer le client de soumissions_signees pour mettre à jour le RPO
+        try:
+            soumissions_signees_file = os.path.join(f"{base_cloud}/soumissions_signees", username, "soumissions.json")
+            if os.path.exists(soumissions_signees_file):
+                with open(soumissions_signees_file, "r", encoding="utf-8") as f:
+                    soumissions_signees = json.load(f)
+
+                # Filtrer pour retirer ce client (par num, id, ou nom+prenom+telephone)
+                client_num = client_trouve.get('num')
+                client_id = client_trouve.get('id')
+                client_tel = client_trouve.get('telephone', '')
+
+                signees_filtered = []
+                for soum in soumissions_signees:
+                    # Vérifier si c'est le même client
+                    is_same = False
+                    if client_num and soum.get('num') == client_num:
+                        is_same = True
+                    elif client_id and soum.get('id') == client_id:
+                        is_same = True
+                    elif (soum.get('prenom', '').strip() == client_trouve.get('prenom', '').strip() and
+                          soum.get('nom', '').strip() == client_trouve.get('nom', '').strip() and
+                          soum.get('telephone', '').strip() == client_tel.strip()):
+                        is_same = True
+
+                    if not is_same:
+                        signees_filtered.append(soum)
+                    else:
+                        print(f"[SOUM SIGNEES] Client retiré: {soum.get('prenom')} {soum.get('nom')} ({soum.get('num')})")
+
+                # Sauvegarder la liste filtrée
+                with open(soumissions_signees_file, "w", encoding="utf-8") as f:
+                    json.dump(signees_filtered, f, ensure_ascii=False, indent=2)
+                print(f"[OK] Client retiré de soumissions_signees")
+        except Exception as e:
+            print(f"[WARNING] Erreur retrait soumissions_signees: {e}")
+
+        # Re-synchroniser le RPO pour mettre à jour les statistiques
+        try:
+            from QE.Backend.rpo import sync_ventes_produit_to_rpo, sync_soumissions_to_rpo
+            sync_result_produit = sync_ventes_produit_to_rpo(username)
+            sync_result_soum = sync_soumissions_to_rpo(username)
+            print(f"[RPO SYNC] RPO synchronisé après client perdu")
+        except Exception as e:
+            print(f"[RPO SYNC WARNING] Impossible de synchroniser le RPO: {e}")
+
         return {"success": True, "message": f"{client_nom} marqué comme perdu"}
 
     except Exception as e:
@@ -9922,6 +9968,49 @@ async def annuler_client_accepte(data: dict = Body(...)):
             json.dump(clients_perdus, f, ensure_ascii=False, indent=2)
 
         print(f"[OK] Client {client_nom} annulé et déplacé vers clients perdus")
+
+        # Retirer le client de soumissions_signees pour mettre à jour le RPO
+        try:
+            soumissions_signees_file = os.path.join(f"{base_cloud}/soumissions_signees", username, "soumissions.json")
+            if os.path.exists(soumissions_signees_file):
+                with open(soumissions_signees_file, "r", encoding="utf-8") as f:
+                    soumissions_signees = json.load(f)
+
+                client_num = client_trouve.get('num')
+                client_id_val = client_trouve.get('id')
+                client_tel = client_trouve.get('telephone', '')
+
+                signees_filtered = []
+                for soum in soumissions_signees:
+                    is_same = False
+                    if client_num and soum.get('num') == client_num:
+                        is_same = True
+                    elif client_id_val and soum.get('id') == client_id_val:
+                        is_same = True
+                    elif (soum.get('prenom', '').strip() == client_trouve.get('prenom', '').strip() and
+                          soum.get('nom', '').strip() == client_trouve.get('nom', '').strip() and
+                          soum.get('telephone', '').strip() == client_tel.strip()):
+                        is_same = True
+
+                    if not is_same:
+                        signees_filtered.append(soum)
+                    else:
+                        print(f"[SOUM SIGNEES] Client retiré: {soum.get('prenom')} {soum.get('nom')} ({soum.get('num')})")
+
+                with open(soumissions_signees_file, "w", encoding="utf-8") as f:
+                    json.dump(signees_filtered, f, ensure_ascii=False, indent=2)
+                print(f"[OK] Client retiré de soumissions_signees")
+        except Exception as e:
+            print(f"[WARNING] Erreur retrait soumissions_signees: {e}")
+
+        # Re-synchroniser le RPO pour mettre à jour les statistiques
+        try:
+            from QE.Backend.rpo import sync_ventes_produit_to_rpo, sync_soumissions_to_rpo
+            sync_result_produit = sync_ventes_produit_to_rpo(username)
+            sync_result_soum = sync_soumissions_to_rpo(username)
+            print(f"[RPO SYNC] RPO synchronisé après client perdu")
+        except Exception as e:
+            print(f"[RPO SYNC WARNING] Impossible de synchroniser le RPO: {e}")
 
         return {"success": True, "message": f"{client_nom} annulé et déplacé vers clients perdus"}
 
@@ -10011,6 +10100,51 @@ async def marquer_vente_perdue(data: dict = Body(...)):
 
         client_nom = f"{client_trouve.get('prenom', client_trouve.get('clientPrenom', ''))} {client_trouve.get('nom', client_trouve.get('clientNom', ''))}".strip()
         print(f"[OK] Client {client_nom} marqué comme perdu depuis {category_name}")
+
+        # Retirer le client de soumissions_signees pour mettre à jour le RPO
+        try:
+            soumissions_signees_file = os.path.join(f"{base_cloud}/soumissions_signees", username, "soumissions.json")
+            if os.path.exists(soumissions_signees_file):
+                with open(soumissions_signees_file, "r", encoding="utf-8") as f:
+                    soumissions_signees = json.load(f)
+
+                client_num = client_trouve.get('num')
+                client_id_val = client_trouve.get('id')
+                prenom = client_trouve.get('prenom') or client_trouve.get('clientPrenom', '')
+                nom = client_trouve.get('nom') or client_trouve.get('clientNom', '')
+                client_tel = client_trouve.get('telephone', '')
+
+                signees_filtered = []
+                for soum in soumissions_signees:
+                    is_same = False
+                    if client_num and soum.get('num') == client_num:
+                        is_same = True
+                    elif client_id_val and soum.get('id') == client_id_val:
+                        is_same = True
+                    elif (soum.get('prenom', '').strip() == prenom.strip() and
+                          soum.get('nom', '').strip() == nom.strip() and
+                          soum.get('telephone', '').strip() == client_tel.strip()):
+                        is_same = True
+
+                    if not is_same:
+                        signees_filtered.append(soum)
+                    else:
+                        print(f"[SOUM SIGNEES] Client retiré: {soum.get('prenom')} {soum.get('nom')} ({soum.get('num')})")
+
+                with open(soumissions_signees_file, "w", encoding="utf-8") as f:
+                    json.dump(signees_filtered, f, ensure_ascii=False, indent=2)
+                print(f"[OK] Client retiré de soumissions_signees")
+        except Exception as e:
+            print(f"[WARNING] Erreur retrait soumissions_signees: {e}")
+
+        # Re-synchroniser le RPO pour mettre à jour les statistiques
+        try:
+            from QE.Backend.rpo import sync_ventes_produit_to_rpo, sync_soumissions_to_rpo
+            sync_result_produit = sync_ventes_produit_to_rpo(username)
+            sync_result_soum = sync_soumissions_to_rpo(username)
+            print(f"[RPO SYNC] RPO synchronisé après client perdu")
+        except Exception as e:
+            print(f"[RPO SYNC WARNING] Impossible de synchroniser le RPO: {e}")
 
         return {"success": True, "message": f"{client_nom} marqué comme perdu", "category": category_name}
 

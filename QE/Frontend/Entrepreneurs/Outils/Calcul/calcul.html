@@ -12981,7 +12981,10 @@ function initializeApp() {
         if (clientAddressField && clientData.adresse) {
           clientAddressField.value = clientData.adresse;
           clientAddressField.style.setProperty('border-right-color', '#4caf50', 'important');
+          // Marquer l'adresse comme validée (vient d'un prospect, déjà vérifiée)
+          window.googleClientAddressSelected = true;
           log('[OK] Adresse définie:', clientData.adresse);
+          log('[OK] Adresse marquée comme pré-validée (bypass Google validation)');
         }
         if (clientPhoneField && clientData.telephone) {
           clientPhoneField.value = clientData.telephone;
@@ -19148,9 +19151,32 @@ function initializeApp() {
       } catch (e) {}
     }
 
+    // Validation d'adresse simplifiée: accepter si l'adresse a un format valide (contient chiffres, lettres, virgule)
+    // Cela évite de bloquer les adresses pré-remplies depuis prospects/ventes
+    const addressHasValidFormat = clientAddress && /\d+.*[a-zA-Z].*,/.test(clientAddress);
+
     const isPrefilled = clientData !== null || fromProspect; // Si clientData existe OU fromProspect=true, les champs sont pré-remplis
 
-    if (clientAddress && !window.googleClientAddressSelected && !isPrefilled) {
+    // Vérifier aussi si l'adresse a la bordure verte (pré-remplie depuis prospect/ventes)
+    const addressField = document.getElementById('clientAddress');
+    const hasGreenBorder = addressField && addressField.style.borderRightColor === 'rgb(76, 175, 80)';
+
+    // Si les champs client sont tous remplis, c'est probablement un pré-remplissage (prospect/vente)
+    const allClientFieldsFilled = clientPrenom.trim() && clientNom.trim() && clientAddress.trim();
+
+    // Debug logging
+    console.log('[VALIDATION ADRESSE]', {
+      clientAddress,
+      googleSelected: window.googleClientAddressSelected,
+      isPrefilled,
+      hasGreenBorder,
+      borderRightColor: addressField?.style.borderRightColor,
+      allClientFieldsFilled,
+      addressHasValidFormat
+    });
+
+    // Validation: accepter si Google sélectionné OU pré-rempli OU bordure verte OU tous champs remplis OU format valide
+    if (clientAddress && !window.googleClientAddressSelected && !isPrefilled && !hasGreenBorder && !allClientFieldsFilled && !addressHasValidFormat) {
       alert('Veuillez sélectionner une adresse valide dans les suggestions Google.');
       return;
     }

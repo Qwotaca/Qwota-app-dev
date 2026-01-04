@@ -1935,6 +1935,33 @@ async def creer_pdf(data: SoumissionData, request: Request):
 
         print(f"[OK] Soumission ajoutée dans ventes_attente pour {utilisateur}")
 
+        # Retirer le client des prospects s'il y était
+        try:
+            print(f"[PROSPECTS] Vérification et suppression du prospect: {vente['prenom']} {vente['nom']}")
+            prospects_file = os.path.join(f"{base_cloud}/prospects", utilisateur, "prospects.json")
+            if os.path.exists(prospects_file):
+                with open(prospects_file, "r", encoding="utf-8") as f:
+                    prospects = json.load(f)
+
+                # Filtrer les prospects qui ne correspondent pas à ce client
+                prospects_filtered = [
+                    p for p in prospects
+                    if not (
+                        p.get("prenom", "").strip().lower() == vente['prenom'].strip().lower() and
+                        p.get("nom", "").strip().lower() == vente['nom'].strip().lower() and
+                        p.get("adresse", "").strip().lower() == vente['adresse'].strip().lower()
+                    )
+                ]
+
+                if len(prospects_filtered) < len(prospects):
+                    with open(prospects_file, "w", encoding="utf-8") as f:
+                        json.dump(prospects_filtered, f, ensure_ascii=False, indent=2)
+                    print(f"[OK] Prospect {vente['prenom']} {vente['nom']} retiré de la liste des prospects")
+                else:
+                    print(f"[INFO] Client n'était pas dans les prospects")
+        except Exception as e:
+            print(f"[WARNING] Erreur lors de la suppression du prospect: {e}")
+
     except Exception as e:
         print("Erreur lors de l'enregistrement de la soumission :", e)
         raise HTTPException(status_code=500, detail="Erreur lors de l'enregistrement de la soumission")
@@ -18945,6 +18972,33 @@ async def signer_soumission_vente(data: dict = Body(...)):
         # 3. Retirer de ventes_attente
         with open(fichier_attente, "w", encoding="utf-8") as f:
             json.dump(ventes_attente_updated, f, ensure_ascii=False, indent=2)
+
+        # 3b. Retirer le client des prospects s'il y était
+        try:
+            print(f"[PROSPECTS] Vérification et suppression du prospect: {soumission.get('prenom')} {soumission.get('nom')}")
+            prospects_file = os.path.join(f"{base_cloud}/prospects", username, "prospects.json")
+            if os.path.exists(prospects_file):
+                with open(prospects_file, "r", encoding="utf-8") as f:
+                    prospects = json.load(f)
+
+                # Filtrer les prospects qui ne correspondent pas à ce client
+                prospects_filtered = [
+                    p for p in prospects
+                    if not (
+                        p.get("prenom", "").strip().lower() == soumission.get('prenom', '').strip().lower() and
+                        p.get("nom", "").strip().lower() == soumission.get('nom', '').strip().lower() and
+                        p.get("adresse", "").strip().lower() == soumission.get('adresse', '').strip().lower()
+                    )
+                ]
+
+                if len(prospects_filtered) < len(prospects):
+                    with open(prospects_file, "w", encoding="utf-8") as f:
+                        json.dump(prospects_filtered, f, ensure_ascii=False, indent=2)
+                    print(f"[OK] Prospect {soumission.get('prenom')} {soumission.get('nom')} retiré de la liste des prospects")
+                else:
+                    print(f"[INFO] Client n'était pas dans les prospects")
+        except Exception as e:
+            print(f"[WARNING] Erreur lors de la suppression du prospect: {e}")
 
         # Copier/déplacer le PDF
         pdf_filename = soumission.get("pdf_url", "").split("/")[-1]

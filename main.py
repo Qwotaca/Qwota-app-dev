@@ -3894,7 +3894,27 @@ def envoyer_soumission_email(
 
     depot = total_avec_taxe * 0.25
     depot_fmt = format_montant(depot)
-    email_virement = f"{username}@qualiteetudiants.com"
+
+    # Récupérer le courriel réel de l'utilisateur depuis user_info.json
+    try:
+        user_dir = os.path.join(base_cloud, "signatures", username)
+        info_file = os.path.join(user_dir, "user_info.json")
+        email_virement = f"{username}@qualiteetudiants.com"  # Valeur par défaut
+
+        if os.path.exists(info_file):
+            with open(info_file, "r", encoding="utf-8") as f:
+                user_data = json.load(f)
+                # Utiliser le courriel de l'utilisateur s'il existe
+                if user_data.get("courriel"):
+                    email_virement = user_data.get("courriel")
+                    print(f"[DEBUG] Email virement depuis user_info: {email_virement}")
+                else:
+                    print(f"[DEBUG] Pas de courriel dans user_info, utilisation par défaut: {email_virement}")
+        else:
+            print(f"[DEBUG] Fichier user_info non trouvé, utilisation email par défaut: {email_virement}")
+    except Exception as e:
+        print(f"[ERROR] Erreur lecture courriel utilisateur: {e}, utilisation par défaut")
+        email_virement = f"{username}@qualiteetudiants.com"
 
     from urllib.parse import urlencode
 

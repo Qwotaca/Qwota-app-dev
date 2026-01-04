@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <title>Ventes</title>
-  
+
+  <!-- Cache Control - Désactiver complètement le cache -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
   <!-- 📱 PWA Meta Tags -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#5271ff">
@@ -2326,8 +2331,16 @@
 
   async function checkIfCalculExists(clientData) {
     try {
-      // Récupérer la liste des projets depuis l'API
-      const response = await fetch(`/api/projets/${window.username}`);
+      // Désactiver le cache pour toujours avoir les données à jour
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/api/projets/${window.username}?t=${timestamp}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       if (!response.ok) return false;
 
       const projets = await response.json();
@@ -2351,8 +2364,14 @@
     closeClientInfo();
 
     try {
-      // Récupérer les données de la vente
-      const vente = window.ventesData.attente.find(v => v.id === venteId || v.num === venteId);
+      // Récupérer les données de la vente (chercher dans toutes les catégories)
+      let vente = window.ventesData.attente.find(v => v.id === venteId || v.num === venteId);
+      if (!vente) {
+        vente = window.ventesData.acceptees.find(v => v.id === venteId || v.num === venteId);
+      }
+      if (!vente) {
+        vente = window.ventesData.produit.find(v => v.id === venteId || v.num === venteId);
+      }
       if (!vente) {
         error('[VENTES] Vente non trouvée');
         return;
@@ -2361,8 +2380,16 @@
       const nomComplet = `${vente.prenom || vente.clientPrenom || ''} ${vente.nom || vente.clientNom || ''}`.trim();
       const adresse = vente.adresse || '';
 
-      // Récupérer la liste des projets
-      const response = await fetch(`/api/projets/${window.username}`);
+      // Récupérer la liste des projets (sans cache)
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/api/projets/${window.username}?t=${timestamp}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       if (!response.ok) {
         error('[VENTES] Erreur chargement projets');
         return;
@@ -2376,8 +2403,9 @@
         return;
       }
 
-      // Stocker l'ID du projet dans sessionStorage pour le charger dans calcul
-      sessionStorage.setItem('projetToLoad', projet.id);
+      // Stocker l'ID du projet dans localStorage pour le charger dans calcul
+      localStorage.setItem('pendingProjectLoad', projet.id);
+      log('[VENTES] 📌 Projet à charger:', projet.id);
 
       // Store selected entrepreneur for auto-selection in calculateur
       const selectedEntrepreneur = window.selectedEntrepreneurUsername || window.username;
@@ -3249,8 +3277,16 @@
     if (!tbody) return;
 
     try {
-      // Use API endpoint instead of direct file access to avoid 404 errors in console
-      const response = await fetch(`/prospects/${window.username}`);
+      // Désactiver complètement le cache avec timestamp et cache: 'no-store'
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/prospects/${window.username}?t=${timestamp}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
 
       if (!response.ok) {
         showEmptyTable(tbody, 'potentiel');
@@ -3294,7 +3330,16 @@
     if (!tbody) return;
 
     try {
-      const response = await fetch(`/cloud/ventes_${category}/${window.username}/ventes.json`);
+      // Désactiver complètement le cache avec timestamp et cache: 'no-store'
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/cloud/ventes_${category}/${window.username}/ventes.json?t=${timestamp}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
 
       if (!response.ok) {
         log(`[VENTES] Pas de données ${category} pour ${window.username}`);

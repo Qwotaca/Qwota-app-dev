@@ -73,6 +73,78 @@
     box-shadow: none !important;
   }
 
+  /* Animation de chargement/succès */
+  .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .loading-content {
+    text-align: center;
+    color: white;
+    animation: scaleIn 0.5s ease;
+  }
+
+  .loading-spinner {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+    animation: pulse 1.5s ease infinite;
+  }
+
+  .loading-spinner i {
+    font-size: 32px;
+    color: white;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes scaleIn {
+    from {
+      transform: scale(0.8);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+    }
+    50% {
+      transform: scale(1.05);
+      box-shadow: 0 0 50px rgba(59, 130, 246, 0.7);
+    }
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
 </style>
 
 </head>
@@ -3063,15 +3135,16 @@
             <table class="w-full border-collapse rounded-lg overflow-hidden shadow" style="min-width: 800px; background: var(--bg-card); border: 1px solid var(--border-dark);">
               <thead>
                 <tr style="background: #1e293b;">
-                  <th class="px-4 py-3 text-left font-semibold text-white" style="width: 40%; border: 1px solid var(--border-dark);">Nom du Client</th>
-                  <th class="px-4 py-3 text-left font-semibold text-white" style="width: 25%; border: 1px solid var(--border-dark);">Date de Création</th>
+                  <th class="px-4 py-3 text-left font-semibold text-white" style="width: 30%; border: 1px solid var(--border-dark);">Nom du Client</th>
+                  <th class="px-4 py-3 text-left font-semibold text-white" style="width: 20%; border: 1px solid var(--border-dark);">Date de Création</th>
+                  <th class="px-4 py-3 text-center font-semibold text-white" style="width: 15%; border: 1px solid var(--border-dark);">Type</th>
                   <th class="px-4 py-3 text-left font-semibold text-white" style="width: 20%; border: 1px solid var(--border-dark);">Total ($)</th>
                   <th class="px-4 py-3 text-center font-semibold text-white" style="width: 15%; border: 1px solid var(--border-dark);">Actions</th>
                 </tr>
               </thead>
               <tbody id="projects-table-body">
                 <tr>
-                  <td colspan="4" class="px-4 py-8 text-center" style="border: 1px solid var(--border-dark); color: var(--text-gray);">
+                  <td colspan="5" class="px-4 py-8 text-center" style="border: 1px solid var(--border-dark); color: var(--text-gray);">
                     <i class="fas fa-folder-open text-4xl mb-3 opacity-50 text-blue-400"></i>
                     <p class="text-lg font-medium text-white">Aucun projet sauvegardé</p>
                     <p class="text-sm mt-2 text-gray-300">Commencez par remplir les informations client pour créer automatiquement un projet</p>
@@ -10699,15 +10772,6 @@ function calculateNewCosts(hours, surfaceData, selectedProduct) {
 function updateNewResultsUI(costs, hours, selectedProduct, surfaceData) {
   // Note: Total extérieur now uses subTotal ID and is updated by main calculation functions
   // (removed duplicate update to avoid overriding the correct subtotal calculation)
-  if (document.getElementById('totalHours')) {
-    // Inclure TOUTES les heures des endroits dans le total
-    const totalHours = hours.lavage + hours.preparation + hours.peinture + 
-                      (hours.revetement || 0) + (hours.corniches_moulures || 0) + 
-                      (hours.fenetres_volets || 0) + (hours.portes || 0) + 
-                      (hours.balcon || 0) + (hours.cloture || 0) + (hours.autre || 0);
-    document.getElementById('totalHours').textContent = totalHours.toFixed(1);
-  }
-
   // Update cost breakdown with corrected values
   if (document.getElementById('costLavage')) {
     document.getElementById('costLavage').textContent = formatCurrency(costs.lavage || 0);
@@ -10794,6 +10858,28 @@ function updateNewResultsUI(costs, hours, selectedProduct, surfaceData) {
   }
   if (document.getElementById('gallonsPeinture')) {
     document.getElementById('gallonsPeinture').textContent = costs.gallons;
+  }
+
+  // Calculer le VRAI total des heures en lisant les valeurs affichées
+  if (document.getElementById('totalHours')) {
+    // Fonction pour parser les heures affichées (format: "2,3h")
+    const parseHeures = (elementId) => {
+      const element = document.getElementById(elementId);
+      if (!element) return 0;
+      const text = element.textContent || '0';
+      // Enlever le 'h' et remplacer ',' par '.'
+      const value = parseFloat(text.replace('h', '').replace(',', '.').trim()) || 0;
+      return value;
+    };
+
+    // Lire les vraies valeurs affichées dans le breakdown
+    const heuresLavage = parseHeures('heuresLavage');
+    const heuresPreparation = parseHeures('heuresPreparation');
+    const heuresPeinture = parseHeures('heuresPeinture');
+
+    // Calculer le total réel
+    const totalHeuresReelles = heuresLavage + heuresPreparation + heuresPeinture;
+    document.getElementById('totalHours').textContent = totalHeuresReelles.toFixed(1);
   }
 
   // NOTE: Le sous-total est maintenant géré par updateSubtotal()
@@ -11938,19 +12024,13 @@ document.addEventListener('click', function(e) {
 
     function updateResultsUI(costs, hours, selectedProduct) {
       // Note: Total extérieur now uses subTotal ID and is updated by main calculation functions
-      // Inclure TOUTES les heures des endroits dans le total
-      const totalHours = hours.lavage + hours.preparation + hours.peinture + 
-                         (hours.revetement || 0) + (hours.corniches_moulures || 0) + 
-                         (hours.fenetres_volets || 0) + (hours.portes || 0) + 
-                         (hours.balcon || 0) + (hours.cloture || 0) + (hours.autre || 0);
-      document.getElementById('totalHours').textContent = totalHours.toFixed(1);
-      
+
       // Update cost breakdown
       document.getElementById('costLavage').textContent = formatCurrency(costs.lavage);
       document.getElementById('costPreparation').textContent = formatCurrency(costs.preparation);
       document.getElementById('costPeinture').textContent = formatCurrency(costs.peinture);
       document.getElementById('costProduits').textContent = formatCurrency(costs.produits_appliques || 0);
-      
+
       // Affichage des coûts de primer et 3e couche individuels (legacy function)
       if (document.getElementById('costPrimer')) {
         document.getElementById('costPrimer').textContent = formatCurrency(costs.primer || 0);
@@ -11958,8 +12038,16 @@ document.addEventListener('click', function(e) {
       if (document.getElementById('costThirdCoat')) {
         document.getElementById('costThirdCoat').textContent = formatCurrency(costs.thirdCoat || 0);
       }
-      
+
       document.getElementById('heuresLavage').textContent = hours.lavage.toFixed(1).replace('.', ',') + 'h';
+
+      // Mettre à jour les heures de préparation
+      if (document.getElementById('heuresPreparation')) {
+        const tauxHoraire = getCurrentTauxHoraire();
+        const heuresEquivalentes = tauxHoraire > 0 ? (costs.preparation || 0) / tauxHoraire : 0;
+        document.getElementById('heuresPreparation').textContent = heuresEquivalentes.toFixed(1);
+      }
+
       // Afficher les heures de TOUS les endroits personnalisés
       const endroitsHours = (hours.revetement || 0) + (hours.corniches_moulures || 0) +
                            (hours.fenetres_volets || 0) + (hours.portes || 0) +
@@ -11970,6 +12058,26 @@ document.addEventListener('click', function(e) {
       // Afficher avec 2 décimales visuellement, mais utiliser la valeur exacte pour les calculs
       document.getElementById('heuresPeinture').textContent = displayHours.toFixed(1).replace('.', ',') + 'h';
       document.getElementById('gallonsPeinture').textContent = costs.gallons;
+
+      // Calculer le VRAI total des heures en lisant les valeurs affichées
+      // Fonction pour parser les heures affichées (format: "2,3h")
+      const parseHeures = (elementId) => {
+        const element = document.getElementById(elementId);
+        if (!element) return 0;
+        const text = element.textContent || '0';
+        // Enlever le 'h' et remplacer ',' par '.'
+        const value = parseFloat(text.replace('h', '').replace(',', '.').trim()) || 0;
+        return value;
+      };
+
+      // Lire les vraies valeurs affichées dans le breakdown
+      const heuresLavage = parseHeures('heuresLavage');
+      const heuresPreparation = parseHeures('heuresPreparation');
+      const heuresPeinture = parseHeures('heuresPeinture');
+
+      // Calculer le total réel
+      const totalHeuresReelles = heuresLavage + heuresPreparation + heuresPeinture;
+      document.getElementById('totalHours').textContent = totalHeuresReelles.toFixed(1);
 
       // NOTE: Le sous-total est maintenant géré par updateSubtotal()
       // document.getElementById('subTotal').textContent = formatCurrency(costs.subtotal);
@@ -12750,20 +12858,32 @@ function closeAllDropdowns() {
   });
 }
 
+// Vérifier IMMÉDIATEMENT s'il y a un projet à charger (avant tout)
+// Cela affiche l'animation de chargement dès que la page se charge
+(function() {
+  const pendingProjectId = localStorage.getItem('pendingProjectLoad');
+  if (pendingProjectId) {
+    // Afficher l'animation IMMÉDIATEMENT pour un chargement fluide
+    document.addEventListener('DOMContentLoaded', function() {
+      showLoadingAnimation('Chargement du projet...');
+    });
+  }
+})();
+
 // Appelez cette fonction dans votre initializeApp()
 function initializeApp() {
   // Set current date (élément supprimé - plus nécessaire)
   // document.getElementById('estimationDate').value = new Date().toISOString().split('T')[0];
-  
+
   // Add event listeners
   addEventListeners();
-  
+
   // Load saved parameters
   loadAllParameters();
-  
+
   // Initial calculation
   updateCalculation();
-  
+
   // Ajouter à la fin :
   convertToCustomDropdowns();
   
@@ -12889,8 +13009,23 @@ function initializeApp() {
         error('[ERROR] Erreur lors du parsing des données client estimation:', error);
       }
     }
+
+    // Vérifier s'il y a un projet en attente de chargement (après page reload)
+    const pendingProjectId = localStorage.getItem('pendingProjectLoad');
+    if (pendingProjectId) {
+      log('🔄 [CHARGEMENT] Projet en attente détecté:', pendingProjectId);
+
+      // Nettoyer le flag pour éviter de recharger à chaque refresh
+      localStorage.removeItem('pendingProjectLoad');
+
+      // L'animation est déjà affichée (depuis le début du chargement de la page)
+      // Charger le projet après un petit délai pour s'assurer que tout est initialisé
+      setTimeout(() => {
+        chargerProjetInternal(pendingProjectId);
+      }, 500);
+    }
   }, 1000); // Délai de 1 seconde pour s'assurer que le DOM est prêt
-  
+
   log('Application initialisée avec succès');
 
   // Désactiver tous les champs de paramètres par défaut
@@ -12960,6 +13095,30 @@ function initializeApp() {
           window.location.reload();
         }
       );
+    }
+
+    // Animation de chargement (même style que Ventes et Soumission)
+    function showLoadingAnimation(message = 'Chargement du projet...') {
+      const overlay = document.createElement('div');
+      overlay.className = 'loading-overlay';
+      overlay.id = 'loadingOverlay';
+      overlay.innerHTML = `
+        <div class="loading-content">
+          <div class="loading-spinner">
+            <i class="fas fa-sync-alt"></i>
+          </div>
+          <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">${message}</h2>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+    }
+
+    function hideLoadingAnimation() {
+      const overlay = document.getElementById('loadingOverlay');
+      if (overlay) {
+        overlay.remove();
+      }
     }
     
     function showCustomConfirm(title, message, confirmText, cancelText, onConfirm) {
@@ -17583,22 +17742,24 @@ function initializeApp() {
         }
       });
 
-      // 10. RECALCULER POUR REMETTRE TOUT À ZÉRO
-      setTimeout(() => {
-        if (typeof updateCalculation === 'function') {
-          updateCalculation();
-        }
-        if (typeof calculerInterieur === 'function') {
-          calculerInterieur();
-        }
-        if (typeof refreshProductSelection === 'function') {
-          refreshProductSelection();
-        }
-        // Revalider les boutons (ils devraient être désactivés maintenant)
-        if (typeof validateCompleterButton === 'function') {
-          validateCompleterButton();
-        }
-      }, 100);
+      // 10. RECALCULER IMMÉDIATEMENT POUR REMETTRE TOUT À ZÉRO
+      if (typeof updateCalculation === 'function') {
+        updateCalculation();
+      }
+      if (typeof calculerInterieur === 'function') {
+        calculerInterieur();
+      }
+      if (typeof refreshProductSelection === 'function') {
+        refreshProductSelection();
+      }
+      // Revalider les boutons (ils devraient être désactivés maintenant)
+      if (typeof validateCompleterButton === 'function') {
+        validateCompleterButton();
+      }
+
+      // 11. VIDER TOUS LES ARRAYS/OBJECTS GLOBAUX
+      if (typeof surfaces !== 'undefined') surfaces = {};
+      if (typeof endroits !== 'undefined') endroits = {};
 
       log('🧹 Calculateur complètement réinitialisé');
     }
@@ -17680,6 +17841,19 @@ function initializeApp() {
       // Utiliser l'ID existant si on modifie un projet chargé, sinon créer un nouvel ID
       const projetId = currentLoadedProjectId || Date.now().toString();
 
+      // Déterminer le type de travaux basé sur les seuils
+      let typeTravaux = '';
+      if (prixExt >= 400 && prixInt >= 400) {
+        typeTravaux = 'Ext et Int';
+      } else if (prixExt >= 400) {
+        typeTravaux = 'Ext';
+      } else if (prixInt >= 400) {
+        typeTravaux = 'Int';
+      } else {
+        // Sous le seuil, on indique quand même le type principal
+        typeTravaux = prixExt > prixInt ? 'Ext' : 'Int';
+      }
+
       const projet = {
         id: projetId,
         client: clientName,
@@ -17693,6 +17867,9 @@ function initializeApp() {
           return `${day}/${month}/${year}`;
         })(),
         total: prixArrondi,
+        totalExt: prixExt,
+        totalInt: prixInt,
+        typeTravaux: typeTravaux,
         formData: collecterToutesDonnees()
       };
 
@@ -17710,7 +17887,9 @@ function initializeApp() {
 
         if (response.ok) {
           log('[OK] Projet ' + (currentLoadedProjectId ? 'mis à jour' : 'sauvegardé') + ' dans le cloud');
-          showNotification(currentLoadedProjectId ? 'Projet mis à jour!' : 'Projet enregistré!', 'success');
+
+          // Afficher l'animation de chargement
+          showLoadingAnimation(currentLoadedProjectId ? 'Projet mis à jour!' : 'Projet enregistré!');
 
           // Basculer vers l'onglet Mes Projets AVANT le refresh
           switchTab('mes-projets');
@@ -17720,7 +17899,7 @@ function initializeApp() {
             afficherListeProjets();
           }, 100);
 
-          // Forcer un rechargement complet de la page après un délai pour bien voir la notification
+          // Forcer un rechargement complet de la page après un délai pour voir l'animation
           setTimeout(() => {
             window.location.reload();
           }, 800);
@@ -17734,12 +17913,19 @@ function initializeApp() {
     }
 
     async function chargerProjet(projetId) {
+      // Sauvegarder l'ID du projet à charger dans localStorage
+      localStorage.setItem('pendingProjectLoad', String(projetId));
+
+      // Recharger complètement la page (équivalent à resetForm + charger)
+      // L'animation de chargement s'affichera automatiquement au reload
+      window.location.reload();
+    }
+
+    // Fonction interne pour charger un projet après le reload de la page
+    async function chargerProjetInternal(projetId) {
       const username = localStorage.getItem('username') || 'default';
 
       try {
-        // RÉINITIALISER COMPLÈTEMENT LE CALCULATEUR AVANT DE CHARGER
-        reinitialiserCalculateur();
-
         // Définir le projet actuellement chargé
         currentLoadedProjectId = String(projetId);
 
@@ -17844,6 +18030,22 @@ function initializeApp() {
 
         log(`[OK] Éléments restaurés: ${restoredCount}, Non trouvés: ${notFoundCount}`);
 
+        // Mettre à jour les bordures des champs client pour qu'ils soient verts
+        const clientFields = ['clientPrenom', 'clientNom', 'clientAddress', 'clientPhone'];
+        clientFields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field && field.value && field.value.trim()) {
+            field.style.setProperty('border-right-color', '#4caf50', 'important');
+            log(`[OK] Bordure verte appliquée à ${fieldId}`);
+          }
+        });
+
+        // Mettre à jour le message de validation client
+        if (typeof updateClientValidationMessage === 'function') {
+          updateClientValidationMessage();
+          log('[OK] Message de validation client mis à jour');
+        }
+
       // Restaurer les surfaces extérieures si elles existent
       if (formData.surfaces && typeof restoreSurfaceData === 'function') {
         restoreSurfaceData(formData.surfaces);
@@ -17884,13 +18086,22 @@ function initializeApp() {
         const totalExt = parseFloat(totalExtElement?.textContent.replace('$', '').replace(/\s+/g, '').replace(',', '.').trim() || '0');
         const totalInt = parseFloat(totalIntElement?.textContent.replace('$', '').replace(/\s+/g, '').replace(',', '.').trim() || '0');
 
-        log(`[DEBUG] Totaux projet: Ext=${totalExt}$, Int=${totalInt}$`);
+        log(`[DEBUG] Totaux projet après calculs: Ext=${totalExt}$, Int=${totalInt}$`);
 
-        // Logique: si extérieur a des données -> extérieur, sinon si intérieur -> intérieur
-        if (totalExt > 0) {
-          tabName = 'estimation'; // Extérieur
-        } else if (totalInt > 0) {
+        // Logique améliorée basée sur le seuil de 400$:
+        // - Si SEULEMENT intérieur >= 400$ (Int >= 400 et Ext < 400) -> onglet intérieur
+        // - Si extérieur >= 400$ (avec ou sans intérieur) -> onglet extérieur
+        // - Sinon -> onglet extérieur par défaut
+        if (totalInt >= 400 && totalExt < 400) {
           tabName = 'interieur'; // Intérieur seulement
+          log('🏠 Projet intérieur uniquement détecté (Int >= 400$, Ext < 400$)');
+        } else if (totalExt >= 400) {
+          tabName = 'estimation'; // Extérieur (avec ou sans intérieur)
+          log('🏗️ Projet avec extérieur détecté (Ext >= 400$)');
+        } else {
+          // Si les deux sont sous le seuil, aller vers le plus élevé
+          tabName = totalExt > totalInt ? 'estimation' : 'interieur';
+          log(`📊 Projet sous seuil: ${tabName === 'estimation' ? 'Ext' : 'Int'} (plus élevé)`);
         }
 
         log(`🔄 Changement d'onglet vers: ${tabName}`);
@@ -17899,7 +18110,56 @@ function initializeApp() {
           // skipRefresh = true pour éviter le double chargement des produits
           switchTab(tabName, true);
         }
-      }, 200);
+
+        // Mettre à jour automatiquement le projet avec les totaux et le type si manquants
+        if (!projet.totalExt || !projet.totalInt || !projet.typeTravaux) {
+          // Calculer le type
+          let typeTravaux = '';
+          if (totalExt >= 400 && totalInt >= 400) {
+            typeTravaux = 'Ext et Int';
+          } else if (totalExt >= 400) {
+            typeTravaux = 'Ext';
+          } else if (totalInt >= 400) {
+            typeTravaux = 'Int';
+          } else {
+            typeTravaux = totalExt > totalInt ? 'Ext' : 'Int';
+          }
+
+          // Mettre à jour le projet dans le backend
+          const projetMisAJour = {
+            ...projet,
+            totalExt: totalExt,
+            totalInt: totalInt,
+            typeTravaux: typeTravaux
+          };
+
+          log('[AUTO-UPDATE] Mise à jour automatique du projet avec totaux et type:', projetMisAJour);
+
+          // Sauvegarder silencieusement
+          fetch('/api/projets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              username: username,
+              projet: projetMisAJour,
+              updateExisting: true
+            })
+          }).then(response => {
+            if (response.ok) {
+              log('[AUTO-UPDATE] ✅ Projet mis à jour automatiquement avec les totaux et le type');
+              // Rafraîchir la liste des projets si on est sur l'onglet Mes Projets
+              if (typeof afficherListeProjets === 'function') {
+                setTimeout(() => {
+                  afficherListeProjets();
+                  log('[AUTO-UPDATE] Liste des projets rafraîchie');
+                }, 200);
+              }
+            }
+          }).catch(err => {
+            error('[AUTO-UPDATE] Erreur mise à jour auto:', err);
+          });
+        }
+      }, 500);
 
       // Modifier le header pour indiquer qu'on modifie un projet existant
       const calculatorHeader = document.querySelector('.glass-card h1');
@@ -17914,8 +18174,15 @@ function initializeApp() {
 
       log('[OK] Projet chargé complètement!');
 
+      // Forcer la position de scroll en haut (sans animation) pour éviter tout scroll automatique
+      window.scrollTo(0, 0);
+
+      // Cacher l'animation de chargement
+      hideLoadingAnimation();
+
       } catch (error) {
         error('[ERROR] Erreur chargement projet:', error);
+        hideLoadingAnimation();
         alert('Erreur lors du chargement: ' + error.message);
       }
     }
@@ -18011,7 +18278,7 @@ function initializeApp() {
         // Vue desktop (tableau)
         tbody.innerHTML = `
           <tr>
-            <td colspan="4" class="border: 1px solid var(--border-dark); px-4 py-8 text-center text-gray-500">
+            <td colspan="5" class="border: 1px solid var(--border-dark); px-4 py-8 text-center text-gray-500">
               <i class="fas fa-folder-open text-4xl mb-3 opacity-50"></i>
               <p class="text-lg font-medium">Aucun projet sauvegardé</p>
               <p class="text-sm mt-2">Commencez par remplir les informations client pour créer automatiquement un projet</p>
@@ -18045,7 +18312,39 @@ function initializeApp() {
       }
 
       // Vue desktop (tableau)
-      tbody.innerHTML = projets.map(projet => `
+      tbody.innerHTML = projets.map(projet => {
+        // Déterminer le type de travaux si non existant (pour compatibilité avec anciens projets)
+        let typeTravaux = projet.typeTravaux;
+
+        // Si le type n'existe pas, le calculer à partir des totaux dans formData
+        if (!typeTravaux || typeTravaux === 'N/A') {
+          let prixExt = parseFloat(projet.totalExt || 0);
+          let prixInt = parseFloat(projet.totalInt || 0);
+
+          // Si totalExt/totalInt n'existent pas, essayer de lire depuis formData
+          if (prixExt === 0 && prixInt === 0 && projet.formData) {
+            const totalExtStr = projet.formData.totaux_ext?.total || '0';
+            const totalIntStr = projet.formData.totaux_int?.total || '0';
+
+            prixExt = parseFloat(String(totalExtStr).replace(/[$\s]/g, '').replace(',', '.') || '0');
+            prixInt = parseFloat(String(totalIntStr).replace(/[$\s]/g, '').replace(',', '.') || '0');
+          }
+
+          // Appliquer la même logique que lors de la sauvegarde
+          if (prixExt >= 400 && prixInt >= 400) {
+            typeTravaux = 'Ext et Int';
+          } else if (prixExt >= 400) {
+            typeTravaux = 'Ext';
+          } else if (prixInt >= 400) {
+            typeTravaux = 'Int';
+          } else if (prixExt > 0 || prixInt > 0) {
+            typeTravaux = prixExt > prixInt ? 'Ext' : 'Int';
+          } else {
+            typeTravaux = 'N/A';
+          }
+        }
+
+        return `
         <tr class="hover:bg-slate-700/50">
           <td class="border: 1px solid var(--border-dark); px-4 py-3">
             <div class="text-sm font-medium text-white">${projet.client || 'Client'}</div>
@@ -18053,6 +18352,11 @@ function initializeApp() {
           </td>
           <td class="border: 1px solid var(--border-dark); px-4 py-3 text-sm text-white">
             ${projet.dateCreation ? (projet.dateCreation.includes('/') ? projet.dateCreation : new Date(projet.dateCreation).toLocaleDateString('fr-FR')) : 'N/A'}
+          </td>
+          <td class="border: 1px solid var(--border-dark); px-4 py-3 text-center">
+            <span class="px-3 py-1 rounded-full text-xs font-semibold" style="background: ${typeTravaux === 'Ext et Int' ? 'rgba(168, 85, 247, 0.2)' : typeTravaux === 'Ext' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(16, 185, 129, 0.2)'}; color: ${typeTravaux === 'Ext et Int' ? '#a855f7' : typeTravaux === 'Ext' ? '#3b82f6' : '#10b981'}; border: 1px solid ${typeTravaux === 'Ext et Int' ? 'rgba(168, 85, 247, 0.3)' : typeTravaux === 'Ext' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(16, 185, 129, 0.3)'};">
+              ${typeTravaux}
+            </span>
           </td>
           <td class="border: 1px solid var(--border-dark); px-4 py-3 text-sm font-medium text-white">
             ${formatCurrency(projet.total || 0)}
@@ -18074,11 +18378,42 @@ function initializeApp() {
             </div>
           </td>
         </tr>
-      `).join('');
+      `}).join('');
 
       // Vue mobile (cartes)
-      mobileList.innerHTML = projets.map(projet => `
-        <div class="project-mobile-card" onclick="openProjectDetails(${projet.id}, '${(projet.client || 'Client').replace(/'/g, "\\'")}', '${projet.telephone || ''}', ${projet.total || 0}, '${projet.dateCreation ? new Date(projet.dateCreation).toLocaleDateString('fr-FR') : 'N/A'}')">
+      mobileList.innerHTML = projets.map(projet => {
+        let typeTravaux = projet.typeTravaux;
+
+        // Si le type n'existe pas, le calculer à partir des totaux dans formData
+        if (!typeTravaux || typeTravaux === 'N/A') {
+          let prixExt = parseFloat(projet.totalExt || 0);
+          let prixInt = parseFloat(projet.totalInt || 0);
+
+          // Si totalExt/totalInt n'existent pas, essayer de lire depuis formData
+          if (prixExt === 0 && prixInt === 0 && projet.formData) {
+            const totalExtStr = projet.formData.totaux_ext?.total || '0';
+            const totalIntStr = projet.formData.totaux_int?.total || '0';
+
+            prixExt = parseFloat(String(totalExtStr).replace(/[$\s]/g, '').replace(',', '.') || '0');
+            prixInt = parseFloat(String(totalIntStr).replace(/[$\s]/g, '').replace(',', '.') || '0');
+          }
+
+          // Appliquer la même logique que lors de la sauvegarde
+          if (prixExt >= 400 && prixInt >= 400) {
+            typeTravaux = 'Ext et Int';
+          } else if (prixExt >= 400) {
+            typeTravaux = 'Ext';
+          } else if (prixInt >= 400) {
+            typeTravaux = 'Int';
+          } else if (prixExt > 0 || prixInt > 0) {
+            typeTravaux = prixExt > prixInt ? 'Ext' : 'Int';
+          } else {
+            typeTravaux = 'N/A';
+          }
+        }
+
+        return `
+        <div class="project-mobile-card" onclick="openProjectDetails(${projet.id}, '${(projet.client || 'Client').replace(/'/g, "\\'")}', '${projet.telephone || ''}', ${projet.total || 0}, '${projet.dateCreation ? new Date(projet.dateCreation).toLocaleDateString('fr-FR') : 'N/A'}', '${typeTravaux}')">
           <div class="project-card-header">
             <div style="flex: 1;">
               <div class="project-card-title">${projet.client || 'Client'}</div>
@@ -18090,6 +18425,11 @@ function initializeApp() {
             <div class="project-card-date">
               <i class="fas fa-calendar mr-1"></i>${projet.dateCreation ? new Date(projet.dateCreation).toLocaleDateString('fr-FR') : 'N/A'}
             </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="px-2 py-1 rounded-full text-xs font-semibold" style="background: ${typeTravaux === 'Ext et Int' ? 'rgba(168, 85, 247, 0.2)' : typeTravaux === 'Ext' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(16, 185, 129, 0.2)'}; color: ${typeTravaux === 'Ext et Int' ? '#a855f7' : typeTravaux === 'Ext' ? '#3b82f6' : '#10b981'}; border: 1px solid ${typeTravaux === 'Ext et Int' ? 'rgba(168, 85, 247, 0.3)' : typeTravaux === 'Ext' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(16, 185, 129, 0.3)'};">
+                ${typeTravaux}
+              </span>
+            </div>
             <div class="project-card-actions">
               <button class="project-action-btn edit-btn" onclick="event.stopPropagation(); chargerProjet(${projet.id})">
                 <i class="fas fa-edit"></i>
@@ -18100,14 +18440,14 @@ function initializeApp() {
             </div>
           </div>
         </div>
-      `).join('');
+      `}).join('');
       } catch (error) {
         error('Erreur affichage projets:', error);
       }
     }
 
     // Fonction pour ouvrir le popup de détails du projet (mobile)
-    function openProjectDetails(id, client, telephone, total, date) {
+    function openProjectDetails(id, client, telephone, total, date, typeTravaux = 'N/A') {
       const overlay = document.getElementById('project-details-overlay');
       const body = document.getElementById('project-details-body');
       const title = document.getElementById('project-details-title');
@@ -18129,9 +18469,15 @@ function initializeApp() {
               <span>${telephone}</span>
             </div>
             ` : ''}
-            <div class="flex items-center gap-2 text-sm text-gray-300">
+            <div class="flex items-center gap-2 text-sm text-gray-300 mb-2">
               <i class="fas fa-calendar" style="color: var(--primary-blue);"></i>
               <span>${date}</span>
+            </div>
+            <div class="flex items-center gap-2 text-sm text-gray-300">
+              <i class="fas fa-briefcase" style="color: var(--primary-purple);"></i>
+              <span class="px-3 py-1 rounded-full text-xs font-semibold" style="background: ${typeTravaux === 'Ext et Int' ? 'rgba(168, 85, 247, 0.2)' : typeTravaux === 'Ext' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(16, 185, 129, 0.2)'}; color: ${typeTravaux === 'Ext et Int' ? '#a855f7' : typeTravaux === 'Ext' ? '#3b82f6' : '#10b981'}; border: 1px solid ${typeTravaux === 'Ext et Int' ? 'rgba(168, 85, 247, 0.3)' : typeTravaux === 'Ext' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(16, 185, 129, 0.3)'};">
+                ${typeTravaux}
+              </span>
             </div>
           </div>
 
@@ -18532,10 +18878,15 @@ function initializeApp() {
       }
     }
 
-    // Mettre à jour le message de validation si la fonction existe
-    if (typeof updateClientInfoValidation === 'function') {
-      updateClientInfoValidation();
-    }
+    // Mettre à jour le message de validation et les boutons après un petit délai
+    setTimeout(() => {
+      if (typeof updateClientValidationMessage === 'function') {
+        updateClientValidationMessage();
+      }
+      if (typeof validateCompleterButton === 'function') {
+        validateCompleterButton();
+      }
+    }, 100);
 
     // Ajouter une indication visuelle dans le header
     const calculatorHeader = document.querySelector('.glass-card h1');
@@ -18543,8 +18894,7 @@ function initializeApp() {
       calculatorHeader.innerHTML = `Calculateur d'Estimation <span class="text-sm text-blue-600">(pour ${prenom} ${nom})</span>`;
     }
 
-    // Faire défiler vers les tabs pour commencer le calcul
-    document.querySelector('.tab-spacing').scrollIntoView({ behavior: 'smooth' });
+    // Pas de scroll - l'utilisateur reste où il est
   }
 
   function completeSubmission() {

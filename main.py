@@ -2679,7 +2679,8 @@ def evenements_a_completer(username: str):
     blacklisted_ids = get_blacklisted_ids(username)
     result = []
 
-    DISALLOWED = {"disponibilité estimation", "pap"}
+    # Mots à bannir: tout mot commençant par "dispo" ou "estim" (case-insensitive)
+    BANNED_WORD_STARTS = ["dispo", "estim", "pap"]
 
     for event in r.json().get("items", []):
         event_id = event.get("id")
@@ -2689,7 +2690,15 @@ def evenements_a_completer(username: str):
         summary = (event.get("summary") or "").strip()
         if not summary:
             continue
-        if summary.casefold() in {s.casefold() for s in DISALLOWED}:
+
+        # Vérifier si le titre contient des mots bannis (commençant par dispo, estim, ou pap)
+        summary_lower = summary.lower()
+        words_in_summary = summary_lower.split()
+        has_banned_word = any(
+            any(word.startswith(banned) for banned in BANNED_WORD_STARTS)
+            for word in words_in_summary
+        )
+        if has_banned_word:
             continue
 
         # Vérifier que le titre a EXACTEMENT 2 mots (prénom + nom)

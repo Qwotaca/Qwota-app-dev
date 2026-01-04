@@ -4127,12 +4127,17 @@ def envoyer_soumission_signee(
                 with open(soumissions_completes_file, "r", encoding="utf-8") as f:
                     soumissions_completes = json.load(f)
                     for soumission in soumissions_completes:
-                        if soumission.get("id") == soumission_id:
+                        # FIX: Chercher par num au lieu de id car les IDs peuvent différer
+                        if soumission.get("num") == num or soumission.get("id") == soumission_id:
                             soumission_complete_data = soumission.copy()  # Copier TOUTES les données
-                            print(f"[DEBUG] Données complètes trouvées pour ID {soumission_id}")
+                            print(f"[DEBUG] Données complètes trouvées pour num={num} (ID {soumission_id})")
                             print(f"[DEBUG] Produit: {soumission_complete_data.get('produit', 'VIDE')}")
                             print(f"[DEBUG] Part: {soumission_complete_data.get('part', 'VIDE')}")
                             print(f"[DEBUG] Item: {soumission_complete_data.get('item', 'VIDE')}")
+                            print(f"[DEBUG] Endroit: {soumission_complete_data.get('endroit', 'VIDE')}")
+                            print(f"[DEBUG] Payer par: {soumission_complete_data.get('payer_par', 'VIDE')}")
+                            print(f"[DEBUG] Date2: {soumission_complete_data.get('date2', 'VIDE')}")
+                            print(f"[DEBUG] Temps: {soumission_complete_data.get('temps', 'VIDE')}")
                             break
         except Exception as e:
             print(f"[ERREUR] Impossible de récupérer les données complètes: {e}")

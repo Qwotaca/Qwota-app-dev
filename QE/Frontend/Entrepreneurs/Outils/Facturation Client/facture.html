@@ -31,6 +31,79 @@
   <!-- Styles spécifiques à la Facturation Client -->
   <link rel="stylesheet" href="/facture.css">
 
+  <!-- Loading Animation Styles -->
+  <style>
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.95);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .loading-content {
+      text-align: center;
+      color: white;
+      animation: scaleIn 0.5s ease;
+    }
+
+    .loading-spinner {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.5rem;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 0 30px rgba(16, 185, 129, 0.5);
+      animation: pulse 1.5s ease infinite;
+    }
+
+    .loading-spinner i {
+      font-size: 32px;
+      color: white;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes scaleIn {
+      from {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 30px rgba(16, 185, 129, 0.5);
+      }
+      50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 50px rgba(16, 185, 129, 0.7);
+      }
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  </style>
 
 </head>
 
@@ -274,12 +347,12 @@
   </div>
 
   <script>
-    // ⚡ DÉSACTIVATION DES LOGS - Performance optimization
-    window.log = window.log || (() => {});
-    window.warn = window.warn || (() => {});
-    window.error = window.error || (() => {});
-    window.info = window.info || (() => {});
-    window.debug = window.debug || (() => {});
+    // ✅ ACTIVATION DES LOGS - Debug mode
+    window.log = console.log.bind(console);
+    window.warn = console.warn.bind(console);
+    window.error = console.error.bind(console);
+    window.info = console.info.bind(console);
+    window.debug = console.debug.bind(console);
 
     // Variables globales - Username is handled by common.js
 
@@ -303,6 +376,30 @@
     // Navigation: Retour aux outils
     function goBackToOutils() {
       window.history.back();
+    }
+
+    // Loading Animation Functions
+    function showLoadingAnimation(message = 'Envoi en cours...') {
+      const overlay = document.createElement('div');
+      overlay.className = 'loading-overlay';
+      overlay.id = 'loadingOverlay';
+      overlay.innerHTML = `
+        <div class="loading-content">
+          <div class="loading-spinner">
+            <i class="fas fa-paper-plane"></i>
+          </div>
+          <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">${message}</h2>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+    }
+
+    function hideLoadingAnimation() {
+      const overlay = document.getElementById('loadingOverlay');
+      if (overlay) {
+        overlay.remove();
+      }
     }
 
     // Fonction pour mettre à jour la date
@@ -708,7 +805,6 @@
         const btnText = btn.querySelector("span");
 
         btn.disabled = true;
-        btnText.textContent = "Envoi en cours...";
 
         // Récupère les valeurs des champs d'édition (ou cachés si pas encore sélectionné)
         const nom = document.getElementById("edit-nom").value || document.getElementById("input-nom").value;
@@ -723,10 +819,12 @@
 
         if (!emailClient) {
           alert("Email client introuvable dans la soumission sélectionnée.");
-          btnText.textContent = "Envoyer au client";
           btn.disabled = false;
           return;
         }
+
+        // Afficher l'animation d'envoi
+        showLoadingAnimation(`Envoi de la facture à ${prenom} ${nom}...`);
 
         try {
           // Récupérer le numéro de soumission depuis les données du client
@@ -741,12 +839,13 @@
             depot,
             telephone,
             courriel,
-            endroit,
+            endroit: endroit || selectedClientData?.endroit || "",
             numero_soumission: numeroSoumission,
             item: selectedClientData?.item || "",
             part: selectedClientData?.part || "",
             produit: selectedClientData?.produit || "",
-            payer_par: selectedClientData?.payer_par || ""
+            payer_par: selectedClientData?.payer_par || "",
+            date2: selectedClientData?.date2 || ""
           };
 
           log("[DEBUG] Données facture envoyées:", dataFacture);
@@ -779,8 +878,12 @@
           if (!emailResponse.ok) {
             const errorData = await emailResponse.text();
             error("[ERROR] Erreur backend:", errorData);
+            hideLoadingAnimation();
             throw new Error(`Erreur lors de l'envoi de l'email: ${errorData}`);
           }
+
+          // Masquer l'animation et afficher le succès
+          hideLoadingAnimation();
 
           btnText.innerHTML = `Envoyé <svg class="w-4 h-4 inline ml-1 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
@@ -825,6 +928,7 @@
           chargerFactures();
 
         } catch (error) {
+          hideLoadingAnimation();
           error("Erreur envoi facture :", error);
           btnText.textContent = "Erreur lors de l'envoi";
           setTimeout(() => {
@@ -859,13 +963,17 @@
               email: document.getElementById("edit-email").value || document.getElementById("input-email").value,
               telephone: document.getElementById("edit-telephone").value || "",
               courriel: document.getElementById("edit-email").value || document.getElementById("input-email").value,
-              endroit: document.getElementById("edit-endroit").value || "",
+              endroit: document.getElementById("edit-endroit").value || selectedClientData?.endroit || "",
               // Ajouter les champs depuis les données complètes du client sélectionné
               item: selectedClientData?.item || "",
               part: selectedClientData?.part || "",
               produit: selectedClientData?.produit || "",
-              payer_par: selectedClientData?.payer_par || ""
+              payer_par: selectedClientData?.payer_par || "",
+              date2: selectedClientData?.date2 || ""
             };
+
+            log("[DEBUG VOIR PDF] Données envoyées pour génération PDF:", data);
+            log("[DEBUG VOIR PDF] selectedClientData:", selectedClientData);
 
             // Créer le PDF de prévisualisation
             const response = await fetch(`/generate-facture-preview?username=${encodeURIComponent(window.username)}`, {

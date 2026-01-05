@@ -1148,6 +1148,8 @@ def get_coaches_list_api():
                     team_plaintes_total = 0
                     team_contrat_moyen_total = 0
                     team_soumissions_signees = 0
+                    team_soumissions_en_attente = 0
+                    team_soumissions_perdues = 0
                     team_taux_marketing_total = 0
                     team_taux_vente_total = 0
                     team_prod_horaire_total = 0
@@ -1168,6 +1170,8 @@ def get_coaches_list_api():
                             team_plaintes_total += stats["satisfaction"]["plaintes_actuel"]
                             team_contrat_moyen_total += stats["metriques"]["contrat_moyen"]
                             team_soumissions_signees += stats["status_soumissions"]["signees"]
+                            team_soumissions_en_attente += stats["status_soumissions"]["en_attente"]
+                            team_soumissions_perdues += stats["status_soumissions"]["perdus"]
                             team_taux_marketing_total += stats["metriques"]["taux_marketing"]
                             team_taux_vente_total += stats["metriques"]["taux_vente"]
                             team_prod_horaire_total += stats["metriques"]["prod_horaire"]
@@ -1242,7 +1246,9 @@ def get_coaches_list_api():
                             "pourcentage": round((team_ca_actuel / team_objectif * 100), 2) if team_objectif > 0 else 0
                         },
                         "status_soumissions": {
-                            "signees": team_soumissions_signees
+                            "signees": team_soumissions_signees,
+                            "en_attente": team_soumissions_en_attente,
+                            "perdus": team_soumissions_perdues
                         },
                         "satisfaction": {
                             "etoiles_moyennes": round(etoiles_moyennes_equipe, 2),
@@ -1257,6 +1263,9 @@ def get_coaches_list_api():
                             "contrat_moyen": round(contrat_moyen_equipe, 2),
                             "estimations": round(estimation_moyenne_equipe, 2)
                         },
+                        "soumissions_signees": team_soumissions_signees,
+                        "soumissions_en_attente": team_soumissions_en_attente,
+                        "soumissions_perdues": team_soumissions_perdues,
                         "grade": "coach",
                         "nb_entrepreneurs": nb_entrepreneurs
                     }
@@ -1402,7 +1411,7 @@ def calculate_dashboard_stats(username: str, start_date=None, end_date=None) -> 
                     attente = filtered
                 stats["status_soumissions"]["en_attente"] = len(attente)
 
-        perdus_path = os.path.join(base_cloud, "clients_perdus", username, "clients_perdus.json")
+        perdus_path = os.path.join(base_cloud, "clients_perdus", username, "clients.json")
         if os.path.exists(perdus_path):
             with open(perdus_path, 'r', encoding='utf-8') as f:
                 perdus = json.load(f)
@@ -3013,7 +3022,7 @@ def get_clients_by_username(username: str):
                 result["clients"].extend(prospects)
 
         # Clients perdus
-        perdus_path = os.path.join(base_cloud, "clients_perdus", username, "clients_perdus.json")
+        perdus_path = os.path.join(base_cloud, "clients_perdus", username, "clients.json")
         if os.path.exists(perdus_path):
             with open(perdus_path, 'r', encoding='utf-8') as f:
                 perdus = json.load(f)
@@ -6479,7 +6488,7 @@ def api_get_coach_equipe_dashboard(
             except:
                 pass
 
-        perdus_path = os.path.join(base_cloud, "clients_perdus", username, "clients_perdus.json")
+        perdus_path = os.path.join(base_cloud, "clients_perdus", username, "clients.json")
         if os.path.exists(perdus_path):
             try:
                 with open(perdus_path, 'r', encoding='utf-8') as f:

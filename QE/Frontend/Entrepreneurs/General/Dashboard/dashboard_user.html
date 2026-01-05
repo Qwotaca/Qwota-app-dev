@@ -3118,18 +3118,13 @@
       // Si pas trouvé, calculer depuis rpoData.weekly
       if (heuresPAP === 0 && rpoData?.weekly) {
         log('[DEBUG] Calcul depuis rpoData.weekly');
-        // Mois valides pour le calcul (déc 2025 à août 2026)
-        const moisValides = ['0', '1', '2', '3', '4', '5', '6', '7'];
+        // Compter TOUTES les semaines de l'année (déc 2025 à déc 2026)
 
         for (const monthKey in rpoData.weekly) {
-          // Ignorer les mois hors période valide (sept-nov 2026)
-          if (!moisValides.includes(monthKey)) {
-            continue;
-          }
-
           for (const weekKey in rpoData.weekly[monthKey]) {
             const hMktg = rpoData.weekly[monthKey][weekKey].h_marketing;
-            if (hMktg && hMktg !== '-') {
+            // Compter toutes les valeurs sauf "-" (même 0 compte comme une semaine faite)
+            if (hMktg !== undefined && hMktg !== null && hMktg !== '-') {
               heuresPAP += parseFloat(hMktg) || 0;
               nombreSemaines++;
             }
@@ -3143,9 +3138,29 @@
       const heuresPAPSemaine = nombreSemaines > 0 ? heuresPAP / nombreSemaines : 0;
       log('[DEBUG DASHBOARD] heuresPAPSemaine (moyenne):', heuresPAPSemaine);
 
-      // Calculer Prod Horaire dynamiquement: CA / Heures de PAP
-      const prodHoraire = heuresPAP > 0 ? (montantSigneNum / heuresPAP) : 0;
-      log('[DEBUG] Prod Horaire calculé:', prodHoraire, '(CA:', montantSigneNum, '/ H PAP:', heuresPAP, ')');
+      // Calculer Prod Horaire depuis les valeurs saisies dans RPO (mai à septembre)
+      let totalProdHoraire = 0;
+      let nombreSemainesProdHoraire = 0;
+
+      if (rpoData?.weekly) {
+        // Mois avec prod_horaire: mai à septembre 2026 (mois 4 à 8)
+        for (let monthIndex = 4; monthIndex <= 8; monthIndex++) {
+          const monthKey = String(monthIndex);
+          if (rpoData.weekly[monthKey]) {
+            for (const weekKey in rpoData.weekly[monthKey]) {
+              const prodH = rpoData.weekly[monthKey][weekKey].prod_horaire;
+              // Compter seulement les valeurs saisies (différentes de 0, undefined, null)
+              if (prodH !== undefined && prodH !== null && prodH !== 0 && prodH !== '-') {
+                totalProdHoraire += parseFloat(prodH) || 0;
+                nombreSemainesProdHoraire++;
+              }
+            }
+          }
+        }
+      }
+
+      const prodHoraire = nombreSemainesProdHoraire > 0 ? (totalProdHoraire / nombreSemainesProdHoraire) : 0;
+      log('[DEBUG] Prod Horaire calculé depuis RPO:', prodHoraire, `(${totalProdHoraire} / ${nombreSemainesProdHoraire} semaines)`);
 
       // Afficher Prod Horaire
       const prodHoraireEl = document.getElementById('prodHoraire');
@@ -6225,6 +6240,9 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
     dashboardTypeMenu.classList.remove('show');
   }
 
+  // Rendre la fonction accessible globalement pour voirDashboard()
+  window.selectDashboardType = selectDashboardType;
+
   function selectEntrepreneur(username, fullName) {
     const dropdownToggle = document.getElementById('coach-dropdown-toggle');
     const dropdownMenu = document.getElementById('coach-dropdown-menu');
@@ -6259,6 +6277,9 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
       }
     }
   }
+
+  // Rendre la fonction accessible globalement pour voirDashboard()
+  window.selectEntrepreneur = selectEntrepreneur;
 
   // Fonction pour charger la liste des coachs
   async function loadCoaches() {
@@ -9273,7 +9294,7 @@ function getStatData(statId, ca, soumissions, metriques, satisfaction, employes)
       label: 'Estimations',
       icon: 'fa-file-alt',
       color: 'purple',
-      value: metriques.estimations || 0
+      value: (soumissions.signees || 0) + (soumissions.en_attente || 0) + (soumissions.perdus || 0)
     },
     'taux_vente': {
       label: 'Taux vente',
@@ -9370,21 +9391,73 @@ function getStatData(statId, ca, soumissions, metriques, satisfaction, employes)
   return statMap[statId] || null;
 }
 
-function voirDashboard(usernameParam) {
+async function voirDashboard(usernameParam) {
   log('Redirection vers dashboard pour:', usernameParam);
 
-  // Stocker le username de l'entrepreneur à visualiser
-  sessionStorage.setItem('viewEntrepreneurUsername', usernameParam);
+  // Vérifier si on est déjà sur la page dashboard
+  const currentHash = window.parent ? window.parent.location.hash : window.location.hash;
+  const isOnDashboard = currentHash === '#/dashboard';
 
-  // Rediriger vers le dashboard via le routeur parent (même logique que completerSoumission dans calcul.html)
-  if (window.parent && window.parent !== window) {
-    // On est dans un iframe - utiliser le hash du parent pour déclencher le routeur
-    window.parent.location.hash = '#/dashboard';
+  if (isOnDashboard) {
+    // On est déjà sur le dashboard - changer la vue directement sans recharger
+    log('✅ Déjà sur dashboard - changement de vue direct');
+
+    // Afficher un loader pendant la transition
+    const loader = document.createElement('div');
+    loader.id = 'dashboard-transition-loader';
+    loader.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    `;
+    loader.innerHTML = `
+      <div style="text-align: center;">
+        <div class="spinner" style="border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid #60a5fa; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+        <p style="color: white; font-size: 16px; font-weight: 500;">Chargement du dashboard...</p>
+      </div>
+    `;
+    document.body.appendChild(loader);
+
+    // Attendre un instant pour que le loader s'affiche
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Changer le type de dashboard vers "entrepreneur"
+    selectDashboardType('entrepreneur');
+
+    // Attendre que les entrepreneurs soient chargés
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Sélectionner l'entrepreneur
+    selectEntrepreneur(usernameParam);
+
+    // Attendre que le dashboard se charge
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Retirer le loader
+    loader.remove();
   } else {
-    // Fallback si pas dans un iframe - garder le user du coach actuel
-    const urlParams = new URLSearchParams(window.location.search);
-    const coachUser = urlParams.get('user') || coachUsername;
-    window.location.href = `/apppccoach?user=${coachUser}#/dashboard`;
+    // On n'est pas sur le dashboard - rediriger normalement
+    log('🔄 Navigation vers dashboard');
+
+    // Stocker le username de l'entrepreneur à visualiser
+    sessionStorage.setItem('viewEntrepreneurUsername', usernameParam);
+
+    // Rediriger vers le dashboard via le routeur parent
+    if (window.parent && window.parent !== window) {
+      window.parent.location.hash = '#/dashboard';
+    } else {
+      const urlParams = new URLSearchParams(window.location.search);
+      const coachUser = urlParams.get('user') || coachUsername;
+      window.location.href = `/apppccoach?user=${coachUser}#/dashboard`;
+    }
   }
 }
 

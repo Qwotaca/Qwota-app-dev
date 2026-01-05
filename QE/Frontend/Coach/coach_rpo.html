@@ -9453,8 +9453,10 @@ async function loadObjectifsMensuels() {
                          'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
       const monthName = monthNames[monthIndex];
 
-      // Obtenir le label de l'objectif pour ce mois (basé sur la logique du RPO)
-      const objectifLabel = getObjectifLabel2ForMonth(monthIndex);
+      // Obtenir les labels des 2 objectifs pour ce mois
+      const objectifLabel1 = getObjectifLabel1ForMonth(monthIndex);
+      const objectifLabel2 = getObjectifLabel2ForMonth(monthIndex);
+      const hasObjectif2 = objectifLabel2 !== '';
 
       html += `
         <div class="glass-card shadow" style="margin-bottom: 1.5rem; border: ${i === 0 ? '2px solid #60a5fa' : '1px solid rgba(51, 65, 85, 0.5)'};">
@@ -9467,8 +9469,9 @@ async function loadObjectifsMensuels() {
                 </h4>
                 ${i === 0 ? '<span style="background: #60a5fa; color: white; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">Mois actuel</span>' : ''}
               </div>
-              <div style="color: var(--text-gray); font-size: 0.875rem; font-weight: 600;">
-                ${objectifLabel}
+              <div style="color: var(--text-gray); font-size: 0.875rem; font-weight: 600; display: flex; gap: 1rem;">
+                <span>${objectifLabel1}</span>
+                ${hasObjectif2 ? `<span style="color: #60a5fa;">•</span><span>${objectifLabel2}</span>` : ''}
               </div>
             </div>
           </div>
@@ -9476,30 +9479,64 @@ async function loadObjectifsMensuels() {
             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
       `;
 
-      // Ajouter un input pour chaque entrepreneur
+      // Ajouter les inputs pour chaque entrepreneur
       for (const entrepreneur of entrepreneurs) {
-        const existingValue = existingObjectifs[monthKey] && existingObjectifs[monthKey][entrepreneur.username]
-          ? existingObjectifs[monthKey][entrepreneur.username]
+        const existingObj1 = existingObjectifs[monthKey] && existingObjectifs[monthKey][entrepreneur.username] && existingObjectifs[monthKey][entrepreneur.username].objectif1
+          ? existingObjectifs[monthKey][entrepreneur.username].objectif1
+          : 0;
+        const existingObj2 = existingObjectifs[monthKey] && existingObjectifs[monthKey][entrepreneur.username] && existingObjectifs[monthKey][entrepreneur.username].objectif2
+          ? existingObjectifs[monthKey][entrepreneur.username].objectif2
           : 0;
 
         html += `
           <div style="background: rgba(148, 163, 184, 0.05); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 0.75rem; padding: 1rem;">
-            <label style="display: block; color: var(--text-gray); font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">
+            <label style="display: block; color: var(--text-light); font-size: 0.875rem; font-weight: 700; margin-bottom: 0.75rem;">
               ${entrepreneur.full_name}
             </label>
-            <input
-              type="text"
-              class="objectif-mensuel-input"
-              data-month="${monthKey}"
-              data-entrepreneur="${entrepreneur.username}"
-              data-raw-value="${existingValue}"
-              value="${formatObjectifValue(existingValue, monthIndex)}"
-              placeholder="0"
-              style="width: 100%; background: var(--bg-card); border: 2px solid rgba(148, 163, 184, 0.3); border-radius: 0.5rem; padding: 0.75rem; color: var(--text-light); font-size: 1rem; font-weight: 600; transition: all 0.2s;"
-              onfocus="this.value = this.dataset.rawValue; this.select(); this.style.borderColor = '#60a5fa';"
-              onblur="this.style.borderColor = 'rgba(148, 163, 184, 0.3)';"
-              oninput="updateObjectifMensuelValue(this, ${monthIndex})"
-            />
+
+            <!-- Objectif 1 -->
+            <div style="margin-bottom: ${hasObjectif2 ? '0.75rem' : '0'};">
+              <label style="display: block; color: var(--text-gray); font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">
+                ${objectifLabel1}
+              </label>
+              <input
+                type="text"
+                class="objectif-mensuel-input"
+                data-month="${monthKey}"
+                data-entrepreneur="${entrepreneur.username}"
+                data-objectif="objectif1"
+                data-raw-value="${existingObj1}"
+                value="${formatObjectifValue(existingObj1, monthIndex)}"
+                placeholder="0"
+                style="width: 100%; background: var(--bg-card); border: 2px solid rgba(148, 163, 184, 0.3); border-radius: 0.5rem; padding: 0.75rem; color: var(--text-light); font-size: 1rem; font-weight: 600; transition: all 0.2s;"
+                onfocus="this.value = this.dataset.rawValue; this.select(); this.style.borderColor = '#60a5fa';"
+                onblur="this.style.borderColor = 'rgba(148, 163, 184, 0.3)';"
+                oninput="updateObjectifMensuelValue(this, ${monthIndex})"
+              />
+            </div>
+
+            ${hasObjectif2 ? `
+            <!-- Objectif 2 -->
+            <div>
+              <label style="display: block; color: var(--text-gray); font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">
+                ${objectifLabel2}
+              </label>
+              <input
+                type="text"
+                class="objectif-mensuel-input"
+                data-month="${monthKey}"
+                data-entrepreneur="${entrepreneur.username}"
+                data-objectif="objectif2"
+                data-raw-value="${existingObj2}"
+                value="${formatObjectifValue(existingObj2, monthIndex)}"
+                placeholder="0"
+                style="width: 100%; background: var(--bg-card); border: 2px solid rgba(148, 163, 184, 0.3); border-radius: 0.5rem; padding: 0.75rem; color: var(--text-light); font-size: 1rem; font-weight: 600; transition: all 0.2s;"
+                onfocus="this.value = this.dataset.rawValue; this.select(); this.style.borderColor = '#60a5fa';"
+                onblur="this.style.borderColor = 'rgba(148, 163, 184, 0.3)';"
+                oninput="updateObjectifMensuelValue(this, ${monthIndex})"
+              />
+            </div>
+            ` : ''}
           </div>
         `;
       }
@@ -9541,6 +9578,24 @@ async function loadObjectifsMensuels() {
   }
 }
 
+function getObjectifLabel1ForMonth(monthIndex) {
+  const labels = [
+    'HEURES PÀP',           // Janvier
+    'HEURES PÀP',           // Février
+    'Estimations',          // Mars
+    'Ventes',               // Avril
+    'Ventes',               // Mai
+    'Ventes',               // Juin
+    'Ventes',               // Juillet
+    'Ventes',               // Août
+    '$ Produit',            // Septembre
+    'HEURES PÀP',           // Octobre
+    'HEURES PÀP',           // Novembre
+    'HEURES PÀP'            // Décembre
+  ];
+  return labels[monthIndex];
+}
+
 function getObjectifLabel2ForMonth(monthIndex) {
   const labels = [
     'HEURES PÀP (REP)',     // Janvier
@@ -9549,7 +9604,7 @@ function getObjectifLabel2ForMonth(monthIndex) {
     'Peintres',             // Avril
     'Prod Horaire',         // Mai
     'Prod Horaire',         // Juin
-    'Prod Horaire',         // Juillet
+    '$ Produit',            // Juillet
     '$ Produit',            // Août
     '',                     // Septembre - pas de 2e objectif
     '$ Vendus',             // Octobre
@@ -9606,13 +9661,18 @@ async function saveObjectifsMensuels() {
     inputs.forEach(input => {
       const month = input.dataset.month;
       const entrepreneur = input.dataset.entrepreneur;
+      const objectif = input.dataset.objectif; // "objectif1" or "objectif2"
       const value = parseFloat(input.dataset.rawValue) || 0;
 
       if (!objectifs[month]) {
         objectifs[month] = {};
       }
 
-      objectifs[month][entrepreneur] = value;
+      if (!objectifs[month][entrepreneur]) {
+        objectifs[month][entrepreneur] = {};
+      }
+
+      objectifs[month][entrepreneur][objectif] = value;
     });
 
     const response = await fetch('/api/coach/objectifs-mensuels', {

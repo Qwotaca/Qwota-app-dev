@@ -9550,11 +9550,19 @@ function displayObjectifsMensuelsForMonth(monthIndex) {
             <h4 style="color: var(--text-light); font-weight: 700; font-size: 1.125rem; margin: 0;">
               ${monthName} ${year}
             </h4>
+            <div style="color: var(--text-gray); font-size: 0.875rem; font-weight: 600; display: flex; gap: 0.75rem; margin-left: 1rem;">
+              <span>${objectifLabel1}</span>
+              ${hasObjectif2 ? `<span style="color: #60a5fa;">•</span><span>${objectifLabel2}</span>` : ''}
+            </div>
           </div>
-          <div style="color: var(--text-gray); font-size: 0.875rem; font-weight: 600; display: flex; gap: 1rem;">
-            <span>${objectifLabel1}</span>
-            ${hasObjectif2 ? `<span style="color: #60a5fa;">•</span><span>${objectifLabel2}</span>` : ''}
-          </div>
+          <button
+            id="modify-objectifs-btn-${monthKey}"
+            onclick="toggleModifyObjectifsMode('${monthKey}')"
+            style="background: rgba(148, 163, 184, 0.15); color: var(--text-gray); border: 2px solid rgba(148, 163, 184, 0.3); border-radius: 0.5rem; padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;"
+          >
+            <i class="fas fa-edit"></i>
+            <span>Modifier</span>
+          </button>
         </div>
       </div>
       <div class="p-6" style="background: var(--bg-card); border-radius: 0 0 1rem 1rem;">
@@ -9590,7 +9598,8 @@ function displayObjectifsMensuelsForMonth(monthIndex) {
             data-raw-value="${existingObj1}"
             value="${formatObjectifValue(existingObj1, monthIndex, 'objectif1')}"
             placeholder="0"
-            style="width: 100%; background: var(--bg-card); border: 2px solid rgba(148, 163, 184, 0.3); border-radius: 0.5rem; padding: 0.75rem; color: var(--text-light); font-size: 1rem; font-weight: 600; transition: all 0.2s;"
+            disabled
+            style="width: 100%; background: rgba(148, 163, 184, 0.1); border: 2px solid rgba(148, 163, 184, 0.2); border-radius: 0.5rem; padding: 0.75rem; color: rgba(148, 163, 184, 0.6); font-size: 1rem; font-weight: 600; transition: all 0.2s; cursor: not-allowed;"
             onfocus="this.value = this.dataset.rawValue; this.select(); this.style.borderColor = '#60a5fa';"
             onblur="this.style.borderColor = 'rgba(148, 163, 184, 0.3)';"
             oninput="updateObjectifMensuelValue(this, ${monthIndex})"
@@ -9612,7 +9621,8 @@ function displayObjectifsMensuelsForMonth(monthIndex) {
             data-raw-value="${existingObj2}"
             value="${formatObjectifValue(existingObj2, monthIndex, 'objectif2')}"
             placeholder="0"
-            style="width: 100%; background: var(--bg-card); border: 2px solid rgba(148, 163, 184, 0.3); border-radius: 0.5rem; padding: 0.75rem; color: var(--text-light); font-size: 1rem; font-weight: 600; transition: all 0.2s;"
+            disabled
+            style="width: 100%; background: rgba(148, 163, 184, 0.1); border: 2px solid rgba(148, 163, 184, 0.2); border-radius: 0.5rem; padding: 0.75rem; color: rgba(148, 163, 184, 0.6); font-size: 1rem; font-weight: 600; transition: all 0.2s; cursor: not-allowed;"
             onfocus="this.value = this.dataset.rawValue; this.select(); this.style.borderColor = '#60a5fa';"
             onblur="this.style.borderColor = 'rgba(148, 163, 184, 0.3)';"
             oninput="updateObjectifMensuelValue(this, ${monthIndex})"
@@ -9627,20 +9637,6 @@ function displayObjectifsMensuelsForMonth(monthIndex) {
         </div>
       </div>
     </div>
-
-    <!-- Bouton de sauvegarde en bas -->
-    <div style="display: flex; justify-content: center; margin-top: 2rem; padding-bottom: 2rem;">
-      <button
-        id="save-objectifs-mensuels-btn"
-        onclick="saveObjectifsMensuels()"
-        style="background: linear-gradient(135deg, #60a5fa, #3b82f6); color: white; padding: 1rem 3rem; border-radius: 0.75rem; font-weight: 700; font-size: 1rem; border: none; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);"
-        onmouseover="this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 6px 16px rgba(96, 165, 250, 0.4)';"
-        onmouseout="this.style.transform = 'translateY(0)'; this.style.boxShadow = '0 4px 12px rgba(96, 165, 250, 0.3)';"
-      >
-        <i class="fas fa-save"></i>
-        <span style="margin-left: 0.5rem;">Enregistrer les objectifs</span>
-      </button>
-    </div>
   `;
 
   container.innerHTML = html;
@@ -9648,6 +9644,118 @@ function displayObjectifsMensuelsForMonth(monthIndex) {
 
 function changeObjectifsMensuelsMonth(monthIndex) {
   displayObjectifsMensuelsForMonth(monthIndex);
+}
+
+function toggleModifyObjectifsMode(monthKey) {
+  const btn = document.getElementById(`modify-objectifs-btn-${monthKey}`);
+  const inputs = document.querySelectorAll(`.objectif-mensuel-input[data-month="${monthKey}"]`);
+
+  const isModifyMode = btn.querySelector('span').textContent === 'Modifier';
+
+  if (isModifyMode) {
+    // Activer le mode édition
+    btn.style.background = 'linear-gradient(135deg, #60a5fa, #3b82f6)';
+    btn.style.color = 'white';
+    btn.style.borderColor = '#60a5fa';
+    btn.querySelector('i').className = 'fas fa-save';
+    btn.querySelector('span').textContent = 'Enregistrer';
+
+    // Activer les inputs
+    inputs.forEach(input => {
+      input.disabled = false;
+      input.style.background = 'var(--bg-card)';
+      input.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+      input.style.color = 'var(--text-light)';
+      input.style.cursor = 'text';
+    });
+  } else {
+    // Sauvegarder et désactiver le mode édition
+    saveObjectifsMensuelsForMonth(monthKey).then(success => {
+      if (success) {
+        btn.style.background = 'rgba(148, 163, 184, 0.15)';
+        btn.style.color = 'var(--text-gray)';
+        btn.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+        btn.querySelector('i').className = 'fas fa-edit';
+        btn.querySelector('span').textContent = 'Modifier';
+
+        // Désactiver les inputs
+        inputs.forEach(input => {
+          input.disabled = true;
+          input.style.background = 'rgba(148, 163, 184, 0.1)';
+          input.style.borderColor = 'rgba(148, 163, 184, 0.2)';
+          input.style.color = 'rgba(148, 163, 184, 0.6)';
+          input.style.cursor = 'not-allowed';
+        });
+      }
+    });
+  }
+}
+
+async function saveObjectifsMensuelsForMonth(monthKey) {
+  try {
+    const coachUsername = window.username || localStorage.getItem('username');
+    const inputs = document.querySelectorAll(`.objectif-mensuel-input[data-month="${monthKey}"]`);
+
+    // Créer la structure de données pour ce mois
+    const monthObjectifs = {};
+
+    inputs.forEach(input => {
+      const entrepreneur = input.dataset.entrepreneur;
+      const objectif = input.dataset.objectif; // "objectif1" or "objectif2"
+      const value = parseFloat(input.dataset.rawValue) || 0;
+
+      if (!monthObjectifs[entrepreneur]) {
+        monthObjectifs[entrepreneur] = {};
+      }
+
+      monthObjectifs[entrepreneur][objectif] = value;
+    });
+
+    // Charger les objectifs existants
+    const objectifsResponse = await fetch(`/api/coach/objectifs-mensuels?coach_username=${coachUsername}`);
+    const objectifsData = await objectifsResponse.json();
+    const allObjectifs = objectifsData.success && objectifsData.objectifs ? objectifsData.objectifs : {};
+
+    // Mettre à jour seulement ce mois
+    allObjectifs[monthKey] = monthObjectifs;
+
+    // Sauvegarder
+    const response = await fetch('/api/coach/objectifs-mensuels', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        coach_username: coachUsername,
+        objectifs: allObjectifs
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Mettre à jour les données globales
+      objectifsMensuelsData = allObjectifs;
+
+      // Afficher un message de succès temporaire
+      const btn = document.getElementById(`modify-objectifs-btn-${monthKey}`);
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-check"></i><span>Enregistré!</span>';
+
+      setTimeout(() => {
+        btn.innerHTML = originalHTML;
+      }, 2000);
+
+      return true;
+    } else {
+      throw new Error(data.error || 'Erreur lors de l\'enregistrement');
+    }
+
+  } catch (error) {
+    console.error('[OBJECTIFS MENSUELS] Erreur sauvegarde:', error);
+    alert('Erreur lors de l\'enregistrement des objectifs: ' + error.message);
+    return false;
+  }
 }
 
 function getObjectifLabel1ForMonth(monthIndex) {
@@ -9726,85 +9834,6 @@ function formatObjectifValue(value, monthIndex, objectifType = 'objectif1') {
 function updateObjectifMensuelValue(input, monthIndex) {
   const rawValue = input.value.replace(/[^\d.]/g, '');
   input.dataset.rawValue = rawValue || '0';
-}
-
-async function saveObjectifsMensuels() {
-  const saveBtn = document.getElementById('save-objectifs-mensuels-btn');
-  const originalHTML = saveBtn.innerHTML;
-
-  saveBtn.disabled = true;
-  saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span style="margin-left: 0.5rem;">Enregistrement...</span>';
-
-  try {
-    const coachUsername = window.username || localStorage.getItem('username');
-    const inputs = document.querySelectorAll('.objectif-mensuel-input');
-
-    const objectifs = {};
-
-    inputs.forEach(input => {
-      const month = input.dataset.month;
-      const entrepreneur = input.dataset.entrepreneur;
-      const objectif = input.dataset.objectif; // "objectif1" or "objectif2"
-      const value = parseFloat(input.dataset.rawValue) || 0;
-
-      if (!objectifs[month]) {
-        objectifs[month] = {};
-      }
-
-      if (!objectifs[month][entrepreneur]) {
-        objectifs[month][entrepreneur] = {};
-      }
-
-      objectifs[month][entrepreneur][objectif] = value;
-    });
-
-    const response = await fetch('/api/coach/objectifs-mensuels', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        coach_username: coachUsername,
-        objectifs: objectifs
-      })
-    });
-
-    const data = await response.json();
-
-    if (data.success) {
-      // Reformater tous les inputs avec les valeurs sauvegardées
-      const now = getTorontoNow();
-      const currentMonth = now.getMonth();
-
-      inputs.forEach(input => {
-        const monthKey = input.dataset.month;
-        const monthParts = monthKey.split('-');
-        const monthIndex = parseInt(monthParts[1]) - 1;
-        const objectifType = input.dataset.objectif; // 'objectif1' or 'objectif2'
-        const value = parseFloat(input.dataset.rawValue) || 0;
-        input.value = formatObjectifValue(value, monthIndex, objectifType);
-      });
-
-      // Message de succès temporaire
-      saveBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-      saveBtn.innerHTML = '<i class="fas fa-check"></i><span style="margin-left: 0.5rem;">Enregistré avec succès!</span>';
-
-      setTimeout(() => {
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = originalHTML;
-        saveBtn.style.background = 'linear-gradient(135deg, #60a5fa, #3b82f6)';
-      }, 2000);
-
-    } else {
-      throw new Error(data.error || 'Erreur lors de l\'enregistrement');
-    }
-
-  } catch (error) {
-    console.error('[OBJECTIFS MENSUELS] Erreur sauvegarde:', error);
-    alert('Erreur lors de l\'enregistrement des objectifs: ' + error.message);
-    saveBtn.disabled = false;
-    saveBtn.innerHTML = originalHTML;
-  }
 }
 
 </script>

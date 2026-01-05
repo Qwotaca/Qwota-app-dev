@@ -6327,6 +6327,7 @@ def api_get_coach_equipe_dashboard(
                 "heures_pap_semaine": 0,
                 "taux_vente_moyen": 0,
                 "prod_horaire_moyen": 0,
+                "taux_marketing_moyen": 0,
                 "pourcentage_objectif": 0,
                 "total_signees": 0,
                 "total_en_attente": 0,
@@ -6365,6 +6366,8 @@ def api_get_coach_equipe_dashboard(
     team_pourcentage_count = 0
     team_estimation_count = 0
     team_total_objectif = 0
+    team_total_taux_marketing = 0
+    team_taux_marketing_count = 0
     # Tableau pour le $ produit par mois (13 mois: Déc 2025 + Jan-Déc 2026)
     produit_mensuel = [0] * 13
 
@@ -6626,22 +6629,8 @@ def api_get_coach_equipe_dashboard(
             print(f"[DEBUG OBJECTIF ERROR] {username} -> Erreur chargement RPO: {e}")
             pass
 
-        # 9. ESTIMATIONS (soumissions complètes) - Compte le nombre d'estimations
-        estimation_count = 0
-        completes_path = os.path.join(base_cloud, "soumissions_completes", username, "soumissions.json")
-        if os.path.exists(completes_path):
-            try:
-                with open(completes_path, 'r', encoding='utf-8') as f:
-                    completes = json.load(f)
-                    for s in completes:
-                        if start_date:
-                            date_str = s.get("date", "")
-                            date_obj = parse_date_flexible(date_str)
-                            if date_obj and (date_obj < start_date or date_obj > end_date):
-                                continue
-                        estimation_count += 1
-            except:
-                pass
+        # 9. ESTIMATIONS - Total de toutes les estimations (signées + en_attente + perdues)
+        estimation_count = signees_count + attente_count + perdus_count
 
         # 8. PAIEMENTS RÉCOLTÉS (facturation)
         paiements_recoltes = 0.0
@@ -6711,6 +6700,9 @@ def api_get_coach_equipe_dashboard(
         if pourcentage_objectif > 0:
             team_total_pourcentage_objectif += pourcentage_objectif
             team_pourcentage_count += 1
+        if taux_marketing > 0:
+            team_total_taux_marketing += taux_marketing
+            team_taux_marketing_count += 1
 
         entrepreneurs_data.append({
             "username": username,
@@ -6766,6 +6758,7 @@ def api_get_coach_equipe_dashboard(
     heures_pap_moyenne_equipe = round(team_total_heures_pap / nb_entrepreneurs, 2) if nb_entrepreneurs > 0 else 0
     prod_horaire_moyen_equipe = round(team_total_prod_horaire / team_prod_horaire_count, 2) if team_prod_horaire_count > 0 else 0
     pourcentage_objectif_moyen_equipe = round(team_total_pourcentage_objectif / team_pourcentage_count, 2) if team_pourcentage_count > 0 else 0
+    taux_marketing_moyen_equipe = round(team_total_taux_marketing / team_taux_marketing_count, 2) if team_taux_marketing_count > 0 else 0
 
     return {
         "entrepreneurs": entrepreneurs_data,
@@ -6780,6 +6773,7 @@ def api_get_coach_equipe_dashboard(
             "heures_pap_semaine": heures_pap_moyenne_equipe,
             "taux_vente_moyen": taux_vente_moyen_equipe,
             "prod_horaire_moyen": prod_horaire_moyen_equipe,
+            "taux_marketing_moyen": taux_marketing_moyen_equipe,
             "pourcentage_objectif": pourcentage_objectif_moyen_equipe,
             "total_signees": team_total_signees,
             "total_en_attente": team_total_attente,

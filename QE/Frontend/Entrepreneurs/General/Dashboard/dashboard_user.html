@@ -6639,7 +6639,7 @@ async function chargerCoaches() {
     }
 
   } catch (error) {
-    error('[ERROR] chargerCoaches:', error);
+    console.error('[ERROR] chargerCoaches:', error);
 
     // Cacher le spinner même en cas d'erreur
     if (loadingSpinner) loadingSpinner.style.display = 'none';
@@ -6743,7 +6743,7 @@ async function chargerEntrepreneurs(showSpinner = true) {
     }
 
   } catch (error) {
-    error('[DEBUG chargerEntrepreneurs] ERREUR:', error);
+    console.error('[DEBUG chargerEntrepreneurs] ERREUR:', error);
 
     // Cacher le spinner même en cas d'erreur (seulement si showSpinner était activé)
     if (showSpinner) {
@@ -6792,6 +6792,7 @@ function afficherStatsGlobales() {
   const caMoyen = teamStats.ca_moyen || 0;
   const tauxVente = teamStats.taux_vente_moyen || 0;
   const prodHoraire = teamStats.prod_horaire_moyen || 0;
+  const tauxMarketing = teamStats.taux_marketing_moyen || 0;
 
   const pctObjectif = (teamStats.pourcentage_objectif || 0);
   const pctProduitSurObjectif = objectif > 0 ? (montantProduit / objectif * 100) : 0;
@@ -6896,15 +6897,6 @@ function afficherStatsGlobales() {
           <div class="ca-label" style="font-size: 0.85rem; margin-bottom: 0.5rem; height: 20px; display: flex; align-items: center;">Paiement Récolté</div>
           <div id="coach-paiement-recolte" style="font-size: 1.75rem; font-weight: 700; background: linear-gradient(135deg, #3b82f6, #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">0 $</div>
         </div>
-
-        <!-- Barre de séparation verticale -->
-        <div style="width: 1px; height: 70px; background: linear-gradient(180deg, transparent, rgba(96, 165, 250, 0.3), transparent);"></div>
-
-        <!-- Taux de vente -->
-        <div style="display: flex; flex-direction: column; justify-content: space-between; min-height: 70px; flex: 1;">
-          <div class="ca-label" style="font-size: 0.85rem; margin-bottom: 0.5rem; height: 20px; display: flex; align-items: center;">Taux de vente</div>
-          <div id="coach-taux-vente" style="font-size: 1.75rem; font-weight: 700; color: var(--text-light);">0%</div>
-        </div>
       </div>
 
       <!-- Graphique intégré -->
@@ -6937,18 +6929,32 @@ function afficherStatsGlobales() {
       colorEnd: '#34d399'
     },
     {
-      icon: 'fa-file-invoice-dollar',
-      label: 'Estimation moyenne',
-      value: estimationMoyenne.toFixed(0),
-      colorStart: '#a855f7',
-      colorEnd: '#ec4899'
+      icon: 'fa-percentage',
+      label: 'Taux de vente',
+      value: tauxVente.toFixed(1) + '%',
+      colorStart: '#f59e0b',
+      colorEnd: '#f97316'
+    },
+    {
+      icon: 'fa-bullhorn',
+      label: 'Taux marketing',
+      value: tauxMarketing.toFixed(1) + '%',
+      colorStart: '#8b5cf6',
+      colorEnd: '#a855f7'
     },
     {
       icon: 'fa-clock',
       label: 'Heures PAP/semaine',
       value: heuresPAP.toFixed(1) + ' h',
-      colorStart: '#8b5cf6',
-      colorEnd: '#a855f7'
+      colorStart: '#06b6d4',
+      colorEnd: '#0891b2'
+    },
+    {
+      icon: 'fa-file-alt',
+      label: 'Estimation moyenne',
+      value: Math.round(estimationMoyenne),
+      colorStart: '#ec4899',
+      colorEnd: '#f472b6'
     }
   ];
 
@@ -7084,11 +7090,13 @@ function afficherStatsGlobales() {
     animateNumber('coach-paiement-recolte', teamStats.paiements_recoltes || 0, false, true);
     animateNumber('coach-taux-vente', tauxVente, true);
 
-    // Animer les 4 stats de la grille: 0=Contrat moyen, 1=Prod. horaire, 2=Estimation, 3=Heures PAP
+    // Animer les 6 stats de la grille: 0=Contrat moyen, 1=Prod. horaire, 2=Taux vente, 3=Taux marketing, 4=Heures PAP, 5=Estimation moyenne
     animateNumber('coach-stat-0', caMoyen, false, true); // Contrat moyen
     animateNumberWithSuffix('coach-stat-1', prodHoraire, ' $/h'); // Prod. horaire
-    animateNumber('coach-stat-2', estimationMoyenne, false, false, false); // Estimation moyenne (entier)
-    animateNumberWithSuffix('coach-stat-3', heuresPAP, ' h', true); // Heures PAP (decimal)
+    animateNumberWithSuffix('coach-stat-2', tauxVente, '%', true); // Taux de vente
+    animateNumberWithSuffix('coach-stat-3', tauxMarketing, '%', true); // Taux marketing
+    animateNumberWithSuffix('coach-stat-4', heuresPAP, ' h', true); // Heures PAP (decimal)
+    animateNumber('coach-stat-5', estimationMoyenne, false); // Estimation moyenne (entier)
   }, 50);
 
   // Créer le graphique CA immédiatement après avoir inséré le HTML
@@ -9568,12 +9576,33 @@ function renderActiveStats() {
           <i class="fas ${stat.icon}" style="color: var(--${stat.color});"></i>
           <span style="color: var(--text-light); font-weight: 500;">${stat.label}</span>
         </div>
-        <button onclick="removeStat('${stat.id}')" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 0.5rem 0.75rem; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;">
+        <button class="remove-stat-btn" data-stat-id="${stat.id}" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 0.5rem 0.75rem; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;">
           <i class="fas fa-times"></i>
         </button>
       </div>
     `;
   }).join('');
+
+  // Ajouter les event listeners pour les boutons de suppression
+  console.log('[DEBUG] Attaching remove button listeners...');
+  const removeButtons = document.querySelectorAll('.remove-stat-btn');
+  console.log('[DEBUG] Found', removeButtons.length, 'remove buttons');
+
+  removeButtons.forEach(btn => {
+    // Empêcher le drag sur le bouton
+    btn.setAttribute('draggable', 'false');
+    btn.addEventListener('mousedown', function(e) {
+      e.stopPropagation(); // Empêcher le drag de démarrer
+    });
+
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const statId = this.getAttribute('data-stat-id');
+      console.log('[DEBUG] Remove button clicked for stat:', statId);
+      removeStat(statId);
+    });
+  });
 
   // Ajouter les event listeners pour le drag & drop
   setupDragAndDrop();

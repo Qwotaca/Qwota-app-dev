@@ -5283,7 +5283,92 @@ function calculateMonthlyTotalsFromWeekly(monthIndex) {
   window.allMonthlyData[abbr].contract_reel = totalContract;
   window.allMonthlyData[abbr].dollar_reel = totalDollar;
 
+  // Calculer les valeurs réelles des objectifs coach selon le mois
+  const objPapReelDiv = document.getElementById(`${abbr}-obj-pap-reel`);
+  const objRepReelDiv = document.getElementById(`${abbr}-obj-rep-reel`);
+
+  let objPapReelValue = 0;
+  let objRepReelValue = 0;
+
+  // Mapper les valeurs selon le mois (index)
+  // Décembre 2025 (index -2) utilise les mêmes valeurs qu'octobre 2026
+  let adjustedIndex = monthIndex === -2 ? 9 : monthIndex;
+
+  switch (adjustedIndex) {
+    case 0: // Janvier
+      objPapReelValue = totalHMarketing; // HEURES PÀP
+      objRepReelValue = totalHMarketing; // HEURES PÀP REP (même valeur pour janvier)
+      break;
+    case 1: // Février
+      objPapReelValue = totalHMarketing; // HEURES PÀP
+      objRepReelValue = totalEstimation; // Estimations
+      break;
+    case 2: // Mars
+      objPapReelValue = totalEstimation; // Estimations
+      objRepReelValue = totalContract; // Ventes
+      break;
+    case 3: // Avril
+      objPapReelValue = totalContract; // Ventes
+      objRepReelValue = 0; // Peintres (TODO: à définir)
+      break;
+    case 4: // Mai
+    case 5: // Juin
+    case 6: // Juillet
+      objPapReelValue = totalContract; // Ventes
+      objRepReelValue = totalHMarketing > 0 ? totalDollar / totalHMarketing : 0; // Prod Horaire ($/h)
+      break;
+    case 7: // Août
+      objPapReelValue = totalContract; // Ventes
+      objRepReelValue = totalDollar; // $ Produit
+      break;
+    case 8: // Septembre
+      objPapReelValue = totalDollar; // $ Produit
+      objRepReelValue = 0; // Pas de 2e objectif
+      break;
+    case 9: // Octobre
+    case 10: // Novembre
+    case 11: // Décembre
+      objPapReelValue = totalHMarketing; // HEURES PÀP
+      objRepReelValue = totalDollar; // $ Vendus
+      break;
+  }
+
+  // Mettre à jour les divs réelles des objectifs coach
+  if (objPapReelDiv) {
+    const suffix = getObjectifSuffix(monthIndex, 'pap');
+    if (suffix === ' h') {
+      objPapReelDiv.textContent = objPapReelValue.toFixed(1) + suffix;
+    } else if (suffix === ' $') {
+      objPapReelDiv.textContent = Math.round(objPapReelValue).toLocaleString('fr-CA') + suffix;
+    } else if (suffix === ' $/h') {
+      objPapReelDiv.textContent = objPapReelValue.toFixed(2) + suffix;
+    } else {
+      objPapReelDiv.textContent = Math.round(objPapReelValue).toString();
+    }
+    objPapReelDiv.dataset.value = objPapReelValue;
+  }
+
+  if (objRepReelDiv) {
+    const suffix = getObjectifSuffix(monthIndex, 'rep');
+    if (suffix === ' h') {
+      objRepReelDiv.textContent = objRepReelValue.toFixed(1) + suffix;
+    } else if (suffix === ' $') {
+      objRepReelDiv.textContent = Math.round(objRepReelValue).toLocaleString('fr-CA') + suffix;
+    } else if (suffix === ' $/h') {
+      objRepReelDiv.textContent = objRepReelValue.toFixed(2) + suffix;
+    } else if (suffix !== null) {
+      objRepReelDiv.textContent = Math.round(objRepReelValue).toString();
+    }
+    objRepReelDiv.dataset.value = objRepReelValue;
+  }
+
+  // Sauvegarder dans window.allMonthlyData
+  window.allMonthlyData[abbr].obj_pap_reel = objPapReelValue;
+  window.allMonthlyData[abbr].obj_rep_reel = objRepReelValue;
+
   // Recalculer les pourcentages
+  calculateObjectifPercentage(abbr, 'pap');
+  calculateObjectifPercentage(abbr, 'rep');
   calculateMonthPercentage(abbr, 'hrpap');
   calculateMonthPercentage(abbr, 'estimation');
   calculateMonthPercentage(abbr, 'contract');
@@ -6574,14 +6659,59 @@ function loadAllMonthlyData(monthlyData) {
   setTimeout(() => updateAnnualChart(), 100);
 }
 
+// Get suffix for objectif coach based on month
+function getObjectifSuffix(monthIndex, type) {
+  // Décembre 2025 (index -2) utilise les mêmes valeurs qu'octobre 2026
+  if (monthIndex === -2) monthIndex = 9;
+
+  if (type === 'pap') {
+    const suffixes = [
+      ' h',      // Janvier - HEURES PÀP
+      ' h',      // Février - HEURES PÀP
+      '',        // Mars - Estimations
+      '',        // Avril - Ventes
+      '',        // Mai - Ventes
+      '',        // Juin - Ventes
+      '',        // Juillet - Ventes
+      '',        // Août - Ventes
+      ' $',      // Septembre - $ Produit
+      ' h',      // Octobre - HEURES PÀP
+      ' h',      // Novembre - HEURES PÀP
+      ' h'       // Décembre - HEURES PÀP
+    ];
+    return suffixes[monthIndex];
+  } else if (type === 'rep') {
+    const suffixes = [
+      ' h',      // Janvier - HEURES PÀP REP
+      '',        // Février - Estimations
+      '',        // Mars - Ventes
+      '',        // Avril - Peintres
+      ' $/h',    // Mai - Prod Horaire
+      ' $/h',    // Juin - Prod Horaire
+      ' $/h',    // Juillet - Prod Horaire
+      ' $',      // Août - $ Produit
+      null,      // Septembre - pas de 2e objectif
+      ' $',      // Octobre - $ Vendus
+      ' $',      // Novembre - $ Vendus
+      ' $'       // Décembre - $ Vendus
+    ];
+    return suffixes[monthIndex];
+  }
+  return '';
+}
+
 // Load monthly data for specific month
 function loadMonthlyData(monthIndex, data) {
   const monthInfo = getMonthInfo(monthIndex);
   const abbr = monthInfo.abbr;
 
+  // Get correct suffixes for objectifs coach
+  const objPapSuffix = getObjectifSuffix(monthIndex, 'pap');
+  const objRepSuffix = getObjectifSuffix(monthIndex, 'rep');
+
   const fields = [
-    { id: `${abbr}-obj-pap`, key: 'obj_pap', suffix: ' h' },
-    { id: `${abbr}-obj-rep`, key: 'obj_rep', suffix: ' h' },
+    { id: `${abbr}-obj-pap`, key: 'obj_pap', suffix: objPapSuffix },
+    { id: `${abbr}-obj-rep`, key: 'obj_rep', suffix: objRepSuffix },
     { id: `${abbr}-hrpap-vise`, key: 'hrpap_vise', suffix: ' h' },
     { id: `${abbr}-estimation-vise`, key: 'estimation_vise', suffix: '' },
     { id: `${abbr}-contract-vise`, key: 'contract_vise', suffix: '' },
@@ -6592,13 +6722,24 @@ function loadMonthlyData(monthIndex, data) {
     const input = document.getElementById(field.id);
     if (input && data[field.key] !== undefined) {
       const value = data[field.key];
-      input.value = (field.suffix === ' $' ? value.toLocaleString('fr-CA') : value) + field.suffix;
+      // Format selon le suffix
+      if (field.suffix === ' $') {
+        input.value = Math.round(value).toLocaleString('fr-CA') + field.suffix;
+      } else if (field.suffix === ' $/h') {
+        input.value = value.toFixed(2) + field.suffix;
+      } else if (field.suffix === ' h') {
+        input.value = value.toFixed(1) + field.suffix;
+      } else {
+        input.value = Math.round(value).toString() + field.suffix;
+      }
       input.dataset.value = value;
     }
   });
 
-  // Charger les valeurs RÉEL (divs, pas inputs)
+  // Charger les valeurs RÉEL (divs, pas inputs) incluant les objectifs coach
   const reelFields = [
+    { id: `${abbr}-obj-pap-reel`, key: 'obj_pap_reel', suffix: objPapSuffix },
+    { id: `${abbr}-obj-rep-reel`, key: 'obj_rep_reel', suffix: objRepSuffix },
     { id: `${abbr}-hrpap-reel`, key: 'hrpap_reel', suffix: ' h' },
     { id: `${abbr}-estimation-reel`, key: 'estimation_reel', suffix: '' },
     { id: `${abbr}-contract-reel`, key: 'contract_reel', suffix: '' },
@@ -6607,12 +6748,15 @@ function loadMonthlyData(monthIndex, data) {
 
   reelFields.forEach(field => {
     const div = document.getElementById(field.id);
-    if (div && data[field.key] !== undefined) {
+    if (div && data[field.key] !== undefined && field.suffix !== null) {
       const value = data[field.key];
+      // Format selon le suffix
       if (field.suffix === ' h') {
         div.textContent = value.toFixed(1) + field.suffix;
       } else if (field.suffix === ' $') {
         div.textContent = Math.round(value).toLocaleString('fr-CA') + field.suffix;
+      } else if (field.suffix === ' $/h') {
+        div.textContent = value.toFixed(2) + field.suffix;
       } else {
         div.textContent = Math.round(value).toString();
       }
@@ -6723,6 +6867,8 @@ async function saveMonthlyDataToBackend(monthIndex) {
 
   const objPapEl = document.getElementById(`${abbr}-obj-pap`);
   const objRepEl = document.getElementById(`${abbr}-obj-rep`);
+  const objPapReelEl = document.getElementById(`${abbr}-obj-pap-reel`);
+  const objRepReelEl = document.getElementById(`${abbr}-obj-rep-reel`);
   const hrpapViseEl = document.getElementById(`${abbr}-hrpap-vise`);
   const estimationViseEl = document.getElementById(`${abbr}-estimation-vise`);
   const contractViseEl = document.getElementById(`${abbr}-contract-vise`);
@@ -6731,6 +6877,8 @@ async function saveMonthlyDataToBackend(monthIndex) {
   const data = {
     obj_pap: objPapEl ? (parseFloat(objPapEl.dataset.value) || 0) : 0,
     obj_rep: objRepEl ? (parseFloat(objRepEl.dataset.value) || 0) : 0,
+    obj_pap_reel: objPapReelEl ? (parseFloat(objPapReelEl.dataset.value) || 0) : 0,
+    obj_rep_reel: objRepReelEl ? (parseFloat(objRepReelEl.dataset.value) || 0) : 0,
     hrpap_vise: hrpapViseEl ? (parseFloat(hrpapViseEl.dataset.value) || 0) : 0,
     estimation_vise: estimationViseEl ? (parseFloat(estimationViseEl.dataset.value) || 0) : 0,
     contract_vise: contractViseEl ? (parseFloat(contractViseEl.dataset.value) || 0) : 0,

@@ -531,6 +531,15 @@
           currentUser = pathParts[pathParts.length - 1] || 'mathis';
         }
 
+        // Vérifier le rôle et cacher la bannière Side Quest pour les coaches
+        const userRole = localStorage.getItem('userRole');
+        if (userRole === 'coach') {
+          const questBanner = document.getElementById('questBannerFloat');
+          if (questBanner) {
+            questBanner.style.display = 'none';
+          }
+        }
+
         // Récupérer les informations utilisateur pour le nom complet
         try {
           const userResponse = await fetch(`/api/me/${currentUser}`);
@@ -757,6 +766,15 @@
     // Récupérer et afficher le grade d'entrepreneur
     async function fetchEntrepreneurGrade() {
       try {
+        // Vérifier le rôle de l'utilisateur
+        const userRole = localStorage.getItem('userRole');
+
+        // Si c'est un coach, afficher simplement "Coach"
+        if (userRole === 'coach') {
+          document.getElementById('entrepreneurGrade').textContent = 'Coach';
+          return;
+        }
+
         const response = await fetch(`/api/get-info/${currentUser}`);
         if (!response.ok) throw new Error('Erreur lors de la récupération du grade');
 
@@ -830,6 +848,12 @@
         // Compter le nombre total de badges de ce type
         const totalBadges = Object.values(rarities).reduce((sum, arr) => sum + arr.length, 0);
         if (totalBadges === 0) return;
+
+        // Cacher la catégorie "Badges" (medal) pour les coaches
+        const userRole = localStorage.getItem('userRole');
+        if (userRole === 'coach' && type === 'badge') {
+          return; // Ignorer cette catégorie pour les coaches
+        }
 
         const config = categoryConfig[type];
         const earnedCount = Object.values(rarities)

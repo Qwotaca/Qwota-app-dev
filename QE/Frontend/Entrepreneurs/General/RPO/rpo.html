@@ -5144,11 +5144,6 @@ async function changeMonth(monthIndex) {
     setupWeeklyRealtimeUpdate();
   }, 250);
 
-  // Ajouter event listener pour HEURES PÀP (REP) manuel de janvier
-  setTimeout(() => {
-    setupJanuaryRepReelListener();
-  }, 260);
-
   // Mettre à jour le badge de semaines incomplètes
   setTimeout(() => {
     updateIncompleteWeeksBadge();
@@ -5180,52 +5175,106 @@ function setupWeeklyRealtimeUpdate() {
   });
 }
 
-// Ajouter event listener pour HEURES PÀP (REP) manuel de janvier
-function setupJanuaryRepReelListener() {
-  const janRepReelInput = document.getElementById('jan-obj-rep-reel');
+// Toggle edit mode for coach objectives (January only - HEURES PÀP REP)
+function toggleEditCoachObjectives(monthIndex) {
+  if (monthIndex !== 0) return; // Only for January
 
-  if (janRepReelInput && janRepReelInput.tagName === 'INPUT') {
-    // Supprimer l'ancien listener pour éviter les doublons
-    janRepReelInput.removeEventListener('input', handleJanuaryRepReelChange);
-    janRepReelInput.removeEventListener('blur', handleJanuaryRepReelChange);
+  const abbr = 'jan';
+  const input = document.getElementById(`${abbr}-obj-rep-reel`);
+  const editBtn = document.getElementById(`editCoachBtn-${abbr}`);
+  const saveBtn = document.getElementById(`saveCoachBtn-${abbr}`);
 
-    // Ajouter les nouveaux listeners
-    janRepReelInput.addEventListener('input', handleJanuaryRepReelChange);
-    janRepReelInput.addEventListener('blur', handleJanuaryRepReelChange);
+  if (!input) return;
+
+  const isDisabled = input.disabled;
+
+  if (isDisabled) {
+    // Mode édition - activer l'input
+    input.disabled = false;
+    input.classList.add('editable-input');
+    input.style.background = 'rgba(96, 165, 250, 0.1)';
+    input.style.border = '2px solid rgba(96, 165, 250, 0.3)';
+    input.style.padding = '0.5rem';
+
+    // Enlever le formatage pour permettre la saisie
+    const value = parseFloat(input.dataset.value) || 0;
+    input.value = value.toString();
+
+    input.focus();
+    input.select();
+
+    editBtn.classList.add('hidden');
+    saveBtn.classList.remove('hidden');
+  } else {
+    // Mode lecture - désactiver l'input
+    input.disabled = true;
+    input.classList.remove('editable-input');
+    input.style.background = 'transparent';
+    input.style.border = 'none';
+    input.style.padding = '0';
+
+    editBtn.classList.remove('hidden');
+    saveBtn.classList.add('hidden');
   }
 }
 
-// Handler pour les changements dans jan-obj-rep-reel
-function handleJanuaryRepReelChange(event) {
-  const input = event.target;
+// Save coach objectives (January only - HEURES PÀP REP)
+async function saveCoachObjectives(monthIndex) {
+  if (monthIndex !== 0) return; // Only for January
 
-  // Nettoyer la valeur (garder seulement les chiffres et le point)
-  const cleanValue = input.value.replace(/[^\d.]/g, '');
-  const numericValue = parseFloat(cleanValue) || 0;
+  const abbr = 'jan';
+  const input = document.getElementById(`${abbr}-obj-rep-reel`);
+  const saveBtn = document.getElementById(`saveCoachBtn-${abbr}`);
 
-  // Mettre à jour le dataset
-  input.dataset.value = numericValue;
+  if (!input) return;
 
-  // Formater l'affichage
-  input.value = numericValue.toFixed(1) + ' h';
+  // Sauvegarder l'HTML original du bouton
+  const originalHTML = saveBtn.innerHTML;
 
-  // Mettre à jour window.allMonthlyData
-  if (!window.allMonthlyData) {
-    window.allMonthlyData = {};
+  // Afficher l'icône de chargement
+  saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  saveBtn.disabled = true;
+  saveBtn.style.cursor = 'wait';
+  saveBtn.style.opacity = '0.7';
+
+  try {
+    // Nettoyer et formater la valeur
+    const cleanValue = input.value.replace(/[^\d.]/g, '');
+    const numericValue = parseFloat(cleanValue) || 0;
+
+    // Mettre à jour le dataset
+    input.dataset.value = numericValue;
+
+    // Formater l'affichage
+    input.value = numericValue.toFixed(1) + ' h';
+
+    // Mettre à jour window.allMonthlyData
+    if (!window.allMonthlyData) {
+      window.allMonthlyData = {};
+    }
+    if (!window.allMonthlyData[abbr]) {
+      window.allMonthlyData[abbr] = {};
+    }
+    window.allMonthlyData[abbr].obj_rep_reel = numericValue;
+
+    // Sauvegarder dans le backend
+    await saveMonthlyDataToBackend(monthIndex);
+
+    // Revenir en mode lecture
+    toggleEditCoachObjectives(monthIndex);
+
+    // Recalculer le pourcentage
+    calculateObjectifPercentage(abbr, 'rep');
+
+  } finally {
+    // Restaurer le bouton
+    setTimeout(() => {
+      saveBtn.innerHTML = originalHTML;
+      saveBtn.disabled = false;
+      saveBtn.style.cursor = '';
+      saveBtn.style.opacity = '';
+    }, 300);
   }
-  if (!window.allMonthlyData['jan']) {
-    window.allMonthlyData['jan'] = {};
-  }
-  window.allMonthlyData['jan'].obj_rep_reel = numericValue;
-
-  // Recalculer le pourcentage
-  calculateObjectifPercentage('jan', 'rep');
-
-  // Sauvegarder dans le backend avec un debounce
-  clearTimeout(window.janRepReelSaveTimeout);
-  window.janRepReelSaveTimeout = setTimeout(() => {
-    saveMonthlyDataToBackend(0); // 0 = janvier
-  }, 500);
 }
 
 // Handler pour les changements dans les inputs hebdomadaires
@@ -5970,14 +6019,28 @@ function generateMonthlyContent(monthIndex) {
       <div class="mb-8" style="border: 2px solid rgba(139, 92, 246, 0.3); border-radius: 1rem; overflow: hidden; background: rgba(139, 92, 246, 0.05);">
         <!-- Header Section Coach -->
         <div class="px-6 py-4" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(124, 58, 237, 0.1)); border-bottom: 2px solid rgba(139, 92, 246, 0.2);">
-          <div class="flex items-center gap-3">
-            <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">
-              <i class="fas fa-user-shield" style="font-size: 1.25rem; color: white;"></i>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">
+                <i class="fas fa-user-shield" style="font-size: 1.25rem; color: white;"></i>
+              </div>
+              <div>
+                <h4 style="color: var(--text-light); font-weight: 700; font-size: 1.125rem; margin: 0; letter-spacing: 0.02em;">OBJECTIFS COACH</h4>
+                <p style="color: rgba(167, 139, 250, 0.8); font-size: 0.75rem; margin: 0; margin-top: 0.125rem;">Objectifs généraux définis par votre coach</p>
+              </div>
             </div>
-            <div>
-              <h4 style="color: var(--text-light); font-weight: 700; font-size: 1.125rem; margin: 0; letter-spacing: 0.02em;">OBJECTIFS COACH</h4>
-              <p style="color: rgba(167, 139, 250, 0.8); font-size: 0.75rem; margin: 0; margin-top: 0.125rem;">Objectifs généraux définis par votre coach</p>
+            ${monthIndex === 0 ? `
+            <div class="flex items-center gap-3">
+              <button id="editCoachBtn-${abbr}" onclick="toggleEditCoachObjectives(${monthIndex})" class="rounded-lg flex items-center gap-2 justify-center transition-all hover:scale-105 px-3 py-2" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3);" title="Modifier">
+                <i class="fas fa-pencil-alt text-xs"></i>
+                <span class="text-xs font-bold">Modifier</span>
+              </button>
+              <button id="saveCoachBtn-${abbr}" onclick="saveCoachObjectives(${monthIndex})" class="hidden rounded-lg flex items-center gap-2 justify-center transition-all hover:scale-105 px-3 py-2" style="background: rgba(52, 211, 153, 0.15); color: var(--primary-green); border: 1px solid rgba(52, 211, 153, 0.3);" title="Enregistrer">
+                <i class="fas fa-save text-xs"></i>
+                <span class="text-xs font-bold">Enregistrer</span>
+              </button>
             </div>
+            ` : ''}
           </div>
         </div>
 
@@ -6019,7 +6082,7 @@ function generateMonthlyContent(monthIndex) {
               <div class="flex-1 p-4 flex flex-col justify-center text-center">
                 <div class="text-base font-bold mb-2" style="color: var(--text-light); text-transform: uppercase; letter-spacing: 0.05em;">${getObjectifLabel2(monthIndex)}</div>
                 ${monthIndex === 0 ?
-                  `<input type="text" id="${abbr}-obj-rep-reel" class="rpo-metric-input bg-transparent border-none text-center w-full rounded font-bold" style="color: var(--text-light); outline: none; font-size: 2rem;" data-value="0" value="${getObjectifDefaultValue2(monthIndex)}" placeholder="0 h">`
+                  `<input type="text" id="${abbr}-obj-rep-reel" class="rpo-metric-input bg-transparent border-none text-center w-full rounded font-bold" style="color: var(--text-light); outline: none; font-size: 2rem;" data-value="0" value="${getObjectifDefaultValue2(monthIndex)}" placeholder="0 h" disabled>`
                   :
                   `<div id="${abbr}-obj-rep-reel" class="font-bold" style="color: var(--text-light); font-size: 2rem;" data-value="0">${getObjectifDefaultValue2(monthIndex)}</div>`
                 }

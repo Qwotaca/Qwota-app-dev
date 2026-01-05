@@ -2126,6 +2126,38 @@ select:disabled {
 
     </div>
 
+    <!-- Page Objectifs Mensuels -->
+    <div id="objectifs-mensuels" class="page-content fade-in-up" style="animation-delay: 0.2s;">
+
+      <div class="glass-card shadow" style="margin-bottom: 2rem;">
+        <div class="px-6 py-4" style="background: var(--bg-card); border-bottom: 1px solid rgba(51, 65, 85, 0.5); border-radius: 1rem 1rem 0 0;">
+          <div class="flex items-center gap-3">
+            <div style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #60a5fa, #3b82f6); display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-bullseye" style="font-size: 1.5rem; color: white;"></i>
+            </div>
+            <div>
+              <h3 class="text-2xl font-bold" style="color: var(--text-light);">
+                Objectifs Mensuels par Entrepreneur
+              </h3>
+              <p style="color: var(--text-gray); font-size: 0.875rem; margin-top: 0.25rem;">
+                Définissez les objectifs mensuels pour chaque membre de votre équipe
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-6" style="background: var(--bg-card); border-radius: 0 0 1rem 1rem;">
+          <div id="objectifs-mensuels-content">
+            <div style="text-align: center; padding: 3rem; color: var(--text-gray);">
+              <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem; color: #60a5fa;"></i>
+              <div style="font-size: 1.125rem;">Chargement des objectifs mensuels...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
   </main>
 
   <!-- Modal pour créer/modifier une tâche -->
@@ -3025,6 +3057,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.getElementById('todolist-tab')?.addEventListener('click', () => showPage('todolist'));
   document.getElementById('rpo-tab')?.addEventListener('click', () => showPage('rpo'));
   document.getElementById('stats-tab')?.addEventListener('click', () => showPage('stats'));
+  document.getElementById('btn-objectifs-mensuels')?.addEventListener('click', () => {
+    showPage('objectifs-mensuels');
+    loadObjectifsMensuels();
+  });
 
   // Charger les tâches et l'historique au démarrage SEULEMENT si on a un username
   if (coachUsername) {
@@ -9349,6 +9385,262 @@ async function saveBusinessPlan() {
 document.addEventListener('DOMContentLoaded', function() {
   setTimeout(checkIfBusinessPlanNeeded, 1000);
 });
+
+// ========================================
+// OBJECTIFS MENSUELS PAR ENTREPRENEUR
+// ========================================
+
+async function loadObjectifsMensuels() {
+  const container = document.getElementById('objectifs-mensuels-content');
+  const coachUsername = window.selectedEntrepreneurUsername || window.username || localStorage.getItem('username');
+
+  try {
+    // Charger les entrepreneurs du coach
+    const entrepreneursResponse = await fetch(`/api/entrepreneurs/${coachUsername}`);
+    const entrepreneurs = await entrepreneursResponse.json();
+
+    if (!entrepreneurs || entrepreneurs.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 3rem; color: var(--text-gray);">
+          <i class="fas fa-users-slash" style="font-size: 2rem; margin-bottom: 1rem; color: #ef4444;"></i>
+          <div style="font-size: 1.125rem;">Aucun entrepreneur dans votre équipe</div>
+        </div>
+      `;
+      return;
+    }
+
+    // Charger les objectifs existants
+    const objectifsResponse = await fetch(`/api/coach/objectifs-mensuels?coach_username=${coachUsername}`);
+    const objectifsData = await objectifsResponse.json();
+    const existingObjectifs = objectifsData.success && objectifsData.objectifs ? objectifsData.objectifs : {};
+
+    // Générer les 12 mois à partir du mois actuel
+    const now = getTorontoNow();
+    const currentMonth = now.getMonth(); // 0-11
+    const currentYear = now.getFullYear();
+
+    let html = '';
+
+    // Créer 12 cartes de mois
+    for (let i = 0; i < 12; i++) {
+      let monthIndex = (currentMonth + i) % 12;
+      let yearOffset = Math.floor((currentMonth + i) / 12);
+      let year = currentYear + yearOffset;
+      let monthKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+
+      const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                         'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+      const monthName = monthNames[monthIndex];
+
+      // Obtenir le label de l'objectif pour ce mois (basé sur la logique du RPO)
+      const objectifLabel = getObjectifLabel2ForMonth(monthIndex);
+
+      html += `
+        <div class="glass-card shadow" style="margin-bottom: 1.5rem; border: ${i === 0 ? '2px solid #60a5fa' : '1px solid rgba(51, 65, 85, 0.5)'};">
+          <div class="px-6 py-3" style="background: ${i === 0 ? 'linear-gradient(135deg, rgba(96, 165, 250, 0.15), rgba(59, 130, 246, 0.1))' : 'var(--bg-card)'}; border-bottom: 1px solid rgba(51, 65, 85, 0.5); border-radius: 1rem 1rem 0 0;">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                ${i === 0 ? '<i class="fas fa-calendar-check" style="color: #60a5fa; font-size: 1.25rem;"></i>' : '<i class="far fa-calendar" style="color: var(--text-gray); font-size: 1.25rem;"></i>'}
+                <h4 style="color: var(--text-light); font-weight: 700; font-size: 1.125rem; margin: 0;">
+                  ${monthName} ${year}
+                </h4>
+                ${i === 0 ? '<span style="background: #60a5fa; color: white; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">Mois actuel</span>' : ''}
+              </div>
+              <div style="color: var(--text-gray); font-size: 0.875rem; font-weight: 600;">
+                ${objectifLabel}
+              </div>
+            </div>
+          </div>
+          <div class="p-6" style="background: var(--bg-card); border-radius: 0 0 1rem 1rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
+      `;
+
+      // Ajouter un input pour chaque entrepreneur
+      for (const entrepreneur of entrepreneurs) {
+        const existingValue = existingObjectifs[monthKey] && existingObjectifs[monthKey][entrepreneur.username]
+          ? existingObjectifs[monthKey][entrepreneur.username]
+          : 0;
+
+        html += `
+          <div style="background: rgba(148, 163, 184, 0.05); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 0.75rem; padding: 1rem;">
+            <label style="display: block; color: var(--text-gray); font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">
+              ${entrepreneur.first_name} ${entrepreneur.last_name}
+            </label>
+            <input
+              type="text"
+              class="objectif-mensuel-input"
+              data-month="${monthKey}"
+              data-entrepreneur="${entrepreneur.username}"
+              data-raw-value="${existingValue}"
+              value="${formatObjectifValue(existingValue, monthIndex)}"
+              placeholder="0"
+              style="width: 100%; background: var(--bg-card); border: 2px solid rgba(148, 163, 184, 0.3); border-radius: 0.5rem; padding: 0.75rem; color: var(--text-light); font-size: 1rem; font-weight: 600; transition: all 0.2s;"
+              onfocus="this.value = this.dataset.rawValue; this.select(); this.style.borderColor = '#60a5fa';"
+              onblur="this.style.borderColor = 'rgba(148, 163, 184, 0.3)';"
+              oninput="updateObjectifMensuelValue(this, ${monthIndex})"
+            />
+          </div>
+        `;
+      }
+
+      html += `
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Bouton de sauvegarde en bas
+    html += `
+      <div style="display: flex; justify-content: center; margin-top: 2rem; padding-bottom: 2rem;">
+        <button
+          id="save-objectifs-mensuels-btn"
+          onclick="saveObjectifsMensuels()"
+          style="background: linear-gradient(135deg, #60a5fa, #3b82f6); color: white; padding: 1rem 3rem; border-radius: 0.75rem; font-weight: 700; font-size: 1rem; border: none; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);"
+          onmouseover="this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 6px 16px rgba(96, 165, 250, 0.4)';"
+          onmouseout="this.style.transform = 'translateY(0)'; this.style.boxShadow = '0 4px 12px rgba(96, 165, 250, 0.3)';"
+        >
+          <i class="fas fa-save"></i>
+          <span style="margin-left: 0.5rem;">Enregistrer tous les objectifs</span>
+        </button>
+      </div>
+    `;
+
+    container.innerHTML = html;
+
+  } catch (error) {
+    console.error('[OBJECTIFS MENSUELS] Erreur chargement:', error);
+    container.innerHTML = `
+      <div style="text-align: center; padding: 3rem; color: var(--text-gray);">
+        <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem; color: #ef4444;"></i>
+        <div style="font-size: 1.125rem;">Erreur lors du chargement des objectifs</div>
+        <div style="font-size: 0.875rem; margin-top: 0.5rem;">${error.message}</div>
+      </div>
+    `;
+  }
+}
+
+function getObjectifLabel2ForMonth(monthIndex) {
+  const labels = [
+    'HEURES PÀP (REP)',     // Janvier
+    'Estimations',          // Février
+    'Ventes',               // Mars
+    'Peintres',             // Avril
+    'Prod Horaire',         // Mai
+    'Prod Horaire',         // Juin
+    'Prod Horaire',         // Juillet
+    '$ Produit',            // Août
+    '',                     // Septembre - pas de 2e objectif
+    '$ Vendus',             // Octobre
+    '$ Vendus',             // Novembre
+    '$ Vendus'              // Décembre
+  ];
+  return labels[monthIndex];
+}
+
+function formatObjectifValue(value, monthIndex) {
+  if (!value || value === 0) return '';
+
+  // Janvier, Octobre, Novembre, Décembre = heures ou argent
+  if (monthIndex === 0 || monthIndex === 9 || monthIndex === 10 || monthIndex === 11) {
+    // Janvier = heures, autres = $
+    if (monthIndex === 0) {
+      return value.toFixed(1) + ' h';
+    } else {
+      return Math.round(value).toLocaleString('fr-CA') + ' $';
+    }
+  }
+  // Août = $
+  else if (monthIndex === 7) {
+    return Math.round(value).toLocaleString('fr-CA') + ' $';
+  }
+  // Mai, Juin, Juillet = $/h
+  else if (monthIndex === 4 || monthIndex === 5 || monthIndex === 6) {
+    return value.toFixed(2) + ' $/h';
+  }
+  // Autres = nombre simple
+  else {
+    return Math.round(value).toString();
+  }
+}
+
+function updateObjectifMensuelValue(input, monthIndex) {
+  const rawValue = input.value.replace(/[^\d.]/g, '');
+  input.dataset.rawValue = rawValue || '0';
+}
+
+async function saveObjectifsMensuels() {
+  const saveBtn = document.getElementById('save-objectifs-mensuels-btn');
+  const originalHTML = saveBtn.innerHTML;
+
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span style="margin-left: 0.5rem;">Enregistrement...</span>';
+
+  try {
+    const coachUsername = window.selectedEntrepreneurUsername || window.username || localStorage.getItem('username');
+    const inputs = document.querySelectorAll('.objectif-mensuel-input');
+
+    const objectifs = {};
+
+    inputs.forEach(input => {
+      const month = input.dataset.month;
+      const entrepreneur = input.dataset.entrepreneur;
+      const value = parseFloat(input.dataset.rawValue) || 0;
+
+      if (!objectifs[month]) {
+        objectifs[month] = {};
+      }
+
+      objectifs[month][entrepreneur] = value;
+    });
+
+    const response = await fetch('/api/coach/objectifs-mensuels', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        coach_username: coachUsername,
+        objectifs: objectifs
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Reformater tous les inputs avec les valeurs sauvegardées
+      const now = getTorontoNow();
+      const currentMonth = now.getMonth();
+
+      inputs.forEach(input => {
+        const monthKey = input.dataset.month;
+        const monthParts = monthKey.split('-');
+        const monthIndex = parseInt(monthParts[1]) - 1;
+        const value = parseFloat(input.dataset.rawValue) || 0;
+        input.value = formatObjectifValue(value, monthIndex);
+      });
+
+      // Message de succès temporaire
+      saveBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+      saveBtn.innerHTML = '<i class="fas fa-check"></i><span style="margin-left: 0.5rem;">Enregistré avec succès!</span>';
+
+      setTimeout(() => {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalHTML;
+        saveBtn.style.background = 'linear-gradient(135deg, #60a5fa, #3b82f6)';
+      }, 2000);
+
+    } else {
+      throw new Error(data.error || 'Erreur lors de l\'enregistrement');
+    }
+
+  } catch (error) {
+    console.error('[OBJECTIFS MENSUELS] Erreur sauvegarde:', error);
+    alert('Erreur lors de l\'enregistrement des objectifs: ' + error.message);
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = originalHTML;
+  }
+}
 
 </script>
 

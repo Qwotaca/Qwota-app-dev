@@ -6575,33 +6575,44 @@ def api_get_coach_equipe_dashboard(
             taux_marketing = round(float(annual.get("mktg_reel", 0)), 2)
 
             # Calculer heures_pap_semaine: moyenne réelle par semaine (pas total cumulé)
-            # Période valide: décembre 2025 à août 2026 (mois 0 à 7 inclus)
+            # Compter TOUTES les semaines de l'année (déc 2025 à déc 2026)
             total_heures_pap = 0
             nombre_semaines_avec_data = 0
             weekly_data = rpo_data.get("weekly", {})
 
-            # Mois valides pour le calcul des moyennes PAP (déc 2025 à août 2026)
-            mois_valides = ["0", "1", "2", "3", "4", "5", "6", "7"]  # 0=déc, 1=jan, ..., 7=août
-
             for month_key, weeks in weekly_data.items():
-                # Ignorer les mois hors période valide (sept-nov 2026)
-                if month_key not in mois_valides:
-                    continue
-
                 for week_key, week_data in weeks.items():
                     h_mktg = week_data.get("h_marketing", "-")
-                    if h_mktg != "-":
+                    # Compter toutes les valeurs sauf "-" (même 0 compte comme une semaine faite)
+                    if h_mktg is not None and h_mktg != "-":
                         try:
                             total_heures_pap += float(h_mktg)
                             nombre_semaines_avec_data += 1
                         except:
                             pass
 
-            # Moyenne des heures PAP par semaine (sur période valide uniquement)
+            # Moyenne des heures PAP par semaine (toutes semaines de l'année)
             heures_pap_semaine = round(total_heures_pap / nombre_semaines_avec_data, 2) if nombre_semaines_avec_data > 0 else 0
 
-            # Calculer prod_horaire dynamiquement: CA / Total Heures de PAP
-            prod_horaire = round(ca_actuel / total_heures_pap, 2) if total_heures_pap > 0 else 0
+            # Calculer prod_horaire depuis les valeurs saisies dans RPO (mai à septembre)
+            total_prod_horaire = 0
+            nombre_semaines_prod_horaire = 0
+
+            # Mois avec prod_horaire: mai à septembre 2026 (mois 4 à 8)
+            for month_index in range(4, 9):  # 4=mai, 5=juin, 6=juillet, 7=août, 8=septembre
+                month_key = str(month_index)
+                if month_key in weekly_data:
+                    for week_key, week_data in weekly_data[month_key].items():
+                        prod_h = week_data.get("prod_horaire", 0)
+                        # Compter seulement les valeurs saisies (différentes de 0, None, "-")
+                        if prod_h is not None and prod_h != 0 and prod_h != "-":
+                            try:
+                                total_prod_horaire += float(prod_h)
+                                nombre_semaines_prod_horaire += 1
+                            except:
+                                pass
+
+            prod_horaire = round(total_prod_horaire / nombre_semaines_prod_horaire, 2) if nombre_semaines_prod_horaire > 0 else 0
         except Exception as e:
             print(f"[DEBUG OBJECTIF ERROR] {username} -> Erreur chargement RPO: {e}")
             pass
@@ -6739,7 +6750,8 @@ def api_get_coach_equipe_dashboard(
     taux_vente_moyen_equipe = round((team_total_signees / total_potentiel_equipe) * 100, 2) if total_potentiel_equipe > 0 else 0
 
     # Nouvelles moyennes d'équipe
-    ca_moyen_equipe = round(team_total_ca / nb_entrepreneurs, 2) if nb_entrepreneurs > 0 else 0
+    # Contrat moyen = Total CA / Nombre de soumissions signées
+    ca_moyen_equipe = round(team_total_ca / team_total_signees, 2) if team_total_signees > 0 else 0
     # Estimation moyenne = nombre moyen d'estimations par entrepreneur (seulement ceux qui ont au moins 1 estimation)
     estimation_moyenne_equipe = round(team_total_estimations / team_estimation_count, 2) if team_estimation_count > 0 else 0
     heures_pap_moyenne_equipe = round(team_total_heures_pap / nb_entrepreneurs, 2) if nb_entrepreneurs > 0 else 0
@@ -8936,24 +8948,42 @@ async def update_user_profile(request: Request):
     try:
         data = await request.json()
         username = data.get('username')
-        prenom = data.get('prenom', '')
-        nom = data.get('nom', '')
-        telephone = data.get('telephone', '')
-        email = data.get('email', '')
-        adresse = data.get('adresse', '')
 
         if not username:
             raise HTTPException(status_code=400, detail="Username requis")
 
-        # Mettre à jour dans la base de données SQLite
-        with sqlite3.connect(DB_PATH) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                UPDATE users
-                SET prenom = ?, nom = ?, telephone = ?, email = ?, adresse = ?
-                WHERE username = ?
-            """, (prenom, nom, telephone, email, adresse, username))
-            conn.commit()
+        # Construire dynamiquement la requête SQL avec seulement les champs fournis
+        update_fields = []
+        update_values = []
+
+        if 'prenom' in data:
+            update_fields.append("prenom = ?")
+            update_values.append(data.get('prenom', ''))
+
+        if 'nom' in data:
+            update_fields.append("nom = ?")
+            update_values.append(data.get('nom', ''))
+
+        if 'telephone' in data:
+            update_fields.append("telephone = ?")
+            update_values.append(data.get('telephone', ''))
+
+        if 'email' in data:
+            update_fields.append("email = ?")
+            update_values.append(data.get('email', ''))
+
+        if 'adresse' in data:
+            update_fields.append("adresse = ?")
+            update_values.append(data.get('adresse', ''))
+
+        # Mettre à jour dans la base de données SQLite uniquement si des champs sont fournis
+        if update_fields:
+            with sqlite3.connect(DB_PATH) as conn:
+                cursor = conn.cursor()
+                update_values.append(username)
+                query = f"UPDATE users SET {', '.join(update_fields)} WHERE username = ?"
+                cursor.execute(query, update_values)
+                conn.commit()
 
         # Sauvegarder aussi dans le fichier user_info.json pour rétrocompatibilité
         user_folder = f"{base_cloud}/signatures/{username}"
@@ -8967,12 +8997,17 @@ async def update_user_profile(request: Request):
         else:
             user_info = {}
 
-        # Mettre à jour les champs
-        user_info["prenom"] = prenom
-        user_info["nom"] = nom
-        user_info["telephone"] = telephone
-        user_info["email"] = email
-        user_info["adresse"] = adresse
+        # Mettre à jour uniquement les champs fournis dans le JSON
+        if 'prenom' in data:
+            user_info["prenom"] = data.get('prenom', '')
+        if 'nom' in data:
+            user_info["nom"] = data.get('nom', '')
+        if 'telephone' in data:
+            user_info["telephone"] = data.get('telephone', '')
+        if 'email' in data:
+            user_info["email"] = data.get('email', '')
+        if 'adresse' in data:
+            user_info["adresse"] = data.get('adresse', '')
 
         # Sauvegarder
         with open(user_info_file, "w", encoding="utf-8") as f:
@@ -9455,6 +9490,23 @@ async def save_profile_photo(
         timestamp = int(time.time())
 
         photo_url = f"/cloud/signatures/{username}/{photo_filename}?v={timestamp}"
+
+        # Mettre à jour la base de données avec la nouvelle photo URL
+        try:
+            with sqlite3.connect(DB_PATH) as conn:
+                cursor = conn.cursor()
+                # Stocker l'URL sans le timestamp pour pouvoir ajouter un nouveau timestamp à chaque chargement
+                photo_url_db = f"/cloud/signatures/{username}/{photo_filename}"
+                cursor.execute("""
+                    UPDATE users
+                    SET photo_url = ?
+                    WHERE username = ?
+                """, (photo_url_db, username))
+                conn.commit()
+                print(f"[DEBUG] [SAVE-PHOTO] Base de données mise à jour avec photo_url: {photo_url_db}", flush=True)
+        except Exception as db_error:
+            print(f"[WARN] [SAVE-PHOTO] Erreur mise à jour DB (non bloquant): {db_error}", flush=True)
+
         print(f"[OK] Photo de profil sauvegardée pour {username}: {photo_url}", flush=True)
 
         return {
@@ -18442,6 +18494,12 @@ async def get_all_months_data(username: str):
 @app.post("/api/rpo/{username}/weekly/{month_index}/{week_number}")
 async def save_week_data(username: str, month_index: int, week_number: int, data: dict):
     """Sauvegarde les données d'une semaine spécifique"""
+    print(f"[API] 📨 Requête reçue: {username}, mois {month_index}, semaine {week_number}", flush=True)
+    print(f"[API] 📦 Data reçue: {data}", flush=True)
+    if 'prod_horaire' in data:
+        print(f"[API] 💰 PROD_HORAIRE trouvé: {data['prod_horaire']}", flush=True)
+    else:
+        print(f"[API] ⚠️ PROD_HORAIRE absent!", flush=True)
     try:
         success = update_weekly_data(username, month_index, week_number, data)
         if success:

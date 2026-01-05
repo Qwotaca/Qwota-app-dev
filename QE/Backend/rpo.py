@@ -250,6 +250,11 @@ def update_weekly_data(username: str, month_index: int, week_number: int, weekly
     month_index: 0-11 (janvier=0, décembre=11)
     week_number: numéro de la semaine dans le mois
     """
+    print(f"[BACKEND-SAVE] 📥 Réception des données pour {username}, mois {month_index}, semaine {week_number}", flush=True)
+    print(f"[BACKEND-SAVE] 📊 Données reçues: {weekly_data}", flush=True)
+    if 'prod_horaire' in weekly_data:
+        print(f"[BACKEND-SAVE] 💰 Prod Horaire: {weekly_data['prod_horaire']}$/h", flush=True)
+
     rpo_data = load_user_rpo_data(username)
 
     if 'weekly' not in rpo_data:
@@ -260,9 +265,25 @@ def update_weekly_data(username: str, month_index: int, week_number: int, weekly
         rpo_data['weekly'][month_key] = {}
 
     week_key = str(week_number)
-    rpo_data['weekly'][month_key][week_key] = weekly_data
 
-    return save_user_rpo_data(username, rpo_data)
+    # MERGE au lieu d'écraser: si des données existent déjà, on les garde et on update seulement les nouveaux champs
+    if week_key in rpo_data['weekly'][month_key]:
+        print(f"[BACKEND-SAVE] 🔄 Merge avec données existantes pour semaine {week_number}", flush=True)
+        existing_data = rpo_data['weekly'][month_key][week_key]
+        # Merger les nouvelles données avec les anciennes (les nouvelles ont priorité)
+        existing_data.update(weekly_data)
+        rpo_data['weekly'][month_key][week_key] = existing_data
+    else:
+        print(f"[BACKEND-SAVE] 🆕 Création nouvelle semaine {week_number}", flush=True)
+        rpo_data['weekly'][month_key][week_key] = weekly_data
+
+    result = save_user_rpo_data(username, rpo_data)
+    if result:
+        print(f"[BACKEND-SAVE] ✅ Données sauvegardées avec succès")
+    else:
+        print(f"[BACKEND-SAVE] ❌ Échec de la sauvegarde")
+
+    return result
 
 
 def get_annual_data(username: str) -> Dict[str, Any]:
@@ -412,13 +433,17 @@ def sync_soumissions_to_rpo(username: str) -> bool:
                 if 'h_marketing' not in rpo_data['weekly'][month_key][week_key]:
                     rpo_data['weekly'][month_key][week_key]['h_marketing'] = '-'
 
+                # Garder prod_horaire s'il existe, sinon initialiser à "-" (EXACTEMENT comme h_marketing)
+                if 'prod_horaire' not in rpo_data['weekly'][month_key][week_key]:
+                    rpo_data['weekly'][month_key][week_key]['prod_horaire'] = '-'
+
                 # Initialiser commentaire et rating s'ils n'existent pas
                 if 'commentaire' not in rpo_data['weekly'][month_key][week_key]:
                     rpo_data['weekly'][month_key][week_key]['commentaire'] = 'Problème: - | Focus: -'
                 if 'rating' not in rpo_data['weekly'][month_key][week_key]:
                     rpo_data['weekly'][month_key][week_key]['rating'] = 0
 
-                # Réinitialiser le reste
+                # Réinitialiser le reste (SANS prod_horaire car on le garde comme h_marketing)
                 rpo_data['weekly'][month_key][week_key]['estimation'] = 0
                 rpo_data['weekly'][month_key][week_key]['contract'] = 0
                 rpo_data['weekly'][month_key][week_key]['dollar'] = 0
@@ -426,7 +451,6 @@ def sync_soumissions_to_rpo(username: str) -> bool:
                 rpo_data['weekly'][month_key][week_key]['peintre'] = 0
                 rpo_data['weekly'][month_key][week_key]['ca_cumul'] = 0
                 rpo_data['weekly'][month_key][week_key]['produit'] = 0
-                rpo_data['weekly'][month_key][week_key]['prod_horaire'] = 0
                 rpo_data['weekly'][month_key][week_key]['satisfaction'] = 0
 
         # Déterminer le chemin de base selon l'OS

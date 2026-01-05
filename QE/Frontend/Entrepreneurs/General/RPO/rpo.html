@@ -6874,20 +6874,31 @@ function loadMonthlyData(monthIndex, data) {
   ];
 
   reelFields.forEach(field => {
-    const div = document.getElementById(field.id);
-    if (div && data[field.key] !== undefined && field.suffix !== null) {
+    const element = document.getElementById(field.id);
+    if (element && data[field.key] !== undefined && field.suffix !== null) {
       const value = data[field.key];
+      let formattedValue = '';
+
       // Format selon le suffix
       if (field.suffix === ' h') {
-        div.textContent = value.toFixed(1) + field.suffix;
+        formattedValue = value.toFixed(1) + field.suffix;
       } else if (field.suffix === ' $') {
-        div.textContent = Math.round(value).toLocaleString('fr-CA') + field.suffix;
+        formattedValue = Math.round(value).toLocaleString('fr-CA') + field.suffix;
       } else if (field.suffix === ' $/h') {
-        div.textContent = value.toFixed(2) + field.suffix;
+        formattedValue = value.toFixed(2) + field.suffix;
       } else {
-        div.textContent = Math.round(value).toString();
+        formattedValue = Math.round(value).toString();
       }
-      div.dataset.value = value;
+
+      // Pour les inputs (comme jan-obj-rep-reel), utiliser .value
+      // Pour les divs, utiliser .textContent
+      if (element.tagName === 'INPUT') {
+        element.value = formattedValue;
+      } else {
+        element.textContent = formattedValue;
+      }
+
+      element.dataset.value = value;
     }
   });
 

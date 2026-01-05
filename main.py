@@ -4178,6 +4178,7 @@ def envoyer_soumission_signee(
         enregistrer_soumission_signee(username, soumission_data)
 
         # Enregistrement dans travaux à compléter (copie)
+        # NOTE: Le bannissement se fait maintenant côté frontend via bannirClientACompleter()
         enregistrer_travaux_a_completer(username, soumission_data)
 
         # [HOT] NOUVEAU: Déplacer de ventes_attente vers ventes_acceptees

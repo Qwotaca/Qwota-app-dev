@@ -4795,6 +4795,21 @@ window.acceptPresentation = async function() {
       }
     }
 
+    // IMPORTANT: Bannir le client de "clients à compléter aujourd'hui" si c'est un client de cette liste
+    if (window.storedEventId) {
+      log('[BAN] Client vient de "clients à compléter" - bannissement event_id:', window.storedEventId);
+      try {
+        await bannirClientACompleter(currentFormData, window.storedEventId);
+        log('[OK] Client banni de "clients à compléter aujourd\'hui"');
+        // Réinitialiser l'eventId après bannissement
+        window.storedEventId = null;
+      } catch (e) {
+        log('[WARN] Erreur bannissement client (non bloquant):', e);
+      }
+    } else {
+      log('[INFO] Pas de storedEventId - client ne vient pas de "clients à compléter"');
+    }
+
     // Fermer le modal
     closePdfModal();
 

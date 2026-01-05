@@ -5144,6 +5144,11 @@ async function changeMonth(monthIndex) {
     setupWeeklyRealtimeUpdate();
   }, 250);
 
+  // Ajouter event listener pour HEURES PÀP (REP) manuel de janvier
+  setTimeout(() => {
+    setupJanuaryRepReelListener();
+  }, 260);
+
   // Mettre à jour le badge de semaines incomplètes
   setTimeout(() => {
     updateIncompleteWeeksBadge();
@@ -5173,6 +5178,54 @@ function setupWeeklyRealtimeUpdate() {
     input.addEventListener('input', handleWeeklyInputChange);
     input.addEventListener('change', handleWeeklyInputChange);
   });
+}
+
+// Ajouter event listener pour HEURES PÀP (REP) manuel de janvier
+function setupJanuaryRepReelListener() {
+  const janRepReelInput = document.getElementById('jan-obj-rep-reel');
+
+  if (janRepReelInput && janRepReelInput.tagName === 'INPUT') {
+    // Supprimer l'ancien listener pour éviter les doublons
+    janRepReelInput.removeEventListener('input', handleJanuaryRepReelChange);
+    janRepReelInput.removeEventListener('blur', handleJanuaryRepReelChange);
+
+    // Ajouter les nouveaux listeners
+    janRepReelInput.addEventListener('input', handleJanuaryRepReelChange);
+    janRepReelInput.addEventListener('blur', handleJanuaryRepReelChange);
+  }
+}
+
+// Handler pour les changements dans jan-obj-rep-reel
+function handleJanuaryRepReelChange(event) {
+  const input = event.target;
+
+  // Nettoyer la valeur (garder seulement les chiffres et le point)
+  const cleanValue = input.value.replace(/[^\d.]/g, '');
+  const numericValue = parseFloat(cleanValue) || 0;
+
+  // Mettre à jour le dataset
+  input.dataset.value = numericValue;
+
+  // Formater l'affichage
+  input.value = numericValue.toFixed(1) + ' h';
+
+  // Mettre à jour window.allMonthlyData
+  if (!window.allMonthlyData) {
+    window.allMonthlyData = {};
+  }
+  if (!window.allMonthlyData['jan']) {
+    window.allMonthlyData['jan'] = {};
+  }
+  window.allMonthlyData['jan'].obj_rep_reel = numericValue;
+
+  // Recalculer le pourcentage
+  calculateObjectifPercentage('jan', 'rep');
+
+  // Sauvegarder dans le backend avec un debounce
+  clearTimeout(window.janRepReelSaveTimeout);
+  window.janRepReelSaveTimeout = setTimeout(() => {
+    saveMonthlyDataToBackend(0); // 0 = janvier
+  }, 500);
 }
 
 // Handler pour les changements dans les inputs hebdomadaires
@@ -5297,7 +5350,8 @@ function calculateMonthlyTotalsFromWeekly(monthIndex) {
   switch (adjustedIndex) {
     case 0: // Janvier
       objPapReelValue = totalHMarketing; // HEURES PÀP
-      objRepReelValue = totalHMarketing; // HEURES PÀP REP (même valeur pour janvier)
+      // HEURES PÀP (REP) est MANUEL pour janvier - ne pas écraser
+      objRepReelValue = objRepReelDiv ? (parseFloat(objRepReelDiv.dataset.value) || 0) : 0;
       break;
     case 1: // Février
       objPapReelValue = totalHMarketing; // HEURES PÀP
@@ -5350,16 +5404,22 @@ function calculateMonthlyTotalsFromWeekly(monthIndex) {
 
   if (objRepReelDiv) {
     const suffix = getObjectifSuffix(monthIndex, 'rep');
-    if (suffix === ' h') {
-      objRepReelDiv.textContent = objRepReelValue.toFixed(1) + suffix;
-    } else if (suffix === ' $') {
-      objRepReelDiv.textContent = Math.round(objRepReelValue).toLocaleString('fr-CA') + suffix;
-    } else if (suffix === ' $/h') {
-      objRepReelDiv.textContent = objRepReelValue.toFixed(2) + suffix;
-    } else if (suffix !== null) {
-      objRepReelDiv.textContent = Math.round(objRepReelValue).toString();
+
+    // Pour janvier (index 0), obj-rep-reel est MANUEL - ne pas écraser
+    // Pour les autres mois, mettre à jour automatiquement
+    if (adjustedIndex !== 0) {
+      if (suffix === ' h') {
+        objRepReelDiv.textContent = objRepReelValue.toFixed(1) + suffix;
+      } else if (suffix === ' $') {
+        objRepReelDiv.textContent = Math.round(objRepReelValue).toLocaleString('fr-CA') + suffix;
+      } else if (suffix === ' $/h') {
+        objRepReelDiv.textContent = objRepReelValue.toFixed(2) + suffix;
+      } else if (suffix !== null) {
+        objRepReelDiv.textContent = Math.round(objRepReelValue).toString();
+      }
+      objRepReelDiv.dataset.value = objRepReelValue;
     }
-    objRepReelDiv.dataset.value = objRepReelValue;
+    // Pour janvier, on garde la valeur existante (déjà dans dataset.value)
   }
 
   // Sauvegarder dans window.allMonthlyData
@@ -5958,7 +6018,11 @@ function generateMonthlyContent(monthIndex) {
               </div>
               <div class="flex-1 p-4 flex flex-col justify-center text-center">
                 <div class="text-base font-bold mb-2" style="color: var(--text-light); text-transform: uppercase; letter-spacing: 0.05em;">${getObjectifLabel2(monthIndex)}</div>
-                <div id="${abbr}-obj-rep-reel" class="font-bold" style="color: var(--text-light); font-size: 2rem;" data-value="0">${getObjectifDefaultValue2(monthIndex)}</div>
+                ${monthIndex === 0 ?
+                  `<input type="text" id="${abbr}-obj-rep-reel" class="rpo-metric-input bg-transparent border-none text-center w-full rounded font-bold" style="color: var(--text-light); outline: none; font-size: 2rem;" data-value="0" value="${getObjectifDefaultValue2(monthIndex)}" placeholder="0 h">`
+                  :
+                  `<div id="${abbr}-obj-rep-reel" class="font-bold" style="color: var(--text-light); font-size: 2rem;" data-value="0">${getObjectifDefaultValue2(monthIndex)}</div>`
+                }
               </div>
             </div>
             <div class="flex items-center justify-center px-4 border-l" style="border-color: rgba(96, 165, 250, 0.1);">

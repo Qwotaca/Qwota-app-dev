@@ -4642,6 +4642,25 @@ window.closePdfModal = function() {
   clearPresentationSignature();
 };
 
+// Fonction helper pour détecter la langue à partir de l'adresse
+function detectLanguageFromAddress(address) {
+  if (!address) return 'fr'; // Défaut français
+
+  const addressUpper = address.toUpperCase();
+
+  // Détecter Ontario
+  if (addressUpper.includes('ONTARIO') ||
+      addressUpper.includes(', ON') ||
+      addressUpper.includes(' ON ')) {
+    log('[LANG] Ontario détecté → anglais');
+    return 'en';
+  }
+
+  // Toutes les autres provinces → français
+  log('[LANG] Pas Ontario → français');
+  return 'fr';
+}
+
 // Fonction pour accepter la soumission avec signature
 window.acceptPresentation = async function() {
   log('[acceptPresentation] Fonction appelée');
@@ -4718,7 +4737,11 @@ window.acceptPresentation = async function() {
     log('[acceptPresentation] Canvas signature trouvé:', previewCanvas);
     const signatureDataUrl = previewCanvas.toDataURL('image/png');
 
-    // Étape 3: Envoyer avec signature (va dans ventes_acceptees)
+    // Étape 3: Détecter la langue selon l'adresse (Ontario = anglais)
+    const clientLanguage = detectLanguageFromAddress(currentFormData.adresse);
+    log('[acceptPresentation] Langue détectée:', clientLanguage, 'pour adresse:', currentFormData.adresse);
+
+    // Étape 4: Envoyer avec signature (va dans ventes_acceptees)
     const payload = {
       username: window.username,
       clientEmail: currentFormData.courriel,
@@ -4730,7 +4753,8 @@ window.acceptPresentation = async function() {
       soumission_id: soumissionId,
       num: currentFormData.num,
       adresse: currentFormData.adresse || "",
-      telephone: currentFormData.telephone || ""
+      telephone: currentFormData.telephone || "",
+      language: clientLanguage  // IMPORTANT: Langue pour les courriels
     };
 
     log('[DEBUG] ACCEPTATION - Envoi signature:', payload);

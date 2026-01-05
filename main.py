@@ -3961,11 +3961,11 @@ def envoyer_soumission_email(
 
     # Templates d'email bilingues
     if language == 'en':
-        subject_text = "Your Quote - Qualité Étudiants"
+        subject_text = "Your Quote - College Painters"
         html = (
             f'<div style="font-family: Arial, sans-serif; font-size: 16px; color: #000;">'
             f'<p>Hello {prenom_client} {nom_client},</p>'
-            f'<p>Here is your quote for your painting project with Qualité Étudiants.</p>'
+            f'<p>Here is your quote for your painting project with College Painters.</p>'
             f'<p>Please review your quote by clicking the button below:</p>'
             f'<p style="margin: 10px 0;">'
             f'  <a href="{lien_pdf}" target="_blank" '
@@ -3986,7 +3986,7 @@ def envoyer_soumission_email(
             f'     Sign the quote'
             f'  </a>'
             f'</p><br>'
-            f'<p>Thank you for your trust.<br>The Qualité Étudiants Team</p>'
+            f'<p>Thank you for your trust.<br>The College Painters Team</p>'
             f'</div>'
         )
     else:
@@ -4255,7 +4255,7 @@ def envoyer_soumission_signee(
 def envoyer_email_soumission_signee(email_client, clientNom, clientPrenom, lien_pdf, senderUsername, language='fr'):
     # Templates d'email bilingues
     if language == 'en':
-        subject_text = "Your Signed Quote - Qualité Étudiants"
+        subject_text = "Your Signed Quote - College Painters"
         html = (
             f'<div style="font-family: Arial, sans-serif; font-size: 16px; color: #000;">'
             f'<p>Hello {clientPrenom} {clientNom},</p>'
@@ -4269,7 +4269,7 @@ def envoyer_email_soumission_signee(email_client, clientNom, clientPrenom, lien_
             f'  </a>'
             f'</p><br>'
             f'<p>Thank you for your trust.</p>'
-            f'<p>The Qualité Étudiants Team</p>'
+            f'<p>The College Painters Team</p>'
             f'</div>'
         )
     else:
@@ -5064,7 +5064,7 @@ def envoyer_email_demande_satisfaction(username: str, travail: dict, url_avis: s
             f'  </a>'
             f'</p><br>'
             f'<p>Your feedback is very important to us. Thank you very much!</p>'
-            f'<p>The Qualité Étudiants Team</p>'
+            f'<p>The College Painters Team</p>'
             f'</div>'
         )
     else:

@@ -13616,6 +13616,81 @@ async def save_coach_metrics(request: CoachMetricsRequest):
 
 
 # ============================================
+# ENDPOINTS COACH - OBJECTIFS MENSUELS PAR ENTREPRENEUR
+# ============================================
+
+@app.get("/api/coach/objectifs-mensuels")
+async def get_coach_objectifs_mensuels(coach_username: str):
+    """
+    Récupère les objectifs mensuels par entrepreneur pour un coach
+
+    Query params:
+        coach_username: Nom d'utilisateur du coach
+
+    Returns:
+        {
+            "success": True,
+            "objectifs": {
+                "2026-01": {"entrepreneur1": 100, "entrepreneur2": 120},
+                "2026-02": {...}
+            }
+        }
+    """
+    try:
+        from QE.Backend.coach_previsions import load_coach_objectifs_mensuels
+
+        objectifs = load_coach_objectifs_mensuels(coach_username)
+
+        return {
+            "success": True,
+            "objectifs": objectifs
+        }
+
+    except Exception as e:
+        print(f"[COACH API] Erreur GET objectifs-mensuels: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class CoachObjectifsMensuelsRequest(BaseModel):
+    coach_username: str
+    objectifs: dict  # {"2026-01": {"entrepreneur1": 100, "entrepreneur2": 120}, ...}
+
+
+@app.post("/api/coach/objectifs-mensuels")
+async def save_coach_objectifs_mensuels(request: CoachObjectifsMensuelsRequest):
+    """
+    Sauvegarde les objectifs mensuels par entrepreneur pour un coach
+
+    Body:
+        {
+            "coach_username": "coach1",
+            "objectifs": {
+                "2026-01": {"entrepreneur1": 100, "entrepreneur2": 120},
+                "2026-02": {...}
+            }
+        }
+
+    Returns:
+        {"success": True}
+    """
+    try:
+        from QE.Backend.coach_previsions import save_coach_objectifs_mensuels
+
+        success = save_coach_objectifs_mensuels(request.coach_username, request.objectifs)
+
+        if success:
+            return {
+                "success": True
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
+
+    except Exception as e:
+        print(f"[COACH API] Erreur POST objectifs-mensuels: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================
 # ENDPOINTS COMPTABLE/DIRECTION - FACTURATION QE
 # ============================================
 

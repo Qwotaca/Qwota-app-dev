@@ -9506,7 +9506,7 @@ async function loadObjectifsMensuels() {
                 data-entrepreneur="${entrepreneur.username}"
                 data-objectif="objectif1"
                 data-raw-value="${existingObj1}"
-                value="${formatObjectifValue(existingObj1, monthIndex)}"
+                value="${formatObjectifValue(existingObj1, monthIndex, 'objectif1')}"
                 placeholder="0"
                 style="width: 100%; background: var(--bg-card); border: 2px solid rgba(148, 163, 184, 0.3); border-radius: 0.5rem; padding: 0.75rem; color: var(--text-light); font-size: 1rem; font-weight: 600; transition: all 0.2s;"
                 onfocus="this.value = this.dataset.rawValue; this.select(); this.style.borderColor = '#60a5fa';"
@@ -9528,7 +9528,7 @@ async function loadObjectifsMensuels() {
                 data-entrepreneur="${entrepreneur.username}"
                 data-objectif="objectif2"
                 data-raw-value="${existingObj2}"
-                value="${formatObjectifValue(existingObj2, monthIndex)}"
+                value="${formatObjectifValue(existingObj2, monthIndex, 'objectif2')}"
                 placeholder="0"
                 style="width: 100%; background: var(--bg-card); border: 2px solid rgba(148, 163, 184, 0.3); border-radius: 0.5rem; padding: 0.75rem; color: var(--text-light); font-size: 1rem; font-weight: 600; transition: all 0.2s;"
                 onfocus="this.value = this.dataset.rawValue; this.select(); this.style.borderColor = '#60a5fa';"
@@ -9614,29 +9614,40 @@ function getObjectifLabel2ForMonth(monthIndex) {
   return labels[monthIndex];
 }
 
-function formatObjectifValue(value, monthIndex) {
+function formatObjectifValue(value, monthIndex, objectifType = 'objectif1') {
   if (!value || value === 0) return '';
 
-  // Janvier, Octobre, Novembre, Décembre = heures ou argent
-  if (monthIndex === 0 || monthIndex === 9 || monthIndex === 10 || monthIndex === 11) {
-    // Janvier = heures, autres = $
-    if (monthIndex === 0) {
+  // Formatage selon le mois ET le type d'objectif
+  const formatMap = {
+    0: { objectif1: 'h', objectif2: 'h' },        // Janvier: HEURES PÀP, HEURES PÀP (REP)
+    1: { objectif1: 'h', objectif2: 'nb' },       // Février: HEURES PÀP, ESTIMATIONS
+    2: { objectif1: 'nb', objectif2: 'nb' },      // Mars: ESTIMATIONS, VENTES
+    3: { objectif1: 'nb', objectif2: 'nb' },      // Avril: VENTES, PEINTRES
+    4: { objectif1: 'nb', objectif2: '$/h' },     // Mai: VENTES, PROD HORAIRE
+    5: { objectif1: 'nb', objectif2: '$/h' },     // Juin: VENTES, PROD HORAIRE
+    6: { objectif1: 'nb', objectif2: '$' },       // Juillet: VENTES, $ PRODUIT
+    7: { objectif1: 'nb', objectif2: '$' },       // Août: VENTES, $ PRODUIT
+    8: { objectif1: '$', objectif2: null },       // Septembre: $ PRODUIT (pas de 2e objectif)
+    9: { objectif1: 'h', objectif2: '$' },        // Octobre: HEURES PÀP, $ VENDUS
+    10: { objectif1: 'h', objectif2: '$' },       // Novembre: HEURES PÀP, $ VENDUS
+    11: { objectif1: 'h', objectif2: '$' }        // Décembre: HEURES PÀP, $ VENDUS
+  };
+
+  const format = formatMap[monthIndex][objectifType];
+
+  if (!format) return '';
+
+  switch (format) {
+    case 'h':
       return value.toFixed(1) + ' h';
-    } else {
+    case '$':
       return Math.round(value).toLocaleString('fr-CA') + ' $';
-    }
-  }
-  // Août = $
-  else if (monthIndex === 7) {
-    return Math.round(value).toLocaleString('fr-CA') + ' $';
-  }
-  // Mai, Juin, Juillet = $/h
-  else if (monthIndex === 4 || monthIndex === 5 || monthIndex === 6) {
-    return value.toFixed(2) + ' $/h';
-  }
-  // Autres = nombre simple
-  else {
-    return Math.round(value).toString();
+    case '$/h':
+      return value.toFixed(2) + ' $/h';
+    case 'nb':
+      return Math.round(value).toString();
+    default:
+      return value.toString();
   }
 }
 
@@ -9697,8 +9708,9 @@ async function saveObjectifsMensuels() {
         const monthKey = input.dataset.month;
         const monthParts = monthKey.split('-');
         const monthIndex = parseInt(monthParts[1]) - 1;
+        const objectifType = input.dataset.objectif; // 'objectif1' or 'objectif2'
         const value = parseFloat(input.dataset.rawValue) || 0;
-        input.value = formatObjectifValue(value, monthIndex);
+        input.value = formatObjectifValue(value, monthIndex, objectifType);
       });
 
       // Message de succès temporaire

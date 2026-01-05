@@ -6,7 +6,10 @@ from flask import Blueprint, request, jsonify
 from QE.Backend.coach_previsions import (
     load_coach_previsions,
     save_coach_previsions,
-    get_team_objectif_total
+    get_team_objectif_total,
+    load_coach_objectifs_mensuels,
+    save_coach_objectifs_mensuels,
+    get_entrepreneur_objectif_for_month
 )
 
 coach_bp = Blueprint('coach', __name__)
@@ -111,6 +114,111 @@ def save_team_objectifs():
 
     except Exception as e:
         print(f"[COACH API] Erreur POST team-objectifs: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@coach_bp.route('/api/coach/objectifs-mensuels', methods=['GET'])
+def get_objectifs_mensuels():
+    """
+    Récupère les objectifs mensuels par entrepreneur pour un coach
+
+    Query params:
+        coach_username: Nom d'utilisateur du coach
+
+    Returns:
+        {
+            "success": True,
+            "objectifs": {
+                "2026-01": {
+                    "entrepreneur1": 100,
+                    "entrepreneur2": 120
+                },
+                "2026-02": {...}
+            }
+        }
+    """
+    try:
+        coach_username = request.args.get('coach_username')
+
+        if not coach_username:
+            return jsonify({
+                'success': False,
+                'error': 'coach_username manquant'
+            }), 400
+
+        objectifs = load_coach_objectifs_mensuels(coach_username)
+
+        return jsonify({
+            'success': True,
+            'objectifs': objectifs
+        })
+
+    except Exception as e:
+        print(f"[COACH API] Erreur GET objectifs-mensuels: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@coach_bp.route('/api/coach/objectifs-mensuels', methods=['POST'])
+def save_objectifs_mensuels():
+    """
+    Sauvegarde les objectifs mensuels par entrepreneur pour un coach
+
+    Body JSON:
+        {
+            "coach_username": "coach1",
+            "objectifs": {
+                "2026-01": {
+                    "entrepreneur1": 100,
+                    "entrepreneur2": 120
+                },
+                "2026-02": {...}
+            }
+        }
+
+    Returns:
+        {
+            "success": True
+        }
+    """
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'Données JSON manquantes'
+            }), 400
+
+        coach_username = data.get('coach_username')
+        objectifs = data.get('objectifs', {})
+
+        if not coach_username:
+            return jsonify({
+                'success': False,
+                'error': 'coach_username manquant'
+            }), 400
+
+        # Sauvegarder les objectifs mensuels
+        success = save_coach_objectifs_mensuels(coach_username, objectifs)
+
+        if success:
+            return jsonify({
+                'success': True
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Erreur lors de la sauvegarde'
+            }), 500
+
+    except Exception as e:
+        print(f"[COACH API] Erreur POST objectifs-mensuels: {e}")
         return jsonify({
             'success': False,
             'error': str(e)

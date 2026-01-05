@@ -160,3 +160,100 @@ def save_coach_metrics(coach_username, metrics):
     except Exception as e:
         print(f"[COACH METRICS] ❌ Erreur sauvegarde {coach_username}: {e}")
         return False
+
+
+# ========== GESTION DES OBJECTIFS MENSUELS PAR ENTREPRENEUR ==========
+
+def get_coach_objectifs_mensuels_file(coach_username):
+    """
+    Retourne le chemin du fichier JSON des objectifs mensuels pour un coach
+    """
+    return DATA_DIR / f"{coach_username}_objectifs_mensuels.json"
+
+
+def load_coach_objectifs_mensuels(coach_username):
+    """
+    Charge les objectifs mensuels par entrepreneur pour un coach
+
+    Args:
+        coach_username: Nom d'utilisateur du coach
+
+    Returns:
+        dict: Dictionnaire {
+            "2026-01": {
+                "entrepreneur1": 100,
+                "entrepreneur2": 120
+            },
+            "2026-02": {...}
+        }
+    """
+    file_path = get_coach_objectifs_mensuels_file(coach_username)
+
+    if not file_path.exists():
+        return {}
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return data.get('objectifs', {})
+    except Exception as e:
+        print(f"[COACH OBJECTIFS MENSUELS] Erreur lecture {coach_username}: {e}")
+        return {}
+
+
+def save_coach_objectifs_mensuels(coach_username, objectifs):
+    """
+    Sauvegarde les objectifs mensuels par entrepreneur pour un coach
+
+    Args:
+        coach_username: Nom d'utilisateur du coach
+        objectifs: Dictionnaire {
+            "2026-01": {
+                "entrepreneur1": 100,
+                "entrepreneur2": 120
+            },
+            "2026-02": {...}
+        }
+
+    Returns:
+        bool: True si succès, False sinon
+    """
+    file_path = get_coach_objectifs_mensuels_file(coach_username)
+
+    try:
+        data = {
+            'coach_username': coach_username,
+            'objectifs': objectifs,
+            'last_updated': datetime.now().isoformat()
+        }
+
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        print(f"[COACH OBJECTIFS MENSUELS] ✅ Sauvegardé pour {coach_username}: {len(objectifs)} mois")
+        return True
+
+    except Exception as e:
+        print(f"[COACH OBJECTIFS MENSUELS] ❌ Erreur sauvegarde {coach_username}: {e}")
+        return False
+
+
+def get_entrepreneur_objectif_for_month(coach_username, entrepreneur_username, month_key):
+    """
+    Récupère l'objectif d'un entrepreneur pour un mois donné
+
+    Args:
+        coach_username: Nom d'utilisateur du coach
+        entrepreneur_username: Nom d'utilisateur de l'entrepreneur
+        month_key: Clé du mois au format "2026-01"
+
+    Returns:
+        float: Valeur de l'objectif (0 si non défini)
+    """
+    objectifs = load_coach_objectifs_mensuels(coach_username)
+
+    if month_key not in objectifs:
+        return 0
+
+    month_objectifs = objectifs[month_key]
+    return float(month_objectifs.get(entrepreneur_username, 0))

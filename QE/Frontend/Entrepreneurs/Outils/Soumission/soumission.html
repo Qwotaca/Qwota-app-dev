@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <title>Créer une soumission</title>
-  
+
+  <!-- 🚫 Désactiver le cache du navigateur -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
   <!-- 📱 PWA Meta Tags -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#1f2937">
@@ -1135,7 +1140,32 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
     if (signatureOverlay) {
       signatureOverlay.onclick = () => {
         log('[DEBUG] Click sur signature overlay détecté!');
-        window.openSignatureZoomPopup();
+
+        // Créer un overlay de chargement temporaire
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.style.cssText = `
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+        `;
+        loadingOverlay.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #333;"></i>';
+        signatureOverlay.appendChild(loadingOverlay);
+        signatureOverlay.style.cursor = 'wait';
+
+        // Attendre 1 seconde puis ouvrir le popup
+        setTimeout(() => {
+          if (loadingOverlay.parentElement) {
+            loadingOverlay.remove();
+          }
+          signatureOverlay.style.cursor = 'pointer';
+          window.openSignatureZoomPopup();
+        }, 1000);
       };
       log('[DEBUG] Événement onclick attaché à signatureOverlay');
 
@@ -3874,6 +3904,7 @@ let isPresentationDrawing = false;
 let hasPresentationSignature = false;
 let presentationPoints = [];
 let currentPdfUrl = null; // Pour stocker l'URL du PDF affiché
+let lastCanvasElement = null; // Pour détecter si le canvas a été recréé
 let currentPdfDocument = null; // Pour stocker le document PDF
 let currentPdfPage = null; // Pour stocker la page PDF actuelle
 let currentFormData = null; // Pour stocker les données du formulaire
@@ -3926,6 +3957,10 @@ window.addEventListener('orientationchange', () => {
 
 // Ouvrir le popup de signature zoom
 window.openSignatureZoomPopup = async function() {
+  log('[SIGNATURE] ========================================');
+  log('[SIGNATURE] openSignatureZoomPopup appelé');
+  log('[SIGNATURE] ========================================');
+
   // RESET COMPLET - Tout remettre à 0 avant d'ouvrir
   hasPresentationSignature = false;
   presentationPoints = [];
@@ -3943,29 +3978,46 @@ window.openSignatureZoomPopup = async function() {
 
   const parentBody = window.parent.document.body;
 
-  log('[DEBUG] Popup signature:', popup);
-  log('[DEBUG] PDF Modal:', pdfModal);
-  log('[DEBUG] Popup parent:', popup ? popup.parentElement : 'null');
+  log('[SIGNATURE] Popup signature:', popup);
+  log('[SIGNATURE] PDF Modal:', pdfModal);
+  log('[SIGNATURE] PDF Modal display AVANT:', pdfModal ? pdfModal.style.display : 'null');
+  log('[SIGNATURE] PDF Modal z-index AVANT:', pdfModal ? window.parent.getComputedStyle(pdfModal).zIndex : 'null');
+  log('[SIGNATURE] Popup parent:', popup ? popup.parentElement : 'null');
+
+  // IMPORTANT: Supprimer tous les anciens popups dans le parent pour éviter les doublons
+  const oldPopups = window.parent.document.querySelectorAll('#signatureZoomPopup');
+  log('[SIGNATURE] Nombre de popups trouvés dans parent:', oldPopups.length);
+  if (oldPopups.length > 0) {
+    oldPopups.forEach((oldPopup, index) => {
+      if (oldPopup !== popup) {
+        log('[SIGNATURE] Suppression ancien popup #' + index);
+        oldPopup.remove();
+      }
+    });
+  }
 
   // Déplacer le popup vers le parent si pas déjà fait
   if (popup && popup.parentElement !== parentBody) {
     parentBody.appendChild(popup);
-    log('[DEBUG] Popup déplacé vers parent');
+    log('[SIGNATURE] Popup déplacé vers parent');
   }
 
   // Cacher temporairement le modal PDF pour voir seulement le popup signature
   if (pdfModal) {
     pdfModal.style.display = 'none';
-    log('[DEBUG] PDF Modal caché');
+    log('[SIGNATURE] PDF Modal caché - display APRÈS:', pdfModal.style.display);
+  } else {
+    log('[SIGNATURE] ATTENTION: pdfModal non trouvé!');
   }
 
   if (popup) {
     popup.style.display = 'flex';
-    log('[DEBUG] Popup display set to flex');
-    log('[DEBUG] Popup computed style:', {
+    log('[SIGNATURE] Popup display set to flex');
+    log('[SIGNATURE] Popup computed style:', {
       display: window.parent.getComputedStyle(popup).display,
       zIndex: window.parent.getComputedStyle(popup).zIndex,
-      position: window.parent.getComputedStyle(popup).position
+      position: window.parent.getComputedStyle(popup).position,
+      pointerEvents: window.parent.getComputedStyle(popup).pointerEvents
     });
 
     // Attacher les événements des boutons du popup
@@ -4115,23 +4167,33 @@ async function renderZoomedPdfBackground() {
 
 // Fermer le popup de signature zoom
 window.closeSignatureZoomPopup = function() {
+  log('[SIGNATURE] ========================================');
+  log('[SIGNATURE] closeSignatureZoomPopup appelé');
+  log('[SIGNATURE] ========================================');
+
   let popup = document.getElementById('signatureZoomPopup');
   if (!popup) popup = window.parent.document.getElementById('signatureZoomPopup');
 
   let pdfModal = document.getElementById('pdfModal');
   if (!pdfModal) pdfModal = window.parent.document.getElementById('pdfModal');
 
+  log('[SIGNATURE] Popup display AVANT fermeture:', popup ? popup.style.display : 'null');
+  log('[SIGNATURE] PDF Modal display AVANT réaffichage:', pdfModal ? pdfModal.style.display : 'null');
+
   if (popup) {
     popup.style.display = 'none';
+    log('[SIGNATURE] Popup fermé - display:', popup.style.display);
   }
 
   // Réafficher le modal PDF
   if (pdfModal) {
     pdfModal.style.display = 'flex';
+    log('[SIGNATURE] PDF Modal réaffiché - display:', pdfModal.style.display);
   }
 
   // TOUJOURS réinitialiser quand on annule (ne pas garder l'ancienne signature)
   clearSignatureZoom();
+  log('[SIGNATURE] Signature cleared');
 };
 
 // Effacer la signature dans le zoom
@@ -4141,7 +4203,14 @@ window.clearSignatureZoom = function() {
 
 // Valider la signature et fermer le popup
 window.validateSignature = function() {
-  if (!hasPresentationSignature) return;
+  log('[SIGNATURE] ========================================');
+  log('[SIGNATURE] validateSignature appelé');
+  log('[SIGNATURE] ========================================');
+
+  if (!hasPresentationSignature) {
+    log('[SIGNATURE] ATTENTION: Pas de signature à valider!');
+    return;
+  }
 
   // Copier la signature sur le canvas preview
   let previewCanvas = document.getElementById('signaturePreviewCanvas');
@@ -4260,22 +4329,35 @@ window.validateSignature = function() {
   let pdfModal = document.getElementById('pdfModal');
   if (!pdfModal) pdfModal = window.parent.document.getElementById('pdfModal');
 
+  log('[SIGNATURE] Popup display AVANT fermeture:', popup ? popup.style.display : 'null');
+  log('[SIGNATURE] PDF Modal display AVANT réaffichage:', pdfModal ? pdfModal.style.display : 'null');
+
   if (popup) {
     popup.style.display = 'none';
+    log('[SIGNATURE] Popup fermé après validation - display:', popup.style.display);
   }
 
   // Réafficher le modal PDF
   if (pdfModal) {
     pdfModal.style.display = 'flex';
+    log('[SIGNATURE] PDF Modal réaffiché après validation - display:', pdfModal.style.display);
+    log('[SIGNATURE] PDF Modal z-index:', window.parent.getComputedStyle(pdfModal).zIndex);
   }
+
+  log('[SIGNATURE] validateSignature terminé');
 };
 
 // Initialiser le canvas de signature lors de l'ouverture du popup zoom
 function initPresentationSignatureCanvas() {
+  log('[SIGNATURE] === DÉBUT initPresentationSignatureCanvas ===');
+
   // Chercher le canvas dans l'iframe d'abord, puis dans le parent
   presentationSignatureCanvas = document.getElementById('presentationSignaturePad');
   if (!presentationSignatureCanvas) {
     presentationSignatureCanvas = window.parent.document.getElementById('presentationSignaturePad');
+    log('[SIGNATURE] Canvas trouvé dans parent document');
+  } else {
+    log('[SIGNATURE] Canvas trouvé dans iframe document');
   }
 
   if (!presentationSignatureCanvas) {
@@ -4283,17 +4365,46 @@ function initPresentationSignatureCanvas() {
     return;
   }
 
-  log('[DEBUG] presentationSignaturePad trouvé:', presentationSignatureCanvas);
+  log('[SIGNATURE] Canvas element:', presentationSignatureCanvas);
+
+  // Vérifier si c'est le même canvas que la dernière fois
+  const isSameCanvas = (presentationSignatureCanvas === lastCanvasElement);
+  log('[SIGNATURE] Canvas identique à la dernière fois?', isSameCanvas);
+  log('[SIGNATURE] lastCanvasElement:', lastCanvasElement);
+
+  if (!isSameCanvas && lastCanvasElement) {
+    log('[SIGNATURE] ⚠️ ATTENTION: Le canvas a été RECRÉÉ! Les anciens événements ne fonctionneront plus.');
+  }
+
+  // Mettre à jour la référence
+  lastCanvasElement = presentationSignatureCanvas;
+
+  log('[SIGNATURE] Canvas style AVANT fix:', {
+    width: presentationSignatureCanvas.style.width,
+    height: presentationSignatureCanvas.style.height,
+    display: presentationSignatureCanvas.style.display
+  });
+
+  // FORCER les dimensions du canvas pour éviter le bug 0x0
+  presentationSignatureCanvas.style.width = '600px';
+  presentationSignatureCanvas.style.height = '140px';
+  presentationSignatureCanvas.style.display = 'block';
+
+  log('[SIGNATURE] Canvas style APRÈS fix:', {
+    width: presentationSignatureCanvas.style.width,
+    height: presentationSignatureCanvas.style.height,
+    display: presentationSignatureCanvas.style.display
+  });
 
   presentationSignatureCtx = presentationSignatureCanvas.getContext('2d');
 
   // Configuration du canvas avec ratio plus élevé pour éviter pixelisation
   const ratio = Math.max(window.devicePixelRatio || 1, 2); // Minimum 2x au lieu de 1
-  const rect = presentationSignatureCanvas.getBoundingClientRect();
 
-  // Utiliser les dimensions réelles du canvas dans le DOM
-  const canvasWidth = rect.width;
-  const canvasHeight = rect.height;
+  // Utiliser les dimensions fixes définies dans le HTML (600px x 140px)
+  // getBoundingClientRect() peut retourner 0 si l'iframe n'est pas visible
+  const canvasWidth = 600;
+  const canvasHeight = 140;
 
   log('[DEBUG] Signature canvas dimensions:', { canvasWidth, canvasHeight });
 
@@ -4317,17 +4428,45 @@ function initPresentationSignatureCanvas() {
   // IMPORTANT: S'assurer que le fond reste transparent
   presentationSignatureCtx.clearRect(0, 0, presentationSignatureCanvas.width, presentationSignatureCanvas.height);
 
+  // Retirer les événements existants pour éviter les doublons après navigation
+  presentationSignatureCanvas.removeEventListener('pointerdown', startPresentationDrawing);
+  presentationSignatureCanvas.removeEventListener('pointermove', drawPresentation);
+  presentationSignatureCanvas.removeEventListener('pointerup', stopPresentationDrawing);
+  presentationSignatureCanvas.removeEventListener('pointercancel', stopPresentationDrawing);
+
+  log('[SIGNATURE] Événements retirés, ajout de nouveaux événements...');
+
   // Événements tactiles et souris
   presentationSignatureCanvas.addEventListener('pointerdown', startPresentationDrawing);
   presentationSignatureCanvas.addEventListener('pointermove', drawPresentation);
   presentationSignatureCanvas.addEventListener('pointerup', stopPresentationDrawing);
   presentationSignatureCanvas.addEventListener('pointercancel', stopPresentationDrawing);
+
+  log('[SIGNATURE] Événements attachés avec succès au canvas');
+  log('[SIGNATURE] Canvas final dimensions:', {
+    styleWidth: presentationSignatureCanvas.style.width,
+    styleHeight: presentationSignatureCanvas.style.height,
+    actualWidth: presentationSignatureCanvas.width,
+    actualHeight: presentationSignatureCanvas.height,
+    canvasWidth: canvasWidth,
+    canvasHeight: canvasHeight
+  });
+  log('[SIGNATURE] === FIN initPresentationSignatureCanvas ===');
 }
 
 function startPresentationDrawing(e) {
+  log('[SIGNATURE] startPresentationDrawing appelé - event:', e.type, 'canvas:', !!presentationSignatureCanvas);
+
+  if (!presentationSignatureCanvas) {
+    error('[SIGNATURE] Canvas non trouvé dans startPresentationDrawing!');
+    return;
+  }
+
   const rect = presentationSignatureCanvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
+
+  log('[SIGNATURE] Position:', { x, y, rectWidth: rect.width, rectHeight: rect.height });
 
   // Sur mobile, pas de restriction de bounds - on peut signer partout dans le canvas
   // Le rectangle bleu en pointillés indique la zone idéale mais ne bloque pas le dessin

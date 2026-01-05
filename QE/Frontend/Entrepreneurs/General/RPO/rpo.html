@@ -5266,6 +5266,9 @@ async function saveCoachObjectives(monthIndex) {
     // Recalculer le pourcentage
     calculateObjectifPercentage(abbr, 'rep');
 
+    // Vérifier si l'alerte doit être affichée ou masquée
+    checkCoachObjectivesAlert(abbr);
+
   } finally {
     // Restaurer le bouton
     setTimeout(() => {
@@ -6025,7 +6028,7 @@ function generateMonthlyContent(monthIndex) {
                 <i class="fas fa-user-shield" style="font-size: 1.25rem; color: white;"></i>
               </div>
               <div>
-                <h4 style="color: var(--text-light); font-weight: 700; font-size: 1.125rem; margin: 0; letter-spacing: 0.02em;">OBJECTIFS COACH</h4>
+                <h4 style="color: var(--text-light); font-weight: 700; font-size: 1.125rem; margin: 0; letter-spacing: 0.02em;">OBJECTIF MENSUEL DONNÉ PAR MON COACH</h4>
                 <p style="color: rgba(167, 139, 250, 0.8); font-size: 0.75rem; margin: 0; margin-top: 0.125rem;">Objectifs généraux définis par votre coach</p>
               </div>
             </div>
@@ -6046,6 +6049,19 @@ function generateMonthlyContent(monthIndex) {
 
         <!-- Contenu Objectifs Coach -->
         <div class="p-6">
+          <!-- Alerte objectif coach manquant (seulement pour janvier si obj-rep-reel = 0) -->
+          ${monthIndex === 0 ? `
+          <div id="${abbr}-coach-alert" style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.1)); border-left: 4px solid #f59e0b; border-radius: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <i class="fas fa-exclamation-triangle" style="color: #f59e0b; font-size: 1.25rem;"></i>
+              <div>
+                <div style="color: var(--text-light); font-weight: 600; margin-bottom: 0.25rem;">Objectif coach manquant</div>
+                <div style="color: rgba(148, 163, 184, 0.9); font-size: 0.875rem;">Veuillez remplir HEURES PÀP (REP) pour Janvier 2026</div>
+              </div>
+            </div>
+          </div>
+          ` : ''}
+
           <div class="grid ${getObjectifLabel2(monthIndex) === '' ? 'grid-cols-1' : 'grid-cols-2'} gap-4">
             <div class="rounded-xl flex" style="background: linear-gradient(145deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(139, 92, 246, 0.3); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);">
             <div class="flex-1 flex flex-col">
@@ -6287,6 +6303,43 @@ function changeMonthlyView(monthIndex) {
 
   // Vérifier si tous les objectifs visés sont à 0 et afficher l'alerte si nécessaire
   checkMonthlyObjectivesAlert(abbr);
+
+  // Vérifier si l'objectif coach HEURES PÀP (REP) est à 0 (seulement pour janvier)
+  checkCoachObjectivesAlert(abbr);
+}
+
+// Vérifier si l'objectif coach HEURES PÀP (REP) est à 0 et afficher une alerte (uniquement pour janvier et mois actuel)
+function checkCoachObjectivesAlert(abbr) {
+  // Seulement pour janvier
+  if (abbr !== 'jan') return;
+
+  const alertDiv = document.getElementById(`${abbr}-coach-alert`);
+  if (!alertDiv) return;
+
+  // Déterminer le mois actuel
+  const now = getTorontoNow();
+  const currentMonth = now.getMonth(); // 0-11 (0 = janvier, 11 = décembre)
+  const currentYear = now.getFullYear();
+
+  // Vérifier si c'est janvier 2026 (mois actuel)
+  const isCurrentMonth = (currentYear === 2026 && currentMonth === 0);
+
+  // Si ce n'est pas le mois actuel, masquer l'alerte
+  if (!isCurrentMonth) {
+    alertDiv.style.display = 'none';
+    return;
+  }
+
+  // Vérifier si obj-rep-reel est à 0
+  const objRepReelInput = document.getElementById(`${abbr}-obj-rep-reel`);
+  const objRepReelValue = objRepReelInput ? (parseFloat(objRepReelInput.dataset.value) || 0) : 0;
+
+  // Afficher l'alerte si la valeur est 0
+  if (objRepReelValue === 0) {
+    alertDiv.style.display = 'block';
+  } else {
+    alertDiv.style.display = 'none';
+  }
 }
 
 // Vérifier si les objectifs mensuels sont tous à 0 et afficher une alerte (uniquement pour le mois actuel)

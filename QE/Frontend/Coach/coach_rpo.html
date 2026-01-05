@@ -2147,25 +2147,25 @@ select:disabled {
             </div>
 
             <!-- Month Selector Dropdown -->
-            <div style="min-width: 200px;">
-              <select
-                id="objectifs-mensuels-month-selector"
-                onchange="changeObjectifsMensuelsMonth(parseInt(this.value))"
-                style="width: 100%; background: rgba(148, 163, 184, 0.1); border: 2px solid rgba(148, 163, 184, 0.3); border-radius: 0.75rem; padding: 0.75rem 1rem; color: var(--text-light); font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s;"
-              >
-                <option value="0">Janvier 2026</option>
-                <option value="1">Février 2026</option>
-                <option value="2">Mars 2026</option>
-                <option value="3">Avril 2026</option>
-                <option value="4">Mai 2026</option>
-                <option value="5">Juin 2026</option>
-                <option value="6">Juillet 2026</option>
-                <option value="7">Août 2026</option>
-                <option value="8">Septembre 2026</option>
-                <option value="9">Octobre 2026</option>
-                <option value="10">Novembre 2026</option>
-                <option value="11">Décembre 2026</option>
-              </select>
+            <div style="min-width: 220px; position: relative;">
+              <div class="dropdown-secondary" id="objectifs-mensuels-month-dropdown" onclick="toggleObjectifsMensuelsMonthDropdown()" style="width: 100% !important;">
+                <span id="objectifs-mensuels-month-selected">Janvier 2026</span>
+                <i class="fas fa-chevron-down" style="margin-left: auto; font-size: 0.75rem; color: var(--text-gray); transition: transform 0.2s ease;"></i>
+              </div>
+              <div class="dropdown-secondary-menu" id="objectifs-mensuels-month-menu">
+                <div class="dropdown-secondary-option selected" onclick="selectObjectifsMensuelsMonth(0, 'Janvier 2026')">Janvier 2026</div>
+                <div class="dropdown-secondary-option" onclick="selectObjectifsMensuelsMonth(1, 'Février 2026')">Février 2026</div>
+                <div class="dropdown-secondary-option" onclick="selectObjectifsMensuelsMonth(2, 'Mars 2026')">Mars 2026</div>
+                <div class="dropdown-secondary-option" onclick="selectObjectifsMensuelsMonth(3, 'Avril 2026')">Avril 2026</div>
+                <div class="dropdown-secondary-option" onclick="selectObjectifsMensuelsMonth(4, 'Mai 2026')">Mai 2026</div>
+                <div class="dropdown-secondary-option" onclick="selectObjectifsMensuelsMonth(5, 'Juin 2026')">Juin 2026</div>
+                <div class="dropdown-secondary-option" onclick="selectObjectifsMensuelsMonth(6, 'Juillet 2026')">Juillet 2026</div>
+                <div class="dropdown-secondary-option" onclick="selectObjectifsMensuelsMonth(7, 'Août 2026')">Août 2026</div>
+                <div class="dropdown-secondary-option" onclick="selectObjectifsMensuelsMonth(8, 'Septembre 2026')">Septembre 2026</div>
+                <div class="dropdown-secondary-option" onclick="selectObjectifsMensuelsMonth(9, 'Octobre 2026')">Octobre 2026</div>
+                <div class="dropdown-secondary-option" onclick="selectObjectifsMensuelsMonth(10, 'Novembre 2026')">Novembre 2026</div>
+                <div class="dropdown-secondary-option" onclick="selectObjectifsMensuelsMonth(11, 'Décembre 2026')">Décembre 2026</div>
+              </div>
             </div>
           </div>
         </div>
@@ -9480,15 +9480,54 @@ async function loadObjectifsMensuels() {
   }
 }
 
+function toggleObjectifsMensuelsMonthDropdown() {
+  const menu = document.getElementById('objectifs-mensuels-month-menu');
+  const dropdown = document.getElementById('objectifs-mensuels-month-dropdown');
+  const chevron = dropdown.querySelector('.fa-chevron-down');
+
+  menu.classList.toggle('show');
+  dropdown.classList.toggle('active');
+
+  if (menu.classList.contains('show')) {
+    chevron.style.transform = 'rotate(180deg)';
+  } else {
+    chevron.style.transform = 'rotate(0deg)';
+  }
+}
+
+function selectObjectifsMensuelsMonth(monthIndex, monthName) {
+  // Mettre à jour le texte sélectionné
+  const selectedText = document.getElementById('objectifs-mensuels-month-selected');
+  selectedText.textContent = monthName;
+
+  // Mettre à jour les classes selected
+  const options = document.querySelectorAll('#objectifs-mensuels-month-menu .dropdown-secondary-option');
+  options.forEach((option, index) => {
+    if (index === monthIndex) {
+      option.classList.add('selected');
+    } else {
+      option.classList.remove('selected');
+    }
+  });
+
+  // Fermer le dropdown
+  const menu = document.getElementById('objectifs-mensuels-month-menu');
+  const dropdown = document.getElementById('objectifs-mensuels-month-dropdown');
+  const chevron = dropdown.querySelector('.fa-chevron-down');
+
+  menu.classList.remove('show');
+  dropdown.classList.remove('active');
+  chevron.style.transform = 'rotate(0deg)';
+
+  // Afficher le mois sélectionné
+  changeObjectifsMensuelsMonth(monthIndex);
+}
+
 function displayObjectifsMensuelsForMonth(monthIndex) {
   const container = document.getElementById('objectifs-mensuels-content');
-  const monthSelector = document.getElementById('objectifs-mensuels-month-selector');
 
   // Mettre à jour le mois actuel
   currentObjectifsMensuelsMonth = monthIndex;
-  if (monthSelector) {
-    monthSelector.value = monthIndex;
-  }
 
   const year = 2026; // Pour l'instant on reste en 2026
   const monthKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;

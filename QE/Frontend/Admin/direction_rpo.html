@@ -3327,27 +3327,42 @@ function createTaskElement(task) {
   div.draggable = true;
   div.dataset.taskId = task.id;
 
+  const userRole = localStorage.getItem('userRole');
+  const isDirectionUser = userRole === 'direction';
+  const isCoachUser = userRole === 'coach';
+
+  // Generate action buttons - both Direction and Coaches can manage tasks
+  let actionButtons = `
+    <button onclick="completeTask('${task.id}')" style="padding: 0.5rem; background: rgba(34, 197, 94, 0.2); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 0.5rem; color: #22c55e; cursor: pointer; font-size: 0.875rem;">
+      <i class="fas fa-check" style=""></i>
+    </button>
+  `;
+
+  // Show Edit and Delete buttons for both Direction and Coach users
+  if (isDirectionUser || isCoachUser) {
+    actionButtons += `
+      <button onclick="openTaskModal('${task.priority}', '${task.id}')" style="padding: 0.5rem; background: rgba(96, 165, 250, 0.2); border: 1px solid rgba(96, 165, 250, 0.3); border-radius: 0.5rem; color: #60a5fa; cursor: pointer; font-size: 0.875rem;">
+        <i class="fas fa-edit" style=""></i>
+      </button>
+      <button onclick="deleteTask('${task.id}')" style="padding: 0.5rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 0.5rem; color: #ef4444; cursor: pointer; font-size: 0.875rem;">
+        <i class="fas fa-trash" style=""></i>
+      </button>
+    `;
+  }
+
   div.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-      <div class="todo-item-title" style="margin-bottom: 0;">${task.title}</div>
-      <div style="display: flex; gap: 0.25rem;">
-        <button onclick="showTaskDetails('${task.id.replace(/'/g, "\\'")}', '${task.title.replace(/'/g, "\\'")}', '${(task.details || 'Aucun détail').replace(/'/g, "\\'").replace(/\n/g, '\\n')}')" style="padding: 0.25rem 0.375rem; background: rgba(96, 165, 250, 0.2); border: 1px solid rgba(96, 165, 250, 0.3); border-radius: 0.375rem; color: #60a5fa; cursor: pointer; font-size: 0.7rem;">
-          <i class="fas fa-info-circle"></i>
-        </button>
-        <button onclick="completeTask('${task.id}')" style="padding: 0.25rem 0.375rem; background: rgba(34, 197, 94, 0.2); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 0.375rem; color: #22c55e; cursor: pointer; font-size: 0.7rem;">
-          <i class="fas fa-check"></i>
-        </button>
-        <button onclick="openTaskModal('${task.priority}', '${task.id}')" style="padding: 0.25rem 0.375rem; background: rgba(96, 165, 250, 0.2); border: 1px solid rgba(96, 165, 250, 0.3); border-radius: 0.375rem; color: #60a5fa; cursor: pointer; font-size: 0.7rem;">
-          <i class="fas fa-edit"></i>
-        </button>
-        <button onclick="deleteTask('${task.id}')" style="padding: 0.25rem 0.375rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 0.375rem; color: #ef4444; cursor: pointer; font-size: 0.7rem;">
-          <i class="fas fa-trash"></i>
-        </button>
-      </div>
+    <div style="position: relative;">
+      <div class="todo-item-title">${task.title}</div>
+      <button onclick="showTaskDetails('${task.id.replace(/'/g, "\\'")}', '${task.title.replace(/'/g, "\\'")}', '${(task.details || 'Aucun détail').replace(/'/g, "\\'").replace(/\n/g, '\\n')}')" style="position: absolute; top: 0; right: 0; padding: 0.25rem 0.5rem; background: rgba(96, 165, 250, 0.2); border: 1px solid rgba(96, 165, 250, 0.3); border-radius: 0.5rem; color: #60a5fa; cursor: pointer; font-size: 0.75rem;">
+        <i class="fas fa-info-circle" style=""></i>
+      </button>
     </div>
-    <div class="todo-item-meta" style="justify-content: space-between;">
-      ${task.assigned ? `<span><i class="fas fa-user mr-1"></i>${task.assigned}</span>` : '<span></span>'}
-      ${task.date ? `<span><i class="fas fa-calendar mr-1"></i>${formatDate(task.date)}</span>` : ''}
+    <div class="todo-item-meta">
+      ${task.assigned ? `<span><i class="fas fa-user mr-1" style=""></i>${task.assigned}</span>` : ''}
+      ${task.date ? `<span><i class="fas fa-calendar mr-1" style=""></i>${formatDate(task.date)}</span>` : ''}
+    </div>
+    <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+      ${actionButtons}
     </div>
   `;
 

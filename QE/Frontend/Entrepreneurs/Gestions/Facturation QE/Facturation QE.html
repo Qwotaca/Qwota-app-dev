@@ -690,12 +690,12 @@
           const depotMethode = clientData.depot?.methode; // Utiliser "methode" au lieu de "type"
 
           // Afficher la section éléments à ajouter si:
-          // - Le dépôt est en traitement/attente_comptable (déjà envoyé au comptable)
+          // - Le dépôt est en traitement/attente_comptable/traité (déjà envoyé au comptable)
           // - OU si une méthode de paiement (virement/chèque) a déjà été sélectionnée
           const elementsAjouterDepot = document.getElementById('elementsAjouterDepot');
           const virementFieldsDepot = document.getElementById('virementFieldsDepot');
           const chequeFieldsDepot = document.getElementById('chequeFieldsDepot');
-          const depotEnTraitement = statutDepot === 'traitement' || statutDepot === 'attente_comptable';
+          const depotEnTraitement = statutDepot === 'traitement' || statutDepot === 'attente_comptable' || statutDepot === 'traite' || statutDepot === 'traite_attente_final';
 
           if (elementsAjouterDepot) {
             if (depotEnTraitement || depotMethode) {
@@ -746,10 +746,10 @@
           const paiementFinalType = clientData.paiementFinal?.methode || clientData.paiementFinal?.type;
 
           // Afficher la section éléments à ajouter SEULEMENT si:
-          // - Le paiement est en traitement/attente_comptable (déjà envoyé au comptable)
+          // - Le paiement est en traitement/attente_comptable/traité (déjà envoyé au comptable)
           // - OU si un type de paiement (virement/cheque) a déjà été sélectionné
           const elementsAjouterPaiementFinal = document.getElementById('elementsAjouterPaiementFinal');
-          const paiementFinalEnTraitement = statutPaiementFinal === 'traitement' || statutPaiementFinal === 'attente_comptable';
+          const paiementFinalEnTraitement = statutPaiementFinal === 'traitement' || statutPaiementFinal === 'attente_comptable' || statutPaiementFinal === 'traite';
 
           if (elementsAjouterPaiementFinal) {
             if (paiementFinalEnTraitement || paiementFinalType) {
@@ -3185,9 +3185,12 @@
       let autresPaiements = Array.isArray(client.autresPaiements) ? client.autresPaiements : [];
 
       // CORRECTION AUTOMATIQUE: Si le dépôt est non_envoye ET il y a des autres paiements sans typePaiementAutres,
-      // les corriger pour être "un_seul_paiement"
+      // les corriger pour être "un_seul_paiement" (sauf les remboursements)
       if (statutDepot === 'non_envoye' && autresPaiements.length > 0) {
         autresPaiements = autresPaiements.map(p => {
+          if (p.typePaiementAutres === 'remboursement') {
+            return p; // Ne pas toucher aux remboursements
+          }
           if (!p.typePaiementAutres || p.typePaiementAutres === 'paiement_partiel') {
             return { ...p, typePaiementAutres: 'un_seul_paiement' };
           }
@@ -3195,8 +3198,8 @@
         });
       }
 
-      // Filtrer par type
-      const paiementsPartiels = autresPaiements.filter(p => !p.typePaiementAutres || p.typePaiementAutres === 'paiement_partiel');
+      // Filtrer par type (inclure les remboursements dans paiementsPartiels)
+      const paiementsPartiels = autresPaiements.filter(p => !p.typePaiementAutres || p.typePaiementAutres === 'paiement_partiel' || p.typePaiementAutres === 'remboursement');
       const paiementsUnSeul = autresPaiements.filter(p => p.typePaiementAutres === 'un_seul_paiement');
 
       // Statuts des paiements partiels (traitement OU attente_comptable = en traitement pour l'entrepreneur)
@@ -3736,9 +3739,7 @@
              </button>`;
           } else if (statutPaiement === 'attente_comptable') {
             // Paiement validé par coach, en attente comptable
-            statusBadgeHTML = `<span class="text-xs px-3 py-1" style="color: #f59e0b; font-weight: 500;">
-               <i class="fas fa-spinner fa-spin mr-1"></i>En traitement comptable
-             </span>`;
+            statusBadgeHTML = '';
           } else {
             // Autres statuts (traite, etc.)
             statusBadgeHTML = '';
@@ -4973,16 +4974,21 @@
             </div>
 
             <!-- Bouton Remboursement -->
-            <div class="mt-4 flex justify-end">
-              <button type="button"
-                      onclick="ouvrirPopupRemboursement()"
-                      class="btn-remb-discret text-sm flex items-center space-x-1 px-3 py-2 transition-all"
-                      style="background: rgba(148, 163, 184, 0.15); color: var(--text-gray); border-radius: 28px;"
-                      onmouseover="this.style.background='rgba(239, 68, 68, 0.2)'; this.style.color='#ef4444'"
-                      onmouseout="this.style.background='rgba(148, 163, 184, 0.15)'; this.style.color='var(--text-gray)'">
-                <i class="fas fa-undo" style="font-size: 0.9em;"></i>
-                <span>Remboursement</span>
-              </button>
+            <div class="mt-4">
+              <!-- Note remboursements (affichée seulement si des remboursements existent) -->
+              <span id="noteRemboursements" class="text-xs" style="color: #ef4444; display: none;"></span>
+
+              <div class="flex justify-end">
+                <button type="button"
+                        onclick="ouvrirPopupRemboursement()"
+                        class="btn-remb-discret text-sm flex items-center space-x-1 px-3 py-2 transition-all"
+                        style="background: rgba(148, 163, 184, 0.15); color: var(--text-gray); border-radius: 28px;"
+                        onmouseover="this.style.background='rgba(239, 68, 68, 0.2)'; this.style.color='#ef4444'"
+                        onmouseout="this.style.background='rgba(148, 163, 184, 0.15)'; this.style.color='var(--text-gray)'">
+                  <i class="fas fa-undo" style="font-size: 0.9em;"></i>
+                  <span>Remboursement</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -8155,15 +8161,29 @@
           let hasTraite = false;
           let hasUnSeulPaiement = false;
 
+          let hasRemboursement = false;
+          let montantRemboursement = 0;
+          let nbRemboursements = 0;
+
           autresPaiementsData.forEach(p => {
             const montant = parseFloat(String(p.montant || '0').replace(/\s/g, '').replace(/,/g, '.').replace(/[^\d.]/g, '')) || 0;
+
+            // Détecter les remboursements
+            if (p.typePaiementAutres === 'remboursement') {
+              hasRemboursement = true;
+              montantRemboursement += montant;
+              nbRemboursements++;
+              log('[RED] REMBOURSEMENT détecté (totalTravaux=0):', montant);
+              return; // Skip ce paiement pour les autres checks
+            }
+
             totalAutres += montant;
             if (p.statut === 'traitement' || p.statut === 'attente_comptable') hasEnTraitement = true;
             if (p.statut === 'traite') hasTraite = true;
             if (p.typePaiementAutres === 'un_seul_paiement') hasUnSeulPaiement = true;
           });
 
-          log('[DEBUG] Autres paiements trouvés:', autresPaiementsData.length, 'total:', totalAutres, 'en traitement:', hasEnTraitement, 'traité:', hasTraite, 'un seul:', hasUnSeulPaiement);
+          log('[DEBUG] Autres paiements trouvés:', autresPaiementsData.length, 'total:', totalAutres, 'en traitement:', hasEnTraitement, 'traité:', hasTraite, 'un seul:', hasUnSeulPaiement, 'remboursement:', hasRemboursement);
 
           // Mettre à jour la barre avec le montant des autres paiements
           const totalAvecTaxesAutres = calculerTotalAvecTaxes(totalAutres);
@@ -8172,6 +8192,7 @@
             progressTextRight.textContent = formatMontant(totalAvecTaxesAutres);
           }
 
+          // Ne pas changer la barre pour les remboursements, juste noter leur présence
           if (hasEnTraitement) {
             progressBar.style.width = '100%';
             progressBar.style.background = '#f59e0b'; // Orange
@@ -8190,6 +8211,20 @@
             statutPaiement.textContent = 'En attente du dépôt';
             statutPaiement.style.color = 'white';
           }
+
+          // Afficher la note des remboursements si des remboursements existent
+          const noteRemboursements = document.getElementById('noteRemboursements');
+          if (noteRemboursements && hasRemboursement) {
+            const texteRemb = nbRemboursements > 1
+              ? `${nbRemboursements} remboursements totalisant ${montantRemboursement.toFixed(2).replace('.', ',')} $`
+              : `${nbRemboursements} remboursement totalisant ${montantRemboursement.toFixed(2).replace('.', ',')} $`;
+            noteRemboursements.textContent = texteRemb;
+            noteRemboursements.style.display = 'block';
+            log('[RED] Note remboursements affichée (totalTravaux=0):', texteRemb);
+          } else if (noteRemboursements) {
+            noteRemboursements.style.display = 'none';
+          }
+
           return;
         }
 
@@ -8342,12 +8377,25 @@
         log('[ORANGE] Paiement final EN TRAITEMENT ajouté (via statutPaiementFinal):', cleanAndParseAmount(clientData.paiementFinal?.montant));
       }
 
-      // Vérifier les autres paiements
+      // Vérifier les autres paiements et détecter les remboursements
       let hasAutresPaiementsTraite = false;
       let hasAutresPaiementsTraitement = false;
+      let hasRemboursement = false;
+      let montantRemboursement = 0;
+      let nbRemboursements = 0;
       if (clientData.autresPaiements && Array.isArray(clientData.autresPaiements)) {
         clientData.autresPaiements.forEach(paiement => {
           const montantAutre = cleanAndParseAmount(paiement.montant);
+
+          // Détecter les remboursements
+          if (paiement.typePaiementAutres === 'remboursement') {
+            hasRemboursement = true;
+            montantRemboursement += montantAutre;
+            nbRemboursements++;
+            log('[RED] REMBOURSEMENT détecté:', montantAutre, '(statut:', paiement.statut, ')');
+            return; // Skip les autres checks pour ce paiement
+          }
+
           if (paiement.statut === 'traite') {
             montantTraite += montantAutre;
             hasAutresPaiementsTraite = true;
@@ -8428,7 +8476,8 @@
       // Mettre à jour le statut
       statutPaiement.textContent = statut;
 
-      // Créer la barre de progression avec segments distincts (vert pour traité, orange pour en traitement)
+      // Créer la barre de progression avec segments distincts
+      // Ne pas changer la couleur pour les remboursements, juste afficher normalement
       if (pourcentageTraite > 0 && pourcentageEnTraitement > 0) {
         // Dépôt traité (vert) + Paiement en traitement (orange)
         const percentTraite = (pourcentageTraite / progression) * 100;
@@ -8452,6 +8501,19 @@
       } else {
         statutPaiement.style.color = 'white'; // Blanc pour en attente
         progressBar.style.background = '#6b7280'; // Gris solide
+      }
+
+      // Afficher la note des remboursements si des remboursements existent
+      const noteRemboursements = document.getElementById('noteRemboursements');
+      if (noteRemboursements && hasRemboursement) {
+        const texteRemb = nbRemboursements > 1
+          ? `${nbRemboursements} remboursements totalisant ${montantRemboursement.toFixed(2).replace('.', ',')} $`
+          : `${nbRemboursements} remboursement totalisant ${montantRemboursement.toFixed(2).replace('.', ',')} $`;
+        noteRemboursements.textContent = texteRemb;
+        noteRemboursements.style.display = 'block';
+        log('[RED] Note remboursements affichée (section principale):', texteRemb);
+      } else if (noteRemboursements) {
+        noteRemboursements.style.display = 'none';
       }
 
       log('[OK] Progression mise à jour:', Math.round(progression) + '%', '- Montant traité:', montantTraite, '- Montant en traitement:', montantEnTraitement, '- Total avec taxes:', totalAvecTaxes, '- Statut:', statut);
@@ -9139,18 +9201,23 @@
       const anciensBoutons = tabSpacing.querySelectorAll('[id^="btn-paiement-partiel-"], [id^="btn-un-seul-paiement"]');
       anciensBoutons.forEach(btn => btn.remove());
 
-      // Séparer les paiements par type
+      // Séparer les paiements par type (inclure les remboursements dans paiementsPartiels)
       const paiementsPartiels = autresPaiements.filter(p => {
-        return !p.typePaiementAutres || p.typePaiementAutres === 'paiement_partiel';
+        return !p.typePaiementAutres || p.typePaiementAutres === 'paiement_partiel' || p.typePaiementAutres === 'remboursement';
       });
       const paiementsUnSeul = autresPaiements.filter(p => {
         return p.typePaiementAutres === 'un_seul_paiement';
       });
 
-      log(`[DEBUG] ${paiementsPartiels.length} paiements partiels, ${paiementsUnSeul.length} un seul paiement`);
+      log(`[DEBUG] ${paiementsPartiels.length} paiements partiels (avec remboursements), ${paiementsUnSeul.length} un seul paiement`);
 
-      // Générer boutons pour paiements partiels
+      // Générer boutons pour paiements partiels (SANS les remboursements)
       paiementsPartiels.forEach((paiement, index) => {
+        // SKIP les remboursements - ils n'ont pas de bouton de navigation
+        if (paiement.typePaiementAutres === 'remboursement') {
+          return;
+        }
+
         const numero = index + 1;
         const newButton = document.createElement('button');
         newButton.type = 'button';
@@ -9158,9 +9225,10 @@
         newButton.className = 'btn-secondary px-6 py-3 rounded-lg font-semibold transition-all duration-300';
         // Le gap est géré par le conteneur parent avec display: flex; gap: 0.5rem;
         newButton.onclick = () => showPaiementSection(`paiement-partiel-${numero}`);
+
         newButton.innerHTML = `<i class="fas fa-coins mr-2"></i>Paiement Partiel ${numero}`;
 
-        // Couleurs selon statut - utiliser rgb(16, 185, 129) / rgb(5, 150, 105) pour vert
+        // Couleurs selon statut
         if (paiement.statut === 'traite') {
           newButton.style.setProperty('background', 'linear-gradient(135deg, rgb(16, 185, 129), rgb(5, 150, 105))', 'important');
           newButton.style.setProperty('border-color', 'rgb(16, 185, 129)', 'important');
@@ -9177,9 +9245,14 @@
         }
       });
 
-      // Générer boutons pour "un seul paiement" - SEULEMENT s'il y en a vraiment
+      // Générer boutons pour "un seul paiement" - SEULEMENT s'il y en a vraiment (SANS les remboursements)
       if (paiementsUnSeul.length > 0) {
         paiementsUnSeul.forEach((paiement, index) => {
+          // SKIP les remboursements - ils n'ont pas de bouton de navigation
+          if (paiement.typePaiementAutres === 'remboursement') {
+            return;
+          }
+
           const numero = index + 1;
           const newButton = document.createElement('button');
           newButton.type = 'button';
@@ -9188,7 +9261,7 @@
           newButton.onclick = () => showPaiementSection(`un-seul-paiement-${numero}`);
           newButton.innerHTML = `<i class="fas fa-dollar-sign mr-2"></i>Un seul paiement`;
 
-          // Couleurs selon statut - utiliser rgb(16, 185, 129) / rgb(5, 150, 105) pour vert
+          // Couleurs selon statut
           if (paiement.statut === 'traite') {
             newButton.style.setProperty('background', 'linear-gradient(135deg, rgb(16, 185, 129), rgb(5, 150, 105))', 'important');
             newButton.style.setProperty('border-color', 'rgb(16, 185, 129)', 'important');
@@ -9220,15 +9293,15 @@
       // Supprimer les anciennes sections (paiement partiel ET un seul paiement)
       document.querySelectorAll('[id^="content-paiement-partiel-"], [id^="content-un-seul-paiement-"]').forEach(s => s.remove());
 
-      // Séparer les paiements par type
+      // Séparer les paiements par type (inclure les remboursements dans paiementsPartiels)
       const paiementsPartiels = autresPaiements.filter(p => {
-        return !p.typePaiementAutres || p.typePaiementAutres === 'paiement_partiel';
+        return !p.typePaiementAutres || p.typePaiementAutres === 'paiement_partiel' || p.typePaiementAutres === 'remboursement';
       });
       const paiementsUnSeul = autresPaiements.filter(p => {
         return p.typePaiementAutres === 'un_seul_paiement';
       });
 
-      log(`[FIX] Génération sections: ${paiementsPartiels.length} partielles, ${paiementsUnSeul.length} un seul paiement`);
+      log(`[FIX] Génération sections: ${paiementsPartiels.length} partielles (avec remboursements), ${paiementsUnSeul.length} un seul paiement`);
 
       // Générer sections pour paiements partiels
       paiementsPartiels.forEach((paiement, index) => {
@@ -9236,14 +9309,6 @@
         const newSection = document.createElement('div');
         newSection.id = `content-paiement-partiel-${numero}`;
         newSection.className = 'paiement-content hidden';
-
-        // Badge de statut
-        let badge = '';
-        if (paiement.statut === 'traite') {
-          badge = '<span class="px-3 py-1 text-xs rounded-full ml-3" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">✓ Traité</span>';
-        } else if (paiement.statut === 'traitement') {
-          badge = '<span class="px-3 py-1 text-xs rounded-full ml-3" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">En traitement</span>';
-        }
 
         // Normaliser la méthode (enlever accents: chèque → cheque)
         const methodeNormalized = paiement.methode ? paiement.methode.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
@@ -9253,12 +9318,13 @@
 
         // Construire les champs virement (grisés)
         let virementFields = '';
+        const labelType = paiement.typePaiementAutres === 'remboursement' ? 'Remboursement' : `Paiement Partiel ${numero}`;
         if (methodeNormalized === 'virement') {
           virementFields = `
             <div class="overflow-hidden" style="max-height: 1000px; opacity: 1;">
               <h2 class="text-xl font-bold mb-4 border-b pb-2" style="color: var(--text-light); border-color: var(--border-dark);">
                 <i class="fas fa-plus mr-2 text-orange-500"></i>
-                Éléments à ajouter - Paiement Partiel ${numero}
+                Éléments à ajouter - ${labelType}
               </h2>
 
               <div class="grid grid-cols-4 gap-4">
@@ -9290,7 +9356,7 @@
             <div class="overflow-hidden" style="max-height: 1000px; opacity: 1;">
               <h2 class="text-xl font-bold mb-4 border-b pb-2" style="color: var(--text-light); border-color: var(--border-dark);">
                 <i class="fas fa-plus mr-2 text-orange-500"></i>
-                Éléments à ajouter - Paiement Partiel ${numero}
+                Éléments à ajouter - ${labelType}
               </h2>
 
               <div class="grid grid-cols-3 gap-4">
@@ -9330,12 +9396,15 @@
           `;
         }
 
+        // Changer le titre si c'est un remboursement
+        const titreSection = paiement.typePaiementAutres === 'remboursement'
+          ? `<i class="fas fa-undo mr-2 text-red-500"></i>Remboursement`
+          : `<i class="fas fa-coins mr-2 text-purple-500"></i>Paiement Partiel ${numero}`;
+
         newSection.innerHTML = `
           <div style="margin-bottom: 0.5rem;">
             <h2 class="text-xl font-bold inline-flex items-center" style="color: var(--text-light);">
-              <i class="fas fa-coins mr-2 text-purple-500"></i>
-              Paiement Partiel ${numero}
-              ${badge}
+              ${titreSection}
             </h2>
           </div>
 
@@ -9392,14 +9461,6 @@
         const newSection = document.createElement('div');
         newSection.id = `content-un-seul-paiement-${numero}`;
         newSection.className = 'paiement-content hidden';
-
-        // Badge de statut
-        let badge = '';
-        if (paiement.statut === 'traite') {
-          badge = '<span class="px-3 py-1 text-xs rounded-full ml-3" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">✓ Traité</span>';
-        } else if (paiement.statut === 'traitement') {
-          badge = '<span class="px-3 py-1 text-xs rounded-full ml-3" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">En traitement</span>';
-        }
 
         // Normaliser la méthode (enlever accents: chèque → cheque)
         const methodeNormalized = paiement.methode ? paiement.methode.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
@@ -9491,7 +9552,6 @@
             <h2 class="text-xl font-bold inline-flex items-center" style="color: var(--text-light);">
               <i class="fas fa-dollar-sign mr-2 text-purple-500"></i>
               Un seul paiement
-              ${badge}
             </h2>
           </div>
 
@@ -9724,9 +9784,9 @@
         const clientData = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
         const elementsAjouterPaiementFinal = document.getElementById('elementsAjouterPaiementFinal');
         
-        // Vérifier si le paiement final est en traitement ou attente_comptable
+        // Vérifier si le paiement final est en traitement, attente_comptable ou traité
         const statutPaiementFinalSection = clientData.paiementFinal?.statut || clientData.statutPaiementFinal;
-        const paiementFinalEnTraitement = statutPaiementFinalSection === 'traitement' || statutPaiementFinalSection === 'attente_comptable';
+        const paiementFinalEnTraitement = statutPaiementFinalSection === 'traitement' || statutPaiementFinalSection === 'attente_comptable' || statutPaiementFinalSection === 'traite';
 
         const paiementFinalMethode = clientData.paiementFinal?.methode || clientData.paiementFinal?.type;
 
@@ -10644,9 +10704,9 @@
         log('[DEBUG FILTRES] statutDepot utilisé:', statutDepot);
         log('[DEBUG FILTRES] autresPaiements brut:', autresPaiements);
 
-        // Filtrer seulement les paiements partiels (exclure "un_seul_paiement")
+        // Filtrer seulement les paiements partiels et remboursements (exclure "un_seul_paiement")
         const paiementsPartiels = autresPaiements.filter(p => {
-          const include = !p.typePaiementAutres || p.typePaiementAutres === 'paiement_partiel';
+          const include = !p.typePaiementAutres || p.typePaiementAutres === 'paiement_partiel' || p.typePaiementAutres === 'remboursement';
           log('[DEBUG FILTRES] Paiement:', p, '| typePaiementAutres:', p.typePaiementAutres, '| inclus dans partiels:', include);
           return include;
         });
@@ -10675,6 +10735,15 @@
         log('[DEBUG] DEBUG SOURCE - depot:', clientDataEnriched.depot, '| paiementFinal:', clientDataEnriched.paiementFinal, '| autresPaiements:', clientDataEnriched.autresPaiements);
         log('[DEBUG] CONDITION CHECK - statutDepot attente_comptable?', statutDepot === 'attente_comptable', '| statutPaiementFinal attente_comptable?', statutPaiementFinal === 'attente_comptable');
 
+        // Détecter les remboursements dans paiementsPartiels
+        const hasRemboursement = paiementsPartiels.some(p => p.typePaiementAutres === 'remboursement');
+        const remboursementsTraites = paiementsPartiels.filter(p => p.typePaiementAutres === 'remboursement' && p.statut === 'traite');
+        const montantRemboursementTotal = remboursementsTraites.reduce((sum, p) => {
+          const montant = parseFloat(p.montant?.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
+          return sum + montant;
+        }, 0);
+        log('[RED] Détection remboursement - hasRemboursement:', hasRemboursement, '| remboursements traités:', remboursementsTraites.length, '| montant total:', montantRemboursementTotal);
+
         // Construire le texte du statut
         let statutTexte = '';
         let statutCouleur = 'white';
@@ -10684,6 +10753,7 @@
         log('[DEBUG CONDITIONS] hasAutresPaiementsEnTraitement:', hasAutresPaiementsEnTraitement);
         log('[DEBUG CONDITIONS] Check traitement:', statutDepot === 'traitement');
 
+        // Ne pas changer le statut pour les remboursements, juste afficher normalement
         // Cas spécial: "un seul paiement" (pas de dépôt)
         if (statutDepot === 'non_envoye' && hasUnSeulPaiementEnTraitement) {
           statutTexte = 'Paiement complet en traitement';
@@ -10775,6 +10845,20 @@
         clientStatutPaiement.textContent = statutTexte;
         clientStatutPaiement.style.color = statutCouleur;
 
+        // Afficher la note des remboursements si des remboursements existent
+        const noteRemboursements = document.getElementById('noteRemboursements');
+        if (noteRemboursements && hasRemboursement) {
+          const nbRemb = remboursementsTraites.length;
+          const texteRemb = nbRemb > 1
+            ? `${nbRemb} remboursements totalisant ${montantRemboursementTotal.toFixed(2).replace('.', ',')} $`
+            : `${nbRemb} remboursement totalisant ${montantRemboursementTotal.toFixed(2).replace('.', ',')} $`;
+          noteRemboursements.textContent = texteRemb;
+          noteRemboursements.style.display = 'block';
+          log('[RED] Note remboursements affichée:', texteRemb);
+        } else if (noteRemboursements) {
+          noteRemboursements.style.display = 'none';
+        }
+
         log('[DATA] FACTURATION: Statut paiement affiché:', statutTexte, '(dépôt:', statutDepot, ', paiement:', statutPaiementFinal, ', autres:', autresPaiementsEnTraitement.length, ')');
       }
       
@@ -10843,9 +10927,12 @@
       let autresPaiementsClient = clientDataEnriched.autresPaiements || [];
 
       // CORRECTION AUTOMATIQUE: Si le dépôt est non_envoye ET il y a des autres paiements sans typePaiementAutres,
-      // les corriger pour être "un_seul_paiement"
+      // les corriger pour être "un_seul_paiement" (sauf les remboursements)
       if (statutDepot === 'non_envoye' && autresPaiementsClient.length > 0) {
         autresPaiementsClient = autresPaiementsClient.map(p => {
+          if (p.typePaiementAutres === 'remboursement') {
+            return p; // Ne pas toucher aux remboursements
+          }
           if (!p.typePaiementAutres || p.typePaiementAutres === 'paiement_partiel') {
             log('[FIX] CORRECTION AUTO: Paiement sans typePaiementAutres -> un_seul_paiement');
             return { ...p, typePaiementAutres: 'un_seul_paiement' };
@@ -11001,8 +11088,8 @@
           changerBoutonPaiementFinalStatut(statutPaiementFinal);
           log('🎨 Bouton paiement final stylé selon statut:', statutPaiementFinal);
 
-          // Si en traitement OU attente_comptable, appliquer le grisage automatique
-          if (statutPaiementFinal === 'traitement' || statutPaiementFinal === 'attente_comptable') {
+          // Si en traitement OU attente_comptable OU traité, appliquer le grisage automatique
+          if (statutPaiementFinal === 'traitement' || statutPaiementFinal === 'attente_comptable' || statutPaiementFinal === 'traite') {
             log('[FIX] APPEL de rendreSectionPaiementFinalNonModifiable() pour paiement final en', statutPaiementFinal);
             rendreSectionPaiementFinalNonModifiable();
           }

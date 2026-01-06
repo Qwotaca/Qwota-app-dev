@@ -125,6 +125,31 @@ def get_clients_facturation_qe(username: str):
                                     # Ajouter les détails des autres paiements
                                     if "autresPaiements" in statuts_client:
                                         client_enrichi["autresPaiements"] = statuts_client["autresPaiements"]
+
+                                    # Ajouter les remboursements aux autresPaiements
+                                    fichier_remboursements = os.path.join(base_cloud, "remboursements", username, "remboursements.json")
+                                    if os.path.exists(fichier_remboursements):
+                                        with open(fichier_remboursements, "r", encoding="utf-8") as f_remb:
+                                            remboursements = json.load(f_remb)
+                                            # Filtrer les remboursements pour ce client
+                                            remboursements_client = [r for r in remboursements if r.get("num") == numero_soumission or r.get("numeroSoumission") == numero_soumission]
+                                            if remboursements_client:
+                                                print(f"[REMBOURSEMENT] {len(remboursements_client)} remboursement(s) trouvé(s) pour {numero_soumission}")
+                                                # Initialiser autresPaiements si nécessaire
+                                                if "autresPaiements" not in client_enrichi:
+                                                    client_enrichi["autresPaiements"] = []
+                                                # Ajouter chaque remboursement avec le type 'remboursement'
+                                                for remb in remboursements_client:
+                                                    remb_payment = {
+                                                        "id": remb.get("id"),
+                                                        "montant": remb.get("montant"),
+                                                        "date": remb.get("date"),
+                                                        "statut": remb.get("statut"),
+                                                        "typePaiementAutres": "remboursement",
+                                                        "paiement_source": remb.get("paiement_source"),
+                                                        "courriel": remb.get("courriel")
+                                                    }
+                                                    client_enrichi["autresPaiements"].append(remb_payment)
                 except Exception as e:
                     print(f"[WARN] Erreur lecture détails paiement pour {numero_soumission}: {e}")
 
@@ -167,6 +192,31 @@ def get_statuts_client_facturation_qe(username: str, numero_soumission: str):
             
             tous_statuts = json.loads(content)
             statuts_client = tous_statuts.get(numero_soumission, statuts_defaut)
+
+        # Ajouter les remboursements aux autresPaiements
+        fichier_remboursements = os.path.join(base_cloud, "remboursements", username, "remboursements.json")
+        if os.path.exists(fichier_remboursements):
+            with open(fichier_remboursements, "r", encoding="utf-8") as f_remb:
+                remboursements = json.load(f_remb)
+                # Filtrer les remboursements pour ce client
+                remboursements_client = [r for r in remboursements if r.get("num") == numero_soumission or r.get("numeroSoumission") == numero_soumission]
+                if remboursements_client:
+                    print(f"[REMBOURSEMENT] {len(remboursements_client)} remboursement(s) trouvé(s) pour {numero_soumission}")
+                    # Initialiser autresPaiements si nécessaire
+                    if "autresPaiements" not in statuts_client:
+                        statuts_client["autresPaiements"] = []
+                    # Ajouter chaque remboursement avec le type 'remboursement'
+                    for remb in remboursements_client:
+                        remb_payment = {
+                            "id": remb.get("id"),
+                            "montant": remb.get("montant"),
+                            "date": remb.get("date"),
+                            "statut": remb.get("statut"),
+                            "typePaiementAutres": "remboursement",
+                            "paiement_source": remb.get("paiement_source"),
+                            "courriel": remb.get("courriel")
+                        }
+                        statuts_client["autresPaiements"].append(remb_payment)
 
         # Debug: afficher ce qui est retourné
         print(f"[API get_statuts_client] {numero_soumission}: autresPaiements={statuts_client.get('autresPaiements')}")
@@ -237,7 +287,13 @@ def update_statut_client_facturation_qe(username: str, numero_soumission: str, t
                     tous_statuts[numero_soumission]["depot"]["motDePasse"] = details_paiement.get("motDePasseVirement")
                 if details_paiement.get("numeroCheque"):
                     tous_statuts[numero_soumission]["depot"]["numeroCheque"] = details_paiement.get("numeroCheque")
-                    
+
+                # Sauvegarder les photos du chèque (URLs cloud)
+                if details_paiement.get("photoRecto"):
+                    tous_statuts[numero_soumission]["depot"]["photoRecto"] = details_paiement.get("photoRecto")
+                if details_paiement.get("photoVerso"):
+                    tous_statuts[numero_soumission]["depot"]["photoVerso"] = details_paiement.get("photoVerso")
+
                 print(f"[FIX] Détails dépôt sauvegardés avec liens: {tous_statuts[numero_soumission]['depot']}")
                 
         elif type_statut == "paiement_final":
@@ -263,7 +319,13 @@ def update_statut_client_facturation_qe(username: str, numero_soumission: str, t
                     tous_statuts[numero_soumission]["paiementFinal"]["motDePasse"] = details_paiement.get("motDePasseVirement")
                 if details_paiement.get("numeroCheque"):
                     tous_statuts[numero_soumission]["paiementFinal"]["numeroCheque"] = details_paiement.get("numeroCheque")
-                    
+
+                # Sauvegarder les photos du chèque (URLs cloud)
+                if details_paiement.get("photoRecto"):
+                    tous_statuts[numero_soumission]["paiementFinal"]["photoRecto"] = details_paiement.get("photoRecto")
+                if details_paiement.get("photoVerso"):
+                    tous_statuts[numero_soumission]["paiementFinal"]["photoVerso"] = details_paiement.get("photoVerso")
+
                 print(f"[FIX] Détails paiement final sauvegardés avec liens: {tous_statuts[numero_soumission]['paiementFinal']}")
                 
         elif type_statut == "autres_paiements":
@@ -300,6 +362,12 @@ def update_statut_client_facturation_qe(username: str, numero_soumission: str, t
                     nouveau_autre_paiement["motDePasse"] = details_paiement.get("motDePasseVirement")
                 if details_paiement.get("numeroCheque"):
                     nouveau_autre_paiement["numeroCheque"] = details_paiement.get("numeroCheque")
+
+                # Ajouter les photos du chèque (URLs cloud)
+                if details_paiement.get("photoRecto"):
+                    nouveau_autre_paiement["photoRecto"] = details_paiement.get("photoRecto")
+                if details_paiement.get("photoVerso"):
+                    nouveau_autre_paiement["photoVerso"] = details_paiement.get("photoVerso")
 
                 # Ajouter le type de paiement autres (paiement_partiel ou un_seul_paiement)
                 # FALLBACK BACKEND: Si typePaiementAutres n'est pas fourni, le déduire automatiquement

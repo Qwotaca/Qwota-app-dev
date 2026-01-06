@@ -178,6 +178,7 @@ app.mount("/cloud/ficherlegal", StaticFiles(directory=f"{base_cloud}/ficherlegal
 app.mount("/cloud/fichermarketing", StaticFiles(directory=f"{base_cloud}/fichermarketing"), name="fichermarketing")
 app.mount("/cloud/ficherprocessus", StaticFiles(directory=f"{base_cloud}/ficherprocessus"), name="ficherprocessus")
 app.mount("/cloud/signatures", StaticFiles(directory=f"{base_cloud}/signatures"), name="signatures")
+app.mount("/cloud/cheques", StaticFiles(directory=f"{base_cloud}/cheques"), name="cheques")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/frontend", StaticFiles(directory="QE/Frontend"), name="frontend")
 
@@ -9524,6 +9525,98 @@ async def save_profile_photo(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/facturationqe/save-cheque-photos")
+async def save_cheque_photos(
+    username: str = Body(...),
+    numeroSoumission: str = Body(...),
+    typePaiement: str = Body(...),
+    photoRecto: str = Body(None),
+    photoVerso: str = Body(None)
+):
+    """Sauvegarde les photos recto/verso d'un chèque dans le cloud"""
+    try:
+        print(f"[DEBUG] [SAVE-CHEQUE] Début sauvegarde photos chèque pour {username}, soumission {numeroSoumission}, type {typePaiement}", flush=True)
+
+        # Créer le dossier pour les chèques de l'utilisateur
+        user_cheques_dir = os.path.join(base_cloud, "cheques", username)
+        os.makedirs(user_cheques_dir, exist_ok=True)
+        print(f"[DEBUG] [SAVE-CHEQUE] Dossier créé/vérifié: {user_cheques_dir}", flush=True)
+
+        result_urls = {}
+
+        # Sauvegarder photo recto si présente
+        if photoRecto and photoRecto.startswith('data:image'):
+            try:
+                header, encoded = photoRecto.split(",", 1)
+                photo_bytes = base64.b64decode(encoded)
+                print(f"[DEBUG] [SAVE-CHEQUE] Photo recto décodée, taille: {len(photo_bytes)} bytes", flush=True)
+
+                # Format: cheque_<numeroSoumission>_<typePaiement>_recto.png
+                photo_filename = f"cheque_{numeroSoumission}_{typePaiement}_recto.png"
+                photo_path = os.path.join(user_cheques_dir, photo_filename)
+
+                # Supprimer l'ancienne photo si elle existe
+                if os.path.exists(photo_path):
+                    os.remove(photo_path)
+                    print(f"[DEBUG] [SAVE-CHEQUE] Ancienne photo recto supprimée", flush=True)
+
+                with open(photo_path, "wb") as f:
+                    f.write(photo_bytes)
+
+                print(f"[DEBUG] [SAVE-CHEQUE] Photo recto sauvegardée: {photo_path}", flush=True)
+
+                # Créer l'URL avec timestamp pour éviter le cache
+                import time
+                timestamp = int(time.time())
+                result_urls['photoRecto'] = f"/cloud/cheques/{username}/{photo_filename}?v={timestamp}"
+
+            except Exception as e:
+                print(f"[ERREUR] [SAVE-CHEQUE] Erreur sauvegarde photo recto: {e}", flush=True)
+
+        # Sauvegarder photo verso si présente
+        if photoVerso and photoVerso.startswith('data:image'):
+            try:
+                header, encoded = photoVerso.split(",", 1)
+                photo_bytes = base64.b64decode(encoded)
+                print(f"[DEBUG] [SAVE-CHEQUE] Photo verso décodée, taille: {len(photo_bytes)} bytes", flush=True)
+
+                # Format: cheque_<numeroSoumission>_<typePaiement>_verso.png
+                photo_filename = f"cheque_{numeroSoumission}_{typePaiement}_verso.png"
+                photo_path = os.path.join(user_cheques_dir, photo_filename)
+
+                # Supprimer l'ancienne photo si elle existe
+                if os.path.exists(photo_path):
+                    os.remove(photo_path)
+                    print(f"[DEBUG] [SAVE-CHEQUE] Ancienne photo verso supprimée", flush=True)
+
+                with open(photo_path, "wb") as f:
+                    f.write(photo_bytes)
+
+                print(f"[DEBUG] [SAVE-CHEQUE] Photo verso sauvegardée: {photo_path}", flush=True)
+
+                # Créer l'URL avec timestamp pour éviter le cache
+                import time
+                timestamp = int(time.time())
+                result_urls['photoVerso'] = f"/cloud/cheques/{username}/{photo_filename}?v={timestamp}"
+
+            except Exception as e:
+                print(f"[ERREUR] [SAVE-CHEQUE] Erreur sauvegarde photo verso: {e}", flush=True)
+
+        print(f"[OK] Photos de chèque sauvegardées: {result_urls}", flush=True)
+
+        return {
+            "success": True,
+            "message": "Photos du chèque sauvegardées avec succès",
+            "urls": result_urls
+        }
+
+    except Exception as e:
+        print(f"[ERREUR] Erreur sauvegarde photos chèque: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/user/profile")
 async def get_user_profile(username: str):
     """Récupère le profil d'un utilisateur"""
@@ -11334,6 +11427,9 @@ def api_envoyer_comptable_facturation_qe(username: str, numeroSoumission: str, b
             "lienVirement": body.get("lienVirement", ""),
             "motDePasseVirement": body.get("motDePasseVirement", ""),
             "numeroCheque": body.get("numeroCheque", ""),
+            # Ajouter les photos du chèque en base64
+            "photoRecto": body.get("photoRecto", ""),
+            "photoVerso": body.get("photoVerso", ""),
             # Ajouter le type de paiement autres (un_seul_paiement ou paiement_partiel)
             "typePaiementAutres": body.get("typePaiementAutres", "")
         }
@@ -13757,9 +13853,13 @@ async def liste_facturation_en_traitement_comptable():
             try:
                 with open(historique_file, "r", encoding="utf-8") as f:
                     historique = json.load(f)
-                # Créer un set de clés uniques (username, numeroSoumission, type) pour les paiements dans l'historique
+                # Créer un set de clés uniques (username, numeroSoumission, type, index pour autres_paiements) pour les paiements dans l'historique
                 for h in historique:
-                    key = (h.get("entrepreneurUsername"), h.get("numeroSoumission"), h.get("type"))
+                    if h.get("type") == "autres_paiements":
+                        # Pour les paiements partiels, inclure l'index dans la clé
+                        key = (h.get("entrepreneurUsername"), h.get("numeroSoumission"), h.get("type"), h.get("index"))
+                    else:
+                        key = (h.get("entrepreneurUsername"), h.get("numeroSoumission"), h.get("type"), None)
                     historique_set.add(key)
             except:
                 pass
@@ -13840,7 +13940,7 @@ async def liste_facturation_en_traitement_comptable():
                         # Depot en attente_comptable (validé par coach, en attente de direction)
                         if client_statuts.get("statutDepot") == "attente_comptable":
                             # Vérifier si ce paiement n'est pas déjà dans l'historique (validé par direction)
-                            if (username, num_soumission, "depot") not in historique_set:
+                            if (username, num_soumission, "depot", None) not in historique_set:
                                 depot_details = client_statuts.get("depot", {})
                                 paiements_en_traitement.append({
                                     "entrepreneur": entrepreneur_nom,
@@ -13859,7 +13959,7 @@ async def liste_facturation_en_traitement_comptable():
                         # Paiement final en attente_comptable
                         if client_statuts.get("statutPaiementFinal") == "attente_comptable":
                             # Vérifier si ce paiement n'est pas déjà dans l'historique (validé par direction)
-                            if (username, num_soumission, "paiement_final") not in historique_set:
+                            if (username, num_soumission, "paiement_final", None) not in historique_set:
                                 pf_details = client_statuts.get("paiementFinal", {})
                                 paiements_en_traitement.append({
                                     "entrepreneur": entrepreneur_nom,
@@ -13881,8 +13981,8 @@ async def liste_facturation_en_traitement_comptable():
                             statut_depot = client_statuts.get("statutDepot", "non_envoye")
                             for idx, ap in enumerate(autres):
                                 if ap.get("statut") == "attente_comptable":
-                                    # Vérifier si ce paiement n'est pas déjà dans l'historique (validé par direction)
-                                    if (username, num_soumission, "autres_paiements") not in historique_set:
+                                    # Vérifier si CE paiement partiel spécifique n'est pas déjà dans l'historique (validé par direction)
+                                    if (username, num_soumission, "autres_paiements", idx) not in historique_set:
                                         # Déduire typePaiementAutres si absent
                                         type_paiement = ap.get("typePaiementAutres", "")
                                         if not type_paiement:
@@ -14050,7 +14150,9 @@ async def valider_facturation_comptable(username: str, numero_soumission: str, r
             json.dump(statuts, f, ensure_ascii=False, indent=2)
 
         # Ajouter à l'historique avec statut "attente_comptable" pour affichage dans Rapprochement QBO
-        await ajouter_historique_facturation(username, numero_soumission, type_paiement, "attente_comptable", statuts[numero_soumission])
+        # Pour les paiements partiels, passer l'index
+        paiement_index = data.get("index") if type_paiement == "autres_paiements" else None
+        await ajouter_historique_facturation(username, numero_soumission, type_paiement, "attente_comptable", statuts[numero_soumission], paiement_index)
 
         return {"success": True, "message": message}
     except HTTPException:
@@ -14123,7 +14225,9 @@ async def refuser_facturation_comptable(username: str, numero_soumission: str, r
             json.dump(statuts, f, ensure_ascii=False, indent=2)
 
         # Ajouter à l'historique
-        await ajouter_historique_facturation(username, numero_soumission, type_paiement, "refuse", statuts[numero_soumission])
+        # Pour les paiements partiels, passer l'index
+        paiement_index = data.get("index") if type_paiement == "autres_paiements" else None
+        await ajouter_historique_facturation(username, numero_soumission, type_paiement, "refuse", statuts[numero_soumission], paiement_index)
 
         return {"success": True, "message": "Paiement refusé"}
     except HTTPException:
@@ -14262,7 +14366,7 @@ async def envoyer_message_conversation(username: str, numero_soumission: str, re
         print(f"Erreur lors de l'envoi du message: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-async def ajouter_historique_facturation(username: str, numero_soumission: str, type_paiement: str, statut: str, client_statuts: dict):
+async def ajouter_historique_facturation(username: str, numero_soumission: str, type_paiement: str, statut: str, client_statuts: dict, index: int = None):
     """Ajoute une entrée à l'historique de facturation"""
     try:
         historique_dir = os.path.join(base_cloud, "facturation_qe_historique")
@@ -14349,7 +14453,11 @@ async def ajouter_historique_facturation(username: str, numero_soumission: str, 
             lien_virement = client_statuts.get("paiementFinal", {}).get("lienVirement", "")
         elif type_paiement == "autres_paiements":
             autres = client_statuts.get("autresPaiements", [])
-            if autres:
+            if autres and index is not None and index < len(autres):
+                montant = autres[index].get("montant", "0,00 $")
+                lien_virement = autres[index].get("lienVirement", "")
+            elif autres:
+                # Fallback: prendre le dernier si pas d'index
                 montant = autres[-1].get("montant", "0,00 $")
                 lien_virement = autres[-1].get("lienVirement", "")
         elif type_paiement == "remboursement":
@@ -14384,6 +14492,10 @@ async def ajouter_historique_facturation(username: str, numero_soumission: str, 
             "statut": statut,
             "date": datetime.now().strftime("%d/%m/%Y %H:%M")
         }
+
+        # Ajouter l'index pour les paiements partiels
+        if type_paiement == "autres_paiements" and index is not None:
+            entry["index"] = index
 
         # Ajouter le courriel pour les remboursements
         if type_paiement == "remboursement" and courriel:
@@ -14442,6 +14554,122 @@ async def save_periodes_facturation(data: dict):
                 type_paiement = paiement.get("type")
 
                 if not username or not numero_soumission or not type_paiement:
+                    continue
+
+                # Traitement spécial pour les remboursements
+                if type_paiement == "remboursement":
+                    # 1. Charger le fichier de remboursements
+                    remb_file = os.path.join(base_cloud, "remboursements", username, "remboursements.json")
+                    if not os.path.exists(remb_file):
+                        continue
+
+                    with open(remb_file, "r", encoding="utf-8") as f:
+                        remboursements = json.load(f)
+
+                    # 2. Trouver le remboursement et vérifier s'il n'est pas déjà traité
+                    remb_found = None
+                    for remb in remboursements:
+                        if remb.get("num") == numero_soumission or remb.get("numeroSoumission") == numero_soumission:
+                            # Vérifier si déjà traité pour éviter de traiter deux fois
+                            if remb.get("statut") == "traite":
+                                print(f"[REMBOURSEMENT] {numero_soumission} déjà traité, ignoré")
+                                remb_found = None
+                                break
+                            remb["statut"] = "traite"
+                            remb["dateTraitement"] = datetime.now().isoformat()
+                            remb_found = remb
+                            break
+
+                    if not remb_found:
+                        continue
+
+                    # 3. Sauvegarder le fichier de remboursements
+                    with open(remb_file, "w", encoding="utf-8") as f:
+                        json.dump(remboursements, f, ensure_ascii=False, indent=2)
+
+                    # 4. Calculer le montant sans taxe (taxe Québec = 14.975%)
+                    montant_avec_taxe = remb_found.get("montantNum", 0)
+                    montant_sans_taxe = montant_avec_taxe / 1.14975
+
+                    # 5. Charger le fichier de soumissions signées
+                    soumissions_file = os.path.join(base_cloud, "soumissions_signees", username, "soumissions.json")
+                    if not os.path.exists(soumissions_file):
+                        continue
+
+                    with open(soumissions_file, "r", encoding="utf-8") as f:
+                        soumissions = json.load(f)
+
+                    # 6. Trouver la soumission correspondante
+                    soumission_found = None
+                    for soumission in soumissions:
+                        if soumission.get("num") == numero_soumission:
+                            soumission_found = soumission
+                            break
+
+                    if not soumission_found:
+                        continue
+
+                    # 7. Parser le prix actuel (format: "1 000,00 $" ou "1000,00 $")
+                    prix_str = soumission_found.get("prix", "0,00 $")
+                    # Retirer le $ et les espaces, remplacer , par .
+                    prix_clean = prix_str.replace("$", "").replace(" ", "").replace(",", ".").strip()
+                    try:
+                        prix_actuel = float(prix_clean)
+                    except ValueError:
+                        prix_actuel = 0.0
+
+                    # 8. Soustraire le montant sans taxe
+                    nouveau_prix = prix_actuel - montant_sans_taxe
+
+                    # S'assurer que le prix ne devient pas négatif
+                    if nouveau_prix < 0:
+                        nouveau_prix = 0
+
+                    # 9. Formater le nouveau prix (format: "1 000,00 $")
+                    # Séparer les entiers et les décimales
+                    prix_int = int(nouveau_prix)
+                    prix_dec = int((nouveau_prix - prix_int) * 100)
+
+                    # Formater avec espaces pour les milliers
+                    prix_int_str = f"{prix_int:,}".replace(",", " ")
+                    nouveau_prix_format = f"{prix_int_str},{prix_dec:02d} $"
+
+                    # 10. Mettre à jour le prix
+                    soumission_found["prix"] = nouveau_prix_format
+
+                    # 11. Sauvegarder le fichier de soumissions signées
+                    with open(soumissions_file, "w", encoding="utf-8") as f:
+                        json.dump(soumissions, f, ensure_ascii=False, indent=2)
+
+                    # 12. Aussi mettre à jour dans ventes_acceptees pour le chiffre d'affaires
+                    ventes_acceptees_file = os.path.join(base_cloud, "ventes_acceptees", username, "ventes.json")
+                    if os.path.exists(ventes_acceptees_file):
+                        with open(ventes_acceptees_file, "r", encoding="utf-8") as f:
+                            ventes_acceptees = json.load(f)
+
+                        for vente in ventes_acceptees:
+                            if vente.get("num") == numero_soumission:
+                                vente["prix"] = nouveau_prix_format
+                                break
+
+                        with open(ventes_acceptees_file, "w", encoding="utf-8") as f:
+                            json.dump(ventes_acceptees, f, ensure_ascii=False, indent=2)
+
+                    # 13. Aussi mettre à jour dans ventes_produit si elle y est
+                    ventes_produit_file = os.path.join(base_cloud, "ventes_produit", username, "ventes.json")
+                    if os.path.exists(ventes_produit_file):
+                        with open(ventes_produit_file, "r", encoding="utf-8") as f:
+                            ventes_produit = json.load(f)
+
+                        for vente in ventes_produit:
+                            if vente.get("num") == numero_soumission:
+                                vente["prix"] = nouveau_prix_format
+                                break
+
+                        with open(ventes_produit_file, "w", encoding="utf-8") as f:
+                            json.dump(ventes_produit, f, ensure_ascii=False, indent=2)
+
+                    print(f"[REMBOURSEMENT] Traite pour {numero_soumission}: {montant_avec_taxe}$ (HT: {montant_sans_taxe:.2f}$) soustrait du prix")
                     continue
 
                 # Charger le fichier de statuts de l'entrepreneur

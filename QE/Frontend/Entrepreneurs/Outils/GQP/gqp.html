@@ -735,7 +735,6 @@
     etapes.addEventListener("focus", () => {
       if (etapes.value.trim() === "") {
         etapes.value = "Étape 1 : ";
-        currentStep = 2;
         setTimeout(() => {
           etapes.selectionStart = etapes.selectionEnd = etapes.value.length;
         }, 0);
@@ -746,8 +745,28 @@
       if (e.key === "Enter") {
         e.preventDefault();
         const val = etapes.value.trimEnd();
-        etapes.value = val + "\n\nÉtape " + currentStep + " : ";
-        currentStep++;
+
+        // Détecter tous les numéros d'étapes existants dans le texte
+        const etapeRegex = /Étape\s+(\d+)/gi;
+        const matches = [...val.matchAll(etapeRegex)];
+
+        let nextStep = 1;
+        if (matches.length > 0) {
+          // Extraire tous les numéros d'étapes et les trier
+          const existingNumbers = matches.map(m => parseInt(m[1])).sort((a, b) => a - b);
+
+          // Trouver le premier numéro manquant dans la séquence
+          for (let i = 0; i < existingNumbers.length; i++) {
+            if (existingNumbers[i] === nextStep) {
+              nextStep++;
+            } else if (existingNumbers[i] > nextStep) {
+              // On a trouvé un trou, nextStep est le numéro manquant
+              break;
+            }
+          }
+        }
+
+        etapes.value = val + "\n\nÉtape " + nextStep + " : ";
       }
     });
   }

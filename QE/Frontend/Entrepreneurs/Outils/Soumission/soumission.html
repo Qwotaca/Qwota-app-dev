@@ -5020,21 +5020,21 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       warn('[CNESST/WSIB] ⚠️ window.translations est indéfini');
     }
 
-    // Déterminer la langue actuelle
-    const currentLang = localStorage.getItem('language') || 'fr';
-    log('[CNESST/WSIB] 🌐 Langue actuelle:', currentLang);
+    // FORCER la langue selon la province - pas de mélange permis
+    // Ontario = TOUJOURS Anglais, Quebec = TOUJOURS Français
+    const forcedLang = isOntario ? 'en' : 'fr';
+    const forcedText = isOntario ? englishText : frenchText;
+    log('[CNESST/WSIB] 🌐 Langue FORCÉE selon province:', forcedLang, '| Texte:', forcedText);
 
-    // Mettre à jour l'attribut data-value avec le texte approprié
-    const newDataValue = currentLang === 'en' ? englishText : frenchText;
-    option.setAttribute('data-value', newDataValue);
-    log('[CNESST/WSIB] 🔄 data-value mis à jour:', newDataValue);
+    // Mettre à jour l'attribut data-value
+    option.setAttribute('data-value', forcedText);
+    log('[CNESST/WSIB] 🔄 data-value mis à jour:', forcedText);
 
-    // Mettre à jour le texte affiché selon la langue actuelle
+    // Mettre à jour le texte affiché
     const spanElement = option.querySelector('span');
     if (spanElement) {
-      const newText = currentLang === 'en' ? englishText : frenchText;
-      spanElement.textContent = newText;
-      log('[CNESST/WSIB] 🔄 Texte span mis à jour:', newText);
+      spanElement.textContent = forcedText;
+      log('[CNESST/WSIB] 🔄 Texte span mis à jour:', forcedText);
     } else {
       warn('[CNESST/WSIB] ⚠️ Span element non trouvé dans l\'option');
     }
@@ -5042,7 +5042,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     log('[CNESST/WSIB] ✅ Fin updateCNESSTOption - Résultat:', {
       province: province,
       isOntario: isOntario,
-      currentLang: currentLang,
+      forcedLang: forcedLang,
       finalText: spanElement?.textContent
     });
   };
@@ -5223,13 +5223,10 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       console.log('📝 [PLACE_CHANGED] APRÈS set input.value - ceci va déclencher event INPUT');
 
       log('[GOOGLE AUTOCOMPLETE] Adresse sélectionnée:', fullAddress.trim());
-      log('[GOOGLE AUTOCOMPLETE] Province détectée:', province);
+      log('[GOOGLE AUTOCOMPLETE] Province détectée (SANS changer CNESST/WSIB):', province);
 
-      // Stocker la province globalement
-      window.clientProvince = province;
-
-      // Mettre à jour le texte de l'option CNESST/WSIB selon la province
-      updateCNESSTOption(province);
+      // L'adresse NE CHANGE PAS l'option CNESST/WSIB
+      // Seuls les toggles de langue contrôlent l'assurance
 
       // Mettre la bordure en vert car adresse sélectionnée via Google (format valide)
       console.log('🟢 [PLACE_CHANGED] Mise de la bordure en VERT');
@@ -6201,8 +6198,37 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
         const textBefore = textarea.value.substring(0, cursorPos);
         const textAfter = textarea.value.substring(cursorPos);
 
-        textarea.value = textBefore + '\n- ' + textAfter;
-        textarea.selectionStart = textarea.selectionEnd = cursorPos + 3; // Position après "- "
+        // Détecter si le texte contient des étapes numérotées (ex: "Étape 1", "Étape 2", etc.)
+        const currentText = textarea.value;
+        const etapeRegex = /[ÉéEe]tape\s+(\d+)/gi;
+        const matches = [...currentText.matchAll(etapeRegex)];
+
+        let newText = '\n- '; // Par défaut: puce simple
+
+        if (matches.length > 0) {
+          // Extraire tous les numéros d'étapes existants
+          const existingNumbers = matches.map(m => parseInt(m[1])).sort((a, b) => a - b);
+
+          // Trouver le premier numéro manquant dans la séquence
+          let nextEtape = 1;
+          for (let i = 0; i < existingNumbers.length; i++) {
+            if (existingNumbers[i] === nextEtape) {
+              nextEtape++;
+            } else if (existingNumbers[i] > nextEtape) {
+              // On a trouvé un trou, nextEtape est le numéro manquant
+              break;
+            }
+          }
+
+          // Détecter si on utilise "Étape" ou "étape" (respecter la casse de la première occurrence)
+          const firstMatch = matches[0][0];
+          const etapeWord = firstMatch.match(/[ÉéEe]tape/)[0];
+
+          newText = `\n${etapeWord} ${nextEtape}: `;
+        }
+
+        textarea.value = textBefore + newText + textAfter;
+        textarea.selectionStart = textarea.selectionEnd = cursorPos + newText.length;
       }
     });
 
@@ -7177,19 +7203,21 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
           const savedLang = data.language || 'fr';
           log(`[LANG] Préférence chargée: ${savedLang}`);
 
-          // Déterminer la province selon la langue
-          const province = savedLang === 'en' ? 'ON' : 'QC';
-          log('[LANG] Province déterminée au chargement:', province);
+          // FORCER la province selon la langue sauvegardée
+          // EN = Ontario (WSIB), FR = Québec (CNESST)
+          const forcedProvince = savedLang === 'en' ? 'ON' : 'QC';
+          window.clientProvince = forcedProvince;
+          log('[LANG] Province FORCÉE selon langue:', forcedProvince, '| Langue:', savedLang);
 
           // Appliquer la langue sauvegardée
           if (savedLang !== 'fr') {
             changeLanguage(savedLang);
           }
 
-          // Mettre à jour l'option CNESST/WSIB selon la province
+          // Mettre à jour l'option CNESST/WSIB selon la province forcée
           if (typeof window.updateCNESSTOption === 'function') {
-            window.updateCNESSTOption(province);
-            log('[LANG] updateCNESSTOption appelé avec province:', province);
+            window.updateCNESSTOption(forcedProvince);
+            log('[LANG] updateCNESSTOption appelé avec province forcée:', forcedProvince);
           } else {
             warn('[LANG] updateCNESSTOption n\'est pas disponible au chargement');
           }
@@ -7205,27 +7233,29 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
         option.addEventListener('click', function() {
           const lang = this.dataset.lang;
 
-          log('[TOGGLE PROVINCE] 🔄 Click détecté - langue:', lang);
+          log('[TOGGLE LANG] 🔄 Click détecté - langue:', lang);
 
-          // Déterminer la province selon la langue
-          const province = lang === 'en' ? 'ON' : 'QC';
-          log('[TOGGLE PROVINCE] 🗺️ Province déterminée:', province);
+          // FORCER la province selon la langue sélectionnée
+          // EN = Ontario (WSIB), FR = Québec (CNESST)
+          const forcedProvince = lang === 'en' ? 'ON' : 'QC';
+          window.clientProvince = forcedProvince;
+          log('[TOGGLE LANG] 🗺️ Province FORCÉE selon langue:', forcedProvince, '| Langue:', lang);
 
-          // Mettre à jour l'option CNESST/WSIB selon la province
+          // Mettre à jour l'option CNESST/WSIB selon la province forcée
           if (typeof window.updateCNESSTOption === 'function') {
-            log('[TOGGLE PROVINCE] ✅ Appel de updateCNESSTOption avec province:', province);
-            window.updateCNESSTOption(province);
+            log('[TOGGLE LANG] ✅ Appel de updateCNESSTOption avec province:', forcedProvince);
+            window.updateCNESSTOption(forcedProvince);
           } else {
-            error('[TOGGLE PROVINCE] ❌ window.updateCNESSTOption n\'est pas une fonction!');
+            error('[TOGGLE LANG] ❌ window.updateCNESSTOption n\'est pas une fonction!');
           }
 
-          log('[TOGGLE PROVINCE] 🌐 Appel de changeLanguage avec langue:', lang);
+          log('[TOGGLE LANG] 🌐 Appel de changeLanguage avec langue:', lang);
           changeLanguage(lang);
 
-          // Réinitialiser Google autocomplete avec les nouveaux bounds
+          // Réinitialiser Google autocomplete avec les bons bounds (selon la province forcée)
           if (typeof window.initProspectAutocomplete === 'function') {
             window.initProspectAutocomplete();
-            log('[TOGGLE PROVINCE] 🗺️ Google autocomplete réinitialisé pour', province);
+            log('[TOGGLE LANG] 🗺️ Google autocomplete réinitialisé pour', forcedProvince);
           }
         });
       });
@@ -7298,31 +7328,9 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
                 adresseField.style.setProperty('border-right-color', '#4caf50', 'important');
                 log('[SOUMISSION] ✅ Adresse remplie:', data.adresse);
 
-                // Extraire la province de l'adresse et mettre à jour CNESST/WSIB
-                const address = data.adresse.toUpperCase();
-                let province = 'QC'; // Par défaut Québec
-
-                // Détecter Ontario
-                if (address.includes('ONTARIO') || address.includes(', ON') || address.includes(' ON ')) {
-                  province = 'ON';
-                }
-                // Détecter autres provinces si nécessaire
-                else if (address.includes('QUEBEC') || address.includes('QUÉBEC') || address.includes(', QC') || address.includes(' QC ')) {
-                  province = 'QC';
-                }
-
-                log('[SOUMISSION] 🗺️ Province extraite de l\'adresse:', province);
-
-                // Stocker la province globalement
-                window.clientProvince = province;
-
-                // Mettre à jour l'option CNESST/WSIB
-                if (typeof window.updateCNESSTOption === 'function') {
-                  window.updateCNESSTOption(province);
-                  log('[SOUMISSION] ✅ updateCNESSTOption appelé avec province:', province);
-                } else {
-                  log('[SOUMISSION] ⚠️ updateCNESSTOption n\'est pas disponible');
-                }
+                // L'adresse est remplie mais NE CHANGE PAS l'option CNESST/WSIB
+                // Seuls les toggles de langue contrôlent l'assurance
+                log('[SOUMISSION] 📍 Adresse remplie (SANS changer CNESST/WSIB):', data.adresse);
               }
             }
             if (data.courriel) {

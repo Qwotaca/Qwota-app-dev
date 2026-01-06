@@ -272,23 +272,74 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
             else:
                 if current:
                     wrapped.append(current)
-                current = word
+                # Si le mot seul est trop long, le couper en caractères
+                if c.stringWidth(word, "Helvetica", font_s) > max_w:
+                    # Couper le mot caractère par caractère
+                    temp = ""
+                    for char in word:
+                        if c.stringWidth(temp + char, "Helvetica", font_s) <= max_w:
+                            temp += char
+                        else:
+                            if temp:
+                                wrapped.append(temp)
+                            temp = char
+                    current = temp
+                else:
+                    current = word
         if current:
             wrapped.append(current)
         return wrapped if wrapped else [text]
 
-    # Appliquer le word wrap à chaque ligne
-    lines_produit = []
-    for line in lines_produit_raw:
-        lines_produit.extend(wrap_line_produit(line, max_width_produit, font_size_produit))
+    # Ajustement automatique de la taille de police pour que tout rentre
+    current_font_size = font_size_produit
+    current_line_height = line_height_produit
 
-    start_y_produit = y_produit + max_height_produit - font_size_produit
+    print(f"\n[PDF PRODUIT] ==================== DEBUT AJUSTEMENT ====================")
+    print(f"[PDF PRODUIT] Texte brut recu: {len(lines_produit_raw)} lignes")
+    print(f"[PDF PRODUIT] Hauteur disponible: {max_height_produit}px")
+    print(f"[PDF PRODUIT] Largeur disponible: {max_width_produit}px")
+
+    # Boucle pour réduire la taille jusqu'à ce que tout rentre
+    iteration = 0
+    while current_font_size > 2.5:  # Minimum 2.5pt
+        iteration += 1
+        lines_produit = []
+        current_line_height = current_font_size * 1.4
+
+        # Wrapper toutes les lignes
+        for line in lines_produit_raw:
+            lines_produit.extend(wrap_line_produit(line, max_width_produit, current_font_size))
+
+        # Calculer la hauteur totale nécessaire
+        total_height_needed = len(lines_produit) * current_line_height
+
+        print(f"[PDF PRODUIT] Iteration {iteration}: Taille police={current_font_size}pt | Lignes apres wrap={len(lines_produit)} | Hauteur necessaire={total_height_needed:.2f}px")
+
+        # Si ça rentre, on arrête
+        if total_height_needed <= max_height_produit:
+            print(f"[PDF PRODUIT] OK Tout rentre! Taille finale: {current_font_size}pt")
+            break
+
+        # Sinon, réduire la taille
+        current_font_size -= 0.25
+        print(f"[PDF PRODUIT] WARN Trop grand, reduction a {current_font_size}pt")
+
+    # Si on n'a pas de lignes, refaire une dernière fois
+    if 'lines_produit' not in locals() or not lines_produit:
+        lines_produit = []
+        for line in lines_produit_raw:
+            lines_produit.extend(wrap_line_produit(line, max_width_produit, current_font_size))
+
+    print(f"[PDF PRODUIT] ==================== FIN AJUSTEMENT ====================")
+    print(f"[PDF PRODUIT] RÉSULTAT FINAL: Taille={current_font_size}pt | Lignes={len(lines_produit)} | Hauteur ligne={current_line_height:.2f}px\n")
+
+    start_y_produit = y_produit + max_height_produit - current_font_size
 
     text_obj = c.beginText()
-    text_obj.setFont("Helvetica", font_size_produit)
+    text_obj.setFont("Helvetica", current_font_size)
 
     for i, line in enumerate(lines_produit):
-        current_y = start_y_produit - (i * line_height_produit)
+        current_y = start_y_produit - (i * current_line_height)
         if current_y < y_produit:
             break
         text_obj.setTextOrigin(x_produit, current_y)

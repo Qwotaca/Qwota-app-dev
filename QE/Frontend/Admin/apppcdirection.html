@@ -4755,7 +4755,7 @@
         if (progressFill) progressFill.style.width = '0%';
         if (progressText) progressText.textContent = '0%';
 
-        // Pages à précharger pour Direction (ordre de priorité)
+        // Pages à précharger pour Direction - TOUTES LES 19 PAGES (ordre de priorité)
         const pagesToPreload = [
           // PRIORITÉ 1: Pages principales Direction
           { id: 'iframe-dashboard', url: '/dashboard?dashboardType=qualite-etudiants', name: 'Dashboard', priority: 1 },
@@ -4773,17 +4773,24 @@
           { id: 'iframe-gqp', url: '/gqp', name: 'GQP', priority: 3 },
           { id: 'iframe-facture', url: '/facture', name: 'Facture', priority: 3 },
 
-          // PRIORITÉ 4: Paramètres et autres
+          // PRIORITÉ 4: Paramètres et autres pages
           { id: 'iframe-connection', url: '/parametredirection', name: 'Paramètres Direction', priority: 4 },
           { id: 'iframe-centralevue', url: '/centraleadmin', name: 'Centrale Admin', priority: 4 },
           { id: 'iframe-avis', url: '/avis', name: 'Avis', priority: 4 },
-          { id: 'iframe-travaux', url: '/travaux', name: 'Travaux', priority: 4 }
+          { id: 'iframe-travaux', url: '/travaux', name: 'Ventes', priority: 4 },
+
+          // PRIORITÉ 5: Pages supplémentaires (utilisent page-iframe car pas d'iframe dédiée)
+          { useMainIframe: true, url: '/parametreadmin', name: 'Utilisateurs', priority: 5 },
+          { useMainIframe: true, url: '/badge_assignment', name: 'Badges', priority: 5 },
+          { useMainIframe: true, url: '/coach_rpo', name: 'RPO Coach', priority: 5 },
+          { useMainIframe: true, url: '/suivicoach', name: 'Suivi Coach', priority: 5 },
+          { useMainIframe: true, url: '/rpo', name: 'RPO Entrepreneur', priority: 5 }
         ];
 
         let loadedCount = 0;
         const totalPages = pagesToPreload.length;
 
-        console.log(`[DESKTOP] 📋 Total de pages à précharger: ${totalPages}`);
+        console.log(`[DESKTOP] 📋 Total de pages à précharger: ${totalPages} pages`);
 
         // Fonction pour cacher l'écran de chargement
         const hideLoadingScreen = () => {
@@ -4803,6 +4810,7 @@
         // Charger les pages par batch (4 à la fois pour optimiser)
         const BATCH_SIZE = 4;
         let currentBatchIndex = 0;
+        let nextBatchScheduled = false; // ⚡ FLAG pour éviter les appels multiples
 
         function loadNextBatch() {
           const startIndex = currentBatchIndex * BATCH_SIZE;
@@ -4818,66 +4826,112 @@
           console.log(`[DESKTOP] 📦 Chargement batch ${currentBatchIndex + 1} (${batch.length} pages)...`);
 
           let batchCompleted = 0;
+          nextBatchScheduled = false; // ⚡ Réinitialiser le flag pour ce batch
 
           batch.forEach((page) => {
-            const iframe = document.getElementById(page.id);
+            // Pour les pages qui utilisent la main iframe (page-iframe)
+            if (page.useMainIframe) {
+              console.log(`[DESKTOP] ⏳ [P${page.priority}]: ${page.name} (main iframe)`);
 
-            if (iframe) {
-              console.log(`[DESKTOP] ⏳ [P${page.priority}]: ${page.name}`);
+              const mainIframe = document.getElementById('page-iframe');
+              if (mainIframe) {
+                // Créer une iframe temporaire pour précharger cette page
+                const tempIframe = document.createElement('iframe');
+                tempIframe.style.display = 'block';
+                tempIframe.style.visibility = 'visible';
+                tempIframe.style.position = 'fixed';
+                tempIframe.style.top = '-9999px';
+                tempIframe.style.left = '-9999px';
+                tempIframe.style.zIndex = '-9999';
+                tempIframe.style.pointerEvents = 'none';
+                document.body.appendChild(tempIframe);
 
-              // Rendre l'iframe visible mais hors écran pour forcer le chargement complet
-              iframe.style.display = 'block';
-              iframe.style.visibility = 'visible';
-              iframe.style.position = 'fixed';
-              iframe.style.top = '-9999px';
-              iframe.style.left = '-9999px';
-              iframe.style.zIndex = '-9999';
-              iframe.style.pointerEvents = 'none';
+                tempIframe.addEventListener('load', function onPageLoad() {
+                  loadedCount++;
+                  batchCompleted++;
+                  console.log(`[DESKTOP] ✓ (${loadedCount}/${totalPages}): ${page.name}`);
 
-              // Charger la page
-              iframe.src = page.url;
+                  // Mettre à jour la progression
+                  const progress = Math.round((loadedCount / totalPages) * 100);
+                  if (progressFill) progressFill.style.width = `${progress}%`;
+                  if (progressText) progressText.textContent = `${progress}%`;
 
-              iframe.addEventListener('load', function onPageLoad() {
-                loadedCount++;
+                  // Attendre que tous les scripts/CSS se chargent
+                  setTimeout(() => {
+                    document.body.removeChild(tempIframe);
+
+                    // ⚡ Charger le prochain batch une seule fois
+                    if (batchCompleted === batch.length && !nextBatchScheduled) {
+                      nextBatchScheduled = true;
+                      currentBatchIndex++;
+                      setTimeout(() => loadNextBatch(), 200);
+                    }
+                  }, 500);
+                });
+
+                tempIframe.src = page.url;
+              }
+            }
+            // Pour les pages avec iframe dédiée
+            else {
+              const iframe = document.getElementById(page.id);
+
+              if (iframe) {
+                console.log(`[DESKTOP] ⏳ [P${page.priority}]: ${page.name}`);
+
+                // Rendre l'iframe visible mais hors écran pour forcer le chargement complet
+                iframe.style.display = 'block';
+                iframe.style.visibility = 'visible';
+                iframe.style.position = 'fixed';
+                iframe.style.top = '-9999px';
+                iframe.style.left = '-9999px';
+                iframe.style.zIndex = '-9999';
+                iframe.style.pointerEvents = 'none';
+
+                // Charger la page
+                iframe.src = page.url;
+
+                iframe.addEventListener('load', function onPageLoad() {
+                  loadedCount++;
+                  batchCompleted++;
+                  console.log(`[DESKTOP] ✓ (${loadedCount}/${totalPages}): ${page.name}`);
+
+                  // Mettre à jour la progression
+                  const progress = Math.round((loadedCount / totalPages) * 100);
+                  if (progressFill) progressFill.style.width = `${progress}%`;
+                  if (progressText) progressText.textContent = `${progress}%`;
+
+                  // Attendre 500ms après le load pour que tous les scripts/CSS se chargent
+                  setTimeout(() => {
+                    // Re-cacher l'iframe (elle reste en cache)
+                    iframe.style.display = 'none';
+                    iframe.style.visibility = '';
+                    iframe.style.position = '';
+                    iframe.style.top = '';
+                    iframe.style.left = '';
+                    iframe.style.zIndex = '';
+                    iframe.style.pointerEvents = '';
+
+                    // ⚡ Charger le prochain batch une seule fois
+                    if (batchCompleted === batch.length && !nextBatchScheduled) {
+                      nextBatchScheduled = true;
+                      currentBatchIndex++;
+                      setTimeout(() => loadNextBatch(), 200);
+                    }
+                  }, 500);
+
+                  // Retirer le listener
+                  iframe.removeEventListener('load', onPageLoad);
+                });
+              } else {
+                console.error(`[DESKTOP] ❌ Iframe non trouvée: ${page.id}`);
                 batchCompleted++;
-                console.log(`[DESKTOP] ✓ (${loadedCount}/${totalPages}): ${page.name}`);
-
-                // Mettre à jour la progression
-                const progress = Math.round((loadedCount / totalPages) * 100);
-                if (progressFill) {
-                  progressFill.style.width = `${progress}%`;
+                // ⚡ Gérer le cas où l'iframe n'existe pas
+                if (batchCompleted === batch.length && !nextBatchScheduled) {
+                  nextBatchScheduled = true;
+                  currentBatchIndex++;
+                  setTimeout(() => loadNextBatch(), 200);
                 }
-                if (progressText) {
-                  progressText.textContent = `${progress}%`;
-                }
-
-                // Attendre 500ms après le load pour que tous les scripts/CSS se chargent
-                setTimeout(() => {
-                  // Re-cacher l'iframe (elle reste en cache)
-                  iframe.style.display = 'none';
-                  iframe.style.visibility = '';
-                  iframe.style.position = '';
-                  iframe.style.top = '';
-                  iframe.style.left = '';
-                  iframe.style.zIndex = '';
-                  iframe.style.pointerEvents = '';
-
-                  // Quand le batch est terminé, charger le prochain
-                  if (batchCompleted === batch.length) {
-                    currentBatchIndex++;
-                    setTimeout(() => loadNextBatch(), 200); // Petit délai entre les batchs
-                  }
-                }, 500);
-
-                // Retirer le listener
-                iframe.removeEventListener('load', onPageLoad);
-              });
-            } else {
-              console.error(`[DESKTOP] ❌ Iframe non trouvée: ${page.id}`);
-              batchCompleted++;
-              if (batchCompleted === batch.length) {
-                currentBatchIndex++;
-                setTimeout(() => loadNextBatch(), 200);
               }
             }
           });

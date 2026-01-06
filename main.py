@@ -8577,6 +8577,7 @@ class UpdateUserData(BaseModel):
     nom: Optional[str] = None
     telephone: Optional[str] = None
     adresse: Optional[str] = None
+    department: Optional[str] = None
     monday_api_key: Optional[str] = None
     monday_board_id: Optional[str] = None
 
@@ -8603,6 +8604,7 @@ async def update_user_route(data: UpdateUserData):
             nom=data.nom,
             telephone=data.telephone,
             adresse=data.adresse,
+            department=data.department,
             monday_api_key=data.monday_api_key,
             monday_board_id=data.monday_board_id
         )
@@ -9345,7 +9347,8 @@ async def save_user_info(
     prenom: str = Body(default=""),
     telephone: str = Body(default=""),
     courriel: str = Body(default=""),
-    grade: str = Body(default=None)
+    grade: str = Body(default=None),
+    department: str = Body(default="")
 ):
     """Sauvegarde les informations de l'entrepreneur dans user_info.json"""
     try:
@@ -9387,6 +9390,12 @@ async def save_user_info(
             user_info["tps"] = existing_info["tps"]
         if "tvq" in existing_info:
             user_info["tvq"] = existing_info["tvq"]
+
+        # Ajouter le département si fourni, sinon préserver l'existant
+        if department:
+            user_info["department"] = department
+        elif "department" in existing_info:
+            user_info["department"] = existing_info["department"]
 
         # Préserver equipes et niveau_actuel s'ils existent
         if "equipes" in existing_info:
@@ -14935,6 +14944,7 @@ async def liste_employes_en_attente_comptable():
                         entrepreneur_nom_complet = username
                         photo_profil = None
 
+                        entrepreneur_department = None
                         try:
                             user_info = get_user_info(username)
                             if user_info and user_info.get("success"):
@@ -14947,6 +14957,8 @@ async def liste_employes_en_attente_comptable():
                                 # Récupérer la photo depuis files
                                 files = user_info.get("files", {})
                                 photo_profil = files.get("profile_photo")
+                                # Récupérer le département
+                                entrepreneur_department = data.get("department")
                         except:
                             pass
 
@@ -14965,6 +14977,7 @@ async def liste_employes_en_attente_comptable():
                         employe_avec_info["entrepreneur"] = entrepreneur_nom_complet
                         employe_avec_info["entrepreneurUsername"] = username
                         employe_avec_info["entrepreneurPhoto"] = photo_profil
+                        employe_avec_info["entrepreneurDepartment"] = entrepreneur_department
                         employes_en_attente.append(employe_avec_info)
 
         return {"success": True, "employes": employes_en_attente}
@@ -14996,6 +15009,7 @@ async def liste_modifications_en_attente_comptable():
                         # Récupérer les infos de l'entrepreneur
                         entrepreneur_nom_complet = username
                         photo_profil = None
+                        entrepreneur_department = None
 
                         try:
                             user_info = get_user_info(username)
@@ -15007,6 +15021,8 @@ async def liste_modifications_en_attente_comptable():
                                     entrepreneur_nom_complet = f"{prenom} {nom}".strip()
                                 files = user_info.get("files", {})
                                 photo_profil = files.get("profile_photo")
+                                # Récupérer le département
+                                entrepreneur_department = data.get("department")
                         except:
                             pass
 
@@ -15031,6 +15047,7 @@ async def liste_modifications_en_attente_comptable():
                         modif_avec_info["entrepreneur"] = entrepreneur_nom_complet
                         modif_avec_info["entrepreneurUsername"] = username
                         modif_avec_info["entrepreneurPhoto"] = photo_profil
+                        modif_avec_info["entrepreneurDepartment"] = entrepreneur_department
                         modif_avec_info["requestType"] = "modification"
 
                         # Ajouter les données anciennes/nouvelles si disponibles
@@ -16213,6 +16230,7 @@ async def get_inactivations_en_attente_coach():
                 # Récupérer la photo de profil et le nom complet de l'entrepreneur
                 photo_profil = None
                 entrepreneur_nom_complet = username
+                entrepreneur_department = None
                 try:
                     user_info = get_user_info(username)
                     if user_info and user_info.get("success"):
@@ -16223,6 +16241,8 @@ async def get_inactivations_en_attente_coach():
                             entrepreneur_nom_complet = f"{prenom} {nom}".strip()
                         files = user_info.get("files", {})
                         photo_profil = files.get("profile_photo")
+                        # Récupérer le département
+                        entrepreneur_department = data.get("department")
                 except:
                     pass
 
@@ -16234,6 +16254,7 @@ async def get_inactivations_en_attente_coach():
                         inact_info["entrepreneur"] = entrepreneur_nom_complet
                         inact_info["entrepreneurUsername"] = username
                         inact_info["entrepreneurPhoto"] = photo_profil
+                        inact_info["entrepreneurDepartment"] = entrepreneur_department
                         inactivations_en_attente.append(inact_info)
 
         return {"inactivations": inactivations_en_attente}
@@ -16259,6 +16280,7 @@ async def get_inactivations_en_attente_comptable():
                 # Récupérer la photo de profil et le nom complet (comme dans historique)
                 photo_profil = None
                 entrepreneur_nom_complet = username
+                entrepreneur_department = None
 
                 user_info = get_user_info(username)
                 if user_info and user_info.get("success"):
@@ -16270,6 +16292,8 @@ async def get_inactivations_en_attente_comptable():
                     nom = data.get("nom", "")
                     if prenom or nom:
                         entrepreneur_nom_complet = f"{prenom} {nom}".strip()
+                    # Récupérer le département
+                    entrepreneur_department = data.get("department")
 
                 # Si pas trouvé via get_user_info, chercher manuellement profile_photo_*
                 if not photo_profil:
@@ -16289,6 +16313,7 @@ async def get_inactivations_en_attente_comptable():
                         inact_info["entrepreneur"] = entrepreneur_nom_complet
                         inact_info["entrepreneurUsername"] = username
                         inact_info["entrepreneurPhoto"] = photo_profil
+                        inact_info["entrepreneurDepartment"] = entrepreneur_department
                         inactivations_en_attente.append(inact_info)
 
         return {"inactivations": inactivations_en_attente}
@@ -16811,6 +16836,7 @@ async def get_tous_employes_direction():
             if os.path.isdir(user_path):
                 # Récupérer les infos de l'entrepreneur
                 entrepreneur_nom_complet = username
+                entrepreneur_department = None
                 try:
                     user_info = get_user_info(username)
                     if user_info and user_info.get("success"):
@@ -16819,6 +16845,8 @@ async def get_tous_employes_direction():
                         nom = data.get("nom", "")
                         if prenom or nom:
                             entrepreneur_nom_complet = f"{prenom} {nom}".strip()
+                        # Récupérer le département
+                        entrepreneur_department = data.get("department")
                 except:
                     pass
 
@@ -16831,6 +16859,7 @@ async def get_tous_employes_direction():
                     emp_info["entrepreneur"] = entrepreneur_nom_complet
                     emp_info["entrepreneurUsername"] = username
                     emp_info["entrepreneurPhoto"] = photo_profil
+                    emp_info["entrepreneurDepartment"] = entrepreneur_department
                     tous_actifs.append(emp_info)
 
                 # Charger les terminés/inactifs
@@ -16840,6 +16869,7 @@ async def get_tous_employes_direction():
                     emp_info["entrepreneur"] = entrepreneur_nom_complet
                     emp_info["entrepreneurUsername"] = username
                     emp_info["entrepreneurPhoto"] = photo_profil
+                    emp_info["entrepreneurDepartment"] = entrepreneur_department
                     tous_termines.append(emp_info)
 
                 # Aussi les inactifs (qui sont vraiment inactifs, pas en attente)
@@ -16851,6 +16881,7 @@ async def get_tous_employes_direction():
                         emp_info["entrepreneur"] = entrepreneur_nom_complet
                         emp_info["entrepreneurUsername"] = username
                         emp_info["entrepreneurPhoto"] = photo_profil
+                        emp_info["entrepreneurDepartment"] = entrepreneur_department
                         tous_termines.append(emp_info)
 
         return {"actifs": tous_actifs, "termines": tous_termines}
@@ -17336,7 +17367,16 @@ def get_user_info(username: str):
             print(f"[DEBUG] [GET-INFO] Données lues pour {username}:", user_data)
         else:
             print(f"[DEBUG] [GET-INFO] Aucun fichier info trouvé pour {username}")
-        
+
+        # Récupérer le département depuis la base de données
+        department = None
+        try:
+            user_db = get_user(username)
+            if user_db:
+                department = user_db.get("department")
+        except:
+            pass
+
         # Vérifier l'existence des fichiers (n'importe quelle extension)
         file_status = {}
         for file_key in ["specimen", "betonel", "integration", "profile_photo"]:
@@ -17356,7 +17396,7 @@ def get_user_info(username: str):
                 filename = file_status.get(f"{file_key}_filename")
                 if filename:
                     files[file_key] = f"/api/get-file/{username}/{filename}"
-        
+
         return {
             "success": True,
             "data": {
@@ -17368,6 +17408,7 @@ def get_user_info(username: str):
                 "tps": user_data.get("tps", ""),
                 "tvq": user_data.get("tvq", ""),
                 "grade": user_data.get("grade", ""),
+                "department": department,
                 "equipes": user_data.get("equipes", []),
                 "niveau_actuel": user_data.get("niveau_actuel", 1),
                 "onboarding_completed": user_data.get("onboarding_completed", False),

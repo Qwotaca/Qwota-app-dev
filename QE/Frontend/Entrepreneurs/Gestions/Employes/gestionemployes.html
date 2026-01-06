@@ -5337,7 +5337,16 @@
           // Informations d'emploi
           const poste = employe.posteService ? employe.posteService.split(' - ')[0] : (employe.poste || '-');
           document.getElementById('termineDetailsPoste').textContent = poste;
-          document.getElementById('termineDetailsDepartement').textContent = employe.departement || '0';
+          // Charger le département depuis le user_info de l'entrepreneur
+          fetch('/api/get-info/' + localStorage.getItem('username'))
+            .then(r => r.json())
+            .then(userInfo => {
+              const dept = userInfo?.data?.department || '0';
+              document.getElementById('termineDetailsDepartement').textContent = dept;
+            })
+            .catch(() => {
+              document.getElementById('termineDetailsDepartement').textContent = '0';
+            });
           document.getElementById('termineDetailsTauxHoraire').textContent = employe.tauxHoraire ? `${employe.tauxHoraire} $/h` : '-';
           document.getElementById('termineDetailsDateDebut').textContent = employe.datePremiere || employe.dateActivation || '-';
 
@@ -5732,7 +5741,16 @@
           // Informations d'emploi
           document.getElementById('detailsDateDebut').textContent = employe.datePremiere || '-';
           document.getElementById('detailsPoste').textContent = employe.posteService || '-';
-          document.getElementById('detailsDepartement').textContent = employe.departement || '0';
+          // Charger le département depuis le user_info de l'entrepreneur
+          fetch('/api/get-info/' + localStorage.getItem('username'))
+            .then(r => r.json())
+            .then(userInfo => {
+              const dept = userInfo?.data?.department || '0';
+              document.getElementById('detailsDepartement').textContent = dept;
+            })
+            .catch(() => {
+              document.getElementById('detailsDepartement').textContent = '0';
+            });
 
           // Formatter le taux horaire avec la même logique que le formatage automatique
           const tauxHoraire = employe.tauxHoraire || '';

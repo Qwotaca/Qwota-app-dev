@@ -241,7 +241,7 @@ def get_user(username: str) -> Optional[Dict]:
             cursor = conn.cursor()
 
             cursor.execute('''
-                SELECT id, username, password_hash, role, email, created_at, last_login, is_active
+                SELECT id, username, password_hash, role, email, created_at, last_login, is_active, department
                 FROM users
                 WHERE username = ? AND is_active = 1
             ''', (username,))
@@ -391,7 +391,8 @@ def change_user_role(username: str, new_role: str) -> bool:
 def update_user(user_id: int, username: str = None, email: str = None,
                 role: str = None, password: str = None, prenom: str = None,
                 nom: str = None, telephone: str = None, adresse: str = None,
-                monday_api_key: str = None, monday_board_id: str = None) -> bool:
+                department: str = None, monday_api_key: str = None,
+                monday_board_id: str = None) -> bool:
     """Met à jour les informations d'un utilisateur"""
     try:
         with sqlite3.connect(DB_PATH) as conn:
@@ -435,6 +436,10 @@ def update_user(user_id: int, username: str = None, email: str = None,
             if adresse is not None:
                 updates.append("adresse = ?")
                 params.append(adresse)
+
+            if department is not None:
+                updates.append("department = ?")
+                params.append(department)
 
             if monday_api_key is not None:
                 updates.append("monday_api_key = ?")

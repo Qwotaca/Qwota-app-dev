@@ -1485,7 +1485,7 @@ select:disabled {
             <span>Statistiques</span>
           </button>
         </div>
-        <button id="btn-objectifs-mensuels" class="btn-remb-discret text-sm flex items-center space-x-1 px-3 py-2 transition-all" style="background: rgba(148, 163, 184, 0.15); color: var(--text-gray); border-radius: 28px; display: flex; position: relative;" onmouseover="this.style.background='rgba(96, 165, 250, 0.2)'; this.style.color='#60a5fa'" onmouseout="this.style.background='rgba(148, 163, 184, 0.15)'; this.style.color='var(--text-gray)'">
+        <button id="btn-objectifs-mensuels" class="btn-remb-discret text-sm flex items-center space-x-1 px-3 py-2 transition-all" style="background: rgba(148, 163, 184, 0.15); color: var(--text-gray); border-radius: 28px; display: flex; position: relative;" onmouseover="this.style.background='rgba(96, 165, 250, 0.2)'; this.style.color='#60a5fa'" onmouseout="if(!this.classList.contains('active')) { this.style.background='rgba(148, 163, 184, 0.15)'; this.style.color='var(--text-gray)'; }">
           <i class="fas fa-bullseye" style="font-size: 0.9em;"></i>
           <span>Objectifs Entrepreneur Mensuels</span>
           <span id="objectifs-mensuels-notification" style="position: absolute; top: -8px; right: -8px; background: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 0.75rem; font-weight: 700; display: none; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">1</span>
@@ -9561,18 +9561,28 @@ function displayObjectifsMensuelsForMonth(monthIndex) {
   const objectifLabel2 = getObjectifLabel2ForMonth(monthIndex);
   const hasObjectif2 = objectifLabel2 !== '';
 
+  // Vérifier si c'est le mois actuel pour le contour bleu
+  const now = getTorontoNow();
+  const currentMonth = now.getMonth();
+  const isCurrentMonth = monthIndex === currentMonth;
+  const boxBorderColor = isCurrentMonth ? '#60a5fa' : 'rgba(148, 163, 184, 0.3)';
+  const headerBgGradient = isCurrentMonth
+    ? 'linear-gradient(135deg, rgba(96, 165, 250, 0.15), rgba(59, 130, 246, 0.1))'
+    : 'linear-gradient(135deg, rgba(148, 163, 184, 0.1), rgba(148, 163, 184, 0.05))';
+  const iconColor = isCurrentMonth ? '#60a5fa' : 'rgba(148, 163, 184, 0.7)';
+
   let html = `
-    <div class="glass-card shadow" style="margin-bottom: 1.5rem; border: 2px solid #60a5fa;">
-      <div class="px-6 py-3" style="background: linear-gradient(135deg, rgba(96, 165, 250, 0.15), rgba(59, 130, 246, 0.1)); border-bottom: 1px solid rgba(51, 65, 85, 0.5); border-radius: 1rem 1rem 0 0;">
+    <div class="glass-card shadow" style="margin-bottom: 1.5rem; border: 2px solid ${boxBorderColor};">
+      <div class="px-6 py-3" style="background: ${headerBgGradient}; border-bottom: 1px solid rgba(51, 65, 85, 0.5); border-radius: 1rem 1rem 0 0;">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <i class="fas fa-calendar-check" style="color: #60a5fa; font-size: 1.25rem;"></i>
+            <i class="fas fa-calendar-check" style="color: ${iconColor}; font-size: 1.25rem;"></i>
             <h4 style="color: var(--text-light); font-weight: 700; font-size: 1.125rem; margin: 0;">
               ${monthName} ${year}
             </h4>
             <div style="color: var(--text-gray); font-size: 0.875rem; font-weight: 600; display: flex; gap: 0.75rem; margin-left: 1rem;">
               <span>${objectifLabel1}</span>
-              ${hasObjectif2 ? `<span style="color: #60a5fa;">•</span><span>${objectifLabel2}</span>` : ''}
+              ${hasObjectif2 ? `<span style="color: ${iconColor};">•</span><span>${objectifLabel2}</span>` : ''}
             </div>
           </div>
           <button
@@ -9598,9 +9608,41 @@ function displayObjectifsMensuelsForMonth(monthIndex) {
       ? objectifsMensuelsData[monthKey][entrepreneur.username].objectif2
       : 0;
 
+    // Vérifier si c'est le mois actuel (Toronto time)
+    const now = getTorontoNow();
+    const currentMonthKey = `2026-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const isCurrentMonth = monthKey === currentMonthKey;
+
+    // Déterminer si les objectifs sont remplis
+    const isObj1Filled = existingObj1 && existingObj1 !== 0;
+    const isObj2Filled = !hasObjectif2 || (existingObj2 && existingObj2 !== 0);
+    const isComplete = isObj1Filled && isObj2Filled;
+
+    // Couleurs en fonction du statut (jaune/vert seulement pour le mois actuel)
+    let borderColor, bgColor, badgeColor, badgeIcon;
+
+    if (isCurrentMonth) {
+      // Mois actuel: jaune (incomplet) ou vert (complet)
+      borderColor = isComplete ? 'rgba(52, 211, 153, 0.5)' : 'rgba(245, 158, 11, 0.5)';
+      bgColor = isComplete ? 'rgba(52, 211, 153, 0.05)' : 'rgba(245, 158, 11, 0.05)';
+      badgeColor = isComplete ? '#34d399' : '#f59e0b';
+      badgeIcon = isComplete ? 'fa-check-circle' : 'fa-exclamation-circle';
+    } else {
+      // Autres mois: gris neutre
+      borderColor = 'rgba(148, 163, 184, 0.2)';
+      bgColor = 'rgba(148, 163, 184, 0.05)';
+      badgeColor = 'rgba(148, 163, 184, 0.5)';
+      badgeIcon = isComplete ? 'fa-check-circle' : 'fa-circle';
+    }
+
     html += `
-      <div style="background: rgba(148, 163, 184, 0.05); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 0.75rem; padding: 1rem;">
-        <label style="display: block; color: var(--text-light); font-size: 0.875rem; font-weight: 700; margin-bottom: 0.75rem;">
+      <div class="entrepreneur-objectif-card" data-entrepreneur="${entrepreneur.username}" data-month="${monthKey}" style="background: ${bgColor}; border: 2px solid ${borderColor}; border-radius: 0.75rem; padding: 1rem; position: relative; transition: all 0.3s;">
+        <!-- Badge de statut -->
+        <div style="position: absolute; top: 0.75rem; right: 0.75rem;">
+          <i class="fas ${badgeIcon}" style="color: ${badgeColor}; font-size: 1.25rem;"></i>
+        </div>
+
+        <label style="display: block; color: var(--text-light); font-size: 0.875rem; font-weight: 700; margin-bottom: 0.75rem; padding-right: 2rem;">
           ${entrepreneur.full_name}
         </label>
 
@@ -9818,6 +9860,11 @@ async function saveObjectifsMensuelsForMonth(monthKey) {
         btn.innerHTML = originalHTML;
       }, 2000);
 
+      // Mettre à jour le statut de toutes les cartes entrepreneur pour ce mois
+      inputs.forEach(input => {
+        updateEntrepreneurCardStatus(monthKey, input.dataset.entrepreneur);
+      });
+
       // Mettre à jour la notification
       checkObjectifsMensuelsNotification();
 
@@ -9909,6 +9956,62 @@ function formatObjectifValue(value, monthIndex, objectifType = 'objectif1') {
 function updateObjectifMensuelValue(input, monthIndex) {
   const rawValue = input.value.replace(/[^\d.]/g, '');
   input.dataset.rawValue = rawValue || '0';
+
+  // Mettre à jour le statut visuel de la carte entrepreneur
+  updateEntrepreneurCardStatus(input.dataset.month, input.dataset.entrepreneur);
+
+  // Mettre à jour la notification globale
+  checkObjectifsMensuelsNotification();
+}
+
+// Fonction pour mettre à jour le statut visuel d'une carte entrepreneur
+function updateEntrepreneurCardStatus(monthKey, entrepreneurUsername) {
+  const card = document.querySelector(`.entrepreneur-objectif-card[data-entrepreneur="${entrepreneurUsername}"][data-month="${monthKey}"]`);
+  if (!card) return;
+
+  // Vérifier si c'est le mois actuel
+  const now = getTorontoNow();
+  const currentMonthKey = `2026-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const isCurrentMonth = monthKey === currentMonthKey;
+
+  // Récupérer les inputs de cette carte
+  const inputs = card.querySelectorAll('.objectif-mensuel-input');
+  let allFilled = true;
+
+  inputs.forEach(input => {
+    const value = parseFloat(input.dataset.rawValue) || 0;
+    if (value === 0) {
+      allFilled = false;
+    }
+  });
+
+  // Déterminer les couleurs et icône (jaune/vert seulement pour le mois actuel)
+  let borderColor, bgColor, badgeColor, badgeIcon;
+
+  if (isCurrentMonth) {
+    // Mois actuel: jaune (incomplet) ou vert (complet)
+    borderColor = allFilled ? 'rgba(52, 211, 153, 0.5)' : 'rgba(245, 158, 11, 0.5)';
+    bgColor = allFilled ? 'rgba(52, 211, 153, 0.05)' : 'rgba(245, 158, 11, 0.05)';
+    badgeColor = allFilled ? '#34d399' : '#f59e0b';
+    badgeIcon = allFilled ? 'fa-check-circle' : 'fa-exclamation-circle';
+  } else {
+    // Autres mois: gris neutre
+    borderColor = 'rgba(148, 163, 184, 0.2)';
+    bgColor = 'rgba(148, 163, 184, 0.05)';
+    badgeColor = 'rgba(148, 163, 184, 0.5)';
+    badgeIcon = allFilled ? 'fa-check-circle' : 'fa-circle';
+  }
+
+  // Mettre à jour les styles de la carte
+  card.style.borderColor = borderColor;
+  card.style.background = bgColor;
+
+  // Mettre à jour le badge
+  const badge = card.querySelector('i.fas');
+  if (badge) {
+    badge.className = `fas ${badgeIcon}`;
+    badge.style.color = badgeColor;
+  }
 }
 
 </script>

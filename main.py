@@ -13690,6 +13690,41 @@ async def save_coach_objectifs_mensuels(request: CoachObjectifsMensuelsRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/entrepreneur/coach")
+async def get_entrepreneur_coach(entrepreneur_username: str):
+    """
+    Récupère le coach assigné à un entrepreneur
+
+    Query params:
+        entrepreneur_username: Nom d'utilisateur de l'entrepreneur
+
+    Returns:
+        {
+            "success": True,
+            "coach_username": "coach3"
+        }
+    """
+    try:
+        from QE.Backend.coach_access import get_coach_for_entrepreneur
+
+        coach_username = get_coach_for_entrepreneur(entrepreneur_username)
+
+        if coach_username:
+            return {
+                "success": True,
+                "coach_username": coach_username
+            }
+        else:
+            return {
+                "success": False,
+                "error": "Aucun coach assigné"
+            }
+
+    except Exception as e:
+        print(f"[API] Erreur GET entrepreneur coach: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============================================
 # ENDPOINTS COMPTABLE/DIRECTION - FACTURATION QE
 # ============================================

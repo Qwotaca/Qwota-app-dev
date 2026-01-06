@@ -75,11 +75,11 @@ def save_coach_previsions(coach_username, previsions):
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-        print(f"[COACH PREVISIONS] ✅ Sauvegardé pour {coach_username}: {len(previsions)} prévisions")
+        print(f"[COACH PREVISIONS] Sauvegarde OK pour {coach_username}: {len(previsions)} previsions")
         return True
 
     except Exception as e:
-        print(f"[COACH PREVISIONS] ❌ Erreur sauvegarde {coach_username}: {e}")
+        print(f"[COACH PREVISIONS] ERREUR sauvegarde {coach_username}: {e}")
         return False
 
 
@@ -154,11 +154,11 @@ def save_coach_metrics(coach_username, metrics):
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-        print(f"[COACH METRICS] ✅ Sauvegardé pour {coach_username}: CM={metrics.get('cm')}, Ratio={metrics.get('ratioMktg')}%, Taux={metrics.get('tauxVente')}%")
+        print(f"[COACH METRICS] Sauvegarde OK pour {coach_username}: CM={metrics.get('cm')}, Ratio={metrics.get('ratioMktg')}%, Taux={metrics.get('tauxVente')}%")
         return True
 
     except Exception as e:
-        print(f"[COACH METRICS] ❌ Erreur sauvegarde {coach_username}: {e}")
+        print(f"[COACH METRICS] ERREUR sauvegarde {coach_username}: {e}")
         return False
 
 
@@ -230,11 +230,11 @@ def save_coach_objectifs_mensuels(coach_username, objectifs):
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-        print(f"[COACH OBJECTIFS MENSUELS] ✅ Sauvegardé pour {coach_username}: {len(objectifs)} mois")
+        print(f"[COACH OBJECTIFS MENSUELS] Sauvegarde OK pour {coach_username}: {len(objectifs)} mois")
         return True
 
     except Exception as e:
-        print(f"[COACH OBJECTIFS MENSUELS] ❌ Erreur sauvegarde {coach_username}: {e}")
+        print(f"[COACH OBJECTIFS MENSUELS] ERREUR sauvegarde {coach_username}: {e}")
         return False
 
 

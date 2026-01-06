@@ -4033,10 +4033,117 @@ function getObjectifLabel2(monthIndex) {
   return labels[monthIndex];
 }
 
+// Global variable to store coach objectives
+let coachObjectifsData = {};
+
+// Load coach objectives for the current entrepreneur
+async function loadCoachObjectifs() {
+  const username = getCurrentUsername();
+
+  try {
+    // Get the coach for this entrepreneur
+    const coachResponse = await fetch(`/api/entrepreneur/coach?entrepreneur_username=${username}`);
+    if (!coachResponse.ok) {
+      console.log('[RPO] Pas de coach assigné');
+      return;
+    }
+
+    const coachData = await coachResponse.json();
+    if (!coachData.success || !coachData.coach_username) {
+      console.log('[RPO] Pas de coach assigné');
+      return;
+    }
+
+    const coachUsername = coachData.coach_username;
+    console.log('[RPO] Coach trouvé:', coachUsername);
+
+    // Get the coach's monthly objectives
+    const objectifsResponse = await fetch(`/api/coach/objectifs-mensuels?coach_username=${coachUsername}`);
+    if (!objectifsResponse.ok) {
+      console.log('[RPO] Erreur récupération objectifs coach');
+      return;
+    }
+
+    const objectifsData = await objectifsResponse.json();
+    if (objectifsData.success && objectifsData.objectifs) {
+      coachObjectifsData = objectifsData.objectifs;
+      console.log('[RPO] Objectifs coach chargés:', coachObjectifsData);
+
+      // Update the display with loaded coach objectives
+      updateMonthlyObjectifsDisplay();
+    }
+
+  } catch (error) {
+    console.error('[RPO] Erreur chargement objectifs coach:', error);
+  }
+}
+
+// Update monthly objective displays with loaded coach objectives
+function updateMonthlyObjectifsDisplay() {
+  const monthAbbrs = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+  monthAbbrs.forEach((abbr, monthIndex) => {
+    const objPapInput = document.getElementById(`${abbr}-obj-pap`);
+    const objRepInput = document.getElementById(`${abbr}-obj-rep`);
+
+    if (objPapInput) {
+      const value1 = getObjectifDefaultValue1(monthIndex);
+      objPapInput.value = value1;
+      // Also update data-value if needed (extract numeric value)
+      const numericValue1 = parseFloat(value1) || 0;
+      objPapInput.setAttribute('data-value', numericValue1);
+    }
+
+    if (objRepInput) {
+      const value2 = getObjectifDefaultValue2(monthIndex);
+      objRepInput.value = value2;
+      // Also update data-value if needed (extract numeric value)
+      const numericValue2 = parseFloat(value2) || 0;
+      objRepInput.setAttribute('data-value', numericValue2);
+    }
+  });
+
+  console.log('[RPO] Affichage des objectifs coach mis à jour');
+}
+
 // Get default values based on month
 function getObjectifDefaultValue1(monthIndex) {
   // Décembre 2025 (index -2) utilise les mêmes valeurs qu'octobre 2026
   if (monthIndex === -2) monthIndex = 9;
+
+  // Try to get coach objective for this month
+  const username = getCurrentUsername();
+  const monthKey = `2026-${String(monthIndex + 1).padStart(2, '0')}`;
+
+  if (coachObjectifsData[monthKey] && coachObjectifsData[monthKey][username]) {
+    const objectif = coachObjectifsData[monthKey][username].objectif1;
+    if (objectif !== undefined && objectif !== null && objectif !== 0) {
+      // Format based on month type
+      const defaultValues = [
+        '0 h',      // Janvier - HEURES PÀP
+        '0 h',      // Février - HEURES PÀP
+        '0',        // Mars - Estimations
+        '0',        // Avril - Ventes
+        '0',        // Mai - Ventes
+        '0',        // Juin - Ventes
+        '0',        // Juillet - Ventes
+        '0',        // Août - Ventes
+        '0,00 $',   // Septembre - $ Produit
+        '0 h',      // Octobre - HEURES PÀP
+        '0 h',      // Novembre - HEURES PÀP
+        '0 h'       // Décembre - HEURES PÀP
+      ];
+      const format = defaultValues[monthIndex];
+
+      if (format.includes('h')) {
+        return `${objectif} h`;
+      } else if (format.includes('$')) {
+        return `${objectif.toFixed(2)} $`;
+      } else {
+        return String(objectif);
+      }
+    }
+  }
 
   const values = [
     '0 h',      // Janvier - HEURES PÀP
@@ -4058,6 +4165,44 @@ function getObjectifDefaultValue1(monthIndex) {
 function getObjectifDefaultValue2(monthIndex) {
   // Décembre 2025 (index -2) utilise les mêmes valeurs qu'octobre 2026
   if (monthIndex === -2) monthIndex = 9;
+
+  // Try to get coach objective for this month
+  const username = getCurrentUsername();
+  const monthKey = `2026-${String(monthIndex + 1).padStart(2, '0')}`;
+
+  if (coachObjectifsData[monthKey] && coachObjectifsData[monthKey][username]) {
+    const objectif = coachObjectifsData[monthKey][username].objectif2;
+    if (objectif !== undefined && objectif !== null && objectif !== 0) {
+      // Format based on month type
+      const defaultValues = [
+        '0 h',      // Janvier - HEURES PÀP REP
+        '0',        // Février - Estimations
+        '0',        // Mars - Ventes
+        '0',        // Avril - Peintres
+        '0,00 $/h', // Mai - Prod Horaire
+        '0,00 $/h', // Juin - Prod Horaire
+        '0,00 $',   // Juillet - $ Produit
+        '0,00 $',   // Août - $ Produit
+        '',         // Septembre - pas de 2e objectif
+        '0,00 $',   // Octobre - $ Vendus
+        '0,00 $',   // Novembre - $ Vendus
+        '0,00 $'    // Décembre - $ Vendus
+      ];
+      const format = defaultValues[monthIndex];
+
+      if (format.includes('h') && !format.includes('/h')) {
+        return `${objectif} h`;
+      } else if (format.includes('$/h')) {
+        return `${objectif.toFixed(2)} $/h`;
+      } else if (format.includes('$')) {
+        return `${objectif.toFixed(2)} $`;
+      } else if (format === '') {
+        return '';
+      } else {
+        return String(objectif);
+      }
+    }
+  }
 
   const values = [
     '0 h',      // Janvier - HEURES PÀP REP
@@ -6288,6 +6433,11 @@ function changeMonthlyView(monthIndex) {
   const container = document.getElementById('monthlyContainer');
   container.innerHTML = generateMonthlyContent(monthIndex);
 
+  // Restore coach objectives after HTML regeneration (since they come from coach, not monthly data)
+  if (typeof updateMonthlyObjectifsDisplay === 'function') {
+    updateMonthlyObjectifsDisplay();
+  }
+
   // Load saved data for this month if available
   if (window.allMonthlyData && window.allMonthlyData[abbr]) {
     loadMonthlyData(monthIndex, window.allMonthlyData[abbr]);
@@ -6588,6 +6738,9 @@ window.loadRPOData = async function() {
   }
 
   await loadRPODataInternal();
+
+  // Charger les objectifs du coach pour cet entrepreneur
+  await loadCoachObjectifs();
 
   // Initialiser ou recharger les États des Résultats pour le nouvel entrepreneur
   log('[RPO] Initialisation/Rechargement des États des Résultats');
@@ -6890,8 +7043,7 @@ function loadMonthlyData(monthIndex, data) {
   const objRepSuffix = getObjectifSuffix(monthIndex, 'rep');
 
   const fields = [
-    { id: `${abbr}-obj-pap`, key: 'obj_pap', suffix: objPapSuffix },
-    { id: `${abbr}-obj-rep`, key: 'obj_rep', suffix: objRepSuffix },
+    // IMPORTANT: obj-pap et obj-rep sont exclus car ils viennent du coach, pas des données mensuelles
     { id: `${abbr}-hrpap-vise`, key: 'hrpap_vise', suffix: ' h' },
     { id: `${abbr}-estimation-vise`, key: 'estimation_vise', suffix: '' },
     { id: `${abbr}-contract-vise`, key: 'contract_vise', suffix: '' },
@@ -7771,6 +7923,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   // Load RPO data from backend (entrepreneurs ou coachs avec entrepreneur sélectionné)
   await loadRPODataInternal();
+
+  // Charger les objectifs du coach pour cet entrepreneur
+  await loadCoachObjectifs();
 
   // Initialize views with January AFTER DOM is fully ready
   setTimeout(() => {

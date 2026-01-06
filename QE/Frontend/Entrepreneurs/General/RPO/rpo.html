@@ -6800,7 +6800,13 @@ window.loadRPOData = async function() {
   }, 50);
 
   // Réinitialiser les vues RPO
-  setTimeout(() => {
+  setTimeout(async () => {
+    // Charger les objectifs sauvegardés AVANT d'afficher les vues
+    if (typeof loadSavedWeeklyTargetsIntoPlan === 'function') {
+      await loadSavedWeeklyTargetsIntoPlan();
+      log('[RPO] Objectifs hebdomadaires sauvegardés rechargés');
+    }
+
     changeMonthlyView(0);
     changeMonth(0);
     calculateMonthlyTotalsFromWeekly(0);
@@ -7840,6 +7846,12 @@ function selectCoach(username) {
   setTimeout(async () => {
     await loadRPODataInternal();
 
+    // Charger les objectifs sauvegardés AVANT d'afficher les vues
+    if (typeof loadSavedWeeklyTargetsIntoPlan === 'function') {
+      await loadSavedWeeklyTargetsIntoPlan();
+      log('[RPO] Objectifs hebdomadaires sauvegardés chargés pour le coach');
+    }
+
     // Initialize views
     changeMonthlyView(0);
     changeMonth(0);
@@ -7928,10 +7940,16 @@ document.addEventListener('DOMContentLoaded', async function() {
   await loadCoachObjectifs();
 
   // Initialize views with January AFTER DOM is fully ready
-  setTimeout(() => {
+  setTimeout(async () => {
     // Initialize monthly view
     changeMonthlyView(0);
     log('✓ [INIT] Monthly view initialized with January (monthIndex: 0)');
+
+    // IMPORTANT: Charger les objectifs sauvegardés AVANT d'afficher les tableaux hebdomadaires
+    if (typeof loadSavedWeeklyTargetsIntoPlan === 'function') {
+      await loadSavedWeeklyTargetsIntoPlan();
+      log('✓ [INIT] Objectifs hebdomadaires sauvegardés chargés');
+    }
 
     // Initialize weekly view - THIS loads the weekly data
     changeMonth(0);
@@ -8455,6 +8473,83 @@ async function saveWeeklyTargetsToJSON(mktgPattern, estimPattern, contratPattern
   }
 }
 
+// Charger les objectifs hebdomadaires sauvegardés depuis le backend et les mettre dans window.planWeeklyTargets
+async function loadSavedWeeklyTargetsIntoPlan() {
+  if (!window.planWeeklyTargets) {
+    log('[LOAD TARGETS] window.planWeeklyTargets non initialisé, skip');
+    return;
+  }
+
+  const username = getCurrentUsername();
+  log('[LOAD TARGETS] Chargement des objectifs hebdomadaires sauvegardés...');
+
+  try {
+    // Charger les données hebdomadaires pour tous les mois (Janvier = 0, jusqu'à Décembre = 11)
+    for (let monthIndex = 0; monthIndex <= 11; monthIndex++) {
+      const response = await fetch(`/api/rpo/${username}/weekly/${monthIndex}`);
+      if (response.ok) {
+        const monthData = await response.json();
+
+        // Pour chaque semaine dans ce mois
+        Object.keys(monthData).forEach(weekNumber => {
+          const weekData = monthData[weekNumber];
+
+          // Si des objectifs "vise" sont sauvegardés, les utiliser
+          if (weekData.h_marketing_vise !== undefined ||
+              weekData.estimation_vise !== undefined ||
+              weekData.contract_vise !== undefined ||
+              weekData.dollar_vise !== undefined) {
+
+            // Calculer l'index global dans window.planWeeklyTargets (0-51)
+            const weekOffsets = {
+              '-2': 0,   // Décembre 2025
+              '0': 4,    // Janvier 2026
+              '1': 9,    // Février 2026
+              '2': 13,   // Mars 2026
+              '3': 17,   // Avril 2026
+              '4': 22,   // Mai 2026
+              '5': 26,   // Juin 2026
+              '6': 30,   // Juillet 2026
+              '7': 35,   // Août 2026
+              '8': 39,   // Septembre 2026
+              '9': 43,   // Octobre 2026
+              '10': 48,  // Novembre 2026
+              '11': 52   // Décembre 2026
+            };
+
+            const offset = weekOffsets[String(monthIndex)];
+            if (offset !== undefined) {
+              const globalIndex = offset + parseInt(weekNumber) - 1;
+
+              if (globalIndex >= 0 && globalIndex < window.planWeeklyTargets.mktg.length) {
+                // Remplacer les valeurs du plan par les valeurs sauvegardées
+                if (weekData.h_marketing_vise !== undefined) {
+                  window.planWeeklyTargets.mktg[globalIndex] = weekData.h_marketing_vise;
+                }
+                if (weekData.estimation_vise !== undefined) {
+                  window.planWeeklyTargets.estim[globalIndex] = weekData.estimation_vise;
+                }
+                if (weekData.contract_vise !== undefined) {
+                  window.planWeeklyTargets.contrat[globalIndex] = weekData.contract_vise;
+                }
+                if (weekData.dollar_vise !== undefined) {
+                  window.planWeeklyTargets.dollar[globalIndex] = weekData.dollar_vise;
+                }
+
+                log(`[LOAD TARGETS] Semaine ${weekNumber} du mois ${monthIndex} (index global ${globalIndex}): h_marketing=${weekData.h_marketing_vise}, estimation=${weekData.estimation_vise}, contract=${weekData.contract_vise}, dollar=${weekData.dollar_vise}`);
+              }
+            }
+          }
+        });
+      }
+    }
+
+    log('[LOAD TARGETS] OK Objectifs hebdomadaires chargés dans window.planWeeklyTargets');
+  } catch (error) {
+    error('[LOAD TARGETS] ERREUR Erreur réseau:', error);
+  }
+}
+
 // Fonction pour recharger le plan d'affaire avec spinner
 async function reloadPlanWithAnimation() {
   const planContainer = document.querySelector('.plan-scroll-container');
@@ -8518,6 +8613,9 @@ async function reloadPlanWithAnimation() {
 
   // Régénérer le plan d'affaire
   generatePlanWeeks();
+
+  // Charger les objectifs hebdomadaires sauvegardés
+  await loadSavedWeeklyTargetsIntoPlan();
 
   // Synchroniser les prévisions vers RPO
   setTimeout(() => {
@@ -10824,6 +10922,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Ensuite générer le plan avec les paramètres corrects
   generatePlanWeeks();
+
+  // Charger les objectifs hebdomadaires sauvegardés depuis le backend
+  // Cela remplacera les valeurs calculées par les valeurs sauvegardées (si elles existent)
+  await loadSavedWeeklyTargetsIntoPlan();
 
   // IMPORTANT: Charger d'abord les données réelles hebdomadaires du backend
   // avant toute synchronisation pour éviter d'écraser les données

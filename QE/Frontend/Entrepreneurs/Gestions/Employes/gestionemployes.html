@@ -1326,7 +1326,7 @@
         <button onclick="refuserInactivationCoach()" class="btn-secondary" style="width: auto;">
           <i class="fas fa-times mr-2"></i>Refuser
         </button>
-        <button onclick="validerInactivationCoach()" class="btn-primary" style="width: auto; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;">
+        <button id="btn-valider-inactivation" onclick="validerInactivationCoach()" class="btn-primary" style="width: auto; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;">
           <i class="fas fa-check mr-2"></i>Valider
         </button>
       </div>
@@ -2599,7 +2599,7 @@
         <button type="button" onclick="refuserReactivationCoach()" class="btn-secondary">
           Refuser
         </button>
-        <button type="button" onclick="validerReactivationCoach()" class="btn-primary" style="background: #10b981;">
+        <button type="button" id="btn-valider-reactivation" onclick="validerReactivationCoach()" class="btn-primary" style="background: #10b981;">
           Valider la réactivation
         </button>
       </div>
@@ -3193,7 +3193,7 @@
         <button type="button" onclick="refuserModificationCoach()" class="btn-secondary">
           Refuser
         </button>
-        <button type="button" onclick="validerModificationCoach()" class="btn-primary">
+        <button type="button" id="btn-valider-modification" onclick="validerModificationCoach()" class="btn-primary">
           Valider
         </button>
       </div>
@@ -5564,6 +5564,9 @@
     async function validerModificationCoach() {
       if (!employeModificationEnCours) return;
 
+      const btn = document.getElementById('btn-valider-modification');
+      const originalHtml = showButtonSpinner(btn);
+
       try {
         const username = window.username || 'user';
         const response = await fetch(`/api/employes/${username}/valider-modification/${employeModificationEnCours}`, {
@@ -5592,10 +5595,12 @@
             window.parent.postMessage({ type: 'updateEmployesBadge' }, '*');
           }, 2000);
         } else {
+          hideButtonSpinner(btn, originalHtml);
           const error = await response.json();
           showNotification(error.detail || 'Erreur lors de la validation', 'error');
         }
       } catch (error) {
+        hideButtonSpinner(btn, originalHtml);
         error('Erreur lors de la validation:', error);
         showNotification('Erreur de connexion', 'error');
       }
@@ -7950,6 +7955,39 @@
       currentEmployeValidation = null;
     };
 
+    // === HELPER FUNCTIONS POUR SPINNERS SUR BOUTONS ===
+
+    // Afficher un spinner sur un bouton pendant le chargement
+    function showButtonSpinner(button) {
+      if (!button) return null;
+
+      // Sauvegarder le HTML original
+      const originalHtml = button.innerHTML;
+
+      // Désactiver le bouton
+      button.disabled = true;
+      button.style.opacity = '0.7';
+      button.style.cursor = 'not-allowed';
+
+      // Afficher le spinner
+      button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Chargement...';
+
+      return originalHtml;
+    }
+
+    // Cacher le spinner et restaurer le bouton
+    function hideButtonSpinner(button, originalHtml) {
+      if (!button || !originalHtml) return;
+
+      // Réactiver le bouton
+      button.disabled = false;
+      button.style.opacity = '1';
+      button.style.cursor = 'pointer';
+
+      // Restaurer le HTML original
+      button.innerHTML = originalHtml;
+    }
+
     // Fonction pour afficher l'animation de succès
     function showSuccessAnimation(message) {
       const overlay = document.createElement('div');
@@ -7980,15 +8018,17 @@
         return validerEmployeCoach();
       }
 
-      // Désactiver le bouton pendant le processus
+      // Afficher le spinner sur le bouton
       const btn = document.getElementById('btn-valider-employe');
-      if (btn) {
-        btn.disabled = true;
-        btn.style.opacity = '0.6';
-      }
+      const originalHtml = showButtonSpinner(btn);
 
-      // Appeler la fonction de validation
-      await validerEmployeCoach();
+      try {
+        // Appeler la fonction de validation
+        await validerEmployeCoach();
+      } finally {
+        // Note: Le bouton sera réactivé lors de la réouverture du popup pour le prochain employé
+        // On ne restaure pas ici car le popup va se fermer
+      }
     }
 
     // Fonction pour valider l'employé (coach)
@@ -8514,9 +8554,13 @@
 
     // Valider l'inactivation (coach)
     async function validerInactivationCoach() {
+      const btn = document.getElementById('btn-valider-inactivation');
+      const originalHtml = showButtonSpinner(btn);
+
       try {
         if (!currentInactivationValidation) {
           error('Aucune inactivation en cours de validation');
+          hideButtonSpinner(btn, originalHtml);
           return;
         }
 
@@ -8550,10 +8594,12 @@
             }
           }, 2000);
         } else {
+          hideButtonSpinner(btn, originalHtml);
           const error = await response.json();
           showNotification('Erreur: ' + error.detail, 'error');
         }
       } catch (error) {
+        hideButtonSpinner(btn, originalHtml);
         error('Erreur lors de la validation de l\'inactivation:', error);
         showNotification('Erreur de connexion: ' + error.message, 'error');
       }
@@ -8729,9 +8775,13 @@
 
     // Valider la réactivation (coach)
     async function validerReactivationCoach() {
+      const btn = document.getElementById('btn-valider-reactivation');
+      const originalHtml = showButtonSpinner(btn);
+
       try {
         if (!currentReactivationValidation) {
           error('Aucune réactivation en cours de validation');
+          hideButtonSpinner(btn, originalHtml);
           return;
         }
 
@@ -8765,10 +8815,12 @@
             }
           }, 2000);
         } else {
+          hideButtonSpinner(btn, originalHtml);
           const error = await response.json();
           showNotification('Erreur: ' + error.detail, 'error');
         }
       } catch (error) {
+        hideButtonSpinner(btn, originalHtml);
         error('Erreur lors de la validation de la réactivation:', error);
         showNotification('Erreur de connexion: ' + error.message, 'error');
       }

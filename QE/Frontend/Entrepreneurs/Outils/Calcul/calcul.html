@@ -18693,6 +18693,21 @@ function initializeApp() {
   // Attendre que common.js soit initialisé
   async function initClientsPage() {
     if (window.username) {
+      // ⚡ VÉRIFIER si on doit charger les clients (seulement pour entrepreneur ou coach/direction avec sélection)
+      const userRole = localStorage.getItem('userRole');
+      const isCoach = userRole === 'coach' || userRole === 'direction';
+      const urlParams = new URLSearchParams(window.location.search);
+      const userParam = urlParams.get('user');
+
+      // Vérifier si un entrepreneur est sélectionné
+      const hasSelection = userParam && userParam !== localStorage.getItem('username');
+
+      // ⚡ NE PAS charger si coach/direction SANS sélection entrepreneur
+      if (isCoach && !hasSelection) {
+        log('[CALCUL] Coach/Direction sans sélection - clients à compléter non chargés');
+        return; // Arrêter ici
+      }
+
       try {
         // Récupérer les clients à compléter ET la blacklist des IDs en parallèle
         const [clientsResponse, blacklistedEventIds] = await Promise.all([

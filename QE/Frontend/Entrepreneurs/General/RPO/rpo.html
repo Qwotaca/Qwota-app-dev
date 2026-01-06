@@ -10917,6 +10917,27 @@ async function loadVentesProduitIntoPlan() {
 
 // Initialiser le plan au chargement
 document.addEventListener('DOMContentLoaded', async () => {
+  // ⚡ VÉRIFIER si on doit charger les données RPO
+  const userRole = localStorage.getItem('userRole');
+  const isCoach = userRole === 'coach' || userRole === 'direction';
+  const urlParams = new URLSearchParams(window.location.search);
+  const userParam = urlParams.get('user');
+
+  // Vérifier si un entrepreneur est sélectionné
+  const hasSelection = document.body.classList.contains('has-selection') ||
+                      window.selectedEntrepreneurUsername ||
+                      (userParam && userParam !== localStorage.getItem('username'));
+
+  // ⚡ NE PAS charger si coach/direction SANS sélection entrepreneur
+  if (isCoach && !hasSelection) {
+    console.log('[RPO] Coach/Direction sans sélection - chargement différé jusqu\'à sélection entrepreneur');
+    // Activer quand même le drag-to-scroll pour l'interface
+    enableDragScroll();
+    return; // Arrêter ici - loadRPOData() sera appelé par la sélection entrepreneur
+  }
+
+  console.log('[RPO] Chargement initial des données (entrepreneur ou sélection active)');
+
   // D'abord charger les données RPO pour avoir le bon Objectif CA
   await loadRPOData();
 

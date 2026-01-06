@@ -3405,11 +3405,14 @@
             <span class="tooltip">Dashboard</span>
           </a>
           <!-- Mon Équipe retiré - maintenant accessible via Dashboard dropdown -->
-          <a href="#/coach_rpo" class="nav-item" data-page="coach_rpo">
+          <a href="#/coach_rpo" class="nav-item" data-page="coach_rpo" id="nav-coach-rpo" style="position: relative;">
             <span class="nav-icon">
               <i class="fas fa-calendar-check"></i>
             </span>
-            <span class="nav-label">Mon RPO</span>
+            <span class="nav-label" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+              <span>Mon RPO</span>
+              <span id="rpo-objectifs-notification-badge" class="notification-badge" style="display: none; margin-left: auto;">0</span>
+            </span>
             <span class="tooltip">Mon RPO</span>
           </a>
           <a href="#/central" class="nav-item" data-page="central">
@@ -4295,6 +4298,11 @@
             console.log('[APPPC] Mise à jour badge remboursements via postMessage');
             loadFacturationEnTraitementCount();
           }
+          // Écouter les messages de mise à jour du badge objectifs RPO
+          if (event.data && event.data.type === 'updateRPOObjectifsBadge') {
+            console.log('[APPPC] Mise à jour badge objectifs RPO via postMessage');
+            loadRPOObjectifsNotificationCount();
+          }
         });
 
         // Vérifier périodiquement localStorage pour détection de connexion Gmail (pour PWA)
@@ -4444,6 +4452,12 @@
       // Charger le compteur de facturations en traitement pour les coaches au démarrage
       loadFacturationEnTraitementCount();
 
+      // Charger le compteur des objectifs mensuels manquants pour les coaches au démarrage
+      // Appel avec un petit délai pour s'assurer que username est bien initialisé
+      setTimeout(() => {
+        loadRPOObjectifsNotificationCount();
+      }, 500);
+
     });
 
     // Fonction pour charger le compteur d'employés en attente
@@ -4528,6 +4542,115 @@
         }
       } catch (error) {
         console.error('Erreur lors du chargement du compteur facturation:', error);
+      }
+    }
+
+    // Fonction pour charger le compteur des objectifs mensuels manquants
+    async function loadRPOObjectifsNotificationCount() {
+      try {
+        const userRole = localStorage.getItem('userRole');
+        console.log('[RPO OBJECTIFS BADGE] userRole:', userRole);
+
+        // Afficher le badge uniquement pour les coaches
+        if (userRole !== 'coach') {
+          console.log('[RPO OBJECTIFS BADGE] Pas un coach, on arrête');
+          return;
+        }
+
+        const username = window.username || localStorage.getItem('username');
+        console.log('[RPO OBJECTIFS BADGE] username:', username);
+
+        if (!username) {
+          console.log('[RPO OBJECTIFS BADGE] Pas de username, on arrête');
+          return;
+        }
+
+        // Charger les objectifs mensuels du coach
+        const response = await fetch(`/api/coach/objectifs-mensuels?coach_username=${username}`);
+        console.log('[RPO OBJECTIFS BADGE] Response objectifs:', response.ok);
+
+        if (!response.ok) {
+          console.log('[RPO OBJECTIFS BADGE] Erreur response objectifs');
+          return;
+        }
+
+        const data = await response.json();
+        console.log('[RPO OBJECTIFS BADGE] Data objectifs:', data);
+
+        if (!data.success || !data.objectifs) {
+          console.log('[RPO OBJECTIFS BADGE] Pas de data.success ou data.objectifs');
+          return;
+        }
+
+        // Charger la liste des entrepreneurs
+        const entrepreneursResponse = await fetch(`/api/entrepreneurs/${username}`);
+        console.log('[RPO OBJECTIFS BADGE] Response entrepreneurs:', entrepreneursResponse.ok);
+
+        if (!entrepreneursResponse.ok) {
+          console.log('[RPO OBJECTIFS BADGE] Erreur response entrepreneurs');
+          return;
+        }
+
+        const entrepreneursData = await entrepreneursResponse.json();
+        console.log('[RPO OBJECTIFS BADGE] entrepreneursData:', entrepreneursData);
+
+        const entrepreneurs = entrepreneursData.entrepreneurs || entrepreneursData || [];
+        console.log('[RPO OBJECTIFS BADGE] entrepreneurs:', entrepreneurs);
+
+        if (entrepreneurs.length === 0) {
+          console.log('[RPO OBJECTIFS BADGE] Aucun entrepreneur');
+          return;
+        }
+
+        // Obtenir le mois actuel (Toronto time)
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const monthKey = `2026-${String(currentMonth + 1).padStart(2, '0')}`;
+        console.log('[RPO OBJECTIFS BADGE] monthKey:', monthKey);
+
+        const currentMonthData = data.objectifs[monthKey];
+        console.log('[RPO OBJECTIFS BADGE] currentMonthData:', currentMonthData);
+
+        let hasIncomplete = false;
+
+        if (!currentMonthData) {
+          hasIncomplete = true;
+          console.log('[RPO OBJECTIFS BADGE] Pas de données pour le mois actuel, hasIncomplete = true');
+        } else {
+          // Vérifier si tous les entrepreneurs ont leurs objectifs remplis pour le mois actuel
+          for (const entrepreneur of entrepreneurs) {
+            const entrepreneurData = currentMonthData[entrepreneur.username];
+            console.log(`[RPO OBJECTIFS BADGE] Entrepreneur ${entrepreneur.username}:`, entrepreneurData);
+            if (!entrepreneurData ||
+                ((!entrepreneurData.objectif1 || entrepreneurData.objectif1 === 0) &&
+                 (!entrepreneurData.objectif2 || entrepreneurData.objectif2 === 0))) {
+              hasIncomplete = true;
+              console.log(`[RPO OBJECTIFS BADGE] ${entrepreneur.username} a des objectifs incomplets`);
+              break;
+            }
+          }
+        }
+
+        console.log('[RPO OBJECTIFS BADGE] hasIncomplete final:', hasIncomplete);
+
+        const badge = document.getElementById('rpo-objectifs-notification-badge');
+        console.log('[RPO OBJECTIFS BADGE] badge element:', badge);
+
+        if (badge) {
+          if (hasIncomplete) {
+            badge.textContent = '1';
+            badge.style.display = 'inline-flex';
+            console.log('[RPO OBJECTIFS BADGE] Badge affiché avec 1');
+          } else {
+            badge.style.display = 'none';
+            console.log('[RPO OBJECTIFS BADGE] Badge caché');
+          }
+        } else {
+          console.log('[RPO OBJECTIFS BADGE] ERREUR: Badge element non trouvé!');
+        }
+
+      } catch (error) {
+        console.error('[RPO OBJECTIFS BADGE] Erreur lors du chargement du compteur objectifs RPO:', error);
       }
     }
 

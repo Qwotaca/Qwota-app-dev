@@ -1602,7 +1602,7 @@
         <button type="button" onclick="fermerModal()" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
           Annuler
         </button>
-        <button type="submit" form="formActivation" class="btn-primary px-4 py-2 rounded-lg relative overflow-hidden" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+        <button type="submit" form="formActivation" id="btn-activer-employe" class="btn-primary px-4 py-2 rounded-lg relative overflow-hidden" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
           <span>Activer l'employé</span>
         </button>
       </div>
@@ -3865,6 +3865,15 @@
 
       // IMPORTANT: Réinitialiser les prévisualisations de fichiers pour éviter d'afficher les fichiers de l'employé précédent
       resetFilePreviewsActivation();
+
+      // IMPORTANT: Réinitialiser le bouton "Activer l'employé" pour éviter de garder le spinner
+      const btnActiver = document.getElementById('btn-activer-employe');
+      if (btnActiver) {
+        btnActiver.disabled = false;
+        btnActiver.style.opacity = '1';
+        btnActiver.style.cursor = 'pointer';
+        btnActiver.innerHTML = '<span>Activer l\'employé</span>';
+      }
 
       // Initialiser les selects personnalisés et l'autocomplete après ouverture du modal
       setTimeout(() => {
@@ -7738,6 +7747,9 @@
     
     // Fonction pour activer un employé via l'API
     async function activerEmployeAPI() {
+      const btn = document.getElementById('btn-activer-employe');
+      const originalHtml = showButtonSpinner(btn);
+
       try {
         const employeId = document.getElementById('modalActivation').dataset.employeId;
         const username = window.username || 'user';
@@ -7812,11 +7824,13 @@
             }
           }, 2000);
         } else {
+          hideButtonSpinner(btn, originalHtml);
           const error = await response.json();
           error('Erreur:', error.detail);
           showNotification('Erreur: ' + error.detail, 'error');
         }
       } catch (error) {
+        hideButtonSpinner(btn, originalHtml);
         error('Erreur:', error);
         showNotification('Erreur de connexion: ' + error.message, 'error');
       }
@@ -7975,6 +7989,14 @@
         if (btnValider) {
           btnValider.disabled = false;
           btnValider.style.opacity = '1';
+          btnValider.style.cursor = 'pointer';
+          // Restaurer le HTML original du bouton (sans spinner)
+          btnValider.innerHTML = `
+            <span id="btn-valider-text">Valider</span>
+            <span id="btn-valider-icon" style="display: none;">
+              <i class="fas fa-check-circle"></i>
+            </span>
+          `;
         }
 
         log('Popup de validation ouvert avec succès');
@@ -8350,10 +8372,19 @@
       const userRole = localStorage.getItem('userRole');
       const isCoach = userRole === 'coach';
 
-      container.innerHTML = conversation.map(msg => {
+      container.innerHTML = conversation.map((msg, index) => {
         let sender, cssClass;
 
-        if (msg.de === 'comptable') {
+        // IMPORTANT: Le premier message de refus d'un coach est parfois marqué comme 'comptable' au lieu de 'coach'
+        // Si c'est le premier message ET que l'utilisateur est coach, c'est son propre message de refus initial
+        const isPremierMessageCoach = (index === 0 && isCoach && msg.de === 'comptable');
+
+        if (isPremierMessageCoach) {
+          // Premier message de refus du coach = afficher "Vous" à droite
+          sender = 'Vous';
+          cssClass = 'from-entrepreneur';
+        } else if (msg.de === 'comptable' || msg.de === 'direction') {
+          // Messages de la direction
           sender = 'Direction';
           cssClass = 'from-comptable';
         } else if (msg.de === 'coach') {

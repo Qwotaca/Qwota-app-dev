@@ -81,11 +81,11 @@ def save_direction_previsions(direction_username, previsions):
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-        print(f"[DIRECTION PREVISIONS] ✅ Sauvegardé pour {direction_username}: {len(previsions)} prévisions")
+        print(f"[DIRECTION PREVISIONS] OK Sauvegarde pour {direction_username}: {len(previsions)} previsions")
         return True
 
     except Exception as e:
-        print(f"[DIRECTION PREVISIONS] ❌ Erreur sauvegarde {direction_username}: {e}")
+        print(f"[DIRECTION PREVISIONS] ERREUR sauvegarde {direction_username}: {e}")
         print(f"[DIRECTION PREVISIONS] Type erreur: {type(e).__name__}")
         import traceback
         traceback.print_exc()
@@ -167,11 +167,11 @@ def save_direction_metrics(direction_username, metrics):
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-        print(f"[DIRECTION METRICS] ✅ Sauvegardé pour {direction_username}: CM={metrics.get('cm')}, Ratio={metrics.get('ratioMktg')}%, Taux={metrics.get('tauxVente')}%")
+        print(f"[DIRECTION METRICS] OK Sauvegarde pour {direction_username}: CM={metrics.get('cm')}, Ratio={metrics.get('ratioMktg')}%, Taux={metrics.get('tauxVente')}%")
         return True
 
     except Exception as e:
-        print(f"[DIRECTION METRICS] ❌ Erreur sauvegarde {direction_username}: {e}")
+        print(f"[DIRECTION METRICS] ERREUR sauvegarde {direction_username}: {e}")
         print(f"[DIRECTION METRICS] Type erreur: {type(e).__name__}")
         import traceback
         traceback.print_exc()

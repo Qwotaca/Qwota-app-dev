@@ -345,21 +345,17 @@ def get_user_progress(username: str) -> Dict:
     result = cursor.fetchone()
 
     if result:
-        # Recalculer l'XP total basé sur l'historique complet (incluant badges ET side quests)
+        # Recalculer l'XP total basé sur les badges actifs (avec count)
         cursor.execute("""
-            SELECT SUM(xp_earned) FROM xp_history
+            SELECT badge_id, count FROM user_badges
             WHERE username = ?
         """, (username,))
 
-        xp_sum_result = cursor.fetchone()
-        recalculated_xp = xp_sum_result[0] if xp_sum_result[0] is not None else 0
+        badges = cursor.fetchall()
+        recalculated_xp = max(0, sum(get_badge_xp(badge_id) * (count if count else 1) for badge_id, count in badges))
 
         # Compter les badges actifs pour le retour
-        cursor.execute("""
-            SELECT COUNT(*) FROM user_badges
-            WHERE username = ?
-        """, (username,))
-        badges_count = cursor.fetchone()[0]
+        badges_count = len(badges)
 
         # Calculer le niveau correspondant à l'XP recalculé
         level_info = calculate_level_from_xp(recalculated_xp)
@@ -2112,7 +2108,7 @@ def unlock_badge(username: str, badge_id: str, reason: str = "") -> Dict:
         print(f"[DEBUG INCREMENT] Badges de {username}: {all_badges}")
 
         # Multiplier l'XP de chaque badge par son count
-        total_xp = sum(get_badge_xp(badge_id) * (count if count else 1) for badge_id, count in all_badges)
+        total_xp = max(0, sum(get_badge_xp(badge_id) * (count if count else 1) for badge_id, count in all_badges))
 
         print(f"[DEBUG INCREMENT] XP total calculé: {total_xp}")
         print(f"[DEBUG INCREMENT] Badge incrémenté: {badge_id}, count: {new_count}")
@@ -2121,18 +2117,37 @@ def unlock_badge(username: str, badge_id: str, reason: str = "") -> Dict:
         level_info = calculate_level_from_xp(total_xp)
         new_level = level_info["level"]
 
-        # Mettre à jour le profil utilisateur avec le nouvel XP total et niveau
+        # Vérifier si l'utilisateur existe dans user_progress
         cursor.execute("""
-            UPDATE user_progress
-            SET total_xp = ?, current_level = ?
-            WHERE username = ?
-        """, (total_xp, new_level, username))
+            SELECT username FROM user_progress WHERE username = ?
+        """, (username,))
+        user_exists = cursor.fetchone()
 
-        conn.commit()
-        conn.close()
+        if user_exists:
+            # Mettre à jour le profil utilisateur avec le nouvel XP total et niveau
+            cursor.execute("""
+                UPDATE user_progress
+                SET total_xp = ?, current_level = ?, updated_at = ?
+                WHERE username = ?
+            """, (total_xp, new_level, datetime.now().isoformat(), username))
+        else:
+            # Créer le profil utilisateur
+            cursor.execute("""
+                INSERT INTO user_progress (username, total_xp, current_level, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, (username, total_xp, new_level, datetime.now().isoformat(), datetime.now().isoformat()))
 
         # L'XP ajouté pour ce badge spécifiquement
         xp_to_add = get_badge_xp(badge_id)
+
+        # Ajouter dans l'historique XP
+        cursor.execute("""
+            INSERT INTO xp_history (username, xp_earned, action_type, action_description)
+            VALUES (?, ?, ?, ?)
+        """, (username, xp_to_add, 'badge_increment', f"Badge {badge_id} incrémenté (x{new_count})"))
+
+        conn.commit()
+        conn.close()
 
         print(f"[DEBUG INCREMENT] XP de ce badge: {xp_to_add}, nouveau total XP: {total_xp}")
 
@@ -2140,6 +2155,7 @@ def unlock_badge(username: str, badge_id: str, reason: str = "") -> Dict:
             "success": True,
             "badge_info": badge,
             "count": new_count,
+            "previous_count": current_count,
             "incremented": True,
             "xp_awarded": xp_to_add,
             "new_total_xp": total_xp
@@ -2160,18 +2176,37 @@ def unlock_badge(username: str, badge_id: str, reason: str = "") -> Dict:
     """, (username,))
 
     all_badges = cursor.fetchall()
-    total_xp = sum(get_badge_xp(badge_id[0]) for badge_id in all_badges)
+    total_xp = max(0, sum(get_badge_xp(badge_id[0]) for badge_id in all_badges))
 
     # Calculer le niveau correspondant
     level_info = calculate_level_from_xp(total_xp)
     new_level = level_info["level"]
 
-    # Mettre à jour le profil utilisateur avec le nouvel XP total et niveau
+    # Vérifier si l'utilisateur existe dans user_progress
     cursor.execute("""
-        UPDATE user_progress
-        SET total_xp = ?, current_level = ?
-        WHERE username = ?
-    """, (total_xp, new_level, username))
+        SELECT username FROM user_progress WHERE username = ?
+    """, (username,))
+    user_exists = cursor.fetchone()
+
+    if user_exists:
+        # Mettre à jour le profil utilisateur avec le nouvel XP total et niveau
+        cursor.execute("""
+            UPDATE user_progress
+            SET total_xp = ?, current_level = ?, updated_at = ?
+            WHERE username = ?
+        """, (total_xp, new_level, datetime.now().isoformat(), username))
+    else:
+        # Créer le profil utilisateur
+        cursor.execute("""
+            INSERT INTO user_progress (username, total_xp, current_level, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (username, total_xp, new_level, datetime.now().isoformat(), datetime.now().isoformat()))
+
+    # Ajouter dans l'historique XP
+    cursor.execute("""
+        INSERT INTO xp_history (username, xp_earned, action_type, action_description)
+        VALUES (?, ?, ?, ?)
+    """, (username, badge["xp_bonus"], 'badge_unlock', f"Badge {badge_id} débloqué"))
 
     conn.commit()
     conn.close()
@@ -2179,6 +2214,8 @@ def unlock_badge(username: str, badge_id: str, reason: str = "") -> Dict:
     return {
         "success": True,
         "badge_info": badge,
+        "count": 1,
+        "previous_count": 0,
         "xp_awarded": badge["xp_bonus"],
         "new_total_xp": total_xp,
         "already_unlocked": False
@@ -2227,6 +2264,36 @@ def remove_badge(username: str, badge_id: str) -> Dict:
             WHERE id = ?
         """, (new_count, badge_db_id))
 
+        # Recalculer l'XP total
+        cursor.execute("""
+            SELECT badge_id, count FROM user_badges
+            WHERE username = ?
+        """, (username,))
+        all_badges = cursor.fetchall()
+        total_xp = max(0, sum(get_badge_xp(badge_id) * (count if count else 1) for badge_id, count in all_badges))
+
+        # Calculer le niveau
+        level_info = calculate_level_from_xp(total_xp)
+        new_level = level_info["level"]
+
+        # Mettre à jour user_progress
+        cursor.execute("""
+            SELECT username FROM user_progress WHERE username = ?
+        """, (username,))
+        if cursor.fetchone():
+            cursor.execute("""
+                UPDATE user_progress
+                SET total_xp = ?, current_level = ?, updated_at = ?
+                WHERE username = ?
+            """, (total_xp, new_level, datetime.now().isoformat(), username))
+
+        # Ajouter XP négatif dans l'historique
+        xp_lost = get_badge_xp(badge_id)
+        cursor.execute("""
+            INSERT INTO xp_history (username, xp_earned, action_type, action_description)
+            VALUES (?, ?, ?, ?)
+        """, (username, -xp_lost, 'badge_decrement', f"Badge {badge_id} décrémenté (x{new_count})"))
+
         conn.commit()
         conn.close()
 
@@ -2253,7 +2320,7 @@ def remove_badge(username: str, badge_id: str) -> Dict:
     """, (username,))
 
     remaining_badges = cursor.fetchall()
-    total_xp = sum(get_badge_xp(badge_id[0]) for badge_id in remaining_badges)
+    total_xp = max(0, sum(get_badge_xp(badge_id[0]) for badge_id in remaining_badges))
 
     # Calculer le niveau correspondant
     level_info = calculate_level_from_xp(total_xp)
@@ -2261,10 +2328,21 @@ def remove_badge(username: str, badge_id: str) -> Dict:
 
     # Mettre à jour le profil utilisateur avec le nouvel XP et niveau
     cursor.execute("""
-        UPDATE user_progress
-        SET total_xp = ?, current_level = ?
-        WHERE username = ?
-    """, (total_xp, new_level, username))
+        SELECT username FROM user_progress WHERE username = ?
+    """, (username,))
+    if cursor.fetchone():
+        cursor.execute("""
+            UPDATE user_progress
+            SET total_xp = ?, current_level = ?, updated_at = ?
+            WHERE username = ?
+        """, (total_xp, new_level, datetime.now().isoformat(), username))
+
+    # Ajouter XP négatif dans l'historique
+    xp_lost = get_badge_xp(badge_id)
+    cursor.execute("""
+        INSERT INTO xp_history (username, xp_earned, action_type, action_description)
+        VALUES (?, ?, ?, ?)
+    """, (username, -xp_lost, 'badge_remove', f"Badge {badge_id} retiré"))
 
     conn.commit()
     conn.close()
@@ -2354,16 +2432,16 @@ def recalculate_all_user_xp() -> Dict:
     results = []
 
     for (username,) in users:
-        # Récupérer tous les badges actifs de cet utilisateur
+        # Récupérer tous les badges actifs de cet utilisateur avec leur count
         cursor.execute("""
-            SELECT badge_id FROM user_badges
+            SELECT badge_id, count FROM user_badges
             WHERE username = ?
         """, (username,))
 
         active_badges = cursor.fetchall()
 
-        # Calculer l'XP total basé uniquement sur les badges actifs
-        total_xp = sum(get_badge_xp(badge_id[0]) for badge_id in active_badges)
+        # Calculer l'XP total basé uniquement sur les badges actifs (en multipliant par count)
+        total_xp = max(0, sum(get_badge_xp(badge_id) * (count if count else 1) for badge_id, count in active_badges))
 
         # Récupérer l'XP actuel
         cursor.execute("SELECT total_xp FROM user_progress WHERE username = ?", (username,))
@@ -2558,8 +2636,6 @@ def check_and_reward_completed_quests(username: str):
     Vérifie les quests complétées et attribue l'XP correspondant
     Retourne le nombre de nouvelles quests récompensées
     """
-    from datetime import datetime
-
     # Liste de toutes les side quests (même structure que dans check_all_sidequests.py et main.py)
     WEEKLY_QUESTS = [
         {"title": "Faire 12h de PAP durant la semaine Internationale", "deadline": "2025-12-25", "target": 12, "unit": "heures", "quest_id": "quest_2025_12_25"},
@@ -2766,6 +2842,157 @@ def check_and_reward_completed_quests(username: str):
         import traceback
         traceback.print_exc()
         return 0
+
+
+def check_and_award_automatic_badges(username: str) -> Dict:
+    """
+    Vérifie et attribue automatiquement les badges basés sur les données RPO
+
+    Badges vérifiés:
+    - Ventes totales (total_sales): Cap des Six Chiffres, Ascension, Palier des Titans, etc.
+    - Ventes hebdomadaires (weekly_sales): Sprint de Vente, Semaine de Feu, etc.
+    - Production hebdomadaire (weekly_production): Opération 10K, Roue de production, etc.
+
+    Retourne: {awarded_badges: [...], total_xp: X}
+    """
+    try:
+        from QE.Backend.rpo import load_user_rpo_data
+
+        print(f"\n[AUTO BADGES] Vérification des badges automatiques pour {username}")
+
+        # Charger les données RPO
+        rpo_data = load_user_rpo_data(username)
+        if not rpo_data:
+            print(f"[AUTO BADGES] Pas de données RPO pour {username}")
+            return {"awarded_badges": [], "total_xp": 0}
+
+        awarded_badges = []
+        total_xp = 0
+
+        # Calculer les ventes de l'année en cours (2026)
+        # Parcourir uniquement les mois de 2026 (index 0 à 11)
+        current_year = datetime.now().year
+
+        yearly_sales = 0.0
+        weekly_data = rpo_data.get('weekly', {})
+
+        # Mois de 2026: index 0 à 11 (janvier à décembre)
+        for month_idx in range(12):
+            month_key = str(month_idx)
+            if month_key in weekly_data:
+                for week_key, week_data in weekly_data[month_key].items():
+                    weekly_sales = float(week_data.get('dollar', 0))
+                    yearly_sales += weekly_sales
+
+        print(f"[AUTO BADGES] Ventes de l'année {current_year}: {yearly_sales}$")
+
+        # Parcourir tous les badges automatiques
+        for badge_id, badge_config in BADGES_CONFIG.items():
+            if not badge_config.get('automatic', False):
+                continue
+
+            trigger = badge_config.get('trigger', {})
+            trigger_type = trigger.get('type')
+
+            # Vérifier les badges de ventes totales (ANNUELLES)
+            if trigger_type == 'total_sales':
+                threshold = trigger.get('amount', 0)
+
+                if yearly_sales >= threshold:
+                    # Vérifier si l'utilisateur a déjà ce badge
+                    conn = sqlite3.connect(DB_PATH)
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT count FROM user_badges
+                        WHERE username = ? AND badge_id = ?
+                    """, (username, badge_id))
+                    result = cursor.fetchone()
+                    conn.close()
+
+                    if not result:
+                        # Attribuer le badge
+                        unlock_result = unlock_badge(username, badge_id, f"Automatique: {yearly_sales}$ de ventes en {current_year}")
+                        if unlock_result.get('success'):
+                            xp = unlock_result.get('xp_awarded', 0)
+                            awarded_badges.append({
+                                'badge_id': badge_id,
+                                'badge_name': badge_config['name'],
+                                'xp': xp
+                            })
+                            total_xp += xp
+                            print(f"[AUTO BADGES] ✅ Badge attribué: {badge_config['name']} (+{xp} XP)")
+
+        # Vérifier les badges hebdomadaires (ventes et production)
+        # Compter combien de semaines remplissent chaque critère
+        weekly_badge_counts = {}  # {badge_id: nombre de semaines qui remplissent le critère}
+
+        weekly_data = rpo_data.get('weekly', {})
+
+        for year_key, year_weeks in weekly_data.items():
+            for week_key, week_data in year_weeks.items():
+                weekly_sales = float(week_data.get('dollar', 0))
+                weekly_production = float(week_data.get('produit', 0))
+
+                # Compter les badges de ventes hebdomadaires
+                for badge_id, badge_config in BADGES_CONFIG.items():
+                    if not badge_config.get('automatic', False):
+                        continue
+
+                    trigger = badge_config.get('trigger', {})
+                    trigger_type = trigger.get('type')
+
+                    if trigger_type == 'weekly_sales':
+                        threshold = trigger.get('amount', 0)
+                        if weekly_sales >= threshold:
+                            weekly_badge_counts[badge_id] = weekly_badge_counts.get(badge_id, 0) + 1
+
+                    elif trigger_type == 'weekly_production':
+                        threshold = trigger.get('amount', 0)
+                        if weekly_production >= threshold:
+                            weekly_badge_counts[badge_id] = weekly_badge_counts.get(badge_id, 0) + 1
+
+        # Maintenant, comparer le count attendu avec le count actuel et ajuster
+        for badge_id, expected_count in weekly_badge_counts.items():
+            # Obtenir le count actuel du badge
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT count FROM user_badges
+                WHERE username = ? AND badge_id = ?
+            """, (username, badge_id))
+            result = cursor.fetchone()
+            conn.close()
+
+            current_count = result[0] if result else 0
+
+            # Incrémenter jusqu'au count attendu
+            while current_count < expected_count:
+                unlock_result = unlock_badge(username, badge_id, f"Automatique: badge hebdomadaire")
+                if unlock_result.get('success'):
+                    current_count += 1
+                    xp = unlock_result.get('xp_awarded', 0)
+                    awarded_badges.append({
+                        'badge_id': badge_id,
+                        'badge_name': BADGES_CONFIG[badge_id]['name'],
+                        'xp': xp
+                    })
+                    total_xp += xp
+                    print(f"[AUTO BADGES] ✅ Badge attribué: {BADGES_CONFIG[badge_id]['name']} (count: {current_count}/{expected_count}, +{xp} XP)")
+                else:
+                    break  # Erreur, arrêter l'incrémentation
+
+        print(f"[AUTO BADGES] Terminé: {len(awarded_badges)} badges attribués, +{total_xp} XP total")
+
+        return {
+            "awarded_badges": awarded_badges,
+            "total_xp": total_xp
+        }
+
+    except Exception as e:
+        print(f"[ERROR] Erreur check_and_award_automatic_badges: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"awarded_badges": [], "total_xp": 0}
 
 
 # ============================================

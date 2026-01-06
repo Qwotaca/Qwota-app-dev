@@ -1415,6 +1415,17 @@ select:disabled {
 </head>
 <body>
 
+  <!-- Spinner de chargement lors du changement de coach (fullscreen) -->
+  <div id="coach-loading-spinner" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #0f172a; z-index: 9999; align-items: center; justify-content: center;">
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+      <!-- Spinner SVG animé -->
+      <svg width="64" height="64" viewBox="0 0 64 64" style="animation: spin 0.8s linear infinite;">
+        <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="6"/>
+        <circle cx="32" cy="32" r="28" fill="none" stroke="#3b82f6" stroke-width="6" stroke-dasharray="140" stroke-dashoffset="40" stroke-linecap="round" style="transform-origin: center; transform: rotate(-90deg);"/>
+      </svg>
+      <div style="margin-top: 16px; font-size: 14px; color: rgba(255,255,255,0.9); font-weight: 500; text-align: center;">Chargement du coach...</div>
+    </div>
+  </div>
 
   <!-- Sidebar -->
   <aside id="sidebar" data-role="direction" class="sidebar fixed top-0 left-0 z-40 md:translate-x-0 -translate-x-full transition-transform duration-300"></aside>
@@ -1847,53 +1858,57 @@ select:disabled {
             <!-- Moyennes et objectif de l'équipe -->
             <div id="team-metrics-cards" class="mb-6" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
               <!-- Objectif de vente total -->
-              <div class="rounded-lg p-4" style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-dark);">
-                <div class="text-xs mb-2" style="color: var(--text-gray);">
+              <div class="rounded-lg p-4" onclick="openBusinessPlanPopup()" style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-dark); cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(59, 130, 246, 0.1)'; this.style.borderColor='var(--primary-blue)'" onmouseout="this.style.background='rgba(30, 41, 59, 0.5)'; this.style.borderColor='var(--border-dark)'">
+                <div class="text-xs mb-2" style="color: var(--text-gray); display: flex; align-items: center; gap: 0.5rem;">
                   <span>Objectif Vente Équipe</span>
+                  <i class="fas fa-edit" style="font-size: 0.7rem; color: var(--primary-blue);"></i>
                 </div>
                 <div id="team-objectif-total" class="text-sm font-semibold" style="color: var(--primary-blue);">
                   <span id="team-objectif-value" style="display: none;">0,00 $</span>
-                  <div id="team-objectif-placeholder" style="display: block; color: #f59e0b; font-size: 0.7rem; font-weight: 400; margin-top: 0.25rem;">
-                    <i class="fas fa-exclamation-circle"></i> Non défini
+                  <div id="team-objectif-placeholder" style="display: block; color: var(--text-gray); font-size: 0.7rem; font-weight: 400; margin-top: 0.25rem;">
+                    <i class="fas fa-exclamation-circle"></i> Cliquer pour définir
                   </div>
                 </div>
               </div>
 
               <!-- Contrat moyen -->
-              <div class="rounded-lg p-4" style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-dark);">
-                <div class="text-xs mb-2" style="color: var(--text-gray);">
+              <div class="rounded-lg p-4" onclick="openBusinessPlanPopup()" style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-dark); cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(59, 130, 246, 0.1)'; this.style.borderColor='var(--primary-blue)'" onmouseout="this.style.background='rgba(30, 41, 59, 0.5)'; this.style.borderColor='var(--border-dark)'">
+                <div class="text-xs mb-2" style="color: var(--text-gray); display: flex; align-items: center; gap: 0.5rem;">
                   <span>CM Moyen Équipe</span>
+                  <i class="fas fa-edit" style="font-size: 0.7rem; color: var(--primary-blue);"></i>
                 </div>
                 <div id="team-cm-avg" class="text-sm font-semibold" style="color: var(--primary-blue);">
-                  <span id="team-cm-value" style="display: none;">0,00 $</span>
-                  <div id="team-cm-placeholder" style="display: block; color: #f59e0b; font-size: 0.7rem; font-weight: 400; margin-top: 0.25rem;">
-                    <i class="fas fa-exclamation-circle"></i> Non défini
+                  <span id="coach-cm-value" style="display: none;">0,00 $</span>
+                  <div id="coach-cm-placeholder" style="display: block; color: var(--text-gray); font-size: 0.7rem; font-weight: 400; margin-top: 0.25rem;">
+                    <i class="fas fa-exclamation-circle"></i> Cliquer pour définir
                   </div>
                 </div>
               </div>
 
               <!-- Ratio Marketing moyen -->
-              <div class="rounded-lg p-4" style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-dark);">
-                <div class="text-xs mb-2" style="color: var(--text-gray);">
+              <div class="rounded-lg p-4" onclick="openBusinessPlanPopup()" style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-dark); cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(59, 130, 246, 0.1)'; this.style.borderColor='var(--primary-blue)'" onmouseout="this.style.background='rgba(30, 41, 59, 0.5)'; this.style.borderColor='var(--border-dark)'">
+                <div class="text-xs mb-2" style="color: var(--text-gray); display: flex; align-items: center; gap: 0.5rem;">
                   <span>Ratio Marketing Moyen</span>
+                  <i class="fas fa-edit" style="font-size: 0.7rem; color: var(--primary-blue);"></i>
                 </div>
                 <div id="team-ratio-mktg-avg" class="text-sm font-semibold" style="color: var(--primary-blue);">
-                  <span id="team-ratio-value" style="display: none;">0%</span>
-                  <div id="team-ratio-placeholder" style="display: block; color: #f59e0b; font-size: 0.7rem; font-weight: 400; margin-top: 0.25rem;">
-                    <i class="fas fa-exclamation-circle"></i> Non défini
+                  <span id="coach-ratio-value" style="display: none;">0%</span>
+                  <div id="coach-ratio-placeholder" style="display: block; color: var(--text-gray); font-size: 0.7rem; font-weight: 400; margin-top: 0.25rem;">
+                    <i class="fas fa-exclamation-circle"></i> Cliquer pour définir
                   </div>
                 </div>
               </div>
 
               <!-- Taux de vente moyen -->
-              <div class="rounded-lg p-4" style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-dark);">
-                <div class="text-xs mb-2" style="color: var(--text-gray);">
+              <div class="rounded-lg p-4" onclick="openBusinessPlanPopup()" style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-dark); cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(59, 130, 246, 0.1)'; this.style.borderColor='var(--primary-blue)'" onmouseout="this.style.background='rgba(30, 41, 59, 0.5)'; this.style.borderColor='var(--border-dark)'">
+                <div class="text-xs mb-2" style="color: var(--text-gray); display: flex; align-items: center; gap: 0.5rem;">
                   <span>Taux de Vente Moyen</span>
+                  <i class="fas fa-edit" style="font-size: 0.7rem; color: var(--primary-blue);"></i>
                 </div>
                 <div id="team-taux-vente-avg" class="text-sm font-semibold" style="color: var(--primary-blue);">
-                  <span id="team-taux-value" style="display: none;">0%</span>
-                  <div id="team-taux-placeholder" style="display: block; color: #f59e0b; font-size: 0.7rem; font-weight: 400; margin-top: 0.25rem;">
-                    <i class="fas fa-exclamation-circle"></i> Non défini
+                  <span id="coach-taux-value" style="display: none;">0%</span>
+                  <div id="coach-taux-placeholder" style="display: block; color: var(--text-gray); font-size: 0.7rem; font-weight: 400; margin-top: 0.25rem;">
+                    <i class="fas fa-exclamation-circle"></i> Cliquer pour définir
                   </div>
                 </div>
               </div>
@@ -5081,58 +5096,203 @@ function initializeAllWeeksData() {
   console.log('[INIT] Semaines 10-15:', allWeeksData.slice(10, 15).map(w => w.label));
 }
 
+// Afficher un spinner de chargement sur le plan d'affaire
+function showPlanLoadingSpinner() {
+  const planSection = document.getElementById('stats-plan-affaire');
+  if (!planSection) return;
+
+  // Créer l'overlay avec spinner s'il n'existe pas déjà
+  let overlay = document.getElementById('plan-loading-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'plan-loading-overlay';
+    overlay.style.cssText = `
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 16px;
+      z-index: 100;
+    `;
+    overlay.innerHTML = `
+      <i class="fas fa-spinner fa-spin" style="font-size: 3rem; color: var(--primary-blue); margin-bottom: 1rem;"></i>
+      <div style="color: white; font-size: 1rem;">Chargement du plan d'affaire...</div>
+    `;
+    planSection.style.position = 'relative';
+    planSection.appendChild(overlay);
+  }
+  overlay.style.display = 'flex';
+}
+
+// Cacher le spinner de chargement
+function hidePlanLoadingSpinner() {
+  const overlay = document.getElementById('plan-loading-overlay');
+  if (overlay) {
+    overlay.style.display = 'none';
+  }
+}
+
+// Réinitialiser complètement l'affichage des statistiques
+function resetStatsDisplay() {
+  console.log('[STATS RESET] Réinitialisation complète de l\'affichage');
+
+  // 1. Réinitialiser les cartes métriques (les cacher par défaut)
+  const metricsCards = document.getElementById('team-metrics-cards');
+  if (metricsCards) {
+    metricsCards.style.display = 'none';
+  }
+
+  // 2. Afficher le bouton "Créer plan d'affaires" par défaut
+  const createBtn = document.getElementById('create-business-plan-btn');
+  if (createBtn) {
+    createBtn.style.display = 'block';
+  }
+
+  // 3. Cacher le bouton "Modifier" par défaut
+  const editBtn = document.getElementById('edit-business-plan-btn');
+  if (editBtn) {
+    editBtn.style.display = 'none';
+  }
+
+  // 4. Cacher le tableau du plan d'affaire par défaut
+  const planTable = document.querySelector('#stats-plan-affaire .plan-scroll-container');
+  if (planTable) {
+    planTable.style.display = 'none';
+  }
+
+  // 4b. Vider le contenu du tableau pour éviter de voir les anciennes données
+  const tbody = document.getElementById('stats-plan-weeks-body');
+  if (tbody) {
+    tbody.innerHTML = '';
+  }
+
+  // 5. Réinitialiser les valeurs des métriques
+  const teamObjectifValue = document.getElementById('team-objectif-value');
+  const teamObjectifPlaceholder = document.getElementById('team-objectif-placeholder');
+  if (teamObjectifValue) {
+    teamObjectifValue.textContent = '0,00 $';
+    teamObjectifValue.style.display = 'none';
+  }
+  if (teamObjectifPlaceholder) teamObjectifPlaceholder.style.display = 'block';
+
+  const coachCmValue = document.getElementById('coach-cm-value');
+  const coachCmPlaceholder = document.getElementById('coach-cm-placeholder');
+  if (coachCmValue) {
+    coachCmValue.textContent = '0,00 $';
+    coachCmValue.style.display = 'none';
+  }
+  if (coachCmPlaceholder) coachCmPlaceholder.style.display = 'block';
+
+  const coachRatioValue = document.getElementById('coach-ratio-value');
+  const coachRatioPlaceholder = document.getElementById('coach-ratio-placeholder');
+  if (coachRatioValue) {
+    coachRatioValue.textContent = '0 %';
+    coachRatioValue.style.display = 'none';
+  }
+  if (coachRatioPlaceholder) coachRatioPlaceholder.style.display = 'block';
+
+  const coachTauxValue = document.getElementById('coach-taux-value');
+  const coachTauxPlaceholder = document.getElementById('coach-taux-placeholder');
+  if (coachTauxValue) {
+    coachTauxValue.textContent = '0 %';
+    coachTauxValue.style.display = 'none';
+  }
+  if (coachTauxPlaceholder) coachTauxPlaceholder.style.display = 'block';
+
+  console.log('[STATS RESET] Réinitialisation terminée');
+}
+
 // Sélectionner un coach pour voir son suivi
 async function selectCoach(username, displayName) {
+  console.log('[SELECT COACH] Sélection de:', username, displayName);
+
   // Fermer le modal de sélection
   closeCoachSelectionModal();
+
+  // AFFICHER LE SPINNER FULLSCREEN IMMÉDIATEMENT
+  const coachSpinner = document.getElementById('coach-loading-spinner');
+  if (coachSpinner) {
+    coachSpinner.style.display = 'flex';
+  }
 
   // Mettre à jour les variables globales
   selectedCoachForView = username;
   selectedCoachDisplayName = displayName;
 
-  // Mettre à jour le titre
-  const title = document.querySelector('.box-header-title');
-  if (title && title.textContent === 'Suivi hebdomadaire des coachs') {
-    title.textContent = `Cette semaine - ${displayName}`;
+  try {
+    // Attendre un petit délai pour que le spinner s'affiche bien
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Mettre à jour le titre
+    const title = document.querySelector('.box-header-title');
+    if (title && title.textContent === 'Suivi hebdomadaire des coachs') {
+      title.textContent = `Cette semaine - ${displayName}`;
+    }
+
+    // Afficher le badge, le tableau et cacher le bouton et le message
+    const badge = document.getElementById('selected-coach-badge');
+    const nameSpan = document.getElementById('selected-coach-name');
+    const button = document.getElementById('suivi-action-btn');
+    const tableContainer = document.getElementById('coach-table-container');
+    const noCoachMessage = document.getElementById('no-coach-message');
+
+    if (badge && nameSpan) {
+      nameSpan.textContent = displayName;
+      badge.style.display = 'flex';
+    }
+
+    if (button) {
+      button.style.display = 'none';
+    }
+
+    // Cacher le message et afficher le tableau
+    if (noCoachMessage) {
+      noCoachMessage.style.display = 'none';
+    }
+
+    if (tableContainer) {
+      tableContainer.style.display = 'block';
+    }
+
+    // NE PAS afficher le bouton "Enregistrer" automatiquement
+    // Il n'apparaîtra que lorsque l'utilisateur modifie quelque chose
+
+    // Réinitialiser le filtre de mois au mois actuel (Décembre 2025)
+    selectedMonthFilter = '12-2025';
+    const monthLabel = document.getElementById('selected-month-label');
+    if (monthLabel) {
+      monthLabel.textContent = 'Décembre 2025';
+    }
+
+    // IMPORTANT: Réinitialiser complètement l'affichage des statistiques AVANT de charger les nouvelles données
+    resetStatsDisplay();
+
+    // Charger les données pour toutes les semaines de ce coach
+    console.log('[SELECT COACH] 1/3 - Chargement des semaines...');
+    await loadAllWeeksForCoach(username);
+
+    // Recharger aussi le tableau du plan d'affaire
+    console.log('[SELECT COACH] 2/3 - Initialisation du plan d\'affaire...');
+    if (typeof initTeamPlan === 'function') {
+      await initTeamPlan();
+    }
+
+    // Recharger le plan d'affaire et les statistiques pour le coach sélectionné
+    // IMPORTANT: Appeler APRÈS initTeamPlan pour que l'affichage soit correct
+    console.log('[SELECT COACH] 3/3 - Vérification et toggle de l\'affichage...');
+    await checkAndToggleBusinessPlanView();
+
+    console.log('[SELECT COACH] ✅ Sélection terminée pour', username);
+  } finally {
+    // Toujours cacher le spinner fullscreen, même en cas d'erreur
+    if (coachSpinner) {
+      coachSpinner.style.display = 'none';
+    }
   }
-
-  // Afficher le badge, le tableau et cacher le bouton et le message
-  const badge = document.getElementById('selected-coach-badge');
-  const nameSpan = document.getElementById('selected-coach-name');
-  const button = document.getElementById('suivi-action-btn');
-  const tableContainer = document.getElementById('coach-table-container');
-  const noCoachMessage = document.getElementById('no-coach-message');
-
-  if (badge && nameSpan) {
-    nameSpan.textContent = displayName;
-    badge.style.display = 'flex';
-  }
-
-  if (button) {
-    button.style.display = 'none';
-  }
-
-  // Cacher le message et afficher le tableau
-  if (noCoachMessage) {
-    noCoachMessage.style.display = 'none';
-  }
-
-  if (tableContainer) {
-    tableContainer.style.display = 'block';
-  }
-
-  // NE PAS afficher le bouton "Enregistrer" automatiquement
-  // Il n'apparaîtra que lorsque l'utilisateur modifie quelque chose
-
-  // Réinitialiser le filtre de mois au mois actuel (Décembre 2025)
-  selectedMonthFilter = '12-2025';
-  const monthLabel = document.getElementById('selected-month-label');
-  if (monthLabel) {
-    monthLabel.textContent = 'Décembre 2025';
-  }
-
-  // Charger les données pour toutes les semaines de ce coach
-  await loadAllWeeksForCoach(username);
 }
 
 // Fonction pour réinitialiser la sélection
@@ -6847,15 +7007,22 @@ function closeBusinessPlanPopup() {
 // Charger les coaches pour le formulaire (pour Direction)
 async function loadEntrepreneursForBusinessPlan() {
   const container = document.getElementById('entrepreneurs-previsions-container');
-  const username = window.username || localStorage.getItem('username');
+  // Utiliser le coach sélectionné si on est en mode Direction, sinon utiliser le username de l'utilisateur connecté
+  const username = selectedCoachForView || window.username || localStorage.getItem('username');
+
+  // Choisir le bon endpoint selon si un coach est sélectionné ou non
+  const isCoachSelected = selectedCoachForView !== null;
+  const objectifsEndpoint = isCoachSelected
+    ? `/api/coach/team-objectifs?coach_username=${username}`
+    : `/api/direction/team-objectifs?direction_username=${username}`;
 
   try {
     const response = await fetch(`/api/coaches`);
     const coaches = await response.json();
 
     if (coaches && coaches.length > 0) {
-      // Charger les prévisions existantes depuis direction_team_objectifs
-      const prevResponse = await fetch(`/api/direction/team-objectifs?direction_username=${username}`);
+      // Charger les prévisions existantes
+      const prevResponse = await fetch(objectifsEndpoint);
       const prevData = await prevResponse.json();
       const existingPrevisions = prevData.success && prevData.previsions ? prevData.previsions : {};
 
@@ -6924,10 +7091,17 @@ async function loadEntrepreneursForBusinessPlan() {
 
 // Charger les métriques existantes
 async function loadExistingMetricsForBusinessPlan() {
-  const username = window.username || localStorage.getItem('username');
+  // Utiliser le coach sélectionné si on est en mode Direction, sinon utiliser le username de l'utilisateur connecté
+  const username = selectedCoachForView || window.username || localStorage.getItem('username');
+
+  // Choisir le bon endpoint selon si un coach est sélectionné ou non
+  const isCoachSelected = selectedCoachForView !== null;
+  const metricsEndpoint = isCoachSelected
+    ? `/api/coach/team-metrics?coach_username=${username}`
+    : `/api/direction/team-metrics?direction_username=${username}`;
 
   try {
-    const response = await fetch(`/api/direction/team-metrics?direction_username=${username}`);
+    const response = await fetch(metricsEndpoint);
     const data = await response.json();
 
     if (data.success && data.metrics) {
@@ -7083,7 +7257,14 @@ function formatCurrency(value) {
 
 // Sauvegarder le plan d'affaires
 async function saveBusinessPlan() {
-  const username = window.username || localStorage.getItem('username');
+  // Utiliser le coach sélectionné si on est en mode Direction, sinon utiliser le username de l'utilisateur connecté
+  const username = selectedCoachForView || window.username || localStorage.getItem('username');
+
+  // Choisir le bon endpoint selon si un coach est sélectionné ou non
+  const isCoachSelected = selectedCoachForView !== null;
+  const objectifsEndpoint = isCoachSelected ? '/api/coach/team-objectifs' : '/api/direction/team-objectifs';
+  const metricsEndpoint = isCoachSelected ? '/api/coach/team-metrics' : '/api/direction/team-metrics';
+
   const saveBtn = document.getElementById('bp-save-btn');
 
   // Désactiver le bouton et afficher le spinner
@@ -7126,15 +7307,16 @@ async function saveBusinessPlan() {
       return;
     }
 
-    // 4. Sauvegarder les prévisions (pour direction: coaches au lieu d'entrepreneurs)
+    // 4. Sauvegarder les prévisions
     if (hasPrevisions) {
-      const prevResponse = await fetch('/api/direction/team-objectifs', {
+      const requestBody = isCoachSelected
+        ? { coach_username: username, previsions: previsions }
+        : { direction_username: username, previsions: previsions };
+
+      const prevResponse = await fetch(objectifsEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          direction_username: username,
-          previsions: previsions
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const prevData = await prevResponse.json();
@@ -7145,13 +7327,14 @@ async function saveBusinessPlan() {
 
     // 5. Sauvegarder les métriques
     if (hasMetrics) {
-      const metricsResponse = await fetch('/api/direction/team-metrics', {
+      const requestBody = isCoachSelected
+        ? { coach_username: username, metrics: metrics }
+        : { direction_username: username, metrics: metrics };
+
+      const metricsResponse = await fetch(metricsEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          direction_username: username,
-          metrics: metrics
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const metricsData = await metricsResponse.json();
@@ -7165,6 +7348,22 @@ async function saveBusinessPlan() {
 
     // 7. Afficher l'animation de succès
     showSuccessAnimation('Plan d\'affaires enregistré avec succès!');
+
+    // 8. Afficher le spinner pendant le rechargement
+    showPlanLoadingSpinner();
+
+    try {
+      // 9. Recharger les données pour mettre à jour l'affichage
+      await checkAndToggleBusinessPlanView();
+
+      // 10. Recharger le tableau du plan d'affaire
+      if (typeof initTeamPlan === 'function') {
+        await initTeamPlan();
+      }
+    } finally {
+      // Toujours cacher le spinner
+      hidePlanLoadingSpinner();
+    }
 
   } catch (error) {
     console.error('[BUSINESS PLAN] Erreur sauvegarde:', error);
@@ -9468,19 +9667,29 @@ async function aggregateTeamData() {
 async function initTeamPlan() {
   console.log('[DIRECTION PLAN] Initialisation du plan d affaire Direction');
 
-  const username = window.username || localStorage.getItem('username');
+  // Utiliser le coach sélectionné si on est en mode Direction, sinon utiliser le username de l'utilisateur connecté
+  const username = selectedCoachForView || window.username || localStorage.getItem('username');
   if (!username) {
     console.warn('[DIRECTION PLAN] Pas de username');
     return;
   }
 
+  // Choisir le bon endpoint selon si un coach est sélectionné ou non
+  const isCoachSelected = selectedCoachForView !== null;
+  const objectifsEndpoint = isCoachSelected
+    ? `/api/coach/team-objectifs?coach_username=${username}`
+    : `/api/direction/team-objectifs?direction_username=${username}`;
+  const metricsEndpoint = isCoachSelected
+    ? `/api/coach/team-metrics?coach_username=${username}`
+    : `/api/direction/team-metrics?direction_username=${username}`;
+
   // Générer les 56 semaines
   teamPlanWeeks = generateTeamPlanWeeks();
   console.log('[DIRECTION PLAN] Semaines générées:', teamPlanWeeks.length);
 
-  // ÉTAPE 1: Charger l'objectif total Direction
+  // ÉTAPE 1: Charger l'objectif total
   try {
-    const objectifResponse = await fetch(`/api/direction/team-objectifs?direction_username=${username}`);
+    const objectifResponse = await fetch(objectifsEndpoint);
     const objectifData = await objectifResponse.json();
 
     if (objectifData.success && objectifData.total) {
@@ -9511,10 +9720,10 @@ async function initTeamPlan() {
     }) + ' $';
   }
 
-  // ÉTAPE 2: Charger les métriques Direction (CM, Ratio Marketing, Taux de Vente)
+  // ÉTAPE 2: Charger les métriques (CM, Ratio Marketing, Taux de Vente)
   let directionMetrics = { cm: 0, ratioMktg: 0, tauxVente: 0 };
   try {
-    const metricsResponse = await fetch(`/api/direction/team-metrics?direction_username=${username}`);
+    const metricsResponse = await fetch(metricsEndpoint);
     const metricsData = await metricsResponse.json();
 
     if (metricsData.success && metricsData.metrics) {
@@ -9528,14 +9737,45 @@ async function initTeamPlan() {
   }
 
   // Afficher les métriques
-  document.getElementById('team-cm-avg').textContent = directionMetrics.cm.toLocaleString('fr-CA', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }) + ' $';
+  const cmValueSpan = document.getElementById('coach-cm-value') || document.getElementById('team-cm-value');
+  const cmPlaceholder = document.getElementById('coach-cm-placeholder') || document.getElementById('team-cm-placeholder');
+  const ratioValueSpan = document.getElementById('coach-ratio-value') || document.getElementById('team-ratio-value');
+  const ratioPlaceholder = document.getElementById('coach-ratio-placeholder') || document.getElementById('team-ratio-placeholder');
+  const tauxValueSpan = document.getElementById('coach-taux-value') || document.getElementById('team-taux-value');
+  const tauxPlaceholder = document.getElementById('coach-taux-placeholder') || document.getElementById('team-taux-placeholder');
 
-  document.getElementById('team-ratio-mktg-avg').textContent = directionMetrics.ratioMktg.toFixed(0) + '%';
+  // CM
+  if (directionMetrics.cm > 0 && cmValueSpan) {
+    cmValueSpan.textContent = directionMetrics.cm.toLocaleString('fr-CA', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }) + ' $';
+    cmValueSpan.style.display = 'block';
+    if (cmPlaceholder) cmPlaceholder.style.display = 'none';
+  } else if (cmValueSpan) {
+    cmValueSpan.style.display = 'none';
+    if (cmPlaceholder) cmPlaceholder.style.display = 'block';
+  }
 
-  document.getElementById('team-taux-vente-avg').textContent = directionMetrics.tauxVente.toFixed(0) + '%';
+  // Ratio Marketing
+  if (directionMetrics.ratioMktg > 0 && ratioValueSpan) {
+    ratioValueSpan.textContent = directionMetrics.ratioMktg.toFixed(1) + ' %';
+    ratioValueSpan.style.display = 'block';
+    if (ratioPlaceholder) ratioPlaceholder.style.display = 'none';
+  } else if (ratioValueSpan) {
+    ratioValueSpan.style.display = 'none';
+    if (ratioPlaceholder) ratioPlaceholder.style.display = 'block';
+  }
+
+  // Taux de Vente
+  if (directionMetrics.tauxVente > 0 && tauxValueSpan) {
+    tauxValueSpan.textContent = directionMetrics.tauxVente.toFixed(1) + ' %';
+    tauxValueSpan.style.display = 'block';
+    if (tauxPlaceholder) tauxPlaceholder.style.display = 'none';
+  } else if (tauxValueSpan) {
+    tauxValueSpan.style.display = 'none';
+    if (tauxPlaceholder) tauxPlaceholder.style.display = 'block';
+  }
 
   // ÉTAPE 3: Calculer le plan UNIQUEMENT à partir des 4 stats
   console.log('[DIRECTION PLAN] ===== CALCUL DES PATTERNS =====');
@@ -10020,44 +10260,94 @@ function showSuccessAnimation(message) {
 // Fonction pour vérifier si un plan d'affaires existe et afficher/cacher les sections appropriées
 async function checkAndToggleBusinessPlanView() {
   try {
-    const username = window.username || localStorage.getItem('username');
+    // Utiliser le coach sélectionné si on est en mode Direction, sinon utiliser le username de l'utilisateur connecté
+    const username = selectedCoachForView || window.username || localStorage.getItem('username');
+
+    // Choisir le bon endpoint selon si un coach est sélectionné ou non
+    const isCoachSelected = selectedCoachForView !== null;
+    const objectifsEndpoint = isCoachSelected
+      ? `/api/coach/team-objectifs?coach_username=${username}`
+      : `/api/direction/team-objectifs?direction_username=${username}`;
+    const metricsEndpoint = isCoachSelected
+      ? `/api/coach/team-metrics?coach_username=${username}`
+      : `/api/direction/team-metrics?direction_username=${username}`;
 
     // Récupérer les objectifs
-    const objectifsResponse = await fetch(`/api/direction/team-objectifs?direction_username=${username}`);
+    const objectifsResponse = await fetch(objectifsEndpoint);
     const objectifsData = await objectifsResponse.json();
     const totalObjectif = objectifsData.success ? (objectifsData.total || 0) : 0;
 
     // Récupérer les métriques
-    const metricsResponse = await fetch(`/api/direction/team-metrics?direction_username=${username}`);
+    const metricsResponse = await fetch(metricsEndpoint);
     const metricsData = await metricsResponse.json();
     const metrics = metricsData.success ? metricsData.metrics : { cm: 0, ratioMktg: 0, tauxVente: 0 };
 
     // Vérifier si au moins une donnée existe
     const hasData = totalObjectif > 0 || metrics.cm > 0 || metrics.ratioMktg > 0 || metrics.tauxVente > 0;
 
+    console.log('[BUSINESS PLAN VIEW] ===== TOGGLE DISPLAY =====');
+    console.log('[BUSINESS PLAN VIEW] Username:', username);
+    console.log('[BUSINESS PLAN VIEW] Total Objectif:', totalObjectif);
+    console.log('[BUSINESS PLAN VIEW] Metrics:', metrics);
     console.log('[BUSINESS PLAN VIEW] Has data:', hasData);
 
     // Éléments à afficher/cacher
     const createBtn = document.getElementById('create-business-plan-btn');
     const metricsCards = document.getElementById('team-metrics-cards');
     const editBtn = document.getElementById('edit-business-plan-btn');
-    const planTable = document.querySelector('.plan-scroll-container');
+    const planTable = document.querySelector('#stats-plan-affaire .plan-scroll-container');
 
     if (hasData) {
       // Des données existent : afficher le tableau, les cartes et le bouton modifier
-      console.log('[BUSINESS PLAN VIEW] Affichage des données existantes');
-      if (createBtn) createBtn.style.display = 'none';
-      if (metricsCards) metricsCards.style.display = 'grid';
-      if (editBtn) editBtn.style.display = 'block';
-      if (planTable) planTable.style.display = 'block';
+      console.log('[BUSINESS PLAN VIEW] ✅ Affichage des données existantes');
+      console.log('[BUSINESS PLAN VIEW]   - Cache createBtn');
+      console.log('[BUSINESS PLAN VIEW]   - Affiche metricsCards');
+      console.log('[BUSINESS PLAN VIEW]   - Affiche editBtn');
+      console.log('[BUSINESS PLAN VIEW]   - Affiche planTable');
+
+      if (createBtn) {
+        createBtn.style.display = 'none';
+        console.log('[BUSINESS PLAN VIEW]   ✓ createBtn caché');
+      }
+      if (metricsCards) {
+        metricsCards.style.display = 'grid';
+        console.log('[BUSINESS PLAN VIEW]   ✓ metricsCards affiché');
+      }
+      if (editBtn) {
+        editBtn.style.display = 'block';
+        console.log('[BUSINESS PLAN VIEW]   ✓ editBtn affiché');
+      }
+      if (planTable) {
+        planTable.style.display = 'block';
+        console.log('[BUSINESS PLAN VIEW]   ✓ planTable affiché');
+      }
     } else {
       // Aucune donnée : afficher uniquement le bouton créer
-      console.log('[BUSINESS PLAN VIEW] Affichage du bouton créer');
-      if (createBtn) createBtn.style.display = 'block';
-      if (metricsCards) metricsCards.style.display = 'none';
-      if (editBtn) editBtn.style.display = 'none';
-      if (planTable) planTable.style.display = 'none';
+      console.log('[BUSINESS PLAN VIEW] ⚠️ Affichage du bouton créer');
+      console.log('[BUSINESS PLAN VIEW]   - Affiche createBtn');
+      console.log('[BUSINESS PLAN VIEW]   - Cache metricsCards');
+      console.log('[BUSINESS PLAN VIEW]   - Cache editBtn');
+      console.log('[BUSINESS PLAN VIEW]   - Cache planTable');
+
+      if (createBtn) {
+        createBtn.style.display = 'block';
+        console.log('[BUSINESS PLAN VIEW]   ✓ createBtn affiché');
+      }
+      if (metricsCards) {
+        metricsCards.style.display = 'none';
+        console.log('[BUSINESS PLAN VIEW]   ✓ metricsCards caché');
+      }
+      if (editBtn) {
+        editBtn.style.display = 'none';
+        console.log('[BUSINESS PLAN VIEW]   ✓ editBtn caché');
+      }
+      if (planTable) {
+        planTable.style.display = 'none';
+        console.log('[BUSINESS PLAN VIEW]   ✓ planTable caché');
+      }
     }
+
+    console.log('[BUSINESS PLAN VIEW] ===== FIN TOGGLE =====');
   } catch (error) {
     console.error('[BUSINESS PLAN VIEW] Erreur:', error);
   }

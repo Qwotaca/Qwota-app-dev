@@ -360,10 +360,16 @@
       <!-- Statistiques -->
       <div class="stats-header">
         <span class="stats-title">Statistiques</span>
-        <button class="view-grades-btn" onclick="openGradesModal()">
-          <i class="fas fa-ranking-star"></i>
-          <span>Parcours</span>
-        </button>
+        <div style="display: flex; gap: 0.75rem;">
+          <button class="view-grades-btn" onclick="checkAutomaticBadges()">
+            <i class="fas fa-trophy"></i>
+            <span>Vérifier badges auto</span>
+          </button>
+          <button class="view-grades-btn" onclick="openGradesModal()">
+            <i class="fas fa-ranking-star"></i>
+            <span>Parcours</span>
+          </button>
+        </div>
       </div>
       <div class="stats-grid">
         <div class="stat-card">
@@ -719,9 +725,31 @@
     function closeUserDropdown() {
       const toggle = document.getElementById('userSelectToggle');
       const menu = document.getElementById('userSelectMenu');
+      const searchInput = document.getElementById('userSearchInput');
 
       toggle.classList.remove('active');
       menu.classList.add('hidden');
+
+      // Cacher l'input de recherche et afficher le texte sélectionné
+      if (searchInput) {
+        searchInput.style.display = 'none';
+        searchInput.value = '';
+      }
+
+      const placeholderEl = toggle.querySelector('.placeholder, .selected-text');
+      if (placeholderEl) {
+        placeholderEl.style.display = '';
+      }
+
+      // Réafficher toutes les options pour la prochaine ouverture
+      const allOptions = menu.querySelectorAll('.dropdown-option');
+      allOptions.forEach(opt => opt.style.display = '');
+
+      // Cacher le message "no results"
+      const noResultsMsg = menu.querySelector('.no-results-message');
+      if (noResultsMsg) {
+        noResultsMsg.style.display = 'none';
+      }
     }
 
     // Event listeners pour les dropdowns
@@ -892,6 +920,119 @@
       }
     }
 
+    // Afficher le spinner de chargement
+    function showLoadingSpinner() {
+      const progressSection = document.getElementById('progress-section');
+      const badgesGrid = document.getElementById('badgesGrid');
+
+      // Afficher la section de progression (elle contient déjà les éléments avec "Chargement...")
+      progressSection.style.display = 'block';
+
+      // Créer un overlay de chargement au-dessus de la section de progression
+      let loadingOverlay = document.getElementById('progress-loading-overlay');
+      if (!loadingOverlay) {
+        loadingOverlay = document.createElement('div');
+        loadingOverlay.id = 'progress-loading-overlay';
+        loadingOverlay.style.cssText = `
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(15, 23, 42, 0.8);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 16px;
+          z-index: 10;
+        `;
+        loadingOverlay.innerHTML = `
+          <i class="fas fa-spinner fa-spin" style="font-size: 3rem; color: var(--primary-blue);"></i>
+        `;
+        progressSection.style.position = 'relative';
+        progressSection.appendChild(loadingOverlay);
+      } else {
+        loadingOverlay.style.display = 'flex';
+      }
+
+      // Afficher un spinner dans la grille de badges
+      badgesGrid.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6rem 3rem; text-align: center;">
+          <i class="fas fa-spinner fa-spin" style="font-size: 4rem; color: var(--primary-blue); margin-bottom: 2rem;"></i>
+          <p style="font-size: 1.25rem; font-weight: 600; color: var(--text-light); margin-bottom: 0.5rem;">Chargement en cours...</p>
+          <p style="font-size: 1rem; color: var(--text-gray); opacity: 0.8;">Veuillez patienter</p>
+        </div>
+      `;
+    }
+
+    // Cacher le spinner de chargement
+    function hideLoadingSpinner() {
+      const loadingOverlay = document.getElementById('progress-loading-overlay');
+      if (loadingOverlay) {
+        loadingOverlay.style.display = 'none';
+      }
+    }
+
+    // Rafraîchir les données de l'utilisateur (sans spinner)
+    async function refreshUserData() {
+      if (!selectedUser) return;
+
+      try {
+        // Charger le profil de gamification
+        const profileResponse = await fetch(`/api/gamification/profile/${selectedUser}`);
+        const profileData = await profileResponse.json();
+
+        if (profileData.status === 'success') {
+          userProfile = profileData.profile;
+        }
+
+        // Charger les badges de l'utilisateur
+        const badgesResponse = await fetch(`/api/gamification/badges/user/${selectedUser}`);
+        const badgesData = await badgesResponse.json();
+        userBadges = badgesData.badges || [];
+
+        // Mettre à jour l'affichage (sans spinner)
+        if (userProfile) {
+          // Mettre à jour les stats
+          const totalXpEl = document.getElementById('totalXp');
+          if (totalXpEl) {
+            totalXpEl.textContent = userProfile.total_xp.toLocaleString();
+          }
+          const badgesEarnedEl = document.getElementById('badgesEarned');
+          if (badgesEarnedEl) {
+            badgesEarnedEl.textContent = userBadges.length;
+          }
+
+          // Mettre à jour la barre XP
+          const xpTextEl = document.getElementById('xpText');
+          if (xpTextEl) {
+            xpTextEl.textContent = `${userProfile.xp_progress} / ${userProfile.xp_for_next_level} XP`;
+          }
+          const xpProgressFillEl = document.getElementById('xpProgressFill');
+          if (xpProgressFillEl) {
+            xpProgressFillEl.style.width = `${userProfile.progress_percentage}%`;
+          }
+          const xpProgressTextEl = document.getElementById('xpProgressText');
+          if (xpProgressTextEl) {
+            xpProgressTextEl.textContent = `${userProfile.progress_percentage}%`;
+          }
+
+          // Mettre à jour le niveau
+          const photoLevelTextEl = document.getElementById('photo-level-text');
+          if (photoLevelTextEl) {
+            photoLevelTextEl.textContent = userProfile.level;
+          }
+        }
+
+        // Re-rendre les badges
+        renderBadges();
+
+      } catch (error) {
+        console.error('[ERROR] Erreur rafraîchissement données utilisateur:', error);
+      }
+    }
+
     // Sélectionner une personne (coach ou entrepreneur)
     async function selectUser(username) {
       if (!username) {
@@ -911,6 +1052,9 @@
 
       selectedUser = username;
       console.log(`[DEBUG] Sélection de l'entrepreneur: ${username}`);
+
+      // Afficher le spinner de chargement
+      showLoadingSpinner();
 
       try {
         // Charger le profil de gamification
@@ -953,14 +1097,30 @@
         document.getElementById('progress-section').style.display = 'block';
 
         if (userProfile) {
-          renderProfile();
+          await renderProfile();
         } else {
           console.error('[ERROR] userProfile est null, impossible de rendre le profil');
         }
 
         renderBadges();
+
+        // Cacher le spinner une fois le chargement terminé
+        hideLoadingSpinner();
       } catch (error) {
         console.error('[ERROR] Erreur chargement données utilisateur:', error);
+
+        // Cacher le spinner même en cas d'erreur
+        hideLoadingSpinner();
+
+        // Afficher un message d'erreur
+        document.getElementById('progress-section').style.display = 'none';
+        document.getElementById('badgesGrid').innerHTML = `
+          <div class="empty-state" style="padding: 6rem 3rem; text-align: center;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 6rem; color: rgba(239, 68, 68, 0.25); margin-bottom: 2.5rem; display: block;"></i>
+            <p style="font-size: 1.5rem; font-weight: 600; color: var(--text-light); margin-bottom: 0.75rem;">Erreur de chargement</p>
+            <p style="font-size: 1.125rem; color: var(--text-gray); opacity: 0.8;">Impossible de charger les données de cet utilisateur</p>
+          </div>
+        `;
       }
     }
 
@@ -994,13 +1154,19 @@
     }
 
     // Rendre le profil
-    function renderProfile() {
+    async function renderProfile() {
+      if (!userProfile) {
+        console.error('[ERROR] userProfile est null dans renderProfile');
+        return;
+      }
+
       // Récupérer la photo de profil via l'API
       const photoEl = document.getElementById('profilePhoto');
 
-      fetch(`/api/get-profile-photo/${selectedUser}`)
-        .then(res => res.json())
-        .then(data => {
+      if (photoEl) {
+        try {
+          const res = await fetch(`/api/get-profile-photo/${selectedUser}`);
+          const data = await res.json();
           if (data.success && data.photoUrl) {
             photoEl.style.display = 'block';
             photoEl.src = data.photoUrl;
@@ -1010,23 +1176,31 @@
             photoEl.style.display = 'block';
             photoEl.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
           }
-        })
-        .catch(error => {
+        } catch (error) {
           console.error('Erreur chargement photo:', error);
-          const initial = userFullName ? userFullName.charAt(0).toUpperCase() : currentUser.charAt(0).toUpperCase();
-          photoEl.style.display = 'block';
-          photoEl.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
-        });
+          if (photoEl) {
+            const initial = userFullName ? userFullName.charAt(0).toUpperCase() : currentUser.charAt(0).toUpperCase();
+            photoEl.style.display = 'block';
+            photoEl.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+          }
+        }
+      }
 
       // Mettre à jour le nom avec le nom complet
       const displayName = userFullName || currentUser;
-      document.getElementById('profileName').textContent = displayName;
+      const profileNameEl = document.getElementById('profileName');
+      if (profileNameEl) {
+        profileNameEl.textContent = displayName;
+      }
 
       // Mettre à jour le niveau dans le banner sous la photo
-      document.getElementById('photo-level-text').textContent = userProfile.level;
+      const photoLevelTextEl = document.getElementById('photo-level-text');
+      if (photoLevelTextEl) {
+        photoLevelTextEl.textContent = userProfile.level;
+      }
 
       // Récupérer et afficher le grade d'entrepreneur
-      fetchEntrepreneurGrade();
+      await fetchEntrepreneurGrade();
 
       // Mettre à jour le badge du grade actuel dans le header
       const currentCategory = userProfile.category;
@@ -1041,10 +1215,14 @@
       };
 
       const gradeImage = gradeImageMap[currentCategory];
-      if (gradeImage) {
-        document.getElementById('profileCurrentGrade').src = gradeImage;
+      const profileCurrentGradeEl = document.getElementById('profileCurrentGrade');
+      if (gradeImage && profileCurrentGradeEl) {
+        profileCurrentGradeEl.src = gradeImage;
       }
-      document.getElementById('profileGradeName').textContent = currentCategory;
+      const profileGradeNameEl = document.getElementById('profileGradeName');
+      if (profileGradeNameEl) {
+        profileGradeNameEl.textContent = currentCategory;
+      }
 
       // Appliquer le contour avec XP au conteneur de photo de profil
       const profilePhotoContainer = document.getElementById('profilePhotoContainer');
@@ -1060,13 +1238,28 @@
       }
 
       // Mettre à jour la barre de progression XP
-      document.getElementById('xpText').textContent = `${userProfile.xp_progress} / ${userProfile.xp_for_next_level} XP`;
-      document.getElementById('xpProgressFill').style.width = `${userProfile.progress_percentage}%`;
-      document.getElementById('xpProgressText').textContent = `${userProfile.progress_percentage}%`;
+      const xpTextEl = document.getElementById('xpText');
+      if (xpTextEl) {
+        xpTextEl.textContent = `${userProfile.xp_progress} / ${userProfile.xp_for_next_level} XP`;
+      }
+      const xpProgressFillEl = document.getElementById('xpProgressFill');
+      if (xpProgressFillEl) {
+        xpProgressFillEl.style.width = `${userProfile.progress_percentage}%`;
+      }
+      const xpProgressTextEl = document.getElementById('xpProgressText');
+      if (xpProgressTextEl) {
+        xpProgressTextEl.textContent = `${userProfile.progress_percentage}%`;
+      }
 
       // Mettre à jour les statistiques
-      document.getElementById('totalXp').textContent = userProfile.total_xp.toLocaleString();
-      document.getElementById('badgesEarned').textContent = userBadges.length;
+      const totalXpEl = document.getElementById('totalXp');
+      if (totalXpEl) {
+        totalXpEl.textContent = userProfile.total_xp.toLocaleString();
+      }
+      const badgesEarnedEl = document.getElementById('badgesEarned');
+      if (badgesEarnedEl) {
+        badgesEarnedEl.textContent = userBadges.length;
+      }
 
       // Calculer la progression vers le prochain grade
       const gradeLevels = [
@@ -1085,29 +1278,50 @@
 
       if (currentGrade) {
         // Mettre à jour le badge actuel
-        document.getElementById('currentGradeBadge').src = gradeImageMap[currentGrade.name];
+        const currentGradeBadgeEl = document.getElementById('currentGradeBadge');
+        if (currentGradeBadgeEl) {
+          currentGradeBadgeEl.src = gradeImageMap[currentGrade.name];
+        }
 
         if (currentGrade.name === 'Prestige') {
           // Grade maximum atteint
-          document.getElementById('gradeProgressText').innerHTML = `<span style="color: var(--primary-gold);">Max</span>`;
-          document.getElementById('gradeProgressBarFill').style.width = '100%';
-          document.getElementById('nextGradeBadge').src = gradeImageMap['Prestige'];
+          const gradeProgressTextEl = document.getElementById('gradeProgressText');
+          if (gradeProgressTextEl) {
+            gradeProgressTextEl.innerHTML = `<span style="color: var(--primary-gold);">Max</span>`;
+          }
+          const gradeProgressBarFillEl = document.getElementById('gradeProgressBarFill');
+          if (gradeProgressBarFillEl) {
+            gradeProgressBarFillEl.style.width = '100%';
+          }
+          const nextGradeBadgeEl = document.getElementById('nextGradeBadge');
+          if (nextGradeBadgeEl) {
+            nextGradeBadgeEl.src = gradeImageMap['Prestige'];
+          }
         } else {
           // Prochain grade
           const nextGrade = gradeLevels[currentGradeIndex + 1];
           const nextGradeLevel = nextGrade.minLevel;
 
           // Mettre à jour le badge suivant
-          document.getElementById('nextGradeBadge').src = gradeImageMap[nextGrade.name];
+          const nextGradeBadgeEl = document.getElementById('nextGradeBadge');
+          if (nextGradeBadgeEl) {
+            nextGradeBadgeEl.src = gradeImageMap[nextGrade.name];
+          }
 
           // Afficher niveau actuel / niveau du prochain grade
-          document.getElementById('gradeProgressText').textContent = `Niv. ${currentLevel} / ${nextGradeLevel}`;
+          const gradeProgressTextEl = document.getElementById('gradeProgressText');
+          if (gradeProgressTextEl) {
+            gradeProgressTextEl.textContent = `Niv. ${currentLevel} / ${nextGradeLevel}`;
+          }
 
           // Calculer le pourcentage de progression dans le grade actuel
           const levelsInCurrentGrade = currentGrade.maxLevel - currentGrade.minLevel + 1;
           const levelProgress = currentLevel - currentGrade.minLevel;
           const progressPercentage = (levelProgress / levelsInCurrentGrade) * 100;
-          document.getElementById('gradeProgressBarFill').style.width = `${progressPercentage}%`;
+          const gradeProgressBarFillEl = document.getElementById('gradeProgressBarFill');
+          if (gradeProgressBarFillEl) {
+            gradeProgressBarFillEl.style.width = `${progressPercentage}%`;
+          }
         }
       }
     }
@@ -1115,6 +1329,15 @@
     // Récupérer et afficher le grade d'entrepreneur
     async function fetchEntrepreneurGrade() {
       try {
+        // Si c'est un coach, afficher "Coach" directement
+        if (selectedUserType === 'coach') {
+          const entrepreneurGradeEl = document.getElementById('entrepreneurGrade');
+          if (entrepreneurGradeEl) {
+            entrepreneurGradeEl.textContent = 'Coach';
+          }
+          return;
+        }
+
         const response = await fetch(`/api/get-info/${selectedUser}`);
         if (!response.ok) throw new Error('Erreur lors de la récupération du grade');
 
@@ -1143,10 +1366,21 @@
         }
 
         // Afficher le grade
-        document.getElementById('entrepreneurGrade').textContent = gradeDisplay;
+        const entrepreneurGradeEl = document.getElementById('entrepreneurGrade');
+        if (entrepreneurGradeEl) {
+          entrepreneurGradeEl.textContent = gradeDisplay;
+        }
       } catch (error) {
         console.error('Erreur lors de la récupération du grade:', error);
-        document.getElementById('entrepreneurGrade').textContent = 'Non défini';
+        // Si c'est un coach, afficher "Coach" même en cas d'erreur
+        const entrepreneurGradeEl = document.getElementById('entrepreneurGrade');
+        if (entrepreneurGradeEl) {
+          if (selectedUserType === 'coach') {
+            entrepreneurGradeEl.textContent = 'Coach';
+          } else {
+            entrepreneurGradeEl.textContent = 'Non défini';
+          }
+        }
       }
     }
 
@@ -1536,6 +1770,21 @@
         return;
       }
 
+      // Trouver le bouton et afficher le spinner
+      const allIncrementButtons = document.querySelectorAll(`.increment[onclick*="${badgeId}"]`);
+      let targetButton = null;
+      allIncrementButtons.forEach(btn => {
+        if (btn.getAttribute('onclick').includes(`incrementBadge('${badgeId}'`)) {
+          targetButton = btn;
+        }
+      });
+
+      if (targetButton) {
+        const originalContent = targetButton.innerHTML;
+        targetButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        targetButton.style.pointerEvents = 'none';
+      }
+
       try {
         const response = await fetch('/api/gamification/badges/unlock', {
           method: 'POST',
@@ -1553,13 +1802,23 @@
 
         if (data.status === 'success') {
           console.log(`✅ Badge ${badgeId} incrémenté (${currentCount} -> ${data.result?.count || currentCount + 1})`);
-          // Recharger les données de l'utilisateur
-          await selectUser(selectedUser);
+          // Rafraîchir les données de l'utilisateur (sans spinner)
+          await refreshUserData();
         } else {
+          // Restaurer le bouton en cas d'erreur
+          if (targetButton) {
+            targetButton.innerHTML = '<i class="fas fa-plus"></i>';
+            targetButton.style.pointerEvents = '';
+          }
           alert(`Erreur: ${data.message || 'Impossible d\'incrémenter le badge'}`);
         }
       } catch (error) {
         console.error(`Erreur lors de l'incrémentation du badge:`, error);
+        // Restaurer le bouton en cas d'erreur
+        if (targetButton) {
+          targetButton.innerHTML = '<i class="fas fa-plus"></i>';
+          targetButton.style.pointerEvents = '';
+        }
         alert(`Erreur lors de l'incrémentation du badge`);
       }
     }
@@ -1573,6 +1832,21 @@
 
       if (currentCount === 0) {
         return; // Ne rien faire si le badge n'est pas possédé
+      }
+
+      // Trouver le bouton et afficher le spinner
+      const allDecrementButtons = document.querySelectorAll(`.decrement[onclick*="${badgeId}"]`);
+      let targetButton = null;
+      allDecrementButtons.forEach(btn => {
+        if (btn.getAttribute('onclick').includes(`decrementBadge('${badgeId}'`)) {
+          targetButton = btn;
+        }
+      });
+
+      if (targetButton) {
+        const originalContent = targetButton.innerHTML;
+        targetButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        targetButton.style.pointerEvents = 'none';
       }
 
       try {
@@ -1592,14 +1866,77 @@
         if (data.status === 'success') {
           const newCount = data.result?.count || 0;
           console.log(`✅ Badge ${badgeId} décrémenté (${currentCount} -> ${newCount})`);
-          // Recharger les données de l'utilisateur
-          await selectUser(selectedUser);
+          // Rafraîchir les données de l'utilisateur (sans spinner)
+          await refreshUserData();
         } else {
+          // Restaurer le bouton en cas d'erreur
+          if (targetButton) {
+            targetButton.innerHTML = '<i class="fas fa-minus"></i>';
+            targetButton.style.pointerEvents = '';
+          }
           alert(`Erreur: ${data.message || 'Impossible de décrémenter le badge'}`);
         }
       } catch (error) {
         console.error(`Erreur lors de la décrémentation du badge:`, error);
+        // Restaurer le bouton en cas d'erreur
+        if (targetButton) {
+          targetButton.innerHTML = '<i class="fas fa-minus"></i>';
+          targetButton.style.pointerEvents = '';
+        }
         alert(`Erreur lors de la décrémentation du badge`);
+      }
+    }
+
+    // Vérifier et attribuer automatiquement les badges basés sur les données RPO
+    async function checkAutomaticBadges() {
+      if (!selectedUser) {
+        alert('Veuillez sélectionner un entrepreneur ou coach');
+        return;
+      }
+
+      const userType = selectedUserType === 'coach' ? 'coach' : 'entrepreneur';
+
+      if (!confirm(`Voulez-vous vérifier et attribuer automatiquement les badges pour ${userFullName || selectedUser}?\n\nCela vérifiera:\n- Ventes totales (Cap des Six Chiffres, Ascension, etc.)\n- Ventes hebdomadaires (Sprint de Vente, Semaine de Feu, etc.)\n- Production hebdomadaire (Opération 10K, Roue de production, etc.)`)) {
+        return;
+      }
+
+      try {
+        console.log(`[AUTO BADGES] Vérification des badges automatiques pour ${selectedUser}...`);
+
+        const response = await fetch(`/api/gamification/badges/check-automatic/${selectedUser}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'success') {
+          const awardedCount = data.awarded_badges.length;
+          const totalXp = data.total_xp;
+
+          if (awardedCount > 0) {
+            let message = `✅ ${awardedCount} badge${awardedCount > 1 ? 's' : ''} automatique${awardedCount > 1 ? 's' : ''} attribué${awardedCount > 1 ? 's' : ''} !\n\n`;
+            message += `Total XP gagné: +${totalXp} XP\n\n`;
+            message += `Badges attribués:\n`;
+            data.awarded_badges.forEach(badge => {
+              const weekInfo = badge.week ? ` (semaine ${badge.week})` : '';
+              message += `• ${badge.badge_name}${weekInfo} (+${badge.xp} XP)\n`;
+            });
+            alert(message);
+
+            // Rafraîchir les données pour afficher les nouveaux badges
+            await refreshUserData();
+          } else {
+            alert('Aucun nouveau badge automatique à attribuer.\n\nTous les badges automatiques possibles ont déjà été attribués selon les données RPO actuelles.');
+          }
+        } else {
+          alert(`Erreur: ${data.message || 'Impossible de vérifier les badges automatiques'}`);
+        }
+      } catch (error) {
+        console.error('[ERROR] Erreur vérification badges automatiques:', error);
+        alert('Erreur lors de la vérification des badges automatiques');
       }
     }
 

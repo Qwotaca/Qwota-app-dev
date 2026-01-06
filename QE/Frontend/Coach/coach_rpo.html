@@ -8958,7 +8958,7 @@ document.addEventListener('entrepreneurSelected', function(e) {
 // LOAD RPO DATA FUNCTION
 // Called when a coach is selected
 // ============================================
-window.loadRPOData = function() {
+window.loadRPOData = async function() {
   console.log('[RPO COACH] Rechargement des données RPO pour le coach:', window.username);
 
   // Update coachUsername variable used throughout the page
@@ -8971,40 +8971,46 @@ window.loadRPOData = function() {
 
     // Page To-Do List
     if (typeof loadTasks === 'function') {
-      loadTasks();
+      await loadTasks();
       console.log('[RPO COACH] ✅ Tâches rechargées');
     }
     if (typeof loadTaskHistory === 'function') {
-      loadTaskHistory();
+      await loadTaskHistory();
       console.log('[RPO COACH] ✅ Historique rechargé');
     }
 
     // Page RPO - Résumé hebdomadaire (seulement si les éléments DOM existent)
     if (typeof loadWeeklyProblem === 'function' && document.getElementById('week-selector')) {
-      loadWeeklyProblem();
+      await loadWeeklyProblem();
       console.log('[RPO COACH] ✅ Problème hebdomadaire rechargé');
     }
     if (typeof loadMacroMicroProblem === 'function' && document.getElementById('macro-content-display')) {
-      loadMacroMicroProblem();
+      await loadMacroMicroProblem();
       console.log('[RPO COACH] ✅ MACRO/MICRO/Problème rechargés');
     }
 
     // Charger les entrepreneurs du coach (pour le tableau hebdomadaire)
     if (typeof loadAvailableEntrepreneurs === 'function' && document.getElementById('entrepreneur-selection-list')) {
-      loadAvailableEntrepreneurs();
+      await loadAvailableEntrepreneurs();
       console.log('[RPO COACH] ✅ Entrepreneurs rechargés');
     }
 
     // Si un entrepreneur est sélectionné, recharger ses données
     if (typeof loadWeeklyEntrepreneurData === 'function' && document.getElementById('weekly-entrepreneur-table-body')) {
-      loadWeeklyEntrepreneurData();
+      await loadWeeklyEntrepreneurData();
       console.log('[RPO COACH] ✅ Données hebdomadaires entrepreneur rechargées');
     }
 
     // Page Statistiques - Plan d'affaire
     if (typeof initTeamPlan === 'function') {
-      initTeamPlan();
+      await initTeamPlan();
       console.log('[RPO COACH] ✅ Plan d\'affaire équipe rechargé');
+    }
+
+    // Vérifier et toggle l'affichage du plan d'affaires (bouton Créer vs Métriques)
+    if (typeof checkIfBusinessPlanNeeded === 'function') {
+      await checkIfBusinessPlanNeeded();
+      console.log('[RPO COACH] ✅ Affichage plan d\'affaire vérifié et mis à jour');
     }
 
     console.log('[RPO COACH] ✅ Rechargement complet terminé pour:', coachUsername);
@@ -9053,34 +9059,44 @@ async function checkIfBusinessPlanNeeded() {
   if (!username) return;
 
   try {
-    // Charger les prévisions
-    const prevResponse = await fetch(`/api/coach/team-objectifs?coach_username=${username}`);
-    const prevData = await prevResponse.json();
+    console.log('[BUSINESS PLAN CHECK] Vérification pour:', username);
+
+    // Charger l'objectif total
+    const objectifsResponse = await fetch(`/api/coach/team-objectifs?coach_username=${username}`);
+    const objectifsData = await objectifsResponse.json();
+    const totalObjectif = objectifsData.success ? (objectifsData.total || 0) : 0;
 
     // Charger les métriques
-    const metricsResponse = await fetch(`/api/coach/metrics?coach_username=${username}`);
+    const metricsResponse = await fetch(`/api/coach/team-metrics?coach_username=${username}`);
     const metricsData = await metricsResponse.json();
+    const metrics = metricsData.success ? metricsData.metrics : { cm: 0, ratioMktg: 0, tauxVente: 0 };
 
-    const hasPrevisions = prevData.success && prevData.previsions && Object.keys(prevData.previsions).length > 0;
-    const hasMetrics = metricsData.success && metricsData.metrics &&
-                      (metricsData.metrics.cm > 0 || metricsData.metrics.ratioMktg > 0 || metricsData.metrics.tauxVente > 0);
+    // Vérifier si au moins une donnée existe
+    const hasData = totalObjectif > 0 || metrics.cm > 0 || metrics.ratioMktg > 0 || metrics.tauxVente > 0;
+
+    console.log('[BUSINESS PLAN CHECK] Total objectif:', totalObjectif);
+    console.log('[BUSINESS PLAN CHECK] Métriques:', metrics);
+    console.log('[BUSINESS PLAN CHECK] Has data:', hasData);
 
     const createBtn = document.getElementById('create-business-plan-btn');
     const editBtn = document.getElementById('edit-business-plan-btn');
     const metricsCards = document.getElementById('team-metrics-cards');
+    const planTable = document.querySelector('.plan-scroll-container');
 
-    if (createBtn && editBtn && metricsCards) {
-      if (!hasPrevisions && !hasMetrics) {
-        // Tout est à 0, afficher le bouton "Créer" et cacher les cartes
-        createBtn.style.display = 'block';
-        editBtn.style.display = 'none';
-        metricsCards.style.display = 'none';
-      } else {
-        // Des données existent, afficher le bouton "Modifier" et les cartes
-        createBtn.style.display = 'none';
-        editBtn.style.display = 'block';
-        metricsCards.style.display = 'grid';
-      }
+    if (hasData) {
+      // Des données existent : afficher les métriques, le tableau et le bouton modifier
+      console.log('[BUSINESS PLAN CHECK] ✅ Affichage des données existantes');
+      if (createBtn) createBtn.style.display = 'none';
+      if (editBtn) editBtn.style.display = 'block';
+      if (metricsCards) metricsCards.style.display = 'grid';
+      if (planTable) planTable.style.display = 'block';
+    } else {
+      // Aucune donnée : afficher uniquement le bouton créer
+      console.log('[BUSINESS PLAN CHECK] ⚠️ Affichage du bouton créer');
+      if (createBtn) createBtn.style.display = 'block';
+      if (editBtn) editBtn.style.display = 'none';
+      if (metricsCards) metricsCards.style.display = 'none';
+      if (planTable) planTable.style.display = 'none';
     }
   } catch (error) {
     console.error('[BUSINESS PLAN] Erreur vérification:', error);

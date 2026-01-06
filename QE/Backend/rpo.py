@@ -908,6 +908,16 @@ def sync_soumissions_to_rpo(username: str) -> bool:
         # Sauvegarder les données RPO mises à jour
         save_user_rpo_data(username, rpo_data)
         print(f"[OK] [RPO SYNC] Synchronisation soumissions -> RPO reussie pour {username}", flush=True)
+
+        # Vérifier et attribuer automatiquement les badges basés sur les données RPO
+        try:
+            from gamification import check_and_award_automatic_badges
+            badge_result = check_and_award_automatic_badges(username)
+            if badge_result.get('awarded_badges'):
+                print(f"[RPO SYNC] {len(badge_result['awarded_badges'])} badges automatiques attribues (+{badge_result['total_xp']} XP)", flush=True)
+        except Exception as badge_error:
+            print(f"[WARN] [RPO SYNC] Erreur verification badges automatiques: {badge_error}", flush=True)
+
         return True
 
     except Exception as e:

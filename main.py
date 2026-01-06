@@ -20417,6 +20417,32 @@ def check_badge_endpoint(username: str, badge_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/gamification/badges/check-automatic/{username}")
+def check_automatic_badges_endpoint(username: str):
+    """
+    Vérifie et attribue automatiquement les badges basés sur les données RPO
+
+    Badges automatiques:
+    - Ventes totales: Le Cap des Six Chiffres (100k$), L'Ascension (125k$), Le Palier des Titans (300k$), etc.
+    - Ventes hebdomadaires: Sprint de Vente (10k$/sem), Semaine de Feu (20k$/sem), etc.
+    - Production hebdomadaire: Opération 10K, Roue de production, Machine de Guerre, Maître peintre
+    """
+    try:
+        result = gamification.check_and_award_automatic_badges(username)
+        return {
+            "status": "success",
+            "username": username,
+            "awarded_badges": result.get('awarded_badges', []),
+            "total_xp": result.get('total_xp', 0),
+            "message": f"{len(result.get('awarded_badges', []))} badges attribués"
+        }
+    except Exception as e:
+        print(f"[ERROR] Erreur check_automatic_badges: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/gamification/quest-streak/{username}")
 def get_quest_streak(username: str):
     """Récupère le streak de side quests d'un utilisateur"""

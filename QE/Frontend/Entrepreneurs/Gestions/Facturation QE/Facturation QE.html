@@ -313,7 +313,36 @@
     // Fonction pour afficher la section de paiement sélectionnée
     function showPaiementSection(section) {
       log('showPaiementSection appelée avec:', section);
-      
+
+      // IMPORTANT: Gérer la visibilité des previews pour éviter la superposition
+      const previewRectoDepot = document.getElementById('previewRecto');
+      const previewVersoDepot = document.getElementById('previewVerso');
+      const previewRectoFinal = document.getElementById('previewRectoFinal');
+      const previewVersoFinal = document.getElementById('previewVersoFinal');
+
+      if (section === 'depot') {
+        // Afficher les previews du dépôt, cacher ceux du paiement final
+        if (previewRectoDepot) previewRectoDepot.style.display = 'block';
+        if (previewVersoDepot) previewVersoDepot.style.display = 'block';
+        if (previewRectoFinal) previewRectoFinal.style.display = 'none';
+        if (previewVersoFinal) previewVersoFinal.style.display = 'none';
+        console.log('✅ Previews dépôt affichés, paiement final cachés');
+      } else if (section === 'paiement-final') {
+        // Afficher les previews du paiement final, cacher ceux du dépôt
+        if (previewRectoFinal) previewRectoFinal.style.display = 'block';
+        if (previewVersoFinal) previewVersoFinal.style.display = 'block';
+        if (previewRectoDepot) previewRectoDepot.style.display = 'none';
+        if (previewVersoDepot) previewVersoDepot.style.display = 'none';
+        console.log('✅ Previews paiement final affichés, dépôt cachés');
+      } else {
+        // Pour les autres sections (paiements partiels, etc.), cacher les deux
+        if (previewRectoDepot) previewRectoDepot.style.display = 'none';
+        if (previewVersoDepot) previewVersoDepot.style.display = 'none';
+        if (previewRectoFinal) previewRectoFinal.style.display = 'none';
+        if (previewVersoFinal) previewVersoFinal.style.display = 'none';
+        console.log('✅ Tous les previews dépôt/paiement final cachés (section:', section, ')');
+      }
+
       // NOTE: La gestion des couleurs de boutons est maintenant entièrement déléguée à
       // selectionnerClientFacturation() pour éviter les conflits entre clients
       log('🎨 Couleurs de boutons gérées par selectionnerClientFacturation()');
@@ -654,11 +683,67 @@
       if (activeContent) {
         activeContent.classList.remove('hidden');
 
+        // Restaurer les éléments à ajouter quand on revient sur depot
+        if (section === 'depot') {
+          const clientData = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
+          const statutDepot = clientData.statutDepot || 'non_envoye';
+          const depotMethode = clientData.depot?.methode; // Utiliser "methode" au lieu de "type"
+
+          // Afficher la section éléments à ajouter si:
+          // - Le dépôt est en traitement/attente_comptable (déjà envoyé au comptable)
+          // - OU si une méthode de paiement (virement/chèque) a déjà été sélectionnée
+          const elementsAjouterDepot = document.getElementById('elementsAjouterDepot');
+          const virementFieldsDepot = document.getElementById('virementFieldsDepot');
+          const chequeFieldsDepot = document.getElementById('chequeFieldsDepot');
+          const depotEnTraitement = statutDepot === 'traitement' || statutDepot === 'attente_comptable';
+
+          if (elementsAjouterDepot) {
+            if (depotEnTraitement || depotMethode) {
+              // Forcer la visibilité avec !important
+              elementsAjouterDepot.style.setProperty('max-height', '1000px', 'important');
+              elementsAjouterDepot.style.setProperty('opacity', '1', 'important');
+              elementsAjouterDepot.style.setProperty('display', 'block', 'important');
+              elementsAjouterDepot.style.setProperty('visibility', 'visible', 'important');
+              elementsAjouterDepot.style.setProperty('overflow', 'visible', 'important');
+              elementsAjouterDepot.style.setProperty('height', 'auto', 'important');
+              log('[RESTORE] Restauration éléments à ajouter DÉPÔT (visible) - statut:', statutDepot, 'methode:', depotMethode || 'aucun');
+
+              // Afficher les champs selon la méthode
+              if (depotMethode === 'virement' && virementFieldsDepot) {
+                virementFieldsDepot.classList.remove('hidden');
+                virementFieldsDepot.style.setProperty('display', 'grid', 'important');
+                if (chequeFieldsDepot) chequeFieldsDepot.classList.add('hidden');
+                log('[OK] Champs virement DÉPÔT affichés');
+              } else if (depotMethode === 'chèque' && chequeFieldsDepot) {
+                chequeFieldsDepot.classList.remove('hidden');
+                chequeFieldsDepot.style.setProperty('display', 'grid', 'important');
+                chequeFieldsDepot.style.setProperty('opacity', '1', 'important');
+                chequeFieldsDepot.style.setProperty('visibility', 'visible', 'important');
+                chequeFieldsDepot.style.setProperty('max-height', 'none', 'important');
+                if (virementFieldsDepot) virementFieldsDepot.classList.add('hidden');
+                log('[OK] Champs chèque DÉPÔT affichés');
+              }
+
+              // Si en traitement, appeler rendreSectionDepotNonModifiable pour griser les champs
+              if (depotEnTraitement) {
+                setTimeout(() => {
+                  rendreSectionDepotNonModifiable();
+                }, 50);
+              }
+            } else {
+              // Garder caché si pas en traitement ET pas de méthode sélectionnée
+              elementsAjouterDepot.style.setProperty('max-height', '0', 'important');
+              elementsAjouterDepot.style.setProperty('opacity', '0', 'important');
+              log('[HIDE] Section éléments à ajouter DÉPÔT cachée (pas en traitement, pas de méthode)');
+            }
+          }
+        }
+
         // Restaurer les éléments à ajouter quand on revient sur paiement-final
         if (section === 'paiement-final') {
           const clientData = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
           const statutPaiementFinal = clientData.paiementFinal?.statut || clientData.statutPaiementFinal;
-          const paiementFinalType = clientData.paiementFinal?.type;
+          const paiementFinalType = clientData.paiementFinal?.methode || clientData.paiementFinal?.type;
 
           // Afficher la section éléments à ajouter SEULEMENT si:
           // - Le paiement est en traitement/attente_comptable (déjà envoyé au comptable)
@@ -828,10 +913,13 @@
                     // Griser si dépôt traité ou en traitement (même si vide)
                     if (depotTraiteOuEnTraitement) {
                       lienInput.readOnly = true;
-                      lienInput.style.backgroundColor = 'rgba(55, 65, 81, 0.3)';
-                      lienInput.style.color = '#9ca3af';
-                      lienInput.style.cursor = 'not-allowed';
-                      log('[LOCK] Lien virement grisé');
+                      lienInput.style.setProperty('background', 'rgba(55, 65, 81, 0.3)', 'important');
+                      lienInput.style.setProperty('color', 'var(--text-light)', 'important');
+                      lienInput.style.setProperty('border-color', 'rgba(75, 85, 99, 0.3)', 'important');
+                      lienInput.style.setProperty('cursor', 'not-allowed', 'important');
+                      lienInput.style.setProperty('opacity', '0.7', 'important');
+                      lienInput.style.pointerEvents = 'none';
+                      log('[LOCK] Lien virement grisé uniformément');
                     }
                   }
                   
@@ -843,17 +931,20 @@
                     // Griser si dépôt traité ou en traitement (même si vide)
                     if (depotTraiteOuEnTraitement) {
                       mdpInput.readOnly = true;
-                      mdpInput.style.backgroundColor = 'rgba(55, 65, 81, 0.3)';
-                      mdpInput.style.color = '#9ca3af';
-                      mdpInput.style.cursor = 'not-allowed';
-                      
+                      mdpInput.style.setProperty('background', 'rgba(55, 65, 81, 0.3)', 'important');
+                      mdpInput.style.setProperty('color', 'var(--text-light)', 'important');
+                      mdpInput.style.setProperty('border-color', 'rgba(75, 85, 99, 0.3)', 'important');
+                      mdpInput.style.setProperty('cursor', 'not-allowed', 'important');
+                      mdpInput.style.setProperty('opacity', '0.7', 'important');
+                      mdpInput.style.pointerEvents = 'none';
+
                       // Retirer le placeholder si le champ est vide quand c'est grisé
                       if (!mdpInput.value || mdpInput.value.trim() === '') {
                         mdpInput.placeholder = '';
                         log('[LOCK] Placeholder retiré du mot de passe (champ vide et grisé)');
                       }
                       
-                      log('[LOCK] Mot de passe grisé');
+                      log('[LOCK] Mot de passe grisé uniformément');
                     }
                   }
                   log('🔄 DÉPÔT: Éléments à ajouter virement réouverts');
@@ -1349,7 +1440,32 @@
         if (contentDepot) {
           contentDepot.classList.remove('hidden');
         }
-        
+
+        // IMPORTANT: Réinitialiser les dropdowns de paiement car ils peuvent ne pas avoir été initialisés correctement
+        // quand la section était cachée (display: none)
+        console.log('[TOGGLE SECTION] Réinitialisation des dropdowns de paiement...');
+
+        // Réinitialiser les flags d'initialisation pour permettre la ré-initialisation
+        const dropdownsToReinit = [
+          'typePaiementAutresToggle',
+          'payeParToggle',
+          'payeParFinalToggle',
+          'payeParAutresToggle',
+          'payeParRemboursementToggle'
+        ];
+
+        dropdownsToReinit.forEach(id => {
+          const element = document.getElementById(id);
+          if (element && element.dataset.initialized) {
+            console.log('[TOGGLE SECTION] Réinitialisation flag pour:', id);
+            delete element.dataset.initialized;
+          }
+        });
+
+        if (typeof initPaiementSelects === 'function') {
+          initPaiementSelects();
+        }
+
         log('[OK] Section paiements activée');
       } else {
         // Masquer la section
@@ -1612,7 +1728,15 @@
 
     // Fonction pour fermer le modal de soumission
     function fermerModalSoumission() {
-      document.getElementById('soumissionSigneeModal').classList.add('hidden');
+      const modal = document.getElementById('soumissionSigneeModal');
+      modal.classList.add('hidden');
+
+      // Restaurer le titre original "Soumission signée"
+      const modalTitle = modal.querySelector('h3.text-xl');
+      if (modalTitle) {
+        modalTitle.innerHTML = '<i class="fas fa-file-contract mr-2 text-green-500"></i>Soumission signée';
+      }
+
       // Réactiver le scroll de la page
       document.body.style.overflow = '';
     }
@@ -2106,6 +2230,94 @@
     }
 
     // ============================================
+    // MODAL IMAGE POUR AFFICHER LES PHOTOS DE CHÈQUE
+    // ============================================
+
+    window.ouvrirModalImage = function(urlImage, titre, event) {
+      const modal = document.getElementById('modalImage');
+      const img = document.getElementById('modalImageContent');
+      const titleText = document.getElementById('modalImageTitleText');
+
+      // LOGS pour déboguer les photos
+      console.log('═══════════════════════════════════════════════');
+      console.log('📸 OUVERTURE MODAL PHOTO');
+      console.log('Titre du paiement:', titre);
+      console.log('URL de la photo:', urlImage);
+      console.log('📍 Élément cliqué:', event ? event.target : 'N/A');
+      console.log('📍 Parent de l\'élément:', event ? event.target.parentElement : 'N/A');
+      console.log('📍 ID du parent:', event ? event.target.parentElement?.id : 'N/A');
+      console.log('───────────────────────────────────────────────');
+
+      // Afficher toutes les photos du client pour vérification
+      const clientData = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
+      console.log('📋 PHOTOS DU CLIENT:', clientData.prenom, clientData.nom);
+
+      if (clientData.depot) {
+        console.log('  💰 Dépôt:');
+        console.log('    - Recto:', clientData.depot.photoRecto);
+        console.log('    - Verso:', clientData.depot.photoVerso);
+      }
+
+      if (clientData.paiementFinal) {
+        console.log('  ✅ Paiement Final:');
+        console.log('    - Recto:', clientData.paiementFinal.photoRecto);
+        console.log('    - Verso:', clientData.paiementFinal.photoVerso);
+      }
+
+      if (clientData.autresPaiements && clientData.autresPaiements.length > 0) {
+        clientData.autresPaiements.forEach((p, index) => {
+          console.log(`  💵 Paiement Partiel ${index + 1} (ID: ${p.id}):`);
+          console.log('    - Recto:', p.photoRecto);
+          console.log('    - Verso:', p.photoVerso);
+        });
+      }
+
+      console.log('───────────────────────────────────────────────');
+      // Vérifier si l'URL correspond au bon paiement
+      let urlMatch = false;
+      if (titre.includes('Dépôt')) {
+        urlMatch = clientData.depot && (clientData.depot.photoRecto === urlImage || clientData.depot.photoVerso === urlImage);
+        console.log('✓ Vérification DÉPÔT:', urlMatch ? '✅ MATCH' : '❌ NO MATCH');
+      } else if (titre.includes('Paiement Final')) {
+        urlMatch = clientData.paiementFinal && (clientData.paiementFinal.photoRecto === urlImage || clientData.paiementFinal.photoVerso === urlImage);
+        console.log('✓ Vérification PAIEMENT FINAL:', urlMatch ? '✅ MATCH' : '❌ NO MATCH');
+      } else if (titre.includes('Paiement Partiel')) {
+        const match = titre.match(/Paiement Partiel (\d+)/);
+        if (match) {
+          const numero = parseInt(match[1]) - 1;
+          const paiement = clientData.autresPaiements?.[numero];
+          urlMatch = paiement && (paiement.photoRecto === urlImage || paiement.photoVerso === urlImage);
+          console.log(`✓ Vérification PAIEMENT PARTIEL ${numero + 1}:`, urlMatch ? '✅ MATCH' : '❌ NO MATCH');
+        }
+      }
+      console.log('═══════════════════════════════════════════════');
+
+      img.src = urlImage;
+      titleText.textContent = titre || 'Image du chèque';
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+
+      // Ajouter l'événement ESC pour fermer
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    window.fermerModalImage = function() {
+      const modal = document.getElementById('modalImage');
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+
+      // Retirer l'événement ESC
+      document.removeEventListener('keydown', handleEscapeKey);
+    }
+
+    // Handler pour la touche ESC
+    function handleEscapeKey(e) {
+      if (e.key === 'Escape') {
+        fermerModalImage();
+      }
+    }
+
+    // ============================================
     // VALIDATION COACH DES REMBOURSEMENTS
     // ============================================
 
@@ -2325,6 +2537,23 @@
         setTimeout(() => {
           chargerRemboursementsEnAttenteCoach();
         }, 1000);
+
+        // IMPORTANT: Initialiser les dropdowns de paiement après sélection de l'entrepreneur
+        console.log('[ENTREPRENEUR SELECTED] Initialisation des dropdowns de paiement...');
+        setTimeout(() => {
+          const dropdownsToReinit = ['typePaiementAutresToggle', 'payeParToggle', 'payeParFinalToggle', 'payeParAutresToggle', 'payeParRemboursementToggle'];
+          dropdownsToReinit.forEach(id => {
+            const element = document.getElementById(id);
+            if (element && element.dataset.initialized) {
+              console.log('[ENTREPRENEUR SELECTED] Reset flag pour:', id);
+              delete element.dataset.initialized;
+            }
+          });
+          if (typeof initPaiementSelects === 'function') {
+            initPaiementSelects();
+            console.log('[ENTREPRENEUR SELECTED] ✅ Dropdowns de paiement initialisés');
+          }
+        }, 500);
       }
     });
 
@@ -3464,6 +3693,8 @@
           <p class="text-sm">Aucune facturation</p>
         </div>
       `;
+        // IMPORTANT: Mettre à jour le total à 0,00 $ quand il n'y a aucune facturation
+        calculerEtMettreAJourTotal(containerId, facturations);
         return;
       }
 
@@ -3821,7 +4052,6 @@
               <div class="modern-dropdown-menu hidden" id="modalPayeParMenu">
                 <div class="custom-select-option modal-field-editable" data-value="virement">Virement</div>
                 <div class="custom-select-option modal-field-editable" data-value="cheque">Chèque</div>
-                <div class="custom-select-option modal-field-editable" data-value="square">Square</div>
               </div>
             </div>
             
@@ -4765,6 +4995,12 @@
             <span class="loading-text">Envoi au comptable en cours...</span>
           </div>
 
+          <!-- Loading Overlay pour chargement client - Couvre toute la page -->
+          <div id="loadingClientOverlay" class="section-loading-overlay" style="position: fixed; inset: 0; z-index: 9999;">
+            <div class="spinner-ring"></div>
+            <span class="loading-text">Chargement du client...</span>
+          </div>
+
         <!-- SECTION PAIEMENTS AVEC BOUTONS -->
         <div class="mb-8" id="sectionPaiements" style="display: none; margin-top: 80px;">
           <!-- Boutons de sélection du type de paiement -->
@@ -4834,7 +5070,6 @@
                   <div class="modern-dropdown-menu hidden" id="payeParMenu">
                     <div class="custom-select-option" data-value="virement">Virement</div>
                     <div class="custom-select-option" data-value="cheque">Chèque</div>
-                    <div class="custom-select-option" data-value="square">Square</div>
                   </div>
                 </div>
               </div>
@@ -4905,7 +5140,6 @@
                   <div class="modern-dropdown-menu hidden" id="payeParFinalMenu">
                     <div class="custom-select-option" data-value="virement">Virement</div>
                     <div class="custom-select-option" data-value="cheque">Chèque</div>
-                    <div class="custom-select-option" data-value="square">Square</div>
                   </div>
                 </div>
               </div>
@@ -4975,7 +5209,6 @@
                   <div class="modern-dropdown-menu hidden" id="payeParAutresMenu">
                     <div class="custom-select-option" data-value="virement">Virement</div>
                     <div class="custom-select-option" data-value="cheque">Chèque</div>
-                    <div class="custom-select-option" data-value="square">Square</div>
                   </div>
                 </div>
               </div>
@@ -6011,7 +6244,22 @@
             log('[LAUNCH] Activation des sections paiements...');
             toggleSectionPaiements(true);
             log('[OK] Sections paiements activées');
-            
+
+            // IMPORTANT: Forcer la réinitialisation des dropdowns pour les coaches
+            // Car toggleSectionPaiements peut ne pas déclencher l'init si la section est déjà visible
+            console.log('[CLIENT SELECT] Forçage réinitialisation dropdowns...');
+            const dropdownsToReinit = ['typePaiementAutresToggle', 'payeParToggle', 'payeParFinalToggle', 'payeParAutresToggle', 'payeParRemboursementToggle'];
+            dropdownsToReinit.forEach(id => {
+              const element = document.getElementById(id);
+              if (element && element.dataset.initialized) {
+                delete element.dataset.initialized;
+              }
+            });
+            if (typeof initPaiementSelects === 'function') {
+              initPaiementSelects();
+              console.log('[CLIENT SELECT] ✅ Dropdowns réinitialisés');
+            }
+
             // NOTE: Le statut du dépôt est maintenant géré dans selectionnerClientFacturation()
             // pour éviter les conflits entre localStorage et les données du client
             log('[OK] Statut du dépôt géré par selectionnerClientFacturation()');
@@ -6192,12 +6440,26 @@
 
     // Fonction pour initialiser les menus déroulants de paiement
     function initPaiementSelects() {
+      console.log('[INIT DROPDOWNS] Début initialisation des dropdowns de paiement');
+      console.log('[INIT DROPDOWNS] userRole:', localStorage.getItem('userRole'));
+      console.log('[INIT DROPDOWNS] username:', window.username);
+      console.log('[INIT DROPDOWNS] selectedEntrepreneur:', window.selectedEntrepreneur);
+
       // Initialiser le menu Type de paiement autres
       const typePaiementAutresToggle = document.getElementById('typePaiementAutresToggle');
       const typePaiementAutresMenu = document.getElementById('typePaiementAutresMenu');
-      
+
+      console.log('[INIT DROPDOWNS] typePaiementAutresToggle existe?', !!typePaiementAutresToggle);
+      console.log('[INIT DROPDOWNS] typePaiementAutresToggle.dataset.initialized:', typePaiementAutresToggle?.dataset.initialized);
+
       if (typePaiementAutresToggle && typePaiementAutresMenu) {
-        typePaiementAutresToggle.addEventListener('click', () => {
+        // Vérifier si déjà initialisé pour éviter les event listeners multiples
+        if (typePaiementAutresToggle.dataset.initialized !== 'true') {
+          typePaiementAutresToggle.dataset.initialized = 'true';
+          console.log('[INIT DROPDOWNS] ✅ Initialisation typePaiementAutresToggle');
+
+          typePaiementAutresToggle.addEventListener('click', () => {
+            console.log('[DROPDOWN CLICK] typePaiementAutresToggle cliqué!');
           // Fermer les autres dropdowns
           document.querySelectorAll('.modern-dropdown-menu').forEach(m => {
             if (m !== typePaiementAutresMenu) m.classList.add('hidden');
@@ -6205,7 +6467,7 @@
           document.querySelectorAll('.modern-dropdown').forEach(t => {
             if (t !== typePaiementAutresToggle) t.classList.remove('active');
           });
-          
+
           typePaiementAutresMenu.classList.toggle('hidden');
           typePaiementAutresToggle.classList.toggle('active', !typePaiementAutresMenu.classList.contains('hidden'));
         });
@@ -6266,15 +6528,32 @@
             typePaiementAutresToggle.classList.remove('active');
           }
         });
+        }
       }
 
       // Le menu Type de paiement n'existe plus - supprimé car les sections sont maintenant séparées
-      
+
       // Initialiser le menu Payé par
       const payeParToggle = document.getElementById('payeParToggle');
       const payeParMenu = document.getElementById('payeParMenu');
-      
-      payeParToggle.addEventListener('click', () => {
+
+      console.log('[INIT DROPDOWNS] payeParToggle existe?', !!payeParToggle);
+      console.log('[INIT DROPDOWNS] payeParToggle.dataset.initialized:', payeParToggle?.dataset.initialized);
+      console.log('[INIT DROPDOWNS] payeParToggle element:', payeParToggle);
+
+      if (payeParToggle && payeParMenu) {
+        // Vérifier si déjà initialisé pour éviter les event listeners multiples
+        if (payeParToggle.dataset.initialized !== 'true') {
+          payeParToggle.dataset.initialized = 'true';
+          console.log('[INIT DROPDOWNS] ✅ Initialisation payeParToggle');
+
+          payeParToggle.addEventListener('click', (e) => {
+            console.log('[DROPDOWN CLICK] payeParToggle cliqué!');
+            console.log('[DROPDOWN CLICK] Event:', e);
+            console.log('[DROPDOWN CLICK] payeParMenu avant toggle:', payeParMenu);
+            console.log('[DROPDOWN CLICK] payeParMenu.classList avant:', payeParMenu.classList.toString());
+            console.log('[DROPDOWN CLICK] payeParMenu has hidden?', payeParMenu.classList.contains('hidden'));
+
         // Fermer les autres dropdowns
         document.querySelectorAll('.modern-dropdown-menu').forEach(m => {
           if (m !== payeParMenu) m.classList.add('hidden');
@@ -6288,9 +6567,12 @@
         document.querySelectorAll('.dropdown-toggle').forEach(t => {
           t.classList.remove('active');
         });
-        
+
         payeParMenu.classList.toggle('hidden');
         payeParToggle.classList.toggle('active', !payeParMenu.classList.contains('hidden'));
+
+            console.log('[DROPDOWN CLICK] payeParMenu.classList après:', payeParMenu.classList.toString());
+            console.log('[DROPDOWN CLICK] payeParMenu has hidden après?', payeParMenu.classList.contains('hidden'));
         
       });
       
@@ -6350,13 +6632,19 @@
           log('Méthode de paiement sélectionnée:', value);
         }
       });
-      
+        }
+      }
+
       // Initialiser le menu Payé par Final
       const payeParFinalToggle = document.getElementById('payeParFinalToggle');
       const payeParFinalMenu = document.getElementById('payeParFinalMenu');
-      
+
       if (payeParFinalToggle && payeParFinalMenu) {
-        payeParFinalToggle.addEventListener('click', () => {
+        // Vérifier si déjà initialisé pour éviter les event listeners multiples
+        if (payeParFinalToggle.dataset.initialized !== 'true') {
+          payeParFinalToggle.dataset.initialized = 'true';
+
+          payeParFinalToggle.addEventListener('click', () => {
           // Fermer les autres dropdowns
           document.querySelectorAll('.modern-dropdown-menu').forEach(m => {
             if (m !== payeParFinalMenu) m.classList.add('hidden');
@@ -6407,14 +6695,19 @@
             log('Méthode de paiement final sélectionnée:', value);
           }
         });
+        }
       }
 
       // Initialiser le menu Payé par Autres
       const payeParAutresToggle = document.getElementById('payeParAutresToggle');
       const payeParAutresMenu = document.getElementById('payeParAutresMenu');
-      
+
       if (payeParAutresToggle && payeParAutresMenu) {
-        payeParAutresToggle.addEventListener('click', () => {
+        // Vérifier si déjà initialisé pour éviter les event listeners multiples
+        if (payeParAutresToggle.dataset.initialized !== 'true') {
+          payeParAutresToggle.dataset.initialized = 'true';
+
+          payeParAutresToggle.addEventListener('click', () => {
           // Fermer les autres dropdowns
           document.querySelectorAll('.modern-dropdown-menu').forEach(m => {
             if (m !== payeParAutresMenu) m.classList.add('hidden');
@@ -6465,14 +6758,19 @@
             log('Méthode de paiement autres sélectionnée:', value);
           }
         });
+        }
       }
 
       // Initialiser le menu Payé par Remboursement
       const payeParRemboursementToggle = document.getElementById('payeParRemboursementToggle');
       const payeParRemboursementMenu = document.getElementById('payeParRemboursementMenu');
-      
+
       if (payeParRemboursementToggle && payeParRemboursementMenu) {
-        payeParRemboursementToggle.addEventListener('click', () => {
+        // Vérifier si déjà initialisé pour éviter les event listeners multiples
+        if (payeParRemboursementToggle.dataset.initialized !== 'true') {
+          payeParRemboursementToggle.dataset.initialized = 'true';
+
+          payeParRemboursementToggle.addEventListener('click', () => {
           // Fermer les autres dropdowns
           document.querySelectorAll('.modern-dropdown-menu').forEach(m => {
             if (m !== payeParRemboursementMenu) m.classList.add('hidden');
@@ -6520,6 +6818,7 @@
             log('Méthode de paiement remboursement sélectionnée:', value);
           }
         });
+        }
       }
 
       // Fermer tous les menus en cliquant à l'extérieur
@@ -6599,6 +6898,122 @@
           updatePreview(e.target.files[0], previewVerso);
         }
       });
+
+      // Dropzone Recto Paiement Final
+      const dropzoneRectoFinal = document.getElementById('dropzoneRectoFinal');
+      const fileInputRectoFinal = document.getElementById('photoFileRectoFinal');
+      const previewRectoFinal = document.getElementById('previewRectoFinal');
+
+      if (dropzoneRectoFinal && fileInputRectoFinal && previewRectoFinal) {
+        dropzoneRectoFinal.addEventListener('click', () => fileInputRectoFinal.click());
+        dropzoneRectoFinal.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          dropzoneRectoFinal.classList.add('bg-gray-200');
+        });
+        dropzoneRectoFinal.addEventListener('dragleave', () => dropzoneRectoFinal.classList.remove('bg-gray-200'));
+        dropzoneRectoFinal.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropzoneRectoFinal.classList.remove('bg-gray-200');
+          const files = Array.from(e.dataTransfer.files);
+          if (files.length > 0) {
+            fileInputRectoFinal.files = e.dataTransfer.files;
+            updatePreview(files[0], previewRectoFinal);
+          }
+        });
+
+        fileInputRectoFinal.addEventListener('change', (e) => {
+          if (e.target.files.length > 0) {
+            updatePreview(e.target.files[0], previewRectoFinal);
+          }
+        });
+      }
+
+      // Dropzone Verso Paiement Final
+      const dropzoneVersoFinal = document.getElementById('dropzoneVersoFinal');
+      const fileInputVersoFinal = document.getElementById('photoFileVersoFinal');
+      const previewVersoFinal = document.getElementById('previewVersoFinal');
+
+      if (dropzoneVersoFinal && fileInputVersoFinal && previewVersoFinal) {
+        dropzoneVersoFinal.addEventListener('click', () => fileInputVersoFinal.click());
+        dropzoneVersoFinal.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          dropzoneVersoFinal.classList.add('bg-gray-200');
+        });
+        dropzoneVersoFinal.addEventListener('dragleave', () => dropzoneVersoFinal.classList.remove('bg-gray-200'));
+        dropzoneVersoFinal.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropzoneVersoFinal.classList.remove('bg-gray-200');
+          const files = Array.from(e.dataTransfer.files);
+          if (files.length > 0) {
+            fileInputVersoFinal.files = e.dataTransfer.files;
+            updatePreview(files[0], previewVersoFinal);
+          }
+        });
+
+        fileInputVersoFinal.addEventListener('change', (e) => {
+          if (e.target.files.length > 0) {
+            updatePreview(e.target.files[0], previewVersoFinal);
+          }
+        });
+      }
+
+      // Dropzone Recto Autres Paiements
+      const dropzoneRectoAutres = document.getElementById('dropzoneRectoAutres');
+      const fileInputRectoAutres = document.getElementById('photoFileRectoAutres');
+      const previewRectoAutres = document.getElementById('previewRectoAutres');
+
+      if (dropzoneRectoAutres && fileInputRectoAutres && previewRectoAutres) {
+        dropzoneRectoAutres.addEventListener('click', () => fileInputRectoAutres.click());
+        dropzoneRectoAutres.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          dropzoneRectoAutres.classList.add('bg-gray-200');
+        });
+        dropzoneRectoAutres.addEventListener('dragleave', () => dropzoneRectoAutres.classList.remove('bg-gray-200'));
+        dropzoneRectoAutres.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropzoneRectoAutres.classList.remove('bg-gray-200');
+          const files = Array.from(e.dataTransfer.files);
+          if (files.length > 0) {
+            fileInputRectoAutres.files = e.dataTransfer.files;
+            updatePreview(files[0], previewRectoAutres);
+          }
+        });
+
+        fileInputRectoAutres.addEventListener('change', (e) => {
+          if (e.target.files.length > 0) {
+            updatePreview(e.target.files[0], previewRectoAutres);
+          }
+        });
+      }
+
+      // Dropzone Verso Autres Paiements
+      const dropzoneVersoAutres = document.getElementById('dropzoneVersoAutres');
+      const fileInputVersoAutres = document.getElementById('photoFileVersoAutres');
+      const previewVersoAutres = document.getElementById('previewVersoAutres');
+
+      if (dropzoneVersoAutres && fileInputVersoAutres && previewVersoAutres) {
+        dropzoneVersoAutres.addEventListener('click', () => fileInputVersoAutres.click());
+        dropzoneVersoAutres.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          dropzoneVersoAutres.classList.add('bg-gray-200');
+        });
+        dropzoneVersoAutres.addEventListener('dragleave', () => dropzoneVersoAutres.classList.remove('bg-gray-200'));
+        dropzoneVersoAutres.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropzoneVersoAutres.classList.remove('bg-gray-200');
+          const files = Array.from(e.dataTransfer.files);
+          if (files.length > 0) {
+            fileInputVersoAutres.files = e.dataTransfer.files;
+            updatePreview(files[0], previewVersoAutres);
+          }
+        });
+
+        fileInputVersoAutres.addEventListener('change', (e) => {
+          if (e.target.files.length > 0) {
+            updatePreview(e.target.files[0], previewVersoAutres);
+          }
+        });
+      }
     }
 
     // Fonction pour gérer les dropzones des chèques dans le modal
@@ -7045,8 +7460,7 @@
               typePaiementAutresValue = 'un_seul_paiement';
             } else {
               // FALLBACK: Si le dropdown n'est pas sélectionné correctement,
-              // détecter automatiquement le type selon le statut du dépôt
-              const clientData = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
+              // détecter automatiquement le type selon le statut du dépôt (utilise clientData de ligne 7318)
               const statutDepot = clientData.statutDepot || 'non_envoye';
 
               if (statutDepot === 'non_envoye') {
@@ -7067,9 +7481,20 @@
           }
 
           log('[PACKAGE] Données facturation préparées:', facturationData);
-          
+
+          // Normaliser le texte pour enlever les accents
+          const payeParTextNormalized = payeParText.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+          log('[CHEQUE] Méthode de paiement détectée:', {
+            payeParText: payeParText,
+            payeParTextLower: payeParText.toLowerCase(),
+            payeParTextNormalized: payeParTextNormalized,
+            isVirement: payeParTextNormalized === 'virement',
+            isCheque: payeParTextNormalized.includes('cheque') || payeParTextNormalized.includes('cheq')
+          });
+
           // Ajouter les champs spécifiques selon la méthode et la section active
-          if (payeParText.toLowerCase() === 'virement') {
+          if (payeParTextNormalized === 'virement') {
             let lienVirementEl, motDePasseEl;
             
             // Collecter les champs selon la section active
@@ -7108,7 +7533,8 @@
               motDePasseEl: !!motDePasseEl,
               mdpValue: facturationData.motDePasseVirement
             });
-          } else if (payeParText.toLowerCase() === 'cheque') {
+          } else if (payeParTextNormalized.includes('cheque') || payeParTextNormalized.includes('cheq')) {
+            log('[CHEQUE] ✅ Section chèque détectée!');
             let numeroChequeEl;
             
             // Collecter les champs chèque selon la section active
@@ -7135,7 +7561,124 @@
               numeroChequeEl: !!numeroChequeEl,
               numValue: facturationData.numeroCheque
             });
-            // TODO: Ajouter les URLs des photos si uploadées
+
+            // Ajouter les photos du chèque en base64
+            let photoRectoInput, photoVersoInput;
+
+            log('[CHEQUE] Section active:', sectionActive);
+
+            if (sectionActive === 'paiement-final') {
+              photoRectoInput = document.getElementById('photoFileRectoFinal');
+              photoVersoInput = document.getElementById('photoFileVersoFinal');
+            } else if (sectionActive === 'autres-paiements') {
+              photoRectoInput = document.getElementById('photoFileRectoAutres');
+              photoVersoInput = document.getElementById('photoFileVersoAutres');
+            } else {
+              photoRectoInput = document.getElementById('photoFileRecto');
+              photoVersoInput = document.getElementById('photoFileVerso');
+            }
+
+            log('[CHEQUE] Inputs trouvés:', {
+              photoRectoInput: !!photoRectoInput,
+              photoVersoInput: !!photoVersoInput,
+              rectoHasFiles: !!(photoRectoInput?.files?.length),
+              versoHasFiles: !!(photoVersoInput?.files?.length),
+              rectoFileName: photoRectoInput?.files?.[0]?.name,
+              versoFileName: photoVersoInput?.files?.[0]?.name
+            });
+
+            // Convertir les photos en base64 et uploader au cloud
+            let photoRectoBase64 = null;
+            let photoVersoBase64 = null;
+
+            if (photoRectoInput && photoRectoInput.files && photoRectoInput.files[0]) {
+              log('[CHEQUE] Début conversion recto...');
+              const readerRecto = new FileReader();
+              await new Promise((resolve) => {
+                readerRecto.onload = (e) => {
+                  photoRectoBase64 = e.target.result;
+                  log('[CHEQUE] ✅ Photo recto convertie en base64, taille:', e.target.result.length, 'caractères');
+                  resolve();
+                };
+                readerRecto.readAsDataURL(photoRectoInput.files[0]);
+              });
+            } else {
+              log('[CHEQUE] ⚠️ Aucune photo recto à convertir');
+            }
+
+            if (photoVersoInput && photoVersoInput.files && photoVersoInput.files[0]) {
+              log('[CHEQUE] Début conversion verso...');
+              const readerVerso = new FileReader();
+              await new Promise((resolve) => {
+                readerVerso.onload = (e) => {
+                  photoVersoBase64 = e.target.result;
+                  log('[CHEQUE] ✅ Photo verso convertie en base64, taille:', e.target.result.length, 'caractères');
+                  resolve();
+                };
+                readerVerso.readAsDataURL(photoVersoInput.files[0]);
+              });
+            } else {
+              log('[CHEQUE] ⚠️ Aucune photo verso à convertir');
+            }
+
+            // Uploader les photos au cloud et récupérer les URLs
+            if (photoRectoBase64 || photoVersoBase64) {
+              log('[CHEQUE] 📤 Upload des photos vers le cloud...');
+              try {
+                const username = getFacturationUsername();
+                const numeroSoumission = clientInfo;
+
+                // Déterminer le type de paiement pour le nom du fichier
+                let typePaiement = 'depot';
+                if (sectionActive === 'paiement-final') {
+                  typePaiement = 'paiement_final';
+                } else if (sectionActive === 'autres-paiements') {
+                  // Compter le nombre d'autres paiements existants
+                  const autresPaiementsCount = (clientData.autresPaiements || []).length;
+                  typePaiement = `autre_paiement_${autresPaiementsCount + 1}`;
+                }
+
+                const uploadResponse = await fetch('/api/facturationqe/save-cheque-photos', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    username: username,
+                    numeroSoumission: numeroSoumission,
+                    typePaiement: typePaiement,
+                    photoRecto: photoRectoBase64,
+                    photoVerso: photoVersoBase64
+                  })
+                });
+
+                if (uploadResponse.ok) {
+                  const uploadResult = await uploadResponse.json();
+                  log('[CHEQUE] ✅ Photos uploadées au cloud:', uploadResult.urls);
+
+                  // Stocker les URLs cloud (pas les base64!)
+                  if (uploadResult.urls.photoRecto) {
+                    facturationData.photoRecto = uploadResult.urls.photoRecto;
+                  }
+                  if (uploadResult.urls.photoVerso) {
+                    facturationData.photoVerso = uploadResult.urls.photoVerso;
+                  }
+                } else {
+                  log('[CHEQUE] ❌ Erreur upload photos:', await uploadResponse.text());
+                  alert('Erreur lors de l\'upload des photos du chèque');
+                  return;
+                }
+              } catch (error) {
+                log('[CHEQUE] ❌ Exception upload photos:', error);
+                alert('Erreur lors de l\'upload des photos du chèque');
+                return;
+              }
+            }
+
+            log('[CHEQUE] 📦 URLs cloud ajoutées à facturationData:', {
+              hasRecto: !!facturationData.photoRecto,
+              hasVerso: !!facturationData.photoVerso,
+              rectoUrl: facturationData.photoRecto,
+              versoUrl: facturationData.photoVerso
+            });
           }
           
           // Désactiver le bouton pendant l'envoi
@@ -7147,6 +7690,9 @@
           if (overlay) {
             overlay.classList.add('active');
           }
+
+          // Note: On ne vide PAS la section ici - selectionnerClientFacturation() s'en occupera
+          // pour un rechargement complet et propre
 
           // Envoyer au backend via l'API facturation QE
           const username = getFacturationUsername();
@@ -7213,6 +7759,59 @@
             updateProgressionPaiement(clientData);
           }
 
+          // Mettre à jour TOUTES les données du paiement dans sessionStorage AVANT le rechargement API
+          const currentClient = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
+
+          // Convertir payeParText en format lowercase pour correspondre aux valeurs backend
+          const methode = payeParText.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+          if (sectionActive === 'depot') {
+            currentClient.statutDepot = 'traitement';
+            currentClient.depot = {
+              montant: paiement,
+              date: dateDepot,
+              methode: methode,
+              statut: 'traitement',
+              lienVirement: facturationData.lienVirement || null,
+              motDePasse: facturationData.motDePasseVirement || null,
+              numeroCheque: facturationData.numeroCheque || null,
+              photoRecto: facturationData.photoRecto || null,
+              photoVerso: facturationData.photoVerso || null
+            };
+          } else if (sectionActive === 'paiement-final') {
+            currentClient.statutPaiementFinal = 'traitement';
+            currentClient.paiementFinal = {
+              montant: paiement,
+              date: dateDepot,
+              methode: methode,
+              statut: 'traitement',
+              lienVirement: facturationData.lienVirement || null,
+              motDePasse: facturationData.motDePasseVirement || null,
+              numeroCheque: facturationData.numeroCheque || null,
+              photoRecto: facturationData.photoRecto || null,
+              photoVerso: facturationData.photoVerso || null
+            };
+          }
+
+          // Sauvegarder TEMPORAIREMENT les photos avant le rechargement API
+          const tempPhotosDepot = currentClient.depot ? {
+            photoRecto: currentClient.depot.photoRecto,
+            photoVerso: currentClient.depot.photoVerso
+          } : null;
+          const tempPhotosPaiementFinal = currentClient.paiementFinal ? {
+            photoRecto: currentClient.paiementFinal.photoRecto,
+            photoVerso: currentClient.paiementFinal.photoVerso
+          } : null;
+          // Sauvegarder TOUS les autres paiements avec leurs photos
+          const tempPhotosAutresPaiements = currentClient.autresPaiements ? currentClient.autresPaiements.map(p => ({
+            id: p.id,
+            photoRecto: p.photoRecto,
+            photoVerso: p.photoVerso
+          })) : [];
+
+          sessionStorage.setItem('selectedClientDataFacturation', JSON.stringify(currentClient));
+          log('[UPDATE] Données complètes du paiement mises à jour dans sessionStorage:', sectionActive, currentClient);
+
           // Attendre 800ms puis recharger les colonnes et données
           log('🔄 Rechargement des données et colonnes après envoi...');
           await new Promise(resolve => setTimeout(resolve, 800));
@@ -7221,6 +7820,30 @@
           await chargerFacturationsDepuisAPI();
 
           log('[OK] Données rechargées après envoi au comptable');
+
+          // RESTAURER les URLs des photos après le rechargement API (car l'API peut les écraser)
+          const reloadedClient = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
+          if (tempPhotosDepot && reloadedClient.depot) {
+            reloadedClient.depot.photoRecto = tempPhotosDepot.photoRecto || reloadedClient.depot.photoRecto;
+            reloadedClient.depot.photoVerso = tempPhotosDepot.photoVerso || reloadedClient.depot.photoVerso;
+          }
+          if (tempPhotosPaiementFinal && reloadedClient.paiementFinal) {
+            reloadedClient.paiementFinal.photoRecto = tempPhotosPaiementFinal.photoRecto || reloadedClient.paiementFinal.photoRecto;
+            reloadedClient.paiementFinal.photoVerso = tempPhotosPaiementFinal.photoVerso || reloadedClient.paiementFinal.photoVerso;
+          }
+          // RESTAURER les photos des autres paiements (paiements partiels)
+          if (tempPhotosAutresPaiements.length > 0 && reloadedClient.autresPaiements) {
+            reloadedClient.autresPaiements.forEach(paiement => {
+              const tempPhotos = tempPhotosAutresPaiements.find(tp => tp.id === paiement.id);
+              if (tempPhotos) {
+                paiement.photoRecto = tempPhotos.photoRecto || paiement.photoRecto;
+                paiement.photoVerso = tempPhotos.photoVerso || paiement.photoVerso;
+              }
+            });
+            log('[RESTORE] Photos des paiements partiels restaurées:', tempPhotosAutresPaiements.length);
+          }
+          sessionStorage.setItem('selectedClientDataFacturation', JSON.stringify(reloadedClient));
+          log('[RESTORE] Photos restaurées après rechargement API');
 
           // === NOUVEAU: Réinitialiser le formulaire "Autres paiements" après envoi réussi ===
           if (sectionActive === 'autres-paiements') {
@@ -7273,57 +7896,32 @@
             log('[OK] Formulaire Autres paiements réinitialisé - prêt pour nouveau paiement');
           }
 
+          // RESÉLECTIONNER le client automatiquement pour rafraîchir tout l'état
+          // (grisage, boutons, sections, etc. - tout sera géré automatiquement)
+          // Le spinner reste actif pendant toute l'opération
+          const finalClient = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
+          const clientNameForReload = `${finalClient.prenom || ''} ${finalClient.nom || ''}`.trim();
+
+          if (clientInfo && typeof selectionnerClientFacturation === 'function') {
+            log('[RELOAD] Resélection automatique du client après envoi:', clientInfo);
+            await selectionnerClientFacturation(clientInfo, clientNameForReload, finalClient);
+            log('[OK] ✅ Client resélectionné - état rafraîchi automatiquement');
+          }
+
+          // Cacher le spinner APRÈS la resélection complète
+          if (overlay) {
+            overlay.classList.remove('active');
+          }
+
           // Réinitialiser le bouton envoi
           envoyerBtn.innerHTML = originalText;
           envoyerBtn.disabled = false;
           envoyerBtn.style.backgroundColor = '';
 
-          // Récupérer les données fraîches du client depuis l'API
-          const currentClientNum = sessionStorage.getItem('selectedClientFacturation');
-          const currentClientName = sessionStorage.getItem('selectedClientNameFacturation');
-
-          log('🔄 Rechargement du client avec données fraîches:', currentClientNum);
-
-          if (currentClientNum && currentClientName) {
-            try {
-              // Récupérer les nouvelles données depuis l'API
-              const responseClient = await fetch(`/api/facturationqe/statuts/${username}/${currentClientNum}`);
-              if (responseClient.ok) {
-                const freshData = await responseClient.json();
-                log('[OK] Données fraîches récupérées:', freshData);
-                log('[DEBUG] autresPaiements dans freshData:', freshData.autresPaiements);
-
-                // Recharger le client avec les données fraîches
-                if (typeof selectionnerClientFacturation === 'function') {
-                  await selectionnerClientFacturation(currentClientNum, currentClientName, freshData);
-                  log('[OK] Client rechargé - boutons de paiements partiels générés');
-
-                  // Si c'était un paiement partiel, ouvrir la section "Autres paiements" pour permettre d'en ajouter d'autres
-                  if (sectionActive === 'autres-paiements' && typePaiementAutresText === 'Paiement partiel') {
-                    setTimeout(() => {
-                      showPaiementSection('autres-paiements');
-                      log('[UNLOCK] Section "Autres paiements" réouverte pour ajouter un autre paiement');
-                    }, 300);
-                  }
-                }
-              } else {
-                error('[ERROR] Erreur récupération données fraîches');
-                // Fallback: recharger avec les données en cache
-                const cachedData = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
-                if (typeof selectionnerClientFacturation === 'function') {
-                  await selectionnerClientFacturation(currentClientNum, currentClientName, cachedData);
-                }
-              }
-            } catch (error) {
-              error('[ERROR] Erreur rechargement client:', error);
-            }
-          }
-
-          // === TOUT EST RECHARGÉ - Maintenant cacher l'overlay et afficher le toast ===
-          if (overlay) {
-            overlay.classList.remove('active');
-          }
+          // Afficher le toast de succès
           showSuccessToast('Envoi réussi !', 'Le paiement a été envoyé au comptable avec succès.');
+
+          log('[OK] Paiement envoyé et section grisée automatiquement');
 
         } catch (error) {
           error('Erreur envoi comptable:', error);
@@ -8070,25 +8668,31 @@
         contentDepot.style.opacity = '1';
         contentDepot.style.pointerEvents = 'auto';
         
-        // Rendre les inputs non-modifiables mais visibles
+        // Rendre les inputs non-modifiables mais visibles - AVEC !important pour uniformité
         const inputs = contentDepot.querySelectorAll('input, select, textarea');
         inputs.forEach(input => {
           if (input.tagName === 'INPUT' || input.tagName === 'TEXTAREA') {
             input.readOnly = true;
-            input.style.backgroundColor = 'rgba(55, 65, 81, 0.3)';
-            input.style.color = '#9ca3af';
-            input.style.cursor = 'not-allowed';
+            input.style.setProperty('background', 'rgba(55, 65, 81, 0.3)', 'important');
+            input.style.setProperty('color', 'var(--text-light)', 'important');
+            input.style.setProperty('border-color', 'rgba(75, 85, 99, 0.3)', 'important');
+            input.style.setProperty('cursor', 'not-allowed', 'important');
+            input.style.setProperty('opacity', '0.7', 'important');
+            input.style.pointerEvents = 'none';
           }
         });
-        
-        // Désactiver les dropdowns mais garder le texte visible
+
+        // Désactiver les dropdowns mais garder le texte visible - AVEC !important pour uniformité
         const dropdowns = contentDepot.querySelectorAll('.modern-dropdown');
         dropdowns.forEach(dropdown => {
           dropdown.style.pointerEvents = 'none';
-          dropdown.style.backgroundColor = 'rgba(55, 65, 81, 0.3)';
+          dropdown.style.setProperty('background', 'rgba(55, 65, 81, 0.3)', 'important');
+          dropdown.style.setProperty('border-color', 'rgba(75, 85, 99, 0.3)', 'important');
+          dropdown.style.setProperty('cursor', 'not-allowed', 'important');
+          dropdown.style.setProperty('opacity', '0.7', 'important');
           const placeholder = dropdown.querySelector('.placeholder');
           if (placeholder) {
-            placeholder.style.color = '#9ca3af';
+            placeholder.style.setProperty('color', 'var(--text-light)', 'important');
           }
         });
         
@@ -8126,27 +8730,30 @@
           log('[ERROR] DEBUG - elementsAjouterDepot non trouvé!');
         }
         
-        // Afficher les champs spécifiques au type de paiement (virement/chèque)
-        if (clientData.depot && clientData.depot.type) {
-          
+        // Afficher les champs spécifiques à la méthode de paiement (virement/chèque)
+        if (clientData.depot && (clientData.depot.methode || clientData.depot.type)) {
+
+          // Utiliser 'methode' en priorité, fallback sur 'type' pour compatibilité
+          const depotMethode = clientData.depot.methode || clientData.depot.type;
+
           // D'abord, mettre à jour le dropdown "Payé par"
           const payeParToggle = contentDepot.querySelector('.modern-dropdown .placeholder');
           if (payeParToggle) {
-            const typeText = clientData.depot.type === 'virement' ? 'Virement' : 
-                            clientData.depot.type === 'cheque' ? 'Chèque' : clientData.depot.type;
+            const typeText = depotMethode === 'virement' ? 'Virement' :
+                            depotMethode === 'chèque' || depotMethode === 'cheque' ? 'Chèque' : depotMethode;
             payeParToggle.textContent = typeText;
             log('[OK] Dropdown Payé par mis à jour:', typeText);
           }
-          
+
           // Debug pour voir les éléments disponibles de la section DÉPÔT
           const virementFieldsDepot = document.getElementById('virementFieldsDepot');
           const chequeFieldsDepot = document.getElementById('chequeFieldsDepot');
-          
+
           log('[DEBUG] DEBUG - virementFieldsDepot trouvé:', virementFieldsDepot);
           log('[DEBUG] DEBUG - chequeFieldsDepot trouvé:', chequeFieldsDepot);
-          log('[DEBUG] DEBUG - Type de paiement:', clientData.depot.type);
-          
-          if (clientData.depot.type === 'virement' && virementFieldsDepot) {
+          log('[DEBUG] DEBUG - Méthode de paiement:', depotMethode);
+
+          if (depotMethode === 'virement' && virementFieldsDepot) {
             log('[DEBUG] Affichage des champs virement DÉPÔT...');
             log('[DEBUG] virementFieldsDepot trouvé:', virementFieldsDepot);
             
@@ -8166,37 +8773,149 @@
             log('[DEBUG] lienVirementInput:', lienVirementInput);
             log('[DEBUG] mdpVirementInput:', mdpVirementInput);
             
-            if (lienVirementInput && clientData.depot.lienVirement) {
-              lienVirementInput.value = clientData.depot.lienVirement;
+            if (lienVirementInput) {
+              if (clientData.depot.lienVirement) {
+                lienVirementInput.value = clientData.depot.lienVirement;
+              }
               lienVirementInput.readOnly = true;
-              lienVirementInput.style.backgroundColor = 'rgba(55, 65, 81, 0.3)';
-              lienVirementInput.style.color = '#9ca3af';
-              log('[OK] Lien virement rempli:', clientData.depot.lienVirement);
+              lienVirementInput.style.setProperty('background', 'rgba(55, 65, 81, 0.3)', 'important');
+              lienVirementInput.style.setProperty('color', 'var(--text-light)', 'important');
+              lienVirementInput.style.setProperty('border-color', 'rgba(75, 85, 99, 0.3)', 'important');
+              lienVirementInput.style.setProperty('cursor', 'not-allowed', 'important');
+              lienVirementInput.style.setProperty('opacity', '0.7', 'important');
+              lienVirementInput.style.pointerEvents = 'none';
+              log('[OK] Lien virement grisé uniformément');
             }
-            if (mdpVirementInput && clientData.depot.motDePasse) {
-              mdpVirementInput.value = clientData.depot.motDePasse;
+            if (mdpVirementInput) {
+              if (clientData.depot.motDePasse) {
+                mdpVirementInput.value = clientData.depot.motDePasse;
+              }
               mdpVirementInput.readOnly = true;
-              mdpVirementInput.style.backgroundColor = 'rgba(55, 65, 81, 0.3)';
-              mdpVirementInput.style.color = '#9ca3af';
-              log('[OK] Mot de passe rempli:', clientData.depot.motDePasse);
+              mdpVirementInput.style.setProperty('background', 'rgba(55, 65, 81, 0.3)', 'important');
+              mdpVirementInput.style.setProperty('color', 'var(--text-light)', 'important');
+              mdpVirementInput.style.setProperty('border-color', 'rgba(75, 85, 99, 0.3)', 'important');
+              mdpVirementInput.style.setProperty('cursor', 'not-allowed', 'important');
+              mdpVirementInput.style.setProperty('opacity', '0.7', 'important');
+              mdpVirementInput.style.pointerEvents = 'none';
+              log('[OK] Mot de passe virement grisé uniformément');
             }
             
             log('[OK] Champs virement DÉPÔT affichés et remplis');
-            
-          } else if (clientData.depot.type === 'cheque' && chequeFieldsDepot) {
+
+          } else if ((depotMethode === 'chèque' || depotMethode === 'cheque') && chequeFieldsDepot) {
+            // Forcer l'affichage avec !important (comme virement)
             chequeFieldsDepot.classList.remove('hidden');
-            chequeFieldsDepot.style.display = 'grid';
-            
+            chequeFieldsDepot.style.setProperty('display', 'grid', 'important');
+            chequeFieldsDepot.style.setProperty('opacity', '1', 'important');
+            chequeFieldsDepot.style.setProperty('visibility', 'visible', 'important');
+            chequeFieldsDepot.style.setProperty('max-height', 'none', 'important');
+
             // Remplir les champs chèque avec les données
             const numeroChequeInput = chequeFieldsDepot.querySelector('input[name="num_cheque"]');
-            if (numeroChequeInput && clientData.depot.numeroCheque) {
-              numeroChequeInput.value = clientData.depot.numeroCheque;
+            if (numeroChequeInput) {
+              if (clientData.depot.numeroCheque) {
+                numeroChequeInput.value = clientData.depot.numeroCheque;
+              }
               numeroChequeInput.readOnly = true;
-              numeroChequeInput.style.backgroundColor = 'rgba(55, 65, 81, 0.3)';
-              numeroChequeInput.style.color = '#9ca3af';
+              numeroChequeInput.style.setProperty('background', 'rgba(55, 65, 81, 0.3)', 'important');
+              numeroChequeInput.style.setProperty('color', 'var(--text-light)', 'important');
+              numeroChequeInput.style.setProperty('border-color', 'rgba(75, 85, 99, 0.3)', 'important');
+              numeroChequeInput.style.setProperty('cursor', 'not-allowed', 'important');
+              numeroChequeInput.style.setProperty('opacity', '0.7', 'important');
+              numeroChequeInput.style.pointerEvents = 'none';
             }
-            
-            log('[OK] Champs chèque affichés et remplis');
+
+            // Griser les dropzones recto/verso avec !important
+            const dropzoneRecto = document.getElementById('dropzoneRecto');
+            const dropzoneVerso = document.getElementById('dropzoneVerso');
+            const previewRecto = document.getElementById('previewRecto');
+            const previewVerso = document.getElementById('previewVerso');
+
+            // IMPORTANT: Cacher les previews du paiement final pour éviter la superposition
+            const previewRectoFinal = document.getElementById('previewRectoFinal');
+            const previewVersoFinal = document.getElementById('previewVersoFinal');
+            if (previewRectoFinal) {
+              previewRectoFinal.style.display = 'none';
+              console.log('🚫 previewRectoFinal caché pour éviter superposition');
+            }
+            if (previewVersoFinal) {
+              previewVersoFinal.style.display = 'none';
+              console.log('🚫 previewVersoFinal caché pour éviter superposition');
+            }
+
+            // Réafficher les previews du dépôt
+            if (previewRecto) {
+              previewRecto.style.display = 'block';
+              console.log('✅ previewRecto (depot) affiché');
+            }
+            if (previewVerso) {
+              previewVerso.style.display = 'block';
+              console.log('✅ previewVerso (depot) affiché');
+            }
+
+            // DEBUG: Vérifier les URLs AVANT de générer le HTML
+            console.log('═════════════════════════════════════════════');
+            console.log('🔍 GÉNÉRATION HTML PHOTOS DÉPÔT');
+            console.log('Client:', clientData.prenom, clientData.nom);
+            console.log('clientData.depot:', clientData.depot);
+            console.log('photoRecto:', clientData.depot?.photoRecto);
+            console.log('photoVerso:', clientData.depot?.photoVerso);
+
+            // Vérifier l'état de TOUS les previews
+            const allPreviews = [
+              {name: 'previewRecto (depot)', el: previewRecto},
+              {name: 'previewVerso (depot)', el: previewVerso},
+              {name: 'previewRectoFinal', el: document.getElementById('previewRectoFinal')},
+              {name: 'previewVersoFinal', el: document.getElementById('previewVersoFinal')}
+            ];
+            console.log('📋 ÉTAT DES PREVIEWS:');
+            allPreviews.forEach(p => {
+              if (p.el) {
+                const style = window.getComputedStyle(p.el);
+                console.log(`  ${p.name}:`, {
+                  display: style.display,
+                  visibility: style.visibility,
+                  opacity: style.opacity,
+                  zIndex: style.zIndex,
+                  innerHTML: p.el.innerHTML.substring(0, 100)
+                });
+              }
+            });
+            console.log('═════════════════════════════════════════════');
+
+            if (dropzoneRecto) {
+              dropzoneRecto.style.setProperty('opacity', '0.7', 'important');
+              dropzoneRecto.style.setProperty('cursor', 'not-allowed', 'important');
+              dropzoneRecto.style.setProperty('pointer-events', 'none', 'important');
+              dropzoneRecto.style.setProperty('background', 'rgba(55, 65, 81, 0.3)', 'important');
+            }
+            if (dropzoneVerso) {
+              dropzoneVerso.style.setProperty('opacity', '0.7', 'important');
+              dropzoneVerso.style.setProperty('cursor', 'not-allowed', 'important');
+              dropzoneVerso.style.setProperty('pointer-events', 'none', 'important');
+              dropzoneVerso.style.setProperty('background', 'rgba(55, 65, 81, 0.3)', 'important');
+            }
+
+            if (previewRecto && clientData.depot.photoRecto) {
+              previewRecto.innerHTML = `
+                <img src="${clientData.depot.photoRecto}"
+                     style="width: 80px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid var(--border-dark);"
+                     alt="Recto"
+                     onclick="ouvrirModalImage('${clientData.depot.photoRecto}', 'Recto du chèque - Dépôt')">
+              `;
+              console.log('✅ HTML GÉNÉRÉ pour previewRecto (dépôt):', previewRecto.innerHTML);
+            }
+            if (previewVerso && clientData.depot.photoVerso) {
+              previewVerso.innerHTML = `
+                <img src="${clientData.depot.photoVerso}"
+                     style="width: 80px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid var(--border-dark);"
+                     alt="Verso"
+                     onclick="ouvrirModalImage('${clientData.depot.photoVerso}', 'Verso du chèque - Dépôt')">
+              `;
+              console.log('✅ HTML GÉNÉRÉ pour previewVerso (dépôt):', previewVerso.innerHTML);
+            }
+
+            log('[OK] Champs chèque affichés et remplis avec !important');
           }
         }
         
@@ -8312,8 +9031,94 @@
     // Les paiements envoyés deviennent des boutons "Paiement Partiel 1, 2, 3..." entre Dépôt et Paiement Final
 
     function rendreSectionAutresPaiementsNonModifiable() {
-      log('[WARN] rendreSectionAutresPaiementsNonModifiable appelée - MAIS ne grise plus la section');
-      // Ne rien faire - la section "Autres paiements" reste toujours active
+      log('[WARN] rendreSectionAutresPaiementsNonModifiable appelée');
+
+      const contentAutresPaiements = document.getElementById('content-autres-paiements');
+      if (!contentAutresPaiements) return;
+
+      // Obtenir les données client
+      const clientData = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
+      const elementsAjouterAutres = document.getElementById('elementsAjouterAutres');
+      const chequeFieldsAutres = document.getElementById('chequeFieldsAutres');
+      const virementFieldsAutres = document.getElementById('virementFieldsAutres');
+
+      // Vérifier s'il y a un paiement "autres" actif (le premier dans le tableau)
+      if (clientData.autresPaiements && clientData.autresPaiements.length > 0) {
+        const paiementActif = clientData.autresPaiements[0];
+        const enTraitement = paiementActif.statut === 'traitement' || paiementActif.statut === 'attente_comptable';
+
+        if (enTraitement && paiementActif.methode && elementsAjouterAutres) {
+          // Forcer l'affichage de la section éléments à ajouter
+          elementsAjouterAutres.style.setProperty('max-height', '1000px', 'important');
+          elementsAjouterAutres.style.setProperty('opacity', '1', 'important');
+          elementsAjouterAutres.style.setProperty('display', 'block', 'important');
+          elementsAjouterAutres.style.setProperty('visibility', 'visible', 'important');
+
+          if (paiementActif.methode === 'cheque' && chequeFieldsAutres) {
+            // Forcer l'affichage des champs chèque avec !important
+            chequeFieldsAutres.classList.remove('hidden');
+            chequeFieldsAutres.style.setProperty('display', 'grid', 'important');
+            chequeFieldsAutres.style.setProperty('opacity', '1', 'important');
+            chequeFieldsAutres.style.setProperty('visibility', 'visible', 'important');
+            chequeFieldsAutres.style.setProperty('max-height', 'none', 'important');
+
+            // Remplir le numéro de chèque
+            const numeroChequeInput = chequeFieldsAutres.querySelector('input[name="num_cheque_autres"]');
+            if (numeroChequeInput && paiementActif.numeroCheque) {
+              numeroChequeInput.value = paiementActif.numeroCheque;
+              numeroChequeInput.readOnly = true;
+              numeroChequeInput.style.backgroundColor = 'rgba(55, 65, 81, 0.3)';
+              numeroChequeInput.style.color = '#9ca3af';
+              numeroChequeInput.style.cursor = 'not-allowed';
+            }
+
+            // Afficher les vignettes des photos sous les dropzones
+            const dropzoneRectoAutres = document.getElementById('dropzoneRectoAutres');
+            const dropzoneVersoAutres = document.getElementById('dropzoneVersoAutres');
+            const previewRectoAutres = document.getElementById('previewRectoAutres');
+            const previewVersoAutres = document.getElementById('previewVersoAutres');
+
+            if (dropzoneRectoAutres) {
+              dropzoneRectoAutres.style.opacity = '0.7';
+              dropzoneRectoAutres.style.cursor = 'not-allowed';
+              dropzoneRectoAutres.style.pointerEvents = 'none';
+            }
+            if (dropzoneVersoAutres) {
+              dropzoneVersoAutres.style.opacity = '0.7';
+              dropzoneVersoAutres.style.cursor = 'not-allowed';
+              dropzoneVersoAutres.style.pointerEvents = 'none';
+            }
+
+            if (previewRectoAutres && paiementActif.photoRecto) {
+              previewRectoAutres.innerHTML = `
+                <img src="${paiementActif.photoRecto}"
+                     style="width: 80px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid var(--border-dark);"
+                     alt="Recto"
+                     onclick="ouvrirModalImage('${paiementActif.photoRecto}', 'Recto du chèque')">
+              `;
+            }
+            if (previewVersoAutres && paiementActif.photoVerso) {
+              previewVersoAutres.innerHTML = `
+                <img src="${paiementActif.photoVerso}"
+                     style="width: 80px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid var(--border-dark);"
+                     alt="Verso"
+                     onclick="ouvrirModalImage('${paiementActif.photoVerso}', 'Verso du chèque')">
+              `;
+            }
+
+            log('[OK] Champs chèque AUTRES PAIEMENTS forcés visibles avec !important');
+
+          } else if (paiementActif.methode === 'virement' && virementFieldsAutres) {
+            // Forcer l'affichage des champs virement avec !important
+            virementFieldsAutres.classList.remove('hidden');
+            virementFieldsAutres.style.setProperty('display', 'grid', 'important');
+            virementFieldsAutres.style.setProperty('opacity', '1', 'important');
+            virementFieldsAutres.style.setProperty('visibility', 'visible', 'important');
+
+            log('[OK] Champs virement AUTRES PAIEMENTS forcés visibles avec !important');
+          }
+        }
+      }
     }
 
     /**
@@ -8440,14 +9245,17 @@
           badge = '<span class="px-3 py-1 text-xs rounded-full ml-3" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">En traitement</span>';
         }
 
-        // Capitaliser la première lettre de la méthode
+        // Normaliser la méthode (enlever accents: chèque → cheque)
+        const methodeNormalized = paiement.methode ? paiement.methode.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
+
+        // Capitaliser la première lettre de la méthode pour affichage
         const methodeCapitalized = paiement.methode ? paiement.methode.charAt(0).toUpperCase() + paiement.methode.slice(1) : 'N/A';
 
         // Construire les champs virement (grisés)
         let virementFields = '';
-        if (paiement.methode === 'virement') {
+        if (methodeNormalized === 'virement') {
           virementFields = `
-            <div class="overflow-hidden" style="max-height: 1000px; opacity: 1; pointer-events: none;">
+            <div class="overflow-hidden" style="max-height: 1000px; opacity: 1;">
               <h2 class="text-xl font-bold mb-4 border-b pb-2" style="color: var(--text-light); border-color: var(--border-dark);">
                 <i class="fas fa-plus mr-2 text-orange-500"></i>
                 Éléments à ajouter - Paiement Partiel ${numero}
@@ -8477,9 +9285,9 @@
 
         // Construire les champs chèque (grisés)
         let chequeFields = '';
-        if (paiement.methode === 'cheque') {
+        if (methodeNormalized === 'cheque') {
           chequeFields = `
-            <div class="overflow-hidden" style="max-height: 1000px; opacity: 1; pointer-events: none;">
+            <div class="overflow-hidden" style="max-height: 1000px; opacity: 1;">
               <h2 class="text-xl font-bold mb-4 border-b pb-2" style="color: var(--text-light); border-color: var(--border-dark);">
                 <i class="fas fa-plus mr-2 text-orange-500"></i>
                 Éléments à ajouter - Paiement Partiel ${numero}
@@ -8492,7 +9300,10 @@
                     Recto du chèque
                   </label>
                   <div class="upload-zone-small" style="background: rgba(55, 65, 81, 0.3) !important; border-color: rgba(75, 85, 99, 0.3) !important; opacity: 0.7 !important; cursor: not-allowed; pointer-events: none;">
-                    <p style="color: var(--text-light);"><i class="fas fa-check mr-1"></i> Recto envoyé</p>
+                    <p style="color: var(--text-light);"><i class="fas fa-upload mr-1"></i> Recto</p>
+                  </div>
+                  <div class="mt-2" style="pointer-events: auto;">
+                    <img src="${paiement.photoRecto}" style="width: 80px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid var(--border-dark);" alt="Recto" onclick="ouvrirModalImage('${paiement.photoRecto}', 'Recto du chèque - Paiement Partiel ${numero}')">
                   </div>
                 </div>
                 <div>
@@ -8501,7 +9312,10 @@
                     Verso du chèque
                   </label>
                   <div class="upload-zone-small" style="background: rgba(55, 65, 81, 0.3) !important; border-color: rgba(75, 85, 99, 0.3) !important; opacity: 0.7 !important; cursor: not-allowed; pointer-events: none;">
-                    <p style="color: var(--text-light);"><i class="fas fa-check mr-1"></i> Verso envoyé</p>
+                    <p style="color: var(--text-light);"><i class="fas fa-upload mr-1"></i> Verso</p>
+                  </div>
+                  <div class="mt-2" style="pointer-events: auto;">
+                    <img src="${paiement.photoVerso}" style="width: 80px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid var(--border-dark);" alt="Verso" onclick="ouvrirModalImage('${paiement.photoVerso}', 'Verso du chèque - Paiement Partiel ${numero}')">
                   </div>
                 </div>
                 <div>
@@ -8587,14 +9401,17 @@
           badge = '<span class="px-3 py-1 text-xs rounded-full ml-3" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">En traitement</span>';
         }
 
-        // Capitaliser la première lettre de la méthode
+        // Normaliser la méthode (enlever accents: chèque → cheque)
+        const methodeNormalized = paiement.methode ? paiement.methode.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
+
+        // Capitaliser la première lettre de la méthode pour affichage
         const methodeCapitalized = paiement.methode ? paiement.methode.charAt(0).toUpperCase() + paiement.methode.slice(1) : 'N/A';
 
         // Construire les champs virement (grisés)
         let virementFields = '';
-        if (paiement.methode === 'virement') {
+        if (methodeNormalized === 'virement') {
           virementFields = `
-            <div class="overflow-hidden" style="max-height: 1000px; opacity: 1; pointer-events: none;">
+            <div class="overflow-hidden" style="max-height: 1000px; opacity: 1;">
               <h2 class="text-xl font-bold mb-4 border-b pb-2" style="color: var(--text-light); border-color: var(--border-dark);">
                 <i class="fas fa-plus mr-2 text-orange-500"></i>
                 Éléments à ajouter - Un seul paiement
@@ -8624,9 +9441,9 @@
 
         // Construire les champs chèque (grisés)
         let chequeFields = '';
-        if (paiement.methode === 'cheque') {
+        if (methodeNormalized === 'cheque') {
           chequeFields = `
-            <div class="overflow-hidden" style="max-height: 1000px; opacity: 1; pointer-events: none;">
+            <div class="overflow-hidden" style="max-height: 1000px; opacity: 1;">
               <h2 class="text-xl font-bold mb-4 border-b pb-2" style="color: var(--text-light); border-color: var(--border-dark);">
                 <i class="fas fa-plus mr-2 text-orange-500"></i>
                 Éléments à ajouter - Un seul paiement
@@ -8639,7 +9456,10 @@
                     Recto du chèque
                   </label>
                   <div class="upload-zone-small" style="background: rgba(55, 65, 81, 0.3) !important; border-color: rgba(75, 85, 99, 0.3) !important; opacity: 0.7 !important; cursor: not-allowed; pointer-events: none;">
-                    <p style="color: var(--text-light);"><i class="fas fa-check mr-1"></i> Recto envoyé</p>
+                    <p style="color: var(--text-light);"><i class="fas fa-upload mr-1"></i> Recto</p>
+                  </div>
+                  <div class="mt-2" style="pointer-events: auto;">
+                    <img src="${paiement.photoRecto}" style="width: 80px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid var(--border-dark);" alt="Recto" onclick="ouvrirModalImage('${paiement.photoRecto}', 'Recto du chèque - Un seul paiement')">
                   </div>
                 </div>
                 <div>
@@ -8648,7 +9468,10 @@
                     Verso du chèque
                   </label>
                   <div class="upload-zone-small" style="background: rgba(55, 65, 81, 0.3) !important; border-color: rgba(75, 85, 99, 0.3) !important; opacity: 0.7 !important; cursor: not-allowed; pointer-events: none;">
-                    <p style="color: var(--text-light);"><i class="fas fa-check mr-1"></i> Verso envoyé</p>
+                    <p style="color: var(--text-light);"><i class="fas fa-upload mr-1"></i> Verso</p>
+                  </div>
+                  <div class="mt-2" style="pointer-events: auto;">
+                    <img src="${paiement.photoVerso}" style="width: 80px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid var(--border-dark);" alt="Verso" onclick="ouvrirModalImage('${paiement.photoVerso}', 'Verso du chèque - Un seul paiement')">
                   </div>
                 </div>
                 <div>
@@ -8862,30 +9685,36 @@
         // Section reste visible et cliquable (pas d'opacité réduite)
         contentPaiementFinal.style.opacity = '1';
         contentPaiementFinal.style.pointerEvents = 'auto';
-        
-        // Rendre les inputs non-modifiables mais visibles
+
+        // Rendre les inputs non-modifiables mais visibles - AVEC !important pour uniformité
         const inputs = contentPaiementFinal.querySelectorAll('input, select, textarea');
         inputs.forEach(input => {
           if (input.tagName === 'INPUT' || input.tagName === 'TEXTAREA') {
             input.readOnly = true;
-            input.style.backgroundColor = 'rgba(55, 65, 81, 0.3)';
-            input.style.color = '#9ca3af';
-            input.style.cursor = 'not-allowed';
+            input.style.setProperty('background', 'rgba(55, 65, 81, 0.3)', 'important');
+            input.style.setProperty('color', 'var(--text-light)', 'important');
+            input.style.setProperty('border-color', 'rgba(75, 85, 99, 0.3)', 'important');
+            input.style.setProperty('cursor', 'not-allowed', 'important');
+            input.style.setProperty('opacity', '0.7', 'important');
+            input.style.pointerEvents = 'none';
             // Retirer placeholder pour champs vides si grisés
             if (input.value === '' && (input.name === 'mdp_virement_final' || input.name === 'mdp_virement')) {
               input.placeholder = '';
             }
           }
         });
-        
-        // Désactiver les dropdowns mais garder le texte visible
+
+        // Désactiver les dropdowns mais garder le texte visible - AVEC !important pour uniformité
         const dropdowns = contentPaiementFinal.querySelectorAll('.modern-dropdown');
         dropdowns.forEach(dropdown => {
           dropdown.style.pointerEvents = 'none';
-          dropdown.style.backgroundColor = 'rgba(55, 65, 81, 0.3)';
+          dropdown.style.setProperty('background', 'rgba(55, 65, 81, 0.3)', 'important');
+          dropdown.style.setProperty('border-color', 'rgba(75, 85, 99, 0.3)', 'important');
+          dropdown.style.setProperty('cursor', 'not-allowed', 'important');
+          dropdown.style.setProperty('opacity', '0.7', 'important');
           const placeholder = dropdown.querySelector('.placeholder');
           if (placeholder) {
-            placeholder.style.color = '#9ca3af';
+            placeholder.style.setProperty('color', 'var(--text-light)', 'important');
           }
         });
         
@@ -8899,7 +9728,9 @@
         const statutPaiementFinalSection = clientData.paiementFinal?.statut || clientData.statutPaiementFinal;
         const paiementFinalEnTraitement = statutPaiementFinalSection === 'traitement' || statutPaiementFinalSection === 'attente_comptable';
 
-        if (elementsAjouterPaiementFinal && clientData.paiementFinal && clientData.paiementFinal.type && paiementFinalEnTraitement) {
+        const paiementFinalMethode = clientData.paiementFinal?.methode || clientData.paiementFinal?.type;
+
+        if (elementsAjouterPaiementFinal && clientData.paiementFinal && paiementFinalMethode && paiementFinalEnTraitement) {
           // Forcer l'affichage de la section éléments à ajouter SEULEMENT si en traitement/attente_comptable
           elementsAjouterPaiementFinal.style.setProperty('max-height', '1000px', 'important');
           elementsAjouterPaiementFinal.style.setProperty('opacity', '1', 'important');
@@ -8909,31 +9740,35 @@
           elementsAjouterPaiementFinal.style.setProperty('height', 'auto', 'important');
 
           log('[OK] Section éléments à ajouter PAIEMENT FINAL FORCÉE visible pour traitement/attente_comptable');
-          
+
           const virementFieldsPaiementFinal = document.getElementById('virementFieldsPaiementFinal');
           const chequeFieldsPaiementFinal = document.getElementById('chequeFieldsPaiementFinal');
-          
-          if (clientData.paiementFinal.type === 'virement' && virementFieldsPaiementFinal) {
+
+          if (paiementFinalMethode === 'virement' && virementFieldsPaiementFinal) {
             // Afficher et griser les champs virement paiement final
             virementFieldsPaiementFinal.classList.remove('hidden');
             virementFieldsPaiementFinal.style.setProperty('display', 'grid', 'important');
             virementFieldsPaiementFinal.style.setProperty('opacity', '1', 'important');
             virementFieldsPaiementFinal.style.setProperty('visibility', 'visible', 'important');
             
-            // Remplir et griser les champs virement
+            // Remplir et griser TOUS les champs virement - AVEC !important pour uniformité
             const lienVirementFinal = virementFieldsPaiementFinal.querySelector('input[name="lien_virement_final"]');
             const mdpVirementFinal = virementFieldsPaiementFinal.querySelector('input[name="mdp_virement_final"]');
-            
+
             if (lienVirementFinal) {
               if (clientData.paiementFinal.lienVirement) {
                 lienVirementFinal.value = clientData.paiementFinal.lienVirement;
               }
               lienVirementFinal.readOnly = true;
-              lienVirementFinal.style.backgroundColor = 'rgba(55, 65, 81, 0.3)';
-              lienVirementFinal.style.color = '#9ca3af';
-              lienVirementFinal.style.cursor = 'not-allowed';
+              lienVirementFinal.style.setProperty('background', 'rgba(55, 65, 81, 0.3)', 'important');
+              lienVirementFinal.style.setProperty('color', 'var(--text-light)', 'important');
+              lienVirementFinal.style.setProperty('border-color', 'rgba(75, 85, 99, 0.3)', 'important');
+              lienVirementFinal.style.setProperty('cursor', 'not-allowed', 'important');
+              lienVirementFinal.style.setProperty('opacity', '0.7', 'important');
+              lienVirementFinal.style.pointerEvents = 'none';
+              log('[OK] Lien virement final grisé');
             }
-            
+
             if (mdpVirementFinal) {
               if (clientData.paiementFinal.motDePasse) {
                 mdpVirementFinal.value = clientData.paiementFinal.motDePasse;
@@ -8942,30 +9777,98 @@
                 mdpVirementFinal.placeholder = '';
               }
               mdpVirementFinal.readOnly = true;
-              mdpVirementFinal.style.backgroundColor = 'rgba(55, 65, 81, 0.3)';
-              mdpVirementFinal.style.color = '#9ca3af';
-              mdpVirementFinal.style.cursor = 'not-allowed';
+              mdpVirementFinal.style.setProperty('background', 'rgba(55, 65, 81, 0.3)', 'important');
+              mdpVirementFinal.style.setProperty('color', 'var(--text-light)', 'important');
+              mdpVirementFinal.style.setProperty('border-color', 'rgba(75, 85, 99, 0.3)', 'important');
+              mdpVirementFinal.style.setProperty('cursor', 'not-allowed', 'important');
+              mdpVirementFinal.style.setProperty('opacity', '0.7', 'important');
+              mdpVirementFinal.style.pointerEvents = 'none';
+              log('[OK] Mot de passe virement final grisé');
             }
             
             log('[OK] Champs virement PAIEMENT FINAL grisés automatiquement');
-            
-          } else if (clientData.paiementFinal.type === 'cheque' && chequeFieldsPaiementFinal) {
-            // Afficher et griser les champs chèque paiement final
+
+          } else if ((paiementFinalMethode === 'chèque' || paiementFinalMethode === 'cheque') && chequeFieldsPaiementFinal) {
+            // Afficher et griser les champs chèque paiement final - FORCER avec !important
             chequeFieldsPaiementFinal.classList.remove('hidden');
-            chequeFieldsPaiementFinal.style.display = 'grid';
-            
+            chequeFieldsPaiementFinal.style.setProperty('display', 'grid', 'important');
+            chequeFieldsPaiementFinal.style.setProperty('opacity', '1', 'important');
+            chequeFieldsPaiementFinal.style.setProperty('visibility', 'visible', 'important');
+            chequeFieldsPaiementFinal.style.setProperty('max-height', 'none', 'important');
+
             const numeroChequeInput = chequeFieldsPaiementFinal.querySelector('input[name="num_cheque_final"]');
             if (numeroChequeInput) {
               if (clientData.paiementFinal.numeroCheque) {
                 numeroChequeInput.value = clientData.paiementFinal.numeroCheque;
               }
               numeroChequeInput.readOnly = true;
-              numeroChequeInput.style.backgroundColor = 'rgba(55, 65, 81, 0.3)';
-              numeroChequeInput.style.color = '#9ca3af';
-              numeroChequeInput.style.cursor = 'not-allowed';
+              numeroChequeInput.style.setProperty('background', 'rgba(55, 65, 81, 0.3)', 'important');
+              numeroChequeInput.style.setProperty('color', 'var(--text-light)', 'important');
+              numeroChequeInput.style.setProperty('border-color', 'rgba(75, 85, 99, 0.3)', 'important');
+              numeroChequeInput.style.setProperty('cursor', 'not-allowed', 'important');
+              numeroChequeInput.style.setProperty('opacity', '0.7', 'important');
+              numeroChequeInput.style.pointerEvents = 'none';
             }
-            
-            log('[OK] Champs chèque PAIEMENT FINAL grisés automatiquement');
+
+            // Griser les dropzones recto/verso avec !important
+            const dropzoneRectoFinal = document.getElementById('dropzoneRectoFinal');
+            const dropzoneVersoFinal = document.getElementById('dropzoneVersoFinal');
+            const previewRectoFinal = document.getElementById('previewRectoFinal');
+            const previewVersoFinal = document.getElementById('previewVersoFinal');
+
+            // IMPORTANT: Cacher les previews du dépôt pour éviter la superposition
+            const previewRectoDepot = document.getElementById('previewRecto');
+            const previewVersoDepot = document.getElementById('previewVerso');
+            if (previewRectoDepot) {
+              previewRectoDepot.style.display = 'none';
+              console.log('🚫 previewRecto (depot) caché pour éviter superposition');
+            }
+            if (previewVersoDepot) {
+              previewVersoDepot.style.display = 'none';
+              console.log('🚫 previewVerso (depot) caché pour éviter superposition');
+            }
+
+            // Réafficher les previews du paiement final
+            if (previewRectoFinal) {
+              previewRectoFinal.style.display = 'block';
+              console.log('✅ previewRectoFinal affiché');
+            }
+            if (previewVersoFinal) {
+              previewVersoFinal.style.display = 'block';
+              console.log('✅ previewVersoFinal affiché');
+            }
+
+            if (dropzoneRectoFinal) {
+              dropzoneRectoFinal.style.setProperty('opacity', '0.7', 'important');
+              dropzoneRectoFinal.style.setProperty('cursor', 'not-allowed', 'important');
+              dropzoneRectoFinal.style.setProperty('pointer-events', 'none', 'important');
+              dropzoneRectoFinal.style.setProperty('background', 'rgba(55, 65, 81, 0.3)', 'important');
+            }
+            if (dropzoneVersoFinal) {
+              dropzoneVersoFinal.style.setProperty('opacity', '0.7', 'important');
+              dropzoneVersoFinal.style.setProperty('cursor', 'not-allowed', 'important');
+              dropzoneVersoFinal.style.setProperty('pointer-events', 'none', 'important');
+              dropzoneVersoFinal.style.setProperty('background', 'rgba(55, 65, 81, 0.3)', 'important');
+            }
+
+            if (previewRectoFinal && clientData.paiementFinal.photoRecto) {
+              previewRectoFinal.innerHTML = `
+                <img src="${clientData.paiementFinal.photoRecto}"
+                     style="width: 80px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid var(--border-dark);"
+                     alt="Recto"
+                     onclick="ouvrirModalImage('${clientData.paiementFinal.photoRecto}', 'Recto du chèque - Paiement Final')">
+              `;
+            }
+            if (previewVersoFinal && clientData.paiementFinal.photoVerso) {
+              previewVersoFinal.innerHTML = `
+                <img src="${clientData.paiementFinal.photoVerso}"
+                     style="width: 80px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid var(--border-dark);"
+                     alt="Verso"
+                     onclick="ouvrirModalImage('${clientData.paiementFinal.photoVerso}', 'Verso du chèque - Paiement Final')">
+              `;
+            }
+
+            log('[OK] Champs chèque PAIEMENT FINAL grisés automatiquement avec !important');
           }
         }
         
@@ -9572,17 +10475,41 @@
     // Fonction pour sélectionner un client facturation - déclarée globalement
     window.selectionnerClientFacturation = async function(numeroSoumission, clientName, clientData) {
       log('[TARGET] Sélection client facturation:', numeroSoumission, clientName);
-      
-      // Fermer le menu
-      fermerMenuFacturation();
-      
-      // Mettre à jour l'input avec le nom du client
-      const inputSearch = document.getElementById('clientSearchFacturation');
-      if (inputSearch) {
-        inputSearch.value = clientName;
-        // Mettre la bordure en vert quand un client est sélectionné
-        inputSearch.style.setProperty('border-right-color', '#4caf50', 'important');
+
+      // Afficher le spinner de chargement de la section paiements
+      const sectionPaiementsOverlay = document.getElementById('sectionPaiementsOverlay');
+      const loadingText = sectionPaiementsOverlay?.querySelector('.loading-text');
+      if (sectionPaiementsOverlay) {
+        if (loadingText) {
+          loadingText.textContent = 'Chargement du client...';
+        }
+        sectionPaiementsOverlay.classList.add('active');
       }
+
+      // Enregistrer le moment où on commence le chargement (pour délai minimum de 2s)
+      const startTime = Date.now();
+
+      try {
+        // CRUCIAL: Vider le sessionStorage pour éviter les données en cache de l'ancien client
+        sessionStorage.removeItem('selectedClientDataFacturation');
+        sessionStorage.removeItem('selectedClientFacturation');
+        sessionStorage.removeItem('selectedClientNameFacturation');
+        log('🧹 SessionStorage vidé avant le nouveau client');
+
+        // CRUCIAL: Réinitialiser complètement l'interface AVANT de charger les nouvelles données
+        resetCompleteInterface();
+        log('🔄 Interface réinitialisée, chargement du nouveau client...');
+
+        // Fermer le menu
+        fermerMenuFacturation();
+
+        // Mettre à jour l'input avec le nom du client
+        const inputSearch = document.getElementById('clientSearchFacturation');
+        if (inputSearch) {
+          inputSearch.value = clientName;
+          // Mettre la bordure en vert quand un client est sélectionné
+          inputSearch.style.setProperty('border-right-color', '#4caf50', 'important');
+        }
       
       // Récupérer les données centralisées du workflow
       const clientsWorkflow = await obtenirDonneesClientsWorkflow();
@@ -9627,10 +10554,10 @@
       sessionStorage.setItem('selectedClientDataFacturation', JSON.stringify(clientDataEnriched));
       sessionStorage.setItem('selectedClientFacturation', numeroSoumission);
       sessionStorage.setItem('selectedClientNameFacturation', clientName);
-      
-      // RÉINITIALISATION COMPLÈTE DE L'INTERFACE AVANT D'APPLIQUER LE NOUVEAU CLIENT
-      resetCompleteInterface();
-      
+
+      // NOTE: resetCompleteInterface() est déjà appelé au début de cette fonction (ligne 10192)
+      // Ne pas rappeler ici sinon ça efface tout ce qui vient d'être chargé!
+
       // Définir les variables de statut selon le workflow centralisé
       // Priorité: depot.statut si existe, sinon statutDepot
       const statutDepot = clientDataEnriched.depot?.statut || clientDataEnriched.statutDepot || 'non_envoye';
@@ -10145,7 +11072,27 @@
       }, 500);
       
       log('[OK] Client facturation sélectionné et données sauvegardées');
+    } finally {
+      // S'assurer que le spinner reste visible pendant au moins 1 seconde
+      const elapsedTime = Date.now() - startTime;
+      const minDisplayTime = 1000; // 1 seconde minimum
+      const remainingTime = Math.max(0, minDisplayTime - elapsedTime);
+
+      setTimeout(() => {
+        // Cacher le spinner de chargement
+        const sectionPaiementsOverlay = document.getElementById('sectionPaiementsOverlay');
+        if (sectionPaiementsOverlay) {
+          sectionPaiementsOverlay.classList.remove('active');
+          // Remettre le texte par défaut pour le prochain envoi au comptable
+          const loadingText = sectionPaiementsOverlay.querySelector('.loading-text');
+          if (loadingText) {
+            loadingText.textContent = 'Envoi au comptable en cours...';
+          }
+        }
+        log('✅ Spinner de chargement client masqué après', Math.round((Date.now() - startTime) / 1000), 'secondes');
+      }, remainingTime);
     }
+  }
 
     // Fonction pour réinitialiser complètement l'interface avant de changer de client
     function resetCompleteInterface() {
@@ -10199,17 +11146,19 @@
       // 3. RÉINITIALISER TOUS LES CHAMPS DE FORMULAIRE
       const allInputs = document.querySelectorAll('#content-depot input, #content-paiement-final input, #content-autres-paiements input, #elementsAjouterDepot input, #elementsAjouterPaiementFinal input, #elementsAjouterAutres input');
       allInputs.forEach(input => {
-        if (input) {
+        if (input && input.type !== 'file') {
           // Vider la valeur
           input.value = '';
-          
+
           // Réinitialiser l'état
           input.disabled = false;
           input.readOnly = false;
-          input.style.removeProperty('background-color');
-          input.style.removeProperty('color');
-          input.style.removeProperty('cursor');
-          input.style.removeProperty('pointer-events');
+
+          // SUPPRIMER TOUS LES STYLES INLINE (y compris ceux avec !important)
+          input.style.cssText = '';
+
+          // Retirer les classes de validation
+          input.classList.remove('field-valid', 'field-invalid');
         }
       });
       
@@ -10235,13 +11184,33 @@
       // 4c. SUPPRIMER LES SECTIONS DYNAMIQUES (paiements partiels et un seul paiement)
       document.querySelectorAll('[id^="content-paiement-partiel-"], [id^="content-un-seul-paiement-"]').forEach(s => s.remove());
 
-      // 5. RÉINITIALISER LES CHAMPS VIREMENT/CHÈQUE
+      // 5. RÉINITIALISER LES CHAMPS VIREMENT/CHÈQUE (CRUCIAL!)
       const virementFields = document.querySelectorAll('[id*="virementFields"]');
       const chequeFields = document.querySelectorAll('[id*="chequeFields"]');
-      
+
       [...virementFields, ...chequeFields].forEach(field => {
         if (field) {
+          // Cacher le champ
           field.classList.add('hidden');
+
+          // SUPPRIMER TOUS LES STYLES INLINE AVEC !important
+          field.style.cssText = '';
+
+          // Nettoyer tous les inputs à l'intérieur
+          const inputs = field.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="number"]');
+          inputs.forEach(input => {
+            input.value = '';
+            input.readOnly = false;
+            input.disabled = false;
+            input.style.cssText = '';
+            input.classList.remove('field-valid', 'field-invalid');
+          });
+
+          // Nettoyer les dropzones
+          const dropzones = field.querySelectorAll('.upload-zone-small');
+          dropzones.forEach(zone => {
+            zone.style.cssText = '';
+          });
         }
       });
       
@@ -10249,19 +11218,19 @@
       const allDropdowns = document.querySelectorAll('.modern-dropdown');
       allDropdowns.forEach(dropdown => {
         if (dropdown) {
-          dropdown.style.removeProperty('background-color');
-          dropdown.style.removeProperty('color');
-          dropdown.style.removeProperty('cursor');
-          dropdown.style.removeProperty('pointer-events');
-          dropdown.style.removeProperty('opacity');
+          // SUPPRIMER TOUS LES STYLES INLINE (y compris ceux avec !important)
+          dropdown.style.cssText = '';
           dropdown.classList.remove('active');
-          
+
           // Remettre le texte par défaut pour les dropdowns "Payé par"
           const placeholder = dropdown.querySelector('.placeholder');
           if (placeholder && (dropdown.id === 'payeParToggle' || dropdown.id === 'payeParFinalToggle' || dropdown.id === 'payeParAutresToggle')) {
             placeholder.textContent = 'Choisir méthode...';
-            placeholder.style.removeProperty('color');
+            placeholder.style.cssText = '';
           }
+
+          // Retirer les classes de validation
+          dropdown.classList.remove('field-valid', 'field-invalid');
         }
       });
       
@@ -10272,7 +11241,19 @@
           menu.classList.add('hidden');
         }
       });
-      
+
+      // 8. NETTOYER TOUTES LES PRÉVISUALISATIONS D'IMAGES (CRUCIAL!)
+      const allPreviews = document.querySelectorAll('[id^="preview"]');
+      allPreviews.forEach(preview => {
+        if (preview) {
+          preview.innerHTML = '';
+        }
+      });
+      log('🧹 Prévisualisations d\'images nettoyées');
+
+      // NOTE: On ne vide PAS le sessionStorage ici car il contient les données du client actuel
+      // Le sessionStorage est vidé SEULEMENT dans selectionnerClientFacturation() avant de charger un nouveau client
+
       log('[OK] Interface complètement réinitialisée');
     }
 
@@ -10825,7 +11806,6 @@
       const text = toggle.textContent.toLowerCase();
       if (text.includes('virement')) return 'virement';
       if (text.includes('chèque') || text.includes('cheque')) return 'cheque';
-      if (text.includes('square')) return 'square';
       return null;
     }
 
@@ -11260,6 +12240,35 @@
     </div>
   </div>
 
+  <!-- Modal pour afficher les images de chèque -->
+  <div id="modalImage" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center hidden z-[70]" style="backdrop-filter: blur(8px);" onclick="fermerModalImage()">
+    <div class="relative w-[90vw] max-w-5xl mx-4" onclick="event.stopPropagation()">
+      <!-- Header avec titre et bouton fermer -->
+      <div class="flex items-center justify-between mb-4 px-4">
+        <h3 id="modalImageTitle" class="text-xl font-bold text-white">
+          <i class="fas fa-image mr-2 text-blue-400"></i>
+          <span id="modalImageTitleText"></span>
+        </h3>
+        <button onclick="fermerModalImage()" class="text-white hover:text-red-400 transition-colors text-2xl" title="Fermer">
+          <i class="fas fa-times-circle"></i>
+        </button>
+      </div>
+
+      <!-- Container de l'image avec style dark -->
+      <div class="image-container" style="width: 100%; max-height: 80vh; background: #1a1a1a; border-radius: 12px; overflow: auto; padding: 20px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8);">
+        <img id="modalImageContent" src="" alt="" style="width: 100%; height: auto; border-radius: 8px; display: block; margin: 0 auto;">
+      </div>
+
+      <!-- Bouton d'action en bas -->
+      <div class="flex justify-center mt-4">
+        <button onclick="fermerModalImage()" class="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium transition-all duration-300 shadow-lg">
+          <i class="fas fa-check mr-2"></i>
+          Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal de validation coach pour les remboursements -->
   <div id="coachRemboursementValidationModal" class="fixed inset-0 flex items-center justify-center hidden z-50" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px);">
     <div class="p-8 w-[55vw] mx-4 max-h-[85vh] overflow-y-auto relative" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid var(--border-dark); border-radius: 24px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);">
@@ -11472,6 +12481,20 @@
         // Charger aussi les périodes dans la colonne Traitées
         if (typeof chargerPeriodesTraiter === 'function') {
           chargerPeriodesTraiter();
+        }
+
+        // IMPORTANT: Initialiser les dropdowns de paiement après avoir chargé l'entrepreneur
+        console.log('[COACH SELECT] Initialisation des dropdowns de paiement...');
+        const dropdownsToReinit = ['typePaiementAutresToggle', 'payeParToggle', 'payeParFinalToggle', 'payeParAutresToggle', 'payeParRemboursementToggle'];
+        dropdownsToReinit.forEach(id => {
+          const element = document.getElementById(id);
+          if (element && element.dataset.initialized) {
+            delete element.dataset.initialized;
+          }
+        });
+        if (typeof initPaiementSelects === 'function') {
+          initPaiementSelects();
+          console.log('[COACH SELECT] ✅ Dropdowns de paiement initialisés');
         }
       }
     }
@@ -12708,6 +13731,12 @@
       // Section Dépôt si présent ET si c'est le paiement cliqué
       if (detailsComplets.depot && typePaiementClique === 'depot') {
         const depot = detailsComplets.depot;
+        // Debug: afficher toutes les propriétés du depot
+        log('[MODAL DEPOT] Données depot:', depot);
+        log('[MODAL DEPOT] photoRecto:', depot.photoRecto);
+        log('[MODAL DEPOT] photoVerso:', depot.photoVerso);
+        log('[MODAL DEPOT] photo_recto:', depot.photo_recto);
+        log('[MODAL DEPOT] photo_verso:', depot.photo_verso);
         contentHTML += `
           <div class="modal-section">
             <div class="modal-section-title-row">
@@ -12739,6 +13768,19 @@
                 <i class="fas fa-external-link-alt"></i>
                 ${depot.lienVirement}
               </a>
+            </div>` : ''}
+            ${(depot.methode === 'cheque' || depot.methode === 'chèque') ? `
+            ${depot.numeroCheque ? `
+            <div class="modal-info-row">
+              <span class="modal-info-label">N° Chèque</span>
+              <span class="modal-info-value" style="color: #10b981; font-weight: 600;">${depot.numeroCheque}</span>
+            </div>` : ''}
+            <div class="modal-info-row">
+              <span class="modal-info-label">Chèque</span>
+              <button class="modal-voir-soumission" onclick="ouvrirPhotosCheque('${numeroSoumission}', 'depot')">
+                <i class="fas fa-images"></i>
+                Voir le chèque
+              </button>
             </div>` : ''}
           </div>
         `;
@@ -12794,6 +13836,19 @@
                     ${ap.lienVirement}
                   </a>
                 </div>` : ''}
+                ${(ap.methode === 'cheque' || ap.methode === 'chèque') ? `
+                ${ap.numeroCheque ? `
+                <div class="modal-info-row">
+                  <span class="modal-info-label">N° Chèque</span>
+                  <span class="modal-info-value" style="color: #10b981; font-weight: 600;">${ap.numeroCheque}</span>
+                </div>` : ''}
+                <div class="modal-info-row">
+                  <span class="modal-info-label">Chèque</span>
+                  <button class="modal-voir-soumission" onclick="ouvrirPhotosCheque('${numeroSoumission}', 'autre_paiement_${index + 1}')">
+                    <i class="fas fa-images"></i>
+                    Voir le chèque
+                  </button>
+                </div>` : ''}
               </div>
             `;
           }
@@ -12835,6 +13890,19 @@
                 ${pf.lienVirement}
               </a>
             </div>` : ''}
+            ${(pf.methode === 'cheque' || pf.methode === 'chèque') ? `
+            ${pf.numeroCheque ? `
+            <div class="modal-info-row">
+              <span class="modal-info-label">N° Chèque</span>
+              <span class="modal-info-value" style="color: #10b981; font-weight: 600;">${pf.numeroCheque}</span>
+            </div>` : ''}
+            <div class="modal-info-row">
+              <span class="modal-info-label">Chèque</span>
+              <button class="modal-voir-soumission" onclick="ouvrirPhotosCheque('${numeroSoumission}', 'paiement_final')">
+                <i class="fas fa-images"></i>
+                Voir le chèque
+              </button>
+            </div>` : ''}
           </div>
         `;
       }
@@ -12867,6 +13935,21 @@
           window.parent.document.documentElement.style.overflow = '';
         } catch(e) {}
       }
+
+      // IMPORTANT: Réinitialiser les boutons à leur état initial
+      const btnAccepter = document.getElementById('btnAccepter');
+      if (btnAccepter) {
+        btnAccepter.disabled = false;
+        btnAccepter.innerHTML = '<i class="fas fa-check mr-2"></i>Accepter';
+        btnAccepter.style.background = ''; // Reset to default CSS
+      }
+
+      const btnRefuser = document.getElementById('btnRefuser');
+      if (btnRefuser) {
+        btnRefuser.disabled = false;
+        btnRefuser.innerHTML = '<i class="fas fa-times mr-2"></i>Refuser';
+      }
+
       currentTraitementData = null;
     };
 
@@ -12931,6 +14014,108 @@
 
         // Afficher le modal
         modal.classList.remove('hidden');
+      }
+    };
+
+    // Ouvrir les photos du chèque dans un popup
+    window.ouvrirPhotosCheque = async function(numeroSoumission, typePaiement) {
+      const username = getFacturationUsername();
+
+      try {
+        // Récupérer les détails complets depuis l'API
+        const responseStatuts = await fetch(`/api/facturationqe/client/${username}/${numeroSoumission}/statuts`);
+        if (!responseStatuts.ok) {
+          throw new Error('Erreur lors de la récupération des statuts');
+        }
+
+        const detailsComplets = await responseStatuts.json();
+        console.log('[MODAL CHEQUE] Details complets:', detailsComplets);
+        let paiementData = null;
+
+        // Récupérer les bonnes données selon le type de paiement
+        if (typePaiement === 'depot') {
+          paiementData = detailsComplets.depot;
+        } else if (typePaiement === 'paiement_final') {
+          paiementData = detailsComplets.paiementFinal;
+        } else if (typePaiement.startsWith('autre_paiement_')) {
+          const index = parseInt(typePaiement.replace('autre_paiement_', '')) - 1;
+          paiementData = detailsComplets.autresPaiements?.[index];
+        }
+
+        console.log('[MODAL CHEQUE] Type paiement:', typePaiement);
+        console.log('[MODAL CHEQUE] Paiement data:', paiementData);
+        console.log('[MODAL CHEQUE] photoRecto:', paiementData?.photoRecto);
+        console.log('[MODAL CHEQUE] photoVerso:', paiementData?.photoVerso);
+        console.log('[MODAL CHEQUE] photo_recto:', paiementData?.photo_recto);
+        console.log('[MODAL CHEQUE] photo_verso:', paiementData?.photo_verso);
+        console.log('[MODAL CHEQUE] Toutes les clés:', paiementData ? Object.keys(paiementData) : 'null');
+
+        if (!paiementData) {
+          alert('Aucune donnée de paiement disponible');
+          return;
+        }
+
+        // Essayer différents noms de champs pour les photos
+        const photoRecto = paiementData.photoRecto || paiementData.photo_recto || paiementData.recto;
+        const photoVerso = paiementData.photoVerso || paiementData.photo_verso || paiementData.verso;
+
+        if (!photoRecto && !photoVerso) {
+          alert('Aucune photo de chèque disponible pour ce paiement');
+          return;
+        }
+
+        // Utiliser le même modal que pour les soumissions
+        const modal = document.getElementById('soumissionSigneeModal');
+        const content = document.getElementById('soumissionContent');
+
+        if (modal && content) {
+          // Augmenter le z-index pour être au-dessus du modal traitement
+          modal.style.zIndex = '100001';
+
+          // Changer le titre du modal pour "Chèque" au lieu de "Soumission signée"
+          const modalTitle = modal.querySelector('h3.text-xl');
+          if (modalTitle) {
+            modalTitle.innerHTML = '<i class="fas fa-money-check-alt mr-2" style="color: #10b981;"></i>Chèque';
+          }
+
+          // Afficher les photos dans le modal avec fond bleu foncé
+          content.innerHTML = `
+            <div style="width: 100%; background: #0f1629; border-radius: 8px; padding: 20px;">
+              <h2 style="color: var(--text-light); margin-bottom: 20px; text-align: center; font-size: 1.5rem;">
+                <i class="fas fa-money-check-alt mr-2"></i>Photos du chèque
+              </h2>
+              <div style="display: grid; grid-template-columns: ${photoRecto && photoVerso ? '1fr 1fr' : '1fr'}; gap: 20px; max-height: 70vh; overflow: auto;">
+                ${photoRecto ? `
+                <div>
+                  <h3 style="color: var(--text-light); margin-bottom: 10px; text-align: center;">
+                    <i class="fas fa-image mr-2" style="color: #10b981;"></i>Recto
+                  </h3>
+                  <img src="${photoRecto}" alt="Recto du chèque"
+                       style="width: 100%; height: auto; border-radius: 8px; border: 2px solid var(--border-dark);">
+                </div>
+                ` : ''}
+                ${photoVerso ? `
+                <div>
+                  <h3 style="color: var(--text-light); margin-bottom: 10px; text-align: center;">
+                    <i class="fas fa-image mr-2" style="color: #f59e0b;"></i>Verso
+                  </h3>
+                  <img src="${photoVerso}" alt="Verso du chèque"
+                       style="width: 100%; height: auto; border-radius: 8px; border: 2px solid var(--border-dark);">
+                </div>
+                ` : ''}
+              </div>
+            </div>
+          `;
+
+          // Bloquer le scroll de la page
+          document.body.style.overflow = 'hidden';
+
+          // Afficher le modal
+          modal.classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('[MODAL CHEQUE] Erreur:', error);
+        alert('Erreur lors du chargement des photos du chèque');
       }
     };
 
@@ -13564,6 +14749,21 @@
           // Rafraîchir les données - utiliser utiliserDonneesTestStatus qui transforme les données correctement
           if (typeof utiliserDonneesTestStatus === 'function') {
             await utiliserDonneesTestStatus();
+          }
+
+          // Rafraîchir l'affichage des colonnes pour mettre à jour les totaux et compteurs
+          if (typeof chargerFacturationsColonnes === 'function') {
+            chargerFacturationsColonnes();
+          }
+
+          // Recharger les badges du sélecteur entrepreneur si on est un coach
+          const userRole = localStorage.getItem('userRole');
+          if (userRole === 'coach') {
+            if (window.EntrepreneurSelector) {
+              window.EntrepreneurSelector.reload();
+            } else if (typeof loadEntrepreneursForCoach === 'function') {
+              loadEntrepreneursForCoach();
+            }
           }
         } else {
           const error = await response.json();

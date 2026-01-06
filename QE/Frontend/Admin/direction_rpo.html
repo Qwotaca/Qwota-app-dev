@@ -1186,6 +1186,166 @@ select:disabled {
   }
 }
 
+/* ========== BOUTON "CRÉER MON PLAN D'AFFAIRES" ========== */
+#create-business-plan-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  padding: 1.5rem 2rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.3);
+}
+
+#create-business-plan-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px 0 rgba(59, 130, 246, 0.4);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+#create-business-plan-btn:active {
+  transform: translateY(0);
+}
+
+/* ========== POPUP CRÉATION PLAN D'AFFAIRES ========== */
+#business-plan-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(8px);
+  z-index: 99999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+#business-plan-popup.active {
+  display: flex;
+}
+
+.business-plan-modal {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 16px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.business-plan-header {
+  padding: 2rem;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+  position: sticky;
+  top: 0;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  z-index: 10;
+}
+
+.business-plan-body {
+  padding: 2rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.business-plan-section {
+  margin-bottom: 2rem;
+}
+
+.business-plan-section h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--primary-blue);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.entrepreneur-input-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  align-items: center;
+}
+
+.entrepreneur-label {
+  font-size: 0.9rem;
+  color: var(--text-gray);
+  font-weight: 500;
+}
+
+.business-plan-input {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid var(--border-dark);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: var(--text-light);
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.business-plan-input:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  background: rgba(30, 41, 59, 0.7);
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.metric-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.metric-input-group label {
+  font-size: 0.85rem;
+  color: var(--text-gray);
+  font-weight: 500;
+}
+
+.business-plan-footer {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid rgba(59, 130, 246, 0.1);
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+/* Scrollbar pour le body du modal */
+.business-plan-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.business-plan-body::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.3);
+  border-radius: 10px;
+}
+
+.business-plan-body::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.5);
+  border-radius: 10px;
+}
+
+.business-plan-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.7);
+}
+
 </style>
 
 </head>
@@ -6402,6 +6562,399 @@ function getDateFromWeek(year, week) {
 }
 
 // ================================================================
+// PLAN D'AFFAIRES - PRÉVISIONS ET MÉTRIQUES
+// ================================================================
+
+async function checkIfBusinessPlanNeeded() {
+  const username = window.username || localStorage.getItem('username');
+  if (!username) return;
+
+  try {
+    // Charger les prévisions
+    const prevResponse = await fetch(`/api/coach/team-objectifs?coach_username=${username}`);
+    const prevData = await prevResponse.json();
+
+    // Charger les métriques
+    const metricsResponse = await fetch(`/api/coach/metrics?coach_username=${username}`);
+    const metricsData = await metricsResponse.json();
+
+    const hasPrevisions = prevData.success && prevData.previsions && Object.keys(prevData.previsions).length > 0;
+    const hasMetrics = metricsData.success && metricsData.metrics &&
+                      (metricsData.metrics.cm > 0 || metricsData.metrics.ratioMktg > 0 || metricsData.metrics.tauxVente > 0);
+
+    const createBtn = document.getElementById('create-business-plan-btn');
+    const editBtn = document.getElementById('edit-business-plan-btn');
+    const metricsCards = document.getElementById('team-metrics-cards');
+
+    if (createBtn && editBtn && metricsCards) {
+      if (!hasPrevisions && !hasMetrics) {
+        // Tout est à 0, afficher le bouton "Créer" et cacher les cartes
+        createBtn.style.display = 'block';
+        editBtn.style.display = 'none';
+        metricsCards.style.display = 'none';
+      } else {
+        // Des données existent, afficher le bouton "Modifier" et les cartes
+        createBtn.style.display = 'none';
+        editBtn.style.display = 'block';
+        metricsCards.style.display = 'grid';
+      }
+    }
+  } catch (error) {
+    console.error('[BUSINESS PLAN] Erreur vérification:', error);
+  }
+}
+
+// Ouvrir le popup de création du plan d'affaires
+async function openBusinessPlanPopup() {
+  const popup = document.getElementById('business-plan-popup');
+  const modal = popup.querySelector('.business-plan-modal');
+
+  popup.classList.add('active');
+
+  // Charger les entrepreneurs
+  await loadEntrepreneursForBusinessPlan();
+
+  // Charger les métriques existantes si elles existent
+  await loadExistingMetricsForBusinessPlan();
+}
+
+// Fermer le popup
+function closeBusinessPlanPopup() {
+  const popup = document.getElementById('business-plan-popup');
+  popup.classList.remove('active');
+}
+
+// Charger les entrepreneurs pour le formulaire
+async function loadEntrepreneursForBusinessPlan() {
+  const container = document.getElementById('entrepreneurs-previsions-container');
+  const username = window.username || localStorage.getItem('username');
+
+  try {
+    const response = await fetch(`/api/entrepreneurs/${username}`);
+    const entrepreneurs = await response.json();
+
+    if (entrepreneurs && entrepreneurs.length > 0) {
+      // Charger les prévisions existantes
+      const prevResponse = await fetch(`/api/coach/team-objectifs?coach_username=${username}`);
+      const prevData = await prevResponse.json();
+      const existingPrevisions = prevData.success && prevData.previsions ? prevData.previsions : {};
+
+      // Générer les inputs avec objectif CA de chaque entrepreneur
+      let html = '';
+      for (const entrepreneur of entrepreneurs) {
+        const existingValue = existingPrevisions[entrepreneur.username] || 0;
+        const displayValue = existingValue > 0 ? formatCurrency(existingValue) : '';
+
+        // Charger l'objectif CA de l'entrepreneur depuis son RPO
+        let objectifCA = 0;
+        try {
+          const rpoResponse = await fetch(`/api/rpo/objectifs/${entrepreneur.username}`);
+          const rpoData = await rpoResponse.json();
+          if (rpoData && rpoData.objectif_ca) {
+            objectifCA = rpoData.objectif_ca;
+          }
+        } catch (error) {
+          console.error(`[BUSINESS PLAN] Erreur chargement objectif CA pour ${entrepreneur.username}:`, error);
+        }
+
+        const fullName = entrepreneur.full_name || `${entrepreneur.prenom || ''} ${entrepreneur.nom || ''}`.trim() || entrepreneur.username;
+        const objectifDisplay = objectifCA > 0 ? formatCurrency(objectifCA) : 'Non défini';
+
+        html += `
+          <div class="entrepreneur-input-row">
+            <div class="entrepreneur-label" style="display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fas fa-user" style="color: var(--primary-blue);"></i>
+              <span style="font-weight: 600;">${fullName}</span>
+              <span style="font-size: 0.8rem; color: var(--text-gray);">— Objectif: ${objectifDisplay}</span>
+            </div>
+            <input
+              type="text"
+              class="business-plan-input bp-entrepreneur-input"
+              data-username="${entrepreneur.username}"
+              data-raw-value="${existingValue}"
+              value="${displayValue}"
+              placeholder="0,00 $"
+              onfocus="handleBPCurrencyFocus(this)"
+              onblur="handleBPCurrencyBlur(this)"
+              oninput="handleBPCurrencyInput(this)"
+            />
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
+    } else {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: var(--text-gray);">
+          <i class="fas fa-exclamation-circle" style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #ef4444;"></i>
+          <div>Aucun entrepreneur trouvé dans votre équipe</div>
+        </div>
+      `;
+    }
+  } catch (error) {
+    console.error('[BUSINESS PLAN] Erreur chargement entrepreneurs:', error);
+    container.innerHTML = `
+      <div style="text-align: center; padding: 2rem; color: #ef4444;">
+        <i class="fas fa-exclamation-triangle" style="font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
+        <div>Erreur lors du chargement des entrepreneurs</div>
+      </div>
+    `;
+  }
+}
+
+// Charger les métriques existantes
+async function loadExistingMetricsForBusinessPlan() {
+  const username = window.username || localStorage.getItem('username');
+
+  try {
+    const response = await fetch(`/api/coach/metrics?coach_username=${username}`);
+    const data = await response.json();
+
+    if (data.success && data.metrics) {
+      const cmInput = document.getElementById('bp-cm-input');
+      const ratioInput = document.getElementById('bp-ratio-input');
+      const tauxInput = document.getElementById('bp-taux-input');
+
+      if (data.metrics.cm > 0) {
+        cmInput.dataset.rawValue = data.metrics.cm;
+        cmInput.value = formatCurrency(data.metrics.cm);
+      }
+
+      if (data.metrics.ratioMktg > 0) {
+        ratioInput.dataset.rawValue = data.metrics.ratioMktg;
+        ratioInput.value = data.metrics.ratioMktg.toFixed(1) + ' %';
+      }
+
+      if (data.metrics.tauxVente > 0) {
+        tauxInput.dataset.rawValue = data.metrics.tauxVente;
+        tauxInput.value = data.metrics.tauxVente.toFixed(1) + ' %';
+      }
+
+      // Changer le titre si des données existent
+      const title = document.getElementById('business-plan-title');
+      if (title) {
+        title.textContent = 'Modifier mon plan d\'affaires';
+      }
+    }
+  } catch (error) {
+    console.error('[BUSINESS PLAN] Erreur chargement métriques:', error);
+  }
+}
+
+// Gestion des inputs de devise ($ pour entrepreneurs et CM)
+function handleBPCurrencyFocus(input) {
+  const rawValue = parseFloat(input.dataset.rawValue || '0');
+  if (rawValue > 0) {
+    input.value = rawValue.toString();
+  } else {
+    input.value = '';
+  }
+  input.select();
+}
+
+function handleBPCurrencyBlur(input) {
+  const value = input.value.replace(/[^0-9.]/g, '');
+  const numValue = parseFloat(value) || 0;
+  input.dataset.rawValue = numValue;
+
+  if (numValue > 0) {
+    input.value = formatCurrency(numValue);
+  } else {
+    input.value = '';
+  }
+}
+
+function handleBPCurrencyInput(input) {
+  const oldValue = input.value;
+
+  // Retirer tout sauf les chiffres
+  const rawValue = oldValue.replace(/[^0-9]/g, '');
+
+  // Si vide, on efface tout
+  if (!rawValue) {
+    input.value = '';
+    input.dataset.rawValue = '0';
+    return;
+  }
+
+  // Convertir en nombre
+  const numValue = parseInt(rawValue, 10);
+  input.dataset.rawValue = numValue;
+
+  // Formater avec des espaces tous les 3 chiffres (sans le $)
+  const formatted = numValue.toLocaleString('fr-CA').replace(/,/g, ' ');
+
+  input.value = formatted;
+}
+
+// Gestion des inputs de métriques (% pour ratio et taux)
+function handleBPMetricFocus(input) {
+  const metricType = input.dataset.metric;
+  const rawValue = parseFloat(input.dataset.rawValue || '0');
+
+  if (rawValue > 0) {
+    if (metricType === 'cm') {
+      input.value = rawValue.toString();
+    } else {
+      // Pour les pourcentages
+      input.value = rawValue.toString();
+    }
+  } else {
+    input.value = '';
+  }
+  input.select();
+}
+
+function handleBPMetricBlur(input) {
+  const metricType = input.dataset.metric;
+  const value = input.value.replace(/[^0-9.]/g, '');
+  const numValue = parseFloat(value) || 0;
+  input.dataset.rawValue = numValue;
+
+  if (numValue > 0) {
+    if (metricType === 'cm') {
+      input.value = formatCurrency(numValue);
+    } else {
+      // Pour les pourcentages
+      input.value = numValue.toFixed(1) + ' %';
+    }
+  } else {
+    input.value = '';
+  }
+}
+
+function handleBPMetricInput(input) {
+  const metricType = input.dataset.metric;
+  const oldValue = input.value;
+
+  if (metricType === 'cm') {
+    // Pour CM (devise) - formater en temps réel (sans le $)
+    const rawValue = oldValue.replace(/[^0-9]/g, '');
+
+    if (!rawValue) {
+      input.value = '';
+      input.dataset.rawValue = '0';
+      return;
+    }
+
+    const numValue = parseInt(rawValue, 10);
+    input.dataset.rawValue = numValue;
+
+    const formatted = numValue.toLocaleString('fr-CA').replace(/,/g, ' ');
+
+    input.value = formatted;
+
+  } else {
+    // Pour les pourcentages - juste retirer les caractères non numériques
+    const newValue = oldValue.replace(/[^0-9.]/g, '');
+    if (newValue !== oldValue) {
+      input.value = newValue;
+    }
+  }
+}
+
+// Fonction utilitaire pour formater la devise
+function formatCurrency(value) {
+  return parseFloat(value).toLocaleString('fr-CA', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }) + ' $';
+}
+
+// Sauvegarder le plan d'affaires
+async function saveBusinessPlan() {
+  const username = window.username || localStorage.getItem('username');
+  const saveBtn = document.getElementById('bp-save-btn');
+
+  // Désactiver le bouton et afficher le spinner
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Enregistrement...</span>';
+
+  try {
+    // 1. Récupérer les prévisions des entrepreneurs
+    const previsions = {};
+    const entrepreneurInputs = document.querySelectorAll('.bp-entrepreneur-input');
+    let hasPrevisions = false;
+
+    entrepreneurInputs.forEach(input => {
+      const username = input.dataset.username;
+      const value = parseFloat(input.dataset.rawValue || '0');
+      if (value > 0) {
+        previsions[username] = value;
+        hasPrevisions = true;
+      }
+    });
+
+    // 2. Récupérer les métriques
+    const cmInput = document.getElementById('bp-cm-input');
+    const ratioInput = document.getElementById('bp-ratio-input');
+    const tauxInput = document.getElementById('bp-taux-input');
+
+    const metrics = {
+      cm: parseFloat(cmInput.dataset.rawValue || '0'),
+      ratioMktg: parseFloat(ratioInput.dataset.rawValue || '0'),
+      tauxVente: parseFloat(tauxInput.dataset.rawValue || '0')
+    };
+
+    const hasMetrics = metrics.cm > 0 || metrics.ratioMktg > 0 || metrics.tauxVente > 0;
+
+    // 3. Vérifier qu'au moins une donnée est renseignée
+    if (!hasPrevisions && !hasMetrics) {
+      alert('Veuillez renseigner au moins une prévision ou une métrique');
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i class="fas fa-save"></i><span>Enregistrer</span>';
+      return;
+    }
+
+    // 4. Sauvegarder les prévisions
+    if (hasPrevisions) {
+      const prevResponse = await fetch('/api/coach/team-objectifs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coach_username: username,
+          previsions: previsions
+        })
+      });
+
+      const prevData = await prevResponse.json();
+      if (!prevData.success) {
+        throw new Error('Erreur lors de la sauvegarde des prévisions');
+      }
+    }
+
+    // 5. Sauvegarder les métriques
+    if (hasMetrics) {
+      const metricsResponse = await fetch('/api/coach/metrics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coach_username: username,
+          metrics: metrics
+        })
+      });
+
+      const metricsData = await metricsResponse.json();
+      if (!metricsData.success) {
+        throw new Error('Erreur lors de la sauvegarde des métriques');
+      }
+    }
+
+    // 6. Fermer le popup
+    closeBusinessPlanPopup();
+
+    // 7. Afficher l'animation de succès et recharger la page
+    showSuccessAnimation('Plan d\'affaires enregistré avec succès!');
+
+  } catch (error) {
+    console.error('[BUSINESS PLAN] Erreur sauvegarde:', error);
+    alert('Erreur lors de la sauvegarde du plan d\'affaires');
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '<i class="fas fa-save"></i><span>Enregistrer</span>';
+  }
+}
+
+// ================================================================
 // GESTION DU MODAL RPO COMPLET
 // ================================================================
 
@@ -9973,6 +10526,124 @@ async function updateTeamMetricsDisplay() {
     <div style="display: flex; gap: 1rem; margin-top: 2rem; justify-content: flex-end;">
       <button onclick="closeTeamTauxPopup()" class="btn-secondary"><i class="fas fa-times"></i>Annuler</button>
       <button onclick="saveTeamTaux()" class="btn-primary"><i class="fas fa-save"></i>Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== POPUP PLAN D'AFFAIRES ==================== -->
+<div id="business-plan-popup">
+  <div class="business-plan-modal">
+    <!-- Header -->
+    <div class="business-plan-header">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 style="font-size: 1.5rem; font-weight: 700; color: white; display: flex; align-items: center; gap: 0.75rem;">
+            <div style="background: rgba(59, 130, 246, 0.2); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-chart-line" style="font-size: 1.3rem; color: var(--primary-blue);"></i>
+            </div>
+            <span id="business-plan-title">Créer mon plan d'affaires</span>
+          </h2>
+          <p style="font-size: 0.9rem; color: white; margin-top: 0.5rem; margin-left: 3.75rem;">
+            Définissez les prévisions de votre équipe et les métriques moyennes
+          </p>
+        </div>
+        <button onclick="closeBusinessPlanPopup()" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; width: 40px; height: 40px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(239, 68, 68, 0.2)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.1)'">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="business-plan-body">
+      <!-- Section Prévisions Entrepreneurs -->
+      <div class="business-plan-section">
+        <h3>
+          <i class="fas fa-users"></i>
+          Prévisions par Entrepreneur
+        </h3>
+        <div id="entrepreneurs-previsions-container">
+          <!-- Les inputs seront générés dynamiquement ici -->
+          <div style="text-align: center; padding: 2rem; color: var(--text-gray);">
+            <i class="fas fa-spinner fa-spin" style="font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
+            <div>Chargement des entrepreneurs...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section Métriques Moyennes -->
+      <div class="business-plan-section">
+        <h3>
+          <i class="fas fa-calculator"></i>
+          Métriques Moyennes de l'Équipe
+        </h3>
+        <div class="metrics-grid">
+          <!-- CM Moyen -->
+          <div class="metric-input-group">
+            <label for="bp-cm-input">
+              <i class="fas fa-dollar-sign" style="color: var(--primary-blue);"></i> CM Moyen
+            </label>
+            <input
+              type="text"
+              id="bp-cm-input"
+              class="business-plan-input"
+              placeholder="2 500,00 $"
+              data-metric="cm"
+              data-raw-value="0"
+              onfocus="handleBPMetricFocus(this)"
+              onblur="handleBPMetricBlur(this)"
+              oninput="handleBPMetricInput(this)"
+            />
+          </div>
+
+          <!-- Ratio Marketing -->
+          <div class="metric-input-group">
+            <label for="bp-ratio-input">
+              <i class="fas fa-bullhorn" style="color: var(--primary-blue);"></i> Ratio Marketing
+            </label>
+            <input
+              type="text"
+              id="bp-ratio-input"
+              class="business-plan-input"
+              placeholder="85 %"
+              data-metric="ratioMktg"
+              data-raw-value="0"
+              onfocus="handleBPMetricFocus(this)"
+              onblur="handleBPMetricBlur(this)"
+              oninput="handleBPMetricInput(this)"
+            />
+          </div>
+
+          <!-- Taux de Vente -->
+          <div class="metric-input-group">
+            <label for="bp-taux-input">
+              <i class="fas fa-handshake" style="color: var(--primary-blue);"></i> Taux de Vente
+            </label>
+            <input
+              type="text"
+              id="bp-taux-input"
+              class="business-plan-input"
+              placeholder="30 %"
+              data-metric="tauxVente"
+              data-raw-value="0"
+              onfocus="handleBPMetricFocus(this)"
+              onblur="handleBPMetricBlur(this)"
+              oninput="handleBPMetricInput(this)"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="business-plan-footer">
+      <button class="btn-secondary" onclick="closeBusinessPlanPopup()" style="display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fas fa-times"></i>
+        <span>Annuler</span>
+      </button>
+      <button id="bp-save-btn" class="btn-primary" onclick="saveBusinessPlan()" style="display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fas fa-save"></i>
+        <span>Enregistrer</span>
+      </button>
     </div>
   </div>
 </div>

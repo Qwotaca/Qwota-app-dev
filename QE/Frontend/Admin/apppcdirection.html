@@ -4742,58 +4742,149 @@
       // SYSTÈME DE CHARGEMENT - Desktop & Mobile
       // ================================================================
 
-      // DESKTOP: Charger le dashboard puis cacher l'écran de chargement
+      // DESKTOP: Précharger TOUTES les pages avant de cacher l'écran de chargement
       if (window.innerWidth > 768) {
-        console.log('[DESKTOP] 🚀 Chargement du dashboard...');
+        console.log('[DESKTOP] 🚀 DÉMARRAGE DU PRÉCHARGEMENT COMPLET');
 
         const loadingOverlay = document.getElementById('loading-overlay');
         const appContainer = document.getElementById('app-container');
         const progressFill = document.getElementById('loading-progress-fill');
         const progressText = document.getElementById('loading-progress-text');
 
-        // Animation de progression jusqu'à 90% pendant le chargement
-        let progress = 0;
-        const progressInterval = setInterval(() => {
-          if (progress < 90) {
-            progress += 15;
-            if (progressFill && progressText) {
-              progressFill.style.width = `${progress}%`;
-              progressText.textContent = `${progress}%`;
+        // Initialiser la progression à 0%
+        if (progressFill) progressFill.style.width = '0%';
+        if (progressText) progressText.textContent = '0%';
+
+        // Pages à précharger pour Direction (ordre de priorité)
+        const pagesToPreload = [
+          // PRIORITÉ 1: Pages principales Direction
+          { id: 'iframe-dashboard', url: '/dashboard?dashboardType=qualite-etudiants', name: 'Dashboard', priority: 1 },
+          { id: 'iframe-employes', url: '/coach_validation_employes', name: 'Validation Employés', priority: 1 },
+          { id: 'iframe-direction-facturation', url: '/direction_facturation', name: 'Facturation Direction', priority: 1 },
+
+          // PRIORITÉ 2: RPO et gestion
+          { id: 'iframe-rpo', url: '/direction_rpo', name: 'RPO Direction', priority: 2 },
+          { id: 'iframe-gestionemployes', url: '/gestionemployes', name: 'Gestion Employés', priority: 2 },
+          { id: 'iframe-facturationqe', url: '/facturationqe', name: 'Facturation QE', priority: 2 },
+
+          // PRIORITÉ 3: Outils
+          { id: 'iframe-calcul', url: '/calcul', name: 'Calculateur', priority: 3 },
+          { id: 'iframe-soumissions', url: '/soumissions', name: 'Soumissions', priority: 3 },
+          { id: 'iframe-gqp', url: '/gqp', name: 'GQP', priority: 3 },
+          { id: 'iframe-facture', url: '/facture', name: 'Facture', priority: 3 },
+
+          // PRIORITÉ 4: Paramètres et autres
+          { id: 'iframe-connection', url: '/parametredirection', name: 'Paramètres Direction', priority: 4 },
+          { id: 'iframe-centralevue', url: '/centraleadmin', name: 'Centrale Admin', priority: 4 },
+          { id: 'iframe-avis', url: '/avis', name: 'Avis', priority: 4 },
+          { id: 'iframe-travaux', url: '/travaux', name: 'Travaux', priority: 4 }
+        ];
+
+        let loadedCount = 0;
+        const totalPages = pagesToPreload.length;
+
+        console.log(`[DESKTOP] 📋 Total de pages à précharger: ${totalPages}`);
+
+        // Fonction pour cacher l'écran de chargement
+        const hideLoadingScreen = () => {
+          console.log('[DESKTOP] 🎉 TOUTES LES PAGES PRÉCHARGÉES');
+          setTimeout(() => {
+            if (loadingOverlay) {
+              loadingOverlay.classList.add('hidden');
             }
+            if (appContainer) {
+              appContainer.classList.add('loaded');
+              appContainer.style.opacity = '1';
+            }
+            console.log('[DESKTOP] ✅ Écran de chargement masqué - app prête');
+          }, 500); // Délai pour voir 100%
+        };
+
+        // Charger les pages par batch (4 à la fois pour optimiser)
+        const BATCH_SIZE = 4;
+        let currentBatchIndex = 0;
+
+        function loadNextBatch() {
+          const startIndex = currentBatchIndex * BATCH_SIZE;
+          const endIndex = Math.min(startIndex + BATCH_SIZE, totalPages);
+
+          if (startIndex >= totalPages) {
+            console.log(`[DESKTOP] 🎉 Préchargement terminé (${loadedCount}/${totalPages})`);
+            hideLoadingScreen();
+            return;
           }
-        }, 150);
 
-        // Attendre que le dashboard soit chargé
-        const pageIframe = document.getElementById('page-iframe');
-        if (pageIframe) {
-          pageIframe.addEventListener('load', function onDashboardLoad() {
-            console.log('[DESKTOP] ✅ Dashboard chargé');
+          const batch = pagesToPreload.slice(startIndex, endIndex);
+          console.log(`[DESKTOP] 📦 Chargement batch ${currentBatchIndex + 1} (${batch.length} pages)...`);
 
-            // Arrêter l'animation de progression
-            clearInterval(progressInterval);
+          let batchCompleted = 0;
 
-            // Passer à 100%
-            if (progressFill && progressText) {
-              progressFill.style.width = '100%';
-              progressText.textContent = '100%';
+          batch.forEach((page) => {
+            const iframe = document.getElementById(page.id);
+
+            if (iframe) {
+              console.log(`[DESKTOP] ⏳ [P${page.priority}]: ${page.name}`);
+
+              // Rendre l'iframe visible mais hors écran pour forcer le chargement complet
+              iframe.style.display = 'block';
+              iframe.style.visibility = 'visible';
+              iframe.style.position = 'fixed';
+              iframe.style.top = '-9999px';
+              iframe.style.left = '-9999px';
+              iframe.style.zIndex = '-9999';
+              iframe.style.pointerEvents = 'none';
+
+              // Charger la page
+              iframe.src = page.url;
+
+              iframe.addEventListener('load', function onPageLoad() {
+                loadedCount++;
+                batchCompleted++;
+                console.log(`[DESKTOP] ✓ (${loadedCount}/${totalPages}): ${page.name}`);
+
+                // Mettre à jour la progression
+                const progress = Math.round((loadedCount / totalPages) * 100);
+                if (progressFill) {
+                  progressFill.style.width = `${progress}%`;
+                }
+                if (progressText) {
+                  progressText.textContent = `${progress}%`;
+                }
+
+                // Attendre 500ms après le load pour que tous les scripts/CSS se chargent
+                setTimeout(() => {
+                  // Re-cacher l'iframe (elle reste en cache)
+                  iframe.style.display = 'none';
+                  iframe.style.visibility = '';
+                  iframe.style.position = '';
+                  iframe.style.top = '';
+                  iframe.style.left = '';
+                  iframe.style.zIndex = '';
+                  iframe.style.pointerEvents = '';
+
+                  // Quand le batch est terminé, charger le prochain
+                  if (batchCompleted === batch.length) {
+                    currentBatchIndex++;
+                    setTimeout(() => loadNextBatch(), 200); // Petit délai entre les batchs
+                  }
+                }, 500);
+
+                // Retirer le listener
+                iframe.removeEventListener('load', onPageLoad);
+              });
+            } else {
+              console.error(`[DESKTOP] ❌ Iframe non trouvée: ${page.id}`);
+              batchCompleted++;
+              if (batchCompleted === batch.length) {
+                currentBatchIndex++;
+                setTimeout(() => loadNextBatch(), 200);
+              }
             }
-
-            // Cacher l'overlay et afficher l'app après un court délai
-            setTimeout(() => {
-              if (loadingOverlay) {
-                loadingOverlay.classList.add('hidden');
-              }
-              if (appContainer) {
-                appContainer.classList.add('loaded');
-                appContainer.style.opacity = '1';
-              }
-              console.log('[DESKTOP] ✅ Écran de chargement masqué - app prête');
-            }, 300);
-
-            // Retirer le listener pour ne pas le déclencher lors des navigations suivantes
-            pageIframe.removeEventListener('load', onDashboardLoad);
-          }, { once: true });
+          });
         }
+
+        // Démarrer le préchargement
+        loadNextBatch();
       }
       // MOBILE: Précharger les pages principales et cacher les scrollbars
       else if (window.innerWidth <= 768) {

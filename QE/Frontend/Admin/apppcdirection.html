@@ -4738,8 +4738,48 @@
 
       console.log('[LAUNCH] Qwota SPA initialized');
 
-      // MOBILE UNIQUEMENT: Précharger les pages principales et cacher les scrollbars
-      if (window.innerWidth <= 768) {
+      // ================================================================
+      // SYSTÈME DE CHARGEMENT - Desktop & Mobile
+      // ================================================================
+
+      // DESKTOP: Cacher l'écran de chargement après initialisation
+      if (window.innerWidth > 768) {
+        console.log('[DESKTOP] 🚀 Initialisation - masquage de l\'écran de chargement');
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const appContainer = document.getElementById('app-container');
+
+        // Simuler une progression rapide pour l'effet visuel
+        const progressFill = document.getElementById('loading-progress-fill');
+        const progressText = document.getElementById('loading-progress-text');
+
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+          progress += 20;
+          if (progressFill && progressText) {
+            progressFill.style.width = `${progress}%`;
+            progressText.textContent = `${progress}%`;
+          }
+
+          if (progress >= 100) {
+            clearInterval(progressInterval);
+
+            // Cacher l'overlay et afficher l'app
+            setTimeout(() => {
+              if (loadingOverlay) {
+                loadingOverlay.classList.add('hidden');
+              }
+              if (appContainer) {
+                appContainer.classList.add('loaded');
+                appContainer.style.opacity = '1';
+              }
+              console.log('[DESKTOP] ✅ Écran de chargement masqué - app prête');
+            }, 300);
+          }
+        }, 100);
+      }
+      // MOBILE: Précharger les pages principales et cacher les scrollbars
+      else if (window.innerWidth <= 768) {
         console.log('[MOBILE] 🚀 DÉMARRAGE DU PRÉCHARGEMENT DE TOUTES LES PAGES');
         let loadedPages = 0;
 

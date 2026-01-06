@@ -9440,6 +9440,8 @@ async function saveBusinessPlan() {
 // Initialiser la vérification au chargement
 document.addEventListener('DOMContentLoaded', function() {
   setTimeout(checkIfBusinessPlanNeeded, 1000);
+  // Charger les données pour la notification des objectifs mensuels
+  setTimeout(initObjectifsMensuelsNotification, 1000);
 });
 
 // ========================================
@@ -9450,6 +9452,31 @@ document.addEventListener('DOMContentLoaded', function() {
 let objectifsMensuelsEntrepreneurs = [];
 let objectifsMensuelsData = {};
 let currentObjectifsMensuelsMonth = 0; // Janvier 2026 par défaut
+
+// Initialiser les données pour la notification au chargement de la page
+async function initObjectifsMensuelsNotification() {
+  const coachUsername = window.username || localStorage.getItem('username');
+
+  try {
+    // Charger les entrepreneurs du coach
+    const entrepreneursResponse = await fetch(`/api/entrepreneurs/${coachUsername}`);
+    const entrepreneurs = await entrepreneursResponse.json();
+
+    if (entrepreneurs && entrepreneurs.length > 0) {
+      objectifsMensuelsEntrepreneurs = entrepreneurs;
+
+      // Charger les objectifs existants
+      const objectifsResponse = await fetch(`/api/coach/objectifs-mensuels?coach_username=${coachUsername}`);
+      const objectifsData = await objectifsResponse.json();
+      objectifsMensuelsData = objectifsData.success && objectifsData.objectifs ? objectifsData.objectifs : {};
+
+      // Vérifier et afficher la notification si nécessaire
+      checkObjectifsMensuelsNotification();
+    }
+  } catch (error) {
+    console.error('[OBJECTIFS MENSUELS] Erreur init notification:', error);
+  }
+}
 
 async function loadObjectifsMensuels() {
   const container = document.getElementById('objectifs-mensuels-content');
@@ -9487,6 +9514,11 @@ async function loadObjectifsMensuels() {
 
     // Vérifier si on doit afficher la notification
     checkObjectifsMensuelsNotification();
+
+    // Forcer la mise à jour du badge du menu latéral
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'updateRPOObjectifsBadge' }, '*');
+    }
 
   } catch (error) {
     console.error('[OBJECTIFS MENSUELS] Erreur chargement:', error);
@@ -9748,6 +9780,11 @@ function checkObjectifsMensuelsNotification() {
 
   // Afficher ou cacher le badge
   notification.style.display = allFilled ? 'none' : 'flex';
+
+  // Notifier apppccoach pour mettre à jour le badge du menu latéral
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({ type: 'updateRPOObjectifsBadge' }, '*');
+  }
 }
 
 function toggleModifyObjectifsMode(monthKey) {
@@ -9853,12 +9890,10 @@ async function saveObjectifsMensuelsForMonth(monthKey) {
 
       // Afficher un message de succès temporaire
       const btn = document.getElementById(`modify-objectifs-btn-${monthKey}`);
-      const originalHTML = btn.innerHTML;
       btn.innerHTML = '<i class="fas fa-check"></i><span>Enregistré!</span>';
 
-      setTimeout(() => {
-        btn.innerHTML = originalHTML;
-      }, 2000);
+      // Note: Ne pas restaurer l'ancien HTML car toggleModifyObjectifsMode va le changer en "Modifier"
+      // Le setTimeout est supprimé pour éviter les race conditions
 
       // Mettre à jour le statut de toutes les cartes entrepreneur pour ce mois
       inputs.forEach(input => {

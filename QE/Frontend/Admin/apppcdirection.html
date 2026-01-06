@@ -4742,29 +4742,43 @@
       // SYSTÈME DE CHARGEMENT - Desktop & Mobile
       // ================================================================
 
-      // DESKTOP: Cacher l'écran de chargement après initialisation
+      // DESKTOP: Charger le dashboard puis cacher l'écran de chargement
       if (window.innerWidth > 768) {
-        console.log('[DESKTOP] 🚀 Initialisation - masquage de l\'écran de chargement');
+        console.log('[DESKTOP] 🚀 Chargement du dashboard...');
 
         const loadingOverlay = document.getElementById('loading-overlay');
         const appContainer = document.getElementById('app-container');
-
-        // Simuler une progression rapide pour l'effet visuel
         const progressFill = document.getElementById('loading-progress-fill');
         const progressText = document.getElementById('loading-progress-text');
 
+        // Animation de progression jusqu'à 90% pendant le chargement
         let progress = 0;
         const progressInterval = setInterval(() => {
-          progress += 20;
-          if (progressFill && progressText) {
-            progressFill.style.width = `${progress}%`;
-            progressText.textContent = `${progress}%`;
+          if (progress < 90) {
+            progress += 15;
+            if (progressFill && progressText) {
+              progressFill.style.width = `${progress}%`;
+              progressText.textContent = `${progress}%`;
+            }
           }
+        }, 150);
 
-          if (progress >= 100) {
+        // Attendre que le dashboard soit chargé
+        const pageIframe = document.getElementById('page-iframe');
+        if (pageIframe) {
+          pageIframe.addEventListener('load', function onDashboardLoad() {
+            console.log('[DESKTOP] ✅ Dashboard chargé');
+
+            // Arrêter l'animation de progression
             clearInterval(progressInterval);
 
-            // Cacher l'overlay et afficher l'app
+            // Passer à 100%
+            if (progressFill && progressText) {
+              progressFill.style.width = '100%';
+              progressText.textContent = '100%';
+            }
+
+            // Cacher l'overlay et afficher l'app après un court délai
             setTimeout(() => {
               if (loadingOverlay) {
                 loadingOverlay.classList.add('hidden');
@@ -4775,8 +4789,11 @@
               }
               console.log('[DESKTOP] ✅ Écran de chargement masqué - app prête');
             }, 300);
-          }
-        }, 100);
+
+            // Retirer le listener pour ne pas le déclencher lors des navigations suivantes
+            pageIframe.removeEventListener('load', onDashboardLoad);
+          }, { once: true });
+        }
       }
       // MOBILE: Précharger les pages principales et cacher les scrollbars
       else if (window.innerWidth <= 768) {

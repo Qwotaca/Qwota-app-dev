@@ -176,6 +176,13 @@
         text-size-adjust: none !important;
         overflow-x: hidden !important;
       }
+
+      /* Bloquer les sections mobile-locked uniquement sur mobile */
+      .nav-section.mobile-locked {
+        opacity: 0.5;
+        pointer-events: none;
+        cursor: not-allowed;
+      }
     }
 
     /* ================================================================
@@ -3267,7 +3274,7 @@
 
       <nav class="sidebar-nav">
         <!-- Section Paramètre -->
-        <div class="nav-section">
+        <div class="nav-section mobile-locked">
           <div class="nav-section-title">Paramètre</div>
           <a href="#/connection" class="nav-item" data-page="connection">
             <span class="nav-icon">
@@ -3289,7 +3296,7 @@
             <span class="nav-label">Dashboard</span>
             <span class="tooltip">Dashboard</span>
           </a>
-          <a href="#/rpo" class="nav-item" data-page="rpo" id="nav-rpo" style="position: relative;">
+          <a href="#/rpo" class="nav-item" data-page="rpo" id="nav-rpo" style="position: relative; opacity: 0.5; pointer-events: none; cursor: not-allowed;">
             <span class="nav-icon">
               <i class="fas fa-calendar-alt"></i>
             </span>
@@ -3297,14 +3304,14 @@
             <span class="tooltip">RPO</span>
             <span id="rpo-notification-badge" class="hidden" style="position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; border-radius: 50%; min-width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; padding: 0 5px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); z-index: 100;">0</span>
           </a>
-          <a href="#/centralevue" class="nav-item" data-page="centralevue">
+          <a href="#/centralevue" class="nav-item" data-page="centralevue" style="opacity: 0.5; pointer-events: none; cursor: not-allowed;">
             <span class="nav-icon">
               <i class="fas fa-building"></i>
             </span>
             <span class="nav-label">La Centrale</span>
             <span class="tooltip">La Centrale</span>
           </a>
-          <a href="#/gamification" class="nav-item" data-page="gamification">
+          <a href="#/gamification" class="nav-item" data-page="gamification" style="opacity: 0.5; pointer-events: none; cursor: not-allowed;">
             <span class="nav-icon">
               <i class="fas fa-trophy"></i>
             </span>
@@ -3347,7 +3354,7 @@
         </div>
 
         <!-- Section Gestion -->
-        <div class="nav-section">
+        <div class="nav-section mobile-locked">
           <div class="nav-section-title">Gestion</div>
           <a href="#/travaux" class="nav-item" data-page="travaux">
             <span class="nav-icon">
@@ -3606,7 +3613,7 @@
             </div>
             <!-- Séparateur 1 -->
             <div class="w-px h-8 bg-slate-400 opacity-30"></div>
-            <!-- Case 2 - Travaux -->
+            <!-- Case 2 - Ventes (actif) -->
             <div class="flex-1 case-container flex justify-center items-center h-full">
               <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg cursor-pointer icon-container" onclick="router.loadPage('travaux')">
                 <i class="fas fa-chart-line text-sm text-white"></i>
@@ -3632,7 +3639,7 @@
             <div class="w-px h-8 bg-slate-400 opacity-30"></div>
             <!-- Case 5 - Gestions -->
             <div class="flex-1 case-container flex justify-center items-center h-full">
-              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg cursor-pointer icon-container" onclick="router.loadPage('gestions')">
+              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center shadow-lg cursor-not-allowed icon-container opacity-50" title="Bientôt disponible">
                 <i class="fas fa-briefcase text-sm text-white"></i>
               </div>
             </div>
@@ -3970,7 +3977,9 @@
 
               if (isMobile) {
                 pageSpinner.style.left = '0';
-                pageSpinner.style.top = '0';
+                pageSpinner.style.top = '64px';
+                pageSpinner.style.bottom = '96px';
+                pageSpinner.style.right = '0';
               } else {
                 const sidebarWidth = sidebar && sidebar.classList.contains('expanded') ? '260px' : '80px';
                 pageSpinner.style.left = sidebarWidth;
@@ -4084,9 +4093,11 @@
                 const isMobile = window.innerWidth <= 768;
 
                 if (isMobile) {
-                  // Mobile: pas de sidebar, spinner couvre toute la zone
+                  // Mobile: pas de sidebar, spinner couvre seulement la zone de contenu (entre header et bottom nav)
                   spinner.style.left = '0';
-                  spinner.style.top = '0';
+                  spinner.style.top = '64px';
+                  spinner.style.bottom = '96px';
+                  spinner.style.right = '0';
                 } else {
                   // Desktop: ajuster selon si sidebar expanded ou collapsed
                   const sidebarWidth = sidebar && sidebar.classList.contains('expanded') ? '260px' : '80px';
@@ -4206,7 +4217,10 @@
           const urlParams = new URLSearchParams(window.location.search);
           const usernameFromUrl = urlParams.get('user');
           const username = usernameFromUrl || window.username || localStorage.getItem('username');
-          const initialPage = location.hash.slice(2) || 'dashboard';
+
+          // Forcer dashboard au lancement initial (ignorer le hash existant)
+          const initialPage = 'dashboard';
+          location.hash = '#/dashboard';
 
           // IMPORTANT: Vider toutes les iframes si un nouveau username est détecté
           if (usernameFromUrl) {

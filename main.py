@@ -14404,7 +14404,13 @@ async def ajouter_historique_facturation(username: str, numero_soumission: str, 
         historique = []
         if os.path.exists(historique_file):
             with open(historique_file, "r", encoding="utf-8") as f:
-                historique = json.load(f)
+                content = json.load(f)
+                # Vérifier que c'est bien une liste
+                if isinstance(content, list):
+                    historique = content
+                else:
+                    print(f"[HISTORIQUE] Fichier corrompu (dict au lieu de list), réinitialisation")
+                    historique = []
 
         # Récupérer le nom et la photo de l'entrepreneur
         entrepreneur_nom = username

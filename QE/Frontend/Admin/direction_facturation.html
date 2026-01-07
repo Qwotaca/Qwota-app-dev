@@ -1980,6 +1980,16 @@
           </div>
         </div>
 
+        <!-- Section 5 derniers traités -->
+        <div style="font-size: 0.7rem; font-weight: 600; color: var(--text-gray); text-transform: uppercase; letter-spacing: 0.5px; padding-left: 0.25rem; margin-top: 1rem;">
+          <i class="fas fa-history" style="margin-right: 0.4rem; color: #60a5fa;"></i>Derniers traités
+        </div>
+
+        <!-- Container des derniers traités -->
+        <div id="derniers-traites" style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1; overflow-y: auto; min-height: 0;">
+          <!-- Contenu dynamique chargé par chargerDerniersTraites() -->
+        </div>
+
       </div>
     </div>
     </div>
@@ -3127,6 +3137,9 @@
         await chargerPaiementsEnTraitement();
         await chargerDerniersTraites();
 
+        // Recharger le tableau de rapprochement QBO
+        await chargerTableauPeriodes();
+
         // Notifier le parent
         if (window.parent && window.parent !== window) {
           window.parent.postMessage({ type: 'updateFacturationBadge' }, '*');
@@ -3181,9 +3194,9 @@
 
         const container = document.getElementById('derniers-traites');
 
-        // Vérifier si le container existe
+        // Vérifier si le container existe (il n'existe que dans la vue Général)
         if (!container) {
-          console.error('[Direction Facturation] Element derniers-traites non trouvé');
+          // Pas d'erreur, c'est normal si on est dans une autre vue
           return;
         }
 
@@ -5207,6 +5220,7 @@
       // Ensuite charger le reste
       chargerPaiementsEnTraitement();
       chargerMessagesEnAttente();
+      chargerDerniersTraites();
     });
 
     // Fermer modal avec Escape

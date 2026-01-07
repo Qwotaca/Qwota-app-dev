@@ -509,37 +509,37 @@ def get_xp_history(username: str, limit: int = 50) -> List[Dict]:
 
 XP_REWARDS = {
     # Actions de base
-    "login": 5,
-    "complete_profile": 50,
-    "first_connection": 25,
+    "login": 10,
+    "complete_profile": 100,
+    "first_connection": 50,
 
     # Soumissions
-    "create_soumission": 25,
-    "complete_soumission": 50,
-    "win_soumission": 100,
+    "create_soumission": 50,
+    "complete_soumission": 100,
+    "win_soumission": 200,
 
     # Factures
-    "create_facture": 30,
-    "send_facture": 40,
-    "pay_facture": 60,
+    "create_facture": 60,
+    "send_facture": 80,
+    "pay_facture": 120,
 
     # Gestion
-    "add_employee": 20,
-    "complete_training": 75,
-    "update_schedule": 15,
+    "add_employee": 40,
+    "complete_training": 150,
+    "update_schedule": 30,
 
     # Calculs
-    "use_calculator": 10,
-    "save_calculation": 15,
+    "use_calculator": 20,
+    "save_calculation": 30,
 
     # Social
-    "leave_review": 20,
-    "help_teammate": 30,
+    "leave_review": 40,
+    "help_teammate": 60,
 
     # Quêtes
-    "complete_daily_quest": 50,
-    "complete_weekly_quest": 150,
-    "complete_side_quest": 100,
+    "complete_daily_quest": 100,
+    "complete_weekly_quest": 300,
+    "complete_side_quest": 200,
 }
 
 
@@ -560,42 +560,42 @@ BADGES_CONFIG = {
         "description": "Gagner une Compétition des JITQE avec ton équipe",
         "rarity": "Commun",
         "type": "fleur",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
     },
     "costumier": {
         "name": "Costumier",
         "description": "Gagnant du plus beau costume lors d'un évènement JITQE",
         "rarity": "Commun",
         "type": "fleur",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
     },
     "mvp_competition": {
         "name": "MVP",
         "description": "Sois nommé MVP d'une compétition des JITQE",
         "rarity": "Rare",
         "type": "fleur",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
     },
     "champions_jitqe": {
         "name": "CHAMPIONS !",
         "description": "Gagner les JITQE avec ton équipe",
         "rarity": "Légendaire",
         "type": "fleur",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
     },
     "entrepreneur_semaine": {
         "name": "Entrepreneur de la semaine",
         "description": "Sois nommé entrepreneur de la semaine",
         "rarity": "Légendaire",
         "type": "fleur",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
     },
     "mention_semaine": {
         "name": "Mention de la semaine",
         "description": "Sois nommé mention de la semaine",
         "rarity": "Rare",
         "type": "fleur",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
     },
 
     # Badges Fleurs - Ventes
@@ -604,14 +604,14 @@ BADGES_CONFIG = {
         "description": "Atteins l'objectif du concours de ventes d'hiver",
         "rarity": "Rare",
         "type": "fleur",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
     },
     "pool_facile": {
         "name": "Mon pool était trop facile",
         "description": "Gagnant du tournoi des ventes d'avril",
         "rarity": "Légendaire",
         "type": "fleur",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
     },
 
     # Badges Fleurs - Club Président
@@ -620,42 +620,42 @@ BADGES_CONFIG = {
         "description": "Nommé MVP du voyage selon tes pairs",
         "rarity": "Légendaire",
         "type": "fleur",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
     },
     "president_1": {
         "name": "Tu es un Président",
         "description": "Participer au Club du Président",
         "rarity": "Légendaire",
         "type": "fleur",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
     },
     "president_2": {
         "name": "Encore Président",
         "description": "Participer au Club du Président 2 fois",
         "rarity": "Mythique",
         "type": "fleur",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
     },
     "president_3": {
         "name": "Président pour Toujours",
         "description": "Participer au Club du Président 3 fois",
         "rarity": "Épique",
         "type": "fleur",
-        "xp_bonus": 500,
+        "xp_bonus": 1000,
     },
     "elite_1": {
         "name": "Tu es Élite",
         "description": "Participer au Club Élite",
         "rarity": "Mythique",
         "type": "fleur",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
     },
     "elite_2": {
         "name": "L'Élite de l'Élite",
         "description": "Participer au Club Élite pour une deuxième fois",
         "rarity": "Épique",
         "type": "fleur",
-        "xp_bonus": 500,
+        "xp_bonus": 1000,
     },
 
     # Badges Fleurs - Référence et Recrutement
@@ -664,28 +664,28 @@ BADGES_CONFIG = {
         "description": "Référencie un ami au programme QE",
         "rarity": "Légendaire",
         "type": "fleur",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
     },
     "modele_peintres": {
         "name": "Modèle pour les peintres",
         "description": "Un peintre deviens entrepreneur",
         "rarity": "Mythique",
         "type": "fleur",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
     },
     "referenceurs": {
         "name": "Tu es un Référenceur",
         "description": "Participe au voyage de références",
         "rarity": "Légendaire",
         "type": "fleur",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
     },
     "peintre_entrepreneur": {
         "name": "De Peintres à Entrepreneur",
         "description": "Passe de peintre à entrepreneur",
         "rarity": "Légendaire",
         "type": "fleur",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
     },
 
     # Badges Fleurs - Fidélité
@@ -694,28 +694,28 @@ BADGES_CONFIG = {
         "description": "Reviens pour une 2e année",
         "rarity": "Rare",
         "type": "fleur",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
     },
     "retour_3": {
         "name": "QE sur le Coeur",
         "description": "Reviens pour une 3e année",
         "rarity": "Légendaire",
         "type": "fleur",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
     },
     "retour_4": {
         "name": "ad vitam æternam",
         "description": "Reviens pour une 4e année",
         "rarity": "Mythique",
         "type": "fleur",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
     },
     "retour_5": {
         "name": "QE pour la vie",
         "description": "5 ans chez QE",
         "rarity": "Mythique",
         "type": "fleur",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
     },
 
     # Badges Fleurs - Leadership
@@ -724,21 +724,21 @@ BADGES_CONFIG = {
         "description": "Deviens Coach",
         "rarity": "Mythique",
         "type": "fleur",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
     },
     "super_coach": {
         "name": "Super Coach",
         "description": "Deviens Coach Sénior",
         "rarity": "Épique",
         "type": "fleur",
-        "xp_bonus": 500,
+        "xp_bonus": 1000,
     },
     "mentor": {
         "name": "Mentor!!",
         "description": "Deviens Mentor",
         "rarity": "Mythique",
         "type": "fleur",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
     },
 
     # Badges Fleurs - Performance
@@ -747,7 +747,7 @@ BADGES_CONFIG = {
         "description": "90% et plus de tes peintres sont satisfaits de ton travail",
         "rarity": "Rare",
         "type": "fleur",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
     },
 
     # Badges Fleurs - Activités
@@ -756,21 +756,21 @@ BADGES_CONFIG = {
         "description": "Amènes des peintres au rafting",
         "rarity": "Commun",
         "type": "fleur",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
     },
     "vikings": {
         "name": "VIKINGS",
         "description": "Amènes 5 peintres et plus au rafting",
         "rarity": "Rare",
         "type": "fleur",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
     },
     "berceuse": {
         "name": "Berceuse",
         "description": "Couche la personne de garde au du Président",
         "rarity": "Épique",
         "type": "fleur",
-        "xp_bonus": 500,
+        "xp_bonus": 1000,
     },
 
     # Badges Fleurs - Formation et Participation
@@ -779,28 +779,28 @@ BADGES_CONFIG = {
         "description": "Participe à toutes les formations provinciales",
         "rarity": "Rare",
         "type": "fleur",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
     },
     "ho_ho_ho": {
         "name": "Ho ho ho !",
         "description": "Participe au Souper de Noel",
         "rarity": "Commun",
         "type": "fleur",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
     },
     "formations": {
         "name": "'Formations'",
         "description": "Participe à toutes les retraites",
         "rarity": "Rare",
         "type": "fleur",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
     },
     "premier_classe": {
         "name": "Premier de classe",
         "description": "Participe à tous les évènements obligatoires",
         "rarity": "Légendaire",
         "type": "fleur",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
     },
 
     # Anti-Badges (retirent des points)
@@ -831,7 +831,7 @@ BADGES_CONFIG = {
         "description": "Avoir vendu 100 000$",
         "rarity": "Commun",
         "type": "trophee",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "automatic": True,
         "trigger": {"type": "total_sales", "amount": 100000}
     },
@@ -840,7 +840,7 @@ BADGES_CONFIG = {
         "description": "Avoir vendu 125 000$",
         "rarity": "Rare",
         "type": "trophee",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "automatic": True,
         "trigger": {"type": "total_sales", "amount": 125000}
     },
@@ -849,7 +849,7 @@ BADGES_CONFIG = {
         "description": "Avoir vendu 300 000$",
         "rarity": "Légendaire",
         "type": "trophee",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": True,
         "trigger": {"type": "total_sales", "amount": 300000}
     },
@@ -858,7 +858,7 @@ BADGES_CONFIG = {
         "description": "Avoir vendu 500 000$",
         "rarity": "Mythique",
         "type": "trophee",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "automatic": True,
         "trigger": {"type": "total_sales", "amount": 500000}
     },
@@ -867,7 +867,7 @@ BADGES_CONFIG = {
         "description": "Avoir vendu 1 000 000$",
         "rarity": "Épique",
         "type": "trophee",
-        "xp_bonus": 500,
+        "xp_bonus": 1000,
         "automatic": True,
         "trigger": {"type": "total_sales", "amount": 1000000}
     },
@@ -878,7 +878,7 @@ BADGES_CONFIG = {
         "description": "Vendre 10 000$ en 1 semaine",
         "rarity": "Commun",
         "type": "trophee",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "automatic": True,
         "trigger": {"type": "weekly_sales", "amount": 10000}
     },
@@ -887,7 +887,7 @@ BADGES_CONFIG = {
         "description": "Vendre 20 000$ en 1 semaine",
         "rarity": "Rare",
         "type": "trophee",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "automatic": True,
         "trigger": {"type": "weekly_sales", "amount": 20000}
     },
@@ -896,7 +896,7 @@ BADGES_CONFIG = {
         "description": "Vendre 30 000$ en 1 semaine",
         "rarity": "Légendaire",
         "type": "trophee",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": True,
         "trigger": {"type": "weekly_sales", "amount": 30000}
     },
@@ -905,7 +905,7 @@ BADGES_CONFIG = {
         "description": "Vendre 40 000$ en 1 semaine",
         "rarity": "Mythique",
         "type": "trophee",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "automatic": True,
         "trigger": {"type": "weekly_sales", "amount": 40000}
     },
@@ -916,7 +916,7 @@ BADGES_CONFIG = {
         "description": "Produire 10 000$ en 1 semaine",
         "rarity": "Commun",
         "type": "trophee",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "automatic": True,
         "trigger": {"type": "weekly_production", "amount": 10000}
     },
@@ -925,7 +925,7 @@ BADGES_CONFIG = {
         "description": "Produire 20 000$ en 1 semaine",
         "rarity": "Rare",
         "type": "trophee",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "automatic": True,
         "trigger": {"type": "weekly_production", "amount": 20000}
     },
@@ -934,7 +934,7 @@ BADGES_CONFIG = {
         "description": "Produire 30 000$ en 1 semaine",
         "rarity": "Légendaire",
         "type": "trophee",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": True,
         "trigger": {"type": "weekly_production", "amount": 30000}
     },
@@ -943,7 +943,7 @@ BADGES_CONFIG = {
         "description": "Produire 40 000$ en 1 semaine",
         "rarity": "Mythique",
         "type": "trophee",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "automatic": True,
         "trigger": {"type": "weekly_production", "amount": 40000}
     },
@@ -954,7 +954,7 @@ BADGES_CONFIG = {
         "description": "Recrue de l'année",
         "rarity": "Mythique",
         "type": "trophee",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "automatic": False
     },
     "goat_recrue": {
@@ -962,7 +962,7 @@ BADGES_CONFIG = {
         "description": "Meilleure Recrue de tous les temps",
         "rarity": "Épique",
         "type": "trophee",
-        "xp_bonus": 500,
+        "xp_bonus": 1000,
         "automatic": False
     },
     "etoile_montante": {
@@ -970,7 +970,7 @@ BADGES_CONFIG = {
         "description": "Nominé comme recrue de l'année",
         "rarity": "Légendaire",
         "type": "trophee",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
 
@@ -980,7 +980,7 @@ BADGES_CONFIG = {
         "description": "Entrepreneur de l'année",
         "rarity": "Mythique",
         "type": "trophee",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "automatic": False
     },
     "finaliste_excellence": {
@@ -988,7 +988,7 @@ BADGES_CONFIG = {
         "description": "Nominé comme entrepreneur de l'année",
         "rarity": "Légendaire",
         "type": "trophee",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
 
@@ -998,7 +998,7 @@ BADGES_CONFIG = {
         "description": "Meilleure taux de satisfaction client",
         "rarity": "Mythique",
         "type": "trophee",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "automatic": False
     },
     "chouchou": {
@@ -1006,7 +1006,7 @@ BADGES_CONFIG = {
         "description": "Nominé taux de satisfaction (Prix de Qualité de production)",
         "rarity": "Légendaire",
         "type": "trophee",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
 
@@ -1016,7 +1016,7 @@ BADGES_CONFIG = {
         "description": "3 mois au dessus de 50% de TV",
         "rarity": "Légendaire",
         "type": "trophee",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
     "goat": {
@@ -1024,7 +1024,7 @@ BADGES_CONFIG = {
         "description": "Record de tout les temps",
         "rarity": "Épique",
         "type": "trophee",
-        "xp_bonus": 500,
+        "xp_bonus": 1000,
         "automatic": False
     },
     "big_5": {
@@ -1032,7 +1032,7 @@ BADGES_CONFIG = {
         "description": "Top 5 de tout les temps",
         "rarity": "Mythique",
         "type": "trophee",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "automatic": False
     },
     "triple": {
@@ -1040,7 +1040,7 @@ BADGES_CONFIG = {
         "description": "3 mois consécutif au-dessus de ton objectif",
         "rarity": "Rare",
         "type": "trophee",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "automatic": False
     },
 
@@ -1050,7 +1050,7 @@ BADGES_CONFIG = {
         "description": "Plus de 5 employés actif",
         "rarity": "Commun",
         "type": "trophee",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "automatic": False
     },
     "bande_organisee": {
@@ -1058,7 +1058,7 @@ BADGES_CONFIG = {
         "description": "Plus de 10 employés actif",
         "rarity": "Rare",
         "type": "trophee",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "automatic": False
     },
 
@@ -1068,7 +1068,7 @@ BADGES_CONFIG = {
         "description": "40 000$ signé fin janvier",
         "rarity": "Rare",
         "type": "trophee",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "automatic": False
     },
     "coup_canon": {
@@ -1076,7 +1076,7 @@ BADGES_CONFIG = {
         "description": "75 000$ signé fin janvier",
         "rarity": "Légendaire",
         "type": "trophee",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
 
@@ -1086,7 +1086,7 @@ BADGES_CONFIG = {
         "description": "Gagnant du Prix de Persévérance",
         "rarity": "Mythique",
         "type": "trophee",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "automatic": False
     },
     "travaillant": {
@@ -1094,7 +1094,7 @@ BADGES_CONFIG = {
         "description": "Finaliste au Prix de Persévérance",
         "rarity": "Légendaire",
         "type": "trophee",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
     "consultant_or": {
@@ -1102,7 +1102,7 @@ BADGES_CONFIG = {
         "description": "Coach de l'Année !",
         "rarity": "Mythique",
         "type": "trophee",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "automatic": False
     },
     "propulsion": {
@@ -1110,7 +1110,7 @@ BADGES_CONFIG = {
         "description": "Tu fais parti du Programme Propulsion",
         "rarity": "Légendaire",
         "type": "trophee",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
     "modele_tous": {
@@ -1118,7 +1118,7 @@ BADGES_CONFIG = {
         "description": "Gagnant de l'Image de Marque",
         "rarity": "Mythique",
         "type": "trophee",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "automatic": False
     },
     "collegue_or": {
@@ -1126,7 +1126,7 @@ BADGES_CONFIG = {
         "description": "Finaliste de l'Image de Marque",
         "rarity": "Légendaire",
         "type": "trophee",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
     "mentor_mentors": {
@@ -1134,7 +1134,7 @@ BADGES_CONFIG = {
         "description": "Gagnant du Prix Leadership",
         "rarity": "Mythique",
         "type": "trophee",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "automatic": False
     },
     "modele_releve": {
@@ -1142,7 +1142,7 @@ BADGES_CONFIG = {
         "description": "Finaliste du Prix Leadership",
         "rarity": "Légendaire",
         "type": "trophee",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
     "money_maker": {
@@ -1150,7 +1150,7 @@ BADGES_CONFIG = {
         "description": "Gagnant du Prix Rentabilité",
         "rarity": "Légendaire",
         "type": "trophee",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
     "make_it_rain": {
@@ -1158,7 +1158,7 @@ BADGES_CONFIG = {
         "description": "Finaliste du Prix Rentabilité",
         "rarity": "Mythique",
         "type": "trophee",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "automatic": False
     },
     "madness": {
@@ -1166,7 +1166,7 @@ BADGES_CONFIG = {
         "description": "Gagnant du October Madness",
         "rarity": "Mythique",
         "type": "trophee",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "automatic": False
     },
 
@@ -1180,7 +1180,7 @@ BADGES_CONFIG = {
         "description": "T'as fait 10h de pàp cette semaine",
         "rarity": "Commun",
         "type": "badge",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "weekly_pap", "hours": 10}
@@ -1190,7 +1190,7 @@ BADGES_CONFIG = {
         "description": "T'as fait 20h de pàp cette semaine",
         "rarity": "Rare",
         "type": "badge",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "weekly_pap", "hours": 20}
@@ -1200,7 +1200,7 @@ BADGES_CONFIG = {
         "description": "T'as fait 30h de pàp cette semaine",
         "rarity": "Légendaire",
         "type": "badge",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "weekly_pap", "hours": 30}
@@ -1210,7 +1210,7 @@ BADGES_CONFIG = {
         "description": "T'as fait 40h de pàp cette semaine",
         "rarity": "Mythique",
         "type": "badge",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "weekly_pap", "hours": 40}
@@ -1222,7 +1222,7 @@ BADGES_CONFIG = {
         "description": "8 estimations faites",
         "rarity": "Commun",
         "type": "badge",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "weekly_estimates", "count": 8}
@@ -1232,7 +1232,7 @@ BADGES_CONFIG = {
         "description": "15 estimations faites",
         "rarity": "Rare",
         "type": "badge",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "weekly_estimates", "count": 15}
@@ -1242,7 +1242,7 @@ BADGES_CONFIG = {
         "description": "20 estimations faites",
         "rarity": "Légendaire",
         "type": "badge",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "weekly_estimates", "count": 20}
@@ -1252,7 +1252,7 @@ BADGES_CONFIG = {
         "description": "25 estimations faites",
         "rarity": "Mythique",
         "type": "badge",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "weekly_estimates", "count": 25}
@@ -1264,7 +1264,7 @@ BADGES_CONFIG = {
         "description": "5 000 $ de ventes",
         "rarity": "Commun",
         "type": "badge",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "weekly_sales", "amount": 5000}
@@ -1274,7 +1274,7 @@ BADGES_CONFIG = {
         "description": "10 000 $ de ventes",
         "rarity": "Rare",
         "type": "badge",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "weekly_sales", "amount": 10000}
@@ -1284,7 +1284,7 @@ BADGES_CONFIG = {
         "description": "15 000 $ de ventes",
         "rarity": "Légendaire",
         "type": "badge",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "weekly_sales", "amount": 15000}
@@ -1294,7 +1294,7 @@ BADGES_CONFIG = {
         "description": "20 000 $ de ventes",
         "rarity": "Mythique",
         "type": "badge",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "weekly_sales", "amount": 20000}
@@ -1306,7 +1306,7 @@ BADGES_CONFIG = {
         "description": "30 % de taux de closing",
         "rarity": "Commun",
         "type": "badge",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "closing_rate", "min_rate": 30, "max_rate": 34, "min_estimates": 7}
@@ -1316,7 +1316,7 @@ BADGES_CONFIG = {
         "description": "35 % de taux de closing",
         "rarity": "Rare",
         "type": "badge",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "closing_rate", "min_rate": 35, "max_rate": 39, "min_estimates": 7}
@@ -1326,7 +1326,7 @@ BADGES_CONFIG = {
         "description": "40 % de taux de closing",
         "rarity": "Légendaire",
         "type": "badge",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "closing_rate", "min_rate": 40, "max_rate": 44, "min_estimates": 7}
@@ -1336,7 +1336,7 @@ BADGES_CONFIG = {
         "description": "45 % de taux de closing",
         "rarity": "Mythique",
         "type": "badge",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "closing_rate", "min_rate": 45, "max_rate": 100, "min_estimates": 7}
@@ -1348,7 +1348,7 @@ BADGES_CONFIG = {
         "description": "5 000 $ de production",
         "rarity": "Commun",
         "type": "badge",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "weekly_production", "amount": 5000}
@@ -1358,7 +1358,7 @@ BADGES_CONFIG = {
         "description": "10 000 $ de production",
         "rarity": "Rare",
         "type": "badge",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "weekly_production", "amount": 10000}
@@ -1368,7 +1368,7 @@ BADGES_CONFIG = {
         "description": "15 000 $ de production",
         "rarity": "Légendaire",
         "type": "badge",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "weekly_production", "amount": 15000}
@@ -1378,7 +1378,7 @@ BADGES_CONFIG = {
         "description": "20 000 $ de production",
         "rarity": "Mythique",
         "type": "badge",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "weekly_production", "amount": 20000}
@@ -1390,7 +1390,7 @@ BADGES_CONFIG = {
         "description": "85 $ prod horaire",
         "rarity": "Commun",
         "type": "badge",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "hourly_prod", "rate": 85}
@@ -1400,7 +1400,7 @@ BADGES_CONFIG = {
         "description": "100 $ prod horaire",
         "rarity": "Rare",
         "type": "badge",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "hourly_prod", "rate": 100}
@@ -1410,7 +1410,7 @@ BADGES_CONFIG = {
         "description": "115 $ prod horaire",
         "rarity": "Légendaire",
         "type": "badge",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "hourly_prod", "rate": 115}
@@ -1420,7 +1420,7 @@ BADGES_CONFIG = {
         "description": "130 $ prod horaire",
         "rarity": "Mythique",
         "type": "badge",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "hourly_prod", "rate": 130}
@@ -1432,7 +1432,7 @@ BADGES_CONFIG = {
         "description": "1er employé actif",
         "rarity": "Commun",
         "type": "badge",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "active_employees", "count": 1}
@@ -1442,7 +1442,7 @@ BADGES_CONFIG = {
         "description": "5 employés actifs",
         "rarity": "Rare",
         "type": "badge",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "active_employees", "count": 5}
@@ -1452,7 +1452,7 @@ BADGES_CONFIG = {
         "description": "15 employés actifs",
         "rarity": "Légendaire",
         "type": "badge",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "active_employees", "count": 15}
@@ -1462,7 +1462,7 @@ BADGES_CONFIG = {
         "description": "25 employés actifs",
         "rarity": "Mythique",
         "type": "badge",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "active_employees", "count": 25}
@@ -1474,7 +1474,7 @@ BADGES_CONFIG = {
         "description": "RPO à jour dimanche 20h",
         "rarity": "Commun",
         "type": "badge",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "rpo_on_time", "deadline": "sunday_20h"}
@@ -1484,7 +1484,7 @@ BADGES_CONFIG = {
         "description": "Facturation à jour dimanche 20h",
         "rarity": "Commun",
         "type": "badge",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "billing_on_time", "deadline": "sunday_20h"}
@@ -1494,7 +1494,7 @@ BADGES_CONFIG = {
         "description": "RPO + Facturation à jour dimanche 20h",
         "rarity": "Rare",
         "type": "badge",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "both_on_time", "deadline": "sunday_20h"}
@@ -1538,7 +1538,7 @@ BADGES_CONFIG = {
         "description": "5 Semaines d'affilée pour PàP",
         "rarity": "Commun",
         "type": "badge",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "streak_pap", "weeks": 5, "min_hours": 10}
@@ -1548,7 +1548,7 @@ BADGES_CONFIG = {
         "description": "10 Semaines d'affilée pour PàP",
         "rarity": "Rare",
         "type": "badge",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "streak_pap", "weeks": 10, "min_hours": 10}
@@ -1558,7 +1558,7 @@ BADGES_CONFIG = {
         "description": "15 Semaines d'affilée pour PàP",
         "rarity": "Légendaire",
         "type": "badge",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "streak_pap", "weeks": 15, "min_hours": 10}
@@ -1568,7 +1568,7 @@ BADGES_CONFIG = {
         "description": "25 Semaines d'affilée pour PàP",
         "rarity": "Mythique",
         "type": "badge",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "streak_pap", "weeks": 25, "min_hours": 10}
@@ -1580,7 +1580,7 @@ BADGES_CONFIG = {
         "description": "5 Semaines d'affilée pour Estims",
         "rarity": "Commun",
         "type": "badge",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "streak_estimates", "weeks": 5, "min_count": 10}
@@ -1590,7 +1590,7 @@ BADGES_CONFIG = {
         "description": "10 Semaines d'affilée pour Estims",
         "rarity": "Rare",
         "type": "badge",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "streak_estimates", "weeks": 10, "min_count": 10}
@@ -1600,7 +1600,7 @@ BADGES_CONFIG = {
         "description": "15 Semaines d'affilée pour Estims",
         "rarity": "Légendaire",
         "type": "badge",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "streak_estimates", "weeks": 15, "min_count": 10}
@@ -1610,7 +1610,7 @@ BADGES_CONFIG = {
         "description": "25 Semaines d'affilée pour Estims",
         "rarity": "Mythique",
         "type": "badge",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "streak_estimates", "weeks": 25, "min_count": 10}
@@ -1622,7 +1622,7 @@ BADGES_CONFIG = {
         "description": "5 Semaines d'affilée pour Ventes",
         "rarity": "Commun",
         "type": "badge",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "streak_sales", "weeks": 5, "min_amount": 10000}
@@ -1632,7 +1632,7 @@ BADGES_CONFIG = {
         "description": "10 Semaines d'affilée pour Ventes",
         "rarity": "Rare",
         "type": "badge",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "streak_sales", "weeks": 10, "min_amount": 10000}
@@ -1642,7 +1642,7 @@ BADGES_CONFIG = {
         "description": "15 Semaines d'affilée pour Ventes",
         "rarity": "Légendaire",
         "type": "badge",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "streak_sales", "weeks": 15, "min_amount": 10000}
@@ -1652,7 +1652,7 @@ BADGES_CONFIG = {
         "description": "25 Semaines d'affilée pour Ventes",
         "rarity": "Mythique",
         "type": "badge",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "streak_sales", "weeks": 25, "min_amount": 10000}
@@ -1664,7 +1664,7 @@ BADGES_CONFIG = {
         "description": "3 Semaines d'affilée pour Prod",
         "rarity": "Commun",
         "type": "badge",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "streak_production", "weeks": 3, "min_amount": 10000}
@@ -1674,7 +1674,7 @@ BADGES_CONFIG = {
         "description": "8 Semaines d'affilée pour Prod",
         "rarity": "Rare",
         "type": "badge",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "streak_production", "weeks": 8, "min_amount": 10000}
@@ -1684,7 +1684,7 @@ BADGES_CONFIG = {
         "description": "12 Semaines d'affilée pour Prod",
         "rarity": "Légendaire",
         "type": "badge",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "streak_production", "weeks": 12, "min_amount": 10000}
@@ -1694,7 +1694,7 @@ BADGES_CONFIG = {
         "description": "15 Semaines d'affilée pour Prod",
         "rarity": "Mythique",
         "type": "badge",
-        "xp_bonus": 300,
+        "xp_bonus": 600,
         "icon": "🎖️",
         "automatic": True,
         "trigger": {"type": "streak_production", "weeks": 15, "min_amount": 10000}
@@ -1710,7 +1710,7 @@ BADGES_CONFIG = {
         "description": "Passer sa certification en estimation",
         "rarity": "Commun",
         "type": "etoile",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "automatic": False
     },
     "droit_passage": {
@@ -1718,7 +1718,7 @@ BADGES_CONFIG = {
         "description": "Avoir fait 20 estimations au 31 mars",
         "rarity": "Commun",
         "type": "etoile",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "automatic": False
     },
 
@@ -1728,7 +1728,7 @@ BADGES_CONFIG = {
         "description": "Passer sa certification de production",
         "rarity": "Commun",
         "type": "etoile",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "automatic": False
     },
     "super_producteur": {
@@ -1736,7 +1736,7 @@ BADGES_CONFIG = {
         "description": "Passer sa certification de production avec plus de 80/100",
         "rarity": "Rare",
         "type": "etoile",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "automatic": False
     },
     "maitre_producteur": {
@@ -1744,7 +1744,7 @@ BADGES_CONFIG = {
         "description": "Passer sa certification de production avec plus de 90/100",
         "rarity": "Légendaire",
         "type": "etoile",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
     "roi_production": {
@@ -1752,7 +1752,7 @@ BADGES_CONFIG = {
         "description": "Recevoir la meilleure note lors de la certification de sa cohorte",
         "rarity": "Mythique",
         "type": "etoile",
-        "xp_bonus": 400,
+        "xp_bonus": 800,
         "automatic": False
     },
 
@@ -1762,7 +1762,7 @@ BADGES_CONFIG = {
         "description": "Passer sa certification durant le panel de production à 15/20 et plus",
         "rarity": "Commun",
         "type": "etoile",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "automatic": False
     },
     "paneliste_agguerri": {
@@ -1770,7 +1770,7 @@ BADGES_CONFIG = {
         "description": "Passer sa certification durant le panel de production à 17/20 et plus",
         "rarity": "Rare",
         "type": "etoile",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "automatic": False
     },
     "paneliste_expert": {
@@ -1778,7 +1778,7 @@ BADGES_CONFIG = {
         "description": "Passer sa certification durant le panel de production à 19/20 et plus",
         "rarity": "Légendaire",
         "type": "etoile",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
     "roi_panel": {
@@ -1786,7 +1786,7 @@ BADGES_CONFIG = {
         "description": "Recevoir la meilleure note lors du panel de production de sa cohorte",
         "rarity": "Mythique",
         "type": "etoile",
-        "xp_bonus": 400,
+        "xp_bonus": 800,
         "automatic": False
     },
 
@@ -1796,7 +1796,7 @@ BADGES_CONFIG = {
         "description": "Signer plus de 33 333$ et obtient le droit de participer à la semaine de production",
         "rarity": "Commun",
         "type": "etoile",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "automatic": False
     },
 
@@ -1806,7 +1806,7 @@ BADGES_CONFIG = {
         "description": "Passer son intégration Séniors",
         "rarity": "Commun",
         "type": "etoile",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "automatic": False
     },
 
@@ -1816,7 +1816,7 @@ BADGES_CONFIG = {
         "description": "Passer son Panel Séniors avec 15/20 et plus",
         "rarity": "Commun",
         "type": "etoile",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "automatic": False
     },
     "grosse_annee": {
@@ -1824,7 +1824,7 @@ BADGES_CONFIG = {
         "description": "Passer son Panel Séniors avec 17/20 et plus",
         "rarity": "Rare",
         "type": "etoile",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "automatic": False
     },
     "annee_record": {
@@ -1832,7 +1832,7 @@ BADGES_CONFIG = {
         "description": "Passer son Panel Séniors avec 19/20 et plus",
         "rarity": "Légendaire",
         "type": "etoile",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
     "meilleur_panel_senior": {
@@ -1840,7 +1840,7 @@ BADGES_CONFIG = {
         "description": "Recevoir la meilleure note lors du panel de Janvier de sa cohorte",
         "rarity": "Mythique",
         "type": "etoile",
-        "xp_bonus": 400,
+        "xp_bonus": 800,
         "automatic": False
     },
 
@@ -1850,7 +1850,7 @@ BADGES_CONFIG = {
         "description": "Passer sa formation sur la peinture au spray",
         "rarity": "Rare",
         "type": "etoile",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "automatic": False
     },
     "valet_formateur": {
@@ -1858,7 +1858,7 @@ BADGES_CONFIG = {
         "description": "Donner une semaine de formation comme séniors en mai et avoir 15/20 et plus",
         "rarity": "Commun",
         "type": "etoile",
-        "xp_bonus": 50,
+        "xp_bonus": 100,
         "automatic": False
     },
     "dame_formateur": {
@@ -1866,7 +1866,7 @@ BADGES_CONFIG = {
         "description": "Donner une semaine de formation comme séniors en mai et avoir 17/20 et plus",
         "rarity": "Rare",
         "type": "etoile",
-        "xp_bonus": 100,
+        "xp_bonus": 200,
         "automatic": False
     },
     "roi_formateur": {
@@ -1874,7 +1874,7 @@ BADGES_CONFIG = {
         "description": "Donner une semaine de formation comme séniors en mai et avoir 19/20 et plus",
         "rarity": "Légendaire",
         "type": "etoile",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
 
@@ -1884,7 +1884,7 @@ BADGES_CONFIG = {
         "description": "Recrutement 1",
         "rarity": "Légendaire",
         "type": "etoile",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
     "coaching_expert_1": {
@@ -1892,7 +1892,7 @@ BADGES_CONFIG = {
         "description": "Appel de coaching 1",
         "rarity": "Légendaire",
         "type": "etoile",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
     "conferencier_expert_1": {
@@ -1900,7 +1900,7 @@ BADGES_CONFIG = {
         "description": "Donner une Formation",
         "rarity": "Légendaire",
         "type": "etoile",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
     "coach_terrain_expert_1": {
@@ -1908,7 +1908,7 @@ BADGES_CONFIG = {
         "description": "Coaching de Terrain",
         "rarity": "Légendaire",
         "type": "etoile",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
     "formateur_prod_expert_1": {
@@ -1916,7 +1916,7 @@ BADGES_CONFIG = {
         "description": "Donner une semaine de production",
         "rarity": "Légendaire",
         "type": "etoile",
-        "xp_bonus": 200,
+        "xp_bonus": 400,
         "automatic": False
     },
 
@@ -1926,7 +1926,7 @@ BADGES_CONFIG = {
         "description": "Recrutement 2",
         "rarity": "Mythique",
         "type": "etoile",
-        "xp_bonus": 400,
+        "xp_bonus": 800,
         "automatic": False
     },
     "organisateur_expert_1": {
@@ -1934,7 +1934,7 @@ BADGES_CONFIG = {
         "description": "Organiser un évènement",
         "rarity": "Mythique",
         "type": "etoile",
-        "xp_bonus": 400,
+        "xp_bonus": 800,
         "automatic": False
     },
     "coaching_expert_2": {
@@ -1942,7 +1942,7 @@ BADGES_CONFIG = {
         "description": "Appel de coaching sénior",
         "rarity": "Mythique",
         "type": "etoile",
-        "xp_bonus": 400,
+        "xp_bonus": 800,
         "automatic": False
     },
     "conferencier_expert_2": {
@@ -1950,7 +1950,7 @@ BADGES_CONFIG = {
         "description": "Monter une formation",
         "rarity": "Mythique",
         "type": "etoile",
-        "xp_bonus": 400,
+        "xp_bonus": 800,
         "automatic": False
     },
     "formateur_prod_expert_2": {
@@ -1958,7 +1958,7 @@ BADGES_CONFIG = {
         "description": "Monter une semaine de formation de prod",
         "rarity": "Mythique",
         "type": "etoile",
-        "xp_bonus": 400,
+        "xp_bonus": 800,
         "automatic": False
     },
 
@@ -1968,7 +1968,7 @@ BADGES_CONFIG = {
         "description": "E1",
         "rarity": "Épique",
         "type": "etoile",
-        "xp_bonus": 800,
+        "xp_bonus": 1600,
         "automatic": False
     },
     "former_releve_1": {
@@ -1976,7 +1976,7 @@ BADGES_CONFIG = {
         "description": "Former un Assistant-Coach",
         "rarity": "Mythique",
         "type": "etoile",
-        "xp_bonus": 400,
+        "xp_bonus": 800,
         "automatic": False
     },
     "former_releve_2": {
@@ -1984,7 +1984,7 @@ BADGES_CONFIG = {
         "description": "Former un Coach",
         "rarity": "Épique",
         "type": "etoile",
-        "xp_bonus": 800,
+        "xp_bonus": 1600,
         "automatic": False
     },
     "conferencier_expert_3": {
@@ -1992,7 +1992,7 @@ BADGES_CONFIG = {
         "description": "Donner une Formation dans Propulsion",
         "rarity": "Épique",
         "type": "etoile",
-        "xp_bonus": 800,
+        "xp_bonus": 1600,
         "automatic": False
     }
 }
@@ -2003,39 +2003,39 @@ BADGES_CONFIG = {
 
 # FLEURS (badges normaux)
 FLEUR_XP_BONUS = {
-    "Commun": 25,
-    "Rare": 50,
-    "Légendaire": 100,
-    "Mythique": 300,
-    "Épique": 600,
+    "Commun": 50,
+    "Rare": 100,
+    "Légendaire": 200,
+    "Mythique": 600,
+    "Épique": 1200,
     "Anti-Badge": 0
 }
 
 # ÉTOILES
 STAR_XP_BONUS = {
-    "Commun": 50,
-    "Rare": 100,
-    "Légendaire": 200,
-    "Mythique": 400,
-    "Épique": 800
+    "Commun": 100,
+    "Rare": 200,
+    "Légendaire": 400,
+    "Mythique": 800,
+    "Épique": 1600
 }
 
 # TROPHÉES
 TROPHY_XP_BONUS = {
-    "Commun": 100,
-    "Rare": 200,
-    "Légendaire": 300,
-    "Mythique": 500,
-    "Épique": 1000
+    "Commun": 200,
+    "Rare": 400,
+    "Légendaire": 600,
+    "Mythique": 1000,
+    "Épique": 2000
 }
 
 # BADGES spéciaux
 BADGE_XP_BONUS = {
-    "Commun": 10,
-    "Rare": 25,
-    "Légendaire": 50,
-    "Mythique": 200,
-    "Épique": 400
+    "Commun": 20,
+    "Rare": 50,
+    "Légendaire": 100,
+    "Mythique": 400,
+    "Épique": 800
 }
 
 # Pour compatibilité avec l'ancien système

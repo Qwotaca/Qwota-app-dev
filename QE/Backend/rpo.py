@@ -385,8 +385,8 @@ def get_week_number_from_date(date_str: str) -> tuple:
                 week_number = 1  # Avant le premier lundi = semaine 1
             else:
                 days_since_first_monday = (date - first_monday).days
-                # +2 car s'il y a des jours avant first_monday, ils sont en semaine 1, donc first_monday commence la semaine 2
-                week_number = (days_since_first_monday // 7) + 2
+                # +1 car first_monday commence la semaine 1
+                week_number = (days_since_first_monday // 7) + 1
 
         else:
             # Default: dates hors période fiscale (décembre 2025 - décembre 2026)

@@ -2276,7 +2276,7 @@ async def deplacer_accepte_vers_produits(data: dict):
 
         # 3. Mettre à jour le chiffre d'affaires (comme dans cloturer-travail)
         try:
-            prix_str = str(client_trouve.get("prix", "0")).replace(" ", "").replace(",", ".")
+            prix_str = str(client_trouve.get("prix", "0")).replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
             prix = float(prix_str)
             ajouter_au_chiffre_affaires(username, prix)
             print(f"[MONEY] Chiffre d'affaires mis à jour: +{prix}$")
@@ -4158,13 +4158,18 @@ def envoyer_soumission_signee(
         soumission_data = soumission_complete_data.copy()  # Copier TOUTES les données originales
 
         # Mettre à jour seulement les champs qui ont changé lors de la signature
+        # Utiliser le fuseau horaire de Toronto pour la date de signature
+        import zoneinfo
+        toronto_tz = zoneinfo.ZoneInfo("America/Toronto")
+        date_signature_toronto = datetime.now(toronto_tz).strftime("%d/%m/%Y")
+
         soumission_data.update({
             "id": soumission_id,  # CRUCIAL: utiliser l'ID reçu du frontend
             "num": num,  # Le vrai numéro "24-XXXX"
             "clientNom": clientNom,
             "clientPrenom": clientPrenom,
             "pdfUrl": lien_pdf_signe,  # Nouveau PDF signé
-            "date": (datetime.now() - timedelta(hours=4)).strftime("%d/%m/%Y"),  # Date de signature au format DD/MM/YYYY
+            "date": date_signature_toronto,  # Date de signature (heure Toronto) au format DD/MM/YYYY
             "prix": prix_str,
             "adresse": adresse,
             "telephone": telephone,
@@ -4577,18 +4582,22 @@ def get_total_ventes_produit(username: str, team: bool = Query(False), all_teams
 
 
 # ============== API Numéros de Soumission Uniques ==============
-NUMEROS_SOUMISSION_FILE = "data/soumissions/numeros_utilises.json"
+NUMEROS_SOUMISSION_FILE = os.path.join(base_cloud, "soumissions", "numeros_utilises.json")
 
 def get_numeros_utilises():
     """Récupère la liste des numéros de soumission déjà utilisés"""
-    if not os.path.exists(NUMEROS_SOUMISSION_FILE):
-        os.makedirs(os.path.dirname(NUMEROS_SOUMISSION_FILE), exist_ok=True)
-        with open(NUMEROS_SOUMISSION_FILE, "w", encoding="utf-8") as f:
-            json.dump([], f)
-        return []
+    try:
+        if not os.path.exists(NUMEROS_SOUMISSION_FILE):
+            os.makedirs(os.path.dirname(NUMEROS_SOUMISSION_FILE), exist_ok=True)
+            with open(NUMEROS_SOUMISSION_FILE, "w", encoding="utf-8") as f:
+                json.dump([], f)
+            return []
 
-    with open(NUMEROS_SOUMISSION_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+        with open(NUMEROS_SOUMISSION_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"[ERROR] get_numeros_utilises: {e}")
+        return []
 
 def ajouter_numero_utilise(numero: str, username: str):
     """Ajoute un numéro à la liste des numéros utilisés"""
@@ -4990,7 +4999,7 @@ async def cloturer_travail(payload: dict = Body(...)):
             print(f"[WARNING] Travail {travail_id} déjà présent dans travaux_complete_facture, éviter duplication")
 
         try:
-            prix_str = str(travail.get("prix", "0")).replace(" ", "").replace(",", ".")
+            prix_str = str(travail.get("prix", "0")).replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
             prix = float(prix_str)
         except Exception as e:
             print(f"[ERREUR] conversion prix: {e}")
@@ -5609,7 +5618,7 @@ def graph_data(
 
         for t in travaux:
             date_str = t.get("date", "")
-            prix_str = t.get("prix", "0").replace(" ", "").replace(",", ".")
+            prix_str = t.get("prix", "0").replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
             date_obj = parse_date(date_str)
             if not date_obj:
                 continue
@@ -5622,22 +5631,35 @@ def graph_data(
 
     elif type == "montant-signe":
         fichier = os.path.join(f"{base_cloud}/soumissions_signees", username, "soumissions.json")
+        print(f"[DEBUG montant-signe] Fichier: {fichier}")
+        print(f"[DEBUG montant-signe] Fichier existe: {os.path.exists(fichier)}")
         if not os.path.exists(fichier):
             return {"dates": labels_to_show, "data": [0] * len(all_dates_formatted)}
         with open(fichier, "r", encoding="utf-8") as f:
             soumissions_signees = json.load(f)
 
+        print(f"[DEBUG montant-signe] Nombre de soumissions signées: {len(soumissions_signees)}")
+        print(f"[DEBUG montant-signe] Période: {start_date} à {end_date}")
+
         for s in soumissions_signees:
             date_str = s.get("date", "")
-            prix_str = s.get("prix", "0").replace(" ", "").replace(",", ".")
+            prix_str = s.get("prix", "0").replace(" ", "").replace(",", ".").replace("$", "").replace("€", "")
+            print(f"[DEBUG montant-signe] Soumission: date='{date_str}', prix='{prix_str}'")
             date_obj = parse_date(date_str)
+            print(f"[DEBUG montant-signe] Date parsée: {date_obj}")
             if not date_obj:
+                print(f"[DEBUG montant-signe] Date non parsée, ignorée")
                 continue
             try:
                 prix = float(prix_str)
+                print(f"[DEBUG montant-signe] Prix parsé: {prix}")
                 if start_date <= date_obj <= end_date:
                     data_by_date[format_date_french(date_obj)] += prix
-            except:
+                    print(f"[DEBUG montant-signe] Dans la période! Ajouté à {format_date_french(date_obj)}")
+                else:
+                    print(f"[DEBUG montant-signe] Hors période: {date_obj} pas entre {start_date} et {end_date}")
+            except Exception as e:
+                print(f"[DEBUG montant-signe] Erreur parsing prix: {e}")
                 continue
 
     elif type == "montant-produit":
@@ -5649,7 +5671,7 @@ def graph_data(
 
         for t in travaux:
             date_str = t.get("date", "")
-            prix_str = t.get("prix", "0").replace(" ", "").replace(",", ".")
+            prix_str = t.get("prix", "0").replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
             date_obj = parse_date(date_str)
             if not date_obj:
                 continue
@@ -6081,7 +6103,7 @@ def get_montant_non_produit(username: str, team: bool = Query(False), all_teams:
                 with open(signes_path, "r", encoding="utf-8") as f:
                     soumissions = json.load(f)
                 for s in soumissions:
-                    prix_str = s.get("prix", "0").replace(" ", "").replace(",", ".")
+                    prix_str = s.get("prix", "0").replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
                     try:
                         montant_signe += float(prix_str)
                     except:
@@ -6875,7 +6897,7 @@ def get_entrepreneur_submissions_summary(
     for s in soumissions_signees_current:
         prix_str = s.get("prix") or "0"
         try:
-            prix = float(prix_str.replace(" ", "").replace(",", "."))
+            prix = float(prix_str.replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip())
             valeur_signée_current += prix
         except Exception as e:
             print(f"[Submissions Current] Erreur conversion prix '{prix_str}': {e}")
@@ -6903,7 +6925,7 @@ def get_entrepreneur_submissions_summary(
     for s in soumissions_signees_previous:
         prix_str = s.get("prix") or "0"
         try:
-            prix = float(prix_str.replace(" ", "").replace(",", "."))
+            prix = float(prix_str.replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip())
             valeur_signée_previous += prix
         except Exception as e:
             print(f"[Submissions Previous] Erreur conversion prix '{prix_str}': {e}")
@@ -7000,7 +7022,7 @@ def get_production_summary(
     nombre_current = len(travaux_current)
     valeur_current = 0.0
     for t in travaux_current:
-        prix_str = t.get("prix", "0").replace(" ", "").replace(",", ".")
+        prix_str = t.get("prix", "0").replace("\xa0", "").replace(" ", "").replace(",", ".").replace("$", "").strip()
         try:
             valeur_current += float(prix_str)
         except Exception as e:

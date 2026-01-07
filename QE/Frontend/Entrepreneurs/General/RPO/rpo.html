@@ -1317,8 +1317,8 @@
             <thead>
               <tr style="border-bottom: 2px solid var(--border-dark);">
                 <th class="p-3 text-left text-sm font-semibold sticky-semaine-header" style="color: var(--text-gray); background: rgba(30, 41, 59, 0.5); border-radius: 14px 14px 0px 0px; position: sticky; left: 0; z-index: 20;">Semaine</th>
-                <th class="p-3 text-center text-sm font-semibold" style="color: var(--text-gray); background: rgba(30, 41, 59, 0.5); border-radius: 14px 14px 0px 0px;">Comment va-tu</th>
-                <th class="p-3 text-center text-sm font-semibold" style="color: var(--text-gray); background: rgba(30, 41, 59, 0.5); border-radius: 14px 14px 0px 0px;">Problème de la semaine</th>
+                <th class="p-3 text-center text-sm font-semibold" style="color: var(--text-gray); background: rgba(30, 41, 59, 0.5); border-radius: 14px 14px 0px 0px;">Comment vas-tu</th>
+                <th class="p-3 text-center text-sm font-semibold" style="color: var(--text-gray); background: rgba(30, 41, 59, 0.5); border-radius: 14px 14px 0px 0px;">Analyse de la semaine</th>
                 <th class="p-3 text-center text-sm font-semibold" style="color: var(--text-gray); background: rgba(30, 41, 59, 0.5); border-radius: 14px 14px 0px 0px;">Focus de la semaine</th>
               </tr>
             </thead>
@@ -1461,7 +1461,7 @@
           <!-- Ratio Marketing -->
           <div class="rounded-lg p-4" style="background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-dark);">
             <div class="text-xs mb-2" style="color: var(--text-gray);">Ratio Marketing <span id="ratio-mktg-default-label" style="opacity: 0.6; font-style: italic;">(par défaut)</span></div>
-            <input type="text" id="plan-ratio-mktg" value="85%" data-value="85" class="bg-transparent border-none w-full text-sm font-semibold plan-param-input" style="color: var(--primary-blue); outline: none;" readonly>
+            <input type="text" id="plan-ratio-mktg" value="0.85" data-value="85" class="bg-transparent border-none w-full text-sm font-semibold plan-param-input" style="color: var(--primary-blue); outline: none;" readonly>
           </div>
 
           <!-- Taux de vente -->
@@ -3733,6 +3733,37 @@ function formatMetricInput(inputId, suffix) {
   }
 }
 
+// Fonction spéciale pour formater le ratio marketing en décimal
+function formatRatioMktgInput(inputId) {
+  const input = typeof inputId === 'string' ? document.getElementById(inputId) : inputId;
+  if (!input) return;
+
+  let value = input.value.trim();
+
+  // Retirer tous les caractères non numériques sauf les points et virgules
+  value = value.replace(/[^\d.,]/g, '');
+  value = value.replace(',', '.');
+
+  let number = parseFloat(value);
+
+  if (!isNaN(number)) {
+    // Si la valeur est > 1, c'est un pourcentage qu'on doit convertir
+    // Ex: 85 -> 0.85, ou 0.85 reste 0.85
+    if (number > 1) {
+      // C'est un pourcentage, stocker tel quel dans dataset.value
+      input.dataset.value = Math.round(number);
+      input.value = (number / 100).toFixed(2);
+    } else {
+      // C'est déjà un décimal, stocker en pourcentage dans dataset.value
+      input.dataset.value = Math.round(number * 100);
+      input.value = number.toFixed(2);
+    }
+  } else {
+    input.value = '0.85';
+    input.dataset.value = 85;
+  }
+}
+
 // Toggle edit mode pour Janvier
 function toggleEditJan() {
   // obj-pap et obj-rep sont EXCLUS - ils ne sont jamais modifiables (définis par le coach)
@@ -4516,8 +4547,8 @@ function generateWeeklyTables(monthIndex) {
         <thead>
           <tr style="border-bottom: 2px solid var(--border-dark);">
             <th class="p-3 text-left text-sm font-semibold sticky-semaine-header" style="color: var(--text-gray); background: rgba(30, 41, 59, 0.5); border-radius: 14px 14px 0px 0px; position: sticky; left: 0; z-index: 20; min-width: 150px; width: 150px;">Semaine</th>
-            <th class="p-3 text-center text-sm font-semibold" style="color: var(--text-gray); background: rgba(30, 41, 59, 0.5); border-radius: 14px 14px 0px 0px;">Comment va-tu</th>
-            <th class="p-3 text-center text-sm font-semibold" style="color: var(--text-gray); background: rgba(30, 41, 59, 0.5); border-radius: 14px 14px 0px 0px;">Problème de la semaine</th>
+            <th class="p-3 text-center text-sm font-semibold" style="color: var(--text-gray); background: rgba(30, 41, 59, 0.5); border-radius: 14px 14px 0px 0px;">Comment vas-tu</th>
+            <th class="p-3 text-center text-sm font-semibold" style="color: var(--text-gray); background: rgba(30, 41, 59, 0.5); border-radius: 14px 14px 0px 0px;">Analyse de la semaine</th>
             <th class="p-3 text-center text-sm font-semibold" style="color: var(--text-gray); background: rgba(30, 41, 59, 0.5); border-radius: 14px 14px 0px 0px;">Focus de la semaine</th>
           </tr>
         </thead>
@@ -6163,111 +6194,6 @@ function generateMonthlyContent(monthIndex) {
 
   return `
     <div>
-      <!-- ========== SECTION OBJECTIFS COACH ========== -->
-      <div class="mb-8" style="border: 2px solid rgba(139, 92, 246, 0.3); border-radius: 1rem; overflow: hidden; background: rgba(139, 92, 246, 0.05);">
-        <!-- Header Section Coach -->
-        <div class="px-6 py-4" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(124, 58, 237, 0.1)); border-bottom: 2px solid rgba(139, 92, 246, 0.2);">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">
-                <i class="fas fa-user-shield" style="font-size: 1.25rem; color: white;"></i>
-              </div>
-              <div>
-                <h4 style="color: var(--text-light); font-weight: 700; font-size: 1.125rem; margin: 0; letter-spacing: 0.02em;">OBJECTIF MENSUEL DONNÉ PAR MON COACH</h4>
-                <p style="color: rgba(167, 139, 250, 0.8); font-size: 0.75rem; margin: 0; margin-top: 0.125rem;">Objectifs généraux définis par votre coach</p>
-              </div>
-            </div>
-            ${monthIndex === 0 ? `
-            <div class="flex items-center gap-3">
-              <button id="editCoachBtn-${abbr}" onclick="toggleEditCoachObjectives(${monthIndex})" class="rounded-lg flex items-center gap-2 justify-center transition-all hover:scale-105 px-3 py-2" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3);" title="Modifier">
-                <i class="fas fa-pencil-alt text-xs"></i>
-                <span class="text-xs font-bold">Modifier</span>
-              </button>
-              <button id="saveCoachBtn-${abbr}" onclick="saveCoachObjectives(${monthIndex})" class="hidden rounded-lg flex items-center gap-2 justify-center transition-all hover:scale-105 px-3 py-2" style="background: rgba(52, 211, 153, 0.15); color: var(--primary-green); border: 1px solid rgba(52, 211, 153, 0.3);" title="Enregistrer">
-                <i class="fas fa-save text-xs"></i>
-                <span class="text-xs font-bold">Enregistrer</span>
-              </button>
-            </div>
-            ` : ''}
-          </div>
-        </div>
-
-        <!-- Contenu Objectifs Coach -->
-        <div class="p-6">
-          <!-- Alerte objectif coach manquant (seulement pour janvier si obj-rep-reel = 0) -->
-          ${monthIndex === 0 ? `
-          <div id="${abbr}-coach-alert" style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.1)); border-left: 4px solid #f59e0b; border-radius: 0.5rem;">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <i class="fas fa-exclamation-triangle" style="color: #f59e0b; font-size: 1.25rem;"></i>
-              <div>
-                <div style="color: var(--text-light); font-weight: 600; margin-bottom: 0.25rem;">HEURES PÀP (REP) RÉEL manquant</div>
-                <div style="color: rgba(148, 163, 184, 0.9); font-size: 0.875rem;">Veuillez remplir les heures réelles pour Janvier 2026</div>
-              </div>
-            </div>
-          </div>
-          ` : ''}
-
-          <div class="grid ${getObjectifLabel2(monthIndex) === '' ? 'grid-cols-1' : 'grid-cols-2'} gap-4">
-            <div class="rounded-xl flex" style="background: linear-gradient(145deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(139, 92, 246, 0.3); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);">
-            <div class="flex-1 flex flex-col">
-              <div class="p-3 text-center border-b" style="border-color: rgba(96, 165, 250, 0.1);">
-                <div class="text-xs mb-1" style="color: var(--text-gray);">Objectif</div>
-                <input type="text" id="${abbr}-obj-pap" value="${getObjectifDefaultValue1(monthIndex)}" data-value="0" class="rpo-metric-input bg-transparent border-none text-center w-full rounded" style="color: rgba(139, 92, 246, 0.8); outline: none; font-size: 1.25rem;" readonly>
-              </div>
-              <div class="flex-1 p-4 flex flex-col justify-center text-center">
-                <div class="text-base font-bold mb-2" style="color: var(--text-light); text-transform: uppercase; letter-spacing: 0.05em;">${getObjectifLabel1(monthIndex)}</div>
-                <div id="${abbr}-obj-pap-reel" class="font-bold" style="color: var(--text-light); font-size: 2rem;" data-value="0">${getObjectifDefaultValue1(monthIndex)}</div>
-              </div>
-            </div>
-            <div class="flex items-center justify-center px-4 border-l" style="border-color: rgba(96, 165, 250, 0.1);">
-              <div class="relative inline-flex items-center justify-center">
-                <svg class="transform -rotate-90" width="80" height="80">
-                  <circle cx="40" cy="40" r="32" stroke="rgba(148, 163, 184, 0.2)" stroke-width="6" fill="none"/>
-                  <circle id="${abbr}-obj-pap-circle" cx="40" cy="40" r="32" stroke="#60a5fa" stroke-width="6" fill="none"
-                    stroke-dasharray="201" stroke-dashoffset="201" stroke-linecap="round"
-                    style="transition: stroke-dashoffset 0.5s ease;"/>
-                </svg>
-                <div class="absolute inset-0 flex flex-col items-center justify-center">
-                  <span id="${abbr}-obj-pap-percent" class="text-lg font-bold" style="color: #60a5fa;">0%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          ${getObjectifLabel2(monthIndex) !== '' ? `
-          <div class="rounded-xl flex" style="background: linear-gradient(145deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(139, 92, 246, 0.3); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);">
-            <div class="flex-1 flex flex-col">
-              <div class="p-3 text-center border-b" style="border-color: rgba(96, 165, 250, 0.1);">
-                <div class="text-xs mb-1" style="color: var(--text-gray);">Objectif</div>
-                <input type="text" id="${abbr}-obj-rep" value="${getObjectifDefaultValue2(monthIndex)}" data-value="0" class="rpo-metric-input bg-transparent border-none text-center w-full rounded" style="color: rgba(139, 92, 246, 0.8); outline: none; font-size: 1.25rem;" readonly>
-              </div>
-              <div class="flex-1 p-4 flex flex-col justify-center text-center">
-                <div class="text-base font-bold mb-2" style="color: var(--text-light); text-transform: uppercase; letter-spacing: 0.05em;">${getObjectifLabel2(monthIndex)}</div>
-                ${monthIndex === 0 ?
-                  `<input type="text" id="${abbr}-obj-rep-reel" class="rpo-metric-input bg-transparent border-none text-center w-full rounded font-bold" style="color: var(--text-light); outline: none; font-size: 2rem;" data-value="0" value="${getObjectifDefaultValue2(monthIndex)}" placeholder="0 h" disabled>`
-                  :
-                  `<div id="${abbr}-obj-rep-reel" class="font-bold" style="color: var(--text-light); font-size: 2rem;" data-value="0">${getObjectifDefaultValue2(monthIndex)}</div>`
-                }
-              </div>
-            </div>
-            <div class="flex items-center justify-center px-4 border-l" style="border-color: rgba(96, 165, 250, 0.1);">
-              <div class="relative inline-flex items-center justify-center">
-                <svg class="transform -rotate-90" width="80" height="80">
-                  <circle cx="40" cy="40" r="32" stroke="rgba(148, 163, 184, 0.2)" stroke-width="6" fill="none"/>
-                  <circle id="${abbr}-obj-rep-circle" cx="40" cy="40" r="32" stroke="#60a5fa" stroke-width="6" fill="none"
-                    stroke-dasharray="201" stroke-dashoffset="201" stroke-linecap="round"
-                    style="transition: stroke-dashoffset 0.5s ease;"/>
-                </svg>
-                <div class="absolute inset-0 flex flex-col items-center justify-center">
-                  <span id="${abbr}-obj-rep-percent" class="text-lg font-bold" style="color: #60a5fa;">0%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          ` : ''}
-          </div>
-        </div>
-      </div>
-
       <!-- ========== SECTION OBJECTIFS MENSUELS PERSONNELS ========== -->
       <div class="mb-8" style="border: 2px solid rgba(96, 165, 250, 0.3); border-radius: 1rem; overflow: hidden; background: rgba(96, 165, 250, 0.03);">
         <!-- Header Section Personnels -->
@@ -6854,7 +6780,7 @@ function loadAnnualData(annual) {
   if (ratioMktgInput && annual.ratio_mktg !== undefined) {
     const ratioMktg = annual.ratio_mktg || 85;
     ratioMktgInput.dataset.value = ratioMktg;
-    ratioMktgInput.value = ratioMktg + '%';
+    ratioMktgInput.value = (ratioMktg / 100).toFixed(2);
   }
 
   const tauxVenteInput = document.getElementById('plan-taux-vente');
@@ -9705,7 +9631,7 @@ async function savePlan() {
     formatMetricInput('plan-objectif', '$');
     formatMetricInput('plan-cm-prev', '$');
     formatMetricInput('plan-taux-horaire', '$');
-    formatMetricInput('plan-ratio-mktg', '%');
+    formatRatioMktgInput('plan-ratio-mktg');
     formatMetricInput('plan-taux-vente', '%');
 
     // Sauvegarder les données annuelles (incluant cm_prevision, ratio_mktg, taux_vente)
@@ -11454,7 +11380,7 @@ function calculateTotals() {
 }
 
 // Mettre à jour tous les calculs (écarts + totaux)
-function updateAllCalculations() {
+function updateAllCalculations(saveData = false) {
   const allCategories = [
     'ventes', 'assurance-qe', 'concours', 'essence', 'entretien-voiture',
     'fourniture-bureau', 'frais-bancaires', 'frais-cellulaire',
@@ -11474,8 +11400,11 @@ function updateAllCalculations() {
   // Recalculer les totaux
   calculateTotals();
 
-  // Sauvegarder les données
-  saveEtatsResultatsData();
+  // Sauvegarder les données SEULEMENT si demandé explicitement
+  // (pas lors du chargement initial pour ne pas écraser les données sauvegardées)
+  if (saveData) {
+    saveEtatsResultatsData();
+  }
 }
 
 // Sauvegarder les données Actuel dans le backend
@@ -11634,24 +11563,34 @@ async function loadEtatsResultatsData() {
     log('🔄 [LOAD] Parsing JSON...');
     const result = await response.json();
     log('🔄 [LOAD] JSON parsé:', result);
+    log('🔄 [LOAD] actuel_data brut:', JSON.stringify(result.actuel_data));
+    log('🔄 [LOAD] cible_data brut:', JSON.stringify(result.cible_data));
 
     const actuelData = result.actuel_data || {};
     const cibleData = result.cible_data || {};
     log(`🔄 [LOAD] actuelData keys: ${Object.keys(actuelData).length}, cibleData keys: ${Object.keys(cibleData).length}`);
+    log(`🔄 [LOAD] actuelData contenu:`, actuelData);
 
     // Restaurer toutes les valeurs Actuel
     let actuelCount = 0;
     Object.keys(actuelData).forEach(category => {
       const cell = document.querySelector(`[data-category="${category}"][data-field="actuel-montant"]`);
+      log(`🔄 [LOAD] Restauration ${category}: cell trouvée? ${!!cell}, valeur à restaurer: ${actuelData[category]}`);
       if (cell) {
         const input = cell.querySelector('input');
         if (input) {
-          input.value = formatMoneyValue(actuelData[category]);
+          const formattedValue = formatMoneyValue(actuelData[category]);
+          log(`🔄 [LOAD]   -> input trouvé, nouvelle valeur: ${formattedValue}`);
+          input.value = formattedValue;
           actuelCount++;
         } else {
-          cell.textContent = formatMoneyValue(actuelData[category]);
+          const formattedValue = formatMoneyValue(actuelData[category]);
+          log(`🔄 [LOAD]   -> pas d'input, textContent: ${formattedValue}`);
+          cell.textContent = formattedValue;
           actuelCount++;
         }
+      } else {
+        log(`🔄 [LOAD]   -> CELL NON TROUVÉE pour ${category}`);
       }
     });
 
@@ -11672,9 +11611,9 @@ async function loadEtatsResultatsData() {
     log('   Actuel:', actuelData);
     log('   CIBLÉ:', cibleData);
 
-    // Recalculer les totaux CIBLÉ après chargement
-    log('🔄 [LOAD] Appel de updateCibleCalculations()');
-    updateCibleCalculations();
+    // Recalculer les totaux (sans écraser les montants Actuel chargés)
+    log('🔄 [LOAD] Appel de recalculateTotalsOnly()');
+    recalculateTotalsOnly();
     log('✅ [LOAD] loadEtatsResultatsData() terminée avec succès');
   } catch (error) {
     error('❌ [ERROR] Erreur lors du chargement des données:', error);
@@ -11886,6 +11825,26 @@ function calculateBudgetTotals() {
 // CALCULS AUTOMATIQUES POUR CIBLÉ
 // ========================================
 
+// Pourcentages ciblés par défaut (modifiables)
+// Ces % sont fixes et les montants sont calculés à partir de l'objectif CA
+const DEFAULT_CIBLE_PERCENT = {
+  'assurance-qe': 1.50,
+  'concours': 0,
+  'essence': 1.67,
+  'entretien-voiture': 0.50,
+  'fourniture-bureau': 0.10,
+  'frais-bancaires': 0.10,
+  'frais-cellulaire': 0.17,
+  'frais-garanties': 3.00,
+  'leads': 0.13,
+  'peinture': 9.00,
+  'petits-outils': 4.00,
+  'repas': 0.33,
+  'redevances': null, // Calculé dynamiquement par le système actuel
+  'salaire-peintres': 30.00,
+  'salaires-representant': 1.33
+};
+
 // Recalculer les totaux et pourcentages CIBLÉ automatiquement
 function updateCibleCalculations() {
   log('========================================');
@@ -11912,7 +11871,7 @@ function updateCibleCalculations() {
     return;
   }
 
-  // Calculer le total des dépenses CIBLÉ et mettre à jour les pourcentages
+  // Calculer le total des dépenses CIBLÉ et mettre à jour les montants/pourcentages
   let totalDepensesCible = 0;
   log('[CIBLÉ DEBUG] Starting category loop...');
 
@@ -11926,21 +11885,35 @@ function updateCibleCalculations() {
     }
 
     log(`[CIBLÉ DEBUG] ✓ ${category} input found:`, input);
-    log(`[CIBLÉ DEBUG]   - input.value: "${input.value}"`);
 
-    // Parser la valeur de l'input
-    const montant = parseMoneyValue(input.value);
-    log(`[CIBLÉ DEBUG]   - parsed montant: ${montant}`);
+    // Pour les redevances, garder le système actuel (calculé dynamiquement)
+    // Pour les autres catégories, utiliser le % par défaut pour calculer le montant
+    let montant;
+    let percent;
+
+    if (category === 'redevances') {
+      // Redevances: garder le système actuel (lire le montant de l'input)
+      montant = parseMoneyValue(input.value);
+      percent = (montant / objectifCA) * 100;
+      log(`[CIBLÉ DEBUG]   - redevances: keeping existing value ${montant}`);
+    } else {
+      // Autres catégories: calculer le montant à partir du % par défaut
+      percent = DEFAULT_CIBLE_PERCENT[category] || 0;
+      montant = (percent / 100) * objectifCA;
+
+      // Mettre à jour l'input avec le montant calculé
+      input.value = formatMoneyValue(montant);
+      log(`[CIBLÉ DEBUG]   - ${category}: ${percent}% of ${objectifCA} = ${montant}`);
+    }
 
     totalDepensesCible += montant;
     log(`[CIBLÉ DEBUG]   - running total: ${totalDepensesCible}`);
 
-    // Calculer et afficher le pourcentage
+    // Afficher le pourcentage
     const percentCell = document.querySelector(`[data-category="${category}"][data-field="cible-percent"]`);
     if (percentCell) {
-      const percent = (montant / objectifCA) * 100;
       percentCell.textContent = formatPercentValue(percent);
-      log(`[CIBLÉ DEBUG]   - percent calculated: ${percent.toFixed(2)}%`);
+      log(`[CIBLÉ DEBUG]   - percent: ${percent.toFixed(2)}%`);
 
       // Colorier en rouge si > 0
       if (percent > 0) {
@@ -12116,6 +12089,77 @@ if (!document.getElementById('cible-animations-style')) {
     }
   `;
   document.head.appendChild(style);
+}
+
+// ========================================
+// RECALCUL DES TOTAUX SEULEMENT (sans écraser les valeurs Actuel)
+// ========================================
+
+function recalculateTotalsOnly() {
+  log('[TOTALS] Recalcul des totaux uniquement (sans écraser les valeurs)');
+
+  const categories = [
+    'assurance-qe', 'concours', 'essence', 'entretien-voiture',
+    'fourniture-bureau', 'frais-bancaires', 'frais-cellulaire',
+    'frais-garanties', 'leads', 'peinture', 'petits-outils',
+    'repas', 'redevances', 'salaire-peintres', 'salaires-representant'
+  ];
+
+  // Récupérer l'objectif CA (revenu total)
+  const objectifCAInput = document.getElementById('objectifCA');
+  const objectifCA = parseFloat(objectifCAInput?.dataset.value) || 400000;
+
+  // Calculer le total des dépenses ACTUEL
+  let totalDepensesActuel = 0;
+
+  categories.forEach(category => {
+    const cell = document.querySelector(`[data-category="${category}"][data-field="actuel-montant"]`);
+    if (cell) {
+      const input = cell.querySelector('input');
+      const montant = parseMoneyValue(input ? input.value : cell.textContent);
+      totalDepensesActuel += montant;
+
+      // Mettre à jour le pourcentage Actuel
+      const percentCell = document.querySelector(`[data-category="${category}"][data-field="actuel-percent"]`);
+      if (percentCell) {
+        const percent = objectifCA > 0 ? (montant / objectifCA) * 100 : 0;
+        percentCell.textContent = formatPercentValue(percent);
+      }
+    }
+  });
+
+  // Mettre à jour Total des dépenses ACTUEL
+  const totalDepensesActuelCell = document.querySelector('[data-category="total-depenses"][data-field="actuel-montant"]');
+  const totalDepensesActuelPercentCell = document.querySelector('[data-category="total-depenses"][data-field="actuel-percent"]');
+
+  if (totalDepensesActuelCell) {
+    totalDepensesActuelCell.textContent = formatMoneyValue(totalDepensesActuel);
+  }
+  if (totalDepensesActuelPercentCell) {
+    const totalPercent = objectifCA > 0 ? (totalDepensesActuel / objectifCA) * 100 : 0;
+    totalDepensesActuelPercentCell.textContent = formatPercentValue(totalPercent);
+  }
+
+  // Récupérer les ventes actuelles
+  const ventesCell = document.querySelector('[data-category="ventes"][data-field="actuel-montant"]');
+  const ventesActuel = parseMoneyValue(ventesCell ? ventesCell.textContent : '0');
+
+  // Calculer le PROFIT ACTUEL
+  const profitActuel = ventesActuel - totalDepensesActuel;
+  const profitPercentActuel = ventesActuel > 0 ? (profitActuel / ventesActuel) * 100 : 0;
+
+  // Mettre à jour PROFIT ACTUEL
+  const profitActuelCell = document.querySelector('[data-category="profit"][data-field="actuel-montant"]');
+  const profitActuelPercentCell = document.querySelector('[data-category="profit"][data-field="actuel-percent"]');
+
+  if (profitActuelCell) {
+    profitActuelCell.textContent = formatMoneyValue(profitActuel);
+  }
+  if (profitActuelPercentCell) {
+    profitActuelPercentCell.textContent = formatPercentValue(profitPercentActuel);
+  }
+
+  log(`[TOTALS] Total dépenses Actuel: ${formatMoneyValue(totalDepensesActuel)}, Profit: ${formatMoneyValue(profitActuel)}`);
 }
 
 // ========================================
@@ -13322,9 +13366,9 @@ function updateMobileWeeklyView(weekNumber) {
         </div>
       </div>
 
-      <!-- Comment va-tu -->
+      <!-- Comment vas-tu -->
       <div class="mobile-weekly-resume-item">
-        <span class="mobile-weekly-resume-title"><i class="fas fa-smile" style="color: #fbbf24;"></i>Comment va-tu</span>
+        <span class="mobile-weekly-resume-title"><i class="fas fa-smile" style="color: #fbbf24;"></i>Comment vas-tu</span>
         ${showStars ? `
         <div class="mobile-weekly-stars">
           ${[1, 2, 3, 4, 5].map(rating => `
@@ -13342,9 +13386,9 @@ function updateMobileWeeklyView(weekNumber) {
         `}
       </div>
 
-      <!-- Problème de la semaine -->
+      <!-- Analyse de la semaine -->
       <div class="mobile-weekly-resume-item">
-        <span class="mobile-weekly-resume-title"><i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>Problème de la semaine</span>
+        <span class="mobile-weekly-resume-title"><i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>Analyse de la semaine</span>
         <input type="text" class="mobile-weekly-resume-input week-jan-resume rpo-metric-input"
                value="${problemeInput.value}"
                placeholder="Problème..."
@@ -14047,13 +14091,13 @@ function generateQuickFillInputs(weeks) {
     `;
   }
 
-  // Résumé (Problème de la semaine, Focus et Rating)
+  // Résumé (Analyse de la semaine, Focus et Rating)
   if (week.type === 'resume' || week.type === 'both') {
     html += `
       <div style="margin-bottom: 0.625rem;">
         <label style="display: block; font-size: 0.7rem; font-weight: 600; color: var(--text-gray); margin-bottom: 0.25rem;">
           <i class="fas fa-exclamation-triangle" style="margin-right: 0.25rem; color: #f59e0b;"></i>
-          Problème de la semaine
+          Analyse de la semaine
         </label>
         <textarea
           data-week-index="${selectedWeekIndex}"

@@ -36,6 +36,39 @@
   <link rel="stylesheet" href="/dashboard_user.css">
 
   <style>
+    /* Styles pour les contours de gradient des photos de profil selon le grade */
+    .profile-photo-small {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      padding: 3px;
+    }
+
+    .profile-photo-small.grade-recrue {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .profile-photo-small.grade-senior1 {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    }
+
+    .profile-photo-small.grade-senior2 {
+      background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    }
+
+    .profile-photo-small.grade-senior3 {
+      background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+    }
+
+    .profile-photo-small img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--background-dark);
+    }
+
     /* Styles pour les en-têtes de colonnes triables */
     .sortable-header {
       transition: background-color 0.2s ease;
@@ -1835,36 +1868,8 @@
       <div class="flex justify-between items-center mb-2">
         <h2 class="text-2xl font-bold">Classement</h2>
         <div class="flex items-center gap-2">
-          <!-- Dropdown de filtrage d'entrepreneurs -->
-          <div style="position: relative;">
-            <div class="custom-select" id="entrepreneurScopeSelect" style="width: auto; min-width: 220px;">
-              <button class="custom-select-button" id="entrepreneurScopeBtn" style="min-height: 40px; padding: 8px 14px;">
-                <span class="custom-select-text" id="entrepreneurScopeBtnText">
-                  <i class="fas fa-users mr-2"></i>Tous les entrepreneurs
-                </span>
-                <i class="fas fa-chevron-down custom-select-arrow"></i>
-              </button>
-              <div class="custom-select-dropdown" id="entrepreneurScopeDropdown">
-                <div class="custom-select-option" data-scope="tous">
-                  <i class="fas fa-users mr-2"></i>Tous les entrepreneurs
-                </div>
-                <div class="custom-select-option" data-scope="grade" data-grade="recrue" style="padding-left: 2.5rem;">
-                  <i class="fas fa-seedling mr-2"></i>Recrue
-                </div>
-                <div class="custom-select-option" data-scope="grade" data-grade="senior1" style="padding-left: 2.5rem;">
-                  <i class="fas fa-star mr-2"></i>Sénior 1
-                </div>
-                <div class="custom-select-option" data-scope="grade" data-grade="senior2" style="padding-left: 2.5rem;">
-                  <i class="fas fa-star mr-2"></i>Sénior 2
-                </div>
-                <div class="custom-select-option" data-scope="grade" data-grade="senior3" style="padding-left: 2.5rem;">
-                  <i class="fas fa-star mr-2"></i>Sénior 3
-                </div>
-              </div>
-            </div>
-          </div>
-          <!-- Dropdown de période -->
-          <div style="position: relative;">
+          <!-- Dropdown de période (caché sur mobile) -->
+          <div style="position: relative;" class="hidden md:block">
           <div class="custom-select" id="periodeSelect" style="width: auto; min-width: 180px;">
             <button class="custom-select-button" id="periodeBtn" style="min-height: 40px; padding: 8px 14px;">
               <span class="custom-select-text" id="periodeBtnText">
@@ -1902,10 +1907,39 @@
         </div>
       </div>
 
-      <!-- Sous-titre avec message "Cette semaine" -->
-      <div class="flex justify-between items-center mb-4">
+      <!-- Sous-titre avec message "Cette semaine" (caché sur mobile) -->
+      <div class="hidden md:flex justify-between items-center mb-4">
         <p style="color: var(--text-gray);">Classement de tous les entrepreneurs</p>
         <span id="semaineInfo" class="text-xs hidden" style="color: #f59e0b;"><i class="fas fa-exclamation-triangle mr-1"></i></span>
+      </div>
+
+      <!-- Dropdown de filtrage d'entrepreneurs (sous le sous-titre) -->
+      <div style="position: relative; margin-bottom: 1rem;">
+        <div class="custom-select" id="entrepreneurScopeSelect" style="width: auto; min-width: 220px;">
+          <button class="custom-select-button" id="entrepreneurScopeBtn" style="min-height: 40px; padding: 8px 14px;">
+            <span class="custom-select-text" id="entrepreneurScopeBtnText">
+              <i class="fas fa-users mr-2"></i>Tous les entrepreneurs
+            </span>
+            <i class="fas fa-chevron-down custom-select-arrow"></i>
+          </button>
+          <div class="custom-select-dropdown" id="entrepreneurScopeDropdown">
+            <div class="custom-select-option" data-scope="tous">
+              <i class="fas fa-users mr-2"></i>Tous les entrepreneurs
+            </div>
+            <div class="custom-select-option" data-scope="grade" data-grade="recrue" style="padding-left: 2.5rem;">
+              <i class="fas fa-seedling mr-2"></i>Recrue
+            </div>
+            <div class="custom-select-option" data-scope="grade" data-grade="senior1" style="padding-left: 2.5rem;">
+              <i class="fas fa-star mr-2"></i>Sénior 1
+            </div>
+            <div class="custom-select-option" data-scope="grade" data-grade="senior2" style="padding-left: 2.5rem;">
+              <i class="fas fa-star mr-2"></i>Sénior 2
+            </div>
+            <div class="custom-select-option" data-scope="grade" data-grade="senior3" style="padding-left: 2.5rem;">
+              <i class="fas fa-star mr-2"></i>Sénior 3
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Ligne séparatrice -->
@@ -4450,21 +4484,21 @@
           </span>
           <span class="entrepreneur-stat-value" style="color: #60a5fa;">${dollarsProduit.toLocaleString()} $</span>
         </div>
-        <div class="entrepreneur-stat-row" style="opacity: 0.5;">
+        <div class="entrepreneur-stat-row">
           <span class="entrepreneur-stat-label">
             <i class="fas fa-bullhorn" style="color: #ec4899;"></i>
             Taux marketing
           </span>
           <span class="entrepreneur-stat-value">${Math.round(entrepreneur.taux_marketing * 10) / 10}%</span>
         </div>
-        <div class="entrepreneur-stat-row" style="opacity: 0.5;">
+        <div class="entrepreneur-stat-row">
           <span class="entrepreneur-stat-label">
             <i class="fas fa-clock" style="color: #f59e0b;"></i>
             Productivité/h
           </span>
           <span class="entrepreneur-stat-value">${(entrepreneur.prod_horaire || 0).toLocaleString()} $/h</span>
         </div>
-        <div class="entrepreneur-stat-row" style="opacity: 0.5;">
+        <div class="entrepreneur-stat-row">
           <span class="entrepreneur-stat-label">
             <i class="fas fa-business-time" style="color: #6366f1;"></i>
             H de PÀP
@@ -8184,8 +8218,8 @@ async function renderCoachClassementCoachData(data) {
           <div class="card-rank">#${rang}</div>
           <div class="card-profile">
             ${photoUrl
-              ? `<div class="profile-photo-small ${gradeClass}" style="width: 40px; height: 40px;"><img src="${photoUrl}" alt="${nomComplet}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"></div>`
-              : `<div class="profile-photo-small ${gradeClass}" style="width: 40px; height: 40px;"><div style="width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 16px;">${nomComplet.charAt(0).toUpperCase()}</div></div>`
+              ? `<div class="profile-photo-small ${gradeClass}"><img src="${photoUrl}" alt="${nomComplet}"></div>`
+              : `<div class="profile-photo-small ${gradeClass}"><div style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 16px;">${nomComplet.charAt(0).toUpperCase()}</div></div>`
             }
             <div>
               <div class="card-name">${nomComplet}</div>

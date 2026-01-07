@@ -53,10 +53,12 @@
       backdrop.classList.add('visible');
     }
 
-    // Update selector text for direction on RPO page
+    // Mettre à jour les textes du sélecteur selon la page
     const currentPath = window.location.pathname.toLowerCase();
-    const isRPOPage = currentPath.includes('rpo');
-    if (userRole === 'direction' && isRPOPage) {
+    const isCoachManagementPage = currentPath.includes('coach_rpo') || currentPath.includes('suivicoach');
+
+    if (userRole === 'direction' && isCoachManagementPage) {
+      // Sur les pages de Gestion Coach, afficher "coach"
       const selectorTitle = document.querySelector('.selector-title');
       const selectorSubtitle = document.querySelector('.selector-subtitle');
       const selectorLabel = document.querySelector('.selector-label');
@@ -66,7 +68,7 @@
         selectorTitle.innerHTML = '<i class="fas fa-user-graduate"></i> Sélectionnez un coach';
       }
       if (selectorSubtitle) {
-        selectorSubtitle.textContent = 'Choisissez le coach dont vous souhaitez consulter le RPO';
+        selectorSubtitle.textContent = 'Choisissez le coach dont vous souhaitez consulter les données';
       }
       if (selectorLabel) {
         selectorLabel.innerHTML = '<i class="fas fa-user-graduate"></i><span>Coach:</span>';
@@ -75,8 +77,9 @@
         placeholder.textContent = '-- Sélectionner un coach --';
       }
 
-      console.log('[ENTREPRENEUR-SELECTOR] Textes mis à jour pour mode direction sur RPO');
+      console.log('[ENTREPRENEUR-SELECTOR] Textes mis à jour pour Gestion Coach');
     }
+    // Sinon, les textes par défaut "entrepreneur" restent inchangés
 
     // Load entrepreneurs (or coaches for direction on RPO) with retry logic
     loadEntrepreneursWithRetry();
@@ -161,14 +164,18 @@
       const currentPath = window.location.pathname.toLowerCase();
       const isRPOPage = currentPath.includes('rpo');
 
+      // Détecter si on est dans la section "Gestion Coach"
+      const isCoachManagementPage = currentPath.includes('coach_rpo') || currentPath.includes('suivicoach');
+
       console.log('[ENTREPRENEUR-SELECTOR] 📊 loadEntrepreneurs() appelé');
       console.log('[ENTREPRENEUR-SELECTOR] userRole:', userRole);
       console.log('[ENTREPRENEUR-SELECTOR] coachUsername:', coachUsername);
       console.log('[ENTREPRENEUR-SELECTOR] currentPath:', currentPath);
+      console.log('[ENTREPRENEUR-SELECTOR] isCoachManagementPage:', isCoachManagementPage);
 
-      // SPECIAL CASE: Direction users on RPO page should see COACHES, not entrepreneurs
-      if (userRole === 'direction' && isRPOPage) {
-        console.log('[ENTREPRENEUR-SELECTOR] Mode direction sur RPO - Chargement des COACHES');
+      // SPECIAL CASE: Direction users on Coach Management pages should see COACHES
+      if (userRole === 'direction' && isCoachManagementPage) {
+        console.log('[ENTREPRENEUR-SELECTOR] Mode direction sur Gestion Coach - Chargement des COACHES');
         const response = await fetch('/api/users/coaches');
         const data = await response.json();
 
@@ -183,6 +190,7 @@
         return;
       }
 
+      // Gestion Entrepreneur: affiche toujours les ENTREPRENEURS
       // Direction sees ALL entrepreneurs, Coach sees only assigned ones
       const endpoint = userRole === 'direction'
         ? '/api/users/entrepreneurs'

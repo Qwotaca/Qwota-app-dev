@@ -249,6 +249,7 @@
     <div class="status-cards-grid grid grid-cols-1 gap-6 mb-8">
       <div class="box">
         <div class="box-header">
+          <!-- Ligne du titre -->
           <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
             <div style="display: flex; align-items: center; gap: 0.75rem;">
               <div class="box-header-icon" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);">
@@ -257,8 +258,8 @@
               <h2 class="box-header-title">Créer une soumission</h2>
             </div>
 
-            <!-- Toggle Français/Anglais -->
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <!-- Toggle Province (desktop seulement - à droite du titre) -->
+            <div class="hidden md:flex" style="align-items: center; gap: 0.5rem;">
               <span style="font-size: 0.875rem; color: var(--text-gray); font-weight: 500;">Province:</span>
               <div id="languageToggle" style="display: flex; background: rgba(71, 85, 105, 0.3); border-radius: 8px; padding: 4px; gap: 4px; cursor: pointer;">
                 <div class="lang-option active" data-lang="fr" style="padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; font-weight: 600; transition: all 0.3s ease; color: var(--text-light);">
@@ -267,6 +268,19 @@
                 <div class="lang-option" data-lang="en" style="padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; font-weight: 600; transition: all 0.3s ease; color: var(--text-gray);">
                   Ontario
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Deuxième ligne: Toggle Province (mobile seulement - ligne complète) -->
+          <div class="flex md:hidden mt-4 w-full" style="align-items: center; gap: 0.5rem;">
+            <span style="font-size: 0.875rem; color: var(--text-gray); font-weight: 500;">Province:</span>
+            <div id="languageToggleMobile" style="display: flex; background: rgba(71, 85, 105, 0.3); border-radius: 8px; padding: 4px; gap: 4px; cursor: pointer;">
+              <div class="lang-option-mobile active" data-lang="fr" style="padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; font-weight: 600; transition: all 0.3s ease; color: var(--text-light);">
+                Québec
+              </div>
+              <div class="lang-option-mobile" data-lang="en" style="padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; font-weight: 600; transition: all 0.3s ease; color: var(--text-gray);">
+                Ontario
               </div>
             </div>
           </div>
@@ -534,7 +548,7 @@
   <div id="pending-soumissions-section">
     <div class="status-cards-grid grid grid-cols-1 gap-6 mb-8">
       <div class="box mb-0">
-        <div class="box-header">
+        <div class="box-header box-header-keep-flex">
           <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
             <div class="box-header-icon" style="background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);">
               <i class="fas fa-paper-plane"></i>
@@ -7229,43 +7243,66 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
     // Initialiser les événements du toggle
     document.addEventListener('DOMContentLoaded', function() {
+      // Fonction commune pour gérer le changement de langue
+      const handleLanguageChange = function(lang) {
+        log('[TOGGLE LANG] 🔄 Click détecté - langue:', lang);
+
+        // FORCER la province selon la langue sélectionnée
+        // EN = Ontario (WSIB), FR = Québec (CNESST)
+        const forcedProvince = lang === 'en' ? 'ON' : 'QC';
+        window.clientProvince = forcedProvince;
+        log('[TOGGLE LANG] 🗺️ Province FORCÉE selon langue:', forcedProvince, '| Langue:', lang);
+
+        // Mettre à jour l'option CNESST/WSIB selon la province forcée
+        if (typeof window.updateCNESSTOption === 'function') {
+          log('[TOGGLE LANG] ✅ Appel de updateCNESSTOption avec province:', forcedProvince);
+          window.updateCNESSTOption(forcedProvince);
+        } else {
+          error('[TOGGLE LANG] ❌ window.updateCNESSTOption n\'est pas une fonction!');
+        }
+
+        log('[TOGGLE LANG] 🌐 Appel de changeLanguage avec langue:', lang);
+        changeLanguage(lang);
+
+        // Réinitialiser Google autocomplete avec les bons bounds (selon la province forcée)
+        if (typeof window.initProspectAutocomplete === 'function') {
+          window.initProspectAutocomplete();
+          log('[TOGGLE LANG] 🗺️ Google autocomplete réinitialisé pour', forcedProvince);
+        }
+
+        // Synchroniser les deux toggles (desktop et mobile)
+        document.querySelectorAll('.lang-option, .lang-option-mobile').forEach(opt => {
+          opt.classList.remove('active');
+          if (opt.dataset.lang === lang) {
+            opt.classList.add('active');
+            opt.style.background = 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)';
+            opt.style.color = 'var(--text-light)';
+          } else {
+            opt.style.background = 'transparent';
+            opt.style.color = 'var(--text-gray)';
+          }
+        });
+      };
+
+      // Toggle desktop
       document.querySelectorAll('.lang-option').forEach(option => {
         option.addEventListener('click', function() {
-          const lang = this.dataset.lang;
-
-          log('[TOGGLE LANG] 🔄 Click détecté - langue:', lang);
-
-          // FORCER la province selon la langue sélectionnée
-          // EN = Ontario (WSIB), FR = Québec (CNESST)
-          const forcedProvince = lang === 'en' ? 'ON' : 'QC';
-          window.clientProvince = forcedProvince;
-          log('[TOGGLE LANG] 🗺️ Province FORCÉE selon langue:', forcedProvince, '| Langue:', lang);
-
-          // Mettre à jour l'option CNESST/WSIB selon la province forcée
-          if (typeof window.updateCNESSTOption === 'function') {
-            log('[TOGGLE LANG] ✅ Appel de updateCNESSTOption avec province:', forcedProvince);
-            window.updateCNESSTOption(forcedProvince);
-          } else {
-            error('[TOGGLE LANG] ❌ window.updateCNESSTOption n\'est pas une fonction!');
-          }
-
-          log('[TOGGLE LANG] 🌐 Appel de changeLanguage avec langue:', lang);
-          changeLanguage(lang);
-
-          // Réinitialiser Google autocomplete avec les bons bounds (selon la province forcée)
-          if (typeof window.initProspectAutocomplete === 'function') {
-            window.initProspectAutocomplete();
-            log('[TOGGLE LANG] 🗺️ Google autocomplete réinitialisé pour', forcedProvince);
-          }
+          handleLanguageChange(this.dataset.lang);
         });
       });
 
-      // Appliquer le style actif initial
-      const activeOption = document.querySelector('.lang-option.active');
-      if (activeOption) {
-        activeOption.style.background = 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)';
-        activeOption.style.color = 'var(--text-light)';
-      }
+      // Toggle mobile
+      document.querySelectorAll('.lang-option-mobile').forEach(option => {
+        option.addEventListener('click', function() {
+          handleLanguageChange(this.dataset.lang);
+        });
+      });
+
+      // Appliquer le style actif initial aux deux toggles (desktop et mobile)
+      document.querySelectorAll('.lang-option.active, .lang-option-mobile.active').forEach(activeOpt => {
+        activeOpt.style.background = 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)';
+        activeOpt.style.color = 'var(--text-light)';
+      });
 
       // Charger la préférence de langue sauvegardée
       loadLanguagePreference();

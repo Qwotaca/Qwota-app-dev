@@ -6576,6 +6576,25 @@ async function chargerCoaches() {
       }
     }
 
+    // IMPORTANT: Remplacer totalObjectif par la somme des prévisions de Direction
+    // Au lieu d'additionner les objectifs individuels des coaches,
+    // on utilise les prévisions que Direction a faites pour tous les coaches
+    const directionUsername = localStorage.getItem('username') || window.username;
+    try {
+      const previsionsResponse = await fetch(`/api/direction/team-objectifs?direction_username=${encodeURIComponent(directionUsername)}`);
+      if (previsionsResponse.ok) {
+        const previsionsData = await previsionsResponse.json();
+        if (previsionsData.success) {
+          // Utiliser le total déjà calculé par le backend
+          totalObjectif = previsionsData.total || 0;
+          log('[DEBUG OBJECTIF DIRECTION] Objectif depuis prévisions Direction:', totalObjectif, '| Détail:', previsionsData.previsions);
+        }
+      }
+    } catch (e) {
+      error('[ERROR] Erreur chargement prévisions Direction:', e);
+      // Si erreur, garder la somme des objectifs individuels
+    }
+
     // Afficher les coaches avec leurs stats d'équipe dans les cartes
     entrepreneursData = coachesWithStats;
     log('[DEBUG chargerCoaches] Total coaches chargés:', coachesWithStats.length);

@@ -121,14 +121,21 @@ log('[COMMON.JS] Variable locale username définie:', username);
 */
 
 // Vérification initiale du username
-if (!username || username === "demo") {
+// NE PAS rediriger si on est dans un iframe (apppc charge les pages avec ?user=)
+if (typeof isInIframe === 'undefined') {
+  var isInIframe = window !== window.top;
+}
+if ((!username || username === "demo") && !isInIframe) {
   // warn('[WARN] Username non valide, redirection vers login');
   window.location.href = "/";
 }
 
 // VÉRIFICATION BLOQUANTE DE L'ONBOARDING (optimisée avec cache)
 // Seulement pour les entrepreneurs - direction et coach sont exemptés
+// NE PAS vérifier si on est dans un iframe (apppc gère déjà l'onboarding)
 (function() {
+  if (isInIframe) return; // Skip onboarding check dans les iframes
+
   const currentPath = window.location.pathname;
   const exemptedPaths = ['/login', '/onboarding', '/connect-google', '/oauth2callback', '/connect-gmail', '/gmail-oauth2callback'];
   if (!exemptedPaths.includes(currentPath) && username && username !== 'demo') {

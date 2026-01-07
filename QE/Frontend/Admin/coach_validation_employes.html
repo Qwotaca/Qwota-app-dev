@@ -1706,6 +1706,50 @@
       z-index: 10000;
       animation: fadeIn 0.2s ease;
     }
+    .modal-overlay-opaque {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10001;
+      animation: fadeIn 0.2s ease;
+    }
+    .viewer-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(239, 68, 68, 0.9);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      font-size: 1.25rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+    .viewer-close:hover {
+      background: rgba(220, 38, 38, 1);
+      transform: scale(1.1);
+    }
+    .viewer-content {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+    }
     .modal-content {
       position: relative;
       background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
@@ -2835,7 +2879,7 @@
           bgGradient = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
           btnColor = '#ef4444';
           btnIcon = 'fa-user-times';
-          dateField = employe.date_demande_inactivation || '-';
+          dateField = employe.date_demande_inactivation ? employe.date_demande_inactivation.split(' ')[0] : '-';
           typeBadge = `<span style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; color: #ef4444; font-size: 0.8rem; font-weight: 600;"><i class="fas fa-user-times" style="font-size: 0.7rem;"></i> Fin d'emploi</span>`;
         } else if (isModification) {
           borderColor = 'rgba(139, 92, 246, 0.3)';
@@ -3147,22 +3191,19 @@
           throw new Error('Erreur lors de la validation');
         }
 
-        // Afficher l'animation de succès
-        showSuccessAnimation(`Fin d'emploi validée avec succès!`);
+        // Recharger la liste (inclut les validations ET inactivations)
+        await loadEmployesEnAttente();
 
-        // Attendre la fin de l'animation avant de recharger
-        setTimeout(async () => {
-          // Recharger la liste (inclut les validations ET inactivations)
-          await loadEmployesEnAttente();
+        // Mettre à jour les statistiques immédiatement
+        await loadStats();
 
-          // Mettre à jour les statistiques immédiatement
-          await loadStats();
+        // Notifier le parent pour mettre à jour le badge
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ type: 'updateEmployesBadge' }, '*');
+        }
 
-          // Notifier le parent pour mettre à jour le badge
-          if (window.parent && window.parent !== window) {
-            window.parent.postMessage({ type: 'updateEmployesBadge' }, '*');
-          }
-        }, 2000);
+        // Afficher un message de succès
+        showSuccessMessage(`Fin d'emploi validée avec succès!`);
 
       } catch (error) {
         console.error('Erreur:', error);
@@ -3270,43 +3311,11 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
           <!-- Colonne gauche -->
           <div style="display: flex; flex-direction: column; gap: 1rem;">
-            <!-- Section: Informations personnelles -->
-            <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 12px; padding: 1rem 1.25rem;">
-              <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.75rem; padding-bottom: 0.5rem; color: #94a3b8; border-bottom: 1px solid rgba(148, 163, 184, 0.1);">
-                <i class="fas fa-user" style="color: #60a5fa;"></i>
-                Informations personnelles
-              </div>
-              ${createRow('Nom complet', nouvelles.nom || emp.nom, anciennes.nom)}
-              ${createRow('Genre', nouvelles.genre || emp.genre, anciennes.genre)}
-              ${createRow('Date de naissance', nouvelles.dateNaissance || emp.dateNaissance, anciennes.dateNaissance)}
-              ${createRow('NAS', nouvelles.nas || emp.nas, anciennes.nas, false)}
-            </div>
-
-            <!-- Section: Contact -->
-            <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 12px; padding: 1rem 1.25rem;">
-              <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.75rem; padding-bottom: 0.5rem; color: #94a3b8; border-bottom: 1px solid rgba(148, 163, 184, 0.1);">
-                <i class="fas fa-phone" style="color: #10b981;"></i>
-                Contact
-              </div>
-              ${createRow('Courriel', nouvelles.courriel || emp.courriel, anciennes.courriel)}
-              ${createRow('Téléphone', nouvelles.telephone || emp.telephone, anciennes.telephone)}
-              ${(() => {
-                const adresseParts = [nouvelles.adresse || emp.adresse, nouvelles.ville || emp.ville, nouvelles.codePostal || emp.codePostal].filter(p => p);
-                const adresseComplete = adresseParts.join(', ') || '-';
-                const ancienneAdresseParts = [anciennes.adresse, anciennes.ville, anciennes.codePostal].filter(p => p);
-                const ancienneAdresseComplete = ancienneAdresseParts.join(', ') || '-';
-                return createRow('Adresse complète', adresseComplete, ancienneAdresseComplete, false);
-              })()}
-            </div>
-          </div>
-
-          <!-- Colonne droite -->
-          <div style="display: flex; flex-direction: column; gap: 1rem;">
-            <!-- Section: Informations d'emploi -->
+            <!-- Section: Informations de l'entrepreneur -->
             <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 12px; padding: 1rem 1.25rem;">
               <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.75rem; padding-bottom: 0.5rem; color: #94a3b8; border-bottom: 1px solid rgba(148, 163, 184, 0.1);">
                 <i class="fas fa-briefcase" style="color: #f59e0b;"></i>
-                Informations d'emploi
+                Informations de l'entrepreneur
               </div>
               ${createRow('Poste', nouvelles.posteService || nouvelles.poste || emp.posteService || emp.poste, anciennes.posteService || anciennes.poste)}
               ${createRow('Département', nouvelles.departement || emp.entrepreneurDepartment || emp.departement || '0', anciennes.departement || '0')}
@@ -3316,6 +3325,31 @@
                 return createRow('Taux horaire', tauxNouveau, tauxAncien, true, true);
               })()}
               ${createRow('Date première journée', nouvelles.datePremiere || emp.datePremiere, anciennes.datePremiere, false, true)}
+            </div>
+
+            <!-- Section: Contact -->
+            <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 12px; padding: 1rem 1.25rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.75rem; padding-bottom: 0.5rem; color: #94a3b8; border-bottom: 1px solid rgba(148, 163, 184, 0.1);">
+                <i class="fas fa-phone" style="color: #10b981;"></i>
+                Contact
+              </div>
+              ${createRow('Courriel', nouvelles.courriel || emp.courriel, anciennes.courriel)}
+              ${createRow('Téléphone', nouvelles.telephone || emp.telephone, anciennes.telephone, false)}
+            </div>
+          </div>
+
+          <!-- Colonne droite -->
+          <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <!-- Section: Informations de l'employé -->
+            <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 12px; padding: 1rem 1.25rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.75rem; padding-bottom: 0.5rem; color: #94a3b8; border-bottom: 1px solid rgba(148, 163, 184, 0.1);">
+                <i class="fas fa-user" style="color: #60a5fa;"></i>
+                Informations de l'employé
+              </div>
+              ${createRow('Nom complet', nouvelles.nom || emp.nom, anciennes.nom)}
+              ${createRow('Genre', nouvelles.genre || emp.genre, anciennes.genre)}
+              ${createRow('Date de naissance', nouvelles.dateNaissance || emp.dateNaissance, anciennes.dateNaissance)}
+              ${createRow('NAS', nouvelles.nas || emp.nas, anciennes.nas, false)}
             </div>
 
             <!-- Section: Adresse détaillée -->
@@ -3535,16 +3569,20 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
           <!-- Colonne gauche -->
           <div style="display: flex; flex-direction: column; gap: 1rem;">
-            <!-- Section: Informations personnelles -->
+            <!-- Section: Informations de l'entrepreneur -->
             <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 12px; padding: 1rem 1.25rem;">
               <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.75rem; padding-bottom: 0.5rem; color: #94a3b8; border-bottom: 1px solid rgba(148, 163, 184, 0.1);">
-                <i class="fas fa-user" style="color: #60a5fa;"></i>
-                Informations personnelles
+                <i class="fas fa-briefcase" style="color: #f59e0b;"></i>
+                Informations de l'entrepreneur
               </div>
-              ${createRow('Nom complet', nouvelles.nom, anciennes.nom)}
-              ${createRow('Genre', nouvelles.genre, anciennes.genre)}
-              ${createRow('Date de naissance', nouvelles.dateNaissance, anciennes.dateNaissance)}
-              ${createRow('NAS', nouvelles.nas, anciennes.nas, false)}
+              ${createRow('Poste', nouvelles.posteService || nouvelles.poste, anciennes.posteService || anciennes.poste)}
+              ${createRow('Département', nouvelles.departement || emp.entrepreneurDepartment || '0', anciennes.departement || '0')}
+              ${(() => {
+                const tauxNouveau = nouvelles.tauxHoraire ? parseFloat(nouvelles.tauxHoraire).toFixed(2) + ' $' : '-';
+                const tauxAncien = anciennes.tauxHoraire ? parseFloat(anciennes.tauxHoraire).toFixed(2) + ' $' : '-';
+                return createRow('Taux horaire', tauxNouveau, tauxAncien);
+              })()}
+              ${createRow('Date première journée', nouvelles.datePremiere || nouvelles.datePremierePaie, anciennes.datePremiere || anciennes.datePremierePaie, false)}
             </div>
 
             <!-- Section: Contact -->
@@ -3554,33 +3592,22 @@
                 Contact
               </div>
               ${createRow('Courriel', nouvelles.courriel, anciennes.courriel)}
-              ${createRow('Téléphone', nouvelles.telephone, anciennes.telephone)}
-              ${(() => {
-                const adresseParts = [nouvelles.adresse, nouvelles.ville, nouvelles.codePostal].filter(p => p);
-                const adresseComplete = adresseParts.join(', ') || '-';
-                const ancienneAdresseParts = [anciennes.adresse, anciennes.ville, anciennes.codePostal].filter(p => p);
-                const ancienneAdresseComplete = ancienneAdresseParts.join(', ') || '-';
-                return createRow('Adresse complète', adresseComplete, ancienneAdresseComplete, false);
-              })()}
+              ${createRow('Téléphone', nouvelles.telephone, anciennes.telephone, false)}
             </div>
           </div>
 
           <!-- Colonne droite -->
           <div style="display: flex; flex-direction: column; gap: 1rem;">
-            <!-- Section: Informations d'emploi -->
+            <!-- Section: Informations de l'employé -->
             <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 12px; padding: 1rem 1.25rem;">
               <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.75rem; padding-bottom: 0.5rem; color: #94a3b8; border-bottom: 1px solid rgba(148, 163, 184, 0.1);">
-                <i class="fas fa-briefcase" style="color: #f59e0b;"></i>
-                Informations d'emploi
+                <i class="fas fa-user" style="color: #60a5fa;"></i>
+                Informations de l'employé
               </div>
-              ${createRow('Poste', nouvelles.posteService || nouvelles.poste, anciennes.posteService || anciennes.poste)}
-              ${createRow('Département', nouvelles.departement || emp.entrepreneurDepartment || '0', anciennes.departement || '0')}
-              ${(() => {
-                const tauxNouveau = nouvelles.tauxHoraire ? parseFloat(nouvelles.tauxHoraire).toFixed(2) : '-';
-                const tauxAncien = anciennes.tauxHoraire ? parseFloat(anciennes.tauxHoraire).toFixed(2) : '-';
-                return createRow('Taux horaire', tauxNouveau, tauxAncien);
-              })()}
-              ${createRow('Date première journée', nouvelles.datePremiere || nouvelles.datePremierePaie, anciennes.datePremiere || anciennes.datePremierePaie, false)}
+              ${createRow('Nom complet', nouvelles.nom, anciennes.nom)}
+              ${createRow('Genre', nouvelles.genre, anciennes.genre)}
+              ${createRow('Date de naissance', nouvelles.dateNaissance, anciennes.dateNaissance)}
+              ${createRow('NAS', nouvelles.nas, anciennes.nas, false)}
             </div>
 
             <!-- Section: Adresse détaillée -->
@@ -3822,10 +3849,16 @@
 
     // Fonction pour ouvrir le visualiseur de document (centraleadmin style)
     function ouvrirDocumentViewer(url) {
+      console.log('[VIEWER] Tentative ouverture:', url);
       const viewerModal = document.getElementById('centraleViewerModal');
       const viewerContent = document.getElementById('centraleViewerContent');
+      console.log('[VIEWER] Modal trouvé:', !!viewerModal, 'Content trouvé:', !!viewerContent);
 
-      if (!viewerModal || !viewerContent) return;
+      if (!viewerModal || !viewerContent) {
+        console.error('[VIEWER] Éléments manquants! Modal:', viewerModal, 'Content:', viewerContent);
+        alert('Erreur: Le visualiseur de documents n\'est pas disponible. Veuillez télécharger le fichier.');
+        return;
+      }
 
       viewerContent.innerHTML = '';
       const ext = url.split('.').pop().toLowerCase();
@@ -3847,7 +3880,11 @@
       }
 
       viewerModal.style.display = 'flex';
+      console.log('[VIEWER] Modal affiché');
     }
+
+    // Alias pour compatibilité avec gestionemployes
+    window.openFileModal = ouvrirDocumentViewer;
 
     // Fonction pour fermer le visualiseur de document
     function fermerDocumentViewer() {
@@ -3857,6 +3894,9 @@
       if (viewerModal) viewerModal.style.display = 'none';
       if (viewerContent) viewerContent.innerHTML = '';
     }
+
+    // Alias pour compatibilité
+    window.closeFileModal = fermerDocumentViewer;
 
     // Fermer le modal si on clique en dehors
     document.getElementById('employee-modal').addEventListener('click', function(e) {
@@ -4148,16 +4188,17 @@
         '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">' +
           '<!-- Colonne gauche -->' +
           '<div style="display: flex; flex-direction: column; gap: 1rem;">' +
-            '<!-- Section: Informations personnelles -->' +
+            '<!-- Section: Informations de l\'entrepreneur -->' +
             '<div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 12px; padding: 1rem 1.25rem;">' +
               '<div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.75rem; padding-bottom: 0.5rem; color: #94a3b8; border-bottom: 1px solid rgba(148, 163, 184, 0.1);">' +
-                '<i class="fas fa-user" style="color: #60a5fa;"></i>' +
-                'Informations personnelles' +
+                '<i class="fas fa-briefcase" style="color: #f59e0b;"></i>' +
+                'Informations de l\'entrepreneur' +
               '</div>' +
-              createRow('Nom complet', emp.nom) +
-              createRow('Genre', emp.genre) +
-              createRow('Date de naissance', emp.dateNaissance) +
-              createRow('NAS', emp.nas, false) +
+              createRow('Entrepreneur', emp.entrepreneur) +
+              createRow('Poste', emp.posteService || emp.poste) +
+              createRow('Département', emp.entrepreneurDepartment || emp.departement || '0') +
+              createRow('Taux horaire', tauxFormate) +
+              createRow(dateLabel, dateValue, false) +
             '</div>' +
             '<!-- Section: Contact -->' +
             '<div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 12px; padding: 1rem 1.25rem;">' +
@@ -4166,23 +4207,21 @@
                 'Contact' +
               '</div>' +
               createRow('Courriel', emp.courriel) +
-              createRow('Téléphone', emp.telephone) +
-              createRow('Adresse complète', [emp.adresse, emp.ville, emp.codePostal].filter(function(p) { return p; }).join(', ') || '-', false) +
+              createRow('Téléphone', emp.telephone, false) +
             '</div>' +
           '</div>' +
           '<!-- Colonne droite -->' +
           '<div style="display: flex; flex-direction: column; gap: 1rem;">' +
-            '<!-- Section: Informations d\'emploi -->' +
+            '<!-- Section: Informations de l\'employé -->' +
             '<div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 12px; padding: 1rem 1.25rem;">' +
               '<div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.75rem; padding-bottom: 0.5rem; color: #94a3b8; border-bottom: 1px solid rgba(148, 163, 184, 0.1);">' +
-                '<i class="fas fa-briefcase" style="color: #f59e0b;"></i>' +
-                'Informations d\'emploi' +
+                '<i class="fas fa-user" style="color: #60a5fa;"></i>' +
+                'Informations de l\'employé' +
               '</div>' +
-              createRow('Entrepreneur', emp.entrepreneur) +
-              createRow('Poste', emp.posteService || emp.poste) +
-              createRow('Département', emp.entrepreneurDepartment || emp.departement || '0') +
-              createRow('Taux horaire', tauxFormate) +
-              createRow(dateLabel, dateValue, false) +
+              createRow('Nom complet', emp.nom) +
+              createRow('Genre', emp.genre) +
+              createRow('Date de naissance', emp.dateNaissance) +
+              createRow('NAS', emp.nas, false) +
             '</div>' +
             '<!-- Section: Adresse détaillée -->' +
             '<div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 12px; padding: 1rem 1.25rem;">' +

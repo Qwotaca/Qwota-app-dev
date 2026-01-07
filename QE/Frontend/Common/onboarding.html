@@ -1263,6 +1263,25 @@ canvas.file-preview-thumbnail:hover {
           </div>
         </div>
 
+        <!-- Sélection du grade -->
+        <div style="margin-top: 1rem; margin-bottom: 1rem;">
+          <label class="form-label" style="margin-bottom: 0.5rem;">Sélectionner votre grade *</label>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <button type="button" id="grade-recrue" class="grade-btn" onclick="selectGradeOnboarding('recrue')" style="padding: 0.75rem; border-radius: 0.5rem; border: 2px solid rgba(148, 163, 184, 0.3); background: rgba(30, 41, 59, 0.3); transition: all 0.2s; cursor: pointer;">
+              <div style="font-size: 0.875rem; font-weight: 500; color: rgba(255, 255, 255, 0.9);">Recrue</div>
+            </button>
+            <button type="button" id="grade-senior1" class="grade-btn" onclick="selectGradeOnboarding('senior1')" style="padding: 0.75rem; border-radius: 0.5rem; border: 2px solid rgba(148, 163, 184, 0.3); background: rgba(30, 41, 59, 0.3); transition: all 0.2s; cursor: pointer;">
+              <div style="font-size: 0.875rem; font-weight: 500; color: rgba(255, 255, 255, 0.9);">Senior | 1</div>
+            </button>
+            <button type="button" id="grade-senior2" class="grade-btn" onclick="selectGradeOnboarding('senior2')" style="padding: 0.75rem; border-radius: 0.5rem; border: 2px solid rgba(148, 163, 184, 0.3); background: rgba(30, 41, 59, 0.3); transition: all 0.2s; cursor: pointer;">
+              <div style="font-size: 0.875rem; font-weight: 500; color: rgba(255, 255, 255, 0.9);">Senior | 2</div>
+            </button>
+            <button type="button" id="grade-senior3" class="grade-btn" onclick="selectGradeOnboarding('senior3')" style="padding: 0.75rem; border-radius: 0.5rem; border: 2px solid rgba(148, 163, 184, 0.3); background: rgba(30, 41, 59, 0.3); transition: all 0.2s; cursor: pointer;">
+              <div style="font-size: 0.875rem; font-weight: 500; color: rgba(255, 255, 255, 0.9);">Senior | 3</div>
+            </button>
+          </div>
+        </div>
+
         <!-- Documents optionnels -->
         <p style="color: rgba(148, 163, 184, 0.7); font-size: 0.7rem; margin-top: 0.5rem; margin-bottom: 0.35rem; text-align: center;">
           Documents optionnels
@@ -1737,6 +1756,32 @@ let currentStep = 1;
 const totalSteps = 6;
 // Utiliser window.username qui est déjà défini par common.js
 
+// Variable pour stocker le grade sélectionné
+let selectedGrade = null;
+
+// Fonction pour sélectionner le grade
+function selectGradeOnboarding(grade) {
+  selectedGrade = grade;
+
+  // Retirer la sélection de tous les boutons
+  document.querySelectorAll('.grade-btn').forEach(btn => {
+    btn.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+    btn.style.background = 'rgba(30, 41, 59, 0.3)';
+  });
+
+  // Mettre en surbrillance le bouton sélectionné
+  const selectedBtn = document.getElementById(`grade-${grade}`);
+  if (selectedBtn) {
+    selectedBtn.style.borderColor = '#3b82f6';
+    selectedBtn.style.background = 'rgba(59, 130, 246, 0.1)';
+  }
+
+  // Mettre à jour le bouton "Suivant" de l'étape 1
+  updateNextButton(1);
+
+  console.log('[ONBOARDING] Grade sélectionné:', grade);
+}
+
 // ============ Gestion des fichiers optionnels ============
 // Stockage des URLs et infos de prévisualisation des fichiers
 const filePreviewUrls = {};
@@ -2030,12 +2075,12 @@ function updateProgress() {
 function validateStep(stepNumber) {
   switch(stepNumber) {
     case 1:
-      // Step 1 - Informations personnelles: Prenom, Nom, Telephone, Courriel sont obligatoires
+      // Step 1 - Informations personnelles: Prenom, Nom, Telephone, Courriel et Grade sont obligatoires
       const prenom = document.getElementById('prenom')?.value.trim();
       const nom = document.getElementById('nom')?.value.trim();
       const telephone = document.getElementById('telephone')?.value.trim();
       const courriel = document.getElementById('courriel')?.value.trim();
-      return !!(prenom && nom && telephone && courriel);
+      return !!(prenom && nom && telephone && courriel && selectedGrade);
 
     case 2:
       // Step 2 - Photo de profil: Photo est obligatoire (vérifier que l'image n'a pas la classe hidden)
@@ -2091,6 +2136,11 @@ function nextStep() {
 
     if (!prenom || !nom || !telephone || !courriel) {
       alert('Veuillez remplir tous les champs obligatoires (*)');
+      return;
+    }
+
+    if (!selectedGrade) {
+      alert('Veuillez sélectionner votre grade');
       return;
     }
   }
@@ -2420,6 +2470,7 @@ async function finishOnboarding() {
       neq: document.getElementById('neq').value.trim(),
       tps: document.getElementById('tps').value.trim(),
       tvq: document.getElementById('tvq').value.trim(),
+      grade: selectedGrade || 'recrue', // Grade sélectionné (par défaut: recrue)
       onboarding_completed: true,
       onboarding_date: new Date().toISOString()
     };
@@ -2485,9 +2536,10 @@ async function finishOnboarding() {
     // Sauvegarder en cache que l'onboarding est complété
     localStorage.setItem(`onboarding_${window.username}`, 'completed');
 
-    // Rediriger vers guide dans apppc après 2 secondes
+    // Rediriger vers apppc avec le hash guide - apppc va charger normalement avec son spinner puis naviguer vers le guide
+    // IMPORTANT: Inclure le paramètre ?user= pour que apppc.html puisse le passer aux iframes
     setTimeout(() => {
-      window.location.href = '/apppc#/guide';
+      window.location.href = `/apppc?user=${encodeURIComponent(window.username)}#/guide`;
     }, 2000);
 
   } catch (error) {

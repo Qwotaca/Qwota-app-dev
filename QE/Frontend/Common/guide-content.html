@@ -265,8 +265,11 @@ body {
   </div>
 </div>
 
-<script src="/common.js"></script>
 <script>
+// Récupérer le username depuis l'URL (ex: /guide-content?user=mlabelle)
+const urlParams = new URLSearchParams(window.location.search);
+let username = urlParams.get('user') || localStorage.getItem('username');
+
 // Configuration des vidéos (YouTube embed)
 const videos = [
   {
@@ -291,11 +294,6 @@ const videos = [
 
 let currentVideo = 0;
 let videoWatched = [false, false, false];
-
-// Utiliser la variable username déjà déclarée dans common.js
-if (!username) {
-  username = window.username || localStorage.getItem('username');
-}
 
 // Charger la progression depuis le backend
 async function loadProgress() {
@@ -357,8 +355,8 @@ async function completeGuide() {
     });
 
     if (response.ok) {
-      // Rediriger vers le dashboard
-      window.top.location.href = '/apppc#/dashboard';
+      // Rediriger vers le dashboard avec le paramètre user
+      window.top.location.href = `/apppc?user=${encodeURIComponent(username)}#/dashboard`;
     }
   } catch (error) {
     console.error('Erreur complétion guide:', error);

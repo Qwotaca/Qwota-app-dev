@@ -6744,6 +6744,23 @@ def api_get_coach_equipe_dashboard(
             }
         })
 
+    # IMPORTANT: Remplacer team_total_objectif par la somme des prévisions du coach
+    # Au lieu d'additionner les objectifs individuels des entrepreneurs (depuis leur RPO),
+    # on utilise les prévisions que le coach a faites pour son équipe
+    coach_previsions_path = os.path.join(base_cloud, "coach_previsions", f"{coach_username}_previsions.json")
+    if os.path.exists(coach_previsions_path):
+        try:
+            with open(coach_previsions_path, 'r', encoding='utf-8') as f:
+                coach_previsions_data = json.load(f)
+                previsions = coach_previsions_data.get("previsions", {})
+                # La somme de toutes les prévisions = objectif total du coach
+                team_total_objectif = sum(previsions.values())
+                print(f"[DEBUG OBJECTIF COACH] {coach_username} -> Objectif depuis previsions: {team_total_objectif} (détail: {previsions})")
+        except Exception as e:
+            print(f"[DEBUG OBJECTIF COACH ERROR] {coach_username} -> Erreur chargement previsions: {e}")
+            # Si erreur, garder la somme des objectifs individuels
+            pass
+
     # Calculer les moyennes d'équipe
     nb_entrepreneurs = len(entrepreneurs_data)
     moyenne_etoiles_equipe = round(team_total_etoiles / team_total_avis, 1) if team_total_avis > 0 else 0.0
@@ -16039,6 +16056,14 @@ async def get_reactivation_data(username: str, employe_id: str):
 
         for react in reactivations:
             if react.get("id") == employe_id:
+                # Normaliser les noms de fichiers (gérer les alias)
+                if not react.get("specimenCheque") and react.get("specimen"):
+                    react["specimenCheque"] = react["specimen"]
+                if not react.get("certificatSecurite") and react.get("certificat"):
+                    react["certificatSecurite"] = react["certificat"]
+                if not react.get("carteAssurance") and react.get("carte"):
+                    react["carteAssurance"] = react["carte"]
+
                 return {"success": True, "data": react}
 
         raise HTTPException(status_code=404, detail="Réactivation non trouvée")
@@ -16056,14 +16081,28 @@ async def valider_reactivation_coach(username: str, employe_id: str):
         employe_trouve = False
         source_file = None
 
+        # Récupérer les données de réactivation avec les fichiers
+        reactivations = load_reactivations(username)
+        reactivation_data = None
+        for react in reactivations:
+            if react.get("id") == employe_id:
+                reactivation_data = react
+                break
+
+        if not reactivation_data:
+            raise HTTPException(status_code=404, detail="Demande de réactivation non trouvée")
+
         # Chercher dans inactifs d'abord
         inactifs = load_employes(username, "inactifs")
-        for employe in inactifs:
+        for i, employe in enumerate(inactifs):
             if employe.get("id") == employe_id:
                 if employe.get("statut") != "Réactivation en attente de validation":
                     raise HTTPException(status_code=400, detail="L'employé n'est pas en attente de validation de réactivation")
-                employe["statut"] = "Réactivation en attente comptable"
-                employe["date_validation_coach_reactivation"] = date_validation
+
+                # Copier TOUTES les données de réactivation (incluant les fichiers)
+                inactifs[i] = reactivation_data.copy()
+                inactifs[i]["statut"] = "Réactivation en attente comptable"
+                inactifs[i]["date_validation_coach_reactivation"] = date_validation
                 employe_trouve = True
                 source_file = "inactifs"
                 break
@@ -16071,12 +16110,15 @@ async def valider_reactivation_coach(username: str, employe_id: str):
         # Si pas trouvé, chercher dans termines
         if not employe_trouve:
             termines = load_employes(username, "termines")
-            for employe in termines:
+            for i, employe in enumerate(termines):
                 if employe.get("id") == employe_id:
                     if employe.get("statut") != "Réactivation en attente de validation":
                         raise HTTPException(status_code=400, detail="L'employé n'est pas en attente de validation de réactivation")
-                    employe["statut"] = "Réactivation en attente comptable"
-                    employe["date_validation_coach_reactivation"] = date_validation
+
+                    # Copier TOUTES les données de réactivation (incluant les fichiers)
+                    termines[i] = reactivation_data.copy()
+                    termines[i]["statut"] = "Réactivation en attente comptable"
+                    termines[i]["date_validation_coach_reactivation"] = date_validation
                     employe_trouve = True
                     source_file = "termines"
                     break
@@ -16450,7 +16492,18 @@ async def demander_reactivation(
         employe_dir = os.path.join(os.path.dirname(__file__), "data", "employes", username, employe_id)
         os.makedirs(employe_dir, exist_ok=True)
 
-        # Sauvegarder les fichiers
+        # Normaliser les noms de fichiers (gérer les alias specimen/specimenCheque, etc.)
+        if not employe_trouve.get("specimenCheque") and employe_trouve.get("specimen"):
+            employe_trouve["specimenCheque"] = employe_trouve["specimen"]
+        if not employe_trouve.get("certificatSecurite") and employe_trouve.get("certificat"):
+            employe_trouve["certificatSecurite"] = employe_trouve["certificat"]
+        if not employe_trouve.get("carteAssurance") and employe_trouve.get("carte"):
+            employe_trouve["carteAssurance"] = employe_trouve["carte"]
+
+        # Log des fichiers existants
+        print(f"[INFO] Fichiers existants dans employe_trouve: specimenCheque={employe_trouve.get('specimenCheque')}, certificatSecurite={employe_trouve.get('certificatSecurite')}, carteAssurance={employe_trouve.get('carteAssurance')}")
+
+        # Sauvegarder les nouveaux fichiers (si fournis, ils écrasent les anciens)
         if specimenCheque and specimenCheque.filename:
             file_ext = os.path.splitext(specimenCheque.filename)[1]
             file_path = os.path.join(employe_dir, f"specimen{file_ext}")
@@ -17185,14 +17238,11 @@ async def save_user_info(
             "neq": user_data.get("neq", ""),  # Permettre l'effacement
             "tps": user_data.get("tps", ""),  # Permettre l'effacement
             "tvq": user_data.get("tvq", ""),  # Permettre l'effacement
+            "grade": user_data.get("grade", existing_info.get("grade", "recrue")),  # Grade depuis onboarding ou existant
             "equipes": user_data.get("equipes") if user_data.get("equipes") else existing_info.get("equipes", []),
             "niveau_actuel": user_data.get("niveau_actuel", existing_info.get("niveau_actuel", 1)),
             "last_updated": datetime.now().isoformat()
         }
-
-        # Préserver le grade s'il existe
-        if existing_info.get("grade"):
-            updated_data["grade"] = existing_info.get("grade")
 
         # Une fois onboarding_completed = true, il ne peut JAMAIS redevenir false
         if existing_info.get("onboarding_completed") == True:

@@ -3844,7 +3844,7 @@
 
       // Map des routes vers les URLs FastAPI
       routes: {
-        'guide': '/guide-content',
+        'guide': '/guide-content?v=20260106c',
         'dashboard': '/dashboard',
         'connection': '/connection',
         'rpo': '/rpo',
@@ -3957,12 +3957,14 @@
 
             // ⚡ AFFICHER le spinner IMMÉDIATEMENT (pas de délai)
             // MAIS seulement si le loading-overlay principal n'est pas visible (pas au premier lancement)
+            // EXCEPTION: Pour le guide, toujours afficher le spinner car le loading-overlay se cache rapidement
             const pageSpinner = document.getElementById('page-loading-spinner');
             const loadingOverlay = document.getElementById('loading-overlay');
             const isInitialLoad = loadingOverlay && !loadingOverlay.classList.contains('hidden');
+            const isGuide = pageName === 'guide';
 
             // ⚡ Ajuster la position du spinner selon la sidebar (desktop vs mobile)
-            if (pageSpinner && !isInitialLoad) {
+            if (pageSpinner && (!isInitialLoad || isGuide)) {
               const sidebar = document.querySelector('.sidebar');
               const isMobile = window.innerWidth <= 768;
 
@@ -4226,13 +4228,14 @@
                 const guideData = await response.json();
 
                 // IMPORTANT: Définir la variable globale pour bloquer les navigations futures
-                window.guideIsCompleted = guideData.completed;
+                // Forcer un booléen explicite (undefined/null/false -> false, true -> true)
+                window.guideIsCompleted = !!guideData.completed;
 
                 // Si le guide n'est pas complété, forcer le chargement du guide
                 if (!guideData.completed) {
-                  console.log('[APPPC] Guide non complété, redirection vers guide');
+                  console.log('[APPPC] Guide non complété (window.guideIsCompleted =', window.guideIsCompleted, '), redirection vers guide');
+                  // Changer le hash seulement - le hashchange event va appeler loadPage automatiquement
                   location.hash = '#/guide';
-                  this.loadPage('guide');
                   return;
                 }
               }
@@ -5289,36 +5292,33 @@
 
       // Fonction pour demarrer le prechargement (appelee seulement si guide complete)
       async function startPreloading() {
-        const username = window.username || localStorage.getItem('username');
-        if (!username) {
-          console.log('[PRELOAD] Pas de username, skip prechargement');
-          return;
+        console.log('[PRELOAD] Démarrage startPreloading() - window.guideIsCompleted:', window.guideIsCompleted);
+
+        // Attendre que window.guideIsCompleted soit defini par le router
+        let attempts = 0;
+        const maxAttempts = 50; // 5 secondes max
+
+        while (window.guideIsCompleted === null && attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
         }
 
-        // Verifier si le guide est complete
-        try {
-          const response = await fetch(`/api/guide-progress/${username}`);
-          if (response.ok) {
-            const guideData = await response.json();
-            window.guideIsCompleted = guideData.completed;
+        console.log('[PRELOAD] Après polling - window.guideIsCompleted:', window.guideIsCompleted, 'attempts:', attempts);
 
-            if (!guideData.completed) {
-              console.log('[PRELOAD] Guide non complete - pas de prechargement');
-              // Cacher l ecran de chargement et afficher l app
-              const loadingOverlay = document.getElementById('loading-overlay');
-              const appContainer = document.getElementById('app-container');
-              if (loadingOverlay) {
-                loadingOverlay.classList.add('hidden');
-              }
-              if (appContainer) {
-                appContainer.classList.add('loaded');
-                appContainer.style.opacity = '1';
-              }
-              return; // Ne pas precharger si guide pas complete
-            }
+        // Si le guide n'est pas complete, ne rien precharger
+        if (window.guideIsCompleted === false) {
+          console.log('[PRELOAD] Guide non complete - pas de prechargement');
+          // Cacher l ecran de chargement et afficher l app
+          const loadingOverlay = document.getElementById('loading-overlay');
+          const appContainer = document.getElementById('app-container');
+          if (loadingOverlay) {
+            loadingOverlay.classList.add('hidden');
           }
-        } catch (error) {
-          console.error('[PRELOAD] Erreur verification guide:', error);
+          if (appContainer) {
+            appContainer.classList.add('loaded');
+            appContainer.style.opacity = '1';
+          }
+          return;
         }
 
         console.log('[PRELOAD] Guide complete - demarrage du prechargement');
@@ -5544,7 +5544,7 @@
 
       } // Fin de doPreloadPages()
 
-      // Appeler startPreloading au lieu de precharger directement
+      // Appeler startPreloading - il attendra que window.guideIsCompleted soit defini
       startPreloading();
 
       // ===== SWIPE NAVIGATION SUR MOBILE AVEC ANIMATION FLUIDE =====

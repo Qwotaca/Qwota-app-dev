@@ -145,6 +145,7 @@ os.makedirs(os.path.join(base_cloud, "parameters"), exist_ok=True)
 os.makedirs(os.path.join(base_cloud, "signatures"), exist_ok=True)
 os.makedirs(os.path.join(base_cloud, "employes"), exist_ok=True)
 os.makedirs(os.path.join(base_cloud, "themes"), exist_ok=True)
+os.makedirs(os.path.join(base_cloud, "cheques"), exist_ok=True)
 
 # Nouveaux dossiers pour gestion ventes (travaux.html)
 os.makedirs(f"{base_cloud}/ventes_attente", exist_ok=True)

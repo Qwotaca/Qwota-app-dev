@@ -455,14 +455,22 @@
         Détails des travaux
       </h2>
 
-      <!-- Deuxième ligne: 4 champs sur une ligne -->
-      <div class="grid grid-cols-4 gap-4">
+      <!-- Deuxième ligne: 5 champs sur une ligne -->
+      <div class="grid grid-cols-5 gap-4">
         <div>
           <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
             <i class="fas fa-dollar-sign mr-2 text-green-500"></i>
             Prix
           </label>
-          <input type="text" name="prix" placeholder="Ex: 850$" class="modern-input" autocomplete="off" style="border-right: 2px solid #e57373 !important;" oninput="this.style.setProperty('border-right-color', this.value.trim() ? '#4caf50' : '#e57373', 'important')">
+          <input type="text" name="prix" placeholder="Ex: 850$" class="modern-input" autocomplete="off" style="border-right: 2px solid #e57373 !important;" oninput="calculerDepot(); this.style.setProperty('border-right-color', this.value.trim() ? '#4caf50' : '#e57373', 'important')">
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+            <i class="fas fa-piggy-bank mr-2 text-yellow-500"></i>
+            Dépôt <span style="color: #ffd700; font-size: 0.75rem; font-weight: normal;">(25% par défaut)</span>
+          </label>
+          <input type="text" name="depot" placeholder="Auto" class="modern-input" autocomplete="off" style="border-right: 2px solid #4caf50 !important;" oninput="this.style.setProperty('border-right-color', this.value.trim() ? '#4caf50' : '#e57373', 'important')">
         </div>
 
         <div>
@@ -494,7 +502,7 @@
             <i class="fas fa-calendar-alt mr-2 text-purple-500"></i>
             Date des travaux
           </label>
-          <input type="text" name="date_travaux" placeholder="Ex: Semaine du 15 janvier" class="modern-input" autocomplete="off" style="border-right: 2px solid #e57373 !important;" oninput="this.style.setProperty('border-right-color', this.value.trim() ? '#4caf50' : '#e57373', 'important')">
+          <input type="text" name="date_travaux" placeholder="Ex: mi-mai" class="modern-input" autocomplete="off" style="border-right: 2px solid #e57373 !important;" oninput="this.style.setProperty('border-right-color', this.value.trim() ? '#4caf50' : '#e57373', 'important')">
         </div>
       </div>
     </div>
@@ -637,6 +645,78 @@ function enforceRoleBasedVisibility() {
   log('Role-based visibility enforced - User:', window.username);
 }
 
+// Fonction pour calculer automatiquement le dépôt basé sur le prix
+function calculerDepot() {
+  const prixInput = document.querySelector('input[name="prix"]');
+  const depotInput = document.querySelector('input[name="depot"]');
+
+  if (!prixInput || !depotInput) return;
+
+  // Ne pas recalculer si l'utilisateur a modifié manuellement le dépôt
+  if (depotInput.dataset.userModified === 'true') return;
+
+  const prixValue = prixInput.value.trim();
+  if (!prixValue) {
+    depotInput.value = '';
+    return;
+  }
+
+  // Nettoyer le prix (enlever $, espaces, etc.)
+  let cleaned = prixValue.replace(/[^\d\s\u00A0.,]/g, '');
+  cleaned = cleaned.replace(/[\s\u00A0]+/g, '');
+
+  // Gérer le format français (virgule décimale)
+  const lastCommaIndex = cleaned.lastIndexOf(',');
+  const lastDotIndex = cleaned.lastIndexOf('.');
+  if (lastCommaIndex > lastDotIndex && lastCommaIndex === cleaned.length - 3) {
+    cleaned = cleaned.substring(0, lastCommaIndex) + '.' + cleaned.substring(lastCommaIndex + 1);
+  }
+  cleaned = cleaned.replace(/,/g, '');
+
+  const prix = parseFloat(cleaned);
+  if (isNaN(prix)) {
+    depotInput.value = '';
+    return;
+  }
+
+  // Calculer les taxes (comme dans le PDF)
+  const tps = Math.round(prix * 0.05 * 100) / 100;  // 5% TPS arrondi à 2 décimales
+  const tvq = Math.round(prix * 0.09975 * 100) / 100;  // 9.975% TVQ arrondi à 2 décimales
+  const totalAvecTaxes = prix + tps + tvq;
+
+  // Calculer 25% du total avec taxes comme dépôt
+  const depot = Math.round(totalAvecTaxes * 0.25 * 100) / 100;
+
+  // Formater le dépôt exactement comme le prix (avec virgule et espace pour milliers)
+  const depotFormate = new Intl.NumberFormat('fr-CA', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(depot);
+
+  depotInput.value = depotFormate + ' $';
+  depotInput.style.setProperty('border-right-color', '#4caf50', 'important');
+}
+
+// Marquer le dépôt comme modifié manuellement
+document.addEventListener('DOMContentLoaded', () => {
+  const depotInput = document.querySelector('input[name="depot"]');
+  if (depotInput) {
+    depotInput.addEventListener('input', (e) => {
+      // Si l'utilisateur tape quelque chose, marquer comme modifié manuellement
+      if (e.isTrusted) { // Seulement pour les événements réels de l'utilisateur
+        depotInput.dataset.userModified = 'true';
+      }
+    });
+
+    // Réinitialiser le flag si le champ est vidé
+    depotInput.addEventListener('blur', () => {
+      if (!depotInput.value.trim()) {
+        delete depotInput.dataset.userModified;
+      }
+    });
+  }
+});
+
 // S'assurer que le bouton est toujours visible - TOUS les événements possibles
 document.addEventListener('DOMContentLoaded', enforceRoleBasedVisibility);
 window.addEventListener('load', enforceRoleBasedVisibility);
@@ -674,6 +754,7 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
     num: form.num.value,
     date2: form.date_travaux.value,
     prix: form.prix.value,
+    depot: form.depot.value,
     adresse: form.adresse.value,
     endroit: form.endroit_peinture.value,
     item: document.querySelector("#itemToggle .tag")?.textContent?.trim() || "",
@@ -3587,6 +3668,7 @@ function initFormulaire() {
         log('[MONEY] [OK] Validation réussie:', finalNumber);
         return cleaned;
       })(),
+      depot: form.depot.value,
       adresse: form.adresse.value,
       endroit: form.endroit_peinture.value,
       item: document.querySelector("#itemToggle .tag")?.textContent?.trim() || "",
@@ -3881,7 +3963,7 @@ function formatPrice(value) {
 // Ajouter le listener sur le champ prix
 document.addEventListener('DOMContentLoaded', function() {
   const prixField = document.querySelector('input[name="prix"]');
-  
+
   if (prixField) {
     prixField.addEventListener('blur', function(e) {
       const value = e.target.value.trim();
@@ -3889,9 +3971,28 @@ document.addEventListener('DOMContentLoaded', function() {
         e.target.value = formatPrice(value);
       }
     });
-    
+
     // Permettre seulement les chiffres, points, virgules et $
     prixField.addEventListener('input', function(e) {
+      const value = e.target.value;
+      // Garder seulement les caractères valides pour un prix
+      e.target.value = value.replace(/[^0-9.,$ ]/g, '');
+    });
+  }
+
+  // Ajouter le même formatage sur le champ dépôt
+  const depotField = document.querySelector('input[name="depot"]');
+
+  if (depotField) {
+    depotField.addEventListener('blur', function(e) {
+      const value = e.target.value.trim();
+      if (value && value !== '') {
+        e.target.value = formatPrice(value);
+      }
+    });
+
+    // Permettre seulement les chiffres, points, virgules et $
+    depotField.addEventListener('input', function(e) {
       const value = e.target.value;
       // Garder seulement les caractères valides pour un prix
       e.target.value = value.replace(/[^0-9.,$ ]/g, '');
@@ -6483,7 +6584,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       'Cliquez pour sélectionner particularités des travaux...': 'Click to select work specifications...',
       'Ex: 850$': 'E.g.: $850',
       'Ex: 2-3 jours': 'E.g.: 2-3 days',
-      'Ex: Semaine du 15 janvier': 'E.g.: Week of January 15',
+      'Ex: mi-mai': 'E.g.: mid-May',
       'Ajoutez des détails personnalisés...': 'Add custom details...',
       'Ajoutez des particularités personnalisées...': 'Add custom specifications...',
       'Nom du template...': 'Template name...',

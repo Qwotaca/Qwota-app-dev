@@ -142,11 +142,30 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
         c.drawRightString(443, 124.5 + y_offset, tps)
         c.drawRightString(443, 99.5 + y_offset, total)
 
-    try:
-        depot_val = total_val * 0.25
-        depot = f"{depot_val:,.2f}".replace(",", "TEMP").replace(".", ",").replace("TEMP", " ") + " $"
-    except:
-        depot = ""
+    # Utiliser le dépôt envoyé depuis le formulaire, sinon calculer 25% du total
+    depot_from_form = data.get("depot", "")
+    if depot_from_form and depot_from_form.strip():
+        # Nettoyer et formater le dépôt envoyé depuis le formulaire
+        try:
+            depot_clean = depot_from_form.replace('\xa0', '').replace(' ', '').replace('$', '').strip()
+            if ',' in depot_clean and depot_clean.count(',') == 1 and len(depot_clean.split(',')[1]) <= 2:
+                depot_clean = depot_clean.replace(',', '.')
+            depot_val = float(depot_clean)
+            depot = f"{depot_val:,.2f}".replace(",", "TEMP").replace(".", ",").replace("TEMP", " ") + " $"
+        except:
+            # Si erreur de parsing, calculer automatiquement
+            try:
+                depot_val = total_val * 0.25
+                depot = f"{depot_val:,.2f}".replace(",", "TEMP").replace(".", ",").replace("TEMP", " ") + " $"
+            except:
+                depot = ""
+    else:
+        # Si pas de dépôt dans le formulaire, calculer automatiquement
+        try:
+            depot_val = total_val * 0.25
+            depot = f"{depot_val:,.2f}".replace(",", "TEMP").replace(".", ",").replace("TEMP", " ") + " $"
+        except:
+            depot = ""
     c.drawCentredString(331, 188.5 + y_offset, depot)
 
     adresse = data.get("adresse", "")

@@ -7695,6 +7695,54 @@ function updateCalculation() {
       updateSubtotal();
     }, 100);
 
+    // ===== LOGS DÉTAILLÉS DES CALCULS À L'OUVERTURE =====
+    console.log('\n═══════════════════════════════════════════════════════');
+    console.log('📊 DÉTAIL COMPLET DES CALCULS - OUVERTURE DE PAGE');
+    console.log('═══════════════════════════════════════════════════════\n');
+
+    console.log('🧮 HEURES DE TRAVAIL:');
+    console.log('  ├─ Lavage:', (hours.lavage || 0).toFixed(2), 'h');
+    console.log('  ├─ Préparation:', (hours.preparation || 0).toFixed(2), 'h');
+    console.log('  ├─ Primer:', (hours.primer || 0).toFixed(2), 'h');
+    console.log('  ├─ Revêtement:', (hours.revetement || 0).toFixed(2), 'h');
+    console.log('  ├─ Corniches/Moulures:', (hours.corniches_moulures || 0).toFixed(2), 'h');
+    console.log('  ├─ Fenêtres/Volets:', (hours.fenetres_volets || 0).toFixed(2), 'h');
+    console.log('  ├─ Portes:', (hours.portes || 0).toFixed(2), 'h');
+    console.log('  ├─ Balcon:', (hours.balcon || 0).toFixed(2), 'h');
+    console.log('  ├─ Clôture:', (hours.cloture || 0).toFixed(2), 'h');
+    console.log('  ├─ Autre:', (hours.autre || 0).toFixed(2), 'h');
+    console.log('  ├─ Fer forgé:', (hours.fer_forge || 0).toFixed(2), 'h');
+    console.log('  ├─ Intérieur:', (hours.interieur || 0).toFixed(2), 'h');
+    console.log('  └─ TOTAL JOB:', totalHeuresJob.toFixed(2), 'h\n');
+
+    console.log('💰 COÛTS MAIN D\'ŒUVRE (Taux horaire: ' + tauxHoraire + '$/h):');
+    console.log('  ├─ Lavage:', finalLavage.toFixed(2), '$ = (' + (hours.lavage || 0).toFixed(2) + 'h × ' + tauxHoraire + '$/h)');
+    console.log('  ├─ Préparation TOTALE:', costs.preparation.toFixed(2), '$');
+    console.log('  │  ├─ Déplacement:', deplacement.toFixed(2), '$');
+    console.log('  │  ├─ Prix M-O Préparation:', prixMOPreparation.toFixed(2), '$ = (' + heuresPreparationTotales.toFixed(2) + 'h × ' + tauxHoraire + '$/h)');
+    console.log('  │  ├─ Prix primer spots:', prixPrimerSpots.toFixed(2), '$ = (' + heuresPrimerSpots.toFixed(2) + 'h lavage+prep)');
+    console.log('  │  ├─ Prix M-O Nettoyage:', prixMONettoyage.toFixed(2), '$ = (' + heuresNettoyage.toFixed(2) + 'h × ' + tauxHoraire + '$/h)');
+    console.log('  │  └─ Prix Accessoires:', prixAccessoiresRecalc.toFixed(2), '$ = (arrondi ' + millierSuperieurRecalc + ' ÷ 100)');
+    console.log('  ├─ Peinture (incl. 3ème couche):', costs.peinture.toFixed(2), '$');
+    console.log('  │  ├─ Main d\'œuvre peinture:', vraieMOPeinture.toFixed(2), '$');
+    console.log('  │  ├─ Fer forgé:', costs.fer_forge.toFixed(2), '$');
+    console.log('  │  └─ 3ème couche:', costs.troisieme_couche_mo.toFixed(2), '$');
+    console.log('  └─ TOTAL M-O:', (costs.lavage + costs.preparation + costs.peinture).toFixed(2), '$\n');
+
+    console.log('🎨 PRODUITS:');
+    console.log('  ├─ Produits sélectionnés:', produitsCoutActuel.toFixed(2), '$');
+    console.log('  ├─ Primers surface complète:', primerCostActuel.toFixed(2), '$');
+    console.log('  └─ TOTAL PRODUITS:', (produitsCoutActuel + primerCostActuel).toFixed(2), '$\n');
+
+    console.log('📋 FRAIS ADMINISTRATIFS:', fraisAdministratifs.toFixed(2), '$\n');
+
+    console.log('💵 SOUS-TOTAL:', sousTotal_SIMPLE.toFixed(2), '$');
+    console.log('   = Lavage + Préparation + Peinture + Produits + Frais Admin');
+    console.log('   = ' + costs.lavage.toFixed(2) + ' + ' + costs.preparation.toFixed(2) + ' + ' + costs.peinture.toFixed(2) + ' + ' + (produitsCoutActuel + primerCostActuel).toFixed(2) + ' + ' + fraisAdministratifs.toFixed(2) + '\n');
+
+    console.log('═══════════════════════════════════════════════════════\n');
+    // ===== FIN LOGS DÉTAILLÉS =====
+
   } catch (error) {
     error('Erreur de calcul:', error);
   }
@@ -9639,7 +9687,13 @@ function calculateNewCosts(hours, surfaceData, selectedProduct) {
   costs.fer_forge = 0;
   hours.fer_forge = 0;
   costs.produits_fer_forge = 0;
+  console.log('\n🔨 DÉTAIL FER FORGÉ:');
   document.querySelectorAll('[data-fer_forge]').forEach(input => {
+    // IGNORER les champs de paramètres (param_*)
+    if (input.id && input.id.startsWith('param_')) {
+      return; // Skip les paramètres
+    }
+
     const value = parseFloat(input.value) || 0;
     if (value > 0) {
       // Le type peut être dans data-fer_forge OU data-type selon comment l'élément a été créé
@@ -9648,6 +9702,8 @@ function calculateNewCosts(hours, surfaceData, selectedProduct) {
       if (ferForgeType && ferForgeType.startsWith('endroit_')) {
         ferForgeType = input.getAttribute('data-type');
       }
+
+      console.log('  ├─ Type:', ferForgeType, '| Quantité:', value, '| Input ID:', input.id);
 
       // Calculate cost and hours based on fer forgé type
       let ferForgeCost = 0;
@@ -9726,14 +9782,21 @@ function calculateNewCosts(hours, surfaceData, selectedProduct) {
           break;
       }
 
+      if (ferForgeCost > 0) {
+        console.log('  │  ├─ Coût M-O:', ferForgeCost.toFixed(2), '$');
+        console.log('  │  ├─ Heures:', (ferForgeCost / params.taux_horaire).toFixed(2), 'h');
+      }
+
       // Calcul produit fer forgé avec formule simple: Prix MO × 0.15
       if (ferForgeCost > 0) {
         const coutProduitExact = ferForgeCost * 0.15; // Coût exact pour produits
         const gallonsFerForge = Math.ceil(coutProduitExact / params.peinture_fer_forge); // Nombre entier de gallons pour commande
         costs.produits_fer_forge += coutProduitExact; // Utiliser le montant exact, pas les gallons arrondis
+        console.log('  │  └─ Produits fer forgé:', coutProduitExact.toFixed(2), '$');
       }
     }
   });
+  console.log('  └─ TOTAL FER FORGÉ: Coût M-O =', costs.fer_forge.toFixed(2), '$ | Heures =', hours.fer_forge.toFixed(2), 'h | Produits =', costs.produits_fer_forge.toFixed(2), '$\n');
 
   // Calculate revêtement costs and hours (main d'œuvre revêtement, pas préparation)
   costs.revetement = 0;

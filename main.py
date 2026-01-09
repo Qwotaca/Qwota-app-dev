@@ -750,6 +750,7 @@ class SoumissionData(BaseModel):
     date: Optional[str] = ""
     date2: Optional[str] = ""
     prix: Optional[str] = ""
+    depot: Optional[str] = ""
     endroit: Optional[str] = ""
     produit: Optional[str] = ""
     item: Optional[str] = ""
@@ -1910,6 +1911,7 @@ async def creer_pdf(data: SoumissionData, request: Request):
             "adresse": soumission_data.get("adresse", ""),
             "courriel": soumission_data.get("courriel", ""),
             "prix": soumission_data.get("prix", ""),
+            "depot": soumission_data.get("depot", ""),
             "date": soumission_data.get("date", datetime.now().strftime("%Y-%m-%d")),
             "date2": soumission_data.get("date2", ""),
             "item": soumission_data.get("item", ""),
@@ -4948,7 +4950,7 @@ async def cloturer_travail(payload: dict = Body(...)):
         # Le travail vient de travaux_a_completer qui devrait avoir TOUTES les données de la soumission originale
         essential_fields = [
             'produit', 'part', 'item', 'endroit', 'telephone', 'courriel',
-            'adresse', 'prix', 'date', 'date2', 'temps', 'payer_par',
+            'adresse', 'prix', 'depot', 'date', 'date2', 'temps', 'payer_par',
             'nom', 'prenom', 'clientNom', 'clientPrenom', 'num', 'original_id'
         ]
         for field in essential_fields:
@@ -5199,7 +5201,7 @@ def enregistrer_soumission_signee(utilisateur: str, soumission: dict):
         # La soumission signée doit conserver TOUTES les données de la soumission complète
         essential_fields = [
             'produit', 'part', 'item', 'endroit', 'telephone', 'courriel',
-            'adresse', 'prix', 'date', 'date2', 'temps', 'payer_par',
+            'adresse', 'prix', 'depot', 'date', 'date2', 'temps', 'payer_par',
             'nom', 'prenom'
         ]
         for field in essential_fields:

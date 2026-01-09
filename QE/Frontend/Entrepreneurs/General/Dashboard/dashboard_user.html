@@ -4578,112 +4578,16 @@
         photoUrl: entrepreneur.photoUrl
       });
 
-      // Si desktop, ouvrir le modal complet de statistiques
-      if (window.innerWidth > 768) {
-        // Utiliser login_username si disponible, sinon username
-        const targetUsername = entrepreneur.login_username || entrepreneur.username;
-        // Construire le nom complet (prenom + nom)
-        const fullName = [entrepreneur.prenom, entrepreneur.nom].filter(Boolean).join(' ') || entrepreneur.username;
-        // Passer le nom complet ET les données de l'entrepreneur
-        log('[MODAL DEBUG] Passage au modal - username:', targetUsername, 'fullName:', fullName, 'data:', entrepreneur);
-        openUserStatsModal(targetUsername, fullName, entrepreneur);
-        return;
-      }
+      // Ouvrir le modal complet de statistiques (PC et mobile)
+      // Utiliser login_username si disponible, sinon username
+      const targetUsername = entrepreneur.login_username || entrepreneur.username;
+      // Construire le nom complet (prenom + nom)
+      const fullName = [entrepreneur.prenom, entrepreneur.nom].filter(Boolean).join(' ') || entrepreneur.username;
+      // Passer le nom complet ET les données de l'entrepreneur
+      log('[MODAL DEBUG] Passage au modal - username:', targetUsername, 'fullName:', fullName, 'data:', entrepreneur);
+      openUserStatsModal(targetUsername, fullName, entrepreneur);
+      return;
 
-      const modal = document.getElementById('entrepreneurStatsModal');
-      const photoContainer = document.getElementById('statsEntrepreneurPhoto');
-      const nameElement = document.getElementById('statsEntrepreneurName');
-      const rangElement = document.getElementById('statsEntrepreneurRang');
-      const gridElement = document.getElementById('statsEntrepreneurGrid');
-
-      // Médaille ou rang
-      let rangDisplay = '';
-      if (index === 0) {
-        rangDisplay = '<i class="fas fa-medal" style="color: #fbbf24; font-size: 20px;"></i> 1er';
-      } else if (index === 1) {
-        rangDisplay = '<i class="fas fa-medal" style="color: #94a3b8; font-size: 20px;"></i> 2ème';
-      } else if (index === 2) {
-        rangDisplay = '<i class="fas fa-medal" style="color: #cd7f32; font-size: 20px;"></i> 3ème';
-      } else {
-        rangDisplay = `${index + 1}${index === 3 ? 'ème' : index > 10 ? 'ème' : 'ème'}`;
-      }
-
-      // Photo de profil
-      const photoUrl = entrepreneur.photoUrl; // Devra être récupéré depuis le cache
-      photoContainer.innerHTML = photoUrl
-        ? `<img src="${photoUrl}" alt="Photo" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-dark);">`
-        : `<div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #2586fd 0%, #b2c5fbc7 100%); display: flex; align-items: center; justify-content: center; border: 2px solid var(--border-dark);"><i class="fas fa-user" style="color: white; font-size: 20px;"></i></div>`;
-
-      // Nom et rang
-      nameElement.textContent = entrepreneur.username;
-      rangElement.innerHTML = rangDisplay + ' au classement';
-
-      // Utiliser le montant produit depuis l'API (ventes_produit uniquement)
-      const dollarsProduit = Math.round(entrepreneur.montant_produit || 0);
-
-      // Stats
-      gridElement.innerHTML = `
-        <div class="entrepreneur-stat-row">
-          <span class="entrepreneur-stat-label">
-            <i class="fas fa-dollar-sign" style="color: #10b981;"></i>
-            Dollars ($) vendu
-          </span>
-          <span class="entrepreneur-stat-value" style="color: #10b981;">${entrepreneur.ca_actuel.toLocaleString()} $</span>
-        </div>
-        <div class="entrepreneur-stat-row">
-          <span class="entrepreneur-stat-label">
-            <i class="fas fa-file-signature" style="color: #3b82f6;"></i>
-            Contrats signés
-          </span>
-          <span class="entrepreneur-stat-value">${entrepreneur.soumissions_signees || 0}</span>
-        </div>
-        <div class="entrepreneur-stat-row">
-          <span class="entrepreneur-stat-label">
-            <i class="fas fa-handshake" style="color: #8b5cf6;"></i>
-            Contrat moyen
-          </span>
-          <span class="entrepreneur-stat-value">${entrepreneur.contrat_moyen.toLocaleString()} $</span>
-        </div>
-        <div class="entrepreneur-stat-row">
-          <span class="entrepreneur-stat-label">
-            <i class="fas fa-dollar-sign" style="color: #60a5fa;"></i>
-            Dollars ($) produit
-          </span>
-          <span class="entrepreneur-stat-value" style="color: #60a5fa;">${dollarsProduit.toLocaleString()} $</span>
-        </div>
-        <div class="entrepreneur-stat-row">
-          <span class="entrepreneur-stat-label">
-            <i class="fas fa-bullhorn" style="color: #ec4899;"></i>
-            Taux marketing
-          </span>
-          <span class="entrepreneur-stat-value">${((entrepreneur.taux_marketing || 0) / 100).toFixed(2)}</span>
-        </div>
-        <div class="entrepreneur-stat-row">
-          <span class="entrepreneur-stat-label">
-            <i class="fas fa-clock" style="color: #f59e0b;"></i>
-            Productivité/h
-          </span>
-          <span class="entrepreneur-stat-value">${(entrepreneur.prod_horaire || 0).toLocaleString()} $/h</span>
-        </div>
-        <div class="entrepreneur-stat-row">
-          <span class="entrepreneur-stat-label">
-            <i class="fas fa-business-time" style="color: #6366f1;"></i>
-            H de PÀP
-          </span>
-          <span class="entrepreneur-stat-value">${(entrepreneur.heures_pap || 0).toFixed(1)} h</span>
-        </div>
-        <div class="entrepreneur-stat-row">
-          <span class="entrepreneur-stat-label">
-            <i class="fas fa-star" style="color: #fbbf24;"></i>
-            Satisfaction
-          </span>
-          <span class="entrepreneur-stat-value">${entrepreneur.etoiles.toFixed(1)}</span>
-        </div>
-      `;
-
-      // Afficher le modal et bloquer le scroll du body
-      modal.classList.add('show');
-      document.body.style.overflow = 'hidden';
     }
 
     // Fonction pour fermer le modal
@@ -4725,23 +4629,14 @@
 
       console.log('[SHOW COACH CLASSEMENT STATS] Entrepreneur trouvé:', entrepreneur);
 
-      // Si desktop, ouvrir le modal complet de statistiques
-      if (window.innerWidth > 768) {
-        // Utiliser login_username si disponible, sinon username
-        const targetUsername = entrepreneur.login_username || entrepreneur.username;
-        // Construire le nom complet (prenom + nom)
-        const fullName = [entrepreneur.prenom, entrepreneur.nom].filter(Boolean).join(' ') || entrepreneur.username;
-        // Passer le nom complet ET les données de l'entrepreneur
-        console.log('[SHOW COACH CLASSEMENT STATS] Ouverture modal - username:', targetUsername, 'fullName:', fullName);
-        openUserStatsModal(targetUsername, fullName, entrepreneur);
-        return;
-      }
-
-      // Mobile: utiliser le modal mobile (même logique que showEntrepreneurStats)
-      const modal = document.getElementById('entrepreneurStatsModal');
-      // ... code mobile si nécessaire
-      modal.classList.add('show');
-      document.body.style.overflow = 'hidden';
+      // Ouvrir le modal complet de statistiques (PC et mobile)
+      // Utiliser login_username si disponible, sinon username
+      const targetUsername = entrepreneur.login_username || entrepreneur.username;
+      // Construire le nom complet (prenom + nom)
+      const fullName = [entrepreneur.prenom, entrepreneur.nom].filter(Boolean).join(' ') || entrepreneur.username;
+      // Passer le nom complet ET les données de l'entrepreneur
+      console.log('[SHOW COACH CLASSEMENT STATS] Ouverture modal - username:', targetUsername, 'fullName:', fullName);
+      openUserStatsModal(targetUsername, fullName, entrepreneur);
     }
 
     // ================================================================

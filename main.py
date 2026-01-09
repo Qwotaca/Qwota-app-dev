@@ -1065,6 +1065,10 @@ def get_entrepreneurs_list_api(
                                 # Heures de PÀP depuis weekly
                                 weekly_data = rpo_data.get("weekly", {})
 
+                                # Variables pour calculer la prod horaire depuis les valeurs saisies (mai à septembre)
+                                total_prod_horaire = 0
+                                nombre_semaines_prod_horaire = 0
+
                                 for month_key, weeks in weekly_data.items():
                                     for week_key, week_data in weeks.items():
                                         # Heures de PÀP
@@ -1075,9 +1079,24 @@ def get_entrepreneurs_list_api(
                                             except:
                                                 pass
 
-                                # Calculer prod horaire: montant_signe / heures_pap (même formule que frontend)
-                                if heures_pap > 0:
-                                    prod_horaire_rpo = round(montant_signe / heures_pap)
+                                        # Prod horaire depuis les valeurs saisies (mai à septembre: mois 4 à 8)
+                                        try:
+                                            month_index = int(month_key)
+                                            if 4 <= month_index <= 8:  # Mai à septembre
+                                                prod_h = week_data.get("prod_horaire")
+                                                # Compter seulement les valeurs saisies (différentes de 0, undefined, null, "-")
+                                                if prod_h is not None and prod_h != 0 and prod_h != "-":
+                                                    try:
+                                                        total_prod_horaire += float(prod_h)
+                                                        nombre_semaines_prod_horaire += 1
+                                                    except:
+                                                        pass
+                                        except:
+                                            pass
+
+                                # Calculer prod horaire depuis les valeurs saisies dans RPO (mai à septembre)
+                                if nombre_semaines_prod_horaire > 0:
+                                    prod_horaire_rpo = round(total_prod_horaire / nombre_semaines_prod_horaire)
                                 else:
                                     prod_horaire_rpo = 0
 

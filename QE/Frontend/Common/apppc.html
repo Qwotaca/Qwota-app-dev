@@ -4688,9 +4688,11 @@
 
       // Profil - Utiliser le nom complet si fourni, sinon username
       document.getElementById('stats-username').textContent = fullName || username;
+      document.getElementById('stats-username-mobile').textContent = fullName || username;
 
       // Photo de profil
       const statsPhoto = document.getElementById('stats-profile-photo');
+      const statsPhotoMobile = document.getElementById('stats-profile-photo-mobile');
 
       // Log pour déboguer
       log('[APPPC DEBUG] populateStatsModal - username:', username, 'fullName:', fullName);
@@ -4707,50 +4709,63 @@
             // Vérifier si photoUrl existe dans la réponse
             if (photoData && photoData.photoUrl) {
               statsPhoto.src = photoData.photoUrl;
+              statsPhotoMobile.src = photoData.photoUrl;
             } else {
               // Fallback sur SVG avec initiale
               const initial = username.charAt(0).toUpperCase();
-              statsPhoto.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+              const fallbackSvg = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+              statsPhoto.src = fallbackSvg;
+              statsPhotoMobile.src = fallbackSvg;
             }
           } else {
             // Erreur de réponse, utiliser le fallback
             const initial = username.charAt(0).toUpperCase();
-            statsPhoto.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+            const fallbackSvg = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+            statsPhoto.src = fallbackSvg;
+            statsPhotoMobile.src = fallbackSvg;
           }
         } catch (error) {
           error('Erreur photo:', error);
           // En cas d'erreur, utiliser le fallback
           const initial = username.charAt(0).toUpperCase();
+          const fallbackSvg = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
           if (statsPhoto) {
-            statsPhoto.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+            statsPhoto.src = fallbackSvg;
+          }
+          if (statsPhotoMobile) {
+            statsPhotoMobile.src = fallbackSvg;
           }
         }
       }
 
       // Nom du grade dans la section du haut
       document.getElementById('stats-grade-name-display').textContent = profile.category;
+      document.getElementById('stats-grade-name-display-mobile').textContent = profile.category;
 
       // Niveau sur le badge photo
       document.getElementById('stats-photo-level-text').textContent = profile.level;
+      document.getElementById('stats-photo-level-text-mobile').textContent = profile.level;
 
-      // Appliquer le contour de grade à la photo de profil
-      const photoContainer = document.querySelector('.stats-profile-photo-container');
-      if (photoContainer && profile.category) {
+      // Appliquer le contour de grade à la photo de profil (desktop et mobile)
+      const photoContainers = document.querySelectorAll('.stats-profile-photo-container');
+      if (photoContainers.length > 0 && profile.category) {
         // Convertir le nom du grade en classe CSS
         // Démarrage → grade-demarrage, Maître → grade-maitre, etc.
         const gradeClass = 'grade-' + profile.category.toLowerCase()
           .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Enlever accents
           .replace(/\s+/g, '-'); // Remplacer espaces par tirets
 
-        // Retirer toutes les classes de grade précédentes
-        photoContainer.className = photoContainer.className.replace(/grade-\S+/g, '').trim();
+        photoContainers.forEach(photoContainer => {
+          // Retirer toutes les classes de grade précédentes
+          photoContainer.className = photoContainer.className.replace(/grade-\S+/g, '').trim();
 
-        // Ajouter la nouvelle classe de grade
-        photoContainer.classList.add(gradeClass);
+          // Ajouter la nouvelle classe de grade
+          photoContainer.classList.add(gradeClass);
+        });
         console.log(`Contour de grade appliqué: ${gradeClass}`);
       }
 
-      // Charger et afficher le streak
+      // Charger et afficher le streak (desktop et mobile)
       try {
         const today = new Date().toISOString().split('T')[0];
         const streakResponse = await fetch(`/api/gamification/quest-progress/${username}?quest_date=${today}`);
@@ -4760,9 +4775,14 @@
           const streak = streakData.streak;
           const statsStreakBadge = document.getElementById('statsStreakBadge');
           const statsStreakNumber = document.getElementById('statsStreakNumber');
+          const statsStreakBadgeMobile = document.getElementById('statsStreakBadgeMobile');
+          const statsStreakNumberMobile = document.getElementById('statsStreakNumberMobile');
 
           if (statsStreakNumber) {
             statsStreakNumber.textContent = streak;
+          }
+          if (statsStreakNumberMobile) {
+            statsStreakNumberMobile.textContent = streak;
           }
 
           // Afficher le badge si streak >= 1
@@ -4773,16 +4793,28 @@
               statsStreakBadge.style.display = 'none';
             }
           }
+          if (statsStreakBadgeMobile) {
+            if (streak >= 1) {
+              statsStreakBadgeMobile.style.display = 'flex';
+            } else {
+              statsStreakBadgeMobile.style.display = 'none';
+            }
+          }
         }
       } catch (error) {
         console.error('Erreur chargement streak stats modal:', error);
       }
 
-      // XP
+      // XP (desktop et mobile)
       document.getElementById('stats-xp-current').textContent = profile.xp_progress;
       document.getElementById('stats-xp-next').textContent = profile.xp_for_next_level;
       document.getElementById('stats-xp-fill').style.width = `${profile.progress_percentage}%`;
       document.getElementById('stats-xp-percentage').textContent = `${Math.round(profile.progress_percentage)}%`;
+
+      document.getElementById('stats-xp-current-mobile').textContent = profile.xp_progress;
+      document.getElementById('stats-xp-next-mobile').textContent = profile.xp_for_next_level;
+      document.getElementById('stats-xp-fill-mobile').style.width = `${profile.progress_percentage}%`;
+      document.getElementById('stats-xp-percentage-mobile').textContent = `${Math.round(profile.progress_percentage)}%`;
 
       // Progression vers prochain grade
       const currentLevel = profile.level;

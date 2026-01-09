@@ -929,7 +929,7 @@
   </div>
 
   <!-- Modal informations client -->
-  <div id="clientInfoModal" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none;">
+  <div id="clientInfoModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 80;">
     <div id="clientInfoCard" class="status-card p-6 w-full" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-xl font-bold" style="color: var(--text-light);">
@@ -1267,13 +1267,13 @@
         </button>
       </div>
       <div class="flex-1 overflow-auto rounded-lg" style="background: #0f172a; border: 2px solid var(--border-dark);">
-        <table class="w-full">
+        <table class="w-full modern-table">
           <thead style="background: rgba(30, 41, 59, 0.5); position: sticky; top: 0; z-index: 10;">
             <tr style="border-bottom: 2px solid var(--border-dark);">
               <th class="px-4 py-3 text-left text-sm font-semibold" style="color: var(--text-gray);">Client</th>
               <th class="px-4 py-3 text-left text-sm font-semibold" style="color: var(--text-gray);">Téléphone</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold" style="color: var(--text-gray);">Adresse</th>
               <th class="px-4 py-3 text-left text-sm font-semibold" style="color: var(--text-gray);">Prix</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold" style="color: var(--text-gray);">Date</th>
               <th class="px-4 py-3 text-center text-sm font-semibold" style="color: var(--text-gray);">Actions</th>
             </tr>
           </thead>
@@ -1516,6 +1516,9 @@
 
     log('[VENTES] 📊 Rendu table clients perdus, total:', window.ventesData.perdus.length);
 
+    // Stocker globalement pour accès depuis showClientPerduDetails
+    window.clientsPerdusData = window.ventesData.perdus;
+
     if (window.ventesData.perdus.length === 0) {
       tbody.innerHTML = `
         <tr>
@@ -1534,17 +1537,17 @@
       const nom = client.nom || client.clientNom || '';
       const nomComplet = `${prenom} ${nom}`.trim();
       const telephone = client.telephone || '-';
+      const adresse = client.adresse || '-';
       const prix = formatPrix(client.prix || '0');
-      const date = client.date || '-';
 
       return `
-        <tr style="border-bottom: 1px solid var(--border-dark); transition: background 0.2s;" onmouseover="this.style.background='rgba(30, 41, 59, 0.3)'" onmouseout="this.style.background='transparent'">
-          <td class="px-4 py-3" style="color: var(--text-light);">${nomComplet}</td>
-          <td class="px-4 py-3" style="color: var(--text-gray);">${telephone}</td>
-          <td class="px-4 py-3" style="color: #10b981; font-weight: 600;">${prix}</td>
-          <td class="px-4 py-3" style="color: var(--text-gray);">${date}</td>
-          <td class="px-4 py-3 text-center">
-            <div class="flex items-center justify-center gap-2">
+        <tr style="cursor: pointer;" onclick="showClientPerduDetails(${index})">
+          <td data-label="Nom">${nomComplet}</td>
+          <td data-label="Téléphone">${telephone}</td>
+          <td data-label="Adresse">${adresse}</td>
+          <td data-label="Prix">${prix}</td>
+          <td data-label="Actions" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-center gap-2 desktop-actions-only">
               <button onclick="recupererClientPerdu(${index})" class="px-3 py-1.5 rounded-lg transition-all text-sm font-medium" style="background: rgba(16, 185, 129, 0.2); color: #10b981;" onmouseover="this.style.background='rgba(16, 185, 129, 0.3)'" onmouseout="this.style.background='rgba(16, 185, 129, 0.2)'">
                 <i class="fas fa-undo mr-1"></i> Récupérer
               </button>
@@ -1556,6 +1559,11 @@
         </tr>
       `;
     }).join('');
+
+    // Réinitialiser l'affichage mobile après chargement
+    if (window.innerWidth <= 768) {
+      resetMobileDisplay('clientsPerdusTableBody');
+    }
   }
 
   // Variable globale pour récupération client perdu
@@ -1781,38 +1789,26 @@
         </div>
       `;
     } else if (category === 'attente') {
-      // Header avec bouton "Marquer comme perdu" pour ventes en attente
+      // Header simple pour ventes en attente
       modalHeader.innerHTML = `
         <h3 class="text-xl font-bold" style="color: var(--text-light);">
           <i class="fas fa-user mr-2" style="color: var(--primary-blue);"></i>
           Informations client
         </h3>
-        <div class="flex items-center gap-2">
-          <button onclick="marquerCommePerdu()" class="px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'" title="Marquer comme perdu">
-            <i class="fas fa-times-circle"></i>
-            <span>Marquer comme perdu</span>
-          </button>
-          <button onclick="closeClientInfo()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);" onmouseover="this.style.background='rgba(96, 165, 250, 0.3)'" onmouseout="this.style.background='rgba(96, 165, 250, 0.2)'">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
+        <button onclick="closeClientInfo()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);" onmouseover="this.style.background='rgba(96, 165, 250, 0.3)'" onmouseout="this.style.background='rgba(96, 165, 250, 0.2)'">
+          <i class="fas fa-times"></i>
+        </button>
       `;
     } else if (category === 'acceptees' || category === 'produit') {
-      // Header avec bouton "Marquer comme perdu" pour ventes acceptées et en production
+      // Header simple pour ventes acceptées et en production
       modalHeader.innerHTML = `
         <h3 class="text-xl font-bold" style="color: var(--text-light);">
           <i class="fas fa-user mr-2" style="color: var(--primary-blue);"></i>
           Informations client
         </h3>
-        <div class="flex items-center gap-2">
-          <button onclick="marquerCommePerdu()" class="px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'" title="Marquer comme perdu">
-            <i class="fas fa-times-circle"></i>
-            <span>Marquer comme perdu</span>
-          </button>
-          <button onclick="closeClientInfo()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);" onmouseover="this.style.background='rgba(96, 165, 250, 0.3)'" onmouseout="this.style.background='rgba(96, 165, 250, 0.2)'">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
+        <button onclick="closeClientInfo()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);" onmouseover="this.style.background='rgba(96, 165, 250, 0.3)'" onmouseout="this.style.background='rgba(96, 165, 250, 0.2)'">
+          <i class="fas fa-times"></i>
+        </button>
       `;
     } else {
       // Header normal pour les autres catégories
@@ -1842,7 +1838,23 @@
     // Create Google Maps search URL
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(adresse)}`;
 
-    let html = `
+    let html = ``;
+
+    // Ajouter le bouton "Marquer comme perdu" en haut pour attente/acceptees/produit
+    if (category === 'attente' || category === 'acceptees' || category === 'produit') {
+      html += `
+        <div class="marquer-perdu-top" style="margin-bottom: 1rem;">
+          <div class="flex justify-end">
+            <button onclick="marquerCommePerdu()" class="px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'" title="Marquer comme perdu">
+              <i class="fas fa-times-circle"></i>
+              <span>Marquer comme perdu</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    html += `
       <div style="background: rgba(30, 41, 59, 0.5); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
         <!-- Nom complet -->
         <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid rgba(71, 85, 105, 0.3);">
@@ -1859,8 +1871,7 @@
           <i class="fas fa-phone" style="color: var(--primary-blue); width: 20px; text-align: center;"></i>
           <div style="flex: 1;">
             <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 0.25rem;">Téléphone</div>
-            <a href="tel:${telNumber}" style="color: var(--primary-blue); text-decoration: none; display: flex; align-items: center; gap: 0.5rem; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-              <i class="fas fa-phone-alt" style="font-size: 0.75rem;"></i>
+            <a href="tel:${telNumber}" style="color: var(--primary-blue); text-decoration: none; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
               <span style="font-weight: 500;">${telephone}</span>
             </a>
           </div>
@@ -1873,8 +1884,7 @@
           <i class="fas fa-map-marker-alt" style="color: var(--primary-blue); width: 20px; text-align: center;"></i>
           <div style="flex: 1;">
             <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 0.25rem;">Adresse</div>
-            <a href="javascript:void(0)" onclick="ouvrirMapsModal('${adresse.replace(/'/g, "\\'")}')" style="color: var(--primary-blue); text-decoration: none; display: flex; align-items: center; gap: 0.5rem; transition: opacity 0.2s; cursor: pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-              <i class="fas fa-map-marker-alt" style="font-size: 0.75rem;"></i>
+            <a href="javascript:void(0)" onclick="ouvrirMapsModal('${adresse.replace(/'/g, "\\'")}')" style="color: var(--primary-blue); text-decoration: none; transition: opacity 0.2s; cursor: pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
               <span style="font-weight: 500;">${adresse}</span>
             </a>
           </div>
@@ -1887,8 +1897,7 @@
           <i class="fas fa-envelope" style="color: var(--primary-blue); width: 20px; text-align: center;"></i>
           <div style="flex: 1;">
             <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 0.25rem;">Courriel</div>
-            <a href="mailto:${courriel}" style="color: var(--primary-blue); text-decoration: none; display: flex; align-items: center; gap: 0.5rem; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-              <i class="fas fa-paper-plane" style="font-size: 0.75rem;"></i>
+            <a href="mailto:${courriel}" style="color: var(--primary-blue); text-decoration: none; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
               <span style="font-weight: 500;">${courriel}</span>
             </a>
           </div>
@@ -1931,14 +1940,14 @@
       const pdfUrl = clientData.pdf_url || clientData.pdfUrl || '';
       html += `
         <div class="flex justify-end space-x-3">
-          <button onclick="voirSoumission('${pdfUrl}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
-            <span><i class="fas fa-file-pdf mr-2"></i>Voir la soumission</span>
+          <button onclick="voirSoumission('${pdfUrl}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')" class="btn-secondary btn-action-mobile px-4 py-2 rounded-lg relative overflow-hidden">
+            <span><i class="fas fa-file-pdf mr-2"></i><span class="btn-text-desktop">Voir </span>Soumission</span>
           </button>
-          <button onclick="${hasGQP ? `voirGQP('${gqpUrl}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasGQP ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
-            <i class="fas fa-clipboard-check mr-2"></i>Voir GQP
+          <button onclick="${hasGQP ? `voirGQP('${gqpUrl}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')` : 'return false;'}" class="btn-secondary btn-action-mobile px-4 py-2 rounded-lg relative overflow-hidden" ${!hasGQP ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
+            <i class="fas fa-clipboard-check mr-2"></i><span class="btn-text-desktop">Voir </span>GQP
           </button>
-          <button onclick="${hasCalcul ? `voirCalcul('${clientData.id}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasCalcul ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
-            <i class="fas fa-calculator mr-2"></i>Voir calcul
+          <button onclick="${hasCalcul ? `voirCalcul('${clientData.id}')` : 'return false;'}" class="btn-secondary btn-action-mobile px-4 py-2 rounded-lg relative overflow-hidden" ${!hasCalcul ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
+            <i class="fas fa-calculator mr-2"></i><span class="btn-text-desktop">Voir </span>Calcul
           </button>
         </div>
       `;
@@ -1954,14 +1963,14 @@
         <div class="space-y-3">
           <!-- Boutons de consultation -->
           <div class="flex justify-end space-x-3">
-            <button onclick="voirPDF('${clientData.pdfUrl || ''}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
-              <i class="fas fa-file-pdf mr-2"></i>Voir soumission
+            <button onclick="voirPDF('${clientData.pdfUrl || ''}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')" class="btn-secondary btn-action-mobile px-4 py-2 rounded-lg relative overflow-hidden">
+              <i class="fas fa-file-pdf mr-2"></i><span class="btn-text-desktop">Voir </span>Soumission
             </button>
-            <button onclick="${hasGQP ? `voirGQP('${gqpUrl}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasGQP ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
-              <i class="fas fa-clipboard-list mr-2"></i>Voir GQP
+            <button onclick="${hasGQP ? `voirGQP('${gqpUrl}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')` : 'return false;'}" class="btn-secondary btn-action-mobile px-4 py-2 rounded-lg relative overflow-hidden" ${!hasGQP ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
+              <i class="fas fa-clipboard-list mr-2"></i><span class="btn-text-desktop">Voir </span>GQP
             </button>
-            <button onclick="${hasCalcul ? `voirCalcul('${clientData.id}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasCalcul ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
-              <i class="fas fa-calculator mr-2"></i>Voir calcul
+            <button onclick="${hasCalcul ? `voirCalcul('${clientData.id}')` : 'return false;'}" class="btn-secondary btn-action-mobile px-4 py-2 rounded-lg relative overflow-hidden" ${!hasCalcul ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
+              <i class="fas fa-calculator mr-2"></i><span class="btn-text-desktop">Voir </span>Calcul
             </button>
           </div>
 
@@ -1986,14 +1995,14 @@
 
       html += `
         <div class="flex justify-end space-x-3">
-          <button onclick="voirPDF('${clientData.pdfUrl || ''}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
-            <i class="fas fa-file-pdf mr-2"></i>Voir soumission
+          <button onclick="voirPDF('${clientData.pdfUrl || ''}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')" class="btn-secondary btn-action-mobile px-4 py-2 rounded-lg relative overflow-hidden">
+            <i class="fas fa-file-pdf mr-2"></i><span class="btn-text-desktop">Voir </span>Soumission
           </button>
-          <button onclick="${hasGQP ? `voirGQP('${gqpUrl}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasGQP ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
-            <i class="fas fa-clipboard-list mr-2"></i>Voir GQP
+          <button onclick="${hasGQP ? `voirGQP('${gqpUrl}', '${(clientData.prenom || clientData.clientPrenom || '')} ${(clientData.nom || clientData.clientNom || '')}')` : 'return false;'}" class="btn-secondary btn-action-mobile px-4 py-2 rounded-lg relative overflow-hidden" ${!hasGQP ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
+            <i class="fas fa-clipboard-list mr-2"></i><span class="btn-text-desktop">Voir </span>GQP
           </button>
-          <button onclick="${hasCalcul ? `voirCalcul('${clientData.id}')` : 'return false;'}" class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden" ${!hasCalcul ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
-            <i class="fas fa-calculator mr-2"></i>Voir calcul
+          <button onclick="${hasCalcul ? `voirCalcul('${clientData.id}')` : 'return false;'}" class="btn-secondary btn-action-mobile px-4 py-2 rounded-lg relative overflow-hidden" ${!hasCalcul ? 'style="opacity: 0.5; cursor: not-allowed;" disabled' : ''}>
+            <i class="fas fa-calculator mr-2"></i><span class="btn-text-desktop">Voir </span>Calcul
           </button>
         </div>
       `;
@@ -2621,6 +2630,9 @@
       const tbody = document.getElementById('perdus-modal-tbody');
       if (!tbody) return;
 
+      // Stocker globalement pour accès depuis showClientPerduDetails
+      window.clientsPerdusData = clientsPerdus;
+
       if (!clientsPerdus || clientsPerdus.length === 0) {
         tbody.innerHTML = `
           <tr>
@@ -2638,12 +2650,12 @@
           const nom = client.nom || client.clientNom || '';
           const nomComplet = `${prenom} ${nom}`.trim() || 'N/A';
           return `
-          <tr>
+          <tr style="cursor: pointer;" onclick="showClientPerduDetails(${index})">
             <td data-label="Nom">${nomComplet}</td>
             <td data-label="Téléphone">${client.telephone || '-'}</td>
             <td data-label="Adresse">${client.adresse || '-'}</td>
             <td data-label="Prix">${client.prix || '-'}</td>
-            <td data-label="Actions">
+            <td data-label="Actions" onclick="event.stopPropagation()">
               <div style="display: flex; gap: 8px; justify-content: center;">
                 <button onclick="recupererClientPerdu('${clientId}')" title="Récupérer" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(16, 185, 129, 0.3)'" onmouseout="this.style.background='rgba(16, 185, 129, 0.15)'">
                   <i class="fas fa-undo"></i>
@@ -2655,6 +2667,11 @@
             </td>
           </tr>
         `}).join('');
+
+        // Réinitialiser l'affichage mobile après chargement des données
+        if (window.innerWidth <= 768) {
+          resetMobileDisplay('perdus-modal-tbody');
+        }
       }
     }
 
@@ -2677,6 +2694,126 @@
 
       afficherClientsPerdus(filtered);
     }
+
+    // Fonction pour afficher les détails d'un client perdu dans un popup
+    window.showClientPerduDetails = function(index) {
+      const clientData = window.clientsPerdusData[index];
+      if (!clientData) {
+        error('[VENTES] Client perdu introuvable');
+        return;
+      }
+
+      const modal = document.getElementById('clientInfoModal');
+      const content = document.getElementById('clientInfoContent');
+      const modalHeader = modal.querySelector('.flex.items-center.justify-between');
+
+      if (!modal || !content) return;
+
+      // Header simple
+      modalHeader.innerHTML = `
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i class="fas fa-user mr-2" style="color: var(--primary-blue);"></i>
+          Client perdu
+        </h3>
+        <button onclick="closeClientInfo()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);" onmouseover="this.style.background='rgba(96, 165, 250, 0.3)'" onmouseout="this.style.background='rgba(96, 165, 250, 0.2)'">
+          <i class="fas fa-times"></i>
+        </button>
+      `;
+
+      const prenom = clientData.prenom || clientData.clientPrenom || '-';
+      const nom = clientData.nom || clientData.clientNom || '-';
+      const telephone = clientData.telephone || '-';
+      const adresse = clientData.adresse || '-';
+      const courriel = clientData.courriel || clientData.email || '-';
+      const prixRaw = clientData.prix || '-';
+      const prix = formatPrix(prixRaw);
+      const clientId = clientData.id || `${prenom}_${nom}_${telephone}`;
+
+      // Clean phone number for tel: link
+      const telNumber = telephone.replace(/\D/g, '');
+
+      let html = `
+        <div style="background: rgba(30, 41, 59, 0.5); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+          <!-- Nom complet -->
+          <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid rgba(71, 85, 105, 0.3);">
+            <i class="fas fa-user" style="color: var(--primary-blue); width: 20px; text-align: center;"></i>
+            <div style="flex: 1;">
+              <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 0.25rem;">Nom complet</div>
+              <div style="color: var(--text-light); font-weight: 500;">${prenom} ${nom}</div>
+            </div>
+          </div>
+
+          <!-- Téléphone cliquable -->
+          ${telephone !== '-' ? `
+          <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid rgba(71, 85, 105, 0.3);">
+            <i class="fas fa-phone" style="color: var(--primary-blue); width: 20px; text-align: center;"></i>
+            <div style="flex: 1;">
+              <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 0.25rem;">Téléphone</div>
+              <a href="tel:${telNumber}" style="color: var(--primary-blue); text-decoration: none; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                <span style="font-weight: 500;">${telephone}</span>
+              </a>
+            </div>
+          </div>
+          ` : ''}
+
+          <!-- Adresse cliquable -->
+          ${adresse !== '-' ? `
+          <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid rgba(71, 85, 105, 0.3);">
+            <i class="fas fa-map-marker-alt" style="color: var(--primary-blue); width: 20px; text-align: center;"></i>
+            <div style="flex: 1;">
+              <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 0.25rem;">Adresse</div>
+              <a href="javascript:void(0)" onclick="ouvrirMapsModal('${adresse.replace(/'/g, "\\'")}')" style="color: var(--primary-blue); text-decoration: none; transition: opacity 0.2s; cursor: pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                <span style="font-weight: 500;">${adresse}</span>
+              </a>
+            </div>
+          </div>
+          ` : ''}
+
+          <!-- Courriel cliquable -->
+          ${courriel !== '-' ? `
+          <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid rgba(71, 85, 105, 0.3);">
+            <i class="fas fa-envelope" style="color: var(--primary-blue); width: 20px; text-align: center;"></i>
+            <div style="flex: 1;">
+              <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 0.25rem;">Courriel</div>
+              <a href="mailto:${courriel}" style="color: var(--primary-blue); text-decoration: none; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                <span style="font-weight: 500;">${courriel}</span>
+              </a>
+            </div>
+          </div>
+          ` : ''}
+
+          <!-- Prix -->
+          ${prix !== '-' ? `
+          <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0;">
+            <i class="fas fa-dollar-sign" style="color: #10b981; width: 20px; text-align: center;"></i>
+            <div style="flex: 1;">
+              <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 0.25rem;">Prix</div>
+              <div style="color: #10b981; font-weight: 600; font-size: 1.125rem;">${prix}</div>
+            </div>
+          </div>
+          ` : ''}
+        </div>
+
+        <div class="pt-4">
+          <!-- Boutons d'action -->
+          <div class="flex justify-end space-x-3">
+            <button onclick="recupererClientPerdu(${index}); closeClientInfo();" class="btn-secondary btn-action-mobile px-4 py-2 rounded-lg relative overflow-hidden" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">
+              <i class="fas fa-undo mr-2"></i>Récupérer
+            </button>
+            <button onclick="supprimerClientPerdu(${index}); closeClientInfo();" class="btn-secondary btn-action-mobile px-4 py-2 rounded-lg relative overflow-hidden" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">
+              <i class="fas fa-trash mr-2"></i>Supprimer
+            </button>
+          </div>
+        </div>
+      `;
+
+      content.innerHTML = html;
+
+      // Bloquer le scroll en arrière-plan
+      document.body.style.overflow = 'hidden';
+
+      modal.style.display = 'flex';
+    };
 
   </script>
 
@@ -2901,6 +3038,26 @@
     });
   };
 
+  // Fonction globale pour réinitialiser l'affichage mobile
+  function resetMobileDisplay(tableId) {
+    const tbody = document.getElementById(tableId);
+    if (!tbody) return;
+
+    const rows = tbody.getElementsByTagName('tr');
+    const isMobile = window.innerWidth <= 768;
+
+    Array.from(rows).forEach(row => {
+      if (!row.querySelector('.empty-state')) {
+        // Sur mobile forcer flex, sur desktop supprimer le style
+        if (isMobile) {
+          row.style.display = 'flex';
+        } else {
+          row.style.display = '';
+        }
+      }
+    });
+  }
+
   // Fonctions de recherche pour les tables
   function setupTableSearch(searchInputId, tableId) {
     const searchInput = document.getElementById(searchInputId);
@@ -2911,6 +3068,7 @@
     searchInput.addEventListener('input', function() {
       const searchTerm = this.value.toLowerCase().trim();
       const rows = tbody.getElementsByTagName('tr');
+      const isMobile = window.innerWidth <= 768;
 
       Array.from(rows).forEach(row => {
         // Ignorer les lignes "empty-state"
@@ -2921,16 +3079,30 @@
         const cells = row.getElementsByTagName('td');
         let found = false;
 
-        // Rechercher dans toutes les cellules (nom, téléphone, adresse, prix, paiement)
-        Array.from(cells).forEach(cell => {
-          const text = cell.textContent.toLowerCase();
-          if (text.includes(searchTerm)) {
-            found = true;
-          }
-        });
+        // Si pas de terme de recherche, afficher toutes les lignes
+        if (searchTerm === '') {
+          found = true;
+        } else {
+          // Rechercher dans toutes les cellules (nom, téléphone, adresse, prix, paiement)
+          Array.from(cells).forEach(cell => {
+            const text = cell.textContent.toLowerCase();
+            if (text.includes(searchTerm)) {
+              found = true;
+            }
+          });
+        }
 
         // Afficher ou cacher la ligne selon le résultat
-        row.style.display = found ? '' : 'none';
+        if (found) {
+          // Sur mobile forcer flex, sur desktop laisser le CSS décider
+          if (isMobile) {
+            row.style.display = 'flex';
+          } else {
+            row.style.display = '';
+          }
+        } else {
+          row.style.display = 'none';
+        }
       });
     });
   }
@@ -3336,6 +3508,11 @@
 
       log(`[VENTES] ${prospects.length} prospect(s) chargé(s)`);
 
+      // Réinitialiser l'affichage mobile après chargement des données
+      if (window.innerWidth <= 768) {
+        resetMobileDisplay('potentiel-tbody');
+      }
+
     } catch (err) {
       // Silently handle network errors - file might not exist yet
       showEmptyTable(tbody, 'potentiel');
@@ -3410,6 +3587,11 @@
       `}).join('');
 
       log(`[VENTES] ${ventes.length} vente(s) ${category} chargée(s)`);
+
+      // Réinitialiser l'affichage mobile après chargement des données
+      if (window.innerWidth <= 768) {
+        resetMobileDisplay(tbodyId);
+      }
 
     } catch (err) {
       error(`[VENTES] Erreur chargement ${category}:`, err);

@@ -2362,7 +2362,16 @@
 
   // Navigation: Retour aux outils
   function goBackToOutils() {
-    window.history.back();
+    // Vérifier si on est dans une iframe (système outils-mobile.html)
+    if (window.parent && window.parent !== window && typeof window.parent.returnToToolsGrid === 'function') {
+      // Nouveau système: appeler la fonction du parent pour retourner à la grille
+      console.log('[GQP] Retour à la grille via parent.returnToToolsGrid()');
+      window.parent.returnToToolsGrid();
+    } else {
+      // Ancien système: utiliser l'historique (pour compatibilité)
+      console.log('[GQP] Retour via history.back()');
+      window.history.back();
+    }
   }
 
   // Menu compte - géré plus bas dans le DOM loaded
@@ -3794,6 +3803,25 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </div>
 </div>
+
+<!-- Spinner de chargement pour navigation -->
+<div id="navigation-spinner" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #0f172a; z-index: 9999; align-items: center; justify-content: center;">
+  <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <!-- Spinner SVG animé -->
+    <svg width="64" height="64" viewBox="0 0 64 64" style="animation: spin 0.8s linear infinite;">
+      <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="6"/>
+      <circle cx="32" cy="32" r="28" fill="none" stroke="#3b82f6" stroke-width="6" stroke-dasharray="140" stroke-dashoffset="40" stroke-linecap="round" style="transform-origin: center; transform: rotate(-90deg);"/>
+    </svg>
+    <p style="margin-top: 1rem; color: #94a3b8; font-size: 0.875rem;">Chargement...</p>
+  </div>
+</div>
+
+<style>
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
 
 </body>
 </html>

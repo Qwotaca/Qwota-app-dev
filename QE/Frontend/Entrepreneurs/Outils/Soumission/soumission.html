@@ -613,11 +613,14 @@ window.debug = window.debug || ((...args) => console.debug('[SOUMISSION]', ...ar
 
 // Fonction pour retourner à la page Outils
 function goBackToOutils() {
-  // La page soumissions est chargée DANS l'iframe outils
-  // Il faut utiliser l'historique pour revenir en arrière
-
-  if (window.parent && window.parent !== window) {
-    // On est dans un iframe - utiliser l'historique pour revenir en arrière
+  // Vérifier si on est dans une iframe (système outils-mobile.html)
+  if (window.parent && window.parent !== window && typeof window.parent.returnToToolsGrid === 'function') {
+    // Nouveau système: appeler la fonction du parent pour retourner à la grille
+    console.log('[SOUMISSION] Retour à la grille via parent.returnToToolsGrid()');
+    window.parent.returnToToolsGrid();
+  } else if (window.parent && window.parent !== window) {
+    // Ancien système: utiliser l'historique (pour compatibilité)
+    console.log('[SOUMISSION] Retour via history.back()');
     window.history.back();
   } else if (window.top && window.top !== window) {
     // Deuxième niveau d'iframe
@@ -807,31 +810,44 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
       const oldCanvases = canvasContainer.querySelectorAll('canvas');
       oldCanvases.forEach(cnv => cnv.remove());
 
-      // Échelle fixe à 1.5
-      const scale = 1.5;
+      // Échelle adaptée selon mobile/desktop
+      const isMobile = window.innerWidth <= 768;
+      let currentScale = isMobile ? 0.8 : 1.5;
+      const minScale = 0.5;
+      const maxScale = 3.0;
 
-      // Rendre toutes les pages
-      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        const viewport = page.getViewport({ scale: scale });
+      // Fonction pour rendre toutes les pages au scale actuel
+      const renderAllPages = async (scale) => {
+        // Vider les anciens canvas
+        const oldCanvases = canvasContainer.querySelectorAll('canvas');
+        oldCanvases.forEach(cnv => cnv.remove());
 
-        // Créer un nouveau canvas pour cette page
-        const canvas = document.createElement('canvas');
-        canvas.id = `pdfCanvas-page${pageNum}`;
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        canvas.style.display = 'block';
-        canvas.style.marginBottom = pageNum < numPages ? '10px' : '0'; // Espacement entre pages
-        canvas.tabIndex = -1;
+        // Rendre toutes les pages
+        for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+          const page = await pdf.getPage(pageNum);
+          const viewport = page.getViewport({ scale: scale });
 
-        const context = canvas.getContext('2d');
+          // Créer un nouveau canvas pour cette page
+          const canvas = document.createElement('canvas');
+          canvas.id = `pdfCanvas-page${pageNum}`;
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          canvas.style.display = 'block';
+          canvas.style.marginBottom = pageNum < numPages ? '10px' : '0';
+          canvas.tabIndex = -1;
 
-        // Ajouter le canvas au conteneur
-        canvasContainer.appendChild(canvas);
+          const context = canvas.getContext('2d');
 
-        // Rendu de la page
-        await page.render({ canvasContext: context, viewport: viewport }).promise;
-      }
+          // Ajouter le canvas au conteneur
+          canvasContainer.appendChild(canvas);
+
+          // Rendu de la page
+          await page.render({ canvasContext: context, viewport: viewport }).promise;
+        }
+      };
+
+      // Rendu initial
+      await renderAllPages(currentScale);
 
       // Référencer le premier canvas pour la compatibilité avec le code existant
       const canvas = canvasContainer.querySelector('canvas');
@@ -850,157 +866,69 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
       // Bloquer le scroll en background sur mobile
       document.body.classList.add('modal-open');
 
-      // ===== ZOOM ET DRAG - MOBILE SEULEMENT =====
-      // Réutiliser pdfScrollContainer déjà défini plus haut (ligne 573)
-      const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window;
+      // ===== ZOOM AVEC PINCH-TO-ZOOM ET CTRL+MOLETTE =====
 
-      let currentZoom = 1;
-      const minZoom = 1; // Pas de dézoom - évite les espaces vides
-      const maxZoom = 3;
-
-      // Variables pour les handlers (pour pouvoir les supprimer après)
-      let handleWheel, handleTouchStart, handleTouchMove, handleTouchDragEnd;
-      let handleMouseDown, handleMouseLeave, handleMouseUp, handleMouseMove;
-      let isDragging = false;
-      let startX, startY, scrollLeft, scrollTop;
-
-      // Appliquer zoom et drag seulement sur mobile
-      if (isMobile && pdfScrollContainer) {
-        // Zoom avec la molette (SANS besoin de Ctrl) - MOBILE SEULEMENT
-        handleWheel = (e) => {
-          e.preventDefault();
-          const delta = e.deltaY > 0 ? -0.1 : 0.1;
-          currentZoom = Math.min(maxZoom, Math.max(minZoom, currentZoom + delta));
-          // Appliquer le zoom à tous les canvas
-          const allCanvases = canvasContainer.querySelectorAll('canvas');
-          allCanvases.forEach(cnv => {
-            cnv.style.transform = `scale(${currentZoom})`;
-          });
-          // Mettre à jour la position de la signature après zoom
-          if (window.updateSignatureOverlayPosition) {
-            window.updateSignatureOverlayPosition(currentZoom);
-          }
-        };
-
-        // Zoom tactile (pinch)
-        handleTouchStart = (e) => {
-          if (e.touches.length === 2) {
-            initialDistance = Math.hypot(
-              e.touches[0].clientX - e.touches[1].clientX,
-              e.touches[0].clientY - e.touches[1].clientY
-            );
-            initialZoom = currentZoom;
-          }
-        };
-
+      // Support du pinch-to-zoom sur mobile
+      if (isMobile) {
         let initialDistance = 0;
-        let initialZoom = 1;
+        let initialScale = currentScale;
 
-        handleTouchMove = (e) => {
+        const getDistance = (touches) => {
+          const dx = touches[0].clientX - touches[1].clientX;
+          const dy = touches[0].clientY - touches[1].clientY;
+          return Math.sqrt(dx * dx + dy * dy);
+        };
+
+        pdfScrollContainer.addEventListener('touchstart', (e) => {
           if (e.touches.length === 2) {
             e.preventDefault();
-            const currentDistance = Math.hypot(
-              e.touches[0].clientX - e.touches[1].clientX,
-              e.touches[0].clientY - e.touches[1].clientY
-            );
-            const scale = currentDistance / initialDistance;
-            currentZoom = Math.min(maxZoom, Math.max(minZoom, initialZoom * scale));
-            // Appliquer le zoom à tous les canvas
-            const allCanvases = canvasContainer.querySelectorAll('canvas');
-            allCanvases.forEach(cnv => {
-              cnv.style.transform = `scale(${currentZoom})`;
-            });
-            // Mettre à jour la position de la signature après pinch zoom
-            if (window.updateSignatureOverlayPosition) {
-              window.updateSignatureOverlayPosition(currentZoom);
+            initialDistance = getDistance(e.touches);
+            initialScale = currentScale;
+          }
+        }, { passive: false });
+
+        pdfScrollContainer.addEventListener('touchmove', async (e) => {
+          if (e.touches.length === 2) {
+            e.preventDefault();
+            const distance = getDistance(e.touches);
+            const scaleChange = distance / initialDistance;
+            let newScale = initialScale * scaleChange;
+
+            // Limiter le zoom
+            newScale = Math.max(minScale, Math.min(maxScale, newScale));
+
+            if (Math.abs(newScale - currentScale) > 0.05) {
+              currentScale = newScale;
+              await renderAllPages(currentScale);
             }
           }
-        };
+        }, { passive: false });
 
-        // DRAG TO SCROLL (mouse grab) - MOBILE SEULEMENT
-        handleMouseDown = (e) => {
-          isDragging = true;
-          pdfScrollContainer.style.cursor = 'grabbing';
-          startX = e.pageX - pdfScrollContainer.offsetLeft;
-          startY = e.pageY - pdfScrollContainer.offsetTop;
-          scrollLeft = pdfScrollContainer.scrollLeft;
-          scrollTop = pdfScrollContainer.scrollTop;
-        };
-
-        handleMouseLeave = () => {
-          isDragging = false;
-          pdfScrollContainer.style.cursor = 'grab';
-        };
-
-        handleMouseUp = () => {
-          isDragging = false;
-          pdfScrollContainer.style.cursor = 'grab';
-        };
-
-        handleMouseMove = (e) => {
-          if (!isDragging) return;
-          e.preventDefault();
-          const x = e.pageX - pdfScrollContainer.offsetLeft;
-          const y = e.pageY - pdfScrollContainer.offsetTop;
-          const walkX = (x - startX) * 1.5;
-          const walkY = (y - startY) * 1.5;
-          pdfScrollContainer.scrollLeft = scrollLeft - walkX;
-          pdfScrollContainer.scrollTop = scrollTop - walkY;
-        };
-
-        // Drag tactile (un seul doigt)
-        const handleTouchDragStart = (e) => {
-          if (e.touches.length === 1) {
-            isDragging = true;
-            startX = e.touches[0].pageX - pdfScrollContainer.offsetLeft;
-            startY = e.touches[0].pageY - pdfScrollContainer.offsetTop;
-            scrollLeft = pdfScrollContainer.scrollLeft;
-            scrollTop = pdfScrollContainer.scrollTop;
+        pdfScrollContainer.addEventListener('touchend', (e) => {
+          if (e.touches.length < 2) {
+            initialDistance = 0;
           }
-        };
-
-        const handleTouchDragMove = (e) => {
-          if (e.touches.length === 1 && isDragging) {
-            if (e.cancelable) e.preventDefault();
-            const x = e.touches[0].pageX - pdfScrollContainer.offsetLeft;
-            const y = e.touches[0].pageY - pdfScrollContainer.offsetTop;
-            const walkX = (x - startX) * 1.5;
-            const walkY = (y - startY) * 1.5;
-            pdfScrollContainer.scrollLeft = scrollLeft - walkX;
-            pdfScrollContainer.scrollTop = scrollTop - walkY;
-          }
-        };
-
-        handleTouchDragEnd = () => {
-          isDragging = false;
-        };
-
-        // Combiner pinch zoom et drag tactile
-        const originalTouchStart = handleTouchStart;
-        handleTouchStart = (e) => {
-          originalTouchStart(e);
-          handleTouchDragStart(e);
-        };
-
-        const originalTouchMove = handleTouchMove;
-        handleTouchMove = (e) => {
-          if (e.touches.length === 2) {
-            originalTouchMove(e);
-          } else if (e.touches.length === 1) {
-            handleTouchDragMove(e);
-          }
-        };
-
-        pdfScrollContainer.style.cursor = 'grab';
-        pdfScrollContainer.addEventListener('wheel', handleWheel, { passive: false });
-        pdfScrollContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
-        pdfScrollContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
-        pdfScrollContainer.addEventListener('touchend', handleTouchDragEnd, { passive: true });
-        pdfScrollContainer.addEventListener('mousedown', handleMouseDown);
-        pdfScrollContainer.addEventListener('mouseleave', handleMouseLeave);
-        pdfScrollContainer.addEventListener('mouseup', handleMouseUp);
-        pdfScrollContainer.addEventListener('mousemove', handleMouseMove);
+        });
       }
+
+      // Support du zoom avec Ctrl+molette sur desktop
+      pdfScrollContainer.addEventListener('wheel', async (e) => {
+        if (e.ctrlKey) {
+          e.preventDefault();
+
+          // Déterminer la direction du zoom
+          const delta = e.deltaY > 0 ? -0.1 : 0.1;
+          let newScale = currentScale + delta;
+
+          // Limiter le zoom
+          newScale = Math.max(minScale, Math.min(maxScale, newScale));
+
+          if (newScale !== currentScale) {
+            currentScale = newScale;
+            await renderAllPages(currentScale);
+          }
+        }
+      }, { passive: false });
 
       // Cacher les boutons de présentation (signature, accepter, annuler)
       const signatureOverlay = doc.getElementById('signatureOverlay');
@@ -1027,18 +955,7 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
 
         URL.revokeObjectURL(url);
 
-        // Nettoyer les event listeners de zoom et drag (mobile seulement)
-        if (isMobile && pdfScrollContainer) {
-          if (handleWheel) pdfScrollContainer.removeEventListener('wheel', handleWheel);
-          if (handleTouchStart) pdfScrollContainer.removeEventListener('touchstart', handleTouchStart);
-          if (handleTouchMove) pdfScrollContainer.removeEventListener('touchmove', handleTouchMove);
-          if (handleTouchDragEnd) pdfScrollContainer.removeEventListener('touchend', handleTouchDragEnd);
-          if (handleMouseDown) pdfScrollContainer.removeEventListener('mousedown', handleMouseDown);
-          if (handleMouseLeave) pdfScrollContainer.removeEventListener('mouseleave', handleMouseLeave);
-          if (handleMouseUp) pdfScrollContainer.removeEventListener('mouseup', handleMouseUp);
-          if (handleMouseMove) pdfScrollContainer.removeEventListener('mousemove', handleMouseMove);
-          pdfScrollContainer.style.cursor = '';
-        }
+        // Event listeners seront nettoyés automatiquement
 
         // Débloquer le scroll en background
         document.body.classList.remove('modal-open');
@@ -1121,30 +1038,84 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
     const oldCanvases = canvasContainer.querySelectorAll('canvas');
     oldCanvases.forEach(cnv => cnv.remove());
 
-    // Échelle fixe à 1.5 (pas de zoom)
-    const scale = 1.5;
+    // Échelle adaptée selon mobile/desktop
+    const isMobilePresent = window.innerWidth <= 768;
+    let currentScalePresent = isMobilePresent ? 0.8 : 1.5;
+    const minScalePresent = 0.5;
+    const maxScalePresent = 3.0;
 
-    // Rendre toutes les pages
-    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const viewport = page.getViewport({ scale: scale });
+    // Fonction pour rendre toutes les pages au scale actuel
+    const renderAllPagesPresent = async (scale) => {
+      // Sauvegarder la signature avant de vider
+      let savedSignatureOverlay = null;
+      const existingSignature = canvasContainer.querySelector('#signatureOverlay');
+      if (existingSignature) {
+        savedSignatureOverlay = existingSignature.cloneNode(true);
+        existingSignature.remove();
+      }
 
-      // Créer un nouveau canvas pour cette page
-      const canvas = document.createElement('canvas');
-      canvas.id = `pdfCanvas-page${pageNum}`;
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      canvas.style.display = 'block';
-      canvas.style.marginBottom = pageNum < numPages ? '10px' : '0'; // Espacement entre pages
-      canvas.tabIndex = -1;
+      // Vider les anciens canvas
+      const oldCanvases = canvasContainer.querySelectorAll('canvas');
+      oldCanvases.forEach(cnv => cnv.remove());
 
-      const context = canvas.getContext('2d');
+      // Rendre toutes les pages
+      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const viewport = page.getViewport({ scale: scale });
 
-      // Ajouter le canvas au conteneur
-      canvasContainer.appendChild(canvas);
+        // Créer un nouveau canvas pour cette page
+        const canvas = document.createElement('canvas');
+        canvas.id = `pdfCanvas-page${pageNum}`;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.style.display = 'block';
+        canvas.style.marginBottom = pageNum < numPages ? '10px' : '0';
+        canvas.tabIndex = -1;
 
-      // Rendu de la page
-      await page.render({ canvasContext: context, viewport: viewport }).promise;
+        const context = canvas.getContext('2d');
+
+        // Ajouter le canvas au conteneur
+        canvasContainer.appendChild(canvas);
+
+        // Rendu de la page
+        await page.render({ canvasContext: context, viewport: viewport }).promise;
+      }
+
+      // Remettre la signature si elle existait
+      if (savedSignatureOverlay) {
+        canvasContainer.appendChild(savedSignatureOverlay);
+
+        // Positionner la signature en bas de la PREMIÈRE page seulement
+        const firstCanvas = canvasContainer.querySelector('canvas');
+        if (firstCanvas && numPages > 1) {
+          const firstPageHeight = firstCanvas.height;
+          const signatureBottomOffset = 123;
+          const topPosition = firstPageHeight - signatureBottomOffset - 35;
+
+          savedSignatureOverlay.style.bottom = 'auto';
+          savedSignatureOverlay.style.top = topPosition + 'px';
+        }
+      }
+    };
+
+    // Rendu initial
+    await renderAllPagesPresent(currentScalePresent);
+
+    // Remettre le signatureOverlay après les canvas (mode présentation)
+    if (savedSignatureOverlay) {
+      canvasContainer.appendChild(savedSignatureOverlay);
+
+      // Positionner la signature en bas de la PREMIÈRE page seulement
+      const firstCanvas = canvasContainer.querySelector('canvas');
+      if (firstCanvas && numPages > 1) {
+        // Calculer la position depuis le haut pour être en bas de la page 1
+        const firstPageHeight = firstCanvas.height;
+        const signatureBottomOffset = 123; // Distance depuis le bas de la page 1
+        const topPosition = firstPageHeight - signatureBottomOffset - 35; // 35 = hauteur de la signature
+
+        savedSignatureOverlay.style.bottom = 'auto';
+        savedSignatureOverlay.style.top = topPosition + 'px';
+      }
     }
 
     // Remettre le signatureOverlay après les canvas (mode présentation)
@@ -1172,14 +1143,28 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
     document.getElementById("pdfOverlay").style.display = "block";
     document.getElementById("closePdfBtn").classList.remove("hidden");
 
-    // Réinitialiser le bouton accepter en gris/désactivé
-    const acceptBtn = document.getElementById('acceptPresentationBtn');
-    acceptBtn.disabled = true;
-    acceptBtn.classList.remove('btn-success');
-    acceptBtn.setAttribute('style', 'background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;');
-
     // Réinitialiser l'état de la signature
     hasPresentationSignature = false;
+
+    // Configurer le bouton selon mobile/desktop
+    const isMobilePresentation = window.innerWidth <= 768;
+    const acceptBtn = document.getElementById('acceptPresentationBtn');
+    const acceptBtnSpan = acceptBtn.querySelector('span');
+
+    if (isMobilePresentation) {
+      // Sur mobile: bouton actif "Signer la soumission"
+      acceptBtn.disabled = false;
+      acceptBtn.classList.remove('btn-success');
+      acceptBtn.removeAttribute('style');
+      acceptBtn.style.cssText = 'background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important; color: white !important;';
+      acceptBtnSpan.textContent = 'Signer la soumission';
+    } else {
+      // Sur desktop: bouton gris désactivé "Accepter la soumission"
+      acceptBtn.disabled = true;
+      acceptBtn.classList.remove('btn-success');
+      acceptBtn.setAttribute('style', 'background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;');
+      acceptBtnSpan.textContent = 'Accepter la soumission';
+    }
 
     // MODE PRÉSENTATION: Déplacer modal et overlay vers parent, puis cacher AppPC
     const pdfModal = document.getElementById("pdfModal");
@@ -1226,7 +1211,10 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
     }
 
     log('[DEBUG] signatureOverlay trouvé:', signatureOverlay);
-    if (signatureOverlay) {
+    // isMobilePresentation already declared at line 1150
+
+    if (signatureOverlay && !isMobilePresentation) {
+      // Sur desktop uniquement: cliquer sur l'overlay pour signer
       signatureOverlay.onclick = () => {
         log('[DEBUG] Click sur signature overlay détecté!');
 
@@ -1256,7 +1244,11 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
           window.openSignatureZoomPopup();
         }, 1000);
       };
-      log('[DEBUG] Événement onclick attaché à signatureOverlay');
+      log('[DEBUG] Événement onclick attaché à signatureOverlay (desktop uniquement)');
+    } else if (signatureOverlay && isMobilePresentation) {
+      // Sur mobile: masquer complètement l'overlay (on utilise le bouton)
+      signatureOverlay.style.display = 'none';
+      log('[DEBUG] Overlay signature masqué sur mobile');
 
       // Mettre à jour la position de la signature après un petit délai (attendre le rendu)
       setTimeout(() => {
@@ -1286,112 +1278,71 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
       parentBody.classList.add('modal-open');
     }
 
-    // ===== ZOOM ET DRAG - MOBILE SEULEMENT (Présenter au client) =====
+    // ===== ZOOM AVEC PINCH-TO-ZOOM ET CTRL+MOLETTE (Présenter au client) =====
     const pdfScrollContainerPresent = pdfModal.querySelector('#pdfScrollContainer');
-    const isMobilePresent = window.innerWidth <= 768 || 'ontouchstart' in window;
 
-    let currentZoomPresent = 1;
-    const minZoomPresent = 1; // Pas de dézoom - évite les espaces vides
-    const maxZoomPresent = 3;
+    // Support du pinch-to-zoom sur mobile
+    if (isMobilePresent) {
+      let initialDistance = 0;
+      let initialScale = currentScalePresent;
 
-    // Variables pour le drag
-    let isDraggingPresent = false;
-    let startXPresent, startYPresent, scrollLeftPresent, scrollTopPresent;
-
-    // Handlers pour le zoom/drag
-    let handleWheelPresent, handleTouchStartPresent, handleTouchMovePresent, handleTouchDragEndPresent;
-    let handleMouseDownPresent, handleMouseMovePresent, handleMouseUpPresent, handleMouseLeavePresent;
-
-    if (isMobilePresent && pdfScrollContainerPresent) {
-      // ZOOM DÉSACTIVÉ SUR MOBILE pour que la signature reste à la bonne place
-      // On garde seulement le drag/scroll, pas de zoom wheel ni pinch
-
-      handleWheelPresent = null; // Désactivé
-      handleTouchStartPresent = null; // Sera défini plus bas pour drag seulement
-      handleTouchMovePresent = null; // Sera défini plus bas pour drag seulement
-
-      // Drag pour scroll (souris)
-      handleMouseDownPresent = (e) => {
-        isDraggingPresent = true;
-        pdfScrollContainerPresent.style.cursor = 'grabbing';
-        startXPresent = e.pageX - pdfScrollContainerPresent.offsetLeft;
-        startYPresent = e.pageY - pdfScrollContainerPresent.offsetTop;
-        scrollLeftPresent = pdfScrollContainerPresent.scrollLeft;
-        scrollTopPresent = pdfScrollContainerPresent.scrollTop;
+      const getDistance = (touches) => {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
       };
 
-      handleMouseMovePresent = (e) => {
-        if (!isDraggingPresent) return;
-        e.preventDefault();
-        const x = e.pageX - pdfScrollContainerPresent.offsetLeft;
-        const y = e.pageY - pdfScrollContainerPresent.offsetTop;
-        const walkX = (x - startXPresent) * 1.5;
-        const walkY = (y - startYPresent) * 1.5;
-        pdfScrollContainerPresent.scrollLeft = scrollLeftPresent - walkX;
-        pdfScrollContainerPresent.scrollTop = scrollTopPresent - walkY;
-      };
-
-      handleMouseUpPresent = () => {
-        isDraggingPresent = false;
-        pdfScrollContainerPresent.style.cursor = 'grab';
-      };
-
-      handleMouseLeavePresent = () => {
-        isDraggingPresent = false;
-        pdfScrollContainerPresent.style.cursor = 'grab';
-      };
-
-      // Drag tactile (un seul doigt)
-      const handleTouchDragStartPresent = (e) => {
-        // Seulement pour un seul doigt (drag), pas pour pinch (2 doigts)
-        if (e.touches.length === 1) {
-          isDraggingPresent = true;
-          startXPresent = e.touches[0].pageX - pdfScrollContainerPresent.offsetLeft;
-          startYPresent = e.touches[0].pageY - pdfScrollContainerPresent.offsetTop;
-          scrollLeftPresent = pdfScrollContainerPresent.scrollLeft;
-          scrollTopPresent = pdfScrollContainerPresent.scrollTop;
+      pdfScrollContainerPresent.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+          e.preventDefault();
+          initialDistance = getDistance(e.touches);
+          initialScale = currentScalePresent;
         }
-      };
+      }, { passive: false });
 
-      const handleTouchDragMovePresent = (e) => {
-        // Drag seulement avec un doigt
-        if (e.touches.length === 1 && isDraggingPresent) {
-          if (e.cancelable) e.preventDefault();
-          const x = e.touches[0].pageX - pdfScrollContainerPresent.offsetLeft;
-          const y = e.touches[0].pageY - pdfScrollContainerPresent.offsetTop;
-          const walkX = (x - startXPresent) * 1.5;
-          const walkY = (y - startYPresent) * 1.5;
-          pdfScrollContainerPresent.scrollLeft = scrollLeftPresent - walkX;
-          pdfScrollContainerPresent.scrollTop = scrollTopPresent - walkY;
+      pdfScrollContainerPresent.addEventListener('touchmove', async (e) => {
+        if (e.touches.length === 2) {
+          e.preventDefault();
+          const distance = getDistance(e.touches);
+          const scaleChange = distance / initialDistance;
+          let newScale = initialScale * scaleChange;
+
+          // Limiter le zoom
+          newScale = Math.max(minScalePresent, Math.min(maxScalePresent, newScale));
+
+          if (Math.abs(newScale - currentScalePresent) > 0.05) {
+            currentScalePresent = newScale;
+            await renderAllPagesPresent(currentScalePresent);
+          }
         }
-      };
+      }, { passive: false });
 
-      handleTouchDragEndPresent = () => {
-        isDraggingPresent = false;
-      };
-
-      // Handlers pour touch SANS zoom (drag seulement)
-      handleTouchStartPresent = (e) => {
-        handleTouchDragStartPresent(e); // Drag seulement
-      };
-
-      handleTouchMovePresent = (e) => {
-        if (e.touches.length === 1) {
-          handleTouchDragMovePresent(e); // Drag seulement (pas de pinch zoom)
+      pdfScrollContainerPresent.addEventListener('touchend', (e) => {
+        if (e.touches.length < 2) {
+          initialDistance = 0;
         }
-        // Si 2 doigts, on ignore (pas de zoom)
-      };
+      });
+    }
 
-      // Attacher les événements - SANS zoom wheel
-      pdfScrollContainerPresent.style.cursor = 'grab';
-      // pdfScrollContainerPresent.addEventListener('wheel', handleWheelPresent, { passive: false }); // DÉSACTIVÉ
-      pdfScrollContainerPresent.addEventListener('touchstart', handleTouchStartPresent, { passive: true });
-      pdfScrollContainerPresent.addEventListener('touchmove', handleTouchMovePresent, { passive: false });
-      pdfScrollContainerPresent.addEventListener('touchend', handleTouchDragEndPresent, { passive: true });
-      pdfScrollContainerPresent.addEventListener('mousedown', handleMouseDownPresent);
-      pdfScrollContainerPresent.addEventListener('mouseleave', handleMouseLeavePresent);
-      pdfScrollContainerPresent.addEventListener('mouseup', handleMouseUpPresent);
-      pdfScrollContainerPresent.addEventListener('mousemove', handleMouseMovePresent);
+    // Support du zoom avec Ctrl+molette sur desktop
+    if (pdfScrollContainerPresent) {
+      pdfScrollContainerPresent.addEventListener('wheel', async (e) => {
+        if (e.ctrlKey) {
+          e.preventDefault();
+
+          // Déterminer la direction du zoom
+          const delta = e.deltaY > 0 ? -0.1 : 0.1;
+          let newScale = currentScalePresent + delta;
+
+          // Limiter le zoom
+          newScale = Math.max(minScalePresent, Math.min(maxScalePresent, newScale));
+
+          if (newScale !== currentScalePresent) {
+            currentScalePresent = newScale;
+            await renderAllPagesPresent(currentScalePresent);
+          }
+        }
+      }, { passive: false });
     }
 
     // Fonction de fermeture
@@ -1432,19 +1383,7 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
         parentBody.classList.remove('modal-open');
       }
 
-      // Nettoyer les event listeners zoom/drag (mobile seulement)
-      if (isMobilePresent && pdfScrollContainerPresent) {
-        if (handleWheelPresent) pdfScrollContainerPresent.removeEventListener('wheel', handleWheelPresent);
-        if (handleTouchStartPresent) pdfScrollContainerPresent.removeEventListener('touchstart', handleTouchStartPresent);
-        if (handleTouchMovePresent) pdfScrollContainerPresent.removeEventListener('touchmove', handleTouchMovePresent);
-        if (handleTouchDragEndPresent) pdfScrollContainerPresent.removeEventListener('touchend', handleTouchDragEndPresent);
-        if (handleMouseDownPresent) pdfScrollContainerPresent.removeEventListener('mousedown', handleMouseDownPresent);
-        if (handleMouseLeavePresent) pdfScrollContainerPresent.removeEventListener('mouseleave', handleMouseLeavePresent);
-        if (handleMouseUpPresent) pdfScrollContainerPresent.removeEventListener('mouseup', handleMouseUpPresent);
-        if (handleMouseMovePresent) pdfScrollContainerPresent.removeEventListener('mousemove', handleMouseMovePresent);
-        pdfScrollContainerPresent.style.cursor = '';
-        // Reset transform déjà géré dans le code de nettoyage des canvas ci-dessus
-      }
+      // Event listeners seront nettoyés automatiquement
     };
 
     // Utiliser le bouton déplacé pour l'événement onclick
@@ -4416,17 +4355,6 @@ window.validateSignature = function() {
   if (!signatureHint) signatureHint = window.parent.document.getElementById('signatureHint');
   if (signatureHint) signatureHint.style.display = 'none';
 
-  // Activer le bouton accepter avec style vert vif
-  let acceptBtn = document.getElementById('acceptPresentationBtn');
-  if (!acceptBtn) acceptBtn = window.parent.document.getElementById('acceptPresentationBtn');
-
-  if (acceptBtn) {
-    acceptBtn.disabled = false;
-    acceptBtn.removeAttribute('style'); // Enlever le style inline gris
-    acceptBtn.classList.add('btn-success');
-    acceptBtn.style.boxShadow = 'none'; // Retirer l'ombre
-  }
-
   // Effacer le canvas zoom (mais PAS le preview) pour être prêt pour la prochaine signature
   if (presentationSignatureCtx && presentationSignatureCanvas) {
     presentationSignatureCtx.clearRect(0, 0, presentationSignatureCanvas.width, presentationSignatureCanvas.height);
@@ -4450,11 +4378,43 @@ window.validateSignature = function() {
     log('[SIGNATURE] Popup fermé après validation - display:', popup.style.display);
   }
 
-  // Réafficher le modal PDF
-  if (pdfModal) {
-    pdfModal.style.display = 'flex';
-    log('[SIGNATURE] PDF Modal réaffiché après validation - display:', pdfModal.style.display);
-    log('[SIGNATURE] PDF Modal z-index:', window.parent.getComputedStyle(pdfModal).zIndex);
+  // Vérifier si on est sur mobile
+  const isMobilePresentation = window.innerWidth <= 768;
+
+  if (isMobilePresentation) {
+    // Sur mobile: appeler directement acceptPresentation()
+    log('[SIGNATURE] Mobile - Appel direct de acceptPresentation()');
+    if (window.acceptPresentation) {
+      // Petit délai pour laisser le popup se fermer proprement
+      setTimeout(() => {
+        window.acceptPresentation();
+      }, 100);
+    } else {
+      log('[SIGNATURE] ERREUR - acceptPresentation non trouvé');
+    }
+  } else {
+    // Sur desktop: activer le bouton accepter
+    let acceptBtn = document.getElementById('acceptPresentationBtn');
+    if (!acceptBtn) acceptBtn = window.parent.document.getElementById('acceptPresentationBtn');
+
+    if (acceptBtn) {
+      acceptBtn.disabled = false;
+      acceptBtn.removeAttribute('style'); // Enlever le style inline gris
+      acceptBtn.classList.add('btn-success');
+      acceptBtn.style.boxShadow = 'none'; // Retirer l'ombre
+
+      const acceptBtnSpan = acceptBtn.querySelector('span');
+      if (acceptBtnSpan) {
+        acceptBtnSpan.textContent = 'Accepter la soumission';
+      }
+    }
+
+    // Réafficher le modal PDF
+    if (pdfModal) {
+      pdfModal.style.display = 'flex';
+      log('[SIGNATURE] PDF Modal réaffiché après validation - display:', pdfModal.style.display);
+      log('[SIGNATURE] PDF Modal z-index:', window.parent.getComputedStyle(pdfModal).zIndex);
+    }
   }
 
   log('[SIGNATURE] validateSignature terminé');
@@ -4498,15 +4458,28 @@ function initPresentationSignatureCanvas() {
     display: presentationSignatureCanvas.style.display
   });
 
-  // FORCER les dimensions du canvas pour éviter le bug 0x0
-  presentationSignatureCanvas.style.width = '600px';
-  presentationSignatureCanvas.style.height = '140px';
-  presentationSignatureCanvas.style.display = 'block';
+  // Calculer les dimensions adaptées pour mobile/desktop
+  // Récupérer la largeur du conteneur parent du canvas
+  const canvasContainer = presentationSignatureCanvas.parentElement;
+  const containerWidth = canvasContainer ? canvasContainer.offsetWidth : 320;
+
+  // Limiter à max 320px et garder ratio 4.3:1
+  const maxWidth = Math.min(containerWidth, 320);
+  const canvasWidth = maxWidth;
+  const canvasHeight = Math.round(maxWidth / 4.27); // Ratio 4.27:1 (320/75)
+
+  // FORCER les dimensions du canvas calculées avec !important
+  presentationSignatureCanvas.style.setProperty('width', canvasWidth + 'px', 'important');
+  presentationSignatureCanvas.style.setProperty('height', canvasHeight + 'px', 'important');
+  presentationSignatureCanvas.style.setProperty('display', 'block', 'important');
 
   log('[SIGNATURE] Canvas style APRÈS fix:', {
     width: presentationSignatureCanvas.style.width,
     height: presentationSignatureCanvas.style.height,
-    display: presentationSignatureCanvas.style.display
+    display: presentationSignatureCanvas.style.display,
+    containerWidth: containerWidth,
+    calculatedWidth: canvasWidth,
+    calculatedHeight: canvasHeight
   });
 
   presentationSignatureCtx = presentationSignatureCanvas.getContext('2d');
@@ -4514,24 +4487,22 @@ function initPresentationSignatureCanvas() {
   // Configuration du canvas avec ratio plus élevé pour éviter pixelisation
   const ratio = Math.max(window.devicePixelRatio || 1, 2); // Minimum 2x au lieu de 1
 
-  // Utiliser les dimensions fixes définies dans le HTML (600px x 140px)
-  // getBoundingClientRect() peut retourner 0 si l'iframe n'est pas visible
-  const canvasWidth = 600;
-  const canvasHeight = 140;
-
   log('[DEBUG] Signature canvas dimensions:', { canvasWidth, canvasHeight });
 
   presentationSignatureCanvas.width = canvasWidth * ratio;
   presentationSignatureCanvas.height = canvasHeight * ratio;
-  presentationSignatureCanvas.style.width = canvasWidth + "px";
-  presentationSignatureCanvas.style.height = canvasHeight + "px";
+  presentationSignatureCanvas.style.setProperty('width', canvasWidth + 'px', 'important');
+  presentationSignatureCanvas.style.setProperty('height', canvasHeight + 'px', 'important');
 
   presentationSignatureCtx.scale(ratio, ratio);
 
   // Configuration du style de dessin - comme signature standard
   presentationSignatureCtx.lineCap = 'round';
   presentationSignatureCtx.lineJoin = 'round';
-  presentationSignatureCtx.lineWidth = 2.5; // Trait moyen pour signature lisible
+
+  // Trait plus fin sur mobile, moyen sur desktop
+  const isMobile = window.innerWidth <= 768;
+  presentationSignatureCtx.lineWidth = isMobile ? 1.4 : 2.5;
   presentationSignatureCtx.strokeStyle = '#000000';
 
   // Qualité de rendu maximale pour un trait smooth
@@ -4676,15 +4647,18 @@ window.clearPresentationSignature = function() {
   hasPresentationSignature = false;
   presentationPoints = [];
 
-  // Remettre le bouton accepter en gris
+  // Remettre le bouton accepter en gris SEULEMENT sur desktop
+  const isMobileClear = window.innerWidth <= 768;
   let acceptBtn = document.getElementById('acceptPresentationBtn');
   if (!acceptBtn) acceptBtn = window.parent.document.getElementById('acceptPresentationBtn');
 
-  if (acceptBtn) {
+  if (acceptBtn && !isMobileClear) {
+    // Sur desktop: désactiver le bouton
     acceptBtn.disabled = true;
     acceptBtn.classList.remove('btn-success');
     acceptBtn.setAttribute('style', 'background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;');
   }
+  // Sur mobile: on laisse le bouton "Signer la soumission" actif
 
   // Désactiver le bouton valider dans le popup zoom
   let validateBtn = document.getElementById('validateSignatureBtn');
@@ -4961,9 +4935,26 @@ function attachAcceptButtonEvent() {
       log('[acceptBtn] acceptPresentation exists:', !!window.acceptPresentation);
       log('[acceptBtn] hasPresentationSignature:', hasPresentationSignature);
 
-      if (!acceptBtn.disabled && window.acceptPresentation) {
-        log('[acceptBtn] Appel de acceptPresentation()');
-        window.acceptPresentation();
+      if (!acceptBtn.disabled) {
+        const isMobilePresentation = window.innerWidth <= 768;
+
+        if (isMobilePresentation) {
+          // Sur mobile: ouvrir le popup de signature
+          log('[acceptBtn] Mobile - Ouverture du popup signature');
+          if (window.openSignatureZoomPopup) {
+            window.openSignatureZoomPopup();
+          } else {
+            log('[acceptBtn] ERREUR - openSignatureZoomPopup non trouvé');
+          }
+        } else {
+          // Sur desktop: accepter la soumission
+          if (window.acceptPresentation) {
+            log('[acceptBtn] Desktop - Appel de acceptPresentation()');
+            window.acceptPresentation();
+          } else {
+            log('[acceptBtn] ERREUR - acceptPresentation non trouvé');
+          }
+        }
       } else {
         log('[acceptBtn] BLOQUÉ - disabled:', acceptBtn.disabled, ', fonction:', !!window.acceptPresentation);
       }
@@ -5030,43 +5021,43 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
 <!-- Popup Signature Simple -->
 <div id="signatureZoomPopup" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.85); z-index: 999999; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
-  <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 24px; width: 680px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(148, 163, 184, 0.2);">
-    <div style="text-align: center; margin-bottom: 20px;">
-      <div style="font-size: 18px; font-weight: 600; color: #e2e8f0; margin-bottom: 8px;">
+  <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 20px; width: 90%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(148, 163, 184, 0.2);">
+    <div style="text-align: center; margin-bottom: 16px;">
+      <div style="font-size: 16px; font-weight: 600; color: #e2e8f0; margin-bottom: 6px;">
         <i class="fas fa-pen" style="color: #60a5fa; margin-right: 8px;"></i>
         Signature du client
       </div>
-      <div style="font-size: 12px; color: #94a3b8;">
+      <div style="font-size: 11px; color: #94a3b8;">
         Veuillez signer dans la case ci-dessous
       </div>
     </div>
 
     <!-- Case de signature blanche simple - même ratio que la case sur le PDF (150x35 = 4.3:1) -->
-    <div style="position: relative; background: white; border-radius: 8px; padding: 0; margin-bottom: 20px; border: 3px solid #e2e8f0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); width: 600px;">
-      <!-- Canvas de signature - 600x140 = même ratio que 150x35 mais 4x plus grand -->
-      <canvas id="presentationSignaturePad" style="width: 600px; height: 140px; display: block; border-radius: 6px; cursor: crosshair; touch-action: none; min-width: 600px; max-width: 600px; min-height: 140px; max-height: 140px;"></canvas>
+    <div style="position: relative; background: white; border-radius: 8px; padding: 0; margin-bottom: 16px; border: 3px solid #e2e8f0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); width: 100%; max-width: 320px; margin-left: auto; margin-right: auto;">
+      <!-- Canvas de signature - ratio 4.3:1 maintenu, mais plus petit (320x75) -->
+      <canvas id="presentationSignaturePad" style="width: 320px !important; height: 75px !important; display: block !important; border-radius: 6px; cursor: crosshair; touch-action: none;"></canvas>
 
       <!-- Hint "Signez ici" -->
-      <div id="signatureZoomHint" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(150, 150, 150, 0.4); font-size: 16px; pointer-events: none; font-style: italic; text-align: center;">
+      <div id="signatureZoomHint" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(150, 150, 150, 0.4); font-size: 13px; pointer-events: none; font-style: italic; text-align: center;">
         ✍️ Signez ici
       </div>
 
       <!-- Ligne de signature en bas -->
-      <div style="position: absolute; bottom: 30px; left: 10%; right: 10%; border-bottom: 2px dashed rgba(0,0,0,0.1); pointer-events: none;"></div>
+      <div style="position: absolute; bottom: 15px; left: 10%; right: 10%; border-bottom: 2px dashed rgba(0,0,0,0.1); pointer-events: none;"></div>
     </div>
 
     <!-- Boutons -->
-    <div style="display: flex; gap: 12px; justify-content: space-between;">
-      <button type="button" class="btn-secondary" onclick="clearSignatureZoom()">
+    <div style="display: flex; gap: 8px; justify-content: space-between; flex-wrap: wrap;">
+      <button type="button" class="btn-secondary" onclick="clearSignatureZoom()" style="padding: 8px 16px; font-size: 14px;">
         <i class="fas fa-eraser"></i>
         <span>Effacer</span>
       </button>
-      <div style="display: flex; gap: 12px;">
-        <button type="button" class="btn-secondary" onclick="closeSignatureZoomPopup()">
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn-secondary" onclick="closeSignatureZoomPopup()" style="padding: 8px 16px; font-size: 14px;">
           <i class="fas fa-times"></i>
           <span>Annuler</span>
         </button>
-        <button type="button" id="validateSignatureBtn" class="btn-primary" onclick="validateSignature()" disabled style="background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;">
+        <button type="button" id="validateSignatureBtn" class="btn-primary" onclick="validateSignature()" disabled style="background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important; padding: 8px 16px; font-size: 14px;">
           <i class="fas fa-check"></i>
           <span>Valider</span>
         </button>
@@ -7742,6 +7733,25 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
   <!-- Script commun de gestion des permissions et interface -->
   <script src="/common.js"></script>
 </div> <!-- Fermeture main-content -->
+
+  <!-- Spinner de chargement pour navigation -->
+  <div id="navigation-spinner" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #0f172a; z-index: 9999; align-items: center; justify-content: center;">
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+      <!-- Spinner SVG animé -->
+      <svg width="64" height="64" viewBox="0 0 64 64" style="animation: spin 0.8s linear infinite;">
+        <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="6"/>
+        <circle cx="32" cy="32" r="28" fill="none" stroke="#3b82f6" stroke-width="6" stroke-dasharray="140" stroke-dashoffset="40" stroke-linecap="round" style="transform-origin: center; transform: rotate(-90deg);"/>
+      </svg>
+      <p style="margin-top: 1rem; color: #94a3b8; font-size: 0.875rem;">Chargement...</p>
+    </div>
+  </div>
+
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 
   <script src="/entrepreneur-selector.js"></script>
 </body>

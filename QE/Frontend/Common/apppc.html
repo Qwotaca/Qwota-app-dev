@@ -3209,7 +3209,7 @@
   <!-- ================================================================
        NOUVEAU: Spinner de navigation entre pages (petit et fluide)
        ================================================================ -->
-  <div id="page-loading-spinner" style="display: none; position: fixed; top: 90px; left: 260px; right: 0; bottom: 0; background: #0f172a; z-index: 9999; align-items: center; justify-content: center;">
+  <div id="page-loading-spinner" style="display: none; position: fixed; top: 90px; left: 260px; right: 0; bottom: 0; background: #0f172a; z-index: 40; align-items: center; justify-content: center;">
     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
       <!-- Spinner SVG animé -->
       <svg width="64" height="64" viewBox="0 0 64 64" style="animation: spin 0.8s linear infinite;">
@@ -4686,9 +4686,39 @@
         { name: 'Prestige', minLevel: 91, maxLevel: 100 }
       ];
 
-      // Profil - Utiliser le nom complet si fourni, sinon username
-      document.getElementById('stats-username').textContent = fullName || username;
-      document.getElementById('stats-username-mobile').textContent = fullName || username;
+      // Récupérer le nom complet si pas fourni
+      let displayName = fullName;
+      console.log('[STATS] fullName fourni:', fullName);
+      console.log('[STATS] username:', username);
+
+      if (!displayName) {
+        try {
+          const entrepreneurResponse = await fetch('/api/entrepreneurs');
+          if (entrepreneurResponse.ok) {
+            const entrepreneurs = await entrepreneurResponse.json();
+            console.log('[STATS] Entrepreneurs récupérés:', entrepreneurs.length);
+
+            const currentEntrepreneur = entrepreneurs.find(e => e.username === username || e.login_username === username);
+            console.log('[STATS] Entrepreneur trouvé:', currentEntrepreneur);
+
+            if (currentEntrepreneur) {
+              // Le nom complet est dans le champ username de l'entrepreneur
+              displayName = currentEntrepreneur.username || username;
+              console.log('[STATS] Nom complet récupéré:', displayName);
+            } else {
+              console.log('[STATS] Aucun entrepreneur trouvé pour:', username);
+            }
+          }
+        } catch (error) {
+          console.error('[STATS] Erreur récupération nom complet:', error);
+        }
+      }
+
+      console.log('[STATS] displayName final:', displayName);
+
+      // Profil - Utiliser le nom complet si disponible, sinon username
+      document.getElementById('stats-username').textContent = displayName || username;
+      document.getElementById('stats-username-mobile').textContent = displayName || username;
 
       // Photo de profil
       const statsPhoto = document.getElementById('stats-profile-photo');

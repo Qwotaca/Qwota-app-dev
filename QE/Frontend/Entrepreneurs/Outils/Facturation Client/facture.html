@@ -342,7 +342,16 @@
 
     // Navigation: Retour aux outils
     function goBackToOutils() {
-      window.history.back();
+      // Vérifier si on est dans une iframe (système outils-mobile.html)
+      if (window.parent && window.parent !== window && typeof window.parent.returnToToolsGrid === 'function') {
+        // Nouveau système: appeler la fonction du parent pour retourner à la grille
+        console.log('[FACTURE] Retour à la grille via parent.returnToToolsGrid()');
+        window.parent.returnToToolsGrid();
+      } else {
+        // Ancien système: utiliser l'historique (pour compatibilité)
+        console.log('[FACTURE] Retour via history.back()');
+        window.history.back();
+      }
     }
 
     // Loading Animation Functions
@@ -1032,7 +1041,7 @@
       });
     }
 
-    // Fonction pour afficher le PDF - IDENTIQUE à soumission
+    // Fonction pour afficher le PDF avec zoom mobile et pinch-to-zoom
     async function showPDFModal(lienPdf) {
       try {
         const pdfjsLib = window['pdfjs-dist/build/pdf'];
@@ -1044,14 +1053,22 @@
         const context = canvas.getContext('2d');
         const page = await pdf.getPage(1);
 
-        // Scale fixe pour un bon rendu
-        const scale = 1.5;
-        const viewport = page.getViewport({ scale: scale });
+        // Scale adapté selon la taille de l'écran
+        const isMobile = window.innerWidth <= 768;
+        let currentScale = isMobile ? 0.8 : 1.5; // Zoom réduit sur mobile
+        const minScale = 0.5;
+        const maxScale = 3.0;
 
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
+        // Fonction pour rendre le PDF au scale actuel
+        const renderPDF = async (scale) => {
+          const viewport = page.getViewport({ scale: scale });
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          await page.render({ canvasContext: context, viewport: viewport }).promise;
+        };
 
-        await page.render({ canvasContext: context, viewport: viewport }).promise;
+        // Rendu initial
+        await renderPDF(currentScale);
 
         // Afficher modal et overlay
         document.getElementById("pdfModal").classList.remove("hidden");
@@ -1059,6 +1076,70 @@
 
         // Bloquer le scroll de l'arrière-plan
         document.body.style.overflow = "hidden";
+
+        // Support du pinch-to-zoom sur mobile
+        const pdfScrollContainer = document.getElementById("pdfScrollContainer");
+
+        if (isMobile) {
+          let initialDistance = 0;
+          let initialScale = currentScale;
+
+          const getDistance = (touches) => {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+          };
+
+          pdfScrollContainer.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+              e.preventDefault();
+              initialDistance = getDistance(e.touches);
+              initialScale = currentScale;
+            }
+          }, { passive: false });
+
+          pdfScrollContainer.addEventListener('touchmove', async (e) => {
+            if (e.touches.length === 2) {
+              e.preventDefault();
+              const distance = getDistance(e.touches);
+              const scaleChange = distance / initialDistance;
+              let newScale = initialScale * scaleChange;
+
+              // Limiter le zoom
+              newScale = Math.max(minScale, Math.min(maxScale, newScale));
+
+              if (Math.abs(newScale - currentScale) > 0.05) {
+                currentScale = newScale;
+                await renderPDF(currentScale);
+              }
+            }
+          }, { passive: false });
+
+          pdfScrollContainer.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+              initialDistance = 0;
+            }
+          });
+        }
+
+        // Support du zoom avec Ctrl+molette sur desktop
+        pdfScrollContainer.addEventListener('wheel', async (e) => {
+          if (e.ctrlKey) {
+            e.preventDefault();
+
+            // Déterminer la direction du zoom
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            let newScale = currentScale + delta;
+
+            // Limiter le zoom
+            newScale = Math.max(minScale, Math.min(maxScale, newScale));
+
+            if (newScale !== currentScale) {
+              currentScale = newScale;
+              await renderPDF(currentScale);
+            }
+          }
+        }, { passive: false });
 
         // Fonction de fermeture
         const closePDF = () => {
@@ -1430,6 +1511,25 @@
     </div>
   </div>
 </div>
+
+<!-- Spinner de chargement pour navigation -->
+<div id="navigation-spinner" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #0f172a; z-index: 9999; align-items: center; justify-content: center;">
+  <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <!-- Spinner SVG animé -->
+    <svg width="64" height="64" viewBox="0 0 64 64" style="animation: spin 0.8s linear infinite;">
+      <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="6"/>
+      <circle cx="32" cy="32" r="28" fill="none" stroke="#3b82f6" stroke-width="6" stroke-dasharray="140" stroke-dashoffset="40" stroke-linecap="round" style="transform-origin: center; transform: rotate(-90deg);"/>
+    </svg>
+    <p style="margin-top: 1rem; color: #94a3b8; font-size: 0.875rem;">Chargement...</p>
+  </div>
+</div>
+
+<style>
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
 
 </body>
 </html>

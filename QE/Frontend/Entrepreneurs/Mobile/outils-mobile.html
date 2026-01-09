@@ -463,7 +463,7 @@ li[data-role="coach"] {
     <div class="w-full">
 
       <!-- Header -->
-      <div class="mb-10 mt-5 md:mt-0">
+      <div id="outils-header" class="mb-10 mt-5 md:mt-0">
         <div class="relative">
           <div class="flex items-center justify-between mb-3">
             <h1 class="text-4xl font-bold" style="color: var(--text-light);">
@@ -478,10 +478,10 @@ li[data-role="coach"] {
       </div>
 
       <!-- Grille des outils -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div id="outils-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         <!-- Calculateur -->
-        <div class="tool-container" onclick="window.location.href='/calcul'" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">
+        <div class="tool-container" onclick="loadTool('calcul')" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">
           <div class="tool-content">
             <div class="tool-icon-container">
               <i class="fas fa-calculator"></i>
@@ -495,7 +495,7 @@ li[data-role="coach"] {
         </div>
 
         <!-- Création de soumission -->
-        <div class="tool-container" onclick="window.location.href='/soumissions'" style="background: linear-gradient(135deg, #10b981 0%, #047857 100%);">
+        <div class="tool-container" onclick="loadTool('soumissions')" style="background: linear-gradient(135deg, #10b981 0%, #047857 100%);">
           <div class="tool-content">
             <div class="tool-icon-container">
               <i class="fas fa-file-contract"></i>
@@ -509,7 +509,7 @@ li[data-role="coach"] {
         </div>
 
         <!-- Création de GQP -->
-        <div class="tool-container" onclick="window.location.href='/gqp'" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+        <div class="tool-container" onclick="loadTool('gqp')" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
           <div class="tool-content">
             <div class="tool-icon-container">
               <i class="fas fa-clipboard-check"></i>
@@ -523,7 +523,7 @@ li[data-role="coach"] {
         </div>
 
         <!-- Envoi de facture client -->
-        <div class="tool-container" onclick="window.location.href='/facture'" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+        <div class="tool-container" onclick="loadTool('facture')" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
           <div class="tool-content">
             <div class="tool-icon-container">
               <i class="fas fa-paper-plane"></i>
@@ -538,10 +538,190 @@ li[data-role="coach"] {
 
       </div>
 
+      <!-- Iframes pour chaque outil (préchargées et cachées) -->
+      <iframe id="iframe-calcul" class="tool-iframe" src="" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; border: none; z-index: 9998; background: #0f172a;"></iframe>
+      <iframe id="iframe-soumissions" class="tool-iframe" src="" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; border: none; z-index: 9998; background: #0f172a;"></iframe>
+      <iframe id="iframe-gqp" class="tool-iframe" src="" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; border: none; z-index: 9998; background: #0f172a;"></iframe>
+      <iframe id="iframe-facture" class="tool-iframe" src="" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; border: none; z-index: 9998; background: #0f172a;"></iframe>
+
     </div>
   </div>
 
+  <!-- Spinner de chargement pour navigation -->
+  <div id="navigation-spinner" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #0f172a; z-index: 40; align-items: center; justify-content: center;">
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+      <!-- Spinner SVG animé -->
+      <svg width="64" height="64" viewBox="0 0 64 64" style="animation: spin 0.8s linear infinite;">
+        <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="6"/>
+        <circle cx="32" cy="32" r="28" fill="none" stroke="#3b82f6" stroke-width="6" stroke-dasharray="140" stroke-dashoffset="40" stroke-linecap="round" style="transform-origin: center; transform: rotate(-90deg);"/>
+      </svg>
+      <p style="margin-top: 1rem; color: #94a3b8; font-size: 0.875rem;">Chargement...</p>
+    </div>
+  </div>
+
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+
 <script>
+// Map des routes vers les URLs
+const toolRoutes = {
+  'calcul': '/calcul',
+  'soumissions': '/soumissions',
+  'gqp': '/gqp',
+  'facture': '/facture'
+};
+
+// Variable pour tracker l'outil actuel
+let currentTool = null;
+
+// Fonction pour charger un outil (système iframe comme apppc.html)
+function loadTool(toolName) {
+  const url = toolRoutes[toolName];
+  if (!url) {
+    console.error('[OUTILS-MOBILE] Route non trouvée pour:', toolName);
+    return;
+  }
+
+  console.log('[OUTILS-MOBILE] Chargement de l\'outil:', toolName);
+  currentTool = toolName;
+
+  // Cacher le header et la grille des outils
+  const outilsHeader = document.getElementById('outils-header');
+  const outilsGrid = document.getElementById('outils-grid');
+  if (outilsHeader) {
+    outilsHeader.style.display = 'none';
+  }
+  if (outilsGrid) {
+    outilsGrid.style.display = 'none';
+  }
+
+  // Cacher toutes les iframes d'outils
+  document.querySelectorAll('.tool-iframe').forEach(iframe => {
+    iframe.style.display = 'none';
+  });
+
+  // Afficher l'iframe de l'outil
+  const targetIframe = document.getElementById(`iframe-${toolName}`);
+  if (targetIframe) {
+    // Vérifier si l'iframe a déjà été chargée (vérifier src ET si le contenu est chargé)
+    const srcAttr = targetIframe.getAttribute('src');
+    let isContentLoaded = false;
+    try {
+      // Vérifier si l'iframe a vraiment du contenu chargé
+      isContentLoaded = targetIframe.contentWindow && targetIframe.contentWindow.document && targetIframe.contentWindow.document.readyState === 'complete';
+    } catch (e) {
+      // Si on ne peut pas accéder au contenu (CORS), on suppose qu'il est chargé si src n'est pas vide
+      isContentLoaded = srcAttr && srcAttr !== '' && srcAttr !== 'about:blank';
+    }
+    const needsLoading = !srcAttr || srcAttr === '' || srcAttr === 'about:blank' || !isContentLoaded;
+
+    // FORCE RELOAD pour outils avec données (comme apppc.html)
+    const hasCalcData = sessionStorage.getItem('submissionData') || sessionStorage.getItem('soumissionData') || sessionStorage.getItem('calcClientData') || localStorage.getItem('recuperationClient');
+    const forceReloadSoumissions = toolName === 'soumissions' && hasCalcData && !needsLoading;
+    const forceReloadCalcul = toolName === 'calcul' && hasCalcData && !needsLoading;
+    const forceReload = forceReloadSoumissions || forceReloadCalcul;
+
+    if (needsLoading || forceReload) {
+      // Première fois OU reload forcé - charger l'iframe
+      if (forceReload) {
+        console.log('[OUTILS-MOBILE] 🔄 Rechargement forcé de', toolName, '(données détectées)');
+      } else {
+        console.log('[OUTILS-MOBILE] Chargement initial de:', toolName);
+      }
+
+      // Cacher l'iframe pendant le chargement
+      targetIframe.style.opacity = '0';
+
+      // Afficher le spinner
+      const spinner = document.getElementById('navigation-spinner');
+      if (spinner) {
+        spinner.style.display = 'flex';
+        console.log('[OUTILS-MOBILE] 🔄 Spinner affiché pour', toolName);
+      }
+
+      // Fonction pour cacher le spinner après chargement
+      const hideSpinnerOnLoad = function() {
+        // Attendre 500ms après le load pour s'assurer que le JS est chargé
+        setTimeout(() => {
+          if (spinner) {
+            spinner.style.display = 'none';
+            console.log('[OUTILS-MOBILE] ✅ Spinner caché -', toolName, 'chargé');
+          }
+          // Remettre l'iframe visible
+          targetIframe.style.opacity = '1';
+        }, 500);
+      };
+
+      // Ajouter le paramètre user si présent
+      const urlParams = new URLSearchParams(window.location.search);
+      const username = urlParams.get('user');
+      let finalUrl = url;
+      if (username) {
+        finalUrl = url.includes('?') ? `${url}&user=${encodeURIComponent(username)}` : `${url}?user=${encodeURIComponent(username)}`;
+        console.log('[OUTILS-MOBILE] Ajout du paramètre user:', finalUrl);
+      }
+
+      // Charger l'iframe
+      targetIframe.src = finalUrl;
+      targetIframe.addEventListener('load', hideSpinnerOnLoad, { once: true });
+      targetIframe.style.display = 'block';
+
+      // Retirer l'opacité une fois chargé si reload forcé
+      if (forceReload) {
+        targetIframe.addEventListener('load', function onLoad() {
+          targetIframe.style.opacity = '1';
+          targetIframe.removeEventListener('load', onLoad);
+        });
+      }
+    } else {
+      // Déjà chargée - afficher directement
+      console.log('[OUTILS-MOBILE] ⚡ Affichage instantané de:', toolName);
+      targetIframe.style.display = 'block';
+      targetIframe.style.opacity = '1';
+
+      // Recharger le JavaScript de l'iframe pour rafraîchir les données
+      console.log('[OUTILS-MOBILE] 🔄 Rechargement du JavaScript pour:', toolName);
+      try {
+        if (targetIframe.contentWindow) {
+          // Envoyer un message à l'iframe pour recharger son JS
+          targetIframe.contentWindow.postMessage({ type: 'reload-js' }, '*');
+        }
+      } catch (e) {
+        console.warn('[OUTILS-MOBILE] Impossible de recharger le JS:', e);
+      }
+    }
+  }
+}
+
+// Fonction pour retourner à la grille des outils (appelée depuis les iframes)
+function returnToToolsGrid() {
+  console.log('[OUTILS-MOBILE] Retour à la grille des outils');
+
+  // Cacher toutes les iframes
+  document.querySelectorAll('.tool-iframe').forEach(iframe => {
+    iframe.style.display = 'none';
+  });
+
+  // Réafficher le header et la grille
+  const outilsHeader = document.getElementById('outils-header');
+  const outilsGrid = document.getElementById('outils-grid');
+  if (outilsHeader) {
+    outilsHeader.style.display = 'block';
+  }
+  if (outilsGrid) {
+    outilsGrid.style.display = 'grid';
+  }
+
+  currentTool = null;
+}
+
+// Exposer la fonction globalement pour que les iframes puissent l'appeler
+window.returnToToolsGrid = returnToToolsGrid;
+
 // Scripts de base pour le fonctionnement du template
 document.addEventListener('DOMContentLoaded', function() {
 

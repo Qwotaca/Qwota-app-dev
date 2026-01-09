@@ -222,49 +222,16 @@
               </div>
             </div>
 
-            <!-- Section des détails du client (cachée par défaut, dans la même box) -->
-            <div id="client-details-section" class="hidden mt-8 pt-6" style="border-top: 1px solid var(--border-dark);">
-              <div class="mb-4">
-                <h3 class="text-lg font-semibold flex items-center" style="color: var(--text-light);">
-                  <i class="fas fa-edit mr-3" style="color: var(--primary-blue);"></i>
-                  Détails de la facture
-                </h3>
-              </div>
-              <!-- Message d'avertissement -->
-              <div class="mb-6 p-4 rounded-lg" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3);">
-                <div class="flex items-start">
-                  <div>
-                    <h4 class="font-semibold mb-1" style="color: #f59e0b;">Dépôt modifiable</h4>
-                    <p class="text-sm" style="color: var(--text-light);">
-                      Si le dépôt que le client vous a versé est différent de 25%, veuillez le changer pour que le montant correct soit affiché sur votre facture.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Champs cachés (gardés pour compatibilité backend) -->
-              <div class="hidden">
-                <input type="text" id="edit-prenom" class="modern-input" readonly>
-                <input type="text" id="edit-nom" class="modern-input" readonly>
-                <input type="email" id="edit-email" class="modern-input" readonly>
-                <input type="text" id="edit-adresse" class="modern-input" readonly>
-                <input type="text" id="edit-prix" class="modern-input" readonly>
-                <input type="text" id="edit-telephone" class="modern-input" readonly>
-                <input type="text" id="edit-endroit" class="modern-input" readonly>
-              </div>
-
-              <!-- Seul champ visible : Dépôt -->
-              <div class="max-w-sm">
-                <div>
-                  <label class="block text-sm font-semibold mb-2">
-                    <i class="fas fa-money-bill-wave mr-2" style="color: var(--primary-teal);"></i>
-                    Montant du dépôt
-                  </label>
-                  <input type="text" id="edit-depot" class="modern-input"
-                         placeholder="Montant du dépôt"
-                         style="border: 2px solid var(--primary-teal); background: rgba(20, 184, 166, 0.05); border-right: 2px solid #e57373 !important;">
-                </div>
-              </div>
+            <!-- Champs cachés pour compatibilité backend -->
+            <div class="hidden">
+              <input type="text" id="edit-prenom" class="modern-input" readonly>
+              <input type="text" id="edit-nom" class="modern-input" readonly>
+              <input type="email" id="edit-email" class="modern-input" readonly>
+              <input type="text" id="edit-adresse" class="modern-input" readonly>
+              <input type="text" id="edit-prix" class="modern-input" readonly>
+              <input type="text" id="edit-depot" class="modern-input" readonly>
+              <input type="text" id="edit-telephone" class="modern-input" readonly>
+              <input type="text" id="edit-endroit" class="modern-input" readonly>
             </div>
 
             <!-- Boutons d'action -->
@@ -692,31 +659,21 @@
       const telephone = clientData.telephone || '';
       const endroit = clientData.endroit || '';
 
-      // Calculer le dépôt (25% du prix avec taxes comme dans generate_pdf_facture.py)
+      // Lire le dépôt depuis le JSON (non calculé, vient de la soumission)
       let depot = '';
-      if (prixStr) {
+      if (clientData.depot) {
         try {
-          log("[DEBUG] Prix brut reçu:", prixStr);
-          // Nettoyer le prix: enlever $, espaces, et convertir virgule en point
-          let prixNettoye = prixStr.toString()
-            .replace(/\s/g, '')      // Enlever les espaces
-            .replace('$', '')         // Enlever le $
-            .replace(',', '.');       // Remplacer virgule par point
-          log("[DEBUG] Prix nettoyé:", prixNettoye);
-
-          const prix = parseFloat(prixNettoye);
-          log("[DEBUG] Prix parsé:", prix);
-
-          if (!isNaN(prix) && prix > 0) {
-            const tps = prix * 0.05;
-            const tvq = prix * 0.09975;
-            const totalAvecTaxes = prix + tps + tvq;
-            const depotCalcule = totalAvecTaxes * 0.25;
-            log("[DEBUG] Calcul dépôt: prix=", prix, "total avec taxes=", totalAvecTaxes, "dépôt 25%=", depotCalcule);
-            depot = formaterPrix(depotCalcule.toFixed(2));
+          log("[DEBUG] Dépôt depuis JSON:", clientData.depot);
+          // Formater le dépôt s'il n'est pas déjà formaté
+          const depotStr = clientData.depot.toString();
+          if (depotStr.includes('$')) {
+            depot = depotStr; // Déjà formaté
+          } else {
+            depot = formaterPrix(depotStr);
           }
+          log("[DEBUG] Dépôt formaté:", depot);
         } catch (e) {
-          error("Erreur calcul dépôt:", e);
+          error("Erreur formatage dépôt:", e);
           depot = '';
         }
       }
@@ -743,20 +700,6 @@
       document.getElementById("edit-email").value = email;
       document.getElementById("edit-telephone").value = telephone;
       document.getElementById("edit-endroit").value = endroit;
-
-      // Afficher la section des détails
-      const detailsSection = document.getElementById('client-details-section');
-      if (detailsSection) {
-        detailsSection.classList.remove('hidden');
-        // Animation d'apparition
-        detailsSection.style.opacity = '0';
-        detailsSection.style.transform = 'translateY(20px)';
-        setTimeout(() => {
-          detailsSection.style.transition = 'all 0.3s ease';
-          detailsSection.style.opacity = '1';
-          detailsSection.style.transform = 'translateY(0)';
-        }, 10);
-      }
 
       // Fermer le menu
       fermerMenuFacture();
@@ -906,12 +849,6 @@
           if (clientSearchFacture) {
             clientSearchFacture.value = "";
             clientSearchFacture.placeholder = "Tapez pour rechercher un client...";
-          }
-
-          // Cacher la section des détails
-          const detailsSection = document.getElementById('client-details-section');
-          if (detailsSection) {
-            detailsSection.classList.add('hidden');
           }
 
           // Reset des champs d'édition

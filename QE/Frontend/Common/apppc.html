@@ -2669,7 +2669,7 @@
       border: 1px solid #334155;
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      min-width: 200px;
+      min-width: 240px;
       z-index: 50;
       opacity: 0;
       transform: translateY(-10px) scale(0.95);
@@ -2683,49 +2683,85 @@
       pointer-events: auto;
     }
 
-    .mobile-profile-header {
-      padding: 12px 16px;
-    }
-
-    .mobile-profile-info {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .mobile-username {
-      color: #f1f5f9;
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    .mobile-role {
-      color: #94a3b8;
-      font-size: 12px;
-    }
-
-    .mobile-profile-divider {
-      height: 1px;
-      background: #334155;
-      margin: 0 8px;
-    }
-
-    .mobile-logout-btn {
+    /* Header du dropdown mobile - même style que PC */
+    .mobile-dropdown-header {
+      padding: 1rem;
+      border-bottom: 1px solid #334155;
       display: flex;
       align-items: center;
-      gap: 8px;
-      width: 100%;
-      padding: 12px 16px !important;
-      color: #f87171;
-      font-size: 14px !important;
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      transition: background-color 0.2s ease;
+      justify-content: space-between;
+      gap: 0.75rem;
     }
 
-    .mobile-logout-btn:hover {
-      background: rgba(248, 113, 113, 0.1);
+    .mobile-dropdown-user-info {
+      flex: 1;
+    }
+
+    .mobile-dropdown-username {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--text-light);
+      margin-bottom: 0.25rem;
+    }
+
+    .mobile-dropdown-role {
+      font-size: 0.875rem;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    .mobile-dropdown-grade-badge {
+      width: 50px;
+      height: 50px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    /* Items du dropdown mobile - même style que PC */
+    .mobile-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      color: #cbd5e1;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      font-size: 0.9375rem;
+    }
+
+    .mobile-dropdown-item:hover {
+      background: rgba(96, 165, 250, 0.1);
+      color: #60a5fa;
+    }
+
+    .mobile-dropdown-item.mobile-logout {
+      color: #ef4444;
+      border-top: 1px solid #334155;
+    }
+
+    .mobile-dropdown-item.mobile-logout:hover {
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    /* Cadenas pour items mobiles */
+    .mobile-dropdown-lock-icon {
+      margin-left: auto;
+      font-size: 0.75rem;
+      color: #94a3b8;
+      display: none;
+    }
+
+    .mobile-dropdown-item.locked-guide .mobile-dropdown-lock-icon {
+      display: block;
+    }
+
+    .mobile-dropdown-item.locked-guide {
+      position: relative;
     }
 
     /* ================================================================
@@ -3223,16 +3259,29 @@
           </div>
         </div>
         <div id="mobile-profile-dropdown" class="mobile-profile-dropdown hidden">
-          <div class="mobile-profile-header">
-            <div class="mobile-profile-info">
-              <div class="mobile-username" id="mobile-username">Utilisateur</div>
-              <div class="mobile-role" id="mobile-role">Admin</div>
+          <!-- Header avec nom, rôle et badge de grade -->
+          <div class="mobile-dropdown-header">
+            <div class="mobile-dropdown-user-info">
+              <div class="mobile-dropdown-username" id="mobile-dropdown-username">Chargement...</div>
+              <div class="mobile-dropdown-role" id="mobile-dropdown-role">Chargement...</div>
             </div>
+            <img id="mobile-dropdown-grade-badge" src="" alt="Grade" class="mobile-dropdown-grade-badge">
           </div>
-          <div class="mobile-profile-divider"></div>
-          <button onclick="logout()" class="mobile-logout-btn">
+
+          <!-- Boutons -->
+          <button class="mobile-dropdown-item mobile-stats-item" onclick="openStatsModal(); toggleMobileProfileMenu();">
+            <i class="fas fa-chart-line"></i>
+            <span>Statistiques</span>
+            <i class="fas fa-lock mobile-dropdown-lock-icon"></i>
+          </button>
+          <button class="mobile-dropdown-item mobile-params-item" onclick="navigateTo('connection'); toggleMobileProfileMenu();">
+            <i class="fas fa-cog"></i>
+            <span>Parametres</span>
+            <i class="fas fa-lock mobile-dropdown-lock-icon"></i>
+          </button>
+          <button class="mobile-dropdown-item mobile-logout" onclick="logout()">
             <i class="fas fa-sign-out-alt"></i>
-            <span>Se déconnecter</span>
+            <span>Se deconnecter</span>
           </button>
         </div>
       </div>
@@ -3569,9 +3618,13 @@
         const menuItems = document.querySelectorAll('.nav-item');
         const sidebar = document.querySelector('.sidebar');
 
-        // Sélectionner les items du dropdown (Statistiques et Parametres)
+        // Sélectionner les items du dropdown PC (Statistiques et Parametres)
         const statsItem = document.querySelector('.dropdown-item.stats-item');
         const paramsItem = document.querySelector('.dropdown-item.params-item');
+
+        // Sélectionner les items du dropdown mobile (Statistiques et Parametres)
+        const mobileStatsItem = document.querySelector('.mobile-dropdown-item.mobile-stats-item');
+        const mobileParamsItem = document.querySelector('.mobile-dropdown-item.mobile-params-item');
 
         if (pageName === 'guide') {
           // Bloquer le menu quand on est sur le guide
@@ -3580,6 +3633,8 @@
             item.style.opacity = '0.5';
             item.style.cursor = 'not-allowed';
           });
+
+          // Bloquer dropdown PC
           if (statsItem) {
             statsItem.style.pointerEvents = 'none';
             statsItem.style.opacity = '0.5';
@@ -3590,12 +3645,26 @@
             paramsItem.style.opacity = '0.5';
             paramsItem.classList.add('locked-guide');
           }
+
+          // Bloquer dropdown mobile
+          if (mobileStatsItem) {
+            mobileStatsItem.style.pointerEvents = 'none';
+            mobileStatsItem.style.opacity = '0.5';
+            mobileStatsItem.classList.add('locked-guide');
+          }
+          if (mobileParamsItem) {
+            mobileParamsItem.style.pointerEvents = 'none';
+            mobileParamsItem.style.opacity = '0.5';
+            mobileParamsItem.classList.add('locked-guide');
+          }
         } else {
           menuItems.forEach(item => {
             item.style.pointerEvents = '';
             item.style.opacity = '';
             item.style.cursor = '';
           });
+
+          // Débloquer dropdown PC
           if (statsItem) {
             statsItem.style.pointerEvents = '';
             statsItem.style.opacity = '';
@@ -3605,6 +3674,18 @@
             paramsItem.style.pointerEvents = '';
             paramsItem.style.opacity = '';
             paramsItem.classList.remove('locked-guide');
+          }
+
+          // Débloquer dropdown mobile
+          if (mobileStatsItem) {
+            mobileStatsItem.style.pointerEvents = '';
+            mobileStatsItem.style.opacity = '';
+            mobileStatsItem.classList.remove('locked-guide');
+          }
+          if (mobileParamsItem) {
+            mobileParamsItem.style.pointerEvents = '';
+            mobileParamsItem.style.opacity = '';
+            mobileParamsItem.classList.remove('locked-guide');
           }
         }
 
@@ -4135,12 +4216,12 @@
       if (dropdownUsername) dropdownUsername.textContent = username;
       if (dropdownRole) dropdownRole.textContent = role;
 
-      // Mobile header
-      const mobileUsername = document.getElementById('mobile-username');
-      const mobileRole = document.getElementById('mobile-role');
+      // Mobile dropdown
+      const mobileDropdownUsername = document.getElementById('mobile-dropdown-username');
+      const mobileDropdownRole = document.getElementById('mobile-dropdown-role');
 
-      if (mobileUsername) mobileUsername.textContent = username;
-      if (mobileRole) mobileRole.textContent = role;
+      if (mobileDropdownUsername) mobileDropdownUsername.textContent = username;
+      if (mobileDropdownRole) mobileDropdownRole.textContent = role;
 
       // Charger les données de gamification
       loadGamificationData(username);
@@ -4245,12 +4326,21 @@
             mobileLevelText.textContent = profile.level;
           }
 
-          // Mettre à jour le badge de grade dans le dropdown
+          // Mettre à jour le badge de grade dans le dropdown PC
           const dropdownGradeBadge = document.getElementById('dropdown-grade-badge');
           if (dropdownGradeBadge && profile.category) {
             const gradeImage = gradeImageMap[profile.category];
             if (gradeImage) {
               dropdownGradeBadge.src = gradeImage;
+            }
+          }
+
+          // Mettre à jour le badge de grade dans le dropdown mobile
+          const mobileDropdownGradeBadge = document.getElementById('mobile-dropdown-grade-badge');
+          if (mobileDropdownGradeBadge && profile.category) {
+            const gradeImage = gradeImageMap[profile.category];
+            if (gradeImage) {
+              mobileDropdownGradeBadge.src = gradeImage;
             }
           }
         }

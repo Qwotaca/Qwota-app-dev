@@ -19787,6 +19787,77 @@ function initializeApp() {
 
       if (!overlay || !popupBody || !popupTitle) return;
 
+      // FORCER la mise à jour des totaux AVANT de cloner le contenu
+      // Cela garantit que les valeurs affichées sont toujours actuelles
+      if (typeof updateSubtotalSync !== 'undefined') {
+        updateSubtotalSync();
+      } else {
+        // Fallback: recalculer les totaux manuellement
+        let lavage_html = 0, prep_html = 0, peinture_html = 0, produits_html = 0;
+
+        if (document.getElementById('costLavage')) {
+          const text = document.getElementById('costLavage').textContent;
+          lavage_html = parseFloat(text.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+        }
+        if (document.getElementById('costPreparation')) {
+          const text = document.getElementById('costPreparation').textContent;
+          prep_html = parseFloat(text.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+        }
+        if (document.getElementById('costPeinture')) {
+          const text = document.getElementById('costPeinture').textContent;
+          peinture_html = parseFloat(text.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+        }
+        if (document.getElementById('costProduits')) {
+          const costProduitsText = document.getElementById('costProduits').textContent;
+          produits_html = parseFloat(costProduitsText.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+        }
+
+        const baseCostsWithoutAdmin = lavage_html + prep_html + peinture_html + produits_html;
+        const nouveauxFraisAdmin = baseCostsWithoutAdmin * 0.01;
+
+        if (document.getElementById('fraisAdministratifs')) {
+          document.getElementById('fraisAdministratifs').textContent = formatCurrency(nouveauxFraisAdmin);
+        }
+
+        const nouveauSousTotal = lavage_html + prep_html + peinture_html + produits_html + nouveauxFraisAdmin;
+
+        if (document.getElementById('subTotal')) {
+          document.getElementById('subTotal').textContent = formatCurrency(nouveauSousTotal);
+        }
+
+        if (document.getElementById('subTotalBreakdown')) {
+          document.getElementById('subTotalBreakdown').textContent = formatCurrency(nouveauSousTotal);
+        }
+
+        // Mettre à jour les taxes
+        const tpsAmount = nouveauSousTotal * 0.05;
+        const tvqAmount = nouveauSousTotal * 0.09975;
+
+        if (document.getElementById('tpsAmount')) {
+          document.getElementById('tpsAmount').textContent = formatCurrency(tpsAmount);
+        }
+        if (document.getElementById('tvqAmount')) {
+          document.getElementById('tvqAmount').textContent = formatCurrency(tvqAmount);
+        }
+
+        // Mettre à jour le total combiné
+        const totalExtText = document.getElementById('subTotal')?.textContent || '$0.00';
+        const totalExt = parseFloat(totalExtText.replace(/,/g, '.').replace(/[^0-9.-]/g, '')) || 0;
+
+        const totalIntText = document.getElementById('subTotalInt')?.textContent || '$0.00';
+        const totalInt = parseFloat(totalIntText.replace(/,/g, '.').replace(/[^0-9.-]/g, '')) || 0;
+
+        const totalCombineCalcule = totalExt + totalInt;
+        const totalCombine = Math.max(800, totalCombineCalcule);
+
+        if (document.getElementById('totalCombine')) {
+          document.getElementById('totalCombine').textContent = formatCurrency(totalCombine);
+        }
+        if (document.getElementById('totalCombineInt')) {
+          document.getElementById('totalCombineInt').textContent = formatCurrency(totalCombine);
+        }
+      }
+
       // Déterminer le conteneur source selon le type
       let sourceContainer = null;
       let titleText = '';
@@ -19799,7 +19870,10 @@ function initializeApp() {
         titleText = 'Total Intérieur';
       }
 
-      if (!sourceContainer) return;
+      if (!sourceContainer) {
+        console.error('[POPUP] Source container not found for', tabType);
+        return;
+      }
 
       // Mettre à jour le titre
       popupTitle.textContent = titleText;

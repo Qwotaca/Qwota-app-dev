@@ -8006,8 +8006,9 @@ function calculateTeamObjectivePattern(totalObjectif, avgCM, avgRatioMktg, avgTa
       // Calculer les objectifs pour cette semaine (distribution exacte du pattern)
       const dollarPrev = (totalObjectifVise * pct) / totalPatternPct;
       const contratPrev = avgCM > 0 ? dollarPrev / avgCM : 0;
-      const estimPrev = contratPrev / (avgTauxVente / 100);
-      const mktgPrev = estimPrev / (avgRatioMktg / 100);
+      // Utiliser directement les valeurs décimales (0.30, 0.85) au lieu de diviser par 100
+      const estimPrev = avgTauxVente > 0 ? contratPrev / avgTauxVente : 0;
+      const mktgPrev = avgRatioMktg > 0 ? estimPrev / avgRatioMktg : 0;
 
       weeklyObjectives.push({
         dollarPrev,
@@ -9232,12 +9233,14 @@ async function loadExistingMetricsForBusinessPlan() {
 
       if (data.metrics.ratioMktg > 0) {
         ratioInput.dataset.rawValue = data.metrics.ratioMktg;
-        ratioInput.value = data.metrics.ratioMktg.toFixed(1) + ' %';
+        // Multiplier par 100 pour afficher en pourcentage (0.85 → 85%)
+        ratioInput.value = (data.metrics.ratioMktg * 100).toFixed(1) + ' %';
       }
 
       if (data.metrics.tauxVente > 0) {
         tauxInput.dataset.rawValue = data.metrics.tauxVente;
-        tauxInput.value = data.metrics.tauxVente.toFixed(1) + ' %';
+        // Multiplier par 100 pour afficher en pourcentage (0.30 → 30%)
+        tauxInput.value = (data.metrics.tauxVente * 100).toFixed(1) + ' %';
       }
 
       // Changer le titre si des données existent
@@ -9319,16 +9322,18 @@ function handleBPMetricBlur(input) {
   const metricType = input.dataset.metric;
   const value = input.value.replace(/[^0-9.]/g, '');
   const numValue = parseFloat(value) || 0;
-  input.dataset.rawValue = numValue;
 
   if (numValue > 0) {
     if (metricType === 'cm') {
+      input.dataset.rawValue = numValue;
       input.value = formatCurrency(numValue);
     } else {
-      // Pour les pourcentages
+      // Pour les pourcentages - diviser par 100 pour stocker en décimal (85 → 0.85)
+      input.dataset.rawValue = numValue / 100;
       input.value = numValue.toFixed(1) + ' %';
     }
   } else {
+    input.dataset.rawValue = 0;
     input.value = '';
   }
 }
@@ -10569,7 +10574,8 @@ async function updateCoachMetricsDisplay() {
       } else {
         ratioValue.style.display = 'block';
         ratioPlaceholder.style.display = 'none';
-        ratioValue.textContent = metrics.ratioMktg.toFixed(1) + ' %';
+        // Multiplier par 100 pour afficher en pourcentage (0.85 → 85%)
+        ratioValue.textContent = (metrics.ratioMktg * 100).toFixed(1) + ' %';
       }
 
       // Mise à jour Taux
@@ -10581,7 +10587,8 @@ async function updateCoachMetricsDisplay() {
       } else {
         tauxValue.style.display = 'block';
         tauxPlaceholder.style.display = 'none';
-        tauxValue.textContent = metrics.tauxVente.toFixed(1) + ' %';
+        // Multiplier par 100 pour afficher en pourcentage (0.30 → 30%)
+        tauxValue.textContent = (metrics.tauxVente * 100).toFixed(1) + ' %';
       }
     }
   } catch (error) {
@@ -10607,10 +10614,12 @@ function handleCoachMetricBlur(input) {
     input.value = rawValue > 0 ? formatCurrency(rawValue) : '';
     input.style.borderColor = rawValue > 0 ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)';
   } else if (metric === 'ratioMktg') {
-    input.value = rawValue > 0 ? rawValue.toFixed(1) + ' %' : '';
+    // Multiplier par 100 pour afficher (0.85 → 85%)
+    input.value = rawValue > 0 ? (rawValue * 100).toFixed(1) + ' %' : '';
     input.style.borderColor = rawValue > 0 ? 'rgba(234, 179, 8, 0.5)' : 'rgba(239, 68, 68, 0.5)';
   } else if (metric === 'tauxVente') {
-    input.value = rawValue > 0 ? rawValue.toFixed(1) + ' %' : '';
+    // Multiplier par 100 pour afficher (0.30 → 30%)
+    input.value = rawValue > 0 ? (rawValue * 100).toFixed(1) + ' %' : '';
     input.style.borderColor = rawValue > 0 ? 'rgba(139, 92, 246, 0.5)' : 'rgba(239, 68, 68, 0.5)';
   }
 }
@@ -10618,7 +10627,14 @@ function handleCoachMetricBlur(input) {
 function handleCoachMetricInput(input) {
   let value = input.value.replace(/[^0-9.,]/g, '').replace(',', '.');
   const numericValue = parseFloat(value) || 0;
-  input.dataset.rawValue = numericValue;
+  const metric = input.dataset.metric;
+
+  // Pour ratioMktg et tauxVente, diviser par 100 pour stocker en décimal (85 → 0.85)
+  if (metric === 'ratioMktg' || metric === 'tauxVente') {
+    input.dataset.rawValue = numericValue / 100;
+  } else {
+    input.dataset.rawValue = numericValue;
+  }
   input.style.borderColor = 'var(--primary-blue)';
 }
 
@@ -10693,7 +10709,8 @@ async function openCoachRatioPopup() {
 
     const ratioInput = document.getElementById('coach-ratio-input');
     if (ratioInput) {
-      ratioInput.value = ratio > 0 ? ratio.toFixed(1) + ' %' : '';
+      // Multiplier par 100 pour afficher (0.85 → 85%)
+      ratioInput.value = ratio > 0 ? (ratio * 100).toFixed(1) + ' %' : '';
       ratioInput.dataset.rawValue = ratio;
     }
   } catch (error) {
@@ -10750,7 +10767,8 @@ async function openCoachTauxPopup() {
 
     const tauxInput = document.getElementById('coach-taux-input');
     if (tauxInput) {
-      tauxInput.value = taux > 0 ? taux.toFixed(1) + ' %' : '';
+      // Multiplier par 100 pour afficher (0.30 → 30%)
+      tauxInput.value = taux > 0 ? (taux * 100).toFixed(1) + ' %' : '';
       tauxInput.dataset.rawValue = taux;
     }
   } catch (error) {

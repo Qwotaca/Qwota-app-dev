@@ -858,34 +858,45 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
       let pdfOverlay = doc.getElementById("pdfOverlay");
       let closePdfBtn = doc.getElementById("closePdfBtn");
 
-      if (isMobile && window.parent && window.parent.document) {
-        const parentBody = window.parent.document.body;
-        const parentDoc = window.parent.document;
+      if (isMobile && window.parent) {
+        // Sur mobile: 2 niveaux d'iframes (soumission → outils-mobile → apppc)
+        // Sur desktop: 1 seul niveau (soumission → apppc)
+        // Détecter si on est dans une iframe imbriquée
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
 
-        // Injecter les styles nécessaires dans le parent si pas déjà fait
-        if (!parentDoc.getElementById('soumission-modal-styles')) {
-          const styleLink = parentDoc.createElement('link');
-          styleLink.id = 'soumission-modal-styles';
-          styleLink.rel = 'stylesheet';
-          styleLink.href = '/frontend/Entrepreneurs/Outils/Soumission/soumission.css';
-          parentDoc.head.appendChild(styleLink);
+        console.log('[MODAL PDF] Niveaux iframe:', isNestedIframe ? '2 (mobile)' : '1 (desktop)');
 
-          const baseLink = parentDoc.createElement('link');
-          baseLink.id = 'base-css-for-modal';
-          baseLink.rel = 'stylesheet';
-          baseLink.href = '/base.css';
-          parentDoc.head.appendChild(baseLink);
+        if (rootWindow && rootWindow.document) {
+          const parentBody = rootWindow.document.body;
+          const parentDoc = rootWindow.document;
+
+          // Injecter les styles nécessaires dans le parent si pas déjà fait
+          if (!parentDoc.getElementById('soumission-modal-styles')) {
+            const styleLink = parentDoc.createElement('link');
+            styleLink.id = 'soumission-modal-styles';
+            styleLink.rel = 'stylesheet';
+            styleLink.href = '/frontend/Entrepreneurs/Outils/Soumission/soumission.css';
+            parentDoc.head.appendChild(styleLink);
+
+            const baseLink = parentDoc.createElement('link');
+            baseLink.id = 'base-css-for-modal';
+            baseLink.rel = 'stylesheet';
+            baseLink.href = '/base.css';
+            parentDoc.head.appendChild(baseLink);
+          }
+
+          // Déplacer vers le body parent si pas déjà fait
+          if (pdfModal && pdfModal.parentElement !== parentBody) {
+            parentBody.appendChild(pdfModal);
+            parentBody.appendChild(pdfOverlay);
+            console.log('[MODAL PDF] Déplacé vers document racine (apppc.html)');
+          }
+
+          // Bloquer le scroll du parent
+          parentBody.style.overflow = "hidden";
+          parentBody.classList.add('modal-open');
         }
-
-        // Déplacer vers le body parent si pas déjà fait
-        if (pdfModal && pdfModal.parentElement !== parentBody) {
-          parentBody.appendChild(pdfModal);
-          parentBody.appendChild(pdfOverlay);
-        }
-
-        // Bloquer le scroll du parent
-        parentBody.style.overflow = "hidden";
-        parentBody.classList.add('modal-open');
       }
 
       pdfModal.classList.remove("hidden");
@@ -975,17 +986,23 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
         closePdfBtn.classList.add("hidden");
 
         // Si mobile et modal était dans parent, le ramener dans l'iframe
-        if (isMobile && window.parent && window.parent.document) {
-          const parentBody = window.parent.document.body;
-          if (pdfModal && pdfModal.parentElement === parentBody) {
-            document.body.appendChild(pdfModal);
+        if (isMobile && window.parent) {
+          const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+          const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+          if (rootWindow && rootWindow.document) {
+            const parentBody = rootWindow.document.body;
+            if (pdfModal && pdfModal.parentElement === parentBody) {
+              document.body.appendChild(pdfModal);
+            }
+            if (pdfOverlay && pdfOverlay.parentElement === parentBody) {
+              document.body.appendChild(pdfOverlay);
+            }
+            // Débloquer le scroll du parent
+            parentBody.style.overflow = "auto";
+            parentBody.classList.remove('modal-open');
+            console.log('[MODAL PDF] Ramené dans iframe et scroll débloqué');
           }
-          if (pdfOverlay && pdfOverlay.parentElement === parentBody) {
-            document.body.appendChild(pdfOverlay);
-          }
-          // Débloquer le scroll du parent
-          parentBody.style.overflow = "auto";
-          parentBody.classList.remove('modal-open');
         }
 
         // Nettoyer tous les canvas
@@ -1213,8 +1230,15 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
     const pdfModal = document.getElementById("pdfModal");
     const pdfOverlay = document.getElementById("pdfOverlay");
     const closePdfBtn = document.getElementById("closePdfBtn");
-    const parentBody = window.parent.document.body;
-    const parentDoc = window.parent.document;
+
+    // Détecter si iframe imbriquée (mobile: 2 niveaux) ou directe (desktop: 1 niveau)
+    const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
+    const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+    console.log('[MODAL PRÉSENTATION] Niveaux iframe:', isNestedIframe ? '2 (mobile)' : '1 (desktop)');
+
+    const parentBody = rootWindow.document.body;
+    const parentDoc = rootWindow.document;
 
     // Injecter les styles nécessaires dans le parent si pas déjà fait
     if (!parentDoc.getElementById('soumission-modal-styles')) {
@@ -1235,6 +1259,7 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
     if (pdfModal && pdfModal.parentElement !== parentBody) {
       parentBody.appendChild(pdfModal);
       parentBody.appendChild(pdfOverlay);
+      console.log('[MODAL PRÉSENTATION] Déplacé vers document racine (apppc.html)');
     }
 
     // Récupérer le closePdfBtn depuis le modal déplacé (important!)
@@ -1310,8 +1335,11 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
     }
 
     // Maintenant cacher AppPC
-    const appContainer = window.parent.document.querySelector('#app-container');
-    if (appContainer) appContainer.style.display = 'none';
+    const appContainer = rootWindow.document.querySelector('#app-container');
+    if (appContainer) {
+      appContainer.style.display = 'none';
+      console.log('[MODAL PRÉSENTATION] AppPC caché');
+    }
 
     // Bloquer le scroll de l'arrière-plan (iframe et parent)
     document.body.style.overflow = "hidden";
@@ -6045,32 +6073,41 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
       // Sur MOBILE uniquement: déplacer modal vers parent pour passer au-dessus des headers
       const isMobile = window.innerWidth <= 768;
-      if (isMobile && window.parent && window.parent.document) {
-        const parentBody = window.parent.document.body;
-        const parentDoc = window.parent.document;
+      if (isMobile && window.parent) {
+        // Détecter si iframe imbriquée (mobile: 2 niveaux) ou directe (desktop: 1 niveau)
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
 
-        // Injecter les styles nécessaires dans le parent si pas déjà fait
-        if (!parentDoc.getElementById('soumission-modal-styles')) {
-          const styleLink = parentDoc.createElement('link');
-          styleLink.id = 'soumission-modal-styles';
-          styleLink.rel = 'stylesheet';
-          styleLink.href = '/frontend/Entrepreneurs/Outils/Soumission/soumission.css';
-          parentDoc.head.appendChild(styleLink);
+        console.log('[MODAL PRODUITS] Niveaux iframe:', isNestedIframe ? '2 (mobile)' : '1 (desktop)');
 
-          const baseLink = parentDoc.createElement('link');
-          baseLink.id = 'base-css-for-modal';
-          baseLink.rel = 'stylesheet';
-          baseLink.href = '/base.css';
-          parentDoc.head.appendChild(baseLink);
+        if (rootWindow && rootWindow.document) {
+          const parentBody = rootWindow.document.body;
+          const parentDoc = rootWindow.document;
+
+          // Injecter les styles nécessaires dans le parent si pas déjà fait
+          if (!parentDoc.getElementById('soumission-modal-styles')) {
+            const styleLink = parentDoc.createElement('link');
+            styleLink.id = 'soumission-modal-styles';
+            styleLink.rel = 'stylesheet';
+            styleLink.href = '/frontend/Entrepreneurs/Outils/Soumission/soumission.css';
+            parentDoc.head.appendChild(styleLink);
+
+            const baseLink = parentDoc.createElement('link');
+            baseLink.id = 'base-css-for-modal';
+            baseLink.rel = 'stylesheet';
+            baseLink.href = '/base.css';
+            parentDoc.head.appendChild(baseLink);
+          }
+
+          // Déplacer vers le body parent si pas déjà fait
+          if (productModal && productModal.parentElement !== parentBody) {
+            parentBody.appendChild(productModal);
+            console.log('[MODAL PRODUITS] Déplacé vers document racine (apppc.html)');
+          }
+
+          // Bloquer le scroll du parent
+          parentBody.style.overflow = "hidden";
         }
-
-        // Déplacer vers le body parent si pas déjà fait
-        if (productModal && productModal.parentElement !== parentBody) {
-          parentBody.appendChild(productModal);
-        }
-
-        // Bloquer le scroll du parent
-        parentBody.style.overflow = "hidden";
       }
 
       productModal.classList.add('active');
@@ -6098,13 +6135,19 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
       // Si mobile et modal était dans parent, le ramener dans l'iframe
       const isMobile = window.innerWidth <= 768;
-      if (isMobile && window.parent && window.parent.document) {
-        const parentBody = window.parent.document.body;
-        if (productModal && productModal.parentElement === parentBody) {
-          document.body.appendChild(productModal);
+      if (isMobile && window.parent) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+        if (rootWindow && rootWindow.document) {
+          const parentBody = rootWindow.document.body;
+          if (productModal && productModal.parentElement === parentBody) {
+            document.body.appendChild(productModal);
+            console.log('[MODAL PRODUITS] Ramené dans iframe');
+          }
+          // Débloquer le scroll du parent
+          parentBody.style.overflow = "auto";
         }
-        // Débloquer le scroll du parent
-        parentBody.style.overflow = "auto";
       }
 
       document.body.style.overflow = 'auto'; // Réactiver le scroll de la page
@@ -6123,32 +6166,41 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
       // Sur MOBILE uniquement: déplacer modal vers parent pour passer au-dessus des headers
       const isMobile = window.innerWidth <= 768;
-      if (isMobile && window.parent && window.parent.document) {
-        const parentBody = window.parent.document.body;
-        const parentDoc = window.parent.document;
+      if (isMobile && window.parent) {
+        // Détecter si iframe imbriquée (mobile: 2 niveaux) ou directe (desktop: 1 niveau)
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
 
-        // Injecter les styles nécessaires dans le parent si pas déjà fait
-        if (!parentDoc.getElementById('soumission-modal-styles')) {
-          const styleLink = parentDoc.createElement('link');
-          styleLink.id = 'soumission-modal-styles';
-          styleLink.rel = 'stylesheet';
-          styleLink.href = '/frontend/Entrepreneurs/Outils/Soumission/soumission.css';
-          parentDoc.head.appendChild(styleLink);
+        console.log('[MODAL PART TRAVAUX] Niveaux iframe:', isNestedIframe ? '2 (mobile)' : '1 (desktop)');
 
-          const baseLink = parentDoc.createElement('link');
-          baseLink.id = 'base-css-for-modal';
-          baseLink.rel = 'stylesheet';
-          baseLink.href = '/base.css';
-          parentDoc.head.appendChild(baseLink);
+        if (rootWindow && rootWindow.document) {
+          const parentBody = rootWindow.document.body;
+          const parentDoc = rootWindow.document;
+
+          // Injecter les styles nécessaires dans le parent si pas déjà fait
+          if (!parentDoc.getElementById('soumission-modal-styles')) {
+            const styleLink = parentDoc.createElement('link');
+            styleLink.id = 'soumission-modal-styles';
+            styleLink.rel = 'stylesheet';
+            styleLink.href = '/frontend/Entrepreneurs/Outils/Soumission/soumission.css';
+            parentDoc.head.appendChild(styleLink);
+
+            const baseLink = parentDoc.createElement('link');
+            baseLink.id = 'base-css-for-modal';
+            baseLink.rel = 'stylesheet';
+            baseLink.href = '/base.css';
+            parentDoc.head.appendChild(baseLink);
+          }
+
+          // Déplacer vers le body parent si pas déjà fait
+          if (partTravauxModal && partTravauxModal.parentElement !== parentBody) {
+            parentBody.appendChild(partTravauxModal);
+            console.log('[MODAL PART TRAVAUX] Déplacé vers document racine (apppc.html)');
+          }
+
+          // Bloquer le scroll du parent
+          parentBody.style.overflow = "hidden";
         }
-
-        // Déplacer vers le body parent si pas déjà fait
-        if (partTravauxModal && partTravauxModal.parentElement !== parentBody) {
-          parentBody.appendChild(partTravauxModal);
-        }
-
-        // Bloquer le scroll du parent
-        parentBody.style.overflow = "hidden";
       }
 
       partTravauxModal.classList.add('active');
@@ -6177,13 +6229,19 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
       // Si mobile et modal était dans parent, le ramener dans l'iframe
       const isMobile = window.innerWidth <= 768;
-      if (isMobile && window.parent && window.parent.document) {
-        const parentBody = window.parent.document.body;
-        if (partTravauxModal && partTravauxModal.parentElement === parentBody) {
-          document.body.appendChild(partTravauxModal);
+      if (isMobile && window.parent) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+        if (rootWindow && rootWindow.document) {
+          const parentBody = rootWindow.document.body;
+          if (partTravauxModal && partTravauxModal.parentElement === parentBody) {
+            document.body.appendChild(partTravauxModal);
+            console.log('[MODAL PART TRAVAUX] Ramené dans iframe');
+          }
+          // Débloquer le scroll du parent
+          parentBody.style.overflow = "auto";
         }
-        // Débloquer le scroll du parent
-        parentBody.style.overflow = "auto";
       }
 
       document.body.style.overflow = 'auto'; // Réactiver le scroll de la page

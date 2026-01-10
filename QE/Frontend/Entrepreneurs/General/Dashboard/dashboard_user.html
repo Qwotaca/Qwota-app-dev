@@ -1715,6 +1715,28 @@
 
     /* ===== FIN STYLES BOUTONS FILTRAGE ===== */
 
+    /* ===== DROPDOWN ENTREPRENEUR SCOPE - RESPONSIVE ===== */
+    /* Sur mobile: afficher seulement le dropdown mobile */
+    @media (max-width: 768px) {
+      #entrepreneurScopeDesktopContainer {
+        display: none !important;
+      }
+      #entrepreneurScopeMobileContainer {
+        display: block !important;
+      }
+    }
+
+    /* Sur desktop: afficher seulement le dropdown desktop */
+    @media (min-width: 769px) {
+      #entrepreneurScopeDesktopContainer {
+        display: block !important;
+      }
+      #entrepreneurScopeMobileContainer {
+        display: none !important;
+      }
+    }
+    /* ===== FIN DROPDOWN ENTREPRENEUR SCOPE ===== */
+
     /* ===== FIN STYLES DASHBOARD COACH ===== */
   </style>
 </head>
@@ -2047,6 +2069,34 @@
       <div class="flex justify-between items-center mb-2">
         <h2 class="text-2xl font-bold">Classement</h2>
         <div class="flex items-center gap-2">
+          <!-- Dropdown de filtrage entrepreneurs (visible uniquement sur desktop à droite) -->
+          <div id="entrepreneurScopeDesktopContainer" style="position: relative; display: none;">
+            <div class="custom-select" id="entrepreneurScopeSelectDesktop" style="width: auto; min-width: 220px;">
+              <button class="custom-select-button" id="entrepreneurScopeBtnDesktop" style="min-height: 40px; padding: 8px 14px;">
+                <span class="custom-select-text" id="entrepreneurScopeBtnTextDesktop">
+                  <i class="fas fa-users mr-2"></i>Tous les entrepreneurs
+                </span>
+                <i class="fas fa-chevron-down custom-select-arrow"></i>
+              </button>
+              <div class="custom-select-dropdown" id="entrepreneurScopeDropdownDesktop">
+                <div class="custom-select-option" data-scope="tous">
+                  <i class="fas fa-users mr-2"></i>Tous les entrepreneurs
+                </div>
+                <div class="custom-select-option" data-scope="grade" data-grade="recrue" style="padding-left: 2.5rem;">
+                  <i class="fas fa-seedling mr-2"></i>Recrue
+                </div>
+                <div class="custom-select-option" data-scope="grade" data-grade="senior1" style="padding-left: 2.5rem;">
+                  <i class="fas fa-star mr-2"></i>Sénior 1
+                </div>
+                <div class="custom-select-option" data-scope="grade" data-grade="senior2" style="padding-left: 2.5rem;">
+                  <i class="fas fa-star mr-2"></i>Sénior 2
+                </div>
+                <div class="custom-select-option" data-scope="grade" data-grade="senior3" style="padding-left: 2.5rem;">
+                  <i class="fas fa-star mr-2"></i>Sénior 3
+                </div>
+              </div>
+            </div>
+          </div>
           <!-- Dropdown de période (caché sur mobile) -->
           <div style="position: relative;" class="hidden md:block">
           <div class="custom-select" id="periodeSelect" style="width: auto; min-width: 180px;">
@@ -2092,8 +2142,8 @@
         <span id="semaineInfo" class="text-xs hidden" style="color: #f59e0b;"><i class="fas fa-exclamation-triangle mr-1"></i></span>
       </div>
 
-      <!-- Dropdown de filtrage d'entrepreneurs (sous le sous-titre) -->
-      <div style="position: relative; margin-bottom: 1rem;">
+      <!-- Dropdown de filtrage d'entrepreneurs (visible uniquement sur mobile) -->
+      <div id="entrepreneurScopeMobileContainer" style="position: relative; margin-bottom: 1rem;">
         <div class="custom-select" id="entrepreneurScopeSelect" style="width: auto; min-width: 220px;">
           <button class="custom-select-button" id="entrepreneurScopeBtn" style="min-height: 40px; padding: 8px 14px;">
             <span class="custom-select-text" id="entrepreneurScopeBtnText">
@@ -4238,10 +4288,16 @@
 
     // Fonction pour configurer le dropdown de scope d'entrepreneurs
     async function setupEntrepreneurScopeDropdown() {
+      // Gérer à la fois le dropdown mobile et desktop
       const scopeSelect = document.getElementById('entrepreneurScopeSelect');
       const scopeBtn = document.getElementById('entrepreneurScopeBtn');
       const scopeBtnText = document.getElementById('entrepreneurScopeBtnText');
       const dropdown = document.getElementById('entrepreneurScopeDropdown');
+
+      const scopeSelectDesktop = document.getElementById('entrepreneurScopeSelectDesktop');
+      const scopeBtnDesktop = document.getElementById('entrepreneurScopeBtnDesktop');
+      const scopeBtnTextDesktop = document.getElementById('entrepreneurScopeBtnTextDesktop');
+      const dropdownDesktop = document.getElementById('entrepreneurScopeDropdownDesktop');
 
       if (!scopeSelect || !scopeBtn) return;
 
@@ -4277,9 +4333,12 @@
               };
 
               if (gradeMap[gradeLower]) {
-                // Mettre à jour le bouton avec le grade de l'entrepreneur
+                // Mettre à jour le bouton avec le grade de l'entrepreneur (mobile et desktop)
                 console.log('[GRADE FILTER] Mise à jour du bouton avec:', gradeMap[gradeLower].text);
                 scopeBtnText.innerHTML = `<i class="${gradeMap[gradeLower].icon} mr-2"></i>${gradeMap[gradeLower].text}`;
+                if (scopeBtnTextDesktop) {
+                  scopeBtnTextDesktop.innerHTML = `<i class="${gradeMap[gradeLower].icon} mr-2"></i>${gradeMap[gradeLower].text}`;
+                }
                 currentGroupFilter = gradeMap[gradeLower].value;
                 console.log('[GRADE FILTER] currentGroupFilter défini à:', currentGroupFilter);
               } else {
@@ -4308,7 +4367,7 @@
         }
       });
 
-      // Gérer les options
+      // Gérer les options mobile
       dropdown.addEventListener('click', function(e) {
         const option = e.target.closest('.custom-select-option');
         if (!option) return;
@@ -4316,8 +4375,11 @@
         const scope = option.getAttribute('data-scope');
         const grade = option.getAttribute('data-grade');
 
-        // Mettre à jour le texte du bouton
+        // Mettre à jour le texte du bouton (mobile et desktop)
         scopeBtnText.innerHTML = option.innerHTML;
+        if (scopeBtnTextDesktop) {
+          scopeBtnTextDesktop.innerHTML = option.innerHTML;
+        }
 
         // Fermer le dropdown
         scopeSelect.classList.remove('open');
@@ -4332,6 +4394,50 @@
         // Recharger les données (qui appliquera automatiquement le filtre après le render)
         loadClassementData();
       });
+
+      // Gérer le dropdown desktop (si présent)
+      if (scopeSelectDesktop && scopeBtnDesktop && dropdownDesktop) {
+        // Toggle dropdown desktop
+        scopeBtnDesktop.addEventListener('click', function(e) {
+          e.stopPropagation();
+          scopeSelectDesktop.classList.toggle('open');
+        });
+
+        // Fermer dropdown desktop si clic ailleurs
+        document.addEventListener('click', function(e) {
+          if (!scopeSelectDesktop.contains(e.target)) {
+            scopeSelectDesktop.classList.remove('open');
+          }
+        });
+
+        // Gérer les options desktop
+        dropdownDesktop.addEventListener('click', function(e) {
+          const option = e.target.closest('.custom-select-option');
+          if (!option) return;
+
+          const scope = option.getAttribute('data-scope');
+          const grade = option.getAttribute('data-grade');
+
+          // Mettre à jour le texte des boutons (desktop et mobile)
+          scopeBtnTextDesktop.innerHTML = option.innerHTML;
+          if (scopeBtnText) {
+            scopeBtnText.innerHTML = option.innerHTML;
+          }
+
+          // Fermer le dropdown
+          scopeSelectDesktop.classList.remove('open');
+
+          // Filtrer selon la sélection
+          if (scope === 'tous') {
+            currentGroupFilter = 'tous';
+          } else if (scope === 'grade') {
+            currentGroupFilter = grade;
+          }
+
+          // Recharger les données
+          loadClassementData();
+        });
+      }
     }
 
     let classementData = [];

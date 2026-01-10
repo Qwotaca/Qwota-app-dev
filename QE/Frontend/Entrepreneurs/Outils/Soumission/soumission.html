@@ -4643,12 +4643,16 @@ window.validateSignature = function() {
 function initPresentationSignatureCanvas() {
   log('[SIGNATURE] === DÉBUT initPresentationSignatureCanvas ===');
 
-  // Chercher le canvas dans l'iframe d'abord, puis dans le parent
+  // Détecter si iframe imbriquée (mobile: 2 niveaux) ou directe (desktop: 1 niveau)
+  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
+  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+  // Chercher le canvas dans l'iframe d'abord, puis dans le rootWindow (apppc.html sur mobile)
   presentationSignatureCanvas = document.getElementById('presentationSignaturePad');
-  if (!presentationSignatureCanvas) {
-    presentationSignatureCanvas = window.parent.document.getElementById('presentationSignaturePad');
-    log('[SIGNATURE] Canvas trouvé dans parent document');
-  } else {
+  if (!presentationSignatureCanvas && rootWindow && rootWindow.document) {
+    presentationSignatureCanvas = rootWindow.document.getElementById('presentationSignaturePad');
+    log('[SIGNATURE] Canvas trouvé dans rootWindow document');
+  } else if (presentationSignatureCanvas) {
     log('[SIGNATURE] Canvas trouvé dans iframe document');
   }
 
@@ -4818,9 +4822,15 @@ function drawPresentation(e) {
   // Activer le bouton d'acceptation
   hasPresentationSignature = true;
 
+  // Détecter si iframe imbriquée (mobile: 2 niveaux) ou directe (desktop: 1 niveau)
+  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
+  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
   // Activer le bouton valider dans le popup zoom
   let validateBtn = document.getElementById('validateSignatureBtn');
-  if (!validateBtn) validateBtn = window.parent.document.getElementById('validateSignatureBtn');
+  if (!validateBtn && rootWindow && rootWindow.document) {
+    validateBtn = rootWindow.document.getElementById('validateSignatureBtn');
+  }
 
   if (validateBtn) {
     validateBtn.disabled = false;

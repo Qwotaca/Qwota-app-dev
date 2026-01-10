@@ -41,6 +41,40 @@
 <script>
   // Ces variables sont maintenant gérées par common.js
   // username, userRole, canEditParameters sont disponibles globalement
+
+  // Script anti-flash pour coach/direction
+  (function() {
+    const userRole = localStorage.getItem('userRole');
+    const isCoachOrDirection = userRole === 'coach' || userRole === 'direction';
+    const urlParams = new URLSearchParams(window.location.search);
+    const userParam = urlParams.get('user');
+    const coachUsername = localStorage.getItem('username');
+
+    // Afficher le sélecteur si c'est un coach/direction sans entrepreneur sélectionné
+    const shouldShowSelector = isCoachOrDirection && (!userParam || userParam === coachUsername);
+
+    if (shouldShowSelector) {
+      // Injecter le CSS immédiatement pour cacher le contenu et afficher le sélecteur
+      const style = document.createElement('style');
+      style.id = 'coach-anti-flash-css';
+      style.textContent = `
+        .main-content {
+          opacity: 0 !important;
+          pointer-events: none !important;
+        }
+        #coach-selector-backdrop {
+          display: block !important;
+          opacity: 1 !important;
+          pointer-events: all !important;
+        }
+        #coach-entrepreneur-selector {
+          display: block !important;
+          opacity: 1 !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  })();
 </script>
 
   <link rel="stylesheet" href="/soumission.css">

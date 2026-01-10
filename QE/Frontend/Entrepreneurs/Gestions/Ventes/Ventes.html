@@ -34,6 +34,9 @@
   <link rel="icon" href="/favicon" type="image/x-icon" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
+  <!-- PDF.js pour affichage PDF avec canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
+
   <!-- Variables globales définies dans common.js -->
   <script>
     // Ces variables sont maintenant gérées par common.js
@@ -1285,20 +1288,26 @@
     </div>
   </div>
 
-  <!-- Modal PDF Viewer -->
-  <div id="pdfViewerModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px); display: none; z-index: 70;">
-    <div class="flex flex-col p-6 mx-4" style="width: 90%; max-width: 1200px; height: 85vh; background: #1e293b; border: 1px solid var(--border-dark); border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-xl font-bold" style="color: var(--text-light);">
-          <i class="fas fa-file-pdf mr-2" style="color: var(--primary-blue);"></i>
-          <span id="pdfViewerTitle">Soumission</span>
-        </h3>
-        <button onclick="closePDFViewer()" class="w-10 h-10 rounded-full flex items-center justify-center transition-colors" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
-          <i class="fas fa-times text-xl"></i>
+  <!-- Overlay flou pour modal PDF -->
+  <div id="pdfOverlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); display: none; z-index: 999998;"></div>
+
+  <!-- Modal PDF Viewer avec PDF.js (comme soumission.html) -->
+  <div id="pdfViewerModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 999999; align-items: center; justify-content: center;">
+    <div id="pdfContent" style="background: #1e293b; border: 1px solid rgba(71, 85, 105, 0.3); border-radius: 16px; width: 90%; max-width: 900px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);" tabindex="-1">
+      <!-- Header -->
+      <div id="pdfControls" style="padding: 16px 20px; background: rgba(15, 23, 42, 0.8); border-bottom: 1px solid rgba(71, 85, 105, 0.3); display: flex; align-items: center; justify-content: space-between; border-radius: 16px 16px 0 0;">
+        <span id="pdfViewerTitle" style="font-size: 18px; font-weight: 600; color: #e2e8f0;">
+          <i class="fas fa-file-pdf mr-2" style="color: #60a5fa;"></i>
+          Soumission
+        </span>
+        <button id="closePdfBtn" onclick="closePDFViewer()" style="width: 40px; height: 40px; border-radius: 50%; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all 0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'" tabindex="-1">
+          ×
         </button>
       </div>
-      <div class="flex-1 rounded-lg overflow-hidden" style="background: #0f172a; border: 2px solid var(--border-dark);">
-        <iframe id="pdfViewerFrame" style="width: 100%; height: 100%; border: none;"></iframe>
+
+      <!-- Container scrollable pour PDF multi-pages -->
+      <div id="pdfScrollContainer" style="flex: 1; overflow-y: auto; overflow-x: hidden; background: #0f172a; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 20px; border-radius: 0 0 16px 16px;" tabindex="-1">
+        <!-- Les canvas seront ajoutés ici dynamiquement -->
       </div>
     </div>
   </div>
@@ -2313,46 +2322,27 @@
     }, 2000);
   }
 
+  // voirSoumission utilise maintenant voirPDF (même fonction)
   window.voirSoumission = function(pdfUrl, clientName) {
-    log('[VENTES] voirSoumission appelée avec:', pdfUrl, clientName);
-    closeClientInfo();
-
-    if (!pdfUrl || pdfUrl === '') {
-      log('[VENTES] Aucun PDF disponible');
-      return;
-    }
-
-    const modal = document.getElementById('pdfViewerModal');
-    const iframe = document.getElementById('pdfViewerFrame');
-    const title = document.getElementById('pdfViewerTitle');
-
-    log('[VENTES] Éléments trouvés:', { modal, iframe, title });
-
-    if (!modal || !iframe || !title) {
-      error('[VENTES] Éléments du modal PDF introuvables');
-      return;
-    }
-
-    title.textContent = `Soumission - ${clientName}`;
-    iframe.src = pdfUrl;
-
-    // Bloquer le scroll en arrière-plan
-    document.body.style.overflow = 'hidden';
-
-    modal.style.display = 'flex';
-
-    log('[VENTES] Modal PDF affiché');
+    log('[VENTES] voirSoumission appelée - redirection vers voirPDF');
+    window.voirPDF(pdfUrl, clientName);
   };
 
   window.closePDFViewer = function() {
     const modal = document.getElementById('pdfViewerModal');
-    const iframe = document.getElementById('pdfViewerFrame');
+    const overlay = document.getElementById('pdfOverlay');
+    const scrollContainer = document.getElementById('pdfScrollContainer');
 
-    modal.style.display = 'none';
-    iframe.src = '';
+    if (modal) modal.style.display = 'none';
+    if (overlay) overlay.style.display = 'none';
+
+    // Vider le container
+    if (scrollContainer) scrollContainer.innerHTML = '';
 
     // Réactiver le scroll
     document.body.style.overflow = '';
+
+    log('[VENTES] Modal PDF fermé');
   };
 
   async function checkIfCalculExists(clientData) {
@@ -2455,68 +2445,182 @@
     }
   };
 
-  // Fonction pour voir soumission dans popup (pour Acceptées et Produit)
-  window.voirPDF = function(pdfUrl, clientName) {
+  // Fonction pour voir soumission dans popup (avec PDF.js comme soumission.html)
+  window.voirPDF = async function(pdfUrl, clientName) {
     log('[VENTES] voirPDF appelée avec:', pdfUrl, clientName);
     closeClientInfo();
 
     if (!pdfUrl || pdfUrl === '') {
       log('[VENTES] Aucun PDF disponible');
+      alert('❌ Aucun PDF disponible');
       return;
     }
 
     const modal = document.getElementById('pdfViewerModal');
-    const iframe = document.getElementById('pdfViewerFrame');
+    const overlay = document.getElementById('pdfOverlay');
     const title = document.getElementById('pdfViewerTitle');
+    const scrollContainer = document.getElementById('pdfScrollContainer');
 
-    log('[VENTES] Éléments trouvés:', { modal, iframe, title });
-
-    if (!modal || !iframe || !title) {
+    if (!modal || !overlay || !title || !scrollContainer) {
       error('[VENTES] Éléments du modal PDF introuvables');
       return;
     }
 
-    title.textContent = `Soumission - ${clientName}`;
-    iframe.src = pdfUrl;
+    // Mettre à jour le titre
+    title.innerHTML = `<i class="fas fa-file-pdf mr-2" style="color: #60a5fa;"></i>Soumission - ${clientName}`;
 
-    // Bloquer le scroll en arrière-plan
+    // Afficher modal et overlay
+    overlay.style.display = 'block';
+    modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
 
-    modal.style.display = 'flex';
+    // Vider le container
+    scrollContainer.innerHTML = '<div style="color: #94a3b8; text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin mr-2"></i>Chargement du PDF...</div>';
 
-    log('[VENTES] Modal PDF affiché');
+    try {
+      // Charger PDF avec PDF.js
+      const pdfjsLib = window['pdfjs-dist/build/pdf'];
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
+
+      const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+      const numPages = pdf.numPages;
+
+      log('[VENTES] PDF chargé:', numPages, 'pages');
+
+      // Vider le container
+      scrollContainer.innerHTML = '';
+
+      // Créer un wrapper pour tous les canvas
+      const pagesWrapper = document.createElement('div');
+      pagesWrapper.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%;';
+      scrollContainer.appendChild(pagesWrapper);
+
+      // Rendre toutes les pages
+      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const viewport = page.getViewport({ scale: 1.5 });
+
+        // Créer canvas pour cette page
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.style.cssText = 'max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);';
+
+        // Ajouter le canvas au wrapper
+        pagesWrapper.appendChild(canvas);
+
+        // Rendre la page
+        await page.render({
+          canvasContext: context,
+          viewport: viewport
+        }).promise;
+
+        log('[VENTES] Page', pageNum, 'rendue');
+      }
+
+      log('[VENTES] Toutes les pages rendues');
+
+    } catch (error) {
+      error('[VENTES] Erreur chargement PDF:', error);
+      scrollContainer.innerHTML = `
+        <div style="color: #ef4444; text-align: center; padding: 40px;">
+          <i class="fas fa-exclamation-circle" style="font-size: 48px; margin-bottom: 16px;"></i>
+          <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Erreur de chargement</div>
+          <div style="font-size: 14px; color: #94a3b8;">Impossible de charger le PDF</div>
+        </div>
+      `;
+    }
   };
 
-  // Fonction pour voir GQP dans le même popup que voirSoumission
-  window.voirGQP = function(gqpUrl, clientName) {
+  // Fonction pour voir GQP (utilise le même système que voirPDF)
+  window.voirGQP = async function(gqpUrl, clientName) {
     log('[VENTES] voirGQP appelée avec:', gqpUrl, clientName);
     closeClientInfo();
 
     if (!gqpUrl || gqpUrl === '') {
       log('[VENTES] Aucun GQP disponible');
+      alert('❌ Aucun GQP disponible');
       return;
     }
 
     const modal = document.getElementById('pdfViewerModal');
-    const iframe = document.getElementById('pdfViewerFrame');
+    const overlay = document.getElementById('pdfOverlay');
     const title = document.getElementById('pdfViewerTitle');
+    const scrollContainer = document.getElementById('pdfScrollContainer');
 
-    log('[VENTES] Éléments trouvés:', { modal, iframe, title });
-
-    if (!modal || !iframe || !title) {
+    if (!modal || !overlay || !title || !scrollContainer) {
       error('[VENTES] Éléments du modal PDF introuvables');
       return;
     }
 
-    title.textContent = `GQP - ${clientName}`;
-    iframe.src = gqpUrl;
+    // Mettre à jour le titre pour GQP
+    title.innerHTML = `<i class="fas fa-file-pdf mr-2" style="color: #60a5fa;"></i>GQP - ${clientName}`;
 
-    // Bloquer le scroll en arrière-plan
+    // Afficher modal et overlay
+    overlay.style.display = 'block';
+    modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
 
-    modal.style.display = 'flex';
+    // Vider le container
+    scrollContainer.innerHTML = '<div style="color: #94a3b8; text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin mr-2"></i>Chargement du PDF...</div>';
 
-    log('[VENTES] Modal GQP affiché');
+    try {
+      // Charger PDF avec PDF.js
+      const pdfjsLib = window['pdfjs-dist/build/pdf'];
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
+
+      const pdf = await pdfjsLib.getDocument(gqpUrl).promise;
+      const numPages = pdf.numPages;
+
+      log('[VENTES] GQP chargé:', numPages, 'pages');
+
+      // Vider le container
+      scrollContainer.innerHTML = '';
+
+      // Créer un wrapper pour tous les canvas
+      const pagesWrapper = document.createElement('div');
+      pagesWrapper.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%;';
+      scrollContainer.appendChild(pagesWrapper);
+
+      // Rendre toutes les pages
+      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const viewport = page.getViewport({ scale: 1.5 });
+
+        // Créer canvas pour cette page
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.style.cssText = 'max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);';
+
+        // Ajouter le canvas au wrapper
+        pagesWrapper.appendChild(canvas);
+
+        // Rendre la page
+        await page.render({
+          canvasContext: context,
+          viewport: viewport
+        }).promise;
+
+        log('[VENTES] Page GQP', pageNum, 'rendue');
+      }
+
+      log('[VENTES] Toutes les pages GQP rendues');
+
+    } catch (error) {
+      error('[VENTES] Erreur chargement GQP:', error);
+      scrollContainer.innerHTML = `
+        <div style="color: #ef4444; text-align: center; padding: 40px;">
+          <i class="fas fa-exclamation-circle" style="font-size: 48px; margin-bottom: 16px;"></i>
+          <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Erreur de chargement</div>
+          <div style="font-size: 14px; color: #94a3b8;">Impossible de charger le GQP</div>
+        </div>
+      `;
+    }
   };
 
 

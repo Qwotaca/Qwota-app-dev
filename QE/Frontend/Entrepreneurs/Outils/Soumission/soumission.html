@@ -4580,7 +4580,9 @@ window.validateSignature = function() {
   previewCanvas.style.display = 'block';
 
   let signatureHint = document.getElementById('signatureHint');
-  if (!signatureHint) signatureHint = window.parent.document.getElementById('signatureHint');
+  if (!signatureHint && rootWindow && rootWindow.document) {
+    signatureHint = rootWindow.document.getElementById('signatureHint');
+  }
   if (signatureHint) signatureHint.style.display = 'none';
 
   // Effacer le canvas zoom (mais PAS le preview) pour être prêt pour la prochaine signature
@@ -4593,10 +4595,14 @@ window.validateSignature = function() {
 
   // Fermer le popup
   let popup = document.getElementById('signatureZoomPopup');
-  if (!popup) popup = window.parent.document.getElementById('signatureZoomPopup');
+  if (!popup && rootWindow && rootWindow.document) {
+    popup = rootWindow.document.getElementById('signatureZoomPopup');
+  }
 
   let pdfModal = document.getElementById('pdfModal');
-  if (!pdfModal) pdfModal = window.parent.document.getElementById('pdfModal');
+  if (!pdfModal && rootWindow && rootWindow.document) {
+    pdfModal = rootWindow.document.getElementById('pdfModal');
+  }
 
   log('[SIGNATURE] Popup display AVANT fermeture:', popup ? popup.style.display : 'null');
   log('[SIGNATURE] PDF Modal display AVANT réaffichage:', pdfModal ? pdfModal.style.display : 'null');
@@ -4623,7 +4629,9 @@ window.validateSignature = function() {
   } else {
     // Sur desktop: activer le bouton accepter
     let acceptBtn = document.getElementById('acceptPresentationBtn');
-    if (!acceptBtn) acceptBtn = window.parent.document.getElementById('acceptPresentationBtn');
+    if (!acceptBtn && rootWindow && rootWindow.document) {
+      acceptBtn = rootWindow.document.getElementById('acceptPresentationBtn');
+    }
 
     if (acceptBtn) {
       acceptBtn.disabled = false;
@@ -4641,7 +4649,7 @@ window.validateSignature = function() {
     if (pdfModal) {
       pdfModal.style.display = 'flex';
       log('[SIGNATURE] PDF Modal réaffiché après validation - display:', pdfModal.style.display);
-      log('[SIGNATURE] PDF Modal z-index:', window.parent.getComputedStyle(pdfModal).zIndex);
+      log('[SIGNATURE] PDF Modal z-index:', rootWindow.getComputedStyle(pdfModal).zIndex);
     }
   }
 
@@ -4942,28 +4950,34 @@ window.clearPresentationSignature = function() {
 
   // Cacher le bouton effacer
   let clearBtn = document.getElementById('clearSignatureBtn');
-  if (!clearBtn) clearBtn = window.parent.document.getElementById('clearSignatureBtn');
+  if (!clearBtn && rootWindow && rootWindow.document) {
+    clearBtn = rootWindow.document.getElementById('clearSignatureBtn');
+  }
   if (clearBtn) clearBtn.style.display = 'none';
 };
 
 // Fonction pour fermer le modal
 window.closePdfModal = function() {
-  // Chercher les éléments dans l'iframe d'abord, puis dans le parent
+  // Détecter iframe imbriquée (mobile: 2 niveaux)
+  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
+  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+  // Chercher les éléments dans l'iframe d'abord, puis dans le rootWindow
   let pdfModal = document.getElementById("pdfModal");
   let modalWasInParent = false;
-  if (!pdfModal && window.parent && window.parent.document) {
-    pdfModal = window.parent.document.getElementById("pdfModal");
+  if (!pdfModal && rootWindow && rootWindow.document) {
+    pdfModal = rootWindow.document.getElementById("pdfModal");
     modalWasInParent = true;
   }
 
   let pdfOverlay = document.getElementById("pdfOverlay");
-  if (!pdfOverlay && window.parent && window.parent.document) {
-    pdfOverlay = window.parent.document.getElementById("pdfOverlay");
+  if (!pdfOverlay && rootWindow && rootWindow.document) {
+    pdfOverlay = rootWindow.document.getElementById("pdfOverlay");
   }
 
   let closePdfBtn = document.getElementById("closePdfBtn");
-  if (!closePdfBtn && window.parent && window.parent.document) {
-    closePdfBtn = window.parent.document.getElementById("closePdfBtn");
+  if (!closePdfBtn && rootWindow && rootWindow.document) {
+    closePdfBtn = rootWindow.document.getElementById("closePdfBtn");
   }
 
   if (pdfModal) pdfModal.classList.add("hidden");
@@ -4972,19 +4986,21 @@ window.closePdfModal = function() {
 
   document.body.style.overflow = "auto";
 
-  // Ramener le modal et overlay dans l'iframe si ils étaient dans le parent
-  if (modalWasInParent && pdfModal && pdfModal.parentElement === window.parent.document.body) {
+  // Ramener le modal et overlay dans l'iframe si ils étaient dans le rootWindow
+  if (modalWasInParent && pdfModal && rootWindow && rootWindow.document && pdfModal.parentElement === rootWindow.document.body) {
     document.body.appendChild(pdfModal);
     console.log('[closePdfModal] Modal ramené dans l\'iframe');
   }
-  if (modalWasInParent && pdfOverlay && pdfOverlay.parentElement === window.parent.document.body) {
+  if (modalWasInParent && pdfOverlay && rootWindow && rootWindow.document && pdfOverlay.parentElement === rootWindow.document.body) {
     document.body.appendChild(pdfOverlay);
     console.log('[closePdfModal] Overlay ramené dans l\'iframe');
   }
 
   // Restaurer AppPC
-  const appContainer = window.parent.document.querySelector('#app-container');
-  if (appContainer) appContainer.style.display = '';
+  if (rootWindow && rootWindow.document) {
+    const appContainer = rootWindow.document.querySelector('#app-container');
+    if (appContainer) appContainer.style.display = '';
+  }
 
   // Réinitialiser la signature
   clearPresentationSignature();
@@ -5027,11 +5043,19 @@ window.acceptPresentation = async function() {
     return;
   }
 
-  // Chercher le bouton dans l'iframe d'abord, puis dans le parent
+  // Détecter iframe imbriquée (mobile: 2 niveaux)
+  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
+  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+  log('[acceptPresentation] Iframe imbriquée:', isNestedIframe ? 'Oui (2 niveaux)' : 'Non (1 niveau)');
+
+  // Chercher le bouton dans l'iframe d'abord, puis dans le rootWindow
   let btn = document.getElementById('acceptPresentationBtn');
-  if (!btn && window.parent && window.parent.document) {
-    btn = window.parent.document.getElementById('acceptPresentationBtn');
-    log('[acceptPresentation] Bouton trouvé dans le parent');
+  if (!btn && rootWindow && rootWindow.document) {
+    btn = rootWindow.document.getElementById('acceptPresentationBtn');
+    if (btn) {
+      log('[acceptPresentation] Bouton trouvé dans le rootWindow');
+    }
   }
 
   if (!btn) {
@@ -5067,11 +5091,13 @@ window.acceptPresentation = async function() {
     // Étape 2: Préparer la signature
     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Signature...';
 
-    // Chercher le canvas de signature dans l'iframe d'abord, puis dans le parent
+    // Chercher le canvas de signature dans l'iframe d'abord, puis dans le rootWindow
     let previewCanvas = document.getElementById('signaturePreviewCanvas');
-    if (!previewCanvas && window.parent && window.parent.document) {
-      previewCanvas = window.parent.document.getElementById('signaturePreviewCanvas');
-      log('[acceptPresentation] Canvas signature trouvé dans le parent');
+    if (!previewCanvas && rootWindow && rootWindow.document) {
+      previewCanvas = rootWindow.document.getElementById('signaturePreviewCanvas');
+      if (previewCanvas) {
+        log('[acceptPresentation] Canvas signature trouvé dans le rootWindow');
+      }
     }
 
     if (!previewCanvas) {
@@ -5176,11 +5202,15 @@ window.acceptPresentation = async function() {
 function attachAcceptButtonEvent() {
   log('[attachAcceptButtonEvent] Tentative d\'attachement');
 
-  // Chercher le bouton dans l'iframe d'abord, puis dans le parent
+  // Détecter iframe imbriquée (mobile: 2 niveaux)
+  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
+  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+  // Chercher le bouton dans l'iframe d'abord, puis dans le rootWindow
   let acceptBtn = document.getElementById('acceptPresentationBtn');
-  if (!acceptBtn && window.parent && window.parent.document) {
-    acceptBtn = window.parent.document.getElementById('acceptPresentationBtn');
-    log('[attachAcceptButtonEvent] Bouton cherché dans le parent');
+  if (!acceptBtn && rootWindow && rootWindow.document) {
+    acceptBtn = rootWindow.document.getElementById('acceptPresentationBtn');
+    log('[attachAcceptButtonEvent] Bouton cherché dans le rootWindow');
   }
 
   log('[attachAcceptButtonEvent] Bouton trouvé:', !!acceptBtn);

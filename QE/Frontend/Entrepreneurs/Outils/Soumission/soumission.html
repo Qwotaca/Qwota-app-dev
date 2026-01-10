@@ -1424,10 +1424,15 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
     // ===== ZOOM AVEC PINCH-TO-ZOOM ET CTRL+MOLETTE (Présenter au client) =====
     const pdfScrollContainerPresent = pdfModal.querySelector('#pdfScrollContainer');
 
-    // Support du pinch-to-zoom sur mobile
+    // Support du pinch-to-zoom ET pan/drag sur mobile
     if (isMobilePresent) {
       let initialDistance = 0;
       let initialScale = currentScalePresent;
+      let isPanning = false;
+      let startX = 0;
+      let startY = 0;
+      let scrollLeftStart = 0;
+      let scrollTopStart = 0;
 
       const getDistance = (touches) => {
         const dx = touches[0].clientX - touches[1].clientX;
@@ -1437,15 +1442,26 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
 
       pdfScrollContainerPresent.addEventListener('touchstart', (e) => {
         if (e.touches.length === 2) {
+          // Pinch-to-zoom avec 2 doigts
           e.preventDefault();
+          isPanning = false;
           initialDistance = getDistance(e.touches);
           initialScale = currentScalePresent;
+        } else if (e.touches.length === 1) {
+          // Pan/drag avec 1 doigt
+          isPanning = true;
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+          scrollLeftStart = pdfScrollContainerPresent.scrollLeft;
+          scrollTopStart = pdfScrollContainerPresent.scrollTop;
         }
       }, { passive: false });
 
       pdfScrollContainerPresent.addEventListener('touchmove', async (e) => {
         if (e.touches.length === 2) {
+          // Pinch-to-zoom
           e.preventDefault();
+          isPanning = false;
           const distance = getDistance(e.touches);
           const scaleChange = distance / initialDistance;
           let newScale = initialScale * scaleChange;
@@ -1457,6 +1473,17 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
             currentScalePresent = newScale;
             await renderAllPagesPresent(currentScalePresent);
           }
+        } else if (e.touches.length === 1 && isPanning) {
+          // Pan/drag dans toutes les directions
+          e.preventDefault();
+          const currentX = e.touches[0].clientX;
+          const currentY = e.touches[0].clientY;
+
+          const deltaX = startX - currentX;
+          const deltaY = startY - currentY;
+
+          pdfScrollContainerPresent.scrollLeft = scrollLeftStart + deltaX;
+          pdfScrollContainerPresent.scrollTop = scrollTopStart + deltaY;
         }
       }, { passive: false });
 
@@ -1464,7 +1491,12 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
         if (e.touches.length < 2) {
           initialDistance = 0;
         }
+        if (e.touches.length === 0) {
+          isPanning = false;
+        }
       });
+
+      console.log('[PDF PRÉSENTATION MOBILE] Pan/drag activé - 1 doigt = bouger, 2 doigts = zoomer');
     }
 
     // Support du zoom avec Ctrl+molette sur desktop
@@ -1490,9 +1522,30 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
 
     // Fonction de fermeture
     const closePDF = () => {
-      if (pdfModal) pdfModal.classList.add("hidden");
-      if (pdfOverlay) pdfOverlay.style.display = "none";
-      if (closePdfBtn) closePdfBtn.classList.add("hidden");
+      log('[PRÉSENTATION] Fermeture du modal...');
+
+      // Ramener modal et overlay dans l'iframe D'ABORD (avant de cacher)
+      if (pdfModal && pdfModal.parentElement === parentBody) {
+        document.body.appendChild(pdfModal);
+        log('[PRÉSENTATION] Modal ramené dans iframe');
+      }
+      if (pdfOverlay && pdfOverlay.parentElement === parentBody) {
+        document.body.appendChild(pdfOverlay);
+        log('[PRÉSENTATION] Overlay ramené dans iframe');
+      }
+
+      // PUIS cacher les éléments
+      if (pdfModal) {
+        pdfModal.classList.add("hidden");
+        log('[PRÉSENTATION] Modal caché');
+      }
+      if (pdfOverlay) {
+        pdfOverlay.style.display = "none";
+        log('[PRÉSENTATION] Overlay caché');
+      }
+      if (closePdfBtn) {
+        closePdfBtn.classList.add("hidden");
+      }
 
       // Nettoyer tous les canvas
       const allCanvases = canvasContainer.querySelectorAll('canvas');
@@ -1504,18 +1557,13 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
 
       URL.revokeObjectURL(url);
 
-      // Restaurer AppPC
-      const appContainer = window.parent.document.querySelector('#app-container');
-      if (appContainer) appContainer.style.display = '';
-
-      // Ramener le modal et overlay dans l'iframe pour permettre une nouvelle présentation
-      if (pdfModal && pdfModal.parentElement === parentBody) {
-        document.body.appendChild(pdfModal);
-        log('[DEBUG] Modal ramené dans l\'iframe');
-      }
-      if (pdfOverlay && pdfOverlay.parentElement === parentBody) {
-        document.body.appendChild(pdfOverlay);
-        log('[DEBUG] Overlay ramené dans l\'iframe');
+      // Restaurer AppPC - IMPORTANT: utiliser rootWindow pour mobile
+      const appContainer = rootWindow.document.querySelector('#app-container');
+      if (appContainer) {
+        appContainer.style.display = '';
+        log('[PRÉSENTATION] AppPC réaffiché');
+      } else {
+        error('[PRÉSENTATION] AppPC non trouvé!');
       }
 
       // Restaurer le scroll de l'arrière-plan (iframe et parent)
@@ -1524,8 +1572,10 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
       if (parentBody) {
         parentBody.style.overflow = "";
         parentBody.classList.remove('modal-open');
+        log('[PRÉSENTATION] Scroll parent débloqué');
       }
 
+      log('[PRÉSENTATION] ✅ Modal fermé - retour à la page');
       // Event listeners seront nettoyés automatiquement
     };
 

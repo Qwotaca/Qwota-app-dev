@@ -55,10 +55,15 @@
     const userParam = urlParams.get('user');
     const coachUsername = localStorage.getItem('username');
     const pendingProjectLoad = localStorage.getItem('pendingProjectLoad');
+    const selectedEntrepreneurBeforeReload = sessionStorage.getItem('selectedEntrepreneurBeforeReload');
 
-    // Ne PAS afficher le sélecteur si on est en train de charger un projet
-    // Afficher le sélecteur si c'est un coach/direction sans entrepreneur sélectionné ET sans projet en chargement
-    const shouldShowSelector = isCoachOrDirection && (!userParam || userParam === coachUsername) && !pendingProjectLoad;
+    // Ne PAS afficher le sélecteur si:
+    // - On est en train de charger un projet
+    // - Un entrepreneur était sélectionné avant le reload
+    const shouldShowSelector = isCoachOrDirection &&
+                               (!userParam || userParam === coachUsername) &&
+                               !pendingProjectLoad &&
+                               !selectedEntrepreneurBeforeReload;
 
     if (shouldShowSelector) {
       // Injecter le CSS immédiatement pour cacher le contenu et afficher le sélecteur
@@ -13237,6 +13242,23 @@ function initializeApp() {
     if (pendingProjectId) {
       log('🔄 [CHARGEMENT] Projet en attente détecté:', pendingProjectId);
 
+      // Restaurer l'entrepreneur sélectionné pour coach/direction
+      const selectedEntrepreneurBeforeReload = sessionStorage.getItem('selectedEntrepreneurBeforeReload');
+      if (selectedEntrepreneurBeforeReload) {
+        window.selectedEntrepreneur = selectedEntrepreneurBeforeReload;
+        window.username = selectedEntrepreneurBeforeReload;
+        localStorage.setItem('username', selectedEntrepreneurBeforeReload);
+        sessionStorage.removeItem('selectedEntrepreneurBeforeReload'); // Nettoyer
+        log('🔄 [CHARGEMENT] Entrepreneur restauré:', selectedEntrepreneurBeforeReload);
+
+        // Retirer le CSS anti-flash s'il existe
+        const antiFlashStyle = document.getElementById('coach-anti-flash-css');
+        if (antiFlashStyle) {
+          antiFlashStyle.remove();
+          log('🔄 [CHARGEMENT] Anti-flash CSS retiré');
+        }
+      }
+
       // Nettoyer le flag pour éviter de recharger à chaque refresh
       localStorage.removeItem('pendingProjectLoad');
 
@@ -18165,6 +18187,13 @@ function initializeApp() {
     async function chargerProjet(projetId) {
       // Sauvegarder l'ID du projet à charger dans localStorage
       localStorage.setItem('pendingProjectLoad', String(projetId));
+
+      // Pour coach/direction: sauvegarder l'entrepreneur sélectionné pour le restaurer après reload
+      const userRole = localStorage.getItem('userRole');
+      const isCoachOrDirection = userRole === 'coach' || userRole === 'direction';
+      if (isCoachOrDirection && window.selectedEntrepreneur) {
+        sessionStorage.setItem('selectedEntrepreneurBeforeReload', window.selectedEntrepreneur);
+      }
 
       // Recharger complètement la page (équivalent à resetForm + charger)
       // L'animation de chargement s'affichera automatiquement au reload

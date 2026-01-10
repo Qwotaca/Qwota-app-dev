@@ -1030,33 +1030,48 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
           modalToClose = modalRootWindow.document.getElementById("pdfModal");
           overlayToClose = modalRootWindow.document.getElementById("pdfOverlay");
           btnToClose = modalRootWindow.document.getElementById("closePdfBtn");
-          console.log('[MODAL PDF] Éléments trouvés dans document racine');
+          console.log('[MODAL PDF] Éléments trouvés dans document racine (apppc.html)');
         } else {
           // Chercher dans l'iframe actuelle
           modalToClose = pdfModal;
           overlayToClose = pdfOverlay;
           btnToClose = closePdfBtn;
+          console.log('[MODAL PDF] Éléments trouvés dans iframe');
         }
 
-        if (modalToClose) modalToClose.classList.add("hidden");
-        if (overlayToClose) overlayToClose.style.display = "none";
-        if (btnToClose) btnToClose.classList.add("hidden");
-
-        // Si mobile et modal était dans parent, le ramener dans l'iframe
+        // IMPORTANT: Si mobile, ramener dans l'iframe D'ABORD avant de cacher
         if (isMobile && modalRootWindow && modalRootWindow.document) {
           const parentBody = modalRootWindow.document.body;
+
+          // Ramener le modal dans l'iframe
           if (modalToClose && modalToClose.parentElement === parentBody) {
             document.body.appendChild(modalToClose);
             console.log('[MODAL PDF] Modal ramené dans iframe');
           }
+
+          // Ramener l'overlay dans l'iframe
           if (overlayToClose && overlayToClose.parentElement === parentBody) {
             document.body.appendChild(overlayToClose);
             console.log('[MODAL PDF] Overlay ramené dans iframe');
           }
+
           // Débloquer le scroll du parent
           parentBody.style.overflow = "auto";
           parentBody.classList.remove('modal-open');
           console.log('[MODAL PDF] Scroll parent débloqué');
+        }
+
+        // MAINTENANT cacher les éléments (après les avoir ramenés dans l'iframe)
+        if (modalToClose) {
+          modalToClose.classList.add("hidden");
+          console.log('[MODAL PDF] Modal caché');
+        }
+        if (overlayToClose) {
+          overlayToClose.style.display = "none";
+          console.log('[MODAL PDF] Overlay caché');
+        }
+        if (btnToClose) {
+          btnToClose.classList.add("hidden");
         }
 
         // Nettoyer tous les canvas
@@ -5822,7 +5837,23 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
     // Mettre à jour le dropdown de sélection
     function updateTemplateSelect() {
-      const menu = document.getElementById('templateMenu');
+      // Chercher le templateMenu dans l'iframe d'abord, sinon dans le parent (si modal déplacé)
+      let menu = document.getElementById('templateMenu');
+
+      // Si null, chercher dans le parent (cas mobile où modal déplacé vers apppc.html)
+      if (!menu && window.parent && window.parent.document) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+        if (rootWindow && rootWindow.document) {
+          menu = rootWindow.document.getElementById('templateMenu');
+        }
+      }
+
+      if (!menu) {
+        console.warn('[TEMPLATES] templateMenu introuvable');
+        return;
+      }
+
       menu.innerHTML = '';
 
       if (userTemplates.length === 0) {
@@ -6170,18 +6201,22 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       productModal.classList.add('active');
       document.body.style.overflow = 'hidden'; // Désactiver le scroll de la page
 
-      // Restaurer le contenu sauvegardé
+      // Restaurer le contenu sauvegardé (produitCouleursHidden est dans la page principale)
       const savedContent = document.getElementById('produitCouleursHidden').value;
-      if (savedContent) {
+
+      // Chercher le textarea dans le modal (peu importe où il est)
+      const productTextarea = productModal.querySelector('#productTextarea');
+
+      if (savedContent && productTextarea) {
         // Le champ caché contient le texte AVEC tirets maintenant
         // Restaurer tel quel dans le textarea
-        document.getElementById('productTextarea').value = savedContent;
+        productTextarea.value = savedContent;
 
         // Synchroniser les checkboxes avec le contenu du textarea
         syncProductCheckboxes();
-      } else {
+      } else if (productTextarea) {
         // Vider le textarea si rien n'est sauvegardé
-        document.getElementById('productTextarea').value = '';
+        productTextarea.value = '';
       }
     }
 
@@ -6273,16 +6308,20 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       // Charger les templates de l'utilisateur
       await loadUserTemplates();
 
-      // Restaurer le contenu sauvegardé
+      // Restaurer le contenu sauvegardé (partTravauxHidden est dans la page principale)
       const savedContent = document.getElementById('partTravauxHidden').value;
-      if (savedContent) {
-        document.getElementById('partTravauxTextarea').value = savedContent;
+
+      // Chercher le textarea dans le modal (peu importe où il est)
+      const partTravauxTextarea = partTravauxModal.querySelector('#partTravauxTextarea');
+
+      if (savedContent && partTravauxTextarea) {
+        partTravauxTextarea.value = savedContent;
 
         // Synchroniser les checkboxes avec le contenu du textarea
         syncPartTravauxCheckboxes();
-      } else {
+      } else if (partTravauxTextarea) {
         // Vider le textarea si rien n'est sauvegardé
-        document.getElementById('partTravauxTextarea').value = '';
+        partTravauxTextarea.value = '';
       }
     }
 
@@ -6331,6 +6370,21 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     window.closeProductModal = closeProductModal;
     window.openPartTravauxModal = openPartTravauxModal;
     window.closePartTravauxModal = closePartTravauxModal;
+
+    // AUSSI exposer dans le parent (apppc.html) pour que les boutons onclick fonctionnent
+    if (window.parent && window.parent !== window) {
+      // Détecter si iframe imbriquée
+      const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+      const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+      if (rootWindow && rootWindow !== window) {
+        rootWindow.openProductModal = openProductModal;
+        rootWindow.closeProductModal = closeProductModal;
+        rootWindow.openPartTravauxModal = openPartTravauxModal;
+        rootWindow.closePartTravauxModal = closePartTravauxModal;
+        console.log('[MODALS] Fonctions exposées dans le parent (apppc.html)');
+      }
+    }
 
     // Gérer les sélections d'options Produit/Couleurs
     document.getElementById('productOptions').addEventListener('click', function(e) {

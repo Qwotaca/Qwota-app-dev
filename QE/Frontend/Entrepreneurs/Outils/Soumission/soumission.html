@@ -4916,46 +4916,77 @@ window.clearPresentationSignature = function() {
 
 // Fonction pour fermer le modal
 window.closePdfModal = function() {
-  // Chercher les éléments dans l'iframe d'abord, puis dans le parent
+  log('[closePdfModal] Fermeture du modal...');
+
+  // Détecter si iframe imbriquée (mobile: 2 niveaux) ou directe (desktop: 1 niveau)
+  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
+  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+  log('[closePdfModal] Niveaux iframe:', isNestedIframe ? '2 (mobile)' : '1 (desktop)');
+
+  // Chercher les éléments dans l'iframe d'abord, puis dans le rootWindow
   let pdfModal = document.getElementById("pdfModal");
   let modalWasInParent = false;
-  if (!pdfModal && window.parent && window.parent.document) {
-    pdfModal = window.parent.document.getElementById("pdfModal");
+  if (!pdfModal && rootWindow && rootWindow.document) {
+    pdfModal = rootWindow.document.getElementById("pdfModal");
     modalWasInParent = true;
+    log('[closePdfModal] Modal trouvé dans rootWindow');
   }
 
   let pdfOverlay = document.getElementById("pdfOverlay");
-  if (!pdfOverlay && window.parent && window.parent.document) {
-    pdfOverlay = window.parent.document.getElementById("pdfOverlay");
+  if (!pdfOverlay && rootWindow && rootWindow.document) {
+    pdfOverlay = rootWindow.document.getElementById("pdfOverlay");
   }
 
   let closePdfBtn = document.getElementById("closePdfBtn");
-  if (!closePdfBtn && window.parent && window.parent.document) {
-    closePdfBtn = window.parent.document.getElementById("closePdfBtn");
+  if (!closePdfBtn && rootWindow && rootWindow.document) {
+    closePdfBtn = rootWindow.document.getElementById("closePdfBtn");
   }
 
-  if (pdfModal) pdfModal.classList.add("hidden");
-  if (pdfOverlay) pdfOverlay.style.display = "none";
-  if (closePdfBtn) closePdfBtn.classList.add("hidden");
+  // Ramener le modal et overlay dans l'iframe D'ABORD (avant de cacher)
+  if (modalWasInParent && rootWindow && rootWindow.document) {
+    if (pdfModal && pdfModal.parentElement === rootWindow.document.body) {
+      document.body.appendChild(pdfModal);
+      log('[closePdfModal] Modal ramené dans iframe');
+    }
+    if (pdfOverlay && pdfOverlay.parentElement === rootWindow.document.body) {
+      document.body.appendChild(pdfOverlay);
+      log('[closePdfModal] Overlay ramené dans iframe');
+    }
+
+    // Débloquer le scroll du parent
+    rootWindow.document.body.style.overflow = "auto";
+    rootWindow.document.body.classList.remove('modal-open');
+    log('[closePdfModal] Scroll parent débloqué');
+  }
+
+  // PUIS cacher les éléments
+  if (pdfModal) {
+    pdfModal.classList.add("hidden");
+    log('[closePdfModal] Modal caché');
+  }
+  if (pdfOverlay) {
+    pdfOverlay.style.display = "none";
+  }
+  if (closePdfBtn) {
+    closePdfBtn.classList.add("hidden");
+  }
 
   document.body.style.overflow = "auto";
 
-  // Ramener le modal et overlay dans l'iframe si ils étaient dans le parent
-  if (modalWasInParent && pdfModal && pdfModal.parentElement === window.parent.document.body) {
-    document.body.appendChild(pdfModal);
-    console.log('[closePdfModal] Modal ramené dans l\'iframe');
-  }
-  if (modalWasInParent && pdfOverlay && pdfOverlay.parentElement === window.parent.document.body) {
-    document.body.appendChild(pdfOverlay);
-    console.log('[closePdfModal] Overlay ramené dans l\'iframe');
-  }
-
   // Restaurer AppPC
-  const appContainer = window.parent.document.querySelector('#app-container');
-  if (appContainer) appContainer.style.display = '';
+  if (rootWindow && rootWindow.document) {
+    const appContainer = rootWindow.document.querySelector('#app-container');
+    if (appContainer) {
+      appContainer.style.display = '';
+      log('[closePdfModal] AppPC réaffiché');
+    }
+  }
 
   // Réinitialiser la signature
   clearPresentationSignature();
+
+  log('[closePdfModal] ✅ Modal fermé');
 };
 
 // Fonction helper pour détecter la langue à partir de l'adresse

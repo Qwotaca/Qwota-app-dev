@@ -141,12 +141,12 @@
       const userRole = localStorage.getItem('userRole');
       const userParam = urlParams.get('user');
 
-      // Détecter si c'est un coach
+      // Détecter si c'est un coach ou direction
       const coachUsernames = ['coach1', 'coach01', 'coach2', 'coach3'];
-      const isCoach = userRole === 'coach' || (userParam && coachUsernames.includes(userParam));
+      const isCoachOrDirection = (userRole === 'coach' || userRole === 'direction') || (userParam && coachUsernames.includes(userParam));
 
-      // Afficher page2 (Status) SEULEMENT si page=status ET c'est un coach
-      if (pageParam === 'status' && isCoach) {
+      // Afficher page2 (Status) SEULEMENT si page=status ET c'est un coach/direction
+      if (pageParam === 'status' && isCoachOrDirection) {
         // Injecter du CSS TEMPORAIRE pour cacher page1 et afficher page2 AVANT le rendu
         const style = document.createElement('style');
         style.id = 'coach-mode-initial-style';
@@ -155,7 +155,7 @@
 
         // Marquer qu'on est en mode coach initial
         window._coachModeInitial = true;
-      } else if (pageParam === 'status' && !isCoach) {
+      } else if (pageParam === 'status' && !isCoachOrDirection) {
         // Si c'est un entrepreneur avec ?page=status, retirer le paramètre de l'URL
         const newUrlParams = new URLSearchParams(window.location.search);
         newUrlParams.delete('page');
@@ -2522,9 +2522,9 @@
               // Vérifier s'il reste d'autres remboursements en attente
               chargerRemboursementsEnAttenteCoach();
 
-              // Recharger les badges du sélecteur entrepreneur si on est un coach
+              // Recharger les badges du sélecteur entrepreneur si on est un coach/direction
               const userRole = localStorage.getItem('userRole');
-              if (userRole === 'coach') {
+              if (userRole === 'coach' || userRole === 'direction') {
                 if (window.EntrepreneurSelector) {
                   window.EntrepreneurSelector.reload();
                   log('[REMB COACH] Badges entrepreneur rechargés après validation');
@@ -3078,8 +3078,8 @@
       } else if (statutPaiement === 'traite' || statutPaiement === 'traite_attente_final') {
         statusText = 'traité';
       } else if (statutPaiement === 'attente_comptable') {
-        // Pour coach: "en traitement comptable", pour entrepreneur: "en traitement"
-        statusText = (userRole === 'coach') ? 'en traitement comptable' : 'en traitement';
+        // Pour coach/direction: "en traitement comptable", pour entrepreneur: "en traitement"
+        statusText = (userRole === 'coach' || userRole === 'direction') ? 'en traitement comptable' : 'en traitement';
       } else if (statutPaiement === 'traitement') {
         statusText = 'en traitement';
       } else if (statutPaiement === 'envoye') {
@@ -3340,9 +3340,9 @@
           result.hideTopPrice = true;
         }
       } else if (statutDepot === 'attente_comptable') {
-        // Dépôt validé par le coach - pour l'entrepreneur afficher "en traitement", pour le coach afficher "en traitement comptable"
+        // Dépôt validé par le coach/direction - pour l'entrepreneur afficher "en traitement", pour le coach/direction afficher "en traitement comptable"
         const userRole = localStorage.getItem('userRole');
-        const texteTraitement = (userRole === 'coach') ? 'en traitement comptable' : 'en traitement';
+        const texteTraitement = (userRole === 'coach' || userRole === 'direction') ? 'en traitement comptable' : 'en traitement';
 
         if (statutPaiementFinal === 'attente_comptable') {
           // Les deux paiements sont validés par coach
@@ -3394,9 +3394,9 @@
           result.paiementFinal = `Paiement final à traiter (${montantPaiementFinal})`;
           result.hideTopPrice = true;
         } else if (statutPaiementFinal === 'attente_comptable') {
-          // Paiement final validé par coach - pour l'entrepreneur afficher "en traitement", pour le coach afficher "en traitement comptable"
+          // Paiement final validé par coach/direction - pour l'entrepreneur afficher "en traitement", pour le coach/direction afficher "en traitement comptable"
           const userRole = localStorage.getItem('userRole');
-          const texteTraitement = (userRole === 'coach') ? 'en traitement comptable' : 'en traitement';
+          const texteTraitement = (userRole === 'coach' || userRole === 'direction') ? 'en traitement comptable' : 'en traitement';
 
           result.depot = `Dépôt traité (${montantDepot})`;
           // Ajouter les paiements partiels traités s'il y en a
@@ -3704,9 +3704,9 @@
       const container = document.getElementById(containerId);
       if (!container) return;
 
-      // Détecter si l'utilisateur est un coach
+      // Détecter si l'utilisateur est un coach ou direction
       const userRole = localStorage.getItem('userRole');
-      const isCoach = userRole === 'coach';
+      const isCoachOrDirection = userRole === 'coach' || userRole === 'direction';
       const isTraitementSection = containerId === 'traitement-content';
       const isUrgenteSection = containerId === 'urgente-content';
 
@@ -3728,10 +3728,10 @@
         const dateCreation = facturation.dateCreation ? new Date(facturation.dateCreation).toLocaleDateString('fr-CA') : '';
         const tempsEcoule = facturation.dateCreation ? calculerTempsEcoule(facturation.dateCreation) : '';
 
-        // Pour les coachs dans la section traitement: bouton "À traiter" ou badge "En attente comptable"
+        // Pour les coachs/direction dans la section traitement: bouton "À traiter" ou badge "En attente comptable"
         let statusBadgeHTML;
         log('[DEBUG A TRAITER]', facturation.numeroSoumission, {
-          isCoach, isTraitementSection, userRole,
+          isCoachOrDirection, isTraitementSection, userRole,
           statutDepot: facturation.statutDepot,
           statutPaiementFinal: facturation.statutPaiementFinal,
           statutAutresPaiements: facturation.statutAutresPaiements,
@@ -3739,14 +3739,14 @@
           aRefus: facturation.aRefus
         });
 
-        // Pour les entrepreneurs ET coaches dans la section urgente avec un refus: bouton "Lire"
+        // Pour les entrepreneurs ET coaches/direction dans la section urgente avec un refus: bouton "Lire"
         if (isUrgenteSection && facturation.aRefus) {
           statusBadgeHTML = `<button class="btn btn-danger text-xs px-3 py-1 rounded-full cursor-pointer transition-all"
              style="background-color: #ef4444 !important; border-color: #ef4444 !important; color: white;"
              onclick="event.stopPropagation(); ouvrirModalRefusEntrepreneur('${facturation.numeroSoumission}', ${JSON.stringify(facturation).replace(/"/g, '&quot;')})">
              <i class="fas fa-envelope-open-text mr-1"></i>Lire
            </button>`;
-        } else if (isCoach && isTraitementSection) {
+        } else if (isCoachOrDirection && isTraitementSection) {
           // Logique simplifiée: chaque carte = un paiement unique
           // Utiliser facturation.statutPaiement pour déterminer le badge
           const statutPaiement = facturation.statutPaiement || facturation.statut;
@@ -5680,9 +5680,9 @@
               <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary-blue);"></i>
               <p style="color: var(--text-gray); margin-top: 1rem;">Chargement...</p>
             </div>
-            <div id="traiter-empty" style="display: none; text-align: center; padding: 2rem;">
-              <i class="fas fa-inbox" style="font-size: 2rem; color: var(--text-gray);"></i>
-              <p style="color: var(--text-gray); margin-top: 1rem;">Aucune donnée disponible</p>
+            <div id="traiter-empty" class="flex flex-col items-center justify-center py-12 px-6 text-center" style="display: none; color: var(--text-gray);">
+              <i class="fas fa-inbox text-4xl mb-4" style="color: var(--text-secondary);"></i>
+              <p class="text-sm">Aucune donnée disponible</p>
             </div>
             <div id="periodes-container-traiter">
               <!-- Les périodes seront chargées ici -->
@@ -5872,19 +5872,19 @@
       const pageParam = urlParams.get('page');
       const userParam = urlParams.get('user');
 
-      // Vérifier si on est un coach
+      // Vérifier si on est un coach ou direction
       const userRole = localStorage.getItem('userRole');
-      const isCoach = userRole === 'coach';
+      const isCoachOrDirection = userRole === 'coach' || userRole === 'direction';
 
       // Détecter si le paramètre user est un coach ou un entrepreneur
       const userParamIsCoach = userParam && isCoachUsername(userParam);
 
-      // Mode coach = userRole est 'coach' ET (pas de paramètre user OU paramètre user est un coach)
-      const isCoachModeWithoutSelection = isCoach && (!userParam || userParamIsCoach);
+      // Mode coach/direction = userRole est 'coach' ou 'direction' ET (pas de paramètre user OU paramètre user est un coach)
+      const isCoachModeWithoutSelection = isCoachOrDirection && (!userParam || userParamIsCoach);
 
-      // CORRECTION: Afficher page2 (Status) SEULEMENT si c'est un coach
-      // Si page=status est demandé ET c'est un coach, OU si on a un paramètre user ET c'est un coach
-      const shouldShowStatus = isCoach && (pageParam === 'status' || urlParams.has('user'));
+      // CORRECTION: Afficher page2 (Status) SEULEMENT si c'est un coach/direction
+      // Si page=status est demandé ET c'est un coach/direction, OU si on a un paramètre user ET c'est un coach/direction
+      const shouldShowStatus = isCoachOrDirection && (pageParam === 'status' || urlParams.has('user'));
       log('[INIT] Mode coach sans sélection:', isCoachModeWithoutSelection, '| Page param:', pageParam, '| Show Status:', shouldShowStatus);
       showPage(shouldShowStatus ? 'page2' : 'page1');
 
@@ -14266,7 +14266,7 @@
 
         // Envoyer le paiement vers attente_comptable
         let apiUrl;
-        if (userRole === 'coach') {
+        if (userRole === 'coach' || userRole === 'direction') {
           apiUrl = `/api/coach/facturation/${username}/${numeroSoumission}/valider`;
         } else {
           apiUrl = `/api/facturationqe/client/${username}/${numeroSoumission}/traiter`;
@@ -14297,8 +14297,8 @@
             await utiliserDonneesTestStatus();
           }
 
-          // Recharger les badges du sélecteur entrepreneur si on est un coach
-          if (userRole === 'coach') {
+          // Recharger les badges du sélecteur entrepreneur si on est un coach/direction
+          if (userRole === 'coach' || userRole === 'direction') {
             if (window.EntrepreneurSelector) {
               window.EntrepreneurSelector.reload();
             } else if (typeof loadEntrepreneursForCoach === 'function') {
@@ -14391,7 +14391,7 @@
 
       try {
         let apiUrl;
-        if (userRole === 'coach') {
+        if (userRole === 'coach' || userRole === 'direction') {
           apiUrl = `/api/coach/facturation/${username}/${numeroSoumission}/valider`;
         } else {
           apiUrl = `/api/facturationqe/client/${username}/${numeroSoumission}/traiter`;
@@ -14427,8 +14427,8 @@
             await utiliserDonneesTestStatus();
           }
 
-          // Recharger les badges du sélecteur entrepreneur si on est un coach
-          if (userRole === 'coach') {
+          // Recharger les badges du sélecteur entrepreneur si on est un coach/direction
+          if (userRole === 'coach' || userRole === 'direction') {
             if (window.EntrepreneurSelector) {
               window.EntrepreneurSelector.reload();
             } else if (typeof loadEntrepreneursForCoach === 'function') {
@@ -14532,8 +14532,8 @@
             await utiliserDonneesTestStatus();
           }
 
-          // Recharger les badges du sélecteur entrepreneur si on est un coach
-          if (userRole === 'coach') {
+          // Recharger les badges du sélecteur entrepreneur si on est un coach/direction
+          if (userRole === 'coach' || userRole === 'direction') {
             if (window.EntrepreneurSelector) {
               window.EntrepreneurSelector.reload();
             } else if (typeof loadEntrepreneursForCoach === 'function') {
@@ -14871,9 +14871,9 @@
             chargerFacturationsColonnes();
           }
 
-          // Recharger les badges du sélecteur entrepreneur si on est un coach
+          // Recharger les badges du sélecteur entrepreneur si on est un coach/direction
           const userRole = localStorage.getItem('userRole');
-          if (userRole === 'coach') {
+          if (userRole === 'coach' || userRole === 'direction') {
             if (window.EntrepreneurSelector) {
               window.EntrepreneurSelector.reload();
             } else if (typeof loadEntrepreneursForCoach === 'function') {

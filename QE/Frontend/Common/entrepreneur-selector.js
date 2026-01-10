@@ -403,6 +403,13 @@
     selector.classList.add('in-header');
     document.body.classList.add('has-selection');
 
+    // Remove anti-flash CSS to reveal main content
+    const antiFlashStyle = document.getElementById('coach-anti-flash-css');
+    if (antiFlashStyle) {
+      antiFlashStyle.remove();
+      console.log('[ENTREPRENEUR-SELECTOR] Anti-flash CSS retiré - contenu révélé');
+    }
+
     // Hide backdrop
     if (backdrop) {
       backdrop.classList.remove('visible');
@@ -518,6 +525,13 @@
     // Move selector to header
     selector.classList.add('in-header');
     document.body.classList.add('has-selection');
+
+    // Remove anti-flash CSS to reveal main content
+    const antiFlashStyle = document.getElementById('coach-anti-flash-css');
+    if (antiFlashStyle) {
+      antiFlashStyle.remove();
+      console.log('[ENTREPRENEUR-SELECTOR] Anti-flash CSS retiré - contenu révélé');
+    }
 
     // Hide backdrop
     if (backdrop) {

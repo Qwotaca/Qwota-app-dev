@@ -843,11 +843,11 @@
   <script>
     (function() {
       const userRole = localStorage.getItem('userRole');
-      const isCoach = userRole === 'coach';
+      const isCoachOrDirection = userRole === 'coach' || userRole === 'direction';
       const urlParams = new URLSearchParams(window.location.search);
       const hasUserParam = urlParams.get('user');
 
-      if (isCoach && !hasUserParam) {
+      if (isCoachOrDirection && !hasUserParam) {
         // Injecter le CSS immédiatement pour cacher le contenu et afficher le sélecteur
         const style = document.createElement('style');
         style.id = 'coach-anti-flash-css';
@@ -6628,7 +6628,12 @@
         if (addEmployeeBtn) {
           // Vérifier si un entrepreneur est chargé via window.selectedEntrepreneur OU window.username
           const entrepreneurUsername = window.selectedEntrepreneur || window.username;
-          const isViewingEntrepreneur = entrepreneurUsername && entrepreneurUsername !== currentUsername;
+
+          // Pour direction: toujours activer si un entrepreneur est sélectionné
+          // Pour coach: activer seulement si c'est un entrepreneur différent du coach
+          const isViewingEntrepreneur = userRole === 'direction'
+            ? !!window.selectedEntrepreneur
+            : (entrepreneurUsername && entrepreneurUsername !== currentUsername);
 
           console.log('[BUTTON-STATE] entrepreneurUsername:', entrepreneurUsername);
           console.log('[BUTTON-STATE] isViewingEntrepreneur:', isViewingEntrepreneur);
@@ -6675,7 +6680,7 @@
         console.log('[INIT] Flag notification modal initialisé:', window.shouldShowNotificationModal);
       }
 
-      if (userRole !== 'coach') {
+      if (userRole !== 'coach' && userRole !== 'direction') {
         // Pour les entrepreneurs, utiliser le username depuis localStorage
         window.username = localStorage.getItem('username') || 'user';
         log('Entrepreneur username initialisé:', window.username);
@@ -7009,20 +7014,20 @@
         // Vérifier le rôle depuis localStorage OU window.userRole (plus fiable avec les iframes)
         const userRole = localStorage.getItem('userRole') || window.userRole || '';
 
-        // Coach voit "En attente de validation" avec bouton Vérifier (quand statut = "En attente de validation")
-        // Coach voit spinner "En attente de validation" (quand statut = "En attente comptable")
+        // Coach/direction voit "En attente de validation" avec bouton Vérifier (quand statut = "En attente de validation")
+        // Coach/direction voit spinner "En attente de validation" (quand statut = "En attente comptable")
         // Entrepreneur voit spinner "En attente de validation" pour les deux statuts: "En attente de validation" et "En attente comptable"
         // ACTIVATION
-        const estCoachAvecEnAttente = (userRole === 'coach' && employe.statut === 'En attente de validation');
-        const estCoachAvecAttenteComptable = (userRole === 'coach' && employe.statut === 'En attente comptable');
+        const estCoachAvecEnAttente = ((userRole === 'coach' || userRole === 'direction') && employe.statut === 'En attente de validation');
+        const estCoachAvecAttenteComptable = ((userRole === 'coach' || userRole === 'direction') && employe.statut === 'En attente comptable');
         const estEntrepreneurAvecValidation = (userRole === 'entrepreneur' && (employe.statut === 'En attente de validation' || employe.statut === 'En attente comptable'));
         // REFUS
         const estRefuseParCoach = (employe.statut === 'Refusé par coach');
         const estRefuseParComptable = (employe.statut === 'Refusé par comptable');
         const estRefuse = estRefuseParCoach || estRefuseParComptable;
         // INACTIVATION
-        const estCoachAvecInactivationEnAttente = (userRole === 'coach' && employe.statut === 'Inactivation en attente de validation');
-        const estCoachAvecInactivationComptable = (userRole === 'coach' && employe.statut === 'Inactivation en attente comptable');
+        const estCoachAvecInactivationEnAttente = ((userRole === 'coach' || userRole === 'direction') && employe.statut === 'Inactivation en attente de validation');
+        const estCoachAvecInactivationComptable = ((userRole === 'coach' || userRole === 'direction') && employe.statut === 'Inactivation en attente comptable');
         const estEntrepreneurAvecInactivation = (userRole === 'entrepreneur' && (employe.statut === 'Inactivation en attente de validation' || employe.statut === 'Inactivation en attente comptable'));
 
         log('Employé:', nomComplet, 'Statut:', employe.statut, 'Role:', userRole, 'localStorage:', localStorage.getItem('userRole'), 'window:', window.userRole);
@@ -7064,7 +7069,7 @@
                    <span>Activation en attente coach</span>
                  </div>`
               : estRefuse
-              ? `<span class="status-badge ${(userRole === 'coach' && estRefuseParComptable) ? 'terminated' : 'refused'} btn-voir-refus-badge" data-motif="${motifRefus.replace(/"/g, '&quot;')}" data-date="${dateRefus}" data-nom="${nomComplet.replace(/"/g, '&quot;')}" data-employe-id="${employe.id}" data-refuse-par="${refusePar}"><i class="fas fa-eye"></i> Refusé par ${refusePar}</span>`
+              ? `<span class="status-badge ${((userRole === 'coach' || userRole === 'direction') && estRefuseParComptable) ? 'terminated' : 'refused'} btn-voir-refus-badge" data-motif="${motifRefus.replace(/"/g, '&quot;')}" data-date="${dateRefus}" data-nom="${nomComplet.replace(/"/g, '&quot;')}" data-employe-id="${employe.id}" data-refuse-par="${refusePar}"><i class="fas fa-eye"></i> Refusé par ${refusePar}</span>`
               : `<span style="color: var(--text-gray); font-size: 0.8rem;">—</span>`
             }
           </td>
@@ -7117,7 +7122,7 @@
             </div>
             ${estRefuse
               ? `<div class="employe-card-actions" style="flex-wrap: wrap; gap: 0.4rem; justify-content: center;">
-                   <span class="status-badge ${(userRole === 'coach' && estRefuseParComptable) ? 'terminated' : 'refused'}"><i class="fas fa-times-circle"></i> Refusé par ${refusePar}</span>
+                   <span class="status-badge ${((userRole === 'coach' || userRole === 'direction') && estRefuseParComptable) ? 'terminated' : 'refused'}"><i class="fas fa-times-circle"></i> Refusé par ${refusePar}</span>
                    <button class="btn-reason btn-voir-refus-mobile" data-motif="${motifRefus.replace(/"/g, '&quot;')}" data-date="${dateRefus}" data-refuse-par="${refusePar}" data-employe-id="${employe.id}" data-nom="${nomComplet.replace(/"/g, '&quot;')}">Voir</button>
                    <div class="action-btns-compact">
                      <button onclick="supprimerEmployeNouveau('${employe.id}', '${(employe.nom || '').replace(/'/g, "\\'")}')" class="btn-secondary">Annuler</button>
@@ -7226,19 +7231,19 @@
         const userRole = localStorage.getItem('userRole') || window.userRole || '';
 
         // INACTIVATION - Vérifier les différents cas selon le rôle
-        // Coach avec "Inactivation en attente de validation" -> bouton Vérifier
-        // Coach avec "Inactivation en attente comptable" -> spinner
+        // Coach/direction avec "Inactivation en attente de validation" -> bouton Vérifier
+        // Coach/direction avec "Inactivation en attente comptable" -> spinner
         // Entrepreneur avec inactivation -> toujours spinner
-        const estCoachAvecInactivationEnAttente = (userRole === 'coach' && employe.statut === 'Inactivation en attente de validation');
-        const estCoachAvecInactivationComptable = (userRole === 'coach' && employe.statut === 'Inactivation en attente comptable');
+        const estCoachAvecInactivationEnAttente = ((userRole === 'coach' || userRole === 'direction') && employe.statut === 'Inactivation en attente de validation');
+        const estCoachAvecInactivationComptable = ((userRole === 'coach' || userRole === 'direction') && employe.statut === 'Inactivation en attente comptable');
         const estEntrepreneurAvecInactivation = (userRole === 'entrepreneur' && (employe.statut === 'Inactivation en attente de validation' || employe.statut === 'Inactivation en attente comptable'));
 
         // MODIFICATION - Vérifier si l'employé est en attente de modification
-        // Coach avec "Modification en attente de validation" -> bouton Vérifier modification
-        // Coach avec "Modification en attente comptable" -> spinner
+        // Coach/direction avec "Modification en attente de validation" -> bouton Vérifier modification
+        // Coach/direction avec "Modification en attente comptable" -> spinner
         // Entrepreneur avec modification -> toujours spinner
-        const estCoachAvecModificationEnAttente = (userRole === 'coach' && employe.statut === 'Modification en attente de validation');
-        const estCoachAvecModificationComptable = (userRole === 'coach' && employe.statut === 'Modification en attente comptable');
+        const estCoachAvecModificationEnAttente = ((userRole === 'coach' || userRole === 'direction') && employe.statut === 'Modification en attente de validation');
+        const estCoachAvecModificationComptable = ((userRole === 'coach' || userRole === 'direction') && employe.statut === 'Modification en attente comptable');
         const estEntrepreneurAvecModification = (userRole === 'entrepreneur' && (employe.statut === 'Modification en attente de validation' || employe.statut === 'Modification en attente comptable'));
 
         // REFUS - Vérifier les différents types de refus
@@ -7512,8 +7517,8 @@
         // RÉACTIVATION - Vérifier les différents statuts
         const estReactivationEnAttente = (employe.statut === 'Réactivation en attente de validation');
         const estReactivationComptable = (employe.statut === 'Réactivation en attente comptable');
-        const estCoachAvecReactivationEnAttente = (userRole === 'coach' && estReactivationEnAttente);
-        const estCoachAvecReactivationComptable = (userRole === 'coach' && estReactivationComptable);
+        const estCoachAvecReactivationEnAttente = ((userRole === 'coach' || userRole === 'direction') && estReactivationEnAttente);
+        const estCoachAvecReactivationComptable = ((userRole === 'coach' || userRole === 'direction') && estReactivationComptable);
         const estEntrepreneurAvecReactivation = (userRole === 'entrepreneur' && (estReactivationEnAttente || estReactivationComptable));
 
         // TERMINÉ PAR COMPTABLE - Vérifier si c'est une fin d'emploi par comptable
@@ -8415,17 +8420,17 @@
 
       // Déterminer qui est "Vous" (celui connecté)
       const userRole = localStorage.getItem('userRole');
-      const isCoach = userRole === 'coach';
+      const isCoachOrDirection = userRole === 'coach' || userRole === 'direction';
 
       container.innerHTML = conversation.map((msg, index) => {
         let sender, cssClass;
 
-        // IMPORTANT: Le premier message de refus d'un coach est parfois marqué comme 'comptable' au lieu de 'coach'
-        // Si c'est le premier message ET que l'utilisateur est coach, c'est son propre message de refus initial
-        const isPremierMessageCoach = (index === 0 && isCoach && msg.de === 'comptable');
+        // IMPORTANT: Le premier message de refus d'un coach/direction est parfois marqué comme 'comptable' au lieu de 'coach'
+        // Si c'est le premier message ET que l'utilisateur est coach/direction, c'est son propre message de refus initial
+        const isPremierMessageCoach = (index === 0 && isCoachOrDirection && msg.de === 'comptable');
 
         // IMPORTANT: Quand entrepreneur voit le premier message, vérifier si c'est du coach ou direction
-        const isPremierMessageDeRefus = (index === 0 && !isCoach && msg.de === 'comptable');
+        const isPremierMessageDeRefus = (index === 0 && !isCoachOrDirection && msg.de === 'comptable');
 
         if (isPremierMessageCoach) {
           // Premier message de refus du coach = afficher "Vous" à droite

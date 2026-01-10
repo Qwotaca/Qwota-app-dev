@@ -4444,7 +4444,7 @@
     let currentGroupFilter = 'tous';
 
     async function sortClassement(sortBy) {
-      const sortedData = [...classementData].sort((a, b) => {
+      let sortedData = [...classementData].sort((a, b) => {
         switch(sortBy) {
           case 'ca': return (b.ca_actuel || 0) - (a.ca_actuel || 0);
           case 'signees': return (b.soumissions_signees || 0) - (a.soumissions_signees || 0);
@@ -4464,14 +4464,38 @@
         }
       });
 
+      // IMPORTANT: Filtrer les données AVANT de les rendre pour éviter le flash
+      if (currentGroupFilter && currentGroupFilter !== 'tous') {
+        log('[SORT] Filtrage des données AVANT render - filtre:', currentGroupFilter);
+        sortedData = sortedData.filter(entrepreneur => {
+          const grade = entrepreneur.grade || '';
+
+          let matches = false;
+          switch(currentGroupFilter) {
+            case 'recrue':
+              matches = grade === 'recrue' || grade === 'rookie';
+              break;
+            case 'senior1':
+              matches = grade === 'senior1';
+              break;
+            case 'senior2':
+              matches = grade === 'senior2';
+              break;
+            case 'senior3':
+              matches = grade === 'senior3';
+              break;
+            default:
+              matches = true;
+          }
+
+          return matches;
+        });
+      }
+
       await renderClassement(sortedData);
 
-      // Après le render (qui a ajouté les grades), appliquer le filtre si nécessaire
-      log('[SORT] Après renderClassement - currentGroupFilter:', currentGroupFilter);
-      if (currentGroupFilter && currentGroupFilter !== 'tous') {
-        log('[SORT] Application du filtre de groupe après render:', currentGroupFilter);
-        filterClassementByGroup(currentGroupFilter);
-      }
+      // Le filtre a déjà été appliqué avant le render, pas besoin de re-filtrer
+      log('[SORT] Données triées et filtrées rendues - count:', sortedData.length);
     }
 
     async function renderClassement(data) {

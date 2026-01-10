@@ -43,9 +43,76 @@ def get_monday_credentials(username: str) -> tuple[Optional[str], Optional[str]]
         return None, None
 
 
+def find_existing_monday_item(api_key: str, board_id: str, soumission_num: str) -> Optional[str]:
+    """
+    Recherche un item existant dans Monday.com par numéro de soumission
+
+    Args:
+        api_key: Clé API Monday.com
+        board_id: ID du board Monday.com
+        soumission_num: Numéro de soumission à rechercher
+
+    Returns:
+        Optional[str]: ID de l'item si trouvé, None sinon
+    """
+    try:
+        url = "https://api.monday.com/v2"
+        headers = {
+            "Authorization": api_key,
+            "Content-Type": "application/json"
+        }
+
+        # Query pour rechercher tous les items du board
+        query = f"""
+        query {{
+          boards(ids: {board_id}) {{
+            items_page(limit: 500) {{
+              items {{
+                id
+                name
+                column_values {{
+                  id
+                  text
+                  value
+                }}
+              }}
+            }}
+          }}
+        }}
+        """
+
+        response = requests.post(url, headers=headers, json={"query": query})
+
+        if response.status_code == 200:
+            data = response.json()
+            if "data" in data and data["data"]["boards"]:
+                items = data["data"]["boards"][0]["items_page"]["items"]
+
+                # Chercher un item qui contient le numéro de soumission dans son nom
+                for item in items:
+                    item_name = item.get("name", "")
+                    # Le numéro de soumission pourrait être dans le nom ou dans une colonne
+                    if soumission_num and soumission_num in item_name:
+                        print(f"[MONDAY] Item existant trouvé: {item_name} (ID: {item['id']})")
+                        return item["id"]
+
+                print(f"[MONDAY] Aucun item existant trouvé avec le numéro {soumission_num}")
+                return None
+            else:
+                print(f"[MONDAY] Aucun item trouvé dans le board")
+                return None
+        else:
+            print(f"[MONDAY WARN] Erreur recherche items: HTTP {response.status_code}")
+            return None
+
+    except Exception as e:
+        print(f"[MONDAY WARN] Erreur lors de la recherche: {e}")
+        return None
+
+
 def create_monday_item(api_key: str, board_id: str, item_data: Dict) -> bool:
     """
-    Crée un nouvel item dans Monday.com
+    Crée un nouvel item dans Monday.com (seulement si pas de doublon)
 
     Args:
         api_key: Clé API Monday.com
@@ -64,6 +131,16 @@ def create_monday_item(api_key: str, board_id: str, item_data: Dict) -> bool:
         telephone = item_data.get('telephone', '')
         adresse = item_data.get('adresse', '')
         courriel = item_data.get('email', item_data.get('courriel', ''))
+        soumission_num = item_data.get('num') or item_data.get('id', '')
+
+        print(f"[MONDAY] Vérification doublon pour soumission #{soumission_num}: {nom_complet}")
+
+        # VÉRIFIER SI UN ITEM EXISTE DÉJÀ AVEC CE NUMÉRO DE SOUMISSION
+        existing_item_id = find_existing_monday_item(api_key, board_id, str(soumission_num))
+        if existing_item_id:
+            print(f"[MONDAY] ⚠️ DOUBLON DÉTECTÉ! L'item existe déjà (ID: {existing_item_id})")
+            print(f"[MONDAY] ✓ Création ignorée pour éviter le doublon")
+            return True  # Retourner True car ce n'est pas une erreur, juste un doublon évité
 
         print(f"[MONDAY] Création item pour: {nom_complet}")
         print(f"[MONDAY] Prix: {prix}, Tel: {telephone}, Courriel: {courriel}")
@@ -97,12 +174,15 @@ def create_monday_item(api_key: str, board_id: str, item_data: Dict) -> bool:
         import json
         column_values_json = json.dumps(column_values).replace('"', '\\"')
 
+        # Ajouter le numéro de soumission au nom pour faciliter l'identification
+        item_name = f"{nom_complet} (#{soumission_num})" if soumission_num else nom_complet
+
         # Query GraphQL pour créer l'item
         query = f"""
         mutation {{
           create_item (
             board_id: {board_id},
-            item_name: "{nom_complet}",
+            item_name: "{item_name}",
             column_values: "{column_values_json}"
           ) {{
             id

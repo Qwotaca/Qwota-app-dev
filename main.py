@@ -20917,6 +20917,20 @@ def update_centrale_section(section_data: dict = Body(...), type: str = "entrepr
         print(f"[ERROR] Erreur update_centrale_section ({type}): {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/centrale/sections/save-all")
+def save_all_centrale_sections(all_sections: dict = Body(...), type: str = "entrepreneur"):
+    """Sauvegarde toutes les sections en une seule fois"""
+    try:
+        data = {"sections": all_sections.get("sections", [])}
+
+        if save_centrale_data(data, type):
+            return {"status": "success", "message": "Toutes les sections ont été sauvegardées"}
+        else:
+            raise HTTPException(status_code=500, detail="Erreur sauvegarde")
+    except Exception as e:
+        print(f"[ERROR] Erreur save_all_centrale_sections ({type}): {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.delete("/api/centrale/sections/{section_id}")
 def delete_centrale_section(section_id: str, type: str = "entrepreneur"):
     """Supprime une section"""

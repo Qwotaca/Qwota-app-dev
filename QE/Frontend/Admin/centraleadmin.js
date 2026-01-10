@@ -939,20 +939,6 @@ function createTableRow(section, row) {
   elementInput.placeholder = section.columns[0]?.name || 'Élément';
   elementInput.value = row.element || '';
 
-  // Auto-save avec debounce pendant la saisie
-  elementInput.addEventListener('input', () => debouncedSave(section.id, row.id, 500));
-
-  // Sauvegarder immédiatement quand on quitte le champ
-  elementInput.addEventListener('blur', () => {
-    // Annuler le debounce et sauvegarder tout de suite
-    const key = `${section.id}-${row.id}`;
-    if (saveTimeouts[key]) {
-      clearTimeout(saveTimeouts[key]);
-      delete saveTimeouts[key];
-    }
-    saveRowData(section.id, row.id);
-  });
-
   tdElement.appendChild(elementInput);
   tr.appendChild(tdElement);
 
@@ -1070,20 +1056,6 @@ function createNumeroColumn(sectionId, rowId, colName, value) {
   input.value = value;
   input.dataset.columnName = colName; // IMPORTANT: pour identifier la colonne
 
-  // Auto-save avec debounce pendant la saisie
-  input.addEventListener('input', () => debouncedSave(sectionId, rowId, 500));
-
-  // Sauvegarder immédiatement quand on quitte le champ
-  input.addEventListener('blur', () => {
-    // Annuler le debounce et sauvegarder tout de suite
-    const key = `${sectionId}-${rowId}`;
-    if (saveTimeouts[key]) {
-      clearTimeout(saveTimeouts[key]);
-      delete saveTimeouts[key];
-    }
-    saveRowData(sectionId, rowId);
-  });
-
   return input;
 }
 
@@ -1094,20 +1066,6 @@ function createTexteColumn(sectionId, rowId, colName, value) {
   input.placeholder = 'Texte...';
   input.value = value;
   input.dataset.columnName = colName; // IMPORTANT: pour identifier la colonne
-
-  // Auto-save avec debounce pendant la saisie
-  input.addEventListener('input', () => debouncedSave(sectionId, rowId, 500));
-
-  // Sauvegarder immédiatement quand on quitte le champ
-  input.addEventListener('blur', () => {
-    // Annuler le debounce et sauvegarder tout de suite
-    const key = `${sectionId}-${rowId}`;
-    if (saveTimeouts[key]) {
-      clearTimeout(saveTimeouts[key]);
-      delete saveTimeouts[key];
-    }
-    saveRowData(sectionId, rowId);
-  });
 
   return input;
 }
@@ -1343,6 +1301,75 @@ async function saveRowData(sectionId, rowId) {
     });
   } catch (error) {
     console.error('Erreur:', error);
+  }
+}
+
+async function saveAllSections() {
+  const saveBtn = document.getElementById('save-all-btn');
+  const originalHtml = saveBtn.innerHTML;
+
+  // Désactiver le bouton et montrer l'animation de chargement
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sauvegarde en cours...';
+  saveBtn.style.opacity = '0.7';
+
+  // Collecter toutes les données des inputs avant de sauvegarder
+  sections.forEach(section => {
+    section.rows.forEach(row => {
+      const tr = document.querySelector(`tr[data-row-id="${row.id}"]`);
+      if (tr) {
+        // Mettre à jour l'élément
+        const elementInput = tr.querySelector('input:not([data-column-name])');
+        if (elementInput) {
+          row.element = elementInput.value;
+        }
+
+        // Mettre à jour les colonnes
+        const columnInputs = tr.querySelectorAll('input[data-column-name]');
+        columnInputs.forEach(input => {
+          const columnName = input.dataset.columnName;
+          if (columnName) {
+            row[columnName] = input.value;
+          }
+        });
+      }
+    });
+  });
+
+  try {
+    const response = await fetch(addTypeParam('/api/centrale/sections/save-all'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sections })
+    });
+
+    if (response.ok) {
+      // Succès - montrer un feedback visuel
+      saveBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Sauvegardé!';
+      saveBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+
+      // Réinitialiser après 2 secondes
+      setTimeout(() => {
+        saveBtn.innerHTML = originalHtml;
+        saveBtn.style.background = '';
+        saveBtn.disabled = false;
+        saveBtn.style.opacity = '1';
+      }, 2000);
+    } else {
+      throw new Error('Erreur de sauvegarde');
+    }
+  } catch (error) {
+    console.error('Erreur sauvegarde:', error);
+    saveBtn.innerHTML = '<i class="fas fa-times mr-2"></i>Erreur';
+    saveBtn.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+
+    // Réinitialiser après 2 secondes
+    setTimeout(() => {
+      saveBtn.innerHTML = originalHtml;
+      saveBtn.style.background = '';
+      saveBtn.disabled = false;
+      saveBtn.style.opacity = '1';
+    }, 2000);
   }
 }
 
@@ -1631,6 +1658,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('select-entrepreneur-centrale').addEventListener('click', () => {
     switchCentraleType('entrepreneur');
+  });
+
+  // Event listener pour le bouton de sauvegarde
+  document.getElementById('save-all-btn').addEventListener('click', () => {
+    saveAllSections();
   });
 
   // Charger les sections pour le type par défaut (coach)

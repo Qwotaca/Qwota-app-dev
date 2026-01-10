@@ -18199,15 +18199,20 @@ function initializeApp() {
     }
 
     async function chargerProjet(projetId) {
-      // Pour coach/direction avec entrepreneur déjà sélectionné: charger directement sans reload
+      // Pour coach/direction avec entrepreneur déjà sélectionné: reset + charger sans reload
       const userRole = localStorage.getItem('userRole');
       const isCoachOrDirection = userRole === 'coach' || userRole === 'direction';
       const hasSelection = document.body.classList.contains('has-selection');
 
       if (isCoachOrDirection && hasSelection && window.selectedEntrepreneur) {
-        // Charger directement sans reload
-        log('🔄 [CHARGEMENT] Entrepreneur déjà sélectionné, chargement direct sans reload');
+        // Réinitialiser le formulaire puis charger directement sans reload
+        log('🔄 [CHARGEMENT] Entrepreneur déjà sélectionné, reset + chargement sans reload');
         showLoadingAnimation('Chargement du projet...');
+
+        // Réinitialiser tous les champs et sections
+        resetFormFields();
+
+        // Charger le projet
         await chargerProjetInternal(projetId);
         return;
       }
@@ -18223,6 +18228,57 @@ function initializeApp() {
       // Recharger complètement la page (équivalent à resetForm + charger)
       // L'animation de chargement s'affichera automatiquement au reload
       window.location.reload();
+    }
+
+    // Fonction pour réinitialiser tous les champs du formulaire sans reload
+    function resetFormFields() {
+      log('[RESET] Réinitialisation des champs du formulaire...');
+
+      // Réinitialiser le projet chargé
+      currentLoadedProjectId = null;
+
+      // Réinitialiser tous les inputs text/number
+      document.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"]').forEach(input => {
+        if (input.id !== 'search-input') { // Garder la recherche
+          input.value = '';
+        }
+      });
+
+      // Réinitialiser les textareas
+      document.querySelectorAll('textarea').forEach(textarea => {
+        textarea.value = '';
+      });
+
+      // Réinitialiser les checkboxes
+      document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        checkbox.checked = false;
+      });
+
+      // Supprimer toutes les sections dynamiques (lavage, préparation, primer, endroits)
+      document.querySelectorAll('.lavage-section, .preparation-section, .primer-section, .endroit-a-peinturer').forEach(section => {
+        section.remove();
+      });
+
+      // Supprimer tous les travaux additionnels dynamiques
+      document.querySelectorAll('.porte-item, .fenetre-item, .divers-item, .plafond-item').forEach(item => {
+        item.remove();
+      });
+
+      // Réinitialiser les pièces intérieures
+      piecesInterieur = [];
+      pieceCounter = 0;
+      document.getElementById('pieces-container')?.querySelectorAll('.piece-card').forEach(card => card.remove());
+
+      // Réinitialiser les compteurs
+      porteGlobaleCounter = 0;
+      fenetreGlobaleCounter = 0;
+      diversGlobalCounter = 0;
+      plafondGlobalCounter = 0;
+
+      // Recalculer
+      updateCalculation();
+
+      log('[RESET] ✅ Formulaire réinitialisé');
     }
 
     // Fonction interne pour charger un projet après le reload de la page

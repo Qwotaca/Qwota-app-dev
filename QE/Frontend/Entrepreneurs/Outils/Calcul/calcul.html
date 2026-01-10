@@ -19791,149 +19791,169 @@ function initializeApp() {
 
       if (!overlay || !popupBody || !popupTitle) return;
 
-      // FORCER la mise à jour des totaux AVANT de cloner le contenu
-      // Cela garantit que les valeurs affichées sont toujours actuelles
-      if (typeof updateSubtotalSync !== 'undefined') {
-        updateSubtotalSync();
-      } else {
-        // Fallback: recalculer les totaux manuellement
-        let lavage_html = 0, prep_html = 0, peinture_html = 0, produits_html = 0;
-
-        if (document.getElementById('costLavage')) {
-          const text = document.getElementById('costLavage').textContent;
-          lavage_html = parseFloat(text.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
-        }
-        if (document.getElementById('costPreparation')) {
-          const text = document.getElementById('costPreparation').textContent;
-          prep_html = parseFloat(text.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
-        }
-        if (document.getElementById('costPeinture')) {
-          const text = document.getElementById('costPeinture').textContent;
-          peinture_html = parseFloat(text.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
-        }
-        if (document.getElementById('costProduits')) {
-          const costProduitsText = document.getElementById('costProduits').textContent;
-          produits_html = parseFloat(costProduitsText.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
-        }
-
-        const baseCostsWithoutAdmin = lavage_html + prep_html + peinture_html + produits_html;
-        const nouveauxFraisAdmin = baseCostsWithoutAdmin * 0.01;
-
-        if (document.getElementById('fraisAdministratifs')) {
-          document.getElementById('fraisAdministratifs').textContent = formatCurrency(nouveauxFraisAdmin);
-        }
-
-        const nouveauSousTotal = lavage_html + prep_html + peinture_html + produits_html + nouveauxFraisAdmin;
-
-        console.log('💰 RECALCUL DES TOTAUX:');
-        console.log('  ├─ Lavage:', lavage_html.toFixed(2), '$');
-        console.log('  ├─ Préparation:', prep_html.toFixed(2), '$');
-        console.log('  ├─ Main d\'œuvre (Peinture):', peinture_html.toFixed(2), '$');
-        console.log('  ├─ Produits:', produits_html.toFixed(2), '$');
-        console.log('  ├─ Frais administratifs (1%):', nouveauxFraisAdmin.toFixed(2), '$');
-        console.log('  └─ SOUS-TOTAL:', nouveauSousTotal.toFixed(2), '$\n');
-
-        if (document.getElementById('subTotal')) {
-          document.getElementById('subTotal').textContent = formatCurrency(nouveauSousTotal);
-        }
-
-        if (document.getElementById('subTotalBreakdown')) {
-          document.getElementById('subTotalBreakdown').textContent = formatCurrency(nouveauSousTotal);
-        }
-
-        // Mettre à jour les taxes
-        const tpsAmount = nouveauSousTotal * 0.05;
-        const tvqAmount = nouveauSousTotal * 0.09975;
-
-        console.log('📊 TAXES:');
-        console.log('  ├─ TPS (5%):', tpsAmount.toFixed(2), '$');
-        console.log('  └─ TVQ (9.975%):', tvqAmount.toFixed(2), '$\n');
-
-        if (document.getElementById('tpsAmount')) {
-          document.getElementById('tpsAmount').textContent = formatCurrency(tpsAmount);
-        }
-        if (document.getElementById('tvqAmount')) {
-          document.getElementById('tvqAmount').textContent = formatCurrency(tvqAmount);
-        }
-
-        // Mettre à jour le total combiné
-        const totalExtText = document.getElementById('subTotal')?.textContent || '$0.00';
-        const totalExt = parseFloat(totalExtText.replace(/,/g, '.').replace(/[^0-9.-]/g, '')) || 0;
-
-        const totalIntText = document.getElementById('subTotalInt')?.textContent || '$0.00';
-        const totalInt = parseFloat(totalIntText.replace(/,/g, '.').replace(/[^0-9.-]/g, '')) || 0;
-
-        const totalCombineCalcule = totalExt + totalInt;
-        const totalCombine = Math.max(800, totalCombineCalcule);
-
-        // Récupérer les heures
-        const heuresExtText = document.getElementById('totalHours')?.textContent || '0';
-        const heuresExt = parseFloat(heuresExtText.replace(/,/g, '.')) || 0;
-
-        const heuresIntText = document.getElementById('totalHeuresInt')?.textContent || '0';
-        const heuresInt = parseFloat(heuresIntText.replace(/,/g, '.')) || 0;
-
-        const heuresCombine = heuresExt + heuresInt;
-
-        console.log('🔢 TOTAUX COMBINÉS (Ext + Int):');
-        console.log('  ├─ Total extérieur:', totalExt.toFixed(2), '$');
-        console.log('  ├─ Total intérieur:', totalInt.toFixed(2), '$');
-        console.log('  ├─ Total calculé:', totalCombineCalcule.toFixed(2), '$');
-        console.log('  ├─ Total final (min 800$):', totalCombine.toFixed(2), '$');
-        console.log('  ├─ Heures extérieur:', heuresExt.toFixed(1), 'h');
-        console.log('  ├─ Heures intérieur:', heuresInt.toFixed(1), 'h');
-        console.log('  └─ Total heures:', heuresCombine.toFixed(1), 'h\n');
-
-        if (document.getElementById('totalCombine')) {
-          document.getElementById('totalCombine').textContent = formatCurrency(totalCombine);
-        }
-        if (document.getElementById('totalCombineInt')) {
-          document.getElementById('totalCombineInt').textContent = formatCurrency(totalCombine);
-        }
-      }
-
-      // Déterminer le conteneur source selon le type
-      let sourceContainer = null;
-      let titleText = '';
-
-      if (tabType === 'estimation') {
-        sourceContainer = document.querySelector('#estimation-tab .grid > .space-y-6:last-child');
-        titleText = 'Total Extérieur';
-      } else if (tabType === 'interieur') {
-        sourceContainer = document.querySelector('#interieur-tab .grid > .space-y-6:last-child');
-        titleText = 'Total Intérieur';
-      }
-
-      if (!sourceContainer) {
-        console.error('[POPUP] ❌ Source container not found for', tabType);
-        return;
-      }
-
-      console.log('✅ Container source trouvé:', tabType);
-      console.log('📄 Titre du popup:', titleText);
-
-      // Mettre à jour le titre
+      // Déterminer le titre avant d'afficher le spinner
+      const titleText = tabType === 'estimation' ? 'Total Extérieur' : 'Total Intérieur';
       popupTitle.textContent = titleText;
 
-      // Cloner le contenu (Total, Détails, Configuration)
-      popupBody.innerHTML = '';
-      const clonedContent = sourceContainer.cloneNode(true);
-
-      // Retirer les styles qui cachent le contenu
-      clonedContent.style.display = 'block';
-      clonedContent.style.order = 'initial';
-
-      popupBody.appendChild(clonedContent);
-
-      console.log('✅ Contenu cloné et inséré dans le popup');
-      console.log('✅ Popup affiché\n');
-      console.log('═══════════════════════════════════════════════════════\n');
-
-      // Afficher le popup
+      // Afficher IMMÉDIATEMENT le popup avec un spinner
+      popupBody.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; min-height: 300px; flex-direction: column; gap: 1rem;">
+          <div style="width: 48px; height: 48px; border: 4px solid rgba(96, 165, 250, 0.2); border-top-color: #60a5fa; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+          <p style="color: var(--text-light); font-size: 0.875rem;">Actualisation des totaux...</p>
+        </div>
+        <style>
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        </style>
+      `;
       overlay.style.display = 'flex';
-
-      // Empêcher le scroll du body
       document.body.classList.add('popup-open');
+
+      console.log('⏳ Spinner affiché, recalcul en cours...');
+
+      // Utiliser setTimeout pour laisser le DOM se mettre à jour visuellement
+      setTimeout(() => {
+        console.log('🔄 Début du recalcul complet...');
+
+        // FORCER la mise à jour des totaux AVANT de cloner le contenu
+        // Cela garantit que les valeurs affichées sont toujours actuelles
+        if (typeof updateSubtotalSync !== 'undefined') {
+          updateSubtotalSync();
+        } else {
+          // Fallback: recalculer les totaux manuellement
+          let lavage_html = 0, prep_html = 0, peinture_html = 0, produits_html = 0;
+
+          if (document.getElementById('costLavage')) {
+            const text = document.getElementById('costLavage').textContent;
+            lavage_html = parseFloat(text.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+          }
+          if (document.getElementById('costPreparation')) {
+            const text = document.getElementById('costPreparation').textContent;
+            prep_html = parseFloat(text.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+          }
+          if (document.getElementById('costPeinture')) {
+            const text = document.getElementById('costPeinture').textContent;
+            peinture_html = parseFloat(text.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+          }
+          if (document.getElementById('costProduits')) {
+            const costProduitsText = document.getElementById('costProduits').textContent;
+            produits_html = parseFloat(costProduitsText.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+          }
+
+          const baseCostsWithoutAdmin = lavage_html + prep_html + peinture_html + produits_html;
+          const nouveauxFraisAdmin = baseCostsWithoutAdmin * 0.01;
+
+          if (document.getElementById('fraisAdministratifs')) {
+            document.getElementById('fraisAdministratifs').textContent = formatCurrency(nouveauxFraisAdmin);
+          }
+
+          const nouveauSousTotal = lavage_html + prep_html + peinture_html + produits_html + nouveauxFraisAdmin;
+
+          console.log('💰 RECALCUL DES TOTAUX:');
+          console.log('  ├─ Lavage:', lavage_html.toFixed(2), '$');
+          console.log('  ├─ Préparation:', prep_html.toFixed(2), '$');
+          console.log('  ├─ Main d\'œuvre (Peinture):', peinture_html.toFixed(2), '$');
+          console.log('  ├─ Produits:', produits_html.toFixed(2), '$');
+          console.log('  ├─ Frais administratifs (1%):', nouveauxFraisAdmin.toFixed(2), '$');
+          console.log('  └─ SOUS-TOTAL:', nouveauSousTotal.toFixed(2), '$\n');
+
+          if (document.getElementById('subTotal')) {
+            document.getElementById('subTotal').textContent = formatCurrency(nouveauSousTotal);
+          }
+
+          if (document.getElementById('subTotalBreakdown')) {
+            document.getElementById('subTotalBreakdown').textContent = formatCurrency(nouveauSousTotal);
+          }
+
+          // Mettre à jour les taxes
+          const tpsAmount = nouveauSousTotal * 0.05;
+          const tvqAmount = nouveauSousTotal * 0.09975;
+
+          console.log('📊 TAXES:');
+          console.log('  ├─ TPS (5%):', tpsAmount.toFixed(2), '$');
+          console.log('  └─ TVQ (9.975%):', tvqAmount.toFixed(2), '$\n');
+
+          if (document.getElementById('tpsAmount')) {
+            document.getElementById('tpsAmount').textContent = formatCurrency(tpsAmount);
+          }
+          if (document.getElementById('tvqAmount')) {
+            document.getElementById('tvqAmount').textContent = formatCurrency(tvqAmount);
+          }
+
+          // Mettre à jour le total combiné
+          const totalExtText = document.getElementById('subTotal')?.textContent || '$0.00';
+          const totalExt = parseFloat(totalExtText.replace(/,/g, '.').replace(/[^0-9.-]/g, '')) || 0;
+
+          const totalIntText = document.getElementById('subTotalInt')?.textContent || '$0.00';
+          const totalInt = parseFloat(totalIntText.replace(/,/g, '.').replace(/[^0-9.-]/g, '')) || 0;
+
+          const totalCombineCalcule = totalExt + totalInt;
+          const totalCombine = Math.max(800, totalCombineCalcule);
+
+          // Récupérer les heures
+          const heuresExtText = document.getElementById('totalHours')?.textContent || '0';
+          const heuresExt = parseFloat(heuresExtText.replace(/,/g, '.')) || 0;
+
+          const heuresIntText = document.getElementById('totalHeuresInt')?.textContent || '0';
+          const heuresInt = parseFloat(heuresIntText.replace(/,/g, '.')) || 0;
+
+          const heuresCombine = heuresExt + heuresInt;
+
+          console.log('🔢 TOTAUX COMBINÉS (Ext + Int):');
+          console.log('  ├─ Total extérieur:', totalExt.toFixed(2), '$');
+          console.log('  ├─ Total intérieur:', totalInt.toFixed(2), '$');
+          console.log('  ├─ Total calculé:', totalCombineCalcule.toFixed(2), '$');
+          console.log('  ├─ Total final (min 800$):', totalCombine.toFixed(2), '$');
+          console.log('  ├─ Heures extérieur:', heuresExt.toFixed(1), 'h');
+          console.log('  ├─ Heures intérieur:', heuresInt.toFixed(1), 'h');
+          console.log('  └─ Total heures:', heuresCombine.toFixed(1), 'h\n');
+
+          if (document.getElementById('totalCombine')) {
+            document.getElementById('totalCombine').textContent = formatCurrency(totalCombine);
+          }
+          if (document.getElementById('totalCombineInt')) {
+            document.getElementById('totalCombineInt').textContent = formatCurrency(totalCombine);
+          }
+        }
+
+        // Attendre un peu plus pour que le DOM soit rendu avec les nouvelles valeurs
+        setTimeout(() => {
+          console.log('📋 Clonage du contenu après mise à jour DOM...');
+
+          // Déterminer le conteneur source selon le type
+          let sourceContainer = null;
+
+          if (tabType === 'estimation') {
+            sourceContainer = document.querySelector('#estimation-tab .grid > .space-y-6:last-child');
+          } else if (tabType === 'interieur') {
+            sourceContainer = document.querySelector('#interieur-tab .grid > .space-y-6:last-child');
+          }
+
+          if (!sourceContainer) {
+            console.error('[POPUP] ❌ Source container not found for', tabType);
+            popupBody.innerHTML = '<p style="color: var(--text-light); padding: 2rem; text-align: center;">Erreur: contenu non trouvé</p>';
+            return;
+          }
+
+          console.log('✅ Container source trouvé:', tabType);
+
+          // Cloner le contenu (Total, Détails, Configuration)
+          popupBody.innerHTML = '';
+          const clonedContent = sourceContainer.cloneNode(true);
+
+          // Retirer les styles qui cachent le contenu
+          clonedContent.style.display = 'block';
+          clonedContent.style.order = 'initial';
+
+          popupBody.appendChild(clonedContent);
+
+          console.log('✅ Contenu cloné et inséré dans le popup');
+          console.log('✅ Popup affiché avec les valeurs actualisées\n');
+          console.log('═══════════════════════════════════════════════════════\n');
+        }, 150); // Délai additionnel pour le rendu du DOM
+      }, 100); // Délai initial pour afficher le spinner
     }
 
     // Fonction pour fermer le popup Total/Détails/Configuration

@@ -9233,8 +9233,8 @@ async function loadExistingMetricsForBusinessPlan() {
 
       if (data.metrics.ratioMktg > 0) {
         ratioInput.dataset.rawValue = data.metrics.ratioMktg;
-        // Multiplier par 100 pour afficher en pourcentage (0.85 → 85%)
-        ratioInput.value = (data.metrics.ratioMktg * 100).toFixed(1) + ' %';
+        // Afficher en format décimal (0.85)
+        ratioInput.value = data.metrics.ratioMktg.toFixed(2);
       }
 
       if (data.metrics.tauxVente > 0) {
@@ -9327,8 +9327,12 @@ function handleBPMetricBlur(input) {
     if (metricType === 'cm') {
       input.dataset.rawValue = numValue;
       input.value = formatCurrency(numValue);
-    } else {
-      // Pour les pourcentages - diviser par 100 pour stocker en décimal (85 → 0.85)
+    } else if (metricType === 'ratioMktg') {
+      // Ratio marketing: format décimal direct (0.85)
+      input.dataset.rawValue = numValue;
+      input.value = numValue.toFixed(2);
+    } else if (metricType === 'tauxVente') {
+      // Taux de vente: diviser par 100 pour stocker en décimal (30 → 0.30)
       input.dataset.rawValue = numValue / 100;
       input.value = numValue.toFixed(1) + ' %';
     }
@@ -10574,8 +10578,8 @@ async function updateCoachMetricsDisplay() {
       } else {
         ratioValue.style.display = 'block';
         ratioPlaceholder.style.display = 'none';
-        // Multiplier par 100 pour afficher en pourcentage (0.85 → 85%)
-        ratioValue.textContent = (metrics.ratioMktg * 100).toFixed(1) + ' %';
+        // Afficher en format décimal (0.85)
+        ratioValue.textContent = metrics.ratioMktg.toFixed(2);
       }
 
       // Mise à jour Taux
@@ -10614,8 +10618,8 @@ function handleCoachMetricBlur(input) {
     input.value = rawValue > 0 ? formatCurrency(rawValue) : '';
     input.style.borderColor = rawValue > 0 ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)';
   } else if (metric === 'ratioMktg') {
-    // Multiplier par 100 pour afficher (0.85 → 85%)
-    input.value = rawValue > 0 ? (rawValue * 100).toFixed(1) + ' %' : '';
+    // Afficher en format décimal (0.85)
+    input.value = rawValue > 0 ? rawValue.toFixed(2) : '';
     input.style.borderColor = rawValue > 0 ? 'rgba(234, 179, 8, 0.5)' : 'rgba(239, 68, 68, 0.5)';
   } else if (metric === 'tauxVente') {
     // Multiplier par 100 pour afficher (0.30 → 30%)
@@ -10629,8 +10633,9 @@ function handleCoachMetricInput(input) {
   const numericValue = parseFloat(value) || 0;
   const metric = input.dataset.metric;
 
-  // Pour ratioMktg et tauxVente, diviser par 100 pour stocker en décimal (85 → 0.85)
-  if (metric === 'ratioMktg' || metric === 'tauxVente') {
+  // Pour tauxVente, diviser par 100 pour stocker en décimal (30 → 0.30)
+  // Pour ratioMktg, garder le format décimal direct (0.85)
+  if (metric === 'tauxVente') {
     input.dataset.rawValue = numericValue / 100;
   } else {
     input.dataset.rawValue = numericValue;
@@ -10709,8 +10714,8 @@ async function openCoachRatioPopup() {
 
     const ratioInput = document.getElementById('coach-ratio-input');
     if (ratioInput) {
-      // Multiplier par 100 pour afficher (0.85 → 85%)
-      ratioInput.value = ratio > 0 ? (ratio * 100).toFixed(1) + ' %' : '';
+      // Afficher en format décimal (0.85)
+      ratioInput.value = ratio > 0 ? ratio.toFixed(2) : '';
       ratioInput.dataset.rawValue = ratio;
     }
   } catch (error) {
@@ -10876,7 +10881,7 @@ function showSuccessToast(message) {
           Ratio Marketing Prévisionnel
         </h2>
         <p style="font-size: 0.875rem; color: var(--text-gray); margin-top: 0.5rem;">
-          Définissez votre ratio marketing prévisionnel
+          Définissez votre ratio marketing prévisionnel (format décimal, ex: 0.85)
         </p>
       </div>
       <button onclick="closeCoachRatioPopup()" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; width: 40px; height: 40px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
@@ -10884,7 +10889,7 @@ function showSuccessToast(message) {
       </button>
     </div>
     <div style="background: linear-gradient(135deg, rgba(234, 179, 8, 0.2) 0%, rgba(234, 179, 8, 0.05) 100%); border: 2px solid rgba(234, 179, 8, 0.3); border-radius: 16px; padding: 1.5rem;">
-      <input type="text" id="coach-ratio-input" placeholder="0 %" data-metric="ratioMktg" data-raw-value="0" style="width: 100%; background: rgba(23, 32, 51, 0.8); border: 2px solid rgba(234, 179, 8, 0.5); border-radius: 12px; padding: 1rem; color: var(--text-light); font-weight: 600; font-size: 1.125rem;" onfocus="handleCoachMetricFocus(this)" onblur="handleCoachMetricBlur(this)" oninput="handleCoachMetricInput(this)" />
+      <input type="text" id="coach-ratio-input" placeholder="0.00" data-metric="ratioMktg" data-raw-value="0" style="width: 100%; background: rgba(23, 32, 51, 0.8); border: 2px solid rgba(234, 179, 8, 0.5); border-radius: 12px; padding: 1rem; color: var(--text-light); font-weight: 600; font-size: 1.125rem;" onfocus="handleCoachMetricFocus(this)" onblur="handleCoachMetricBlur(this)" oninput="handleCoachMetricInput(this)" />
     </div>
     <div style="display: flex; gap: 1rem; margin-top: 2rem; justify-content: flex-end;">
       <button onclick="closeCoachRatioPopup()" class="btn-secondary" style="display: flex; align-items: center; gap: 0.5rem;"><i class="fas fa-times"></i><span>Annuler</span></button>
@@ -10994,7 +10999,7 @@ function showSuccessToast(message) {
               type="text"
               id="bp-ratio-input"
               class="business-plan-input"
-              placeholder="85 %"
+              placeholder="0.85"
               data-metric="ratioMktg"
               data-raw-value="0"
               onfocus="handleBPMetricFocus(this)"

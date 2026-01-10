@@ -852,18 +852,47 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
       // Référencer le premier canvas pour la compatibilité avec le code existant
       const canvas = canvasContainer.querySelector('canvas');
 
-      // Afficher le modal SANS déplacer vers parent et SANS cacher AppPC
-      // Chercher les éléments dans le bon document
+      // Sur MOBILE uniquement: déplacer modal vers parent pour passer au-dessus des headers
       const doc = canvas.ownerDocument;
-      const pdfModal = doc.getElementById("pdfModal");
-      const pdfOverlay = doc.getElementById("pdfOverlay");
-      const closePdfBtn = doc.getElementById("closePdfBtn");
+      let pdfModal = doc.getElementById("pdfModal");
+      let pdfOverlay = doc.getElementById("pdfOverlay");
+      let closePdfBtn = doc.getElementById("closePdfBtn");
+
+      if (isMobile && window.parent && window.parent.document) {
+        const parentBody = window.parent.document.body;
+        const parentDoc = window.parent.document;
+
+        // Injecter les styles nécessaires dans le parent si pas déjà fait
+        if (!parentDoc.getElementById('soumission-modal-styles')) {
+          const styleLink = parentDoc.createElement('link');
+          styleLink.id = 'soumission-modal-styles';
+          styleLink.rel = 'stylesheet';
+          styleLink.href = '/frontend/Entrepreneurs/Outils/Soumission/soumission.css';
+          parentDoc.head.appendChild(styleLink);
+
+          const baseLink = parentDoc.createElement('link');
+          baseLink.id = 'base-css-for-modal';
+          baseLink.rel = 'stylesheet';
+          baseLink.href = '/base.css';
+          parentDoc.head.appendChild(baseLink);
+        }
+
+        // Déplacer vers le body parent si pas déjà fait
+        if (pdfModal && pdfModal.parentElement !== parentBody) {
+          parentBody.appendChild(pdfModal);
+          parentBody.appendChild(pdfOverlay);
+        }
+
+        // Bloquer le scroll du parent
+        parentBody.style.overflow = "hidden";
+        parentBody.classList.add('modal-open');
+      }
 
       pdfModal.classList.remove("hidden");
       pdfOverlay.style.display = "block";
       closePdfBtn.classList.remove("hidden");
 
-      // Bloquer le scroll en background sur mobile
+      // Bloquer le scroll en background
       document.body.classList.add('modal-open');
 
       // ===== ZOOM AVEC PINCH-TO-ZOOM ET CTRL+MOLETTE =====
@@ -944,6 +973,20 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
         pdfModal.classList.add("hidden");
         pdfOverlay.style.display = "none";
         closePdfBtn.classList.add("hidden");
+
+        // Si mobile et modal était dans parent, le ramener dans l'iframe
+        if (isMobile && window.parent && window.parent.document) {
+          const parentBody = window.parent.document.body;
+          if (pdfModal && pdfModal.parentElement === parentBody) {
+            document.body.appendChild(pdfModal);
+          }
+          if (pdfOverlay && pdfOverlay.parentElement === parentBody) {
+            document.body.appendChild(pdfOverlay);
+          }
+          // Débloquer le scroll du parent
+          parentBody.style.overflow = "auto";
+          parentBody.classList.remove('modal-open');
+        }
 
         // Nettoyer tous les canvas
         const allCanvases = canvasContainer.querySelectorAll('canvas');
@@ -5998,7 +6041,39 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
     // Ouvrir popup Produit/Couleurs
     function openProductModal() {
-      document.getElementById('productModal').classList.add('active');
+      const productModal = document.getElementById('productModal');
+
+      // Sur MOBILE uniquement: déplacer modal vers parent pour passer au-dessus des headers
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile && window.parent && window.parent.document) {
+        const parentBody = window.parent.document.body;
+        const parentDoc = window.parent.document;
+
+        // Injecter les styles nécessaires dans le parent si pas déjà fait
+        if (!parentDoc.getElementById('soumission-modal-styles')) {
+          const styleLink = parentDoc.createElement('link');
+          styleLink.id = 'soumission-modal-styles';
+          styleLink.rel = 'stylesheet';
+          styleLink.href = '/frontend/Entrepreneurs/Outils/Soumission/soumission.css';
+          parentDoc.head.appendChild(styleLink);
+
+          const baseLink = parentDoc.createElement('link');
+          baseLink.id = 'base-css-for-modal';
+          baseLink.rel = 'stylesheet';
+          baseLink.href = '/base.css';
+          parentDoc.head.appendChild(baseLink);
+        }
+
+        // Déplacer vers le body parent si pas déjà fait
+        if (productModal && productModal.parentElement !== parentBody) {
+          parentBody.appendChild(productModal);
+        }
+
+        // Bloquer le scroll du parent
+        parentBody.style.overflow = "hidden";
+      }
+
+      productModal.classList.add('active');
       document.body.style.overflow = 'hidden'; // Désactiver le scroll de la page
 
       // Restaurer le contenu sauvegardé
@@ -6018,7 +6093,20 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
     // Fermer popup Produit/Couleurs
     function closeProductModal() {
-      document.getElementById('productModal').classList.remove('active');
+      const productModal = document.getElementById('productModal');
+      productModal.classList.remove('active');
+
+      // Si mobile et modal était dans parent, le ramener dans l'iframe
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile && window.parent && window.parent.document) {
+        const parentBody = window.parent.document.body;
+        if (productModal && productModal.parentElement === parentBody) {
+          document.body.appendChild(productModal);
+        }
+        // Débloquer le scroll du parent
+        parentBody.style.overflow = "auto";
+      }
+
       document.body.style.overflow = 'auto'; // Réactiver le scroll de la page
       // Désélectionner toutes les checkboxes (le texte reste dans le display)
       productSelections = [];
@@ -6031,7 +6119,39 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
     // Ouvrir popup Particularité des travaux
     async function openPartTravauxModal() {
-      document.getElementById('partTravauxModal').classList.add('active');
+      const partTravauxModal = document.getElementById('partTravauxModal');
+
+      // Sur MOBILE uniquement: déplacer modal vers parent pour passer au-dessus des headers
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile && window.parent && window.parent.document) {
+        const parentBody = window.parent.document.body;
+        const parentDoc = window.parent.document;
+
+        // Injecter les styles nécessaires dans le parent si pas déjà fait
+        if (!parentDoc.getElementById('soumission-modal-styles')) {
+          const styleLink = parentDoc.createElement('link');
+          styleLink.id = 'soumission-modal-styles';
+          styleLink.rel = 'stylesheet';
+          styleLink.href = '/frontend/Entrepreneurs/Outils/Soumission/soumission.css';
+          parentDoc.head.appendChild(styleLink);
+
+          const baseLink = parentDoc.createElement('link');
+          baseLink.id = 'base-css-for-modal';
+          baseLink.rel = 'stylesheet';
+          baseLink.href = '/base.css';
+          parentDoc.head.appendChild(baseLink);
+        }
+
+        // Déplacer vers le body parent si pas déjà fait
+        if (partTravauxModal && partTravauxModal.parentElement !== parentBody) {
+          parentBody.appendChild(partTravauxModal);
+        }
+
+        // Bloquer le scroll du parent
+        parentBody.style.overflow = "hidden";
+      }
+
+      partTravauxModal.classList.add('active');
       document.body.style.overflow = 'hidden'; // Désactiver le scroll de la page
 
       // Charger les templates de l'utilisateur
@@ -6052,7 +6172,20 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
     // Fermer popup Particularité des travaux
     function closePartTravauxModal() {
-      document.getElementById('partTravauxModal').classList.remove('active');
+      const partTravauxModal = document.getElementById('partTravauxModal');
+      partTravauxModal.classList.remove('active');
+
+      // Si mobile et modal était dans parent, le ramener dans l'iframe
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile && window.parent && window.parent.document) {
+        const parentBody = window.parent.document.body;
+        if (partTravauxModal && partTravauxModal.parentElement === parentBody) {
+          document.body.appendChild(partTravauxModal);
+        }
+        // Débloquer le scroll du parent
+        parentBody.style.overflow = "auto";
+      }
+
       document.body.style.overflow = 'auto'; // Réactiver le scroll de la page
       // Désélectionner toutes les checkboxes (le texte reste dans le display)
       partTravauxSelections = [];

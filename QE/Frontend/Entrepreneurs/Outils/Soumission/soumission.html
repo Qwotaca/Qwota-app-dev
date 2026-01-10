@@ -4722,14 +4722,12 @@ function initPresentationSignatureCanvas() {
   });
 
   // Calculer les dimensions adaptées pour mobile/desktop
-  // Récupérer la largeur du conteneur parent du canvas
-  const canvasContainer = presentationSignatureCanvas.parentElement;
-  const containerWidth = canvasContainer ? canvasContainer.offsetWidth : 320;
+  // Détecter si on est sur PC (>= 768px) ou mobile (< 768px)
+  const isDesktop = window.innerWidth >= 768;
 
-  // Limiter à max 320px et garder ratio 4.3:1
-  const maxWidth = Math.min(containerWidth, 320);
-  const canvasWidth = maxWidth;
-  const canvasHeight = Math.round(maxWidth / 4.27); // Ratio 4.27:1 (320/75)
+  // Utiliser les bonnes dimensions selon le type d'appareil
+  const canvasWidth = isDesktop ? 415 : 320;
+  const canvasHeight = isDesktop ? 97 : 75;
 
   // FORCER les dimensions du canvas calculées avec !important
   presentationSignatureCanvas.style.setProperty('width', canvasWidth + 'px', 'important');
@@ -4740,7 +4738,7 @@ function initPresentationSignatureCanvas() {
     width: presentationSignatureCanvas.style.width,
     height: presentationSignatureCanvas.style.height,
     display: presentationSignatureCanvas.style.display,
-    containerWidth: containerWidth,
+    isDesktop: isDesktop,
     calculatedWidth: canvasWidth,
     calculatedHeight: canvasHeight
   });
@@ -4750,7 +4748,7 @@ function initPresentationSignatureCanvas() {
   // Configuration du canvas avec ratio plus élevé pour éviter pixelisation
   const ratio = Math.max(window.devicePixelRatio || 1, 2); // Minimum 2x au lieu de 1
 
-  log('[DEBUG] Signature canvas dimensions:', { canvasWidth, canvasHeight });
+  log('[DEBUG] Signature canvas dimensions:', { canvasWidth, canvasHeight, isDesktop });
 
   presentationSignatureCanvas.width = canvasWidth * ratio;
   presentationSignatureCanvas.height = canvasHeight * ratio;

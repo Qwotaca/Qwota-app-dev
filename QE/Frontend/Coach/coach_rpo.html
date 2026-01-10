@@ -8260,9 +8260,9 @@ async function aggregateTeamData() {
     const rpoData = await loadEntrepreneurRPOData(username);
     if (!rpoData || !rpoData.weekly) continue;
 
-    // Parcourir les données hebdomadaires (de novembre 2025 à octobre 2026)
-    let weekIndex = 0;
-    for (let monthIndex = -2; monthIndex <= 10; monthIndex++) {
+    // Parcourir les données hebdomadaires (de décembre 2025 à décembre 2026)
+    // Mapping correct: mois -1 = Décembre 2025, mois 0 = Janvier 2026, etc.
+    for (let monthIndex = -1; monthIndex <= 11; monthIndex++) {
       const monthKey = String(monthIndex);
       if (!rpoData.weekly[monthKey]) continue;
 
@@ -8270,7 +8270,14 @@ async function aggregateTeamData() {
       const weekNumbers = Object.keys(monthData).sort((a, b) => parseInt(a) - parseInt(b));
 
       for (const weekNum of weekNumbers) {
-        if (weekIndex >= 56) break;
+        // Calculer le bon index de semaine basé sur le mois et le numéro de semaine
+        // Formule: weekIndex = (monthIndex + 1) * 5 + (weekNum - 1)
+        // Exemple: mois -1 semaine 1 -> (0 * 5) + 0 = 0
+        //          mois 0 semaine 1 -> (1 * 5) + 0 = 5
+        //          mois 1 semaine 2 -> (2 * 5) + 1 = 11
+        const weekIndex = (monthIndex + 1) * 5 + (parseInt(weekNum) - 1);
+
+        if (weekIndex < 0 || weekIndex >= 56) continue;
 
         const weekData = monthData[weekNum];
 
@@ -8285,8 +8292,7 @@ async function aggregateTeamData() {
         const dollarReel = weekData.dollar || weekData.dollar_reel || '0';
         allWeeklyData[weekIndex].dollarReel += parseFloat(String(dollarReel).replace(/[^\d]/g, '')) || 0;
 
-        // Note: prod_horaire est calculé après comme dollarReel / mktgReel pour chaque semaine
-        weekIndex++;
+        console.log(`[TEAM PLAN] ${username} mois ${monthIndex} semaine ${weekNum} -> weekIndex ${weekIndex} (${weekData.week_label || 'no label'})`);
       }
     }
 

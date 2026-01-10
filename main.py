@@ -6279,6 +6279,87 @@ def api_get_coach_equipe(coach_username: str):
         }
     }
 
+@app.get("/api/coach/{coach_username}/details-contrats-estimations")
+def api_get_coach_details_contrats_estimations(coach_username: str):
+    """API pour récupérer tous les contrats signés et estimations de l'équipe d'un coach avec dates"""
+    from datetime import datetime
+    import glob
+
+    entrepreneur_data = get_entrepreneurs_for_coach(coach_username)
+    if not entrepreneur_data:
+        return {"entrepreneurs": []}
+
+    entrepreneur_usernames = [e["username"] for e in entrepreneur_data]
+
+    result = []
+
+    for username in entrepreneur_usernames:
+        # Récupérer le nom complet de l'entrepreneur
+        user_info_path = os.path.join(base_cloud, "signatures", username, "user_info.json")
+        prenom = username.capitalize()
+        nom = ""
+        if os.path.exists(user_info_path):
+            try:
+                with open(user_info_path, "r", encoding="utf-8") as f:
+                    user_info = json.load(f)
+                    prenom = user_info.get("prenom", username.capitalize())
+                    nom = user_info.get("nom", "")
+            except:
+                pass
+
+        display_name = f"{prenom} {nom}".strip()
+
+        # Récupérer les contrats signés
+        contrats_signees = []
+        signees_path = os.path.join(base_cloud, "soumissions_signees", username, "soumissions.json")
+        if os.path.exists(signees_path):
+            try:
+                with open(signees_path, "r", encoding="utf-8") as f:
+                    signees = json.load(f)
+                    for s in signees:
+                        contrats_signees.append({
+                            "date": s.get("date", ""),
+                            "client": f"{s.get('prenom', '')} {s.get('nom', '')}".strip(),
+                            "montant": s.get("prix", "0 $"),
+                            "numero": s.get("num", "")
+                        })
+            except:
+                pass
+
+        # Récupérer les estimations (fichiers PDF dans soumissions_completes)
+        estimations = []
+        soumissions_dir = os.path.join(base_cloud, "soumissions_completes", username)
+        if os.path.exists(soumissions_dir):
+            try:
+                pdf_files = glob.glob(os.path.join(soumissions_dir, "soumission_*.pdf"))
+                for pdf_file in pdf_files:
+                    filename = os.path.basename(pdf_file)
+                    # Extraire la date du nom de fichier: soumission_YYYYMMDD_HHMMSS.pdf
+                    parts = filename.replace("soumission_", "").replace(".pdf", "").split("_")
+                    if len(parts) >= 2:
+                        date_str = parts[0]  # YYYYMMDD
+                        time_str = parts[1]  # HHMMSS
+                        try:
+                            date_obj = datetime.strptime(date_str, "%Y%m%d")
+                            formatted_date = date_obj.strftime("%d/%m/%Y")
+                            estimations.append({
+                                "date": formatted_date,
+                                "fichier": filename
+                            })
+                        except:
+                            pass
+            except:
+                pass
+
+        result.append({
+            "username": username,
+            "display_name": display_name,
+            "contrats_signees": sorted(contrats_signees, key=lambda x: x.get("date", ""), reverse=True),
+            "estimations": sorted(estimations, key=lambda x: x.get("date", ""), reverse=True)
+        })
+
+    return {"entrepreneurs": result}
+
 def parse_date_flexible(date_str: str):
     """
     Parse une date dans différents formats: DD/MM/YYYY, YYYY-MM-DD, ISO

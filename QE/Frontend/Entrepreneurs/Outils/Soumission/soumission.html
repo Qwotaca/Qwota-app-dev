@@ -4210,13 +4210,13 @@ window.openSignatureZoomPopup = async function() {
   hasPresentationSignature = false;
   presentationPoints = [];
 
-  // Détecter iframe imbriquée (mobile: 2 niveaux)
+  // Détecter si iframe imbriquée (mobile: 2 niveaux) ou directe (desktop: 1 niveau)
   const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
   const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
 
   log('[SIGNATURE] Niveaux iframe:', isNestedIframe ? '2 (mobile)' : '1 (desktop)');
 
-  // Chercher dans l'iframe d'abord, puis dans le rootWindow (apppc.html)
+  // Chercher dans l'iframe d'abord, puis dans le rootWindow (apppc.html sur mobile)
   let popup = document.getElementById('signatureZoomPopup');
   if (!popup && rootWindow && rootWindow.document) {
     popup = rootWindow.document.getElementById('signatureZoomPopup');
@@ -4247,16 +4247,10 @@ window.openSignatureZoomPopup = async function() {
     });
   }
 
-  // Déplacer le popup vers le rootWindow (apppc.html) si pas déjà fait
+  // Déplacer le popup vers le parent si pas déjà fait
   if (popup && popup.parentElement !== parentBody) {
     parentBody.appendChild(popup);
-    log('[SIGNATURE] Popup déplacé vers document racine (apppc.html)');
-  }
-
-  // S'assurer que le popup a un z-index supérieur au modal PDF
-  if (popup) {
-    popup.style.zIndex = '9999999'; // Plus élevé que le modal PDF (999999)
-    log('[SIGNATURE] Z-index popup défini:', popup.style.zIndex);
+    log('[SIGNATURE] Popup déplacé vers rootWindow (apppc.html)');
   }
 
   // Cacher temporairement le modal PDF pour voir seulement le popup signature
@@ -4291,39 +4285,32 @@ window.openSignatureZoomPopup = async function() {
     if (validateBtn) {
       validateBtn.onclick = () => window.validateSignature();
     }
-
-    log('[SIGNATURE] Événements boutons attachés');
-
-    // ATTENDRE que le popup soit complètement rendu avant d'initialiser le canvas
-    // Double requestAnimationFrame pour garantir que le layout est calculé
-    requestAnimationFrame(() => {
-      requestAnimationFrame(async () => {
-        log('[SIGNATURE] DOM rendu, initialisation du canvas...');
-
-        // Plus besoin de rendre le PDF zoomé - case de signature simple
-        initPresentationSignatureCanvas();
-
-        // Effacer complètement le canvas après init pour être sûr qu'il est vide
-        if (presentationSignatureCtx && presentationSignatureCanvas) {
-          presentationSignatureCtx.clearRect(0, 0, presentationSignatureCanvas.width, presentationSignatureCanvas.height);
-        }
-
-        // Désactiver le bouton valider
-        let validateBtn = popup.querySelector('#validateSignatureBtn');
-        if (validateBtn) {
-          validateBtn.disabled = true;
-          validateBtn.classList.remove('btn-success');
-          validateBtn.setAttribute('style', 'background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;');
-        }
-
-        // Afficher le hint
-        let zoomHint = popup.querySelector('#signatureZoomHint');
-        if (zoomHint) zoomHint.style.display = 'block';
-
-        log('[SIGNATURE] Initialisation canvas terminée');
-      });
-    });
   }
+
+  // Initialiser le canvas de signature (sans PDF en arrière-plan)
+  setTimeout(async () => {
+    // Plus besoin de rendre le PDF zoomé - case de signature simple
+    initPresentationSignatureCanvas();
+
+    // Effacer complètement le canvas après init pour être sûr qu'il est vide
+    if (presentationSignatureCtx && presentationSignatureCanvas) {
+      presentationSignatureCtx.clearRect(0, 0, presentationSignatureCanvas.width, presentationSignatureCanvas.height);
+    }
+
+    // Désactiver le bouton valider
+    let validateBtn = document.getElementById('validateSignatureBtn');
+    if (!validateBtn) validateBtn = window.parent.document.getElementById('validateSignatureBtn');
+    if (validateBtn) {
+      validateBtn.disabled = true;
+      validateBtn.classList.remove('btn-success');
+      validateBtn.setAttribute('style', 'background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;');
+    }
+
+    // Afficher le hint
+    let zoomHint = document.getElementById('signatureZoomHint');
+    if (!zoomHint) zoomHint = window.parent.document.getElementById('signatureZoomHint');
+    if (zoomHint) zoomHint.style.display = 'block';
+  }, 100);
 };
 
 // Rendre le PDF zoomé en arrière-plan du popup
@@ -4435,7 +4422,7 @@ window.closeSignatureZoomPopup = function() {
   log('[SIGNATURE] closeSignatureZoomPopup appelé');
   log('[SIGNATURE] ========================================');
 
-  // Détecter iframe imbriquée (mobile: 2 niveaux)
+  // Détecter si iframe imbriquée (mobile: 2 niveaux) ou directe (desktop: 1 niveau)
   const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
   const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
 
@@ -4484,7 +4471,7 @@ window.validateSignature = function() {
     return;
   }
 
-  // Détecter iframe imbriquée (mobile: 2 niveaux)
+  // Détecter si iframe imbriquée (mobile: 2 niveaux) ou directe (desktop: 1 niveau)
   const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
   const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
 
@@ -4511,9 +4498,7 @@ window.validateSignature = function() {
   let signaturePreviewParent = previewCanvas.parentElement;
   if (!signaturePreviewParent) {
     let sp = document.getElementById('signaturePreview');
-    if (!sp && rootWindow && rootWindow.document) {
-      sp = rootWindow.document.getElementById('signaturePreview');
-    }
+    if (!sp) sp = window.parent.document.getElementById('signaturePreview');
     signaturePreviewParent = sp;
   }
 
@@ -4629,9 +4614,7 @@ window.validateSignature = function() {
   } else {
     // Sur desktop: activer le bouton accepter
     let acceptBtn = document.getElementById('acceptPresentationBtn');
-    if (!acceptBtn && rootWindow && rootWindow.document) {
-      acceptBtn = rootWindow.document.getElementById('acceptPresentationBtn');
-    }
+    if (!acceptBtn) acceptBtn = window.parent.document.getElementById('acceptPresentationBtn');
 
     if (acceptBtn) {
       acceptBtn.disabled = false;
@@ -4649,7 +4632,7 @@ window.validateSignature = function() {
     if (pdfModal) {
       pdfModal.style.display = 'flex';
       log('[SIGNATURE] PDF Modal réaffiché après validation - display:', pdfModal.style.display);
-      log('[SIGNATURE] PDF Modal z-index:', rootWindow.getComputedStyle(pdfModal).zIndex);
+      log('[SIGNATURE] PDF Modal z-index:', window.parent.getComputedStyle(pdfModal).zIndex);
     }
   }
 
@@ -4660,16 +4643,12 @@ window.validateSignature = function() {
 function initPresentationSignatureCanvas() {
   log('[SIGNATURE] === DÉBUT initPresentationSignatureCanvas ===');
 
-  // Détecter iframe imbriquée (mobile: 2 niveaux)
-  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
-  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
-
-  // Chercher le canvas dans l'iframe d'abord, puis dans le rootWindow (apppc.html)
+  // Chercher le canvas dans l'iframe d'abord, puis dans le parent
   presentationSignatureCanvas = document.getElementById('presentationSignaturePad');
-  if (!presentationSignatureCanvas && rootWindow && rootWindow.document) {
-    presentationSignatureCanvas = rootWindow.document.getElementById('presentationSignaturePad');
-    log('[SIGNATURE] Canvas trouvé dans rootWindow document');
-  } else if (presentationSignatureCanvas) {
+  if (!presentationSignatureCanvas) {
+    presentationSignatureCanvas = window.parent.document.getElementById('presentationSignaturePad');
+    log('[SIGNATURE] Canvas trouvé dans parent document');
+  } else {
     log('[SIGNATURE] Canvas trouvé dans iframe document');
   }
 
@@ -4799,19 +4778,12 @@ function startPresentationDrawing(e) {
   presentationPoints = [];
 
   // Cacher les hints (preview et zoom)
-  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
-  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
-
   let hint = document.getElementById('signatureHint');
-  if (!hint && rootWindow && rootWindow.document) {
-    hint = rootWindow.document.getElementById('signatureHint');
-  }
+  if (!hint) hint = window.parent.document.getElementById('signatureHint');
   if (hint) hint.style.display = 'none';
 
   let zoomHint = document.getElementById('signatureZoomHint');
-  if (!zoomHint && rootWindow && rootWindow.document) {
-    zoomHint = rootWindow.document.getElementById('signatureZoomHint');
-  }
+  if (!zoomHint) zoomHint = window.parent.document.getElementById('signatureZoomHint');
   if (zoomHint) zoomHint.style.display = 'none';
 
   presentationPoints.push({ x, y });
@@ -4846,15 +4818,9 @@ function drawPresentation(e) {
   // Activer le bouton d'acceptation
   hasPresentationSignature = true;
 
-  // Détecter iframe imbriquée (mobile: 2 niveaux)
-  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
-  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
-
   // Activer le bouton valider dans le popup zoom
   let validateBtn = document.getElementById('validateSignatureBtn');
-  if (!validateBtn && rootWindow && rootWindow.document) {
-    validateBtn = rootWindow.document.getElementById('validateSignatureBtn');
-  }
+  if (!validateBtn) validateBtn = window.parent.document.getElementById('validateSignatureBtn');
 
   if (validateBtn) {
     validateBtn.disabled = false;
@@ -4864,9 +4830,7 @@ function drawPresentation(e) {
 
   // Afficher le bouton effacer
   let clearBtn = document.getElementById('clearSignatureBtn');
-  if (!clearBtn && rootWindow && rootWindow.document) {
-    clearBtn = rootWindow.document.getElementById('clearSignatureBtn');
-  }
+  if (!clearBtn) clearBtn = window.parent.document.getElementById('clearSignatureBtn');
   if (clearBtn) clearBtn.style.display = 'block';
 }
 
@@ -4884,10 +4848,6 @@ function stopPresentationDrawing() {
 
 // Fonction pour effacer la signature
 window.clearPresentationSignature = function() {
-  // Détecter iframe imbriquée (mobile: 2 niveaux)
-  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
-  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
-
   // Effacer le canvas de signature zoom
   if (presentationSignatureCtx && presentationSignatureCanvas) {
     presentationSignatureCtx.clearRect(0, 0, presentationSignatureCanvas.width, presentationSignatureCanvas.height);
@@ -4895,9 +4855,7 @@ window.clearPresentationSignature = function() {
 
   // Effacer aussi le canvas preview
   let previewCanvas = document.getElementById('signaturePreviewCanvas');
-  if (!previewCanvas && rootWindow && rootWindow.document) {
-    previewCanvas = rootWindow.document.getElementById('signaturePreviewCanvas');
-  }
+  if (!previewCanvas) previewCanvas = window.parent.document.getElementById('signaturePreviewCanvas');
   if (previewCanvas) {
     const previewCtx = previewCanvas.getContext('2d');
     previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
@@ -4911,9 +4869,7 @@ window.clearPresentationSignature = function() {
   // Remettre le bouton accepter en gris SEULEMENT sur desktop
   const isMobileClear = window.innerWidth <= 768;
   let acceptBtn = document.getElementById('acceptPresentationBtn');
-  if (!acceptBtn && rootWindow && rootWindow.document) {
-    acceptBtn = rootWindow.document.getElementById('acceptPresentationBtn');
-  }
+  if (!acceptBtn) acceptBtn = window.parent.document.getElementById('acceptPresentationBtn');
 
   if (acceptBtn && !isMobileClear) {
     // Sur desktop: désactiver le bouton
@@ -4925,9 +4881,7 @@ window.clearPresentationSignature = function() {
 
   // Désactiver le bouton valider dans le popup zoom
   let validateBtn = document.getElementById('validateSignatureBtn');
-  if (!validateBtn && rootWindow && rootWindow.document) {
-    validateBtn = rootWindow.document.getElementById('validateSignatureBtn');
-  }
+  if (!validateBtn) validateBtn = window.parent.document.getElementById('validateSignatureBtn');
 
   if (validateBtn) {
     validateBtn.disabled = true;
@@ -4937,47 +4891,37 @@ window.clearPresentationSignature = function() {
 
   // Réafficher les hints (preview et zoom)
   let hint = document.getElementById('signatureHint');
-  if (!hint && rootWindow && rootWindow.document) {
-    hint = rootWindow.document.getElementById('signatureHint');
-  }
+  if (!hint) hint = window.parent.document.getElementById('signatureHint');
   if (hint) hint.style.display = 'block';
 
   let zoomHint = document.getElementById('signatureZoomHint');
-  if (!zoomHint && rootWindow && rootWindow.document) {
-    zoomHint = rootWindow.document.getElementById('signatureZoomHint');
-  }
+  if (!zoomHint) zoomHint = window.parent.document.getElementById('signatureZoomHint');
   if (zoomHint) zoomHint.style.display = 'block';
 
   // Cacher le bouton effacer
   let clearBtn = document.getElementById('clearSignatureBtn');
-  if (!clearBtn && rootWindow && rootWindow.document) {
-    clearBtn = rootWindow.document.getElementById('clearSignatureBtn');
-  }
+  if (!clearBtn) clearBtn = window.parent.document.getElementById('clearSignatureBtn');
   if (clearBtn) clearBtn.style.display = 'none';
 };
 
 // Fonction pour fermer le modal
 window.closePdfModal = function() {
-  // Détecter iframe imbriquée (mobile: 2 niveaux)
-  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
-  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
-
-  // Chercher les éléments dans l'iframe d'abord, puis dans le rootWindow
+  // Chercher les éléments dans l'iframe d'abord, puis dans le parent
   let pdfModal = document.getElementById("pdfModal");
   let modalWasInParent = false;
-  if (!pdfModal && rootWindow && rootWindow.document) {
-    pdfModal = rootWindow.document.getElementById("pdfModal");
+  if (!pdfModal && window.parent && window.parent.document) {
+    pdfModal = window.parent.document.getElementById("pdfModal");
     modalWasInParent = true;
   }
 
   let pdfOverlay = document.getElementById("pdfOverlay");
-  if (!pdfOverlay && rootWindow && rootWindow.document) {
-    pdfOverlay = rootWindow.document.getElementById("pdfOverlay");
+  if (!pdfOverlay && window.parent && window.parent.document) {
+    pdfOverlay = window.parent.document.getElementById("pdfOverlay");
   }
 
   let closePdfBtn = document.getElementById("closePdfBtn");
-  if (!closePdfBtn && rootWindow && rootWindow.document) {
-    closePdfBtn = rootWindow.document.getElementById("closePdfBtn");
+  if (!closePdfBtn && window.parent && window.parent.document) {
+    closePdfBtn = window.parent.document.getElementById("closePdfBtn");
   }
 
   if (pdfModal) pdfModal.classList.add("hidden");
@@ -4986,21 +4930,19 @@ window.closePdfModal = function() {
 
   document.body.style.overflow = "auto";
 
-  // Ramener le modal et overlay dans l'iframe si ils étaient dans le rootWindow
-  if (modalWasInParent && pdfModal && rootWindow && rootWindow.document && pdfModal.parentElement === rootWindow.document.body) {
+  // Ramener le modal et overlay dans l'iframe si ils étaient dans le parent
+  if (modalWasInParent && pdfModal && pdfModal.parentElement === window.parent.document.body) {
     document.body.appendChild(pdfModal);
     console.log('[closePdfModal] Modal ramené dans l\'iframe');
   }
-  if (modalWasInParent && pdfOverlay && rootWindow && rootWindow.document && pdfOverlay.parentElement === rootWindow.document.body) {
+  if (modalWasInParent && pdfOverlay && pdfOverlay.parentElement === window.parent.document.body) {
     document.body.appendChild(pdfOverlay);
     console.log('[closePdfModal] Overlay ramené dans l\'iframe');
   }
 
   // Restaurer AppPC
-  if (rootWindow && rootWindow.document) {
-    const appContainer = rootWindow.document.querySelector('#app-container');
-    if (appContainer) appContainer.style.display = '';
-  }
+  const appContainer = window.parent.document.querySelector('#app-container');
+  if (appContainer) appContainer.style.display = '';
 
   // Réinitialiser la signature
   clearPresentationSignature();
@@ -5043,19 +4985,11 @@ window.acceptPresentation = async function() {
     return;
   }
 
-  // Détecter iframe imbriquée (mobile: 2 niveaux)
-  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
-  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
-
-  log('[acceptPresentation] Iframe imbriquée:', isNestedIframe ? 'Oui (2 niveaux)' : 'Non (1 niveau)');
-
-  // Chercher le bouton dans l'iframe d'abord, puis dans le rootWindow
+  // Chercher le bouton dans l'iframe d'abord, puis dans le parent
   let btn = document.getElementById('acceptPresentationBtn');
-  if (!btn && rootWindow && rootWindow.document) {
-    btn = rootWindow.document.getElementById('acceptPresentationBtn');
-    if (btn) {
-      log('[acceptPresentation] Bouton trouvé dans le rootWindow');
-    }
+  if (!btn && window.parent && window.parent.document) {
+    btn = window.parent.document.getElementById('acceptPresentationBtn');
+    log('[acceptPresentation] Bouton trouvé dans le parent');
   }
 
   if (!btn) {
@@ -5091,13 +5025,11 @@ window.acceptPresentation = async function() {
     // Étape 2: Préparer la signature
     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Signature...';
 
-    // Chercher le canvas de signature dans l'iframe d'abord, puis dans le rootWindow
+    // Chercher le canvas de signature dans l'iframe d'abord, puis dans le parent
     let previewCanvas = document.getElementById('signaturePreviewCanvas');
-    if (!previewCanvas && rootWindow && rootWindow.document) {
-      previewCanvas = rootWindow.document.getElementById('signaturePreviewCanvas');
-      if (previewCanvas) {
-        log('[acceptPresentation] Canvas signature trouvé dans le rootWindow');
-      }
+    if (!previewCanvas && window.parent && window.parent.document) {
+      previewCanvas = window.parent.document.getElementById('signaturePreviewCanvas');
+      log('[acceptPresentation] Canvas signature trouvé dans le parent');
     }
 
     if (!previewCanvas) {
@@ -5202,15 +5134,11 @@ window.acceptPresentation = async function() {
 function attachAcceptButtonEvent() {
   log('[attachAcceptButtonEvent] Tentative d\'attachement');
 
-  // Détecter iframe imbriquée (mobile: 2 niveaux)
-  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
-  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
-
-  // Chercher le bouton dans l'iframe d'abord, puis dans le rootWindow
+  // Chercher le bouton dans l'iframe d'abord, puis dans le parent
   let acceptBtn = document.getElementById('acceptPresentationBtn');
-  if (!acceptBtn && rootWindow && rootWindow.document) {
-    acceptBtn = rootWindow.document.getElementById('acceptPresentationBtn');
-    log('[attachAcceptButtonEvent] Bouton cherché dans le rootWindow');
+  if (!acceptBtn && window.parent && window.parent.document) {
+    acceptBtn = window.parent.document.getElementById('acceptPresentationBtn');
+    log('[attachAcceptButtonEvent] Bouton cherché dans le parent');
   }
 
   log('[attachAcceptButtonEvent] Bouton trouvé:', !!acceptBtn);
@@ -5311,7 +5239,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 </div>
 
 <!-- Popup Signature Simple -->
-<div id="signatureZoomPopup" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.85); z-index: 999999; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
+<div id="signatureZoomPopup" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.85); z-index: 10000000; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
   <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 20px; width: 90%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(148, 163, 184, 0.2);">
     <div style="text-align: center; margin-bottom: 16px;">
       <div style="font-size: 16px; font-weight: 600; color: #e2e8f0; margin-bottom: 6px;">
@@ -6616,8 +6544,29 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       if (e.target.closest('.popup-option')) {
         const option = e.target.closest('.popup-option');
         const value = option.getAttribute('data-value');
-        const textarea = document.getElementById('productTextarea');
-        
+
+        // Chercher le modal où qu'il soit (iframe ou parent)
+        let productModal = document.getElementById('productModal');
+        if (!productModal && window.parent) {
+          const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+          const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+          if (rootWindow && rootWindow.document) {
+            productModal = rootWindow.document.getElementById('productModal');
+          }
+        }
+
+        if (!productModal) {
+          console.warn('[PRODUCT OPTIONS] Modal introuvable');
+          return;
+        }
+
+        // Chercher le textarea dans le modal
+        const textarea = productModal.querySelector('#productTextarea');
+        if (!textarea) {
+          console.warn('[PRODUCT OPTIONS] Textarea introuvable');
+          return;
+        }
+
         if (option.classList.contains('selected')) {
           // Désélectionner
           option.classList.remove('selected');
@@ -6653,8 +6602,29 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       if (e.target.closest('.popup-option')) {
         const option = e.target.closest('.popup-option');
         const value = option.getAttribute('data-value');
-        const textarea = document.getElementById('partTravauxTextarea');
-        
+
+        // Chercher le modal où qu'il soit (iframe ou parent)
+        let partTravauxModal = document.getElementById('partTravauxModal');
+        if (!partTravauxModal && window.parent) {
+          const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+          const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+          if (rootWindow && rootWindow.document) {
+            partTravauxModal = rootWindow.document.getElementById('partTravauxModal');
+          }
+        }
+
+        if (!partTravauxModal) {
+          console.warn('[PART TRAVAUX OPTIONS] Modal introuvable');
+          return;
+        }
+
+        // Chercher le textarea dans le modal
+        const textarea = partTravauxModal.querySelector('#partTravauxTextarea');
+        if (!textarea) {
+          console.warn('[PART TRAVAUX OPTIONS] Textarea introuvable');
+          return;
+        }
+
         if (option.classList.contains('selected')) {
           // Désélectionner
           option.classList.remove('selected');

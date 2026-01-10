@@ -19781,6 +19781,10 @@ function initializeApp() {
 
     // Fonction pour ouvrir le popup Total/Détails/Configuration
     function openTotalPopup(tabType) {
+      console.log('\n═══════════════════════════════════════════════════════');
+      console.log('📱 OUVERTURE POPUP "VOIR TOTAL" - ' + (tabType === 'estimation' ? 'EXTÉRIEUR' : 'INTÉRIEUR'));
+      console.log('═══════════════════════════════════════════════════════\n');
+
       const overlay = document.getElementById('total-popup-overlay');
       const popupBody = document.getElementById('total-popup-body');
       const popupTitle = document.getElementById('total-popup-title');
@@ -19821,6 +19825,14 @@ function initializeApp() {
 
         const nouveauSousTotal = lavage_html + prep_html + peinture_html + produits_html + nouveauxFraisAdmin;
 
+        console.log('💰 RECALCUL DES TOTAUX:');
+        console.log('  ├─ Lavage:', lavage_html.toFixed(2), '$');
+        console.log('  ├─ Préparation:', prep_html.toFixed(2), '$');
+        console.log('  ├─ Main d\'œuvre (Peinture):', peinture_html.toFixed(2), '$');
+        console.log('  ├─ Produits:', produits_html.toFixed(2), '$');
+        console.log('  ├─ Frais administratifs (1%):', nouveauxFraisAdmin.toFixed(2), '$');
+        console.log('  └─ SOUS-TOTAL:', nouveauSousTotal.toFixed(2), '$\n');
+
         if (document.getElementById('subTotal')) {
           document.getElementById('subTotal').textContent = formatCurrency(nouveauSousTotal);
         }
@@ -19832,6 +19844,10 @@ function initializeApp() {
         // Mettre à jour les taxes
         const tpsAmount = nouveauSousTotal * 0.05;
         const tvqAmount = nouveauSousTotal * 0.09975;
+
+        console.log('📊 TAXES:');
+        console.log('  ├─ TPS (5%):', tpsAmount.toFixed(2), '$');
+        console.log('  └─ TVQ (9.975%):', tvqAmount.toFixed(2), '$\n');
 
         if (document.getElementById('tpsAmount')) {
           document.getElementById('tpsAmount').textContent = formatCurrency(tpsAmount);
@@ -19849,6 +19865,24 @@ function initializeApp() {
 
         const totalCombineCalcule = totalExt + totalInt;
         const totalCombine = Math.max(800, totalCombineCalcule);
+
+        // Récupérer les heures
+        const heuresExtText = document.getElementById('totalHours')?.textContent || '0';
+        const heuresExt = parseFloat(heuresExtText.replace(/,/g, '.')) || 0;
+
+        const heuresIntText = document.getElementById('totalHeuresInt')?.textContent || '0';
+        const heuresInt = parseFloat(heuresIntText.replace(/,/g, '.')) || 0;
+
+        const heuresCombine = heuresExt + heuresInt;
+
+        console.log('🔢 TOTAUX COMBINÉS (Ext + Int):');
+        console.log('  ├─ Total extérieur:', totalExt.toFixed(2), '$');
+        console.log('  ├─ Total intérieur:', totalInt.toFixed(2), '$');
+        console.log('  ├─ Total calculé:', totalCombineCalcule.toFixed(2), '$');
+        console.log('  ├─ Total final (min 800$):', totalCombine.toFixed(2), '$');
+        console.log('  ├─ Heures extérieur:', heuresExt.toFixed(1), 'h');
+        console.log('  ├─ Heures intérieur:', heuresInt.toFixed(1), 'h');
+        console.log('  └─ Total heures:', heuresCombine.toFixed(1), 'h\n');
 
         if (document.getElementById('totalCombine')) {
           document.getElementById('totalCombine').textContent = formatCurrency(totalCombine);
@@ -19871,9 +19905,12 @@ function initializeApp() {
       }
 
       if (!sourceContainer) {
-        console.error('[POPUP] Source container not found for', tabType);
+        console.error('[POPUP] ❌ Source container not found for', tabType);
         return;
       }
+
+      console.log('✅ Container source trouvé:', tabType);
+      console.log('📄 Titre du popup:', titleText);
 
       // Mettre à jour le titre
       popupTitle.textContent = titleText;
@@ -19887,6 +19924,10 @@ function initializeApp() {
       clonedContent.style.order = 'initial';
 
       popupBody.appendChild(clonedContent);
+
+      console.log('✅ Contenu cloné et inséré dans le popup');
+      console.log('✅ Popup affiché\n');
+      console.log('═══════════════════════════════════════════════════════\n');
 
       // Afficher le popup
       overlay.style.display = 'flex';

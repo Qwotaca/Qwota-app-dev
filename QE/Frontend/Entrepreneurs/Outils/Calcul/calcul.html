@@ -19830,13 +19830,25 @@ function initializeApp() {
       setTimeout(() => {
         console.log('🔄 Début du recalcul complet...');
 
-        // FORCER la mise à jour des totaux AVANT de cloner le contenu
-        // Cela garantit que les valeurs affichées sont toujours actuelles
-        if (typeof updateSubtotalSync !== 'undefined') {
-          updateSubtotalSync();
+        // FORCER un recalcul complet avec updateCalculation()
+        if (typeof updateCalculation === 'function') {
+          console.log('[POPUP] Appel de updateCalculation() pour recalculer tout...');
+          updateCalculation();
         } else {
-          // Fallback: recalculer les totaux manuellement
-          let lavage_html = 0, prep_html = 0, peinture_html = 0, produits_html = 0;
+          console.warn('[POPUP] updateCalculation() non disponible');
+        }
+
+        // Attendre que updateCalculation() ait fini de mettre à jour le DOM
+        setTimeout(() => {
+          console.log('[POPUP] Lecture des valeurs du DOM après recalcul...');
+
+          // FORCER la mise à jour des totaux AVANT de cloner le contenu
+          // Cela garantit que les valeurs affichées sont toujours actuelles
+          if (typeof updateSubtotalSync !== 'undefined') {
+            updateSubtotalSync();
+          } else {
+            // Fallback: recalculer les totaux manuellement
+            let lavage_html = 0, prep_html = 0, peinture_html = 0, produits_html = 0;
 
           if (document.getElementById('costLavage')) {
             const text = document.getElementById('costLavage').textContent;
@@ -19931,41 +19943,42 @@ function initializeApp() {
           }
         }
 
-        // Attendre un peu plus pour que le DOM soit rendu avec les nouvelles valeurs
-        setTimeout(() => {
-          console.log('📋 Clonage du contenu après mise à jour DOM...');
+          // Attendre un peu plus pour que le DOM soit rendu avec les nouvelles valeurs
+          setTimeout(() => {
+            console.log('📋 Clonage du contenu après mise à jour DOM...');
 
-          // Déterminer le conteneur source selon le type
-          let sourceContainer = null;
+            // Déterminer le conteneur source selon le type
+            let sourceContainer = null;
 
-          if (tabType === 'estimation') {
-            sourceContainer = document.querySelector('#estimation-tab .grid > .space-y-6:last-child');
-          } else if (tabType === 'interieur') {
-            sourceContainer = document.querySelector('#interieur-tab .grid > .space-y-6:last-child');
-          }
+            if (tabType === 'estimation') {
+              sourceContainer = document.querySelector('#estimation-tab .grid > .space-y-6:last-child');
+            } else if (tabType === 'interieur') {
+              sourceContainer = document.querySelector('#interieur-tab .grid > .space-y-6:last-child');
+            }
 
-          if (!sourceContainer) {
-            console.error('[POPUP] ❌ Source container not found for', tabType);
-            popupBody.innerHTML = '<p style="color: var(--text-light); padding: 2rem; text-align: center;">Erreur: contenu non trouvé</p>';
-            return;
-          }
+            if (!sourceContainer) {
+              console.error('[POPUP] ❌ Source container not found for', tabType);
+              popupBody.innerHTML = '<p style="color: var(--text-light); padding: 2rem; text-align: center;">Erreur: contenu non trouvé</p>';
+              return;
+            }
 
-          console.log('✅ Container source trouvé:', tabType);
+            console.log('✅ Container source trouvé:', tabType);
 
-          // Cloner le contenu (Total, Détails, Configuration)
-          popupBody.innerHTML = '';
-          const clonedContent = sourceContainer.cloneNode(true);
+            // Cloner le contenu (Total, Détails, Configuration)
+            popupBody.innerHTML = '';
+            const clonedContent = sourceContainer.cloneNode(true);
 
-          // Retirer les styles qui cachent le contenu
-          clonedContent.style.display = 'block';
-          clonedContent.style.order = 'initial';
+            // Retirer les styles qui cachent le contenu
+            clonedContent.style.display = 'block';
+            clonedContent.style.order = 'initial';
 
-          popupBody.appendChild(clonedContent);
+            popupBody.appendChild(clonedContent);
 
-          console.log('✅ Contenu cloné et inséré dans le popup');
-          console.log('✅ Popup affiché avec les valeurs actualisées\n');
-          console.log('═══════════════════════════════════════════════════════\n');
-        }, 150); // Délai additionnel pour le rendu du DOM
+            console.log('✅ Contenu cloné et inséré dans le popup');
+            console.log('✅ Popup affiché avec les valeurs actualisées\n');
+            console.log('═══════════════════════════════════════════════════════\n');
+          }, 150); // Délai additionnel pour le rendu du DOM
+        }, 200); // Délai pour laisser updateCalculation() finir
       }, 100); // Délai initial pour afficher le spinner
     }
 

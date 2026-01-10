@@ -18199,12 +18199,23 @@ function initializeApp() {
     }
 
     async function chargerProjet(projetId) {
+      // Pour coach/direction avec entrepreneur déjà sélectionné: charger directement sans reload
+      const userRole = localStorage.getItem('userRole');
+      const isCoachOrDirection = userRole === 'coach' || userRole === 'direction';
+      const hasSelection = document.body.classList.contains('has-selection');
+
+      if (isCoachOrDirection && hasSelection && window.selectedEntrepreneur) {
+        // Charger directement sans reload
+        log('🔄 [CHARGEMENT] Entrepreneur déjà sélectionné, chargement direct sans reload');
+        showLoadingAnimation('Chargement du projet...');
+        await chargerProjetInternal(projetId);
+        return;
+      }
+
       // Sauvegarder l'ID du projet à charger dans localStorage
       localStorage.setItem('pendingProjectLoad', String(projetId));
 
       // Pour coach/direction: sauvegarder l'entrepreneur sélectionné pour le restaurer après reload
-      const userRole = localStorage.getItem('userRole');
-      const isCoachOrDirection = userRole === 'coach' || userRole === 'direction';
       if (isCoachOrDirection && window.selectedEntrepreneur) {
         sessionStorage.setItem('selectedEntrepreneurBeforeReload', window.selectedEntrepreneur);
       }

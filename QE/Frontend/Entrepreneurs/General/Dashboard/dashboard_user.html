@@ -4534,16 +4534,21 @@
           }
 
           // Récupérer le grade métier depuis user_info (pour le filtrage)
-          let gradeMetier = 'recrue'; // Défaut
-          try {
-            const userInfoResponse = await fetch(`/api/user-info/${loginUsername}`);
-            if (userInfoResponse.ok) {
-              const userInfo = await userInfoResponse.json();
-              // Le grade métier est directement dans userInfo.grade (recrue, senior1, senior2, senior3)
-              gradeMetier = userInfo.grade || 'recrue';
+          // Si le grade est déjà chargé dans classementData, l'utiliser directement
+          let gradeMetier = entrepreneur.grade || 'recrue'; // Défaut
+          if (!entrepreneur.grade) {
+            // Charger le grade seulement s'il n'est pas déjà présent
+            try {
+              const userInfoResponse = await fetch(`/api/user-info/${loginUsername}`);
+              if (userInfoResponse.ok) {
+                const userInfo = await userInfoResponse.json();
+                // Le grade métier est directement dans userInfo.grade (recrue, senior1, senior2, senior3)
+                gradeMetier = userInfo.grade || 'recrue';
+                entrepreneur.grade = gradeMetier; // Stocker pour les prochains renders
+              }
+            } catch (err) {
+              log(`Grade métier par défaut pour ${entrepreneur.username}`);
             }
-          } catch (err) {
-            log(`Grade métier par défaut pour ${entrepreneur.username}`);
           }
 
           // Récupérer le grade de gamification (pour le contour de photo)
@@ -5500,6 +5505,27 @@
         } else if (userIndex === -1) {
           log(`[WARNING] Utilisateur ${currentUsername} non trouvé dans classementData`);
         }
+
+        // IMPORTANT: Charger les grades AVANT de trier pour que le filtre fonctionne
+        log('[CLASSEMENT] Chargement des grades pour tous les entrepreneurs...');
+        const gradePromises = classementData.map(async (entrepreneur) => {
+          const loginUsername = entrepreneur.login_username || entrepreneur.username;
+          try {
+            const userInfoResponse = await fetch(`/api/user-info/${loginUsername}`);
+            if (userInfoResponse.ok) {
+              const userInfo = await userInfoResponse.json();
+              entrepreneur.grade = userInfo.grade || 'recrue';
+              log(`[GRADE] ${loginUsername}: ${entrepreneur.grade}`);
+            } else {
+              entrepreneur.grade = 'recrue';
+            }
+          } catch (err) {
+            entrepreneur.grade = 'recrue';
+            log(`[GRADE] Erreur pour ${loginUsername}, grade par défaut: recrue`);
+          }
+        });
+        await Promise.all(gradePromises);
+        log('[CLASSEMENT] Grades chargés pour', classementData.length, 'entrepreneurs');
 
         await sortClassement('ca'); // Trier par CA par défaut
       } catch (error) {

@@ -19574,12 +19574,25 @@ function initializeApp() {
       localStorage.setItem('shouldResetCalculator', 'true');
     }, 1000);
 
-    // Rediriger vers la page de soumission via le routeur parent
+    // Rediriger vers la page de soumission
+    console.log('[REDIRECT] Redirection vers soumissions...');
+    console.log('[REDIRECT] window.parent exists:', !!(window.parent && window.parent !== window));
+    console.log('[REDIRECT] window.parent.loadTool exists:', !!(window.parent && window.parent.loadTool));
+
     if (window.parent && window.parent !== window) {
-      // On est dans un iframe - utiliser le hash du parent pour déclencher le routeur
-      window.parent.location.hash = '#/soumissions';
+      // On est dans un iframe
+      if (typeof window.parent.loadTool === 'function') {
+        // Mobile: utiliser loadTool('soumissions')
+        console.log('[REDIRECT] Mobile détecté - utilisation de loadTool()');
+        window.parent.loadTool('soumissions');
+      } else {
+        // Desktop: utiliser le hash pour déclencher le routeur
+        console.log('[REDIRECT] Desktop détecté - utilisation du hash');
+        window.parent.location.hash = '#/soumissions';
+      }
     } else {
       // Fallback si pas dans un iframe
+      console.log('[REDIRECT] Pas dans iframe - redirection directe');
       window.location.href = '/soumissions';
     }
   }

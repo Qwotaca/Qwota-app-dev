@@ -4210,27 +4210,33 @@ window.openSignatureZoomPopup = async function() {
   hasPresentationSignature = false;
   presentationPoints = [];
 
-  // Chercher dans l'iframe d'abord, puis dans le parent
+  // Détecter iframe imbriquée (mobile: 2 niveaux)
+  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
+  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+  log('[SIGNATURE] Niveaux iframe:', isNestedIframe ? '2 (mobile)' : '1 (desktop)');
+
+  // Chercher dans l'iframe d'abord, puis dans le rootWindow (apppc.html)
   let popup = document.getElementById('signatureZoomPopup');
-  if (!popup) {
-    popup = window.parent.document.getElementById('signatureZoomPopup');
+  if (!popup && rootWindow && rootWindow.document) {
+    popup = rootWindow.document.getElementById('signatureZoomPopup');
   }
 
   let pdfModal = document.getElementById('pdfModal');
-  if (!pdfModal) {
-    pdfModal = window.parent.document.getElementById('pdfModal');
+  if (!pdfModal && rootWindow && rootWindow.document) {
+    pdfModal = rootWindow.document.getElementById('pdfModal');
   }
 
-  const parentBody = window.parent.document.body;
+  const parentBody = rootWindow.document.body;
 
   log('[SIGNATURE] Popup signature:', popup);
   log('[SIGNATURE] PDF Modal:', pdfModal);
   log('[SIGNATURE] PDF Modal display AVANT:', pdfModal ? pdfModal.style.display : 'null');
-  log('[SIGNATURE] PDF Modal z-index AVANT:', pdfModal ? window.parent.getComputedStyle(pdfModal).zIndex : 'null');
+  log('[SIGNATURE] PDF Modal z-index AVANT:', pdfModal ? rootWindow.getComputedStyle(pdfModal).zIndex : 'null');
   log('[SIGNATURE] Popup parent:', popup ? popup.parentElement : 'null');
 
   // IMPORTANT: Supprimer tous les anciens popups dans le parent pour éviter les doublons
-  const oldPopups = window.parent.document.querySelectorAll('#signatureZoomPopup');
+  const oldPopups = rootWindow.document.querySelectorAll('#signatureZoomPopup');
   log('[SIGNATURE] Nombre de popups trouvés dans parent:', oldPopups.length);
   if (oldPopups.length > 0) {
     oldPopups.forEach((oldPopup, index) => {
@@ -4241,10 +4247,16 @@ window.openSignatureZoomPopup = async function() {
     });
   }
 
-  // Déplacer le popup vers le parent si pas déjà fait
+  // Déplacer le popup vers le rootWindow (apppc.html) si pas déjà fait
   if (popup && popup.parentElement !== parentBody) {
     parentBody.appendChild(popup);
-    log('[SIGNATURE] Popup déplacé vers parent');
+    log('[SIGNATURE] Popup déplacé vers document racine (apppc.html)');
+  }
+
+  // S'assurer que le popup a un z-index supérieur au modal PDF
+  if (popup) {
+    popup.style.zIndex = '9999999'; // Plus élevé que le modal PDF (999999)
+    log('[SIGNATURE] Z-index popup défini:', popup.style.zIndex);
   }
 
   // Cacher temporairement le modal PDF pour voir seulement le popup signature
@@ -4259,10 +4271,10 @@ window.openSignatureZoomPopup = async function() {
     popup.style.display = 'flex';
     log('[SIGNATURE] Popup display set to flex');
     log('[SIGNATURE] Popup computed style:', {
-      display: window.parent.getComputedStyle(popup).display,
-      zIndex: window.parent.getComputedStyle(popup).zIndex,
-      position: window.parent.getComputedStyle(popup).position,
-      pointerEvents: window.parent.getComputedStyle(popup).pointerEvents
+      display: rootWindow.getComputedStyle(popup).display,
+      zIndex: rootWindow.getComputedStyle(popup).zIndex,
+      position: rootWindow.getComputedStyle(popup).position,
+      pointerEvents: rootWindow.getComputedStyle(popup).pointerEvents
     });
 
     // Attacher les événements des boutons du popup
@@ -4279,32 +4291,39 @@ window.openSignatureZoomPopup = async function() {
     if (validateBtn) {
       validateBtn.onclick = () => window.validateSignature();
     }
+
+    log('[SIGNATURE] Événements boutons attachés');
+
+    // ATTENDRE que le popup soit complètement rendu avant d'initialiser le canvas
+    // Double requestAnimationFrame pour garantir que le layout est calculé
+    requestAnimationFrame(() => {
+      requestAnimationFrame(async () => {
+        log('[SIGNATURE] DOM rendu, initialisation du canvas...');
+
+        // Plus besoin de rendre le PDF zoomé - case de signature simple
+        initPresentationSignatureCanvas();
+
+        // Effacer complètement le canvas après init pour être sûr qu'il est vide
+        if (presentationSignatureCtx && presentationSignatureCanvas) {
+          presentationSignatureCtx.clearRect(0, 0, presentationSignatureCanvas.width, presentationSignatureCanvas.height);
+        }
+
+        // Désactiver le bouton valider
+        let validateBtn = popup.querySelector('#validateSignatureBtn');
+        if (validateBtn) {
+          validateBtn.disabled = true;
+          validateBtn.classList.remove('btn-success');
+          validateBtn.setAttribute('style', 'background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;');
+        }
+
+        // Afficher le hint
+        let zoomHint = popup.querySelector('#signatureZoomHint');
+        if (zoomHint) zoomHint.style.display = 'block';
+
+        log('[SIGNATURE] Initialisation canvas terminée');
+      });
+    });
   }
-
-  // Initialiser le canvas de signature (sans PDF en arrière-plan)
-  setTimeout(async () => {
-    // Plus besoin de rendre le PDF zoomé - case de signature simple
-    initPresentationSignatureCanvas();
-
-    // Effacer complètement le canvas après init pour être sûr qu'il est vide
-    if (presentationSignatureCtx && presentationSignatureCanvas) {
-      presentationSignatureCtx.clearRect(0, 0, presentationSignatureCanvas.width, presentationSignatureCanvas.height);
-    }
-
-    // Désactiver le bouton valider
-    let validateBtn = document.getElementById('validateSignatureBtn');
-    if (!validateBtn) validateBtn = window.parent.document.getElementById('validateSignatureBtn');
-    if (validateBtn) {
-      validateBtn.disabled = true;
-      validateBtn.classList.remove('btn-success');
-      validateBtn.setAttribute('style', 'background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;');
-    }
-
-    // Afficher le hint
-    let zoomHint = document.getElementById('signatureZoomHint');
-    if (!zoomHint) zoomHint = window.parent.document.getElementById('signatureZoomHint');
-    if (zoomHint) zoomHint.style.display = 'block';
-  }, 100);
 };
 
 // Rendre le PDF zoomé en arrière-plan du popup
@@ -4416,11 +4435,19 @@ window.closeSignatureZoomPopup = function() {
   log('[SIGNATURE] closeSignatureZoomPopup appelé');
   log('[SIGNATURE] ========================================');
 
+  // Détecter iframe imbriquée (mobile: 2 niveaux)
+  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
+  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
   let popup = document.getElementById('signatureZoomPopup');
-  if (!popup) popup = window.parent.document.getElementById('signatureZoomPopup');
+  if (!popup && rootWindow && rootWindow.document) {
+    popup = rootWindow.document.getElementById('signatureZoomPopup');
+  }
 
   let pdfModal = document.getElementById('pdfModal');
-  if (!pdfModal) pdfModal = window.parent.document.getElementById('pdfModal');
+  if (!pdfModal && rootWindow && rootWindow.document) {
+    pdfModal = rootWindow.document.getElementById('pdfModal');
+  }
 
   log('[SIGNATURE] Popup display AVANT fermeture:', popup ? popup.style.display : 'null');
   log('[SIGNATURE] PDF Modal display AVANT réaffichage:', pdfModal ? pdfModal.style.display : 'null');
@@ -4457,9 +4484,15 @@ window.validateSignature = function() {
     return;
   }
 
+  // Détecter iframe imbriquée (mobile: 2 niveaux)
+  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
+  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
   // Copier la signature sur le canvas preview
   let previewCanvas = document.getElementById('signaturePreviewCanvas');
-  if (!previewCanvas) previewCanvas = window.parent.document.getElementById('signaturePreviewCanvas');
+  if (!previewCanvas && rootWindow && rootWindow.document) {
+    previewCanvas = rootWindow.document.getElementById('signaturePreviewCanvas');
+  }
 
   if (!previewCanvas) {
     error('[ERROR] signaturePreviewCanvas non trouvé!');
@@ -4478,7 +4511,9 @@ window.validateSignature = function() {
   let signaturePreviewParent = previewCanvas.parentElement;
   if (!signaturePreviewParent) {
     let sp = document.getElementById('signaturePreview');
-    if (!sp) sp = window.parent.document.getElementById('signaturePreview');
+    if (!sp && rootWindow && rootWindow.document) {
+      sp = rootWindow.document.getElementById('signaturePreview');
+    }
     signaturePreviewParent = sp;
   }
 
@@ -4617,12 +4652,16 @@ window.validateSignature = function() {
 function initPresentationSignatureCanvas() {
   log('[SIGNATURE] === DÉBUT initPresentationSignatureCanvas ===');
 
-  // Chercher le canvas dans l'iframe d'abord, puis dans le parent
+  // Détecter iframe imbriquée (mobile: 2 niveaux)
+  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
+  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+  // Chercher le canvas dans l'iframe d'abord, puis dans le rootWindow (apppc.html)
   presentationSignatureCanvas = document.getElementById('presentationSignaturePad');
-  if (!presentationSignatureCanvas) {
-    presentationSignatureCanvas = window.parent.document.getElementById('presentationSignaturePad');
-    log('[SIGNATURE] Canvas trouvé dans parent document');
-  } else {
+  if (!presentationSignatureCanvas && rootWindow && rootWindow.document) {
+    presentationSignatureCanvas = rootWindow.document.getElementById('presentationSignaturePad');
+    log('[SIGNATURE] Canvas trouvé dans rootWindow document');
+  } else if (presentationSignatureCanvas) {
     log('[SIGNATURE] Canvas trouvé dans iframe document');
   }
 
@@ -4752,12 +4791,19 @@ function startPresentationDrawing(e) {
   presentationPoints = [];
 
   // Cacher les hints (preview et zoom)
+  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
+  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
   let hint = document.getElementById('signatureHint');
-  if (!hint) hint = window.parent.document.getElementById('signatureHint');
+  if (!hint && rootWindow && rootWindow.document) {
+    hint = rootWindow.document.getElementById('signatureHint');
+  }
   if (hint) hint.style.display = 'none';
 
   let zoomHint = document.getElementById('signatureZoomHint');
-  if (!zoomHint) zoomHint = window.parent.document.getElementById('signatureZoomHint');
+  if (!zoomHint && rootWindow && rootWindow.document) {
+    zoomHint = rootWindow.document.getElementById('signatureZoomHint');
+  }
   if (zoomHint) zoomHint.style.display = 'none';
 
   presentationPoints.push({ x, y });
@@ -4792,9 +4838,15 @@ function drawPresentation(e) {
   // Activer le bouton d'acceptation
   hasPresentationSignature = true;
 
+  // Détecter iframe imbriquée (mobile: 2 niveaux)
+  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
+  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
   // Activer le bouton valider dans le popup zoom
   let validateBtn = document.getElementById('validateSignatureBtn');
-  if (!validateBtn) validateBtn = window.parent.document.getElementById('validateSignatureBtn');
+  if (!validateBtn && rootWindow && rootWindow.document) {
+    validateBtn = rootWindow.document.getElementById('validateSignatureBtn');
+  }
 
   if (validateBtn) {
     validateBtn.disabled = false;
@@ -4804,7 +4856,9 @@ function drawPresentation(e) {
 
   // Afficher le bouton effacer
   let clearBtn = document.getElementById('clearSignatureBtn');
-  if (!clearBtn) clearBtn = window.parent.document.getElementById('clearSignatureBtn');
+  if (!clearBtn && rootWindow && rootWindow.document) {
+    clearBtn = rootWindow.document.getElementById('clearSignatureBtn');
+  }
   if (clearBtn) clearBtn.style.display = 'block';
 }
 
@@ -4822,6 +4876,10 @@ function stopPresentationDrawing() {
 
 // Fonction pour effacer la signature
 window.clearPresentationSignature = function() {
+  // Détecter iframe imbriquée (mobile: 2 niveaux)
+  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
+  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
   // Effacer le canvas de signature zoom
   if (presentationSignatureCtx && presentationSignatureCanvas) {
     presentationSignatureCtx.clearRect(0, 0, presentationSignatureCanvas.width, presentationSignatureCanvas.height);
@@ -4829,7 +4887,9 @@ window.clearPresentationSignature = function() {
 
   // Effacer aussi le canvas preview
   let previewCanvas = document.getElementById('signaturePreviewCanvas');
-  if (!previewCanvas) previewCanvas = window.parent.document.getElementById('signaturePreviewCanvas');
+  if (!previewCanvas && rootWindow && rootWindow.document) {
+    previewCanvas = rootWindow.document.getElementById('signaturePreviewCanvas');
+  }
   if (previewCanvas) {
     const previewCtx = previewCanvas.getContext('2d');
     previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
@@ -4843,7 +4903,9 @@ window.clearPresentationSignature = function() {
   // Remettre le bouton accepter en gris SEULEMENT sur desktop
   const isMobileClear = window.innerWidth <= 768;
   let acceptBtn = document.getElementById('acceptPresentationBtn');
-  if (!acceptBtn) acceptBtn = window.parent.document.getElementById('acceptPresentationBtn');
+  if (!acceptBtn && rootWindow && rootWindow.document) {
+    acceptBtn = rootWindow.document.getElementById('acceptPresentationBtn');
+  }
 
   if (acceptBtn && !isMobileClear) {
     // Sur desktop: désactiver le bouton
@@ -4855,7 +4917,9 @@ window.clearPresentationSignature = function() {
 
   // Désactiver le bouton valider dans le popup zoom
   let validateBtn = document.getElementById('validateSignatureBtn');
-  if (!validateBtn) validateBtn = window.parent.document.getElementById('validateSignatureBtn');
+  if (!validateBtn && rootWindow && rootWindow.document) {
+    validateBtn = rootWindow.document.getElementById('validateSignatureBtn');
+  }
 
   if (validateBtn) {
     validateBtn.disabled = true;
@@ -4865,11 +4929,15 @@ window.clearPresentationSignature = function() {
 
   // Réafficher les hints (preview et zoom)
   let hint = document.getElementById('signatureHint');
-  if (!hint) hint = window.parent.document.getElementById('signatureHint');
+  if (!hint && rootWindow && rootWindow.document) {
+    hint = rootWindow.document.getElementById('signatureHint');
+  }
   if (hint) hint.style.display = 'block';
 
   let zoomHint = document.getElementById('signatureZoomHint');
-  if (!zoomHint) zoomHint = window.parent.document.getElementById('signatureZoomHint');
+  if (!zoomHint && rootWindow && rootWindow.document) {
+    zoomHint = rootWindow.document.getElementById('signatureZoomHint');
+  }
   if (zoomHint) zoomHint.style.display = 'block';
 
   // Cacher le bouton effacer
@@ -5970,30 +6038,61 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
         });
       }
 
-      // Reset le toggle
-      const toggle = document.getElementById('templateToggle');
-      toggle.innerHTML = '<span class="placeholder" style="color: rgb(156 163 175); font-size: 13px;">-- Sélectionner --</span>';
-      toggle.classList.remove('has-selection');
+      // Reset le toggle - chercher dans le même document que menu
+      let toggle = document.getElementById('templateToggle');
+      if (!toggle && window.parent && window.parent.document) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+        if (rootWindow && rootWindow.document) {
+          toggle = rootWindow.document.getElementById('templateToggle');
+        }
+      }
+
+      if (toggle) {
+        toggle.innerHTML = '<span class="placeholder" style="color: rgb(156 163 175); font-size: 13px;">-- Sélectionner --</span>';
+        toggle.classList.remove('has-selection');
+      }
       selectedTemplateIndex = null;
     }
 
     // Sélectionner et charger un template
     function selectTemplate(index, name) {
-      const toggle = document.getElementById('templateToggle');
-      const menu = document.getElementById('templateMenu');
+      // Chercher le modal où qu'il soit
+      let partTravauxModal = document.getElementById('partTravauxModal');
+      if (!partTravauxModal && window.parent) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+        if (rootWindow && rootWindow.document) {
+          partTravauxModal = rootWindow.document.getElementById('partTravauxModal');
+        }
+      }
+
+      if (!partTravauxModal) {
+        console.warn('[SELECT TEMPLATE] Modal introuvable');
+        return;
+      }
+
+      // Chercher les éléments dans le modal
+      const toggle = partTravauxModal.querySelector('#templateToggle');
+      const menu = partTravauxModal.querySelector('#templateMenu');
+      const textarea = partTravauxModal.querySelector('#partTravauxTextarea');
 
       // Mettre à jour l'affichage du dropdown
-      toggle.innerHTML = `<span class="tag" style="padding: 0px 8px;">${name}</span>`;
-      toggle.classList.add('has-selection');
-      menu.classList.add('hidden');
+      if (toggle) {
+        toggle.innerHTML = `<span class="tag" style="padding: 0px 8px;">${name}</span>`;
+        toggle.classList.add('has-selection');
+      }
+      if (menu) {
+        menu.classList.add('hidden');
+      }
 
       // Sauvegarder l'index sélectionné
       selectedTemplateIndex = index;
 
       // Charger le contenu du template
       const template = userTemplates[index];
-      if (template) {
-        document.getElementById('partTravauxTextarea').value = template.content;
+      if (template && textarea) {
+        textarea.value = template.content;
         // Synchroniser les checkboxes
         syncPartTravauxCheckboxes();
       }
@@ -6274,23 +6373,29 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     function closeProductModal() {
       console.log('[MODAL PRODUITS] Fermeture...');
 
-      const productModal = document.getElementById('productModal');
-      if (productModal) {
-        productModal.classList.remove('active');
-      }
+      // Chercher le modal où qu'il soit (iframe ou parent)
+      let productModal = document.getElementById('productModal');
 
-      // Si mobile et modal était dans parent, le ramener dans l'iframe
       const isMobile = window.innerWidth <= 768;
       if (isMobile && window.parent) {
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
         const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
 
+        // Si pas trouvé dans iframe, chercher dans parent
+        if (!productModal && rootWindow && rootWindow.document) {
+          productModal = rootWindow.document.getElementById('productModal');
+          console.log('[MODAL PRODUITS] Modal trouvé dans parent');
+        }
+
         if (rootWindow && rootWindow.document) {
           const parentBody = rootWindow.document.body;
+
+          // Ramener dans iframe D'ABORD
           if (productModal && productModal.parentElement === parentBody) {
             document.body.appendChild(productModal);
             console.log('[MODAL PRODUITS] Ramené dans iframe');
           }
+
           // Débloquer le scroll du parent
           parentBody.style.overflow = "auto";
           parentBody.classList.remove('modal-open');
@@ -6298,15 +6403,30 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
         }
       }
 
+      // PUIS cacher le modal (après l'avoir ramené)
+      if (productModal) {
+        productModal.classList.remove('active');
+        console.log('[MODAL PRODUITS] Modal caché');
+      }
+
       document.body.style.overflow = 'auto'; // Réactiver le scroll de la page
       console.log('[MODAL PRODUITS] ✅ Modal fermé');
-      // Désélectionner toutes les checkboxes (le texte reste dans le display)
-      productSelections = [];
-      document.querySelectorAll('#productOptions .popup-option').forEach(option => {
-        option.classList.remove('selected');
-      });
-      // Vider le textarea de travail (pas le display qui contient le texte sauvegardé)
-      document.getElementById('productTextarea').value = '';
+
+      // Récupérer le modal (il a été ramené dans l'iframe)
+      const productModalForCleanup = document.getElementById('productModal');
+      if (productModalForCleanup) {
+        // Désélectionner toutes les checkboxes (le texte reste dans le display)
+        productSelections = [];
+        productModalForCleanup.querySelectorAll('#productOptions .popup-option').forEach(option => {
+          option.classList.remove('selected');
+        });
+
+        // Vider le textarea de travail (pas le display qui contient le texte sauvegardé)
+        const productTextarea = productModalForCleanup.querySelector('#productTextarea');
+        if (productTextarea) {
+          productTextarea.value = '';
+        }
+      }
     }
 
     // Ouvrir popup Particularité des travaux
@@ -6379,23 +6499,29 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     function closePartTravauxModal() {
       console.log('[MODAL PART TRAVAUX] Fermeture...');
 
-      const partTravauxModal = document.getElementById('partTravauxModal');
-      if (partTravauxModal) {
-        partTravauxModal.classList.remove('active');
-      }
+      // Chercher le modal où qu'il soit (iframe ou parent)
+      let partTravauxModal = document.getElementById('partTravauxModal');
 
-      // Si mobile et modal était dans parent, le ramener dans l'iframe
       const isMobile = window.innerWidth <= 768;
       if (isMobile && window.parent) {
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
         const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
 
+        // Si pas trouvé dans iframe, chercher dans parent
+        if (!partTravauxModal && rootWindow && rootWindow.document) {
+          partTravauxModal = rootWindow.document.getElementById('partTravauxModal');
+          console.log('[MODAL PART TRAVAUX] Modal trouvé dans parent');
+        }
+
         if (rootWindow && rootWindow.document) {
           const parentBody = rootWindow.document.body;
+
+          // Ramener dans iframe D'ABORD
           if (partTravauxModal && partTravauxModal.parentElement === parentBody) {
             document.body.appendChild(partTravauxModal);
             console.log('[MODAL PART TRAVAUX] Ramené dans iframe');
           }
+
           // Débloquer le scroll du parent
           parentBody.style.overflow = "auto";
           parentBody.classList.remove('modal-open');
@@ -6403,15 +6529,30 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
         }
       }
 
+      // PUIS cacher le modal (après l'avoir ramené)
+      if (partTravauxModal) {
+        partTravauxModal.classList.remove('active');
+        console.log('[MODAL PART TRAVAUX] Modal caché');
+      }
+
       document.body.style.overflow = 'auto'; // Réactiver le scroll de la page
       console.log('[MODAL PART TRAVAUX] ✅ Modal fermé');
-      // Désélectionner toutes les checkboxes (le texte reste dans le display)
-      partTravauxSelections = [];
-      document.querySelectorAll('#partTravauxOptions .popup-option').forEach(option => {
-        option.classList.remove('selected');
-      });
-      // Vider le textarea de travail (pas le display qui contient le texte sauvegardé)
-      document.getElementById('partTravauxTextarea').value = '';
+
+      // Récupérer le modal (il a été ramené dans l'iframe)
+      const partTravauxModalForCleanup = document.getElementById('partTravauxModal');
+      if (partTravauxModalForCleanup) {
+        // Désélectionner toutes les checkboxes (le texte reste dans le display)
+        partTravauxSelections = [];
+        partTravauxModalForCleanup.querySelectorAll('#partTravauxOptions .popup-option').forEach(option => {
+          option.classList.remove('selected');
+        });
+
+        // Vider le textarea de travail (pas le display qui contient le texte sauvegardé)
+        const partTravauxTextarea = partTravauxModalForCleanup.querySelector('#partTravauxTextarea');
+        if (partTravauxTextarea) {
+          partTravauxTextarea.value = '';
+        }
+      }
     }
 
     // Exposer les fonctions globalement pour qu'elles soient accessibles depuis apppc.html
@@ -6420,6 +6561,8 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     window.closeProductModal = closeProductModal;
     window.openPartTravauxModal = openPartTravauxModal;
     window.closePartTravauxModal = closePartTravauxModal;
+    window.confirmProductSelection = confirmProductSelection;
+    window.confirmPartTravauxSelection = confirmPartTravauxSelection;
 
     // AUSSI exposer dans le parent (apppc.html) pour que les boutons onclick fonctionnent
     if (window.parent && window.parent !== window) {
@@ -6432,6 +6575,8 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
         rootWindow.closeProductModal = closeProductModal;
         rootWindow.openPartTravauxModal = openPartTravauxModal;
         rootWindow.closePartTravauxModal = closePartTravauxModal;
+        rootWindow.confirmProductSelection = confirmProductSelection;
+        rootWindow.confirmPartTravauxSelection = confirmPartTravauxSelection;
         console.log('[MODALS] Fonctions exposées dans le parent (apppc.html)');
       }
     }
@@ -6512,7 +6657,24 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
     // Confirmer sélection Produit/Couleurs
     function confirmProductSelection() {
-      const textarea = document.getElementById('productTextarea').value.trim();
+      // Chercher le modal où qu'il soit
+      let productModal = document.getElementById('productModal');
+      if (!productModal && window.parent) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+        if (rootWindow && rootWindow.document) {
+          productModal = rootWindow.document.getElementById('productModal');
+        }
+      }
+
+      if (!productModal) {
+        console.warn('[CONFIRM PRODUITS] Modal introuvable');
+        return;
+      }
+
+      // Chercher les éléments (display et hidden sont dans la page principale, textarea dans le modal)
+      const textareaElement = productModal.querySelector('#productTextarea');
+      const textarea = textareaElement ? textareaElement.value.trim() : '';
       const display = document.getElementById('productDisplay');
       const hidden = document.getElementById('produitCouleursHidden');
 
@@ -6556,7 +6718,24 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
     // Confirmer sélection Particularité des travaux
     function confirmPartTravauxSelection() {
-      const textarea = document.getElementById('partTravauxTextarea').value.trim();
+      // Chercher le modal où qu'il soit
+      let partTravauxModal = document.getElementById('partTravauxModal');
+      if (!partTravauxModal && window.parent) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+        if (rootWindow && rootWindow.document) {
+          partTravauxModal = rootWindow.document.getElementById('partTravauxModal');
+        }
+      }
+
+      if (!partTravauxModal) {
+        console.warn('[CONFIRM PART TRAVAUX] Modal introuvable');
+        return;
+      }
+
+      // Chercher les éléments (display et hidden sont dans la page principale, textarea dans le modal)
+      const textareaElement = partTravauxModal.querySelector('#partTravauxTextarea');
+      const textarea = textareaElement ? textareaElement.value.trim() : '';
       const display = document.getElementById('partTravauxDisplay');
       const hidden = document.getElementById('partTravauxHidden');
       const partTravauxTrigger = document.getElementById('partTravauxTrigger');
@@ -6592,13 +6771,34 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
     // Synchroniser les checkboxes avec le contenu du textarea Produit
     function syncProductCheckboxes() {
-      const textarea = document.getElementById('productTextarea');
+      // Chercher le modal où qu'il soit (iframe ou parent)
+      let productModal = document.getElementById('productModal');
+      if (!productModal && window.parent) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+        if (rootWindow && rootWindow.document) {
+          productModal = rootWindow.document.getElementById('productModal');
+        }
+      }
+
+      if (!productModal) {
+        console.warn('[SYNC PRODUITS] Modal introuvable');
+        return;
+      }
+
+      // Chercher textarea dans le modal
+      const textarea = productModal.querySelector('#productTextarea');
+      if (!textarea) {
+        console.warn('[SYNC PRODUITS] Textarea introuvable');
+        return;
+      }
+
       const currentLines = textarea.value.split('\n')
         .map(line => line.replace(/^-\s*/, '').trim())
         .filter(line => line);
 
-      // Parcourir toutes les options et mettre à jour leur état
-      document.querySelectorAll('#productOptions .popup-option').forEach(option => {
+      // Parcourir toutes les options dans le modal
+      productModal.querySelectorAll('#productOptions .popup-option').forEach(option => {
         const value = option.getAttribute('data-value');
 
         if (currentLines.includes(value)) {
@@ -6621,13 +6821,34 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
     // Synchroniser les checkboxes avec le contenu du textarea Particularités
     function syncPartTravauxCheckboxes() {
-      const textarea = document.getElementById('partTravauxTextarea');
+      // Chercher le modal où qu'il soit (iframe ou parent)
+      let partTravauxModal = document.getElementById('partTravauxModal');
+      if (!partTravauxModal && window.parent) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+        if (rootWindow && rootWindow.document) {
+          partTravauxModal = rootWindow.document.getElementById('partTravauxModal');
+        }
+      }
+
+      if (!partTravauxModal) {
+        console.warn('[SYNC PART TRAVAUX] Modal introuvable');
+        return;
+      }
+
+      // Chercher textarea dans le modal
+      const textarea = partTravauxModal.querySelector('#partTravauxTextarea');
+      if (!textarea) {
+        console.warn('[SYNC PART TRAVAUX] Textarea introuvable');
+        return;
+      }
+
       const currentLines = textarea.value.split('\n')
         .map(line => line.replace(/^-\s*/, '').trim())
         .filter(line => line);
 
-      // Parcourir toutes les options et mettre à jour leur état
-      document.querySelectorAll('#partTravauxOptions .popup-option').forEach(option => {
+      // Parcourir toutes les options dans le modal
+      partTravauxModal.querySelectorAll('#partTravauxOptions .popup-option').forEach(option => {
         const value = option.getAttribute('data-value');
 
         if (currentLines.includes(value)) {

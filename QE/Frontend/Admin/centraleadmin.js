@@ -41,6 +41,7 @@ let currentLinkData = null;
 let currentColumnSectionId = null;
 let currentSelectedColumnType = '';
 let currentCentraleType = 'coach'; // Type de centrale actuellement géré (coach ou entrepreneur)
+let hasUnsavedChanges = false; // Flag pour détecter les modifications
 
 // Helper function pour ajouter le type aux requêtes
 function addTypeParam(url) {
@@ -49,21 +50,13 @@ function addTypeParam(url) {
   return `${url}${separator}type=${currentCentraleType}`;
 }
 
-// Fonction de debounce pour l'auto-save
-let saveTimeouts = {};
-function debouncedSave(sectionId, rowId, delay = 500) {
-  const key = `${sectionId}-${rowId}`;
-
-  // Annuler le timeout précédent s'il existe
-  if (saveTimeouts[key]) {
-    clearTimeout(saveTimeouts[key]);
+// Fonction pour marquer comme modifié et afficher le bouton sauvegarder
+function markAsModified() {
+  hasUnsavedChanges = true;
+  const saveBtn = document.getElementById('save-all-btn');
+  if (saveBtn) {
+    saveBtn.style.display = 'flex';
   }
-
-  // Créer un nouveau timeout
-  saveTimeouts[key] = setTimeout(() => {
-    saveRowData(sectionId, rowId);
-    delete saveTimeouts[key];
-  }, delay);
 }
 
 // DOM Elements
@@ -150,7 +143,7 @@ function showAlert(message) {
 // SECTION MANAGEMENT
 // ================================================================
 
-async function createNewSection() {
+function createNewSection() {
   const newSection = {
     id: Date.now().toString(),
     title: 'Nouvelle section',
@@ -166,58 +159,26 @@ async function createNewSection() {
     ]
   };
 
-  try {
-    const response = await fetch(addTypeParam('/api/centrale/sections'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newSection)
-    });
-
-    if (response.ok) {
-      sections.push(newSection);
-      renderSections();
-    } else {
-      await showAlert('Erreur lors de la création de la section');
-    }
-  } catch (error) {
-    console.error('Erreur:', error);
-    await showAlert('Erreur lors de la création de la section');
-  }
+  sections.push(newSection);
+  markAsModified();
+  renderSections();
 }
 
-async function updateSectionTitle(sectionId, newTitle) {
+function updateSectionTitle(sectionId, newTitle) {
   const section = sections.find(s => s.id === sectionId);
   if (!section) return;
 
   section.title = newTitle;
-
-  try {
-    await fetch(addTypeParam('/api/centrale/sections'), {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(section)
-    });
-  } catch (error) {
-    console.error('Erreur:', error);
-  }
+  markAsModified();
 }
 
-async function updateSectionIcon(sectionId, newIcon) {
+function updateSectionIcon(sectionId, newIcon) {
   const section = sections.find(s => s.id === sectionId);
   if (!section) return;
 
   section.icon = newIcon;
-
-  try {
-    await fetch(addTypeParam('/api/centrale/sections'), {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(section)
-    });
-    renderSections();
-  } catch (error) {
-    console.error('Erreur:', error);
-  }
+  markAsModified();
+  renderSections();
 }
 
 function openIconModal(sectionId) {
@@ -284,21 +245,12 @@ async function deleteSection(sectionId) {
   const confirmed = await showConfirm('Supprimer cette section et toutes ses données?');
   if (!confirmed) return;
 
-  // Sauvegarder toutes les valeurs actuelles avant de modifier
-  await saveAllInputValues();
+  // Collecter toutes les valeurs actuelles avant de modifier
+  collectAllInputValues();
 
-  try {
-    const response = await fetch(addTypeParam(`/api/centrale/sections/${sectionId}`), {
-      method: 'DELETE'
-    });
-
-    if (response.ok) {
-      sections = sections.filter(s => s.id !== sectionId);
-      renderSections();
-    }
-  } catch (error) {
-    console.error('Erreur:', error);
-  }
+  sections = sections.filter(s => s.id !== sectionId);
+  markAsModified();
+  renderSections();
 }
 
 function openColumnModal(sectionId) {
@@ -352,108 +304,59 @@ async function saveColumn() {
   const section = sections.find(s => s.id === currentColumnSectionId);
   if (!section) return;
 
-  // Sauvegarder toutes les valeurs actuelles avant de modifier
-  saveAllInputValues();
+  // Collecter toutes les valeurs actuelles avant de modifier
+  collectAllInputValues();
 
   const newColumnIndex = section.columns.length;
   section.columns.push({ name: defaultName, type });
 
-  try {
-    await fetch(addTypeParam('/api/centrale/sections'), {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(section)
-    });
-    renderSections();
-    closeColumnModal();
+  markAsModified();
+  renderSections();
+  closeColumnModal();
 
-    // Auto-focus sur le nom de la nouvelle colonne
-    setTimeout(() => {
-      const sectionCard = document.querySelector(`#tbody-${currentColumnSectionId}`)?.closest('.box');
-      if (sectionCard) {
-        const headerInputs = sectionCard.querySelectorAll('thead input[type="text"]');
-        const newColInput = headerInputs[newColumnIndex];
-        if (newColInput) {
-          newColInput.focus();
-          newColInput.select();
-        }
+  // Auto-focus sur le nom de la nouvelle colonne
+  setTimeout(() => {
+    const sectionCard = document.querySelector(`#tbody-${currentColumnSectionId}`)?.closest('.box');
+    if (sectionCard) {
+      const headerInputs = sectionCard.querySelectorAll('thead input[type="text"]');
+      const newColInput = headerInputs[newColumnIndex];
+      if (newColInput) {
+        newColInput.focus();
+        newColInput.select();
       }
-    }, 50);
-  } catch (error) {
-    console.error('Erreur:', error);
-    await showAlert('Erreur lors de l\'ajout de la colonne');
-  }
+    }
+  }, 50);
 }
 
-async function updateColumnName(sectionId, columnIndex, newName) {
+function updateColumnName(sectionId, columnIndex, newName) {
   const section = sections.find(s => s.id === sectionId);
   if (!section || columnIndex < 0 || columnIndex >= section.columns.length) return;
 
   section.columns[columnIndex].name = newName;
-
-  try {
-    await fetch(addTypeParam('/api/centrale/sections'), {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(section)
-    });
-  } catch (error) {
-    console.error('Erreur:', error);
-  }
+  markAsModified();
 }
 
-// Fonction pour sauvegarder toutes les valeurs des inputs avant de re-render
-async function saveAllInputValues() {
-  console.log('💾 SAUVEGARDE AUTOMATIQUE - Début');
-  const savePromises = [];
-
+// Fonction pour collecter toutes les valeurs des inputs dans les données locales avant de re-render
+function collectAllInputValues() {
   sections.forEach(section => {
     section.rows.forEach(row => {
       const tr = document.querySelector(`tr[data-row-id="${row.id}"]`);
       if (!tr) return;
 
       const inputs = tr.querySelectorAll('input[type="text"]');
-      let hasChanges = false;
-      const changes = {};
 
       inputs.forEach((input) => {
         const columnName = input.dataset.columnName;
         if (columnName) {
           // C'est une colonne avec data-column-name
-          if (row[columnName] !== input.value) {
-            changes[columnName] = { old: row[columnName], new: input.value };
-            row[columnName] = input.value;
-            hasChanges = true;
-          }
+          row[columnName] = input.value;
         } else {
           // C'est le champ element
-          if (row.element !== input.value) {
-            changes['element'] = { old: row.element, new: input.value };
-            row.element = input.value;
-            hasChanges = true;
-          }
+          row.element = input.value;
         }
       });
-
-      // Si des changements ont été détectés, sauvegarder sur le serveur
-      if (hasChanges) {
-        console.log(`  📝 Changements détectés pour ligne ${row.id}:`, changes);
-        console.log(`  📤 Données envoyées:`, JSON.stringify(row, null, 2));
-
-        const promise = fetch(addTypeParam(`/api/centrale/sections/${section.id}/rows/${row.id}`), {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(row)
-        }).catch(err => console.error('Erreur sauvegarde:', err));
-
-        savePromises.push(promise);
-      }
     });
   });
-
-  // Attendre que toutes les sauvegardes soient terminées
-  await Promise.all(savePromises);
-  console.log(`💾 SAUVEGARDE AUTOMATIQUE - Terminée (${savePromises.length} lignes sauvegardées)\n`);
 }
 
 async function deleteColumn(sectionId, columnIndex) {
@@ -475,8 +378,8 @@ async function deleteColumn(sectionId, columnIndex) {
     console.log(`Ligne ${idx + 1}:`, JSON.stringify(row, null, 2));
   });
 
-  // Sauvegarder toutes les valeurs actuelles avant de modifier
-  await saveAllInputValues();
+  // Collecter toutes les valeurs actuelles avant de modifier
+  collectAllInputValues();
 
   // Supprimer la colonne
   section.columns.splice(columnIndex, 1);
@@ -495,16 +398,8 @@ async function deleteColumn(sectionId, columnIndex) {
   });
   console.log('═══════════════════════════════════════\n');
 
-  try {
-    await fetch(addTypeParam('/api/centrale/sections'), {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(section)
-    });
-    renderSections();
-  } catch (error) {
-    console.error('Erreur:', error);
-  }
+  markAsModified();
+  renderSections();
 }
 
 // ================================================================
@@ -939,6 +834,9 @@ function createTableRow(section, row) {
   elementInput.placeholder = section.columns[0]?.name || 'Élément';
   elementInput.value = row.element || '';
 
+  // Détecter les modifications pour afficher le bouton sauvegarder
+  elementInput.addEventListener('input', () => markAsModified());
+
   tdElement.appendChild(elementInput);
   tr.appendChild(tdElement);
 
@@ -1056,6 +954,9 @@ function createNumeroColumn(sectionId, rowId, colName, value) {
   input.value = value;
   input.dataset.columnName = colName; // IMPORTANT: pour identifier la colonne
 
+  // Détecter les modifications pour afficher le bouton sauvegarder
+  input.addEventListener('input', () => markAsModified());
+
   return input;
 }
 
@@ -1066,6 +967,9 @@ function createTexteColumn(sectionId, rowId, colName, value) {
   input.placeholder = 'Texte...';
   input.value = value;
   input.dataset.columnName = colName; // IMPORTANT: pour identifier la colonne
+
+  // Détecter les modifications pour afficher le bouton sauvegarder
+  input.addEventListener('input', () => markAsModified());
 
   return input;
 }
@@ -1173,7 +1077,7 @@ function createFileIcon(file, sectionId, rowId, container) {
 // ROW OPERATIONS
 // ================================================================
 
-async function addRow(sectionId) {
+function addRow(sectionId) {
   const section = sections.find(s => s.id === sectionId);
   if (!section) return;
 
@@ -1182,85 +1086,42 @@ async function addRow(sectionId) {
     element: ''
   };
 
-  try {
-    const response = await fetch(addTypeParam(`/api/centrale/sections/${sectionId}/rows`), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newRow)
-    });
+  section.rows.push(newRow);
+  markAsModified();
+  renderSections();
 
-    if (response.ok) {
-      const data = await response.json();
-      section.rows.push(data.row);
-      renderSections();
+  // Auto-focus sur le champ élément de la nouvelle ligne avec animation
+  setTimeout(() => {
+    const newRowEl = document.querySelector(`tr[data-row-id="${newRow.id}"]`);
+    if (newRowEl) {
+      newRowEl.classList.add('new-row');
+      const elementInput = newRowEl.querySelector('input[type="text"]');
+      if (elementInput) {
+        elementInput.focus();
+        elementInput.select();
+      }
 
-      // Auto-focus sur le champ élément de la nouvelle ligne avec animation
+      // Retirer la classe après l'animation
       setTimeout(() => {
-        const newRowEl = document.querySelector(`tr[data-row-id="${newRow.id}"]`);
-        if (newRowEl) {
-          newRowEl.classList.add('new-row');
-          const elementInput = newRowEl.querySelector('input[type="text"]');
-          if (elementInput) {
-            elementInput.focus();
-            elementInput.select();
-          }
-
-          // Retirer la classe après l'animation
-          setTimeout(() => {
-            newRowEl.classList.remove('new-row');
-          }, 300);
-        }
-      }, 50);
+        newRowEl.classList.remove('new-row');
+      }, 300);
     }
-  } catch (error) {
-    console.error('Erreur:', error);
-    await showAlert('Erreur lors de l\'ajout de la ligne');
-  }
+  }, 50);
 }
 
 async function deleteRow(sectionId, rowId) {
   const confirmed = await showConfirm('Supprimer cette ligne?');
   if (!confirmed) return;
 
-  console.log('═══════════════════════════════════════');
-  console.log('🗑️ SUPPRESSION DE LIGNE - AVANT');
-  console.log('═══════════════════════════════════════');
   const section = sections.find(s => s.id === sectionId);
-  if (section) {
-    console.log('Section:', section.title);
-    console.log('Colonnes:', section.columns.map(c => `${c.name} (${c.type})`));
-    console.log('Nombre de lignes AVANT:', section.rows.length);
-    section.rows.forEach((row, idx) => {
-      console.log(`Ligne ${idx + 1}:`, JSON.stringify(row, null, 2));
-    });
-  }
+  if (!section) return;
 
-  // Sauvegarder toutes les valeurs actuelles avant de modifier
-  await saveAllInputValues();
+  // Collecter toutes les valeurs actuelles avant de modifier
+  collectAllInputValues();
 
-  try {
-    const response = await fetch(addTypeParam(`/api/centrale/sections/${sectionId}/rows/${rowId}`), {
-      method: 'DELETE'
-    });
-
-    if (response.ok) {
-      if (section) {
-        section.rows = section.rows.filter(r => r.id !== rowId);
-        console.log('═══════════════════════════════════════');
-        console.log('🗑️ SUPPRESSION DE LIGNE - APRÈS');
-        console.log('═══════════════════════════════════════');
-        console.log('Nombre de lignes APRÈS:', section.rows.length);
-        section.rows.forEach((row, idx) => {
-          console.log(`Ligne ${idx + 1}:`, JSON.stringify(row, null, 2));
-        });
-        console.log('═══════════════════════════════════════\n');
-        renderSections();
-      }
-    }
-  } catch (error) {
-    console.error('Erreur:', error);
-    await showAlert('Erreur lors de la suppression de la ligne');
-  }
+  section.rows = section.rows.filter(r => r.id !== rowId);
+  markAsModified();
+  renderSections();
 }
 
 async function saveRowData(sectionId, rowId) {
@@ -1348,12 +1209,16 @@ async function saveAllSections() {
       saveBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Sauvegardé!';
       saveBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
 
-      // Réinitialiser après 2 secondes
+      // Réinitialiser le flag des modifications
+      hasUnsavedChanges = false;
+
+      // Cacher le bouton après 2 secondes
       setTimeout(() => {
         saveBtn.innerHTML = originalHtml;
         saveBtn.style.background = '';
         saveBtn.disabled = false;
         saveBtn.style.opacity = '1';
+        saveBtn.style.display = 'none';
       }, 2000);
     } else {
       throw new Error('Erreur de sauvegarde');
@@ -1413,6 +1278,7 @@ async function handleFileUpload(e, sectionId, rowId, container) {
               }
               // Ajouter le nouveau fichier
               row[fileColumn.name].push(data.file);
+              markAsModified();
               console.log(`📎 Fichier ajouté localement à la ligne ${rowId}:`, data.file);
             }
           }
@@ -1478,32 +1344,19 @@ async function saveLinkData() {
     return;
   }
 
-  try {
-    await fetch(addTypeParam(`/api/centrale/sections/${currentLinkData.sectionId}/rows/${currentLinkData.rowId}/link`), {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        colName: currentLinkData.colName,
-        text,
-        url
-      })
-    });
-
-    // Update UI
-    const section = sections.find(s => s.id === currentLinkData.sectionId);
-    if (section) {
-      const row = section.rows.find(r => r.id === currentLinkData.rowId);
-      if (row) {
-        row[currentLinkData.colName] = { text, url };
-        renderSections();
-      }
+  // Update UI
+  const section = sections.find(s => s.id === currentLinkData.sectionId);
+  if (section) {
+    const row = section.rows.find(r => r.id === currentLinkData.rowId);
+    if (row) {
+      row[currentLinkData.colName] = { text, url };
+      markAsModified();
+      renderSections();
     }
-
-    linkModal.style.display = 'none';
-    currentLinkData = null;
-  } catch (error) {
-    console.error('Erreur:', error);
   }
+
+  linkModal.style.display = 'none';
+  currentLinkData = null;
 }
 
 // ================================================================

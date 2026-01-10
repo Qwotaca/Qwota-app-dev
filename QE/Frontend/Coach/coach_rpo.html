@@ -9079,7 +9079,7 @@ async function checkIfBusinessPlanNeeded() {
     const totalObjectif = objectifsData.success ? (objectifsData.total || 0) : 0;
 
     // Charger les métriques
-    const metricsResponse = await fetch(`/api/coach/team-metrics?coach_username=${username}`);
+    const metricsResponse = await fetch(`/api/coach/metrics?coach_username=${username}`);
     const metricsData = await metricsResponse.json();
     const metrics = metricsData.success ? metricsData.metrics : { cm: 0, ratioMktg: 0, tauxVente: 0 };
 
@@ -10542,6 +10542,12 @@ async function reloadPlanWithAnimation() {
 
   // Recharger les données
   await initTeamPlan();
+
+  // Mettre à jour l'affichage des métriques dans les cartes
+  await updateCoachMetricsDisplay();
+
+  // Vérifier et mettre à jour l'affichage du plan (bouton créer vs données)
+  await checkIfBusinessPlanNeeded();
 
   // Petit délai avant de retirer le spinner
   await new Promise(resolve => setTimeout(resolve, 300));

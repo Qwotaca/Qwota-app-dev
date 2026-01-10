@@ -29,6 +29,7 @@ from database import (
 # Configuration sécurisée
 import config
 import time
+import glob
 
 # Backend QE imports
 from QE.Backend.auth import hash_password, verify_password
@@ -926,6 +927,75 @@ def list_users_route(include_inactive: bool = False):
     """Liste tous les utilisateurs avec option d'inclure les inactifs"""
     users_list = list_all_users(include_inactive=include_inactive)
     return users_list  # Retourne tous les champs incluant id, email, created_at, last_login, is_active, prenom, nom, etc.
+
+@app.get("/api/user/{username}")
+def get_user_info(username: str):
+    """Récupère les informations d'un utilisateur spécifique"""
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT username, prenom, nom, first_name, last_name, role, email
+                FROM users
+                WHERE username = ? AND is_active = 1
+            """, (username,))
+            user = cursor.fetchone()
+
+            if user:
+                return {
+                    "username": user[0],
+                    "prenom": user[1],
+                    "nom": user[2],
+                    "first_name": user[3],
+                    "last_name": user[4],
+                    "role": user[5],
+                    "email": user[6]
+                }
+            else:
+                raise HTTPException(status_code=404, detail="User not found")
+    except Exception as e:
+        print(f"[ERROR] Error fetching user info: {e}", flush=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/get-user-info/{username}")
+def get_user_info_alias(username: str):
+    """Alias pour récupérer les informations d'un utilisateur (utilisé par le frontend)"""
+    return get_user_info(username)
+
+@app.get("/api/user/{username}/profile-photo")
+def get_user_profile_photo(username: str):
+    """Récupère l'URL de la photo de profil la plus récente pour un utilisateur"""
+    try:
+        photos_dir = os.path.join(BASE_DIR, "static", "profile_photos")
+        if not os.path.exists(photos_dir):
+            return {"photo_url": None}
+
+        # Chercher toutes les photos pour cet utilisateur
+        matching_files = []
+        for ext in ['.png', '.jpg', '.jpeg']:
+            pattern = f"{username}_*{ext}"
+            files = glob.glob(os.path.join(photos_dir, pattern))
+            matching_files.extend(files)
+
+        # Aussi chercher sans timestamp
+        for ext in ['.png', '.jpg', '.jpeg']:
+            simple_file = os.path.join(photos_dir, f"{username}{ext}")
+            if os.path.exists(simple_file):
+                matching_files.append(simple_file)
+
+        if not matching_files:
+            return {"photo_url": None}
+
+        # Trier par date de modification (le plus récent en premier)
+        matching_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+        most_recent = matching_files[0]
+
+        # Retourner le chemin relatif
+        photo_filename = os.path.basename(most_recent)
+        return {"photo_url": f"/static/profile_photos/{photo_filename}"}
+    except Exception as e:
+        print(f"[ERROR] Error fetching profile photo: {e}", flush=True)
+        return {"photo_url": None}
 
 @app.get("/api/entrepreneurs")
 def get_entrepreneurs_list_api(
@@ -6279,87 +6349,6 @@ def api_get_coach_equipe(coach_username: str):
         }
     }
 
-@app.get("/api/coach/{coach_username}/details-contrats-estimations")
-def api_get_coach_details_contrats_estimations(coach_username: str):
-    """API pour récupérer tous les contrats signés et estimations de l'équipe d'un coach avec dates"""
-    from datetime import datetime
-    import glob
-
-    entrepreneur_data = get_entrepreneurs_for_coach(coach_username)
-    if not entrepreneur_data:
-        return {"entrepreneurs": []}
-
-    entrepreneur_usernames = [e["username"] for e in entrepreneur_data]
-
-    result = []
-
-    for username in entrepreneur_usernames:
-        # Récupérer le nom complet de l'entrepreneur
-        user_info_path = os.path.join(base_cloud, "signatures", username, "user_info.json")
-        prenom = username.capitalize()
-        nom = ""
-        if os.path.exists(user_info_path):
-            try:
-                with open(user_info_path, "r", encoding="utf-8") as f:
-                    user_info = json.load(f)
-                    prenom = user_info.get("prenom", username.capitalize())
-                    nom = user_info.get("nom", "")
-            except:
-                pass
-
-        display_name = f"{prenom} {nom}".strip()
-
-        # Récupérer les contrats signés
-        contrats_signees = []
-        signees_path = os.path.join(base_cloud, "soumissions_signees", username, "soumissions.json")
-        if os.path.exists(signees_path):
-            try:
-                with open(signees_path, "r", encoding="utf-8") as f:
-                    signees = json.load(f)
-                    for s in signees:
-                        contrats_signees.append({
-                            "date": s.get("date", ""),
-                            "client": f"{s.get('prenom', '')} {s.get('nom', '')}".strip(),
-                            "montant": s.get("prix", "0 $"),
-                            "numero": s.get("num", "")
-                        })
-            except:
-                pass
-
-        # Récupérer les estimations (fichiers PDF dans soumissions_completes)
-        estimations = []
-        soumissions_dir = os.path.join(base_cloud, "soumissions_completes", username)
-        if os.path.exists(soumissions_dir):
-            try:
-                pdf_files = glob.glob(os.path.join(soumissions_dir, "soumission_*.pdf"))
-                for pdf_file in pdf_files:
-                    filename = os.path.basename(pdf_file)
-                    # Extraire la date du nom de fichier: soumission_YYYYMMDD_HHMMSS.pdf
-                    parts = filename.replace("soumission_", "").replace(".pdf", "").split("_")
-                    if len(parts) >= 2:
-                        date_str = parts[0]  # YYYYMMDD
-                        time_str = parts[1]  # HHMMSS
-                        try:
-                            date_obj = datetime.strptime(date_str, "%Y%m%d")
-                            formatted_date = date_obj.strftime("%d/%m/%Y")
-                            estimations.append({
-                                "date": formatted_date,
-                                "fichier": filename
-                            })
-                        except:
-                            pass
-            except:
-                pass
-
-        result.append({
-            "username": username,
-            "display_name": display_name,
-            "contrats_signees": sorted(contrats_signees, key=lambda x: x.get("date", ""), reverse=True),
-            "estimations": sorted(estimations, key=lambda x: x.get("date", ""), reverse=True)
-        })
-
-    return {"entrepreneurs": result}
-
 def parse_date_flexible(date_str: str):
     """
     Parse une date dans différents formats: DD/MM/YYYY, YYYY-MM-DD, ISO
@@ -8822,7 +8811,7 @@ async def get_users_entrepreneurs_api(coach_username: Optional[str] = None):
             if coach_username:
                 # Récupérer seulement les entrepreneurs assignés à ce coach via assigned_coach
                 cursor.execute("""
-                    SELECT username, email, created_at, is_active
+                    SELECT username, email, created_at, is_active, prenom, nom
                     FROM users
                     WHERE role = 'entrepreneur' AND assigned_coach = ? AND is_active = 1
                     ORDER BY username
@@ -8830,7 +8819,7 @@ async def get_users_entrepreneurs_api(coach_username: Optional[str] = None):
             else:
                 # Récupérer tous les entrepreneurs
                 cursor.execute("""
-                    SELECT username, email, created_at, is_active
+                    SELECT username, email, created_at, is_active, prenom, nom
                     FROM users
                     WHERE role = 'entrepreneur'
                     ORDER BY username
@@ -8925,11 +8914,29 @@ async def get_users_entrepreneurs_api(coach_username: Optional[str] = None):
                                 remb_en_attente = sum(1 for r in remboursements if r.get("statut") == "en_attente_coach")
                                 pending_facturations_count += remb_en_attente
 
+                # Récupérer prenom et nom depuis la DB, sinon depuis user_info.json
+                prenom = row[4] or ""
+                nom = row[5] or ""
+
+                # Si prenom ou nom vide dans DB, lire depuis user_info.json
+                if not prenom or not nom:
+                    user_info_file = os.path.join("data", "signatures", username, "user_info.json")
+                    if os.path.exists(user_info_file):
+                        try:
+                            with open(user_info_file, "r", encoding="utf-8") as f:
+                                user_info = json.load(f)
+                                prenom = prenom or user_info.get("prenom", "")
+                                nom = nom or user_info.get("nom", "")
+                        except Exception as e:
+                            print(f"[API] Erreur lecture user_info pour {username}: {e}")
+
                 entrepreneurs.append({
                     "username": username,
                     "email": row[1],
                     "created_at": row[2],
                     "is_active": bool(row[3]),
+                    "prenom": prenom,
+                    "nom": nom,
                     "pending_count": pending_employes_count,  # Pour compatibilité avec Gestion Employés
                     "pending_employes_count": pending_employes_count,
                     "pending_facturations_count": pending_facturations_count
@@ -12775,17 +12782,77 @@ async def refuser_facturation_coach(username: str, numero_soumission: str, reque
 # ============================================
 
 @app.get("/api/coach/tasks")
-async def get_coach_tasks(coach_username: str):
-    """Récupère toutes les tâches d'un coach depuis son fichier tasks.json"""
+async def get_coach_tasks(coach_username: str, include_all: bool = False):
+    """Récupère toutes les tâches d'un coach depuis son fichier tasks.json
+    Si include_all=True (pour direction), retourne toutes les tâches de tous les utilisateurs"""
     try:
         tasks_dir = os.path.join("data", "coach_tasks")
-        tasks_file = os.path.join(tasks_dir, f"{coach_username}_tasks.json")
 
-        if not os.path.exists(tasks_file):
-            return {"success": True, "tasks": []}
+        if include_all:
+            # Pour les utilisateurs direction, charger toutes les tâches
+            all_tasks = []
+            if os.path.exists(tasks_dir):
+                for filename in os.listdir(tasks_dir):
+                    if filename.endswith('_tasks.json'):
+                        tasks_file = os.path.join(tasks_dir, filename)
+                        try:
+                            with open(tasks_file, "r", encoding="utf-8") as f:
+                                user_tasks = json.load(f)
+                                # Éviter les doublons en vérifiant les IDs
+                                for task in user_tasks:
+                                    if not any(t.get('id') == task.get('id') for t in all_tasks):
+                                        all_tasks.append(task)
+                        except Exception as e:
+                            print(f"Erreur lors de la lecture de {filename}: {e}")
+                            continue
+            tasks = all_tasks
+        else:
+            # Pour les coaches, charger seulement leurs tâches
+            tasks_file = os.path.join(tasks_dir, f"{coach_username}_tasks.json")
+            if not os.path.exists(tasks_file):
+                return {"success": True, "tasks": []}
 
-        with open(tasks_file, "r", encoding="utf-8") as f:
-            tasks = json.load(f)
+            with open(tasks_file, "r", encoding="utf-8") as f:
+                tasks = json.load(f)
+
+        # Enrichir chaque tâche avec le nom complet du créateur
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            for task in tasks:
+                creator_username = task.get("created_by")
+                if creator_username and not task.get("created_by_username"):
+                    cursor.execute("""
+                        SELECT prenom, nom, first_name, last_name
+                        FROM users
+                        WHERE username = ? AND is_active = 1
+                    """, (creator_username,))
+                    user = cursor.fetchone()
+
+                    if user:
+                        prenom = user[0]
+                        nom = user[1]
+                        first_name = user[2]
+                        last_name = user[3]
+
+                        # Prioriser prenom/nom sur first_name/last_name
+                        full_name = ""
+                        if prenom and nom:
+                            full_name = f"{prenom} {nom}"
+                        elif first_name and last_name:
+                            full_name = f"{first_name} {last_name}"
+                        elif prenom:
+                            full_name = prenom
+                        elif nom:
+                            full_name = nom
+                        elif first_name:
+                            full_name = first_name
+                        elif last_name:
+                            full_name = last_name
+
+                        if full_name:
+                            # Stocker à la fois le username et le nom complet
+                            task["created_by_username"] = creator_username
+                            task["created_by"] = full_name
 
         return {"success": True, "tasks": tasks}
     except Exception as e:
@@ -12811,11 +12878,14 @@ async def save_coach_task(request: Request):
             import uuid
             task["id"] = str(uuid.uuid4())
 
-        # Ajouter le créateur de la tâche
-        task["created_by"] = coach_username
+        # Ajouter le créateur de la tâche seulement s'il n'existe pas déjà
+        if not task.get("created_by"):
+            task["created_by"] = coach_username
 
         # Récupérer la liste des utilisateurs assignés
         assigned_users = task.get("assignedUsers", [])
+
+        print(f"[DEBUG] Saving task: id={task.get('id')}, created_by={task.get('created_by')}, assigned_users={len(assigned_users)}", flush=True)
 
         # Si aucun utilisateur n'est assigné, assigner seulement au créateur
         if not assigned_users:
@@ -12837,7 +12907,16 @@ async def save_coach_task(request: Request):
             tasks = []
             if os.path.exists(tasks_file):
                 with open(tasks_file, "r", encoding="utf-8") as f:
-                    tasks = json.load(f)
+                    loaded_data = json.load(f)
+                    # S'assurer que c'est une liste
+                    if isinstance(loaded_data, list):
+                        tasks = loaded_data
+                    elif isinstance(loaded_data, dict):
+                        # Si c'est un dict, le convertir en liste (cas d'ancien format)
+                        print(f"[WARNING] Converting dict to list for {username}_tasks.json", flush=True)
+                        tasks = []
+                    else:
+                        tasks = []
 
             # Si task_id existe, mettre à jour, sinon créer
             task_id = task.get("id")
@@ -12999,19 +13078,43 @@ async def complete_coach_task(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/coach/tasks/history")
-async def get_coach_tasks_history(coach_username: str):
-    """Récupère l'historique des tâches complétées d'un coach"""
+async def get_coach_tasks_history(coach_username: str, include_all: bool = False):
+    """Récupère l'historique des tâches complétées d'un coach
+    Si include_all=True (pour direction), retourne l'historique de tous les utilisateurs"""
     try:
         tasks_dir = os.path.join("data", "coach_tasks")
-        history_file = os.path.join(tasks_dir, f"{coach_username}_history.json")
 
-        if not os.path.exists(history_file):
-            return []
+        if include_all:
+            # Pour les utilisateurs direction, charger tout l'historique
+            all_history = []
+            if os.path.exists(tasks_dir):
+                for filename in os.listdir(tasks_dir):
+                    if filename.endswith('_history.json'):
+                        history_file = os.path.join(tasks_dir, filename)
+                        try:
+                            with open(history_file, "r", encoding="utf-8") as f:
+                                user_history = json.load(f)
+                                # Éviter les doublons en vérifiant les IDs
+                                for task in user_history:
+                                    if not any(t.get('id') == task.get('id') for t in all_history):
+                                        all_history.append(task)
+                        except Exception as e:
+                            print(f"Erreur lors de la lecture de {filename}: {e}")
+                            continue
+            # Trier par date de complétion (plus récent en premier)
+            all_history.sort(key=lambda x: x.get('completed_at', ''), reverse=True)
+            return all_history[:100]  # Limiter à 100 tâches
+        else:
+            # Pour les coaches, charger seulement leur historique
+            history_file = os.path.join(tasks_dir, f"{coach_username}_history.json")
 
-        with open(history_file, "r", encoding="utf-8") as f:
-            history = json.load(f)
+            if not os.path.exists(history_file):
+                return []
 
-        return history
+            with open(history_file, "r", encoding="utf-8") as f:
+                history = json.load(f)
+
+            return history
     except Exception as e:
         print(f"Erreur lors de la récupération de l'historique: {e}")
         raise HTTPException(status_code=500, detail=str(e))

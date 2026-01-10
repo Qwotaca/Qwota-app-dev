@@ -286,16 +286,21 @@
         ? `<span class="entrepreneur-badge">${count}</span>`
         : '';
 
+      // Afficher le nom complet si disponible, sinon le username
+      const displayName = entrepreneur.prenom && entrepreneur.nom
+        ? `${entrepreneur.prenom} ${entrepreneur.nom}`
+        : entrepreneur.username;
+
       option.innerHTML = `
         <span>
           <i class="fas fa-user-tie"></i>
-          <span>${entrepreneur.username}</span>
+          <span>${displayName}</span>
         </span>
         ${badge}
       `;
 
       option.addEventListener('click', function() {
-        selectEntrepreneur(entrepreneur.username, count);
+        selectEntrepreneur(entrepreneur.username, count, displayName);
       });
 
       dropdownMenu.appendChild(option);
@@ -454,7 +459,7 @@
   // ============================================
   // SELECT ENTREPRENEUR
   // ============================================
-  function selectEntrepreneur(username, pendingCount) {
+  function selectEntrepreneur(username, pendingCount, displayName) {
     const dropdownToggle = document.getElementById('coach-dropdown-toggle');
     const dropdownMenu = document.getElementById('coach-dropdown-menu');
     const searchInput = document.getElementById('search-input');
@@ -482,10 +487,11 @@
       console.log('[ENTREPRENEUR-SELECTOR] updateAddEmployeeButtonState() appelé');
     }
 
-    // Update toggle display
+    // Update toggle display - utiliser le nom complet si disponible
     let textElement = dropdownToggle.querySelector('.placeholder, .selected-text');
     if (textElement) {
-      textElement.innerHTML = `<i class="fas fa-check-circle"></i> ${username}`;
+      const nameToDisplay = displayName || username;
+      textElement.innerHTML = `<i class="fas fa-check-circle"></i> ${nameToDisplay}`;
       textElement.classList.remove('placeholder');
       textElement.classList.add('selected-text');
       textElement.style.display = 'flex';
@@ -608,8 +614,9 @@
         let visibleCount = 0;
 
         allOptions.forEach(option => {
-          const username = option.querySelector('span span')?.textContent?.toLowerCase() || '';
-          if (searchTerm === '' || username.includes(searchTerm)) {
+          // Chercher dans le texte affiché (nom complet ou username)
+          const displayText = option.querySelector('span span')?.textContent?.toLowerCase() || '';
+          if (searchTerm === '' || displayText.includes(searchTerm)) {
             option.style.display = 'flex';
             visibleCount++;
           } else {

@@ -30,6 +30,7 @@ from database import (
 import config
 import time
 import glob
+import threading
 
 # Backend QE imports
 from QE.Backend.auth import hash_password, verify_password
@@ -4338,12 +4339,16 @@ def envoyer_soumission_signee(
                 json.dump(ventes_acceptees, f, ensure_ascii=False, indent=2)
             print(f"[OK] Soumission {soumission_id} ajoutée dans ventes_acceptees")
 
-            # Synchroniser avec Monday.com
-            sync_success = sync_vente_to_monday(username, soumission_data)
-            if sync_success:
-                print(f"[MONDAY] ✓ Synchronisation Monday.com réussie")
-            else:
-                print(f"[MONDAY] ✗ Synchronisation Monday.com échouée (non bloquant)")
+            # Synchroniser avec Monday.com EN ARRIÈRE-PLAN (non bloquant)
+            def sync_monday_background():
+                sync_success = sync_vente_to_monday(username, soumission_data)
+                if sync_success:
+                    print(f"[MONDAY] ✓ Synchronisation Monday.com réussie")
+                else:
+                    print(f"[MONDAY] ✗ Synchronisation Monday.com échouée (non bloquant)")
+
+            threading.Thread(target=sync_monday_background, daemon=True).start()
+            print(f"[MONDAY] 🚀 Synchronisation Monday.com lancée en arrière-plan")
 
         except Exception as e:
             print(f"[WARNING] Erreur lors du déplacement ventes_attente -> ventes_acceptees: {e}")
@@ -19876,13 +19881,18 @@ async def signer_soumission_vente(data: dict = Body(...)):
                 shutil.copy2(src_pdf, dst_pdf_signees)
                 os.remove(src_pdf)
 
-        # 4. Synchroniser avec Monday.com (automatique si configuré)
+        # 4. Synchroniser avec Monday.com EN ARRIÈRE-PLAN (automatique si configuré)
         print(f"[MONDAY] Tentative de synchronisation pour {username}")
-        sync_success = sync_vente_to_monday(username, soumission)
-        if sync_success:
-            print(f"[MONDAY] ✓ Synchronisation Monday.com réussie")
-        else:
-            print(f"[MONDAY] ✗ Synchronisation Monday.com échouée (non bloquant)")
+
+        def sync_monday_background():
+            sync_success = sync_vente_to_monday(username, soumission)
+            if sync_success:
+                print(f"[MONDAY] ✓ Synchronisation Monday.com réussie")
+            else:
+                print(f"[MONDAY] ✗ Synchronisation Monday.com échouée (non bloquant)")
+
+        threading.Thread(target=sync_monday_background, daemon=True).start()
+        print(f"[MONDAY] 🚀 Synchronisation Monday.com lancée en arrière-plan")
 
         return {"success": True, "message": "Soumission acceptée"}
 
@@ -19930,16 +19940,20 @@ def get_ventes_acceptees(username: str):
             if vente_id not in synced_ids:
                 nouvelles_ventes.append((vente_id, vente))
 
-        # Synchroniser les nouvelles ventes vers Monday.com
+        # Synchroniser les nouvelles ventes vers Monday.com EN ARRIÈRE-PLAN
         if nouvelles_ventes:
-            for vente_id, vente in nouvelles_ventes:
-                sync_success = sync_vente_to_monday(username, vente)
-                if sync_success:
-                    synced_ids.add(vente_id)
+            def sync_ventes_background():
+                for vente_id, vente in nouvelles_ventes:
+                    sync_success = sync_vente_to_monday(username, vente)
+                    if sync_success:
+                        synced_ids.add(vente_id)
 
-            # Sauvegarder la liste mise à jour des ventes synchronisées
-            with open(fichier_synced, "w", encoding="utf-8") as f:
-                json.dump(list(synced_ids), f, ensure_ascii=False, indent=2)
+                # Sauvegarder la liste mise à jour des ventes synchronisées
+                with open(fichier_synced, "w", encoding="utf-8") as f:
+                    json.dump(list(synced_ids), f, ensure_ascii=False, indent=2)
+
+            threading.Thread(target=sync_ventes_background, daemon=True).start()
+            print(f"[MONDAY] 🚀 Synchronisation de {len(nouvelles_ventes)} vente(s) lancée en arrière-plan")
 
         return ventes
     except Exception:

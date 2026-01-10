@@ -1029,7 +1029,7 @@ BADGES_CONFIG = {
     },
     "big_5": {
         "name": "Le big 5",
-        "description": "Top 5 de tout les temps",
+        "description": "Top 5 de tous les temps",
         "rarity": "Mythique",
         "type": "trophee",
         "xp_bonus": 600,

@@ -18232,53 +18232,227 @@ function initializeApp() {
 
     // Fonction pour réinitialiser tous les champs du formulaire sans reload
     function resetFormFields() {
-      log('[RESET] Réinitialisation des champs du formulaire...');
+      log('[RESET] Réinitialisation COMPLÈTE des champs du formulaire...');
 
-      // Réinitialiser le projet chargé
+      // ====== RÉINITIALISER LES VARIABLES GLOBALES ======
       currentLoadedProjectId = null;
+      selectedProducts = {};
+      preparationsGlobales = {};
+      preparationPieceCounters = {};
+      appretPieceCounters = {};
+      heuresNettoyage = 0;
 
-      // Réinitialiser tous les inputs text/number
-      document.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"]').forEach(input => {
+      // ====== RÉINITIALISER LES COMPTEURS ======
+      pieceCounter = 0;
+      porteGlobaleCounter = 0;
+      fenetreGlobaleCounter = 0;
+      diversGlobalCounter = 0;
+      plafondGlobalCounter = 0;
+      endroitCounter = 0;
+      lavageCounter = 0;
+      preparationCounter = 0;
+      primerCounter = 0;
+
+      // ====== RÉINITIALISER LES ARRAYS ======
+      piecesInterieur = [];
+
+      // ====== RÉINITIALISER TOUS LES INPUTS ======
+      document.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"], input[type="email"]').forEach(input => {
         if (input.id !== 'search-input') { // Garder la recherche
           input.value = '';
         }
       });
 
-      // Réinitialiser les textareas
+      // ====== RÉINITIALISER LES TEXTAREAS ======
       document.querySelectorAll('textarea').forEach(textarea => {
         textarea.value = '';
       });
 
-      // Réinitialiser les checkboxes
+      // ====== RÉINITIALISER LES CHECKBOXES ======
       document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
         checkbox.checked = false;
       });
 
-      // Supprimer toutes les sections dynamiques (lavage, préparation, primer, endroits)
+      // ====== RÉINITIALISER LES RADIO BUTTONS ======
+      document.querySelectorAll('input[type="radio"]').forEach(radio => {
+        radio.checked = false;
+      });
+
+      // ====== RÉINITIALISER TOUS LES SELECT ======
+      document.querySelectorAll('select').forEach(select => {
+        select.selectedIndex = 0; // Retourner à la première option
+      });
+
+      // ====== SUPPRIMER TOUTES LES SECTIONS DYNAMIQUES ======
+      // VIDER COMPLÈTEMENT LE CONTENEUR DE LAVAGES
+      const lavagesContainer = document.getElementById('lavages-container');
+      if (lavagesContainer) {
+        lavagesContainer.innerHTML = '';
+        log('[RESET] Conteneur lavages vidé');
+      }
+
+      // VIDER COMPLÈTEMENT LE CONTENEUR DE PRÉPARATIONS
+      const preparationsContainer = document.getElementById('preparations-container');
+      if (preparationsContainer) {
+        preparationsContainer.innerHTML = '';
+        log('[RESET] Conteneur préparations vidé');
+      }
+
+      // VIDER COMPLÈTEMENT LE CONTENEUR DE PRIMERS
+      const primersContainer = document.getElementById('primers-container');
+      if (primersContainer) {
+        primersContainer.innerHTML = '';
+        log('[RESET] Conteneur primers vidé');
+      }
+
+      // VIDER COMPLÈTEMENT LE CONTENEUR D'ENDROITS À PEINTURER
+      const endroitsContainer = document.getElementById('endroits-container');
+      if (endroitsContainer) {
+        endroitsContainer.innerHTML = '';
+        log('[RESET] Conteneur endroits vidé');
+      }
+
+      // VIDER COMPLÈTEMENT LA LISTE DES PIÈCES INTÉRIEURES
+      const listePieces = document.getElementById('listePieces');
+      if (listePieces) {
+        listePieces.innerHTML = '';
+        log('[RESET] Liste des pièces vidée');
+      }
+
+      // VIDER COMPLÈTEMENT LES TRAVAUX ADDITIONNELS INTÉRIEURS
+      const listPortesGlobales = document.getElementById('listPortesGlobales');
+      if (listPortesGlobales) {
+        listPortesGlobales.innerHTML = '';
+        log('[RESET] Liste des portes globales vidée');
+      }
+
+      const listFenetresGlobales = document.getElementById('listFenetresGlobales');
+      if (listFenetresGlobales) {
+        listFenetresGlobales.innerHTML = '';
+        log('[RESET] Liste des fenêtres globales vidée');
+      }
+
+      const listDiversGlobaux = document.getElementById('listDiversGlobaux');
+      if (listDiversGlobaux) {
+        listDiversGlobaux.innerHTML = '';
+        log('[RESET] Liste des divers globaux vidée');
+      }
+
+      const listPlafondsGlobaux = document.getElementById('listPlafondsGlobaux');
+      if (listPlafondsGlobaux) {
+        listPlafondsGlobaux.innerHTML = '';
+        log('[RESET] Liste des plafonds globaux vidée');
+      }
+
+      // SUPPRIMER TOUTES LES BOXES DE TYPE DYNAMIQUES (box-revetement, box-portes, etc.)
+      document.querySelectorAll('div.box[id^="box-"]').forEach(box => {
+        box.remove();
+        log('[RESET] Box de type supprimée:', box.id);
+      });
+
+      // Supprimer aussi les sections dynamiques au cas où (par sécurité)
       document.querySelectorAll('.lavage-section, .preparation-section, .primer-section, .endroit-a-peinturer').forEach(section => {
         section.remove();
       });
 
-      // Supprimer tous les travaux additionnels dynamiques
+      // Sections de travaux additionnels
       document.querySelectorAll('.porte-item, .fenetre-item, .divers-item, .plafond-item').forEach(item => {
         item.remove();
       });
 
-      // Réinitialiser les pièces intérieures
-      piecesInterieur = [];
-      pieceCounter = 0;
-      document.getElementById('pieces-container')?.querySelectorAll('.piece-card').forEach(card => card.remove());
+      // Préparations globales des pièces
+      document.querySelectorAll('[id^="prepGlobalList_"]').forEach(list => {
+        list.innerHTML = '';
+      });
 
-      // Réinitialiser les compteurs
-      porteGlobaleCounter = 0;
-      fenetreGlobaleCounter = 0;
-      diversGlobalCounter = 0;
-      plafondGlobalCounter = 0;
+      // ====== RÉINITIALISER LES AFFICHAGES DE RÉSULTATS ======
+      // Surfaces
+      const surfaceElements = [
+        'surfaceTotaleInt',
+        'surfaceTotaleExt'
+      ];
+      surfaceElements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '0 ft²';
+      });
 
-      // Recalculer
+      // Coûts de produits
+      const costElements = [
+        'cost_appret_int',
+        'cost_lifemaster_int',
+        'cost_glidden_int',
+        'totalProduitsInt',
+        'costPreparation',
+        'costPeinture',
+        'costProduits',
+        'fraisAdministratifs',
+        'subTotal',
+        'subTotalBreakdown',
+        'totalCombine',
+        'totalCombineInt',
+        'tpsAmount',
+        'tvqAmount'
+      ];
+      costElements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '$0.00';
+      });
+
+      // Heures
+      const heuresElements = [
+        'totalHoursCombine',
+        'appretGlobalHeures',
+        'preparationGlobalHeures'
+      ];
+      heuresElements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '0';
+      });
+
+      // Gallons
+      const gallonsElements = [
+        'appretGlobalGallons'
+      ];
+      gallonsElements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '0';
+      });
+
+      // Coûts spécifiques
+      const specificCostElements = [
+        'appretGlobalCoutProduit',
+        'appretGlobalCoutMO',
+        'preparationGlobalCoutMO'
+      ];
+      specificCostElements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '$0.00';
+      });
+
+      // ====== RÉINITIALISER LES CONTENEURS DE PRODUITS ======
+      const produitsInterieursContainer = document.querySelector('.produits-int-container');
+      if (produitsInterieursContainer) {
+        produitsInterieursContainer.innerHTML = '';
+      }
+
+      const produitsExterieursContainer = document.querySelector('.produits-ext-container');
+      if (produitsExterieursContainer) {
+        produitsExterieursContainer.innerHTML = '';
+      }
+
+      // ====== NETTOYER LE LOCALSTORAGE (sauf username/entrepreneur) ======
+      const keysToKeep = ['username', 'userRole', 'selectedEntrepreneur', 'token'];
+      const allKeys = Object.keys(localStorage);
+      allKeys.forEach(key => {
+        if (!keysToKeep.includes(key) && key.startsWith('calc_')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      // ====== RECALCULER POUR METTRE À JOUR L'AFFICHAGE ======
       updateCalculation();
 
-      log('[RESET] ✅ Formulaire réinitialisé');
+      log('[RESET] ✅ Formulaire COMPLÈTEMENT réinitialisé - tout est à zéro');
     }
 
     // Fonction interne pour charger un projet après le reload de la page

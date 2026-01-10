@@ -128,6 +128,7 @@ def create_monday_item(api_key: str, board_id: str, item_data: Dict) -> bool:
         nom = item_data.get('nom') or item_data.get('clientNom', '')
         nom_complet = f"{prenom} {nom}".strip()
         prix = item_data.get('prix', '')
+        depot = item_data.get('depot', '')
         telephone = item_data.get('telephone', '')
         adresse = item_data.get('adresse', '')
         courriel = item_data.get('email', item_data.get('courriel', ''))
@@ -167,6 +168,19 @@ def create_monday_item(api_key: str, board_id: str, item_data: Dict) -> bool:
             except Exception as e:
                 print(f"[MONDAY WARN] Impossible de parser le prix: {prix} - {e}")
 
+        # $ DÉPÔT - Dépôt (colonne de type numbers)
+        if depot:
+            try:
+                # Nettoyer le dépôt (enlever espaces, $, etc.)
+                depot_str = str(depot).replace('$', '').replace(' ', '').replace('\xa0', '').replace('\u202f', '').strip()
+                # Remplacer virgule par point pour les décimales
+                depot_str = depot_str.replace(',', '.')
+                depot_num = float(depot_str)
+                column_values["numbers1"] = str(depot_num)
+                print(f"[MONDAY] Dépôt ajouté: {depot_num}$")
+            except Exception as e:
+                print(f"[MONDAY WARN] Impossible de parser le dépôt: {depot} - {e}")
+
         # Pour Monday.com, les colonnes phone, location et email nécessitent un format JSON spécifique
         # On va les envoyer séparément avec change_column_value après la création
 
@@ -174,8 +188,8 @@ def create_monday_item(api_key: str, board_id: str, item_data: Dict) -> bool:
         import json
         column_values_json = json.dumps(column_values).replace('"', '\\"')
 
-        # Ajouter le numéro de soumission au nom pour faciliter l'identification
-        item_name = f"{nom_complet} (#{soumission_num})" if soumission_num else nom_complet
+        # Nom de l'item = seulement prénom + nom
+        item_name = nom_complet
 
         # Query GraphQL pour créer l'item
         query = f"""

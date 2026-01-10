@@ -4995,11 +4995,15 @@ window.acceptPresentation = async function() {
     return;
   }
 
-  // Chercher le bouton dans l'iframe d'abord, puis dans le parent
+  // Détecter si iframe imbriquée (mobile: 2 niveaux) ou directe (desktop: 1 niveau)
+  const isNestedIframe = window.parent && window.parent.parent && window.parent.parent !== window.parent;
+  const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+  // Chercher le bouton dans l'iframe d'abord, puis dans le rootWindow
   let btn = document.getElementById('acceptPresentationBtn');
-  if (!btn && window.parent && window.parent.document) {
-    btn = window.parent.document.getElementById('acceptPresentationBtn');
-    log('[acceptPresentation] Bouton trouvé dans le parent');
+  if (!btn && rootWindow && rootWindow.document) {
+    btn = rootWindow.document.getElementById('acceptPresentationBtn');
+    log('[acceptPresentation] Bouton trouvé dans rootWindow (', isNestedIframe ? '2 niveaux' : '1 niveau', ')');
   }
 
   if (!btn) {

@@ -10830,7 +10830,7 @@ def get_soumissions_signees_facturation_qe(username: str):
 
         is_coach = False
         try:
-            db_path = os.path.join("data", "qwota.db")
+            db_path = os.path.join(base_cloud, "qwota.db")
             conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
             cursor.execute("SELECT role FROM users WHERE username = ?", (username,))
@@ -12797,7 +12797,7 @@ async def get_coach_tasks(coach_username: str, include_all: bool = False):
     """Récupère toutes les tâches d'un coach depuis son fichier tasks.json
     Si include_all=True (pour direction), retourne toutes les tâches de tous les utilisateurs"""
     try:
-        tasks_dir = os.path.join("data", "coach_tasks")
+        tasks_dir = os.path.join(base_cloud, "coach_tasks")
 
         if include_all:
             # Pour les utilisateurs direction, charger toutes les tâches
@@ -12881,7 +12881,7 @@ async def save_coach_task(request: Request):
         if not coach_username or not task:
             raise HTTPException(status_code=400, detail="coach_username et task requis")
 
-        tasks_dir = os.path.join("data", "coach_tasks")
+        tasks_dir = os.path.join(base_cloud, "coach_tasks")
         os.makedirs(tasks_dir, exist_ok=True)
 
         # Générer un ID si nécessaire
@@ -12963,7 +12963,7 @@ async def delete_coach_task(request: Request):
         if not coach_username or not task_id:
             raise HTTPException(status_code=400, detail="coach_username et task_id requis")
 
-        tasks_dir = os.path.join("data", "coach_tasks")
+        tasks_dir = os.path.join(base_cloud, "coach_tasks")
         tasks_file = os.path.join(tasks_dir, f"{coach_username}_tasks.json")
 
         if not os.path.exists(tasks_file):
@@ -13018,7 +13018,7 @@ async def complete_coach_task(request: Request):
         if not coach_username or not task_id:
             raise HTTPException(status_code=400, detail="coach_username et task_id requis")
 
-        tasks_dir = os.path.join("data", "coach_tasks")
+        tasks_dir = os.path.join(base_cloud, "coach_tasks")
         os.makedirs(tasks_dir, exist_ok=True)
 
         tasks_file = os.path.join(tasks_dir, f"{coach_username}_tasks.json")
@@ -13093,7 +13093,7 @@ async def get_coach_tasks_history(coach_username: str, include_all: bool = False
     """Récupère l'historique des tâches complétées d'un coach
     Si include_all=True (pour direction), retourne l'historique de tous les utilisateurs"""
     try:
-        tasks_dir = os.path.join("data", "coach_tasks")
+        tasks_dir = os.path.join(base_cloud, "coach_tasks")
 
         if include_all:
             # Pour les utilisateurs direction, charger tout l'historique
@@ -13138,7 +13138,7 @@ async def get_coach_tasks_history(coach_username: str, include_all: bool = False
 async def get_weekly_problem(coach_username: str, week: str):
     """Récupère le problème hebdomadaire pour un coach et une semaine donnée"""
     try:
-        problems_dir = os.path.join("data", "coach_weekly_problems")
+        problems_dir = os.path.join(base_cloud, "coach_weekly_problems")
         os.makedirs(problems_dir, exist_ok=True)
 
         problems_file = os.path.join(problems_dir, f"{coach_username}_problems.json")
@@ -13171,7 +13171,7 @@ async def save_weekly_problem(request: Request):
         if not coach_username or not week:
             raise HTTPException(status_code=400, detail="coach_username et week sont requis")
 
-        problems_dir = os.path.join("data", "coach_weekly_problems")
+        problems_dir = os.path.join(base_cloud, "coach_weekly_problems")
         os.makedirs(problems_dir, exist_ok=True)
 
         problems_file = os.path.join(problems_dir, f"{coach_username}_problems.json")
@@ -13229,7 +13229,7 @@ async def save_macro_micro_problem(request: Request):
         if not week:
             raise HTTPException(status_code=400, detail="week est requis")
 
-        data_dir = os.path.join("data", "coach_macro_micro")
+        data_dir = os.path.join(base_cloud, "coach_macro_micro")
         os.makedirs(data_dir, exist_ok=True)
 
         data_file = os.path.join(data_dir, f"{coach_username}_{week}.json")
@@ -13258,7 +13258,7 @@ async def save_macro_micro_problem(request: Request):
 async def get_macro_micro_problem(coach_username: str, week: str):
     """Récupère MACRO, MICRO et Problème pour un coach et une semaine"""
     try:
-        data_dir = os.path.join("data", "coach_macro_micro")
+        data_dir = os.path.join(base_cloud, "coach_macro_micro")
         data_file = os.path.join(data_dir, f"{coach_username}_{week}.json")
 
         if not os.path.exists(data_file):
@@ -13284,7 +13284,7 @@ async def get_available_entrepreneurs(coach_username: str, week: str, all: bool 
             entrepreneurs_data = all_entrepreneurs
         else:
             # Récupérer les suivis déjà effectués cette semaine
-            data_dir = os.path.join("data", "coach_weekly_entrepreneur_data")
+            data_dir = os.path.join(base_cloud, "coach_weekly_entrepreneur_data")
             data_file = os.path.join(data_dir, f"{coach_username}_{week}.json")
 
             followed_entrepreneurs = set()
@@ -13311,7 +13311,7 @@ async def get_available_entrepreneurs(coach_username: str, week: str, all: bool 
 async def get_weekly_entrepreneur_data(coach_username: str, week: str):
     """Récupère les données hebdomadaires des entrepreneurs pour un coach et une semaine"""
     try:
-        data_dir = os.path.join("data", "coach_weekly_entrepreneur_data")
+        data_dir = os.path.join(base_cloud, "coach_weekly_entrepreneur_data")
         os.makedirs(data_dir, exist_ok=True)
 
         data_file = os.path.join(data_dir, f"{coach_username}_{week}.json")
@@ -13339,7 +13339,7 @@ async def save_weekly_entrepreneur_data(request: Request):
         if not coach_username or not week:
             raise HTTPException(status_code=400, detail="coach_username et week sont requis")
 
-        data_dir = os.path.join("data", "coach_weekly_entrepreneur_data")
+        data_dir = os.path.join(base_cloud, "coach_weekly_entrepreneur_data")
         os.makedirs(data_dir, exist_ok=True)
 
         data_file = os.path.join(data_dir, f"{coach_username}_{week}.json")
@@ -13400,7 +13400,7 @@ async def delete_weekly_entrepreneur_data(request: Request):
         if not coach_username or not week or not entry_id:
             raise HTTPException(status_code=400, detail="coach_username, week et entry_id sont requis")
 
-        data_dir = os.path.join("data", "coach_weekly_entrepreneur_data")
+        data_dir = os.path.join(base_cloud, "coach_weekly_entrepreneur_data")
         data_file = os.path.join(data_dir, f"{coach_username}_{week}.json")
 
         if not os.path.exists(data_file):
@@ -13474,7 +13474,7 @@ async def get_entrepreneur_weekly_data_for_week(username: str, week: str):
             return {"has_data": False, "data": None}
 
         # Charger les données hebdomadaires du coach pour cette semaine
-        data_dir = os.path.join("data", "coach_weekly_entrepreneur_data")
+        data_dir = os.path.join(base_cloud, "coach_weekly_entrepreneur_data")
         data_file = os.path.join(data_dir, f"{coach_username}_{week}.json")
 
         if not os.path.exists(data_file):
@@ -13800,7 +13800,7 @@ async def save_direction_macro_micro_problem(request: Request):
         if not week:
             raise HTTPException(status_code=400, detail="week est requis")
 
-        data_dir = os.path.join("data", "direction_macro_micro")
+        data_dir = os.path.join(base_cloud, "direction_macro_micro")
         os.makedirs(data_dir, exist_ok=True)
 
         data_file = os.path.join(data_dir, f"{direction_username}_{week}.json")
@@ -13829,7 +13829,7 @@ async def save_direction_macro_micro_problem(request: Request):
 async def get_direction_macro_micro_problem(direction_username: str, week: str):
     """Récupère MACRO, MICRO et Problème pour la direction et une semaine"""
     try:
-        data_dir = os.path.join("data", "direction_macro_micro")
+        data_dir = os.path.join(base_cloud, "direction_macro_micro")
         data_file = os.path.join(data_dir, f"{direction_username}_{week}.json")
 
         if not os.path.exists(data_file):
@@ -13862,7 +13862,7 @@ async def save_direction_coach_weekly_data(request: Request):
             raise HTTPException(status_code=400, detail="id, coach_username et week_label requis")
 
         # Créer le répertoire pour les données direction
-        data_dir = os.path.join("data", "direction_coach_weekly")
+        data_dir = os.path.join(base_cloud, "direction_coach_weekly")
         os.makedirs(data_dir, exist_ok=True)
 
         # Fichier unique par coach + semaine
@@ -13891,7 +13891,7 @@ async def save_direction_coach_weekly_data(request: Request):
 async def get_direction_coach_weekly_data(id: str):
     """Récupère les notes hebdomadaires pour un coach depuis la direction"""
     try:
-        data_dir = os.path.join("data", "direction_coach_weekly")
+        data_dir = os.path.join(base_cloud, "direction_coach_weekly")
         data_file = os.path.join(data_dir, f"{id}.json")
 
         if not os.path.exists(data_file):
@@ -14169,7 +14169,7 @@ async def liste_facturation_en_traitement_comptable():
                     clients_data = {}
 
                     # Source 1: soumissions_signees
-                    soumissions_signees_file = os.path.join("data", "soumissions_signees", username, "soumissions.json")
+                    soumissions_signees_file = os.path.join(base_cloud, "soumissions_signees", username, "soumissions.json")
                     if os.path.exists(soumissions_signees_file):
                         try:
                             with open(soumissions_signees_file, "r", encoding="utf-8") as f:
@@ -14184,7 +14184,7 @@ async def liste_facturation_en_traitement_comptable():
                             pass
 
                     # Source 2: travaux_a_completer
-                    travaux_file = os.path.join("data", "travaux_a_completer", username, "soumissions.json")
+                    travaux_file = os.path.join(base_cloud, "travaux_a_completer", username, "soumissions.json")
                     if os.path.exists(travaux_file):
                         try:
                             with open(travaux_file, "r", encoding="utf-8") as f:
@@ -14681,7 +14681,7 @@ async def ajouter_historique_facturation(username: str, numero_soumission: str, 
         client_nom = "Client inconnu"
 
         # Source 1: soumissions_signees
-        soumissions_signees_file = os.path.join("data", "soumissions_signees", username, "soumissions.json")
+        soumissions_signees_file = os.path.join(base_cloud, "soumissions_signees", username, "soumissions.json")
         if os.path.exists(soumissions_signees_file):
             try:
                 with open(soumissions_signees_file, "r", encoding="utf-8") as f:
@@ -14697,7 +14697,7 @@ async def ajouter_historique_facturation(username: str, numero_soumission: str, 
 
         # Source 2: travaux_a_completer si pas trouvé
         if client_nom == "Client inconnu":
-            travaux_file = os.path.join("data", "travaux_a_completer", username, "soumissions.json")
+            travaux_file = os.path.join(base_cloud, "travaux_a_completer", username, "soumissions.json")
             if os.path.exists(travaux_file):
                 try:
                     with open(travaux_file, "r", encoding="utf-8") as f:
@@ -15735,7 +15735,7 @@ async def demande_modification_employe(
             raise HTTPException(status_code=404, detail="Employé non trouvé")
 
         # Créer le dossier pour les documents
-        employe_folder = os.path.join("data", "employes", username, employe_id)
+        employe_folder = os.path.join(base_cloud, "employes", username, employe_id)
         os.makedirs(employe_folder, exist_ok=True)
 
         # Sauvegarder les nouveaux fichiers s'ils sont fournis

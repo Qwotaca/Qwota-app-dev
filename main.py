@@ -133,6 +133,7 @@ os.makedirs(os.path.join(base_cloud, "facturation_qe_historique"), exist_ok=True
 os.makedirs(os.path.join(base_cloud, "gqp"), exist_ok=True)
 os.makedirs(os.path.join(base_cloud, "gqp_images"), exist_ok=True)
 os.makedirs(os.path.join(base_cloud, "soumissions_signees"), exist_ok=True)
+os.makedirs(os.path.join(base_cloud, "plaintes"), exist_ok=True)
 os.makedirs(os.path.join(base_cloud, "chiffre_affaires"), exist_ok=True)
 os.makedirs(os.path.join(base_cloud, "travaux_a_completer"), exist_ok=True)
 os.makedirs(os.path.join(base_cloud, "travaux_completes"), exist_ok=True)
@@ -376,6 +377,11 @@ def coach_mon_equipe_file():
 def coach_rpo_file():
     """Page RPO pour les coachs"""
     return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Coach", "coach_rpo.html"))
+
+@app.get("/coach_plaintes", include_in_schema=False)
+def coach_plaintes_file():
+    """Page Gestion de Plaintes pour les coachs"""
+    return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Coach", "coach_plaintes.html"))
 
 @app.get("/direction_rpo", include_in_schema=False)
 def direction_rpo_file():
@@ -20050,6 +20056,190 @@ async def production_terminee_vente(data: dict = Body(...)):
 
     except Exception as e:
         print(f"[ERREUR production_terminee_vente] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================
+# ROUTES API PLAINTES
+# ============================================
+
+@app.get("/api/soumissions/{username}/signed")
+def get_soumissions_signees(username: str):
+    """
+    Récupère toutes les soumissions signées (ventes acceptées) d'un entrepreneur
+    Retourne les données nécessaires pour le dropdown de sélection client
+    """
+    try:
+        ventes_dir = os.path.join(f"{base_cloud}/ventes_acceptees", username)
+        fichier_acceptees = os.path.join(ventes_dir, "ventes.json")
+
+        # Si le fichier n'existe pas, retourner une liste vide
+        if not os.path.exists(fichier_acceptees):
+            return {"success": True, "soumissions": []}
+
+        with open(fichier_acceptees, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            if not content:
+                return {"success": True, "soumissions": []}
+            ventes = json.loads(content)
+
+        # Formater les données pour le dropdown
+        soumissions = []
+        for vente in ventes:
+            soumissions.append({
+                "id": vente.get("id", ""),
+                "prenom": vente.get("prenom", ""),
+                "nom": vente.get("nom", ""),
+                "num": vente.get("num", ""),
+                "telephone": vente.get("telephone", ""),
+                "courriel": vente.get("courriel", "")
+            })
+
+        return {"success": True, "soumissions": soumissions}
+
+    except Exception as e:
+        print(f"[ERREUR get_soumissions_signees] {e}")
+        return {"success": False, "message": str(e)}
+
+
+@app.post("/api/plaintes")
+async def ajouter_plainte(data: dict = Body(...)):
+    """
+    Ajoute une nouvelle plainte
+    """
+    try:
+        entrepreneur_username = data.get("entrepreneur_username")
+        client_prenom = data.get("client_prenom")
+        client_nom = data.get("client_nom")
+        client_telephone = data.get("client_telephone", "")
+        client_courriel = data.get("client_courriel", "")
+        soumission_num = data.get("soumission_num")
+        description = data.get("description")
+        statut = data.get("statut", "actuelle")  # actuelle ou reglee
+
+        if not all([entrepreneur_username, client_prenom, client_nom, soumission_num, description]):
+            raise HTTPException(status_code=400, detail="Tous les champs sont requis")
+
+        # Charger ou créer le fichier de plaintes
+        plaintes_dir = os.path.join(f"{base_cloud}/plaintes", entrepreneur_username)
+        os.makedirs(plaintes_dir, exist_ok=True)
+        fichier_plaintes = os.path.join(plaintes_dir, "plaintes.json")
+
+        plaintes = []
+        if os.path.exists(fichier_plaintes):
+            with open(fichier_plaintes, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if content:
+                    plaintes = json.loads(content)
+
+        # Créer la nouvelle plainte
+        nouvelle_plainte = {
+            "id": str(uuid.uuid4()),
+            "client_prenom": client_prenom,
+            "client_nom": client_nom,
+            "client_telephone": client_telephone,
+            "client_courriel": client_courriel,
+            "soumission_num": soumission_num,
+            "description": description,
+            "statut": statut,
+            "date_creation": datetime.now().isoformat(),
+            "date_reglee": None
+        }
+
+        plaintes.append(nouvelle_plainte)
+
+        # Sauvegarder
+        with open(fichier_plaintes, "w", encoding="utf-8") as f:
+            json.dump(plaintes, f, ensure_ascii=False, indent=2)
+
+        return {"success": True, "message": "Plainte ajoutée avec succès", "plainte": nouvelle_plainte}
+
+    except Exception as e:
+        print(f"[ERREUR ajouter_plainte] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/plaintes/{username}")
+def get_plaintes(username: str):
+    """
+    Récupère toutes les plaintes d'un entrepreneur
+    """
+    try:
+        plaintes_dir = os.path.join(f"{base_cloud}/plaintes", username)
+        fichier_plaintes = os.path.join(plaintes_dir, "plaintes.json")
+
+        # Si le fichier n'existe pas, retourner des listes vides
+        if not os.path.exists(fichier_plaintes):
+            return {
+                "success": True,
+                "plaintes_actuelles": [],
+                "plaintes_reglees": []
+            }
+
+        with open(fichier_plaintes, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            if not content:
+                return {
+                    "success": True,
+                    "plaintes_actuelles": [],
+                    "plaintes_reglees": []
+                }
+            plaintes = json.loads(content)
+
+        # Séparer les plaintes actuelles et réglées
+        plaintes_actuelles = [p for p in plaintes if p.get("statut") == "actuelle"]
+        plaintes_reglees = [p for p in plaintes if p.get("statut") == "reglee"]
+
+        return {
+            "success": True,
+            "plaintes_actuelles": plaintes_actuelles,
+            "plaintes_reglees": plaintes_reglees
+        }
+
+    except Exception as e:
+        print(f"[ERREUR get_plaintes] {e}")
+        return {"success": False, "message": str(e)}
+
+
+@app.put("/api/plaintes/{plainte_id}/resoudre")
+async def resoudre_plainte(plainte_id: str):
+    """
+    Marque une plainte comme réglée
+    """
+    try:
+        # Chercher dans tous les dossiers d'entrepreneurs
+        plaintes_base = os.path.join(f"{base_cloud}/plaintes")
+
+        for entrepreneur_folder in os.listdir(plaintes_base):
+            fichier_plaintes = os.path.join(plaintes_base, entrepreneur_folder, "plaintes.json")
+
+            if os.path.exists(fichier_plaintes):
+                with open(fichier_plaintes, "r", encoding="utf-8") as f:
+                    content = f.read().strip()
+                    if not content:
+                        continue
+                    plaintes = json.loads(content)
+
+                # Chercher la plainte par ID
+                plainte_found = False
+                for plainte in plaintes:
+                    if plainte.get("id") == plainte_id:
+                        plainte["statut"] = "reglee"
+                        plainte["date_reglee"] = datetime.now().isoformat()
+                        plainte_found = True
+                        break
+
+                if plainte_found:
+                    # Sauvegarder
+                    with open(fichier_plaintes, "w", encoding="utf-8") as f:
+                        json.dump(plaintes, f, ensure_ascii=False, indent=2)
+
+                    return {"success": True, "message": "Plainte marquée comme réglée"}
+
+        return {"success": False, "message": "Plainte non trouvée"}
+
+    except Exception as e:
+        print(f"[ERREUR resoudre_plainte] {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

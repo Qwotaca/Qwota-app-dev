@@ -306,6 +306,181 @@
       background: #60a5fa;
     }
 
+    /* Scrollbar pour la liste des plaintes */
+    #plaintesListeContainer::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #plaintesListeContainer::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.3);
+      border-radius: 10px;
+    }
+
+    #plaintesListeContainer::-webkit-scrollbar-thumb {
+      background: rgba(107, 114, 128, 0.5);
+      border-radius: 10px;
+    }
+
+    #plaintesListeContainer::-webkit-scrollbar-thumb:hover {
+      background: rgba(107, 114, 128, 0.7);
+    }
+
+    /* Animation de succès pour résolution de plainte */
+    @keyframes successFadeIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.8);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes checkmarkDraw {
+      0% {
+        stroke-dashoffset: 100;
+      }
+      100% {
+        stroke-dashoffset: 0;
+      }
+    }
+
+    .success-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: successFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .success-content {
+      text-align: center;
+      color: white;
+      animation: successFadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+    }
+
+    .success-checkmark {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      margin: 0 auto 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4);
+    }
+
+    .success-checkmark svg {
+      stroke: white;
+      stroke-width: 3;
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      animation: checkmarkDraw 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.4s forwards;
+    }
+
+    /* Styles pour les cercles de countdown */
+    .countdown-circle {
+      position: relative;
+      display: inline-block;
+    }
+
+    .countdown-circle svg {
+      transform: rotate(-90deg);
+    }
+
+    .countdown-circle-bg {
+      fill: none;
+      stroke: rgba(71, 85, 105, 0.3);
+      stroke-width: 4;
+    }
+
+    .countdown-circle-progress {
+      fill: none;
+      stroke: #ef4444;
+      stroke-width: 4;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s linear;
+    }
+
+    .countdown-circle-progress.warning {
+      stroke: #f59e0b;
+    }
+
+    .countdown-circle-progress.critical {
+      stroke: #ef4444;
+      animation: pulse-critical 1s ease-in-out infinite;
+    }
+
+    .countdown-circle-progress.paused {
+      stroke: #6b7280;
+    }
+
+    @keyframes pulse-critical {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .countdown-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: var(--text-light);
+      font-weight: bold;
+      pointer-events: none;
+    }
+
+    .countdown-text div {
+      font-size: 11px;
+      line-height: 1;
+    }
+
+    .countdown-text .countdown-label {
+      font-size: 7px;
+      color: var(--text-gray);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 2px;
+      display: block;
+    }
+
+    /* Cercle de 80px - texte plus gros */
+    .countdown-circle[style*="width: 80px"] .countdown-text div {
+      font-size: 16px;
+    }
+
+    .countdown-circle[style*="width: 80px"] .countdown-text .countdown-label {
+      font-size: 9px;
+      margin-top: 3px;
+    }
+
+    /* Cercle plus petit pour le popup */
+    .countdown-circle.small {
+      width: 40px;
+      height: 40px;
+    }
+
+    .countdown-circle.small .countdown-text div {
+      font-size: 9px;
+    }
+
+    .countdown-circle.small .countdown-text .countdown-label {
+      font-size: 6px;
+    }
+
     /* ===== STYLES POUR LE DASHBOARD COACH (Mon Équipe) ===== */
     /* Cacher par défaut, affiché uniquement quand role === 'coach' */
     #coach-dashboard-content {
@@ -1965,29 +2140,15 @@
             </div>
           </div>
 
-          <div class="rounded-lg p-3">
+          <div class="rounded-lg p-3 cursor-pointer transition-all" onclick="ouvrirPlaintePopup()" style="box-shadow: 0 0 0 rgba(239, 68, 68, 0); border: 2px solid transparent;" onmouseover="this.style.boxShadow='0 4px 12px rgba(239, 68, 68, 0.3)'; this.style.borderColor='#ef4444'" onmouseout="this.style.boxShadow='0 0 0 rgba(239, 68, 68, 0)'; this.style.borderColor='transparent'">
             <div class="flex items-center justify-between">
               <span class="text-sm font-medium">Plaintes actuelles</span>
 
               <div class="flex items-center gap-3">
-                <!-- Badge chrono urgent -->
-                <button id="plainteIcon" onclick="ouvrirPlaintePopup()"
-                        class="hidden relative cursor-pointer"
-                        style="background: #f87171;
-                               border-radius: 8px;
-                               padding: 4px 10px;
-                               box-shadow: 0 2px 8px rgba(248, 113, 113, 0.4);
-                               border: 1px solid rgba(248, 113, 113, 0.3);
-                               transition: all 0.3s ease;">
-                  <!-- Point jaune pulsant -->
-                  <div class="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-ping"></div>
-                  <div class="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"></div>
-
-                  <div class="flex items-center gap-1.5">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 10px; color: white !important;"></i>
-                    <span id="plainteTimer" class="text-[10px] font-bold text-white leading-none">0j 0h 0m 0s</span>
-                  </div>
-                </button>
+                <!-- Badge chrono urgent - Cercle de countdown -->
+                <div id="plainteIcon" class="hidden" style="width: 50px; height: 50px; pointer-events: none;">
+                  <!-- Le cercle sera inséré ici dynamiquement -->
+                </div>
 
                 <!-- Compteur plaintes -->
                 <span id="plaintesActuel" class="text-lg font-bold text-red-600 animated-number">1</span>
@@ -2443,12 +2604,12 @@
   </div>
 
   <!-- Popup Plainte -->
-  <div id="plaintePopup" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onclick="fermerPlaintePopup()">
-    <div class="bg-gray-800 rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl" onclick="event.stopPropagation()" style="border: 2px solid var(--border-dark); max-height: 85vh;">
+  <div id="plaintePopup" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-2xl shadow-2xl" onclick="event.stopPropagation()" style="border: 2px solid var(--border-dark); width: 600px; height: 70vh; display: flex; flex-direction: column;">
 
       <!-- Vue: Liste des plaintes -->
-      <div id="plaintesListe">
-        <div class="flex items-center justify-between mb-4">
+      <div id="plaintesListe" style="display: flex; flex-direction: column; height: 100%;">
+        <div class="flex items-center justify-between p-6 pb-4">
           <h3 class="text-xl font-bold flex items-center gap-2" style="color: var(--text-light);">
             <i class="fas fa-exclamation-triangle" style="color: #f87171;"></i>
             <span>Mes plaintes (<span id="plaintesCount">0</span>)</span>
@@ -2458,51 +2619,13 @@
           </button>
         </div>
 
-        <div class="space-y-2">
-          <!-- Plainte 1 -->
-          <div onclick="ouvrirDetailsPlainte(1)" class="bg-gray-900 rounded-lg p-4 cursor-pointer border border-transparent hover:border-red-500 transition-all">
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex-1 min-w-0">
-                <div class="text-base font-bold truncate" style="color: var(--text-light);">Jean Dupont</div>
-              </div>
-              <div class="flex items-center gap-2">
-                <div class="bg-red-900 bg-opacity-30 px-2 py-1 rounded">
-                  <div class="text-xs text-red-400 font-semibold whitespace-nowrap">
-                    <i class="fas fa-clock mr-1"></i>2j 5h 12m 45s
-                  </div>
-                </div>
-                <i class="fas fa-chevron-right text-gray-500 text-sm"></i>
-              </div>
-            </div>
-          </div>
-
-          <!-- Plainte 2 -->
-          <div onclick="ouvrirDetailsPlainte(2)" class="bg-gray-900 rounded-lg p-4 cursor-pointer border border-transparent hover:border-red-500 transition-all">
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex-1 min-w-0">
-                <div class="text-base font-bold truncate" style="color: var(--text-light);">Marie Tremblay</div>
-              </div>
-              <div class="flex items-center gap-2">
-                <div class="bg-red-900 bg-opacity-30 px-2 py-1 rounded">
-                  <div class="text-xs text-red-400 font-semibold whitespace-nowrap">
-                    <i class="fas fa-clock mr-1"></i>0j 3h 25m 10s
-                  </div>
-                </div>
-                <i class="fas fa-chevron-right text-gray-500 text-sm"></i>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-4 flex justify-end">
-          <button onclick="fermerPlaintePopup()" class="px-6 py-2 rounded-lg font-semibold transition-colors" style="background: var(--bg-card); color: var(--text-light);">
-            Fermer
-          </button>
+        <div class="space-y-2 px-6 pb-6" id="plaintesListeContainer" style="flex: 1; overflow-y: auto; overflow-x: hidden;">
+          <!-- Les plaintes seront insérées dynamiquement ici -->
         </div>
       </div>
 
       <!-- Vue: Détails d'une plainte -->
-      <div id="plainteDetails" class="hidden">
+      <div id="plainteDetails" class="hidden" style="display: flex; flex-direction: column; height: 100%;">
         <!-- Le contenu sera inséré dynamiquement -->
       </div>
 
@@ -5544,14 +5667,135 @@
     window.loadClassementData = loadClassementData;
 
     // Fonctions pour la plainte popup
-    let plainteStartTime = new Date(); // Test data - will be replaced with actual timestamp
+    let plaintesActuellesData = []; // Données réelles chargées depuis l'API
 
-    window.ouvrirPlaintePopup = function() {
+    // Fonction pour calculer le temps business restant (excluant weekends)
+    function calculateBusinessHoursRemaining(dateCreation) {
+      const TOTAL_BUSINESS_HOURS = 24;
+      const created = new Date(dateCreation);
+      const now = new Date();
+
+      const nowDay = now.getDay();
+      const isPaused = nowDay === 0 || nowDay === 6; // Weekend
+
+      let businessHoursElapsed = 0;
+      let current = new Date(created);
+
+      while (current < now) {
+        const currentDay = current.getDay();
+        if (currentDay !== 0 && currentDay !== 6) {
+          const nextHour = new Date(current.getTime() + (60 * 60 * 1000));
+          const timeToAdd = Math.min((now - current) / (1000 * 60 * 60), 1);
+          businessHoursElapsed += timeToAdd;
+          if (businessHoursElapsed >= TOTAL_BUSINESS_HOURS) break;
+        }
+        current = new Date(current.getTime() + (60 * 60 * 1000));
+        if (current > now) break;
+      }
+
+      const hoursRemaining = Math.max(0, TOTAL_BUSINESS_HOURS - businessHoursElapsed);
+      const percentRemaining = (hoursRemaining / TOTAL_BUSINESS_HOURS) * 100;
+
+      return { hoursRemaining, isPaused, percentRemaining };
+    }
+
+    // Fonction pour créer le HTML du cercle de countdown
+    function createCountdownCircleHTML(dateCreation, size = 50) {
+      const { hoursRemaining, isPaused, percentRemaining } = calculateBusinessHoursRemaining(dateCreation);
+
+      const radius = (size / 2) - 4;
+      const circumference = 2 * Math.PI * radius;
+      const strokeDashoffset = circumference * (1 - percentRemaining / 100);
+
+      let progressClass = '';
+      if (isPaused) {
+        progressClass = 'paused';
+      } else if (percentRemaining < 25) {
+        progressClass = 'critical';
+      } else if (percentRemaining < 50) {
+        progressClass = 'warning';
+      }
+
+      const hours = Math.floor(hoursRemaining);
+      const minutes = Math.floor((hoursRemaining - hours) * 60);
+
+      let timeDisplay, labelDisplay;
+      const showLabel = size >= 50; // Afficher le label seulement pour les grands cercles
+
+      if (isPaused) {
+        timeDisplay = `${hours}h${minutes > 0 ? String(minutes).padStart(2, '0') : ''}`;
+        labelDisplay = showLabel ? 'PAUSE' : '';
+      } else if (hours > 0) {
+        timeDisplay = `${hours}h${minutes > 0 ? String(minutes).padStart(2, '0') : ''}`;
+        labelDisplay = ''; // Pas de label pendant la semaine
+      } else {
+        timeDisplay = `${minutes}min`;
+        labelDisplay = ''; // Pas de label pendant la semaine
+      }
+
+      return `
+        <div class="countdown-circle" style="width: ${size}px; height: ${size}px; pointer-events: none;">
+          <svg width="${size}" height="${size}">
+            <circle class="countdown-circle-bg" cx="${size/2}" cy="${size/2}" r="${radius}"></circle>
+            <circle class="countdown-circle-progress ${progressClass}"
+                    cx="${size/2}" cy="${size/2}" r="${radius}"
+                    stroke-dasharray="${circumference}"
+                    stroke-dashoffset="${strokeDashoffset}"></circle>
+          </svg>
+          <div class="countdown-text">
+            <div>${timeDisplay}</div>
+            ${labelDisplay ? `<span class="countdown-label">${labelDisplay}</span>` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    // Fonction pour formater le temps restant en texte (pour compatibilité)
+    function formatTimeRemaining(hoursRemaining, isPaused) {
+      if (isPaused) {
+        const hours = Math.floor(hoursRemaining);
+        const minutes = Math.floor((hoursRemaining - hours) * 60);
+        return `${hours}h${minutes > 0 ? String(minutes).padStart(2, '0') : ''} (PAUSE)`;
+      }
+
+      const totalMinutes = Math.floor(hoursRemaining * 60);
+      const days = Math.floor(totalMinutes / (24 * 60));
+      const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+      const minutes = totalMinutes % 60;
+
+      return `${days}j ${hours}h ${minutes}m`;
+    }
+
+    // Charger les plaintes depuis l'API
+    async function loadPlaintesData() {
+      if (!window.username) return;
+
+      try {
+        const response = await fetch(`/api/plaintes/${window.username}`);
+        const data = await response.json();
+
+        if (data.success) {
+          plaintesActuellesData = data.plaintes_actuelles || [];
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des plaintes:', error);
+      }
+    }
+
+    window.ouvrirPlaintePopup = async function() {
+      await loadPlaintesData();
+
       document.getElementById('plaintePopup').classList.remove('hidden');
       document.body.style.overflow = 'hidden'; // Bloquer le scroll
+
       // Afficher la liste, cacher les détails
       document.getElementById('plaintesListe').classList.remove('hidden');
+      document.getElementById('plaintesListe').style.display = 'flex';
       document.getElementById('plainteDetails').classList.add('hidden');
+      document.getElementById('plainteDetails').style.display = 'none';
+
+      // Mettre à jour le contenu
+      renderPlaintesList();
     };
 
     window.fermerPlaintePopup = function() {
@@ -5561,96 +5805,207 @@
 
     window.retourListePlaintes = function() {
       document.getElementById('plaintesListe').classList.remove('hidden');
+      document.getElementById('plaintesListe').style.display = 'flex';
       document.getElementById('plainteDetails').classList.add('hidden');
+      document.getElementById('plainteDetails').style.display = 'none';
     };
 
-    // Données des plaintes
-    const plaintesData = {
-      1: {
-        nom: 'Jean Dupont',
-        telephone: '514-555-1234',
-        email: 'jean.dupont@email.com',
-        message: "Le travail n'a pas été terminé dans les délais convenus. Je suis très insatisfait du service.",
-        temps: '2j 5h 12m 45s'
-      },
-      2: {
-        nom: 'Marie Tremblay',
-        telephone: '450-555-9876',
-        email: 'marie.t@email.com',
-        message: "La qualité du travail ne correspond pas à ce qui a été promis. Très déçue.",
-        temps: '0j 3h 25m 10s'
+    // Rendre la liste des plaintes dynamiquement
+    function renderPlaintesList() {
+      const container = document.getElementById('plaintesListeContainer');
+      const countSpan = document.getElementById('plaintesCount');
+
+      countSpan.textContent = plaintesActuellesData.length;
+
+      if (plaintesActuellesData.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-8" style="color: var(--text-gray);">
+            <i class="fas fa-inbox text-4xl mb-3 opacity-50"></i>
+            <p>Aucune plainte actuelle</p>
+          </div>
+        `;
+        return;
       }
-    };
 
-    window.ouvrirDetailsPlainte = function(plainteId) {
-      const plainte = plaintesData[plainteId];
+      container.innerHTML = plaintesActuellesData.map((plainte, index) => {
+        const circleHTML = createCountdownCircleHTML(plainte.date_creation, 40);
+
+        return `
+          <div onclick="ouvrirDetailsPlainte(${index})" class="bg-gray-900 rounded-lg p-4 cursor-pointer border border-transparent transition-all">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <div class="text-base font-bold truncate" style="color: var(--text-light);">${plainte.client_prenom} ${plainte.client_nom}</div>
+                <div class="text-xs mt-1" style="color: var(--text-gray);">${plainte.soumission_num}</div>
+              </div>
+              <div class="flex items-center gap-2">
+                ${circleHTML}
+                <i class="fas fa-chevron-right text-gray-500 text-sm"></i>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    window.ouvrirDetailsPlainte = async function(plainteIndex) {
+      const plainte = plaintesActuellesData[plainteIndex];
       if (!plainte) return;
 
       // Masquer la liste, afficher les détails
       document.getElementById('plaintesListe').classList.add('hidden');
       document.getElementById('plainteDetails').classList.remove('hidden');
+      document.getElementById('plainteDetails').style.display = 'flex';
+
+      // Si les données téléphone/courriel ne sont pas dans la plainte, aller les chercher
+      let telephone = plainte.client_telephone || '';
+      let courriel = plainte.client_courriel || '';
+
+      if (!telephone || !courriel) {
+        try {
+          const response = await fetch(`/api/soumissions/${window.username}/signed`);
+          const data = await response.json();
+          if (data.success && data.soumissions) {
+            const soumission = data.soumissions.find(s => s.num === plainte.soumission_num);
+            if (soumission) {
+              telephone = soumission.telephone || '';
+              courriel = soumission.courriel || '';
+            }
+          }
+        } catch (error) {
+          console.error('Erreur lors de la récupération des infos client:', error);
+        }
+      }
 
       // Afficher les détails
+      const circleHTMLLarge = createCountdownCircleHTML(plainte.date_creation, 80);
+
       document.getElementById('plainteDetails').innerHTML = `
-        <div class="flex items-center justify-between mb-4">
-          <button onclick="retourListePlaintes()" class="text-gray-400 hover:text-white transition-colors flex items-center gap-2">
-            <i class="fas fa-arrow-left"></i>
-            <span class="font-semibold">Retour</span>
-          </button>
-          <button onclick="fermerPlaintePopup()" class="text-gray-400 hover:text-red-500 transition-colors">
-            <i class="fas fa-times text-xl"></i>
-          </button>
-        </div>
-
-        <div class="bg-gray-900 rounded-lg p-5 border border-red-500 border-opacity-30">
-          <div class="flex items-start justify-between mb-4">
-            <div>
-              <div class="text-xs text-gray-500 mb-1">Client</div>
-              <div class="text-lg font-bold" style="color: var(--text-light);">${plainte.nom}</div>
-              <div class="flex items-center gap-3 mt-2">
-                <div class="text-xs" style="color: var(--text-gray);">
-                  <i class="fas fa-phone text-[10px] mr-1"></i>${plainte.telephone}
-                </div>
-                <div class="text-xs" style="color: var(--text-gray);">
-                  <i class="fas fa-envelope text-[10px] mr-1"></i>${plainte.email}
-                </div>
-              </div>
-            </div>
-            <div class="bg-red-900 bg-opacity-30 px-3 py-1.5 rounded-lg">
-              <div class="text-xs text-red-400 font-semibold">
-                <i class="fas fa-clock mr-1"></i>${plainte.temps}
-              </div>
-            </div>
-          </div>
-
-          <div class="mt-4">
-            <div class="text-xs text-gray-500 mb-2">Message de la plainte</div>
-            <div class="text-sm leading-relaxed bg-gray-800 rounded-lg p-4" style="color: var(--text-light);">
-              ${plainte.message}
-            </div>
-          </div>
-
-          <div class="mt-5 flex gap-3">
-            <button onclick="reglerPlainte(${plainteId})" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-colors" style="background: #10b981; color: white;">
-              <i class="fas fa-check mr-2"></i>Régler cette plainte
+        <div class="p-6 pb-4">
+          <div class="flex items-center justify-between mb-6">
+            <button onclick="retourListePlaintes()" class="text-gray-400 hover:text-white transition-colors flex items-center gap-2">
+              <i class="fas fa-arrow-left"></i>
+              <span class="font-semibold">Retour</span>
+            </button>
+            <button onclick="fermerPlaintePopup()" class="text-gray-400 hover:text-red-500 transition-colors">
+              <i class="fas fa-times text-xl"></i>
             </button>
           </div>
+
+          <div style="display: grid; grid-template-columns: 1fr auto; gap: 1.5rem;">
+            <!-- Partie gauche: Info client -->
+            <div class="bg-gray-900 rounded-lg p-5 border border-red-500 border-opacity-30">
+              <div class="text-xs text-gray-500 mb-1">Client</div>
+              <div class="text-xl font-bold mb-3" style="color: var(--text-light);">${plainte.client_prenom} ${plainte.client_nom}</div>
+
+              <div class="space-y-2">
+                ${telephone ? `
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-phone text-xs" style="color: var(--text-gray);"></i>
+                  <div class="text-sm" style="color: var(--text-gray);">${telephone}</div>
+                </div>
+                ` : ''}
+
+                ${courriel ? `
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-envelope text-xs" style="color: var(--text-gray);"></i>
+                  <div class="text-sm" style="color: var(--text-gray);">${courriel}</div>
+                </div>
+                ` : ''}
+
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-file-signature text-xs" style="color: var(--text-gray);"></i>
+                  <div class="text-sm font-medium" style="color: var(--text-gray);">${plainte.soumission_num}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Partie droite: Cercle centré -->
+            <div class="bg-gray-900 rounded-lg border border-red-500 border-opacity-30 flex items-center justify-center" style="min-width: 140px; padding: 1.5rem;">
+              ${circleHTMLLarge}
+            </div>
+          </div>
+        </div>
+
+        <div class="px-6 flex-1" style="overflow-y: auto;">
+          <div class="text-xs text-gray-500 mb-2">Message de la plainte</div>
+          <div class="text-sm leading-relaxed bg-gray-900 rounded-lg p-4 border border-gray-700" style="color: var(--text-light); min-height: 150px;">
+            ${plainte.description}
+          </div>
+        </div>
+
+        <div class="p-6 pt-4 flex justify-end">
+          <button onclick="reglerPlainte('${plainte.id}')" class="btn-primary" style="background: #10b981 !important; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;">
+            <i class="fas fa-check mr-2"></i>Régler cette plainte
+          </button>
         </div>
       `;
     };
 
-    window.reglerPlainte = function(plainteId) {
-      // Pour l'instant, juste fermer le popup
-      // Plus tard: envoyer requête au serveur pour marquer comme réglée
-      log('Plainte réglée:', plainteId);
-      // Ici on pourrait retirer la plainte de la liste dynamiquement
-      // Réactiver le scroll avant de fermer
-      document.body.style.overflow = '';
-      fermerPlaintePopup();
+    // Fonction pour afficher l'animation de succès
+    function showSuccessAnimation() {
+      const overlay = document.createElement('div');
+      overlay.className = 'success-overlay';
+      overlay.innerHTML = `
+        <div class="success-content">
+          <div class="success-checkmark">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+              <path d="M8 20 L16 28 L32 12" stroke="white" stroke-width="3"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Plainte réglée avec succès!</h2>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+
+      setTimeout(() => {
+        overlay.remove();
+        // Fermer le popup et recharger
+        document.body.style.overflow = '';
+        fermerPlaintePopup();
+        updatePlainteTimer();
+
+        // Mettre à jour le badge dans le menu latéral
+        if (window.parent && window.parent.updatePlaintesBadge) {
+          window.parent.updatePlaintesBadge();
+        }
+      }, 2000);
+    }
+
+    window.reglerPlainte = async function(plainteId) {
+      try {
+        const response = await fetch(`/api/plaintes/${plainteId}/resoudre`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Recharger les données
+          await loadPlaintesData();
+
+          // Afficher l'animation de succès
+          showSuccessAnimation();
+        } else {
+          alert('Erreur lors de la résolution de la plainte');
+        }
+      } catch (error) {
+        console.error('Erreur lors de la résolution de la plainte:', error);
+        alert('Erreur lors de la résolution de la plainte');
+      }
     };
 
-    function updatePlainteTimer() {
-      const plaintesCount = 0; // Test value
+    async function updatePlainteTimer() {
+      // Charger les données à chaque mise à jour
+      if (window.username) {
+        await loadPlaintesData();
+      }
+
+      const plaintesCount = plaintesActuellesData.length;
       const badgeDiv = document.getElementById('plainteIcon');
       const countSpan = document.getElementById('plaintesActuel');
       const zeroSpan = document.getElementById('plaintesZero');
@@ -5664,21 +6019,20 @@
         // Mettre à jour le compteur
         countSpan.textContent = plaintesCount;
 
-        const now = new Date();
-        const elapsed = Math.floor((now - plainteStartTime) / 1000); // seconds
+        // Trouver la plainte avec le MOINS de temps restant
+        let criticalPlainte = plaintesActuellesData[0];
+        let minTimeRemaining = calculateBusinessHoursRemaining(criticalPlainte.date_creation).hoursRemaining;
 
-        const days = Math.floor(elapsed / 86400);
-        const hours = Math.floor((elapsed % 86400) / 3600);
-        const minutes = Math.floor((elapsed % 3600) / 60);
-        const seconds = elapsed % 60;
-
-        const displayText = `${days}j ${hours}h ${minutes}m ${seconds}s`;
-        document.getElementById('plainteTimer').textContent = displayText;
-
-        // Ajouter effet d'urgence si > 1 jour
-        if (days > 0) {
-          badgeDiv.style.animation = 'pulse 2s ease-in-out infinite';
+        for (let plainte of plaintesActuellesData) {
+          const { hoursRemaining } = calculateBusinessHoursRemaining(plainte.date_creation);
+          if (hoursRemaining < minTimeRemaining) {
+            minTimeRemaining = hoursRemaining;
+            criticalPlainte = plainte;
+          }
         }
+
+        // Afficher le cercle pour la plainte la plus critique
+        badgeDiv.innerHTML = createCountdownCircleHTML(criticalPlainte.date_creation, 50);
       } else {
         // Afficher le "0" vert, cacher le badge et le compteur
         badgeDiv.classList.add('hidden');

@@ -486,6 +486,48 @@
       background: transparent !important;
     }
 
+    /* Badge de notification pour les plaintes */
+    .notification-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      margin-left: 8px;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 700;
+      border-radius: 10px;
+    }
+
+    /* Ajuster la position pour le sidebar réduit */
+    .sidebar:not(.expanded) .notification-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      margin-left: 0;
+      min-width: 18px;
+      height: 18px;
+      font-size: 0.65rem;
+      display: inline-flex !important;
+    }
+
+    /* Retirer le nav-label du flux quand sidebar fermé pour éviter décalage */
+    .sidebar:not(.expanded) .nav-label {
+      position: absolute;
+      width: 0;
+      height: 0;
+      overflow: hidden;
+      opacity: 0;
+    }
+
+    /* Le badge reste cliquable même si nav-label est hors du flux */
+    .sidebar:not(.expanded) .nav-label .notification-badge {
+      pointer-events: auto;
+    }
+
     .nav-icon svg {
       width: 17px;
       height: 17px;
@@ -3247,11 +3289,14 @@
         <!-- Section Général -->
         <div class="nav-section">
           <div class="nav-section-title">Général</div>
-          <a href="#/dashboard" class="nav-item active" data-page="dashboard">
+          <a href="#/dashboard" class="nav-item active" data-page="dashboard" style="position: relative;">
             <span class="nav-icon">
               <i class="fas fa-chart-bar"></i>
             </span>
-            <span class="nav-label">Dashboard</span>
+            <span class="nav-label" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+              <span>Dashboard</span>
+              <span id="plaintes-notification-badge" class="notification-badge" style="display: none; margin-left: auto;">0</span>
+            </span>
             <span class="tooltip">Dashboard</span>
           </a>
           <a href="#/rpo" class="nav-item" data-page="rpo" id="nav-rpo" style="position: relative; opacity: 0.5; pointer-events: none; cursor: not-allowed;">
@@ -5893,6 +5938,40 @@
 
         console.log('[SWIPE] ✅ Navigation par swipe fluide activée - Pages:', pageOrder.join(' → '));
       }
+
+      // Fonction pour mettre à jour le badge des plaintes
+      async function updatePlaintesBadge() {
+        const username = window.username || localStorage.getItem('username');
+        if (!username) return;
+
+        try {
+          const response = await fetch(`/api/plaintes/${username}`);
+          const data = await response.json();
+
+          if (data.success) {
+            const plaintesCount = (data.plaintes_actuelles || []).length;
+            const badge = document.getElementById('plaintes-notification-badge');
+
+            if (badge) {
+              if (plaintesCount > 0) {
+                badge.textContent = plaintesCount;
+                badge.style.display = 'flex';
+              } else {
+                badge.style.display = 'none';
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Erreur lors de la mise à jour du badge des plaintes:', error);
+        }
+      }
+
+      // Mettre à jour le badge au chargement et toutes les 30 secondes
+      updatePlaintesBadge();
+      setInterval(updatePlaintesBadge, 30000);
+
+      // Exposer la fonction globalement pour pouvoir la rafraîchir depuis dashboard_user.html
+      window.updatePlaintesBadge = updatePlaintesBadge;
     });
   </script>
 

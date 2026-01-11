@@ -2697,7 +2697,11 @@ def liste_agendas(username: str):
         raise HTTPException(status_code=400, detail="Erreur Google")
 
     return [
-        {"id": cal["id"], "nom": cal.get("summary", cal["id"])}
+        {
+            "id": cal["id"],
+            "nom": cal.get("summary", cal["id"]),
+            "accessRole": cal.get("accessRole", "")
+        }
         for cal in response.json().get("items", [])
     ]
 

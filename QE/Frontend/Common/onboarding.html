@@ -2365,8 +2365,22 @@ function loadCalendars() {
         // Vider le menu dropdown
         dropdownMenu.innerHTML = "";
 
-        // Ajouter les options en utilisant les classes custom-select
-        data.forEach((cal, index) => {
+        // Séparer les agendas personnels (owner) des partagés
+        const personalAgendas = data.filter(cal => cal.accessRole === 'owner');
+        const sharedAgendas = data.filter(cal => cal.accessRole !== 'owner');
+
+        console.log('[DATE] Agendas personnels:', personalAgendas.length, 'Partagés:', sharedAgendas.length);
+
+        // Si aucun agenda personnel, afficher un message informatif
+        if (personalAgendas.length === 0) {
+          const infoMessage = document.createElement("div");
+          infoMessage.style.cssText = "padding: 0.75rem; color: rgba(251, 191, 36, 0.9); background: rgba(251, 191, 36, 0.1); border-radius: 6px; font-size: 0.8rem; margin-bottom: 0.5rem; border: 1px solid rgba(251, 191, 36, 0.2);";
+          infoMessage.innerHTML = '<i class="fas fa-info-circle"></i> Aucun agenda personnel créé. Vous pouvez sélectionner un agenda partagé ou en créer un nouveau dans Google Agenda.';
+          dropdownMenu.appendChild(infoMessage);
+        }
+
+        // Fonction pour créer une option d'agenda
+        function createAgendaOption(cal, isPersonal) {
           const option = document.createElement("div");
           option.className = "custom-select-option";
           if (cal.id === lastSelectedId) {
@@ -2374,7 +2388,13 @@ function loadCalendars() {
             selectedText.textContent = cal.nom;
             selectedText.style.color = "var(--text-light)";
           }
-          option.textContent = cal.nom;
+
+          // Icône différente pour agenda personnel vs partagé
+          const icon = isPersonal
+            ? '<i class="fas fa-calendar" style="color: rgba(34, 197, 94, 0.8); margin-right: 0.5rem;"></i>'
+            : '<i class="fas fa-users" style="color: rgba(148, 163, 184, 0.6); margin-right: 0.5rem;"></i>';
+
+          option.innerHTML = icon + cal.nom;
           option.dataset.agendaId = cal.id;
           option.dataset.agendaName = cal.nom;
 
@@ -2407,7 +2427,25 @@ function loadCalendars() {
             selectContainer.classList.remove("open");
           });
 
-          dropdownMenu.appendChild(option);
+          return option;
+        }
+
+        // Ajouter d'abord les agendas personnels
+        personalAgendas.forEach(cal => {
+          dropdownMenu.appendChild(createAgendaOption(cal, true));
+        });
+
+        // Ajouter un séparateur si on a les deux types
+        if (personalAgendas.length > 0 && sharedAgendas.length > 0) {
+          const separator = document.createElement("div");
+          separator.style.cssText = "padding: 0.5rem 0.75rem; color: rgba(148, 163, 184, 0.6); font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-top: 1px solid rgba(148, 163, 184, 0.1); margin-top: 0.25rem;";
+          separator.textContent = "Agendas partagés";
+          dropdownMenu.appendChild(separator);
+        }
+
+        // Ajouter les agendas partagés
+        sharedAgendas.forEach(cal => {
+          dropdownMenu.appendChild(createAgendaOption(cal, false));
         });
 
         // Si aucun agenda sélectionné, afficher le placeholder

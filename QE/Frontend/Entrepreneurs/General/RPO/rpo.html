@@ -8435,30 +8435,27 @@ function generatePlanWeeks() {
   const tauxVente = parseFloat(document.getElementById('plan-taux-vente')?.dataset.value) || 30;
 
   // Pattern de pourcentages fixes par semaine (% de l'objectif annuel)
-  // Plan commence le 1er décembre 2025
-  // Pourcentages selon planning fourni
+  // Plan commence le 5 janvier 2026 - première semaine vide, objectifs débutent le 12 janvier
   const percentagePattern = [
-    0.01, 0.01, 0.01, 0.01,  // Index 0-3: 1-28 déc 2025 (0.01% pour calcul tendance)
-    0.01,  // Index 4: 29 déc - 4 janv 2026 (0.01% pour calcul tendance)
-    0.01,  // Index 5: 5-11 janv 2026 (0.01% pour calcul tendance)
-    0.5, 2.0, 2.0,  // Index 6-8: 12 janv - 1 fév
-    3.0, 2.5, 3.0, 3.0,  // Index 9-12: 2 fév - 1 mars (2-8 fév: +0.5% = 3.0%)
-    3.5, 4.0, 4.5, 5.5,  // Index 13-16: 2 mars - 29 mars (2 mars: +0.5% = 3.5%, 9-15 mars: +0.5% = 4.0%, 16-22 mars: +1% = 4.5%)
-    4.5, 6.5, 5.5, 6.0, 6.0,  // Index 17-21: 30 mars - 4 mai (30 mars: +0.5% = 4.5%)
-    4.5, 4.5, 4.5, 4.5,  // Index 22-25: 5 mai - 1 juin
-    3.5, 4.0, 3.5, 3.0,  // Index 26-29: 2 juin - 29 juin (1-7 juin: +0.5% = 3.5%, 8-14 juin: +1% = 4.0%, 15 juin: +0.5% = 3.5%)
-    3.0, 3.0, 3.0, 2.0, 1.0,  // Index 30-34: 30 juin - 3 août
-    1.0, 1.0, 1.0, 1.0,  // Index 35-38: 4 août - 31 août
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  // Index 39-51: reste (0%)
+    0,  // Index 0: 5-11 janv 2026 (semaine vide)
+    0.5, 2.0, 2.0,  // Index 1-3: 12 janv - 1 fév
+    3.0, 2.5, 3.0, 3.0,  // Index 4-7: 2 fév - 1 mars (2-8 fév: +0.5% = 3.0%)
+    3.5, 4.0, 4.5, 5.5,  // Index 8-11: 2 mars - 29 mars
+    4.5, 6.5, 5.5, 6.0, 6.0,  // Index 12-16: 30 mars - 4 mai
+    4.5, 4.5, 4.5, 4.5,  // Index 17-20: 5 mai - 1 juin
+    3.5, 4.0, 3.5, 3.0,  // Index 21-24: 2 juin - 29 juin
+    3.0, 3.0, 3.0, 2.0, 1.0,  // Index 25-29: 30 juin - 3 août
+    1.0, 1.0, 1.0, 1.0,  // Index 30-33: 4 août - 31 août
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  // Index 34-51: reste (0%)
   ];
 
   // Pour compatibilité avec le reste du code, garder intensityPattern
   const intensityPattern = percentagePattern;
 
   // Calculer le total d'intensité pour distribuer l'objectif
-  // On compte seulement les semaines 7+ (index 6+) car le plan commence le 12 janvier
+  // On compte seulement les semaines 2+ (index 1+) car le plan commence le 12 janvier (semaine 1 vide)
   const totalIntensity = intensityPattern.reduce((sum, val, idx) => {
-    if (idx >= 6 && val > 0) {
+    if (idx >= 1 && val > 0) {
       return sum + val;
     }
     return sum;
@@ -8472,48 +8469,47 @@ function generatePlanWeeks() {
   const prodPattern = [];
 
   // Pattern d'intensité pour production avec pourcentages spécifiques par semaine
-  // Index mapping: Plan commence 1er décembre 2025
-  // Index 22 = 5 mai 2026 (première semaine de production), etc.
+  // Index mapping: Plan commence 5 janvier 2026
+  // Index 17 = 5 mai 2026 (première semaine de production)
   const productionIntensity = [
-    // Déc 2025 - Avril 2026 (index 0-21): pas de production
-    0, 0, 0, 0, 0,  // Index 0-4: Décembre 2025
-    0, 0, 0, 0,     // Index 5-8: Janvier 2026
-    0, 0, 0, 0,     // Index 9-12: Février 2026
-    0, 0, 0, 0,     // Index 13-16: Mars 2026
-    0, 0, 0, 0, 0,  // Index 17-21: Avril 2026
+    // Janvier - Avril 2026 (index 0-16): pas de production
+    0, 0, 0, 0, 0,  // Index 0-4: Janvier 2026
+    0, 0, 0, 0,     // Index 5-8: Février 2026
+    0, 0, 0, 0,     // Index 9-12: Mars 2026
+    0, 0, 0, 0, 0,  // Index 13-17: Avril 2026
 
-    // Mai 2026 (index 22-25)
-    1,    // Index 22: 5 mai 2026 = 1%
-    4,    // Index 23: 12 mai 2026 = 4%
-    5,    // Index 24: 19 mai 2026 = 5%
-    5,    // Index 25: 26 mai 2026 = 5%
+    // Mai 2026 (index 17-20)
+    1,    // Index 17: 5 mai 2026 = 1%
+    4,    // Index 18: 12 mai 2026 = 4%
+    5,    // Index 19: 19 mai 2026 = 5%
+    5,    // Index 20: 26 mai 2026 = 5%
 
-    // Juin 2026 (index 26-29)
-    5,    // Index 26: 2 juin 2026 = 5%
-    7,    // Index 27: 9 juin 2026 = 7% (ajusté de 6% à 7% pour total 100%)
-    7,    // Index 28: 16 juin 2026 = 7%
-    7,    // Index 29: 23 juin 2026 = 7%
+    // Juin 2026 (index 21-24)
+    5,    // Index 21: 2 juin 2026 = 5%
+    7,    // Index 22: 9 juin 2026 = 7%
+    7,    // Index 23: 16 juin 2026 = 7%
+    7,    // Index 24: 23 juin 2026 = 7%
 
-    // Juillet 2026 (index 30-34)
-    7,    // Index 30: 30 juin 2026 = 7%
-    7,    // Index 31: 7 juillet 2026 = 7%
-    7,    // Index 32: 14 juillet 2026 = 7%
-    7,    // Index 33: 21 juillet 2026 = 7%
-    7,    // Index 34: 28 juillet 2026 = 7%
+    // Juillet 2026 (index 25-29)
+    7,    // Index 25: 30 juin 2026 = 7%
+    7,    // Index 26: 7 juillet 2026 = 7%
+    7,    // Index 27: 14 juillet 2026 = 7%
+    7,    // Index 28: 21 juillet 2026 = 7%
+    7,    // Index 29: 28 juillet 2026 = 7%
 
-    // Août 2026 (index 35-38)
-    6,    // Index 35: 4 août 2026 = 6%
-    5,    // Index 36: 11 août 2026 = 5%
-    5,    // Index 37: 18 août 2026 = 5%
-    4,    // Index 38: 25 août 2026 = 4%
+    // Août 2026 (index 30-33)
+    6,    // Index 30: 4 août 2026 = 6%
+    5,    // Index 31: 11 août 2026 = 5%
+    5,    // Index 32: 18 août 2026 = 5%
+    4,    // Index 33: 25 août 2026 = 4%
 
-    // Septembre 2026 - Fin (index 39-51)
-    3.6,  // Index 39: 1 sept 2026 = 3,6%
-    0.1,  // Index 40: 8 septembre 2026 = 0,1%
-    0.1,  // Index 41: 15 septembre 2026 = 0,1%
-    0.1,  // Index 42: 22 septembre 2026 = 0,1%
-    0.1,  // Index 43: 29 septembre 2026 = 0,1%
-    0, 0, 0, 0, 0, 0, 0, 0  // Index 44-51: reste
+    // Septembre 2026 - Fin (index 34-46)
+    3.6,  // Index 34: 1 sept 2026 = 3,6%
+    0.1,  // Index 35: 8 septembre 2026 = 0,1%
+    0.1,  // Index 36: 15 septembre 2026 = 0,1%
+    0.1,  // Index 37: 22 septembre 2026 = 0,1%
+    0.1,  // Index 38: 29 septembre 2026 = 0,1%
+    0, 0, 0, 0, 0, 0, 0, 0  // Index 39-46: reste
   ];
   const totalProdIntensity = productionIntensity.reduce((sum, val) => sum + val, 0);
   log('[PROD] Total des pourcentages de production:', totalProdIntensity + '%');
@@ -8521,9 +8517,9 @@ function generatePlanWeeks() {
   for (let i = 0; i < weeks; i++) {
     const intensity = intensityPattern[i];
 
-    // Pour les semaines 1-6 (index 0-5), pas de valeurs car le plan commence le 12 janvier (semaine 7)
+    // Pour la semaine 1 (index 0), pas de valeurs car le plan commence le 12 janvier (semaine 2)
     // Pour les semaines inactives (0) ou cachées (-1), pas de valeurs
-    if (i < 6 || intensity <= 0) {
+    if (i < 1 || intensity <= 0) {
       mktgPattern.push(0);
       estimPattern.push(0);
       contratPattern.push(0);
@@ -8655,10 +8651,10 @@ function generatePlanWeeks() {
     const pctSem = intensityPattern[i - 1] || 0; // % de l'objectif pour cette semaine
     const prodPct = productionIntensity[i - 1] || 0; // % de production pour cette semaine
 
-    // TV commence le 12 janvier (semaine 7) et finit le 30 août (semaine 39)
+    // TV commence le 12 janvier (semaine 2) et finit le 30 août (semaine 34)
     // Progression: 25% -> 30% -> 35%
     let tvVal = '-';
-    if (i >= 7 && i <= 39) {
+    if (i >= 2 && i <= 34) {
       tvVal = 25;
       if (i >= 21) tvVal = 30; // À partir de la semaine 21
       if (i >= 33) tvVal = 35; // À partir de la semaine 33
@@ -9549,7 +9545,7 @@ function calculatePlan() {
   let cumulDollarPrev = 0;  // Cumulatif des dollars prévus pour le % Objectif
   let cumulPctPattern = 0;  // Cumul des pourcentages directs du pattern
 
-  // Cumuls objectifs progressifs (à partir de la semaine 7)
+  // Cumuls objectifs progressifs (à partir de la semaine 2)
   let cumulMktgObj = 0;
   let cumulEstimObj = 0;
   let cumulContratObj = 0;
@@ -9637,8 +9633,8 @@ function calculatePlan() {
       totalPctSem += pctSemVal; // Accumuler pour le total
     }
 
-    // Accumuler les pourcentages du pattern à partir de la semaine 7 (12 janvier)
-    if (i >= 7) {
+    // Accumuler les pourcentages du pattern à partir de la semaine 2 (12 janvier)
+    if (i >= 2) {
       cumulDollarPrev += dollarPrev;
       cumulPctPattern += pctSemVal;
 
@@ -9664,13 +9660,13 @@ function calculatePlan() {
     const ratio = mktgReel > 0 ? (estimReel / mktgReel).toFixed(2) : '0.00';
 
     // % Objectif cumulatif basé sur les pourcentages directs du pattern (pas sur les dollars arrondis)
-    // Affiche 0.01% pour chaque semaine de décembre 2025 (semaines 1-6), puis cumule les % du pattern à partir de la semaine 7
+    // Semaine 1 (5-11 janv) vide, objectifs commencent semaine 2 (12 janv)
     let pctCumul;
-    if (i < 7) {
-      // Décembre 2025: afficher 0.01% par semaine cumulé
-      pctCumul = (0.01 * i).toFixed(2);
+    if (i < 1) {
+      // Semaine 1: 0%
+      pctCumul = "0.00";
     } else {
-      // À partir de janvier 2026: cumul normal du pattern
+      // À partir de la semaine 2: cumul normal du pattern
       pctCumul = cumulPctPattern.toFixed(2);
     }
 
@@ -9753,7 +9749,7 @@ function calculatePlan() {
     // Mettre à jour les affichages (avec vérifications)
     // H. Marketing - Cumul Obj. et Cumul
     const mktgCumulObjElem = document.getElementById(`plan-w${i}-mktg-cumul-obj`);
-    if (mktgCumulObjElem) mktgCumulObjElem.textContent = i >= 7 ? parseFloat(cumulMktgObj.toFixed(1)) + ' h' : '-';
+    if (mktgCumulObjElem) mktgCumulObjElem.textContent = i >= 2 ? parseFloat(cumulMktgObj.toFixed(1)) + ' h' : '-';
 
     const mktgCumulElem = document.getElementById(`plan-w${i}-mktg-cumul`);
     if (mktgCumulElem) mktgCumulElem.textContent = parseFloat(cumulMktg.toFixed(1)) + ' h';
@@ -9763,7 +9759,7 @@ function calculatePlan() {
 
     // Estimations - Cumul Obj. et Cumul
     const estimCumulObjElem = document.getElementById(`plan-w${i}-estim-cumul-obj`);
-    if (estimCumulObjElem) estimCumulObjElem.textContent = i >= 7 ? Math.round(cumulEstimObj) : '0';
+    if (estimCumulObjElem) estimCumulObjElem.textContent = i >= 2 ? Math.round(cumulEstimObj) : '0';
 
     const estimCumulElem = document.getElementById(`plan-w${i}-estim-cumul`);
     if (estimCumulElem) estimCumulElem.textContent = Math.round(cumulEstim);
@@ -9776,7 +9772,7 @@ function calculatePlan() {
 
     // Contrats - Cumul Obj. et Cumul
     const contratCumulObjElem = document.getElementById(`plan-w${i}-contrat-cumul-obj`);
-    if (contratCumulObjElem) contratCumulObjElem.textContent = i >= 7 ? parseFloat(cumulContratObj.toFixed(1)) : '0';
+    if (contratCumulObjElem) contratCumulObjElem.textContent = i >= 2 ? parseFloat(cumulContratObj.toFixed(1)) : '0';
 
     const contratCumulElem = document.getElementById(`plan-w${i}-contrat-cumul`);
     if (contratCumulElem) contratCumulElem.textContent = parseFloat(cumulContrat.toFixed(1));
@@ -9786,7 +9782,7 @@ function calculatePlan() {
 
     // $ Signés - Cumul Obj. et Cumul
     const dollarCumulObjElem = document.getElementById(`plan-w${i}-dollar-cumul-obj`);
-    if (dollarCumulObjElem) dollarCumulObjElem.textContent = i >= 7 ? Math.round(cumulDollarObj).toLocaleString('fr-CA') + ' $' : '0 $';
+    if (dollarCumulObjElem) dollarCumulObjElem.textContent = i >= 2 ? Math.round(cumulDollarObj).toLocaleString('fr-CA') + ' $' : '0 $';
 
     const dollarCumulElem = document.getElementById(`plan-w${i}-dollar-cumul`);
     if (dollarCumulElem) dollarCumulElem.textContent = Math.round(cumulDollar).toLocaleString('fr-CA') + ' $';
@@ -9804,7 +9800,7 @@ function calculatePlan() {
 
     // Production - Cumul Obj. et Cumul
     const prodCumulObjElem = document.getElementById(`plan-w${i}-prod-cumul-obj`);
-    if (prodCumulObjElem) prodCumulObjElem.textContent = i >= 7 ? Math.round(cumulProdObj).toLocaleString('fr-CA') + ' $' : '0 $';
+    if (prodCumulObjElem) prodCumulObjElem.textContent = i >= 2 ? Math.round(cumulProdObj).toLocaleString('fr-CA') + ' $' : '0 $';
 
     const prodCumulElem = document.getElementById(`plan-w${i}-prod-cumul`);
     if (prodCumulElem) prodCumulElem.textContent = Math.round(cumulProd).toLocaleString('fr-CA') + ' $';
@@ -9840,7 +9836,7 @@ function calculatePlan() {
   const totalRatio = totalMktgReel > 0 ? (totalEstimReel / totalMktgReel).toFixed(2) : '0.00';
   document.getElementById('total-ratio').textContent = totalRatio;
 
-  // % objectif total (basé sur le cumul final du pattern à partir de la semaine 7)
+  // % objectif total (basé sur le cumul final du pattern à partir de la semaine 2)
   // cumulPctPattern contient la somme exacte des pourcentages du pattern
   const totalPctCumul = cumulPctPattern.toFixed(2);
   document.getElementById('total-pct-cumul').textContent = totalPctCumul + '%';

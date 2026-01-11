@@ -8931,7 +8931,7 @@ async def get_users_entrepreneurs_api(coach_username: Optional[str] = None):
 
                 # Si prenom ou nom vide dans DB, lire depuis user_info.json
                 if not prenom or not nom:
-                    user_info_file = os.path.join("data", "signatures", username, "user_info.json")
+                    user_info_file = os.path.join(base_cloud, "signatures", username, "user_info.json")
                     if os.path.exists(user_info_file):
                         try:
                             with open(user_info_file, "r", encoding="utf-8") as f:

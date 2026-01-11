@@ -2683,9 +2683,31 @@ def get_google_email(username: str):
 
 @app.delete("/deconnecter-agenda")
 def deconnecter_agenda(username: str):
-    fichier = os.path.join(base_cloud, "tokens", f"{username}.json")
-    if os.path.exists(fichier):
-        os.remove(fichier)
+    # Supprimer le token Google
+    fichier_token = os.path.join(base_cloud, "tokens", f"{username}.json")
+    if os.path.exists(fichier_token):
+        os.remove(fichier_token)
+
+    # Supprimer l'agenda sélectionné
+    fichier_agenda = os.path.join(base_cloud, "tokens", f"{username}_agenda.json")
+    if os.path.exists(fichier_agenda):
+        os.remove(fichier_agenda)
+
+    return {"message": "Agenda déconnecté"}
+
+@app.post("/disconnect-agenda")
+def disconnect_agenda(username: str):
+    """Endpoint POST pour la déconnexion d'agenda (utilisé par onboarding)"""
+    # Supprimer le token Google
+    fichier_token = os.path.join(base_cloud, "tokens", f"{username}.json")
+    if os.path.exists(fichier_token):
+        os.remove(fichier_token)
+
+    # Supprimer l'agenda sélectionné
+    fichier_agenda = os.path.join(base_cloud, "tokens", f"{username}_agenda.json")
+    if os.path.exists(fichier_agenda):
+        os.remove(fichier_agenda)
+
     return {"message": "Agenda déconnecté"}
 
 @app.get("/liste-agendas")

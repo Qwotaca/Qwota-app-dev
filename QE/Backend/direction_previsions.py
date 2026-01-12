@@ -23,9 +23,11 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 def get_direction_previsions_file(direction_username):
     """
-    Retourne le chemin du fichier JSON des prévisions pour un utilisateur direction
+    Retourne le chemin du fichier JSON des prévisions COMMUN à tous les comptes direction
+    Le paramètre direction_username est gardé pour compatibilité API mais ignoré
     """
-    return DATA_DIR / f"{direction_username}_previsions.json"
+    # Tous les comptes direction partagent le même fichier
+    return DATA_DIR / "shared_direction_previsions.json"
 
 
 def load_direction_previsions(direction_username):
@@ -48,7 +50,7 @@ def load_direction_previsions(direction_username):
             data = json.load(f)
             return data.get('previsions', {})
     except Exception as e:
-        print(f"[DIRECTION PREVISIONS] Erreur lecture {direction_username}: {e}")
+        print(f"[DIRECTION PREVISIONS] Erreur lecture fichier PARTAGÉ: {e}")
         return {}
 
 
@@ -66,14 +68,14 @@ def save_direction_previsions(direction_username, previsions):
     file_path = get_direction_previsions_file(direction_username)
 
     try:
-        print(f"[DIRECTION PREVISIONS] Tentative sauvegarde pour {direction_username}")
+        print(f"[DIRECTION PREVISIONS] Tentative sauvegarde PARTAGÉE (tous les comptes direction)")
         print(f"[DIRECTION PREVISIONS] Chemin fichier: {file_path}")
         print(f"[DIRECTION PREVISIONS] Répertoire DATA_DIR: {DATA_DIR}")
         print(f"[DIRECTION PREVISIONS] Existe: {DATA_DIR.exists()}")
         print(f"[DIRECTION PREVISIONS] Prévisions: {previsions}")
 
         data = {
-            'direction_username': direction_username,
+            'direction_username': 'shared',  # Commun à tous les comptes direction
             'previsions': previsions,
             'last_updated': datetime.now().isoformat()
         }
@@ -81,11 +83,11 @@ def save_direction_previsions(direction_username, previsions):
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-        print(f"[DIRECTION PREVISIONS] OK Sauvegarde pour {direction_username}: {len(previsions)} previsions")
+        print(f"[DIRECTION PREVISIONS] OK Sauvegarde PARTAGÉE (tous les comptes direction): {len(previsions)} previsions")
         return True
 
     except Exception as e:
-        print(f"[DIRECTION PREVISIONS] ERREUR sauvegarde {direction_username}: {e}")
+        print(f"[DIRECTION PREVISIONS] ERREUR sauvegarde fichier PARTAGÉ: {e}")
         print(f"[DIRECTION PREVISIONS] Type erreur: {type(e).__name__}")
         import traceback
         traceback.print_exc()
@@ -111,9 +113,11 @@ def get_direction_team_objectif_total(direction_username):
 
 def get_direction_metrics_file(direction_username):
     """
-    Retourne le chemin du fichier JSON des métriques pour un utilisateur direction
+    Retourne le chemin du fichier JSON des métriques COMMUN à tous les comptes direction
+    Le paramètre direction_username est gardé pour compatibilité API mais ignoré
     """
-    return DATA_DIR / f"{direction_username}_metrics.json"
+    # Tous les comptes direction partagent le même fichier
+    return DATA_DIR / "shared_direction_metrics.json"
 
 
 def load_direction_metrics(direction_username):
@@ -136,7 +140,7 @@ def load_direction_metrics(direction_username):
             data = json.load(f)
             return data.get('metrics', {'cm': 0, 'ratioMktg': 0, 'tauxVente': 0})
     except Exception as e:
-        print(f"[DIRECTION METRICS] Erreur lecture {direction_username}: {e}")
+        print(f"[DIRECTION METRICS] Erreur lecture fichier PARTAGÉ: {e}")
         return {'cm': 0, 'ratioMktg': 0, 'tauxVente': 0}
 
 
@@ -154,12 +158,12 @@ def save_direction_metrics(direction_username, metrics):
     file_path = get_direction_metrics_file(direction_username)
 
     try:
-        print(f"[DIRECTION METRICS] Tentative sauvegarde pour {direction_username}")
+        print(f"[DIRECTION METRICS] Tentative sauvegarde PARTAGÉE (tous les comptes direction)")
         print(f"[DIRECTION METRICS] Chemin fichier: {file_path}")
         print(f"[DIRECTION METRICS] Métriques: {metrics}")
 
         data = {
-            'direction_username': direction_username,
+            'direction_username': 'shared',  # Commun à tous les comptes direction
             'metrics': metrics,
             'last_updated': datetime.now().isoformat()
         }
@@ -167,11 +171,11 @@ def save_direction_metrics(direction_username, metrics):
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-        print(f"[DIRECTION METRICS] OK Sauvegarde pour {direction_username}: CM={metrics.get('cm')}, Ratio={metrics.get('ratioMktg')}%, Taux={metrics.get('tauxVente')}%")
+        print(f"[DIRECTION METRICS] OK Sauvegarde PARTAGÉE (tous les comptes direction): CM={metrics.get('cm')}, Ratio={metrics.get('ratioMktg')}%, Taux={metrics.get('tauxVente')}%")
         return True
 
     except Exception as e:
-        print(f"[DIRECTION METRICS] ERREUR sauvegarde {direction_username}: {e}")
+        print(f"[DIRECTION METRICS] ERREUR sauvegarde fichier PARTAGÉ: {e}")
         print(f"[DIRECTION METRICS] Type erreur: {type(e).__name__}")
         import traceback
         traceback.print_exc()

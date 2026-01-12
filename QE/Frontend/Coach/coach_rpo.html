@@ -5237,55 +5237,35 @@ let allWeeksData = [];
 function initializeAllWeeksData() {
   if (allWeeksData.length > 0) return; // Déjà initialisé
 
-  // Date de départ: 1er décembre 2025 (comme dans le plan d'affaires)
-  const startDate = new Date(2025, 11, 1); // 1er décembre 2025
+  // Date de départ: 5 janvier 2026 (lundi)
+  const startDate = new Date(2026, 0, 5); // 5 janvier 2026
 
-  // Générer 56 semaines (comme dans le plan d'affaires)
-  const totalWeeks = 56;
-  let weekCounter2025 = 1;
+  // Générer 52 semaines (du 5 janvier au 27 décembre 2026)
+  const totalWeeks = 52;
   let weekCounter2026 = 1;
 
   for (let i = 1; i <= totalWeeks; i++) {
-    // Génération continue des dates depuis le 1er décembre 2025
+    // Génération continue des dates depuis le 5 janvier 2026
     const weekStartDate = new Date(startDate.getTime() + ((i - 1) * 7 * 24 * 60 * 60 * 1000));
     const weekEndDate = new Date(weekStartDate.getTime() + (6 * 24 * 60 * 60 * 1000));
 
-    // Format: "5 janv. - 11 janv." ou "1 - 7 déc. 2025" pour décembre 2025
+    // Format: "5 janv. - 11 janv."
     const startDay = weekStartDate.getDate();
     const endDay = weekEndDate.getDate();
     const startMonth = weekStartDate.toLocaleDateString('fr-FR', { month: 'short' });
     const endMonth = weekEndDate.toLocaleDateString('fr-FR', { month: 'short' });
-    const startYear = weekStartDate.getFullYear();
-    const endYear = weekEndDate.getFullYear();
 
     let dateRangeStr;
     let weekValue;
 
-    // Pour les semaines en 2025 (décembre), ajouter l'année
-    if (startYear === 2025) {
-      if (startMonth === endMonth) {
-        dateRangeStr = `${startDay} - ${endDay} ${startMonth.replace('.', '')} 2025`;
-      } else {
-        // Si la semaine chevauche deux années (2025-2026), PAS d'année
-        if (endYear === 2026) {
-          dateRangeStr = `${startDay} ${startMonth.replace('.', '')} - ${endDay} ${endMonth.replace('.', '')}`;
-        } else {
-          // Même année 2025, mois différents
-          dateRangeStr = `${startDay} ${startMonth.replace('.', '')} - ${endDay} ${endMonth.replace('.', '')} 2025`;
-        }
-      }
-      weekValue = `2025-W${String(weekCounter2025).padStart(2, '0')}`;
-      weekCounter2025++;
+    // Toutes les semaines sont en 2026
+    if (startMonth === endMonth) {
+      dateRangeStr = `${startDay} - ${endDay} ${startMonth.replace('.', '')}`;
     } else {
-      // Pour toutes les autres semaines (2026), pas d'année
-      if (startMonth === endMonth) {
-        dateRangeStr = `${startDay} - ${endDay} ${startMonth}`;
-      } else {
-        dateRangeStr = `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
-      }
-      weekValue = `2026-W${String(weekCounter2026).padStart(2, '0')}`;
-      weekCounter2026++;
+      dateRangeStr = `${startDay} ${startMonth.replace('.', '')} - ${endDay} ${endMonth.replace('.', '')}`;
     }
+    weekValue = `2026-W${String(weekCounter2026).padStart(2, '0')}`;
+    weekCounter2026++;
 
     allWeeksData.push({ value: weekValue, label: dateRangeStr });
   }
@@ -8132,7 +8112,7 @@ function calculateTeamObjectivePattern(totalObjectif, avgCM, avgRatioMktg, avgTa
     }
   }
 
-  console.log('[TEAM PLAN] Objectifs calculés pour 56 semaines');
+  console.log('[TEAM PLAN] Objectifs calculés pour 52 semaines');
   console.log('[TEAM PLAN] Total pattern (%):', totalPatternPct);
   console.log('[TEAM PLAN] Objectif visé total (100%):', totalObjectifVise);
   return weeklyObjectives;
@@ -8247,25 +8227,25 @@ async function loadEntrepreneurVentesProduit(username) {
   }
 }
 
-// Fonction pour convertir une date_completion en index de semaine (0-55)
-// Les semaines commencent le 1er décembre 2025
+// Fonction pour convertir une date_completion en index de semaine (0-51)
+// Les semaines commencent le 5 janvier 2026
 function getWeekIndexFromDate(dateCompletion) {
   try {
-    // Parser la date (format ISO: "2025-12-10T13:54:19.645559")
+    // Parser la date (format ISO: "2026-01-10T13:54:19.645559")
     const completionDate = new Date(dateCompletion);
 
-    // Date de début des semaines (1er décembre 2025)
-    const startDate = new Date(2025, 11, 1); // Month is 0-indexed, so 11 = December
+    // Date de début des semaines (5 janvier 2026)
+    const startDate = new Date(2026, 0, 5); // Month is 0-indexed, so 0 = January
 
     // Calculer la différence en jours
     const diffTime = completionDate - startDate;
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-    // Calculer l'index de semaine (0-55)
+    // Calculer l'index de semaine (0-51)
     const weekIndex = Math.floor(diffDays / 7);
 
-    // Valider que c'est dans la plage valide (0-55)
-    if (weekIndex < 0 || weekIndex >= 56) {
+    // Valider que c'est dans la plage valide (0-51)
+    if (weekIndex < 0 || weekIndex >= 52) {
       console.warn(`[TEAM PLAN] Date hors plage: ${dateCompletion} -> semaine ${weekIndex}`);
       return null;
     }
@@ -8341,8 +8321,8 @@ async function aggregateTeamData() {
 
   const allWeeklyData = {};
 
-  // Initialiser la structure pour 56 semaines (seulement les données réelles)
-  for (let i = 0; i < 56; i++) {
+  // Initialiser la structure pour 52 semaines (seulement les données réelles)
+  for (let i = 0; i < 52; i++) {
     allWeeklyData[i] = {
       mktgReel: 0,
       estimReel: 0,
@@ -8374,9 +8354,25 @@ async function aggregateTeamData() {
     const rpoData = await loadEntrepreneurRPOData(username);
     if (!rpoData || !rpoData.weekly) continue;
 
-    // Parcourir les données hebdomadaires (de décembre 2025 à décembre 2026)
-    // Mapping correct: mois -1 = Décembre 2025, mois 0 = Janvier 2026, etc.
-    for (let monthIndex = -1; monthIndex <= 11; monthIndex++) {
+    // Parcourir les données hebdomadaires (Janvier 2026 à Décembre 2026)
+    // Mapping: mois 0 = Janvier 2026, mois 1 = Février 2026, etc.
+    // Offsets des semaines par mois (52 semaines total, du 5 janvier au 27 décembre 2026)
+    const weekOffsets = {
+      '0': 0,    // Janvier 2026 (5 semaines)
+      '1': 5,    // Février 2026 (4 semaines)
+      '2': 9,    // Mars 2026 (4 semaines)
+      '3': 13,   // Avril 2026 (5 semaines)
+      '4': 18,   // Mai 2026 (4 semaines)
+      '5': 22,   // Juin 2026 (4 semaines)
+      '6': 26,   // Juillet 2026 (5 semaines)
+      '7': 31,   // Août 2026 (4 semaines)
+      '8': 35,   // Septembre 2026 (4 semaines)
+      '9': 39,   // Octobre 2026 (5 semaines)
+      '10': 44,  // Novembre 2026 (4 semaines)
+      '11': 48   // Décembre 2026 (4 semaines)
+    };
+
+    for (let monthIndex = 0; monthIndex <= 11; monthIndex++) {
       const monthKey = String(monthIndex);
       if (!rpoData.weekly[monthKey]) continue;
 
@@ -8385,13 +8381,13 @@ async function aggregateTeamData() {
 
       for (const weekNum of weekNumbers) {
         // Calculer le bon index de semaine basé sur le mois et le numéro de semaine
-        // Formule: weekIndex = (monthIndex + 1) * 5 + (weekNum - 1)
-        // Exemple: mois -1 semaine 1 -> (0 * 5) + 0 = 0
-        //          mois 0 semaine 1 -> (1 * 5) + 0 = 5
-        //          mois 1 semaine 2 -> (2 * 5) + 1 = 11
-        const weekIndex = (monthIndex + 1) * 5 + (parseInt(weekNum) - 1);
+        // Utiliser weekOffsets pour obtenir le début de chaque mois
+        const offset = weekOffsets[monthKey];
+        if (offset === undefined) continue;
 
-        if (weekIndex < 0 || weekIndex >= 56) continue;
+        const weekIndex = offset + parseInt(weekNum) - 1;
+
+        if (weekIndex < 0 || weekIndex >= 52) continue;
 
         const weekData = monthData[weekNum];
 
@@ -8422,7 +8418,7 @@ async function aggregateTeamData() {
       }
 
       const weekIdx = getWeekIndexFromDate(vente.date_completion);
-      if (weekIdx !== null && weekIdx >= 0 && weekIdx < 56) {
+      if (weekIdx !== null && weekIdx >= 0 && weekIdx < 52) {
         const montant = parseMonetaryAmount(vente.prix);
         allWeeklyData[weekIdx].prodReel += montant;
         console.log(`[TEAM PLAN] ${username}: Vente de ${montant}$ ajoutée à la semaine ${weekIdx}`);
@@ -8466,7 +8462,7 @@ async function initTeamPlan() {
     return;
   }
 
-  // Générer les 56 semaines
+  // Générer les 52 semaines
   teamPlanWeeks = generateTeamPlanWeeks();
   console.log('[STATS] Semaines générées:', teamPlanWeeks.length);
 

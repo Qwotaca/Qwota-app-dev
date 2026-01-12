@@ -2734,11 +2734,11 @@ function updateAnnualChart() {
   // Vider le conteneur
   container.innerHTML = '';
 
-  // Noms des mois: Déc 2025 + Jan-Sept 2026
-  const monthNames = ['Déc 25', 'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sept'];
+  // Noms des mois: Jan-Sept 2026
+  const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sept'];
 
-  // Index des mois: -2 (Déc 2025) + 0-8 (Jan-Sept 2026)
-  const monthIndexes = [-2, 0, 1, 2, 3, 4, 5, 6, 7, 8];
+  // Index des mois: 0-8 (Jan-Sept 2026)
+  const monthIndexes = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
   // Récupérer les valeurs mensuelles en SOMMANT les données hebdomadaires
   const monthlyData = [];
@@ -3924,8 +3924,7 @@ function showResume() {
 
 // Get objectif labels based on month
 function getObjectifLabel1(monthIndex) {
-  // Décembre 2025 (index -2) utilise les mêmes labels qu'octobre 2026
-    const labels = [
+  const labels = [
     'HEURES PÀP',           // Janvier (0)
     'HEURES PÀP',           // Février (1)
     'Estimations',          // Mars (2)
@@ -3943,8 +3942,7 @@ function getObjectifLabel1(monthIndex) {
 }
 
 function getObjectifLabel2(monthIndex) {
-  // Décembre 2025 (index -2) utilise les mêmes labels qu'octobre 2026
-    const labels = [
+  const labels = [
     'HEURES PÀP (REP)',     // Janvier (0)
     'Estimations',          // Février (1)
     'Ventes',               // Mars (2)
@@ -10316,51 +10314,6 @@ function loadWeeklyDataToPlan() {
 
   log('[PLAN] Chargement des données depuis window.weeklyData...');
 
-  // Décembre 2025 (monthIndex -2): semaines 1-5 -> plan weeks 1-5
-  if (window.weeklyData['-2']) {
-    Object.keys(window.weeklyData['-2']).forEach(weekNumber => {
-      const weekData = window.weeklyData['-2'][weekNumber];
-      const planWeekIndex = parseInt(weekNumber);
-
-      // H. Marketing
-      if (weekData.h_marketing !== undefined) {
-        const input = document.getElementById(`plan-w${planWeekIndex}-mktg-reel`);
-        if (input) {
-          const val = weekData.h_marketing;
-          input.value = (val !== null && val !== undefined && val !== '-') ? val + ' h' : '-';
-          log(`[PLAN] Décembre sem ${weekNumber} -> plan-w${planWeekIndex}-mktg-reel = ${input.value}`);
-        }
-      }
-
-      // Estimation
-      if (weekData.estimation !== undefined) {
-        const input = document.getElementById(`plan-w${planWeekIndex}-estim-reel`);
-        if (input) {
-          input.value = weekData.estimation;
-          log(`[PLAN] Décembre sem ${weekNumber} -> plan-w${planWeekIndex}-estim-reel = ${input.value}`);
-        }
-      }
-
-      // Contrat
-      if (weekData.contract !== undefined) {
-        const input = document.getElementById(`plan-w${planWeekIndex}-contrat-reel`);
-        if (input) {
-          input.value = weekData.contract;
-          log(`[PLAN] Décembre sem ${weekNumber} -> plan-w${planWeekIndex}-contrat-reel = ${input.value}`);
-        }
-      }
-
-      // Dollar
-      if (weekData.dollar !== undefined) {
-        const input = document.getElementById(`plan-w${planWeekIndex}-dollar-reel`);
-        if (input) {
-          input.value = Math.round(weekData.dollar).toLocaleString('fr-CA') + ' $';
-          log(`[PLAN] Décembre sem ${weekNumber} -> plan-w${planWeekIndex}-dollar-reel = ${input.value}`);
-        }
-      }
-    });
-  }
-
   // Janvier 2026+ (monthIndex 0-11): matcher par week_label
   for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
     const monthKey = String(monthIndex);
@@ -10443,47 +10396,6 @@ async function loadRPODataIntoPlan() {
   log('[PLAN] Chargement de toutes les données hebdomadaires pour le plan...');
 
   try {
-    // Charger Décembre 2025 (monthIndex -2)
-    const decResponse = await fetch(`/api/rpo/${username}/weekly/-2`);
-    if (decResponse.ok) {
-      const decData = await decResponse.json();
-      log('[PLAN] Données Décembre 2025:', decData);
-
-      Object.keys(decData).forEach(weekNumber => {
-        const weekData = decData[weekNumber];
-        const planWeekIndex = parseInt(weekNumber);
-
-        log(`[PLAN] Décembre semaine ${weekNumber} -> plan-w${planWeekIndex}:`, weekData);
-
-        // H. Marketing
-        if (weekData.h_marketing !== undefined) {
-          const input = document.getElementById(`plan-w${planWeekIndex}-mktg-reel`);
-          if (input) {
-            const val = weekData.h_marketing;
-            input.value = (val !== null && val !== undefined && val !== '-') ? val + ' h' : '-';
-          }
-        }
-
-        // Estimation
-        if (weekData.estimation !== undefined) {
-          const input = document.getElementById(`plan-w${planWeekIndex}-estim-reel`);
-          if (input) input.value = weekData.estimation;
-        }
-
-        // Contrat
-        if (weekData.contract !== undefined) {
-          const input = document.getElementById(`plan-w${planWeekIndex}-contrat-reel`);
-          if (input) input.value = weekData.contract;
-        }
-
-        // Dollar
-        if (weekData.dollar !== undefined) {
-          const input = document.getElementById(`plan-w${planWeekIndex}-dollar-reel`);
-          if (input) input.value = Math.round(weekData.dollar).toLocaleString('fr-CA') + ' $';
-        }
-      });
-    }
-
     // Charger tous les mois de 2026 (monthIndex 0-11)
     for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
       const monthResponse = await fetch(`/api/rpo/${username}/weekly/${monthIndex}`);

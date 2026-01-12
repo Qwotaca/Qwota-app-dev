@@ -5,7 +5,7 @@ const fs = require('fs');
 // Configuration du serveur
 const CONFIG_FILE = path.join(__dirname, 'server-config.json');
 let serverConfig = {
-  url: 'https://www.qwota-qualiteetudiants.com/login'
+  url: 'http://localhost:8080/login'
 };
 
 // Charger la configuration si elle existe

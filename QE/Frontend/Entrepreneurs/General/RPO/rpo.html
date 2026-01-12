@@ -2832,14 +2832,14 @@ let currentSelectedWeek = null;
 function getWeeksOf2025() {
   const weeks = [];
 
-  // Partie 1: Décembre 2025 (5 semaines)
+  // Partie 1: Janvier 2026 (5 semaines)
   let weekNumber = 1;
 
-  // Calculer les lundis de décembre 2025 (commence le 1er décembre)
-  const dec2025Start = createTorontoDate(2026, 0, 5); // 1er décembre 2025 - Toronto timezone
+  // Calculer les lundis de janvier 2026 (commence le 5 janvier)
+  const jan2026Start = createTorontoDate(2026, 0, 5); // 5 janvier 2026 - Toronto timezone
 
   for (let i = 0; i < 5; i++) {
-    const weekStart = new Date(dec2025Start.getTime() + (i * 7 * 24 * 60 * 60 * 1000));
+    const weekStart = new Date(jan2026Start.getTime() + (i * 7 * 24 * 60 * 60 * 1000));
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 6);
 
@@ -2847,7 +2847,7 @@ function getWeeksOf2025() {
       weekNumber: weekNumber,
       weekStart: new Date(weekStart),
       weekEnd: new Date(weekEnd),
-      month: -2 // Décembre 2025
+      month: 0 // Janvier 2026
     });
     weekNumber++;
   }
@@ -4292,7 +4292,7 @@ function getWeeklyTargetsFromPlan(monthIndex, weekNumber) {
   }
 
   // Calculer l'index global dans les patterns (0-51)
-  // Le plan d'affaires génère 52 semaines à partir du 1er décembre 2025
+  // Le plan d'affaires génère 52 semaines à partir du 5 janvier 2026
   // On doit mapper les semaines RPO (par mois) aux index du plan (global)
 
   // Mapping cumulatif: nombre de semaines écoulées avant chaque mois
@@ -4652,7 +4652,7 @@ function updateIncompleteObjectifsBadge() {
   if (!window.weeklyData) return;
 
   const today = getTorontoNow();
-  const fiscalYearStart = createTorontoDate(2026, 0, 5); // 1er décembre 2025 (début semaine 1) - Toronto timezone
+  const fiscalYearStart = createTorontoDate(2026, 0, 5); // 5 janvier 2026 (début semaine 1) - Toronto timezone
 
   // Si on n'est pas encore dans l'année fiscale, ne rien afficher
   if (today < fiscalYearStart) {
@@ -4752,7 +4752,7 @@ function updateIncompleteResumeBadge() {
   if (!window.weeklyData) return;
 
   const today = getTorontoNow();
-  const fiscalYearStart = createTorontoDate(2026, 0, 5); // 1er décembre 2025 (début semaine 1) - Toronto timezone
+  const fiscalYearStart = createTorontoDate(2026, 0, 5); // 5 janvier 2026 (début semaine 1) - Toronto timezone
 
   if (today < fiscalYearStart) {
     document.getElementById('incompleteWeeksBadge2').classList.add('hidden');
@@ -4962,7 +4962,7 @@ function updateTotalBadge() {
   if (!window.weeklyData) return;
 
   const today = getTorontoNow();
-  const fiscalYearStart = createTorontoDate(2026, 0, 5); // 1er décembre 2025 (début semaine 1) - Toronto timezone
+  const fiscalYearStart = createTorontoDate(2026, 0, 5); // 5 janvier 2026 (début semaine 1) - Toronto timezone
   if (today < fiscalYearStart) return;
 
   const daysSinceStart = Math.floor((today - fiscalYearStart) / (1000 * 60 * 60 * 24));
@@ -5054,7 +5054,7 @@ function updateMonthDropdownBadges() {
   if (!window.weeklyData) return;
 
   const today = getTorontoNow();
-  const fiscalYearStart = createTorontoDate(2026, 0, 5); // 1er décembre 2025 (début semaine 1) - Toronto timezone
+  const fiscalYearStart = createTorontoDate(2026, 0, 5); // 5 janvier 2026 (début semaine 1) - Toronto timezone
   if (today < fiscalYearStart) return;
 
   const daysSinceStart = Math.floor((today - fiscalYearStart) / (1000 * 60 * 60 * 24));
@@ -5866,11 +5866,11 @@ function calculateAnnualMetrics() {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  // Index 39-51: reste
   ];
 
-  // Calculer quelle semaine on est (0-51 depuis le 1er décembre 2025)
+  // Calculer quelle semaine on est (0-51 depuis le 5 janvier 2026)
   const today = new Date();
-  const dec1_2025 = new Date(2026, 0, 5); // 1er décembre 2025
-  const daysSinceDec1 = Math.floor((today - dec1_2025) / (24 * 60 * 60 * 1000));
-  const currentWeekIndex = Math.floor(daysSinceDec1 / 7);
+  const jan5_2026 = new Date(2026, 0, 5); // 5 janvier 2026
+  const daysSinceJan5 = Math.floor((today - jan5_2026) / (24 * 60 * 60 * 1000));
+  const currentWeekIndex = Math.floor(daysSinceJan5 / 7);
 
   // Calculer le cumul des pourcentages jusqu'à la semaine actuelle
   let cumulPercent = 0;
@@ -8418,8 +8418,8 @@ function generatePlanWeeks() {
   const tbody = document.getElementById('plan-weeks-body');
   if (!tbody) return;
 
-  const startDate = createTorontoDate(2026, 0, 5); // 1er décembre 2025 (lundi) - Toronto timezone
-  const weeks = 52; // Du 1er décembre 2025 au 4 octobre 2026
+  const startDate = createTorontoDate(2026, 0, 5); // 5 janvier 2026 (lundi) - Toronto timezone
+  const weeks = 52; // Du 5 janvier 2026 au 27 décembre 2026
 
   // Récupérer les paramètres utilisateur
   const objectif = parseFloat(document.getElementById('plan-objectif')?.dataset.value) || 0;
@@ -8606,11 +8606,11 @@ function generatePlanWeeks() {
   let html = '';
 
   for (let i = 1; i <= weeks; i++) {
-    // Génération continue des dates depuis le 1er décembre 2025 (utiliser millisecondes pour éviter problèmes timezone)
+    // Génération continue des dates depuis le 5 janvier 2026 (utiliser millisecondes pour éviter problèmes timezone)
     const weekStartDate = new Date(startDate.getTime() + ((i - 1) * 7 * 24 * 60 * 60 * 1000));
     const weekEndDate = new Date(weekStartDate.getTime() + (6 * 24 * 60 * 60 * 1000));
 
-    // Format: "5 janv - 11 janv" ou "6 - 12 déc 2025" pour décembre 2025
+    // Format: "5 janv - 11 janv" ou "20 - 26 déc" pour décembre 2026
     const startDay = weekStartDate.getDate();
     const endDay = weekEndDate.getDate();
     const startMonth = weekStartDate.toLocaleDateString('fr-FR', { month: 'short' });
@@ -8787,7 +8787,7 @@ function generatePlanMobile() {
   const container = document.getElementById('plan-mobile-container');
   if (!container) return;
 
-  const startDate = createTorontoDate(2026, 0, 5); // 1er décembre 2025 (lundi)
+  const startDate = createTorontoDate(2026, 0, 5); // 5 janvier 2026 (lundi)
   const weeks = 52;
 
   // Récupérer les mêmes paramètres
@@ -9954,7 +9954,7 @@ function calculateExpectedToDate() {
   log('📅 Calcul "Devrait être à" depuis Cumul Obj. de la semaine actuelle');
 
   const today = createTorontoDate(); // Date d'aujourd'hui
-  const planStartDate = createTorontoDate(2026, 0, 5); // 1er décembre 2025
+  const planStartDate = createTorontoDate(2026, 0, 5); // 5 janvier 2026
   const weeks = 52;
 
   // Valeurs Cumul Obj. de la semaine actuelle
@@ -10160,8 +10160,8 @@ function showAdvice(metricName) {
 
 // Synchroniser les prévisions du plan d'affaire vers les objectifs RPO hebdo
 function syncPlanToRPO() {
-  // Le plan d'affaire commence le 1er décembre 2025 avec 52 semaines
-  const planStartDate = createTorontoDate(2026, 0, 5); // 1er décembre 2025 - Toronto timezone
+  // Le plan d'affaire commence le 5 janvier 2026 avec 52 semaines
+  const planStartDate = createTorontoDate(2026, 0, 5); // 5 janvier 2026 - Toronto timezone
   const totalPlanWeeks = 52;
 
   // Obtenir les semaines RPO pour le mois actuellement affiché
@@ -10190,8 +10190,8 @@ function syncPlanToRPO() {
     const endDay = parseInt(endParts[0]);
     const endMonthIdx = monthNames.indexOf(endParts[1]);
 
-    // Déterminer l'année (année fiscale commence en décembre 2025)
-    let startYear = startMonthIdx >= 11 ? 2025 : 2026; // Si décembre (index 11), alors 2025
+    // Déterminer l'année (année fiscale commence en janvier 2026)
+    let startYear = 2026; // Année fiscale 2026
     let endYear = endMonthIdx === 0 && startMonthIdx === 11 ? 2026 : startYear;
     if (endMonthIdx < startMonthIdx) endYear = startYear + 1;
 
@@ -10633,7 +10633,7 @@ async function loadVentesProduitIntoPlan() {
     // Initialiser un tableau pour stocker la somme des prix par semaine
     const productionParSemaine = {};
 
-    // Date de début du plan: 1er décembre 2025 (semaine test)
+    // Date de début du plan: 5 janvier 2026
     const startDate = createTorontoDate(2026, 0, 5);
 
     // Parcourir toutes les ventes produit
@@ -13533,7 +13533,7 @@ let selectedWeekIndex = 0;
 
 // Calculer les dates de début et fin de semaine + temps écoulé
 function getWeekDates(monthIndex, weekNumber) {
-  const fiscalYearStart = new Date(2026, 0, 5); // 1er décembre 2025
+  const fiscalYearStart = new Date(2026, 0, 5); // 5 janvier 2026
 
   // Calculer le numéro de semaine global
   let globalWeekNumber;

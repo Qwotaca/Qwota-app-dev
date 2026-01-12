@@ -6246,7 +6246,26 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
     // Ouvrir le popup pour demander le nom du template
     function saveTemplatePrompt() {
-      const content = document.getElementById('partTravauxTextarea').value.trim();
+      // Chercher le textarea où qu'il soit (iframe ou parent sur mobile)
+      let textarea = document.getElementById('partTravauxTextarea');
+      const isMobile = window.innerWidth <= 768;
+
+      if (isMobile && window.parent) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+        // Si pas trouvé dans iframe, chercher dans parent
+        if (!textarea && rootWindow && rootWindow.document) {
+          textarea = rootWindow.document.getElementById('partTravauxTextarea');
+        }
+      }
+
+      if (!textarea) {
+        console.error('[TEMPLATE] partTravauxTextarea introuvable');
+        return;
+      }
+
+      const content = textarea.value.trim();
 
       if (!content) {
         return;
@@ -6254,7 +6273,6 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
       // Chercher le modal où qu'il soit (iframe ou parent)
       let modal = document.getElementById('templateNameModal');
-      const isMobile = window.innerWidth <= 768;
 
       if (isMobile && window.parent) {
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
@@ -6328,7 +6346,25 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
         return;
       }
 
-      const content = document.getElementById('partTravauxTextarea').value.trim();
+      // Chercher le textarea où qu'il soit (iframe ou parent sur mobile)
+      let textarea = document.getElementById('partTravauxTextarea');
+
+      if (isMobile && window.parent) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+        // Si pas trouvé dans iframe, chercher dans parent
+        if (!textarea && rootWindow && rootWindow.document) {
+          textarea = rootWindow.document.getElementById('partTravauxTextarea');
+        }
+      }
+
+      if (!textarea) {
+        console.error('[TEMPLATE] partTravauxTextarea introuvable');
+        return;
+      }
+
+      const content = textarea.value.trim();
       const username = localStorage.getItem('username');
 
       if (!username) {

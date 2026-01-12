@@ -3767,19 +3767,21 @@ async function saveJan() {
 
 // Toggle edit mode for weekly January data
 function toggleEditWeekJan() {
-  const inputs = document.querySelectorAll('.week-jan-input, .week-jan-resume');
+  const inputs = document.querySelectorAll('.week-jan-input, .week-jan-resume, .rpo-objective-input');
   const editBtn = document.getElementById('editWeekJanBtn');
   const saveBtn = document.getElementById('saveWeekJanBtn');
   const isReadonly = inputs[0].hasAttribute('readonly');
 
   inputs.forEach(input => {
-    // Les champs estimation, contract et dollar sont automatiques - toujours readonly
+    // Les champs estimation, contract et dollar (réels) sont automatiques - toujours readonly
     const field = input.dataset.field;
     const isAutoField = field === 'estimation' || field === 'contract' || field === 'dollar';
+    // Les objectifs (colonnes grises) sont maintenant éditables
+    const isObjectiveField = input.classList.contains('rpo-objective-input');
 
     if (isReadonly) {
-      // En mode édition: seul h_marketing est éditable
-      if (!isAutoField) {
+      // En mode édition: h_marketing, prod_horaire, probleme, focus, et TOUS les objectifs sont éditables
+      if (!isAutoField || isObjectiveField) {
         input.removeAttribute('readonly');
         input.style.color = 'var(--primary-blue)';
         input.style.outline = 'none';
@@ -3796,13 +3798,13 @@ function toggleEditWeekJan() {
       input.style.background = 'transparent';
       input.style.borderBottom = 'none';
       input.style.border = 'none';
-      input.style.color = 'var(--text-light)';
+      input.style.color = isObjectiveField ? '#9ca3af' : 'var(--text-light)';
       input.style.padding = '';
       input.style.borderRadius = '';
       input.style.outline = 'none';
 
-      // Remettre les styles non-cliquables pour h_marketing en mode readonly
-      if (!isAutoField) {
+      // Remettre les styles non-cliquables en mode readonly
+      if (!isAutoField || isObjectiveField) {
         input.style.cursor = 'not-allowed';
         input.style.pointerEvents = 'none';
       }
@@ -3848,6 +3850,24 @@ function toggleEditWeekJan() {
   if (isReadonly) {
     editBtn.classList.add('hidden');
     saveBtn.classList.remove('hidden');
+
+    // Add input event listeners to update dataset.value for objective inputs
+    const objectiveInputs = document.querySelectorAll('.rpo-objective-input');
+    objectiveInputs.forEach(input => {
+      input.addEventListener('input', function() {
+        let value = this.value.trim();
+
+        // Remove formatting characters to get numeric value
+        value = value.replace(/[^\d.,]/g, '').replace(',', '.');
+
+        const numericValue = parseFloat(value);
+        if (!isNaN(numericValue)) {
+          this.dataset.value = numericValue;
+        } else {
+          this.dataset.value = '0';
+        }
+      });
+    });
   } else {
     editBtn.classList.remove('hidden');
     saveBtn.classList.add('hidden');
@@ -4386,13 +4406,13 @@ function generateWeeklyTables(monthIndex) {
     objectifsHTML += `
       <tr data-week="${index + 1}" style="border-bottom: 1px solid var(--border-dark); height: 60px;">
         <td class="p-3 text-sm ${stickyClass}" style="color: #9ca3af; ${stickyStyle}">${week.label}</td>
-        <td class="p-3 text-center" style="background-color: #0f172a;"><input type="text" readonly class="bg-transparent rounded px-1 py-0.5 w-full text-center text-sm" style="cursor: not-allowed !important; background-color: transparent !important; color: #9ca3af !important; text-align: center !important; border: none !important; outline: none !important; pointer-events: none !important;" value="${hMarketingAuto > 0 ? hMarketingAuto.toFixed(1) + ' h' : '-'}"></td>
+        <td class="p-3 text-center" style="background-color: #0f172a;"><input type="text" readonly data-week="${index + 1}" data-field="h_marketing_obj" data-month="${monthIndex}" class="week-jan-input rpo-objective-input bg-transparent rounded px-1 py-0.5 w-full text-center text-sm" style="cursor: not-allowed !important; background-color: transparent !important; color: #9ca3af !important; text-align: center !important; border: none !important; outline: none !important; pointer-events: none !important;" value="${hMarketingAuto > 0 ? hMarketingAuto.toFixed(1) + ' h' : '-'}" data-value="${hMarketingAuto}"></td>
         <td class="p-3 text-center"><input type="text" readonly data-week="${index + 1}" data-field="h_marketing" class="week-jan-input rpo-metric-input bg-transparent text-center w-full text-sm" style="color: var(--text-light); outline: none !important; border: none !important; padding: 0 !important; background: transparent !important; cursor: not-allowed !important; pointer-events: none !important;" value="-" data-value="-"></td>
-        <td class="p-3 text-center" style="background-color: #0f172a;"><input type="text" readonly class="bg-transparent rounded px-1 py-0.5 w-full text-center text-sm" style="cursor: not-allowed !important; background-color: transparent !important; color: #9ca3af !important; text-align: center !important; border: none !important; outline: none !important; pointer-events: none !important;" value="${estimationAuto > 0 ? estimationAuto : '-'}"></td>
+        <td class="p-3 text-center" style="background-color: #0f172a;"><input type="text" readonly data-week="${index + 1}" data-field="estimation_obj" data-month="${monthIndex}" class="week-jan-input rpo-objective-input bg-transparent rounded px-1 py-0.5 w-full text-center text-sm" style="cursor: not-allowed !important; background-color: transparent !important; color: #9ca3af !important; text-align: center !important; border: none !important; outline: none !important; pointer-events: none !important;" value="${estimationAuto > 0 ? estimationAuto : '-'}" data-value="${estimationAuto}"></td>
         <td class="p-3 text-center"><input type="text" readonly data-week="${index + 1}" data-field="estimation" class="week-jan-input rpo-metric-input bg-transparent text-center w-full text-sm" style="color: var(--text-light); outline: none !important; border: none !important; padding: 0 !important; background: transparent !important; cursor: not-allowed !important; pointer-events: none !important;" value="0" data-value="0"></td>
-        <td class="p-3 text-center" style="background-color: #0f172a;"><input type="text" readonly class="bg-transparent rounded px-1 py-0.5 w-full text-center text-sm" style="cursor: not-allowed !important; background-color: transparent !important; color: #9ca3af !important; text-align: center !important; border: none !important; outline: none !important; pointer-events: none !important;" value="${contractAuto > 0 ? (contractAuto % 1 === 0 ? contractAuto : contractAuto.toFixed(1)) : '-'}"></td>
+        <td class="p-3 text-center" style="background-color: #0f172a;"><input type="text" readonly data-week="${index + 1}" data-field="contract_obj" data-month="${monthIndex}" class="week-jan-input rpo-objective-input bg-transparent rounded px-1 py-0.5 w-full text-center text-sm" style="cursor: not-allowed !important; background-color: transparent !important; color: #9ca3af !important; text-align: center !important; border: none !important; outline: none !important; pointer-events: none !important;" value="${contractAuto > 0 ? (contractAuto % 1 === 0 ? contractAuto : contractAuto.toFixed(1)) : '-'}" data-value="${contractAuto}"></td>
         <td class="p-3 text-center"><input type="text" readonly data-week="${index + 1}" data-field="contract" class="week-jan-input rpo-metric-input bg-transparent text-center w-full text-sm" style="color: var(--text-light); outline: none !important; border: none !important; padding: 0 !important; background: transparent !important; cursor: not-allowed !important; pointer-events: none !important;" value="0" data-value="0"></td>
-        <td class="p-3 text-center" style="background-color: #0f172a;"><input type="text" readonly class="bg-transparent rounded px-1 py-0.5 w-full text-center text-sm font-semibold" style="cursor: not-allowed !important; background-color: transparent !important; color: #9ca3af !important; text-align: center !important; border: none !important; outline: none !important; pointer-events: none !important;" value="${dollarAuto > 0 ? Math.round(dollarAuto).toLocaleString('fr-CA') + ' $' : '-'}"></td>
+        <td class="p-3 text-center" style="background-color: #0f172a;"><input type="text" readonly data-week="${index + 1}" data-field="dollar_obj" data-month="${monthIndex}" class="week-jan-input rpo-objective-input bg-transparent rounded px-1 py-0.5 w-full text-center text-sm font-semibold" style="cursor: not-allowed !important; background-color: transparent !important; color: #9ca3af !important; text-align: center !important; border: none !important; outline: none !important; pointer-events: none !important;" value="${dollarAuto > 0 ? Math.round(dollarAuto).toLocaleString('fr-CA') + ' $' : '-'}" data-value="${dollarAuto}"></td>
         <td class="p-3 text-center"><input type="text" readonly data-week="${index + 1}" data-field="dollar" class="week-jan-input rpo-metric-input bg-transparent text-center w-full text-sm font-semibold" style="color: var(--text-light); outline: none !important; border: none !important; padding: 0 !important; background: transparent !important; cursor: not-allowed !important; pointer-events: none !important;" value="0 $" data-value="0"></td>
         ${showProdHoraire ? `<td class="p-3 text-center"><input type="text" readonly data-week="${index + 1}" data-field="prod_horaire" class="week-jan-input rpo-metric-input bg-transparent text-center w-full text-sm" style="color: var(--text-light); outline: none !important; border: none !important; padding: 0 !important; background: transparent !important; cursor: not-allowed !important; pointer-events: none !important;" value="-" data-value="-"></td>` : ''}
       </tr>`;
@@ -4536,6 +4556,39 @@ async function loadWeeklyDataForMonth(monthIndex) {
             input.value = '-';
             input.dataset.value = '-';
             console.log(`[SEM2026-LOAD] ℹ️ Prod Horaire semaine ${weekNumber}: non rempli, mis à "-"`);
+          }
+        }
+
+        // Load custom objectives (display only, don't affect business plan)
+        if (data.h_marketing_obj !== undefined && data.h_marketing_obj > 0) {
+          const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="h_marketing_obj"]`);
+          if (input) {
+            input.value = data.h_marketing_obj.toFixed(1) + ' h';
+            input.dataset.value = data.h_marketing_obj;
+          }
+        }
+
+        if (data.estimation_obj !== undefined && data.estimation_obj > 0) {
+          const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="estimation_obj"]`);
+          if (input) {
+            input.value = data.estimation_obj % 1 === 0 ? data.estimation_obj : data.estimation_obj.toFixed(1);
+            input.dataset.value = data.estimation_obj;
+          }
+        }
+
+        if (data.contract_obj !== undefined && data.contract_obj > 0) {
+          const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="contract_obj"]`);
+          if (input) {
+            input.value = data.contract_obj % 1 === 0 ? data.contract_obj : data.contract_obj.toFixed(1);
+            input.dataset.value = data.contract_obj;
+          }
+        }
+
+        if (data.dollar_obj !== undefined && data.dollar_obj > 0) {
+          const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="dollar_obj"]`);
+          if (input) {
+            input.value = Math.round(data.dollar_obj).toLocaleString('fr-CA') + ' $';
+            input.dataset.value = data.dollar_obj;
           }
         }
 
@@ -7147,6 +7200,31 @@ async function saveWeeklyDataToBackend(monthIndex, weekNumber) {
   if (!focusValue || focusValue === '') focusValue = '-';
 
   data.commentaire = `Problème: ${problemeValue} | Focus: ${focusValue}`;
+
+  // Collect custom objectives (editable) - these are for display only, don't affect business plan
+  const hMarketingObjInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="h_marketing_obj"]`);
+  if (hMarketingObjInput) {
+    const value = parseFloat(hMarketingObjInput.dataset.value);
+    data.h_marketing_obj = isNaN(value) ? 0 : value;
+  }
+
+  const estimationObjInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="estimation_obj"]`);
+  if (estimationObjInput) {
+    const value = parseFloat(estimationObjInput.dataset.value);
+    data.estimation_obj = isNaN(value) ? 0 : value;
+  }
+
+  const contractObjInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="contract_obj"]`);
+  if (contractObjInput) {
+    const value = parseFloat(contractObjInput.dataset.value);
+    data.contract_obj = isNaN(value) ? 0 : value;
+  }
+
+  const dollarObjInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="dollar_obj"]`);
+  if (dollarObjInput) {
+    const value = parseFloat(dollarObjInput.dataset.value);
+    data.dollar_obj = isNaN(value) ? 0 : value;
+  }
 
   // ═══════════════════════════════════════════════════════════════════
   // LOG SEM2026 - Afficher les modifications

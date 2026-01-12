@@ -5,11 +5,22 @@ Gère la création automatique d'items dans Monday.com quand une vente est accep
 
 import requests
 import sqlite3
-from typing import Optional, Dict
+from typing import Optional, Dict, Set
 import os
+import sys
+import json
+from datetime import datetime
 import urllib.parse
 
-DB_PATH = "data/qwota.db"
+# Configuration des chemins selon l'environnement
+if sys.platform == 'win32':
+    # Windows - développement local
+    base_cloud = "data"
+else:
+    # Unix/Linux (Production sur Render)
+    base_cloud = os.getenv("STORAGE_PATH", "/mnt/cloud")
+
+DB_PATH = os.path.join(base_cloud, "qwota.db")
 
 def get_monday_credentials(username: str) -> tuple[Optional[str], Optional[str]]:
     """
@@ -41,6 +52,97 @@ def get_monday_credentials(username: str) -> tuple[Optional[str], Optional[str]]
     except Exception as e:
         print(f"[MONDAY ERROR] Erreur récupération credentials: {e}")
         return None, None
+
+
+def get_monday_ban_file(username: str) -> str:
+    """
+    Retourne le chemin du fichier de ban Monday pour un entrepreneur
+
+    Args:
+        username: Username de l'entrepreneur
+
+    Returns:
+        str: Chemin vers monday_ban.json
+    """
+    user_dir = os.path.join(base_cloud, "monday_bans", username)
+    os.makedirs(user_dir, exist_ok=True)
+    return os.path.join(user_dir, "monday_ban.json")
+
+
+def load_monday_bans(username: str) -> Set[str]:
+    """
+    Charge la liste des IDs bannis (déjà envoyés à Monday)
+
+    Args:
+        username: Username de l'entrepreneur
+
+    Returns:
+        Set[str]: Ensemble des IDs bannis
+    """
+    ban_file = get_monday_ban_file(username)
+
+    if not os.path.exists(ban_file):
+        return set()
+
+    try:
+        with open(ban_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return set(data.get('banned_ids', []))
+    except Exception as e:
+        print(f"[MONDAY BAN] Erreur lecture fichier ban: {e}")
+        return set()
+
+
+def add_to_monday_ban(username: str, item_id: str) -> bool:
+    """
+    Ajoute un ID à la liste des bannis (pour ne plus jamais l'envoyer à Monday)
+
+    Args:
+        username: Username de l'entrepreneur
+        item_id: ID de la soumission/vente à bannir
+
+    Returns:
+        bool: True si succès, False sinon
+    """
+    try:
+        ban_file = get_monday_ban_file(username)
+
+        # Charger les bans existants
+        banned_ids = load_monday_bans(username)
+
+        # Ajouter le nouvel ID
+        banned_ids.add(str(item_id))
+
+        # Sauvegarder
+        data = {
+            'banned_ids': list(banned_ids),
+            'last_updated': datetime.now().isoformat()
+        }
+
+        with open(ban_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        print(f"[MONDAY BAN] ID {item_id} ajouté à la liste des bannis pour {username}")
+        return True
+
+    except Exception as e:
+        print(f"[MONDAY BAN] Erreur ajout ban: {e}")
+        return False
+
+
+def is_banned_from_monday(username: str, item_id: str) -> bool:
+    """
+    Vérifie si un ID est banni (déjà envoyé à Monday)
+
+    Args:
+        username: Username de l'entrepreneur
+        item_id: ID de la soumission/vente à vérifier
+
+    Returns:
+        bool: True si banni, False sinon
+    """
+    banned_ids = load_monday_bans(username)
+    return str(item_id) in banned_ids
 
 
 def find_existing_monday_item(api_key: str, board_id: str, soumission_num: str) -> Optional[str]:
@@ -110,14 +212,15 @@ def find_existing_monday_item(api_key: str, board_id: str, soumission_num: str) 
         return None
 
 
-def create_monday_item(api_key: str, board_id: str, item_data: Dict) -> bool:
+def create_monday_item(api_key: str, board_id: str, item_data: Dict, username: str) -> bool:
     """
-    Crée un nouvel item dans Monday.com (seulement si pas de doublon)
+    Crée un nouvel item dans Monday.com (seulement si pas banni et pas de doublon)
 
     Args:
         api_key: Clé API Monday.com
         board_id: ID du board Monday.com
         item_data: Dictionnaire contenant les données du client
+        username: Username de l'entrepreneur (pour le système de ban)
 
     Returns:
         bool: True si succès, False sinon
@@ -134,13 +237,21 @@ def create_monday_item(api_key: str, board_id: str, item_data: Dict) -> bool:
         courriel = item_data.get('email', item_data.get('courriel', ''))
         soumission_num = item_data.get('num') or item_data.get('id', '')
 
+        # VÉRIFICATION #1: Vérifier si l'ID est BANNI (déjà envoyé localement)
+        if is_banned_from_monday(username, soumission_num):
+            print(f"[MONDAY BAN] ⛔ ID {soumission_num} est BANNI - Ne sera JAMAIS envoyé à Monday")
+            print(f"[MONDAY BAN] Ce client a déjà été synchronisé précédemment")
+            return True  # Retourner True car ce n'est pas une erreur, juste un ban
+
         print(f"[MONDAY] Vérification doublon pour soumission #{soumission_num}: {nom_complet}")
 
-        # VÉRIFIER SI UN ITEM EXISTE DÉJÀ AVEC CE NUMÉRO DE SOUMISSION
+        # VÉRIFICATION #2: Vérifier si un item existe déjà dans Monday.com
         existing_item_id = find_existing_monday_item(api_key, board_id, str(soumission_num))
         if existing_item_id:
-            print(f"[MONDAY] ⚠️ DOUBLON DÉTECTÉ! L'item existe déjà (ID: {existing_item_id})")
+            print(f"[MONDAY] ⚠️ DOUBLON DÉTECTÉ dans Monday! L'item existe déjà (ID: {existing_item_id})")
             print(f"[MONDAY] ✓ Création ignorée pour éviter le doublon")
+            # BANNIR cet ID pour ne plus jamais essayer de l'envoyer
+            add_to_monday_ban(username, soumission_num)
             return True  # Retourner True car ce n'est pas une erreur, juste un doublon évité
 
         print(f"[MONDAY] Création item pour: {nom_complet}")
@@ -285,7 +396,7 @@ def create_monday_item(api_key: str, board_id: str, item_data: Dict) -> bool:
                     if 'localhost:8080' in pdf_url or '127.0.0.1:8080' in pdf_url:
                         # Extraire le chemin du fichier depuis l'URL
                         pdf_path = pdf_url.split('/cloud/')[-1]
-                        pdf_full_path = os.path.join('data', pdf_path.replace('/', os.sep))
+                        pdf_full_path = os.path.join(base_cloud, pdf_path.replace('/', os.sep))
 
                         if os.path.exists(pdf_full_path):
                             try:
@@ -319,6 +430,10 @@ def create_monday_item(api_key: str, board_id: str, item_data: Dict) -> bool:
                         print(f"[MONDAY INFO] URL PDF publique: {pdf_url}")
                 else:
                     print(f"[MONDAY INFO] Aucun PDF dans les donnees de vente")
+
+                # BANNIR cet ID pour ne JAMAIS le renvoyer à Monday
+                add_to_monday_ban(username, soumission_num)
+                print(f"[MONDAY BAN] ✓ ID {soumission_num} ajouté à la liste des bannis - Ne sera plus jamais envoyé")
 
                 return True
             else:
@@ -355,8 +470,8 @@ def sync_vente_to_monday(username: str, vente_data: Dict) -> bool:
         print(f"[MONDAY] Synchronisation ignorée - pas de configuration Monday.com pour {username}")
         return True  # Pas une erreur, juste pas configuré
 
-    # Créer l'item dans Monday.com
-    success = create_monday_item(api_key, board_id, vente_data)
+    # Créer l'item dans Monday.com (avec username pour le système de ban)
+    success = create_monday_item(api_key, board_id, vente_data, username)
 
     if success:
         print(f"[MONDAY] Vente synchronisee avec succes vers Monday.com")

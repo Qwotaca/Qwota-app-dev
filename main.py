@@ -218,6 +218,7 @@ async def startup_event():
         os.path.join(base_cloud, 'prospects'),
         os.path.join(base_cloud, 'reviews'),
         os.path.join(base_cloud, 'rpo'),
+        os.path.join(base_cloud, 'rpo_why'),
         os.path.join(base_cloud, 'signatures'),
         os.path.join(base_cloud, 'soumissions_completes'),
         os.path.join(base_cloud, 'soumissions_signees'),
@@ -234,7 +235,7 @@ async def startup_event():
     for directory in required_dirs:
         os.makedirs(directory, exist_ok=True)
 
-    print(f"[STARTUP] {len(required_dirs)} dossiers créés/vérifiés")
+    print(f"[STARTUP] {len(required_dirs)} dossiers créés/vérifiés")  # 28 dossiers
 
     print("[STARTUP] Initialisation du système de gamification...")
     gamification.init_gamification_tables()
@@ -935,33 +936,83 @@ def list_users_route(include_inactive: bool = False):
     users_list = list_all_users(include_inactive=include_inactive)
     return users_list  # Retourne tous les champs incluant id, email, created_at, last_login, is_active, prenom, nom, etc.
 
+@app.get("/api/user/profile")
+async def get_user_profile(username: str):
+    """Récupère le profil d'un utilisateur"""
+    print(f"[PROFILE DEBUG] START - username={username}, DB_PATH={DB_PATH}", flush=True)
+    try:
+        print(f"[PROFILE DEBUG] Opening DB connection...", flush=True)
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            print(f"[PROFILE DEBUG] Executing SQL query for username={username}...", flush=True)
+            cursor.execute("""
+                SELECT username, prenom, nom, role, email
+                FROM users
+                WHERE username = ?
+            """, (username,))
+            result = cursor.fetchone()
+            print(f"[PROFILE DEBUG] SQL result: {result}", flush=True)
+
+            if result:
+                print(f"[PROFILE DEBUG] User FOUND, returning data...", flush=True)
+                return {
+                    "success": True,
+                    "user": {
+                        "username": result[0] or "",
+                        "first_name": result[1] or "",
+                        "last_name": result[2] or "",
+                        "role": result[3] or "",
+                        "email": result[4] or ""
+                    }
+                }
+            else:
+                raise HTTPException(status_code=404, detail="User not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Error getting user profile: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/user/{username}")
 def get_user_info(username: str):
     """Récupère les informations d'un utilisateur spécifique"""
+    print(f"[USER INFO DEBUG] START - username={username}, DB_PATH={DB_PATH}", flush=True)
     try:
+        print(f"[USER INFO DEBUG] Opening DB connection...", flush=True)
         with sqlite3.connect(DB_PATH) as conn:
             cursor = conn.cursor()
+            print(f"[USER INFO DEBUG] Executing SQL query for username={username}...", flush=True)
             cursor.execute("""
                 SELECT username, prenom, nom, first_name, last_name, role, email
                 FROM users
                 WHERE username = ? AND is_active = 1
             """, (username,))
             user = cursor.fetchone()
+            print(f"[USER INFO DEBUG] SQL result: {user}", flush=True)
 
             if user:
+                print(f"[USER INFO DEBUG] User FOUND, returning data...", flush=True)
                 return {
-                    "username": user[0],
-                    "prenom": user[1],
-                    "nom": user[2],
-                    "first_name": user[3],
-                    "last_name": user[4],
-                    "role": user[5],
-                    "email": user[6]
+                    "username": user[0] or "",
+                    "prenom": user[1] or "",
+                    "nom": user[2] or "",
+                    "first_name": user[3] or "",
+                    "last_name": user[4] or "",
+                    "role": user[5] or "",
+                    "email": user[6] or ""
                 }
             else:
+                print(f"[USER INFO DEBUG] User NOT FOUND in database", flush=True)
                 raise HTTPException(status_code=404, detail="User not found")
+    except HTTPException:
+        # Re-raise HTTPException as-is (don't convert to 500)
+        raise
     except Exception as e:
         print(f"[ERROR] Error fetching user info: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/get-user-info/{username}")
@@ -9811,39 +9862,6 @@ async def save_cheque_photos(
         print(f"[ERREUR] Erreur sauvegarde photos chèque: {e}", flush=True)
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/user/profile")
-async def get_user_profile(username: str):
-    """Récupère le profil d'un utilisateur"""
-    try:
-        with sqlite3.connect(DB_PATH) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT username, prenom, nom, role, email
-                FROM users
-                WHERE username = ?
-            """, (username,))
-            result = cursor.fetchone()
-
-            if result:
-                return {
-                    "success": True,
-                    "user": {
-                        "username": result[0],
-                        "first_name": result[1],
-                        "last_name": result[2],
-                        "role": result[3],
-                        "email": result[4]
-                    }
-                }
-            else:
-                raise HTTPException(status_code=404, detail="User not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"[ERROR] Error getting user profile: {e}", flush=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -19236,6 +19254,85 @@ async def get_month_weeks_data(username: str, month_index: int):
     except Exception as e:
         print(f"[Erreur RPO] Chargement weekly month {username}/{month_index}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/rpo/why/{username}")
+async def get_rpo_why(username: str):
+    """Récupère le WHY (motivation) de l'entrepreneur"""
+    try:
+        # Déterminer le chemin selon l'environnement
+        import sys
+        if sys.platform == 'win32':
+            base_cloud = "data"
+        else:
+            base_cloud = os.getenv("STORAGE_PATH", "/mnt/cloud")
+
+        # Chemin du fichier WHY
+        why_dir = os.path.join(base_cloud, "rpo_why", username)
+        why_file = os.path.join(why_dir, "why.json")
+
+        if not os.path.exists(why_file):
+            return {"success": True, "why": ""}
+
+        with open(why_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        print(f"[WHY] ✅ Chargé pour {username}")
+        return {
+            "success": True,
+            "why": data.get("why", ""),
+            "last_updated": data.get("last_updated", "")
+        }
+
+    except Exception as e:
+        print(f"[WHY] ❌ Erreur chargement pour {username}: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/rpo/why/{username}")
+async def save_rpo_why(username: str, request: Request):
+    """Sauvegarde le WHY (motivation) de l'entrepreneur"""
+    try:
+        data = await request.json()
+        why_text = data.get("why", "")
+
+        # Déterminer le chemin selon l'environnement
+        import sys
+        if sys.platform == 'win32':
+            base_cloud = "data"
+        else:
+            base_cloud = os.getenv("STORAGE_PATH", "/mnt/cloud")
+
+        # Créer le dossier si nécessaire
+        why_dir = os.path.join(base_cloud, "rpo_why", username)
+        os.makedirs(why_dir, exist_ok=True)
+
+        # Chemin du fichier WHY
+        why_file = os.path.join(why_dir, "why.json")
+
+        # Préparer les données
+        from datetime import datetime
+        why_data = {
+            "why": why_text,
+            "last_updated": datetime.now().isoformat(),
+            "username": username
+        }
+
+        # Sauvegarder
+        with open(why_file, 'w', encoding='utf-8') as f:
+            json.dump(why_data, f, ensure_ascii=False, indent=2)
+
+        print(f"[WHY] ✅ Sauvegardé pour {username}: {len(why_text)} caractères")
+        return {
+            "success": True,
+            "message": "WHY sauvegardé avec succès"
+        }
+
+    except Exception as e:
+        print(f"[WHY] ❌ Erreur sauvegarde pour {username}: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
 
 
 @app.post("/api/rpo/save-weekly-targets")

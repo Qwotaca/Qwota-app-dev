@@ -4691,7 +4691,7 @@ async function saveResumeData(event) {
       problemDisplay.style.fontStyle = data.problem ? 'normal' : 'italic';
 
       // Mettre à jour le badge instantanément si c'est la semaine actuelle
-      const currentWeekValue = '2025-W53';
+      const currentWeekValue = '2026-W01';
       const isCurrentWeek = selectedWeekValue === currentWeekValue;
       const isFilled = !!(data.macro && data.micro && data.problem);
       updateCurrentWeekBadge(isCurrentWeek, isFilled);
@@ -4758,7 +4758,7 @@ async function saveMacroMicroProblem() {
       button.innerHTML = '<i class="fas fa-check" style=""></i>Enregistré!';
 
       // Mettre à jour le badge instantanément si c'est la semaine actuelle
-      const currentWeekValue = '2025-W53';
+      const currentWeekValue = '2026-W01';
       const isCurrentWeek = selectedWeekValue === currentWeekValue;
       const isFilled = !!(data.macro && data.micro && data.problem);
       updateCurrentWeekBadge(isCurrentWeek, isFilled);
@@ -4794,7 +4794,7 @@ function updateCurrentWeekBadge(isCurrentWeek, isFilled) {
   if (isCurrentWeek) {
     // Afficher le badge pour la semaine actuelle
     badge.style.display = 'block';
-    dateRange.textContent = '29 décembre 2025 - 4 janvier 2026';
+    dateRange.textContent = '5 janvier - 11 janvier';
 
     if (isFilled) {
       // Vert - Complété
@@ -5031,19 +5031,6 @@ async function initResumeWeekSelector() {
 
   weekDropdownMenu.innerHTML = '';
 
-  // ===== SEMAINE ACTUELLE (29 déc 2025 - 4 janv 2026) =====
-  const currentWeekValue = '2025-W53';
-  const currentWeekLabel = '29 décembre 2025 - 4 janvier 2026';
-
-  const currentOption = document.createElement('div');
-  currentOption.className = 'dropdown-secondary-option';
-  currentOption.textContent = currentWeekLabel;
-  currentOption.onclick = (e) => {
-    e.stopPropagation();
-    selectResumeWeek(currentWeekValue, currentWeekLabel);
-  };
-  weekDropdownMenu.appendChild(currentOption);
-
   // ===== SEMAINES DE 2026 =====
   const year = 2026;
   let currentDate = new Date(year, 0, 1);
@@ -5054,6 +5041,8 @@ async function initResumeWeekSelector() {
   }
 
   let weekNumber = 1;
+  let firstWeekValue = '';
+  let firstWeekLabel = '';
 
   while (currentDate.getFullYear() === year) {
     const monday = new Date(currentDate);
@@ -5074,6 +5063,12 @@ async function initResumeWeekSelector() {
 
     const weekValue = `${year}-W${String(weekNumber).padStart(2, '0')}`;
 
+    // Capturer la première semaine
+    if (weekNumber === 1) {
+      firstWeekValue = weekValue;
+      firstWeekLabel = weekLabel;
+    }
+
     const option = document.createElement('div');
     option.className = 'dropdown-secondary-option';
     option.textContent = weekLabel;
@@ -5087,9 +5082,9 @@ async function initResumeWeekSelector() {
     weekNumber++;
   }
 
-  // Sélectionner la semaine actuelle par défaut
-  selectedWeekValue = currentWeekValue;
-  weekDropdownText.textContent = currentWeekLabel;
+  // Sélectionner la première semaine de 2026 par défaut
+  selectedWeekValue = firstWeekValue;
+  weekDropdownText.textContent = firstWeekLabel;
 
   // Charger les données de la semaine actuelle
   await loadMacroMicroProblem();

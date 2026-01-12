@@ -7667,12 +7667,11 @@ document.addEventListener('DOMContentLoaded', function() {
 let teamPlanWeeks = [];
 let teamTotalObjectif = 0;
 
-// Fonction pour générer les 56 semaines du plan d'affaire
+// Fonction pour générer les 52 semaines du plan d'affaire
 function generateTeamPlanWeeks() {
   const weeks = [];
-  const startDate = new Date(2025, 11, 1); // 1er décembre 2025
-  const totalWeeks = 56;
-  let weekCounter2025 = 1;
+  const startDate = new Date(2026, 0, 5); // 5 janvier 2026 (lundi)
+  const totalWeeks = 52;
   let weekCounter2026 = 1;
 
   for (let i = 1; i <= totalWeeks; i++) {
@@ -7690,27 +7689,14 @@ function generateTeamPlanWeeks() {
     let dateRangeStr;
     let weekValue;
 
-    if (startYear === 2025) {
-      if (startMonth === endMonth) {
-        dateRangeStr = `${startDay} - ${endDay} ${startMonth.replace('.', '')} 2025`;
-      } else {
-        if (endYear === 2026) {
-          dateRangeStr = `${startDay} ${startMonth.replace('.', '')} - ${endDay} ${endMonth.replace('.', '')}`;
-        } else {
-          dateRangeStr = `${startDay} ${startMonth.replace('.', '')} - ${endDay} ${endMonth.replace('.', '')} 2025`;
-        }
-      }
-      weekValue = `2025-W${String(weekCounter2025).padStart(2, '0')}`;
-      weekCounter2025++;
+    // Toutes les semaines sont en 2026, sauf décembre en fin d'année
+    if (startMonth === endMonth) {
+      dateRangeStr = `${startDay} - ${endDay} ${startMonth.replace('.', '')}`;
     } else {
-      if (startMonth === endMonth) {
-        dateRangeStr = `${startDay} - ${endDay} ${startMonth}`;
-      } else {
-        dateRangeStr = `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
-      }
-      weekValue = `2026-W${String(weekCounter2026).padStart(2, '0')}`;
-      weekCounter2026++;
+      dateRangeStr = `${startDay} ${startMonth.replace('.', '')} - ${endDay} ${endMonth.replace('.', '')}`;
     }
+    weekValue = `2026-W${String(weekCounter2026).padStart(2, '0')}`;
+    weekCounter2026++;
 
     weeks.push({
       weekNumber: i,
@@ -7756,7 +7742,6 @@ function renderTeamPlanTable(weeks, filterMonth = 'all', totalObjectif = 0) {
   if (filterMonth !== 'all') {
     const [year, month] = filterMonth.split('-').map(Number);
     const monthNames = {
-      12: 'déc',
       1: 'janv',
       2: 'févr',
       3: 'mars',
@@ -7766,7 +7751,9 @@ function renderTeamPlanTable(weeks, filterMonth = 'all', totalObjectif = 0) {
       7: 'juil',
       8: 'août',
       9: 'sept',
-      10: 'oct'
+      10: 'oct',
+      11: 'nov',
+      12: 'déc'
     };
     const monthName = monthNames[month];
 
@@ -7774,13 +7761,8 @@ function renderTeamPlanTable(weeks, filterMonth = 'all', totalObjectif = 0) {
       const weekLabelLower = w.weekLabel.toLowerCase();
       const hasMonthName = weekLabelLower.includes(monthName);
 
-      // Pour Décembre 2025, on vérifie que le label contient "2025"
-      if (year === 2025 && month === 12) {
-        return hasMonthName && weekLabelLower.includes('2025');
-      }
-
-      // Pour les autres mois de 2026, on vérifie que le label ne contient PAS "2025"
-      return hasMonthName && !weekLabelLower.includes('2025');
+      // Toutes les semaines sont en 2026
+      return hasMonthName;
     });
   }
 
@@ -7813,11 +7795,11 @@ function renderTeamPlanTable(weeks, filterMonth = 'all', totalObjectif = 0) {
     cumulDollarReel += week.dollarReel;
     cumulProdReel += week.prodReel;
 
-    // Trouver l'index global de cette semaine dans le tableau complet (56 semaines)
+    // Trouver l'index global de cette semaine dans le tableau complet (52 semaines)
     const globalIndex = weeks.findIndex(w => w.weekLabel === week.weekLabel);
 
-    // Accumuler les dollars PRÉVUS seulement à partir de la semaine 7 (12 janvier)
-    if (globalIndex >= 6) {
+    // Accumuler les dollars PRÉVUS seulement à partir de la semaine 2 (12 janvier)
+    if (globalIndex >= 1) {
       cumulDollarPrev += week.dollarPrev;
     }
 
@@ -7827,11 +7809,11 @@ function renderTeamPlanTable(weeks, filterMonth = 'all', totalObjectif = 0) {
     // % Objectif semaine (utiliser directement la valeur du pattern pour précision exacte)
     const pctSem = percentagePattern[globalIndex] || 0;
 
-    // % Objectif cumulatif (accumulation des % du pattern, commence à la semaine 7)
-    if (globalIndex >= 6) {
+    // % Objectif cumulatif (accumulation des % du pattern, commence à la semaine 2)
+    if (globalIndex >= 1) {
       cumulPctPattern += pctSem;
     }
-    const pctCumul = (globalIndex >= 6) ? cumulPctPattern : 0;
+    const pctCumul = (globalIndex >= 1) ? cumulPctPattern : 0;
 
     // Calculer les tendances (projection annuelle basée sur le % de progression)
     // Formule: (cumul réel / cumul % objectif) * 100 = projection annuelle
@@ -7873,13 +7855,13 @@ function renderTeamPlanTable(weeks, filterMonth = 'all', totalObjectif = 0) {
       }
     }
 
-    // TV% (taux de vente cible, actif du 12 janv au 30 août = index 6 à 38)
+    // TV% (taux de vente cible, actif du 12 janv au 30 août = index 1 à 33)
     let tvVal = '-';
-    if (globalIndex >= 6 && globalIndex <= 38) {
+    if (globalIndex >= 1 && globalIndex <= 33) {
       // Progression du TV% pendant la période de ventes
       tvVal = 25;
-      if (globalIndex >= 14) tvVal = 30;
-      if (globalIndex >= 26) tvVal = 35;
+      if (globalIndex >= 20) tvVal = 30;
+      if (globalIndex >= 32) tvVal = 35;
     }
 
     // % Production (affiche le % du pattern de production)
@@ -8053,41 +8035,67 @@ function enableStatsPlanScroll() {
 
 // Pattern de distribution des objectifs (% de l'objectif annuel par semaine, du 12 janv au 30 août)
 const percentagePattern = [
-  0, 0, 0, 0,  // Index 0-3: 1-28 déc 2025 (pas actif, période des fêtes)
-  0,  // Index 4: 29 déc - 4 janv 2026 (pas actif)
-  0,  // Index 5: 5-11 janv 2026 (début d'activité)
-  0.5, 2.0, 2.0,  // Index 6-8: 12 janv - 1 fév
-  3.0, 2.5, 3.0, 3.0,  // Index 9-12: 2 fév - 1 mars (2-8 fév: +0.5% = 3.0%)
-  3.5, 4.0, 4.5, 5.5,  // Index 13-16: 2 mars - 29 mars (2 mars: +0.5% = 3.5%, 9-15 mars: +0.5% = 4.0%, 16-22 mars: +1% = 4.5%)
-  4.5, 6.5, 5.5, 6.0, 6.0,  // Index 17-21: 30 mars - 4 mai (30 mars: +0.5% = 4.5%)
-  4.5, 4.5, 4.5, 4.5,  // Index 22-25: 5 mai - 1 juin
-  3.5, 4.0, 3.5, 3.0,  // Index 26-29: 2 juin - 29 juin (1-7 juin: +0.5% = 3.5%, 8-14 juin: +1% = 4.0%, 15 juin: +0.5% = 3.5%)
-  3.0, 3.0, 3.0, 2.0, 1.0,  // Index 30-34: 30 juin - 3 août
-  1.0, 1.0, 1.0, 1.0,  // Index 35-38: 4 août - 31 août
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  // Index 39-51: reste (0%)
+  0,  // Index 0: 5-11 janv 2026 (semaine vide)
+  0.5, 2.0, 2.0,  // Index 1-3: 12 janv - 1 fév
+  3.0, 2.5, 3.0, 3.0,  // Index 4-7: 2 fév - 1 mars (2-8 fév: +0.5% = 3.0%)
+  3.5, 4.0, 4.5, 5.5,  // Index 8-11: 2 mars - 29 mars
+  4.5, 6.5, 5.5, 6.0, 6.0,  // Index 12-16: 30 mars - 4 mai
+  4.5, 4.5, 4.5, 4.5,  // Index 17-20: 5 mai - 1 juin
+  3.5, 4.0, 3.5, 3.0,  // Index 21-24: 2 juin - 29 juin
+  3.0, 3.0, 3.0, 2.0, 1.0,  // Index 25-29: 30 juin - 3 août
+  1.0, 1.0, 1.0, 1.0,  // Index 30-33: 4 août - 31 août
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  // Index 34-51: reste (0%)
 ];
 
-// Pattern de distribution de production (56 semaines, du 4 mai au 4 octobre = index 22 à 43)
+// Pattern de distribution de production (52 semaines, du 5 mai au 4 octobre = index 17 à 38)
 const productionIntensityPattern = [
-  // Index 0-21: Avant le 4 mai (22 semaines)
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  // Index 22-43: 4 mai - 4 octobre (22 semaines de production)
-  1, 4, 5, 5,
-  5, 7, 7, 7, 7,
-  7, 7, 7, 7,
-  6, 5, 5, 4, 3.6,
-  0.1, 0.1, 0.1, 0.1,
-  // Index 44-55: Après le 4 octobre (12 semaines)
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+  // Janvier - Avril 2026 (index 0-16): pas de production
+  0, 0, 0, 0, 0,  // Index 0-4: Janvier 2026
+  0, 0, 0, 0,     // Index 5-8: Février 2026
+  0, 0, 0, 0,     // Index 9-12: Mars 2026
+  0, 0, 0, 0,     // Index 13-16: Avril 2026
+
+  // Mai 2026 (index 17-20)
+  1,    // Index 17: 5 mai 2026 = 1%
+  4,    // Index 18: 12 mai 2026 = 4%
+  5,    // Index 19: 19 mai 2026 = 5%
+  5,    // Index 20: 26 mai 2026 = 5%
+
+  // Juin 2026 (index 21-24)
+  5,    // Index 21: 2 juin 2026 = 5%
+  7,    // Index 22: 9 juin 2026 = 7%
+  7,    // Index 23: 16 juin 2026 = 7%
+  7,    // Index 24: 23 juin 2026 = 7%
+
+  // Juillet 2026 (index 25-29)
+  7,    // Index 25: 30 juin 2026 = 7%
+  7,    // Index 26: 7 juillet 2026 = 7%
+  7,    // Index 27: 14 juillet 2026 = 7%
+  7,    // Index 28: 21 juillet 2026 = 7%
+  7,    // Index 29: 28 juillet 2026 = 7%
+
+  // Août 2026 (index 30-33)
+  6,    // Index 30: 4 août 2026 = 6%
+  5,    // Index 31: 11 août 2026 = 5%
+  5,    // Index 32: 18 août 2026 = 5%
+  4,    // Index 33: 25 août 2026 = 4%
+
+  // Septembre 2026 - Fin (index 34-51)
+  3.6,  // Index 34: 1 sept 2026 = 3,6%
+  0.1,  // Index 35: 8 septembre 2026 = 0,1%
+  0.1,  // Index 36: 15 septembre 2026 = 0,1%
+  0.1,  // Index 37: 22 septembre 2026 = 0,1%
+  0.1,  // Index 38: 29 septembre 2026 = 0,1%
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  // Index 39-51: reste
 ];
 
 // Fonction pour calculer les objectifs visés de l'équipe selon le pattern
 function calculateTeamObjectivePattern(totalObjectif, avgCM, avgRatioMktg, avgTauxVente) {
   const weeklyObjectives = [];
 
-  // Calculer le total du pattern (en excluant les -1 et seulement index 6+)
+  // Calculer le total du pattern (en excluant les -1 et seulement index 1+)
   const totalPatternPct = percentagePattern.reduce((sum, pct, idx) => {
-    if (idx >= 6 && pct > 0) {
+    if (idx >= 1 && pct > 0) {
       return sum + pct;
     }
     return sum;
@@ -8096,11 +8104,11 @@ function calculateTeamObjectivePattern(totalObjectif, avgCM, avgRatioMktg, avgTa
   // L'objectif visé total avec +10% (comme l'entrepreneur)
   const totalObjectifVise = totalObjectif * 1.10;
 
-  for (let i = 0; i < 56; i++) {
+  for (let i = 0; i < 52; i++) {
     const pct = percentagePattern[i] || 0;
 
-    if (pct === -1 || i < 6) {
-      // Semaine d'arrêt (-1) ou avant la semaine 7 (12 janvier), pas d'objectif
+    if (pct === -1 || i < 1) {
+      // Semaine d'arrêt (-1) ou avant la semaine 2 (12 janvier), pas d'objectif
       weeklyObjectives.push({
         dollarPrev: 0,
         contratPrev: 0,
@@ -8141,7 +8149,7 @@ function calculateTeamProductionPattern(totalObjectif) {
   const totalProductionVise = totalObjectif * 1.10;
 
   // Distribuer cette production selon le pattern (normaliser pour que le total = 110% de l'objectif)
-  for (let i = 0; i < 56; i++) {
+  for (let i = 0; i < 52; i++) {
     const prodVise = (totalProductionVise * productionIntensityPattern[i]) / totalIntensity;
     prodPattern.push(prodVise);
   }

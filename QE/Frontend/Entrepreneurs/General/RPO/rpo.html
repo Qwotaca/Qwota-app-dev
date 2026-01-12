@@ -2396,6 +2396,129 @@
   </div>
 </div>
 
+<!-- Popup Lecture Seule (Voir le texte complet) -->
+<div id="weeklyAnalysisViewPopup" style="
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+">
+  <div style="
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.98), rgba(51, 65, 85, 0.95));
+    border: 1px solid rgba(96, 165, 250, 0.3);
+    border-radius: 1.5rem;
+    width: 90%;
+    max-width: 650px;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: slideIn 0.3s ease-out;
+  ">
+    <!-- Header -->
+    <div id="weeklyAnalysisViewHeader" style="
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(96, 165, 250, 0.1);
+    ">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <div id="weeklyAnalysisViewIcon" style="
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
+          background: linear-gradient(135deg, #3b82f6, #2563eb);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">
+          <i class="fas fa-eye" style="font-size: 1.5rem; color: white;"></i>
+        </div>
+        <div>
+          <h3 id="weeklyAnalysisViewTitle" style="
+            color: var(--text-light);
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+          ">Analyse de la semaine</h3>
+          <p id="weeklyAnalysisViewSubtitle" style="
+            color: var(--text-gray);
+            font-size: 0.875rem;
+            margin: 0;
+            margin-top: 0.25rem;
+          ">Semaine 1 - 5 janv. - 11 janv.</p>
+        </div>
+      </div>
+      <button onclick="closeWeeklyAnalysisViewPopup()" style="
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: rgba(248, 113, 113, 0.1);
+        border: 1px solid rgba(248, 113, 113, 0.3);
+        color: #f87171;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+      " onmouseover="this.style.background='rgba(248, 113, 113, 0.2)'" onmouseout="this.style.background='rgba(248, 113, 113, 0.1)'">
+        <i class="fas fa-times" style="font-size: 1.25rem;"></i>
+      </button>
+    </div>
+
+    <!-- Content (read-only) -->
+    <div style="padding: 2rem; overflow-y: auto; max-height: calc(80vh - 180px);">
+      <div id="weeklyAnalysisViewContent" style="
+        padding: 1.5rem;
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(96, 165, 250, 0.2);
+        border-radius: 12px;
+        color: var(--text-light);
+        font-size: 0.95rem;
+        line-height: 1.8;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        min-height: 100px;
+      ">
+        Texte de l'analyse...
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="
+      padding: 1.5rem 2rem;
+      border-top: 1px solid rgba(51, 65, 85, 0.5);
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      background: rgba(30, 41, 59, 0.5);
+    ">
+      <button onclick="closeWeeklyAnalysisViewPopup()" style="
+        padding: 0.75rem 2rem;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        border: none;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(59, 130, 246, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.3)'">
+        <i class="fas fa-check" style="margin-right: 0.5rem;"></i>
+        Fermer
+      </button>
+    </div>
+  </div>
+</div>
+
 <style>
 @keyframes slideIn {
   from {
@@ -2911,6 +3034,71 @@ let currentWeeklyAnalysisContext = {
   field: null, // 'probleme' ou 'focus'
   monthIndex: 0
 };
+
+// ===== POPUP DE LECTURE SEULE (Voir le texte complet) =====
+
+// Ouvrir le popup de lecture seule pour voir le texte complet
+function openWeeklyAnalysisViewPopup(weekNumber, field) {
+  const popup = document.getElementById('weeklyAnalysisViewPopup');
+  const content = document.getElementById('weeklyAnalysisViewContent');
+  const title = document.getElementById('weeklyAnalysisViewTitle');
+  const subtitle = document.getElementById('weeklyAnalysisViewSubtitle');
+  const icon = document.getElementById('weeklyAnalysisViewIcon');
+
+  if (!popup || !content) {
+    console.error('[WEEKLY ANALYSIS VIEW] Éléments popup non trouvés');
+    return;
+  }
+
+  // Personnaliser selon le type (probleme ou focus)
+  if (field === 'probleme') {
+    title.textContent = 'Analyse de la semaine passée';
+    icon.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+    icon.innerHTML = '<i class="fas fa-exclamation-triangle" style="font-size: 1.5rem; color: white;"></i>';
+  } else {
+    title.textContent = 'Focus de la semaine';
+    icon.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+    icon.innerHTML = '<i class="fas fa-bullseye" style="font-size: 1.5rem; color: white;"></i>';
+  }
+
+  // Obtenir la description de la semaine
+  const weeks = getWeeksForMonth(currentWeeklyMonthIndex);
+  const weekLabel = (weeks && weeks[weekNumber - 1]) ? weeks[weekNumber - 1].label : `Semaine ${weekNumber}`;
+  subtitle.textContent = `Semaine ${weekNumber} - ${weekLabel}`;
+
+  // Charger le texte complet
+  const cell = document.querySelector(`div[data-week="${weekNumber}"][data-field="${field}"]`);
+  if (cell) {
+    const textSpan = cell.querySelector('.week-analysis-text');
+    const fullText = textSpan ? textSpan.getAttribute('data-full-text') || textSpan.textContent : '';
+    content.textContent = fullText === '-' ? 'Aucune donnée saisie' : fullText;
+  } else {
+    content.textContent = 'Aucune donnée disponible';
+  }
+
+  // Bloquer le scroll de l'arrière-plan
+  document.body.style.overflow = 'hidden';
+
+  // Afficher le popup
+  popup.style.display = 'flex';
+
+  console.log(`[WEEKLY ANALYSIS VIEW] Popup ouvert - Semaine ${weekNumber}, Type: ${field}`);
+}
+
+// Fermer le popup de lecture seule
+function closeWeeklyAnalysisViewPopup() {
+  const popup = document.getElementById('weeklyAnalysisViewPopup');
+  if (!popup) return;
+
+  popup.style.display = 'none';
+
+  // Débloquer le scroll
+  document.body.style.overflow = 'auto';
+
+  console.log('[WEEKLY ANALYSIS VIEW] Popup fermé');
+}
+
+// ===== POPUP D'ÉDITION =====
 
 // Ouvrir le popup d'analyse hebdomadaire
 function openWeeklyAnalysisPopup(weekNumber, field) {
@@ -4502,22 +4690,35 @@ function toggleEditWeekJan() {
   const analysisCells = document.querySelectorAll('.week-analysis-cell');
   analysisCells.forEach(cell => {
     const editIcon = cell.querySelector('.week-edit-icon');
+    const weekNumber = cell.dataset.week;
+    const field = cell.dataset.field;
 
     if (isReadonly) {
-      // Mode édition: activer le clic et montrer l'icône
-      const weekNumber = cell.dataset.week;
-      const field = cell.dataset.field;
+      // Mode édition: ouvrir popup d'édition et montrer l'icône
       cell.onclick = () => openWeeklyAnalysisPopup(parseInt(weekNumber), field);
       cell.style.cursor = 'pointer';
       cell.classList.add('hover:bg-opacity-20', 'transition-all');
       cell.title = 'Cliquer pour modifier';
       if (editIcon) editIcon.style.display = 'block';
     } else {
-      // Mode lecture: désactiver le clic et cacher l'icône
-      cell.onclick = null;
-      cell.style.cursor = 'default';
-      cell.classList.remove('hover:bg-opacity-20', 'transition-all');
-      cell.title = '';
+      // Mode lecture: ouvrir popup de lecture seule (voir le texte complet), cacher l'icône d'édition
+      const textSpan = cell.querySelector('.week-analysis-text');
+      const hasText = textSpan && textSpan.getAttribute('data-full-text') && textSpan.getAttribute('data-full-text') !== '-';
+
+      if (hasText) {
+        // Si du texte existe, permettre de cliquer pour le voir
+        cell.onclick = () => openWeeklyAnalysisViewPopup(parseInt(weekNumber), field);
+        cell.style.cursor = 'pointer';
+        cell.classList.add('hover:bg-opacity-20', 'transition-all');
+        cell.title = 'Cliquer pour voir le texte complet';
+      } else {
+        // Pas de texte, désactiver le clic
+        cell.onclick = null;
+        cell.style.cursor = 'default';
+        cell.classList.remove('hover:bg-opacity-20', 'transition-all');
+        cell.title = '';
+      }
+
       if (editIcon) editIcon.style.display = 'none';
     }
   });
@@ -5341,6 +5542,14 @@ async function loadWeeklyDataForMonth(monthIndex) {
               textSpan.textContent = fullText;
             }
           }
+
+          // Activer le clic pour voir le texte complet si du texte existe (mode lecture par défaut)
+          if (fullText !== '-') {
+            problemeCell.onclick = () => openWeeklyAnalysisViewPopup(weekNumber, 'probleme');
+            problemeCell.style.cursor = 'pointer';
+            problemeCell.classList.add('hover:bg-opacity-20', 'transition-all');
+            problemeCell.title = 'Cliquer pour voir le texte complet';
+          }
         }
 
         // Update focus cell
@@ -5355,6 +5564,14 @@ async function loadWeeklyDataForMonth(monthIndex) {
             } else {
               textSpan.textContent = fullText;
             }
+          }
+
+          // Activer le clic pour voir le texte complet si du texte existe (mode lecture par défaut)
+          if (fullText !== '-') {
+            focusCell.onclick = () => openWeeklyAnalysisViewPopup(weekNumber, 'focus');
+            focusCell.style.cursor = 'pointer';
+            focusCell.classList.add('hover:bg-opacity-20', 'transition-all');
+            focusCell.title = 'Cliquer pour voir le texte complet';
           }
         }
 

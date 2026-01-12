@@ -7237,8 +7237,9 @@ async function loadEntrepreneursForBusinessPlan() {
       // Générer les inputs avec les coaches
       let html = '';
       for (const coach of coaches) {
-        const existingValue = existingPrevisions[coach.username] || 0;
-        const displayValue = existingValue > 0 ? formatCurrency(existingValue) : '';
+        const existingValue = existingPrevisions[coach.username] !== undefined ? existingPrevisions[coach.username] : 0;
+        // Afficher la valeur formatée même si c'est 0$ (0$ est une prévision valide)
+        const displayValue = formatCurrency(existingValue);
 
         // Récupérer l'objectif du coach depuis son RPO
         let objectifCA = 0;
@@ -7253,7 +7254,8 @@ async function loadEntrepreneursForBusinessPlan() {
         }
 
         const fullName = coach.full_name || coach.username;
-        const objectifDisplay = objectifCA > 0 ? formatCurrency(objectifCA) : 'Non défini';
+        // Afficher 0,00 $ au lieu de "Non défini" car 0$ est un objectif valide
+        const objectifDisplay = formatCurrency(objectifCA);
 
         html += `
           <div class="entrepreneur-input-row">

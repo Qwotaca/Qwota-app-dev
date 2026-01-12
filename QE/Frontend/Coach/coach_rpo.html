@@ -9288,8 +9288,9 @@ async function loadEntrepreneursForBusinessPlan() {
       // Générer les inputs avec objectif CA de chaque entrepreneur
       let html = '';
       for (const entrepreneur of entrepreneurs) {
-        const existingValue = existingPrevisions[entrepreneur.username] || 0;
-        const displayValue = existingValue > 0 ? formatCurrency(existingValue) : '';
+        const existingValue = existingPrevisions[entrepreneur.username] !== undefined ? existingPrevisions[entrepreneur.username] : 0;
+        // Afficher la valeur formatée même si c'est 0$ (0$ est une prévision valide)
+        const displayValue = formatCurrency(existingValue);
 
         // Charger l'objectif CA de l'entrepreneur depuis son RPO
         let objectifCA = 0;
@@ -9304,7 +9305,8 @@ async function loadEntrepreneursForBusinessPlan() {
         }
 
         const fullName = entrepreneur.full_name || `${entrepreneur.prenom || ''} ${entrepreneur.nom || ''}`.trim() || entrepreneur.username;
-        const objectifDisplay = objectifCA > 0 ? formatCurrency(objectifCA) : 'Non défini';
+        // Afficher 0,00 $ au lieu de "Non défini" car 0$ est un objectif valide
+        const objectifDisplay = formatCurrency(objectifCA);
 
         html += `
           <div class="entrepreneur-input-row">

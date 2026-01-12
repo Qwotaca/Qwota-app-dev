@@ -6252,9 +6252,32 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
         return;
       }
 
-      // Ouvrir le modal
-      const modal = document.getElementById('templateNameModal');
-      const input = document.getElementById('templateNameInput');
+      // Chercher le modal où qu'il soit (iframe ou parent)
+      let modal = document.getElementById('templateNameModal');
+      const isMobile = window.innerWidth <= 768;
+
+      if (isMobile && window.parent) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+        // Si pas trouvé dans iframe, chercher dans parent
+        if (!modal && rootWindow && rootWindow.document) {
+          modal = rootWindow.document.getElementById('templateNameModal');
+        }
+      }
+
+      if (!modal) {
+        console.error('[TEMPLATE] templateNameModal introuvable');
+        return;
+      }
+
+      // Chercher l'input dans le modal
+      const input = modal.querySelector('#templateNameInput');
+      if (!input) {
+        console.error('[TEMPLATE] templateNameInput introuvable');
+        return;
+      }
+
       modal.style.display = 'flex';
       input.value = '';
       input.focus();
@@ -6262,12 +6285,44 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
     // Fermer le popup de nom
     function closeTemplateNameModal() {
-      document.getElementById('templateNameModal').style.display = 'none';
+      // Chercher le modal où qu'il soit (iframe ou parent)
+      let modal = document.getElementById('templateNameModal');
+      const isMobile = window.innerWidth <= 768;
+
+      if (isMobile && window.parent) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+        // Si pas trouvé dans iframe, chercher dans parent
+        if (!modal && rootWindow && rootWindow.document) {
+          modal = rootWindow.document.getElementById('templateNameModal');
+        }
+      }
+
+      if (modal) {
+        modal.style.display = 'none';
+      }
     }
 
     // Confirmer et sauvegarder le template
     async function confirmSaveTemplate() {
-      const name = document.getElementById('templateNameInput').value.trim();
+      // Chercher le modal où qu'il soit (iframe ou parent)
+      let modal = document.getElementById('templateNameModal');
+      const isMobile = window.innerWidth <= 768;
+
+      if (isMobile && window.parent) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+        // Si pas trouvé dans iframe, chercher dans parent
+        if (!modal && rootWindow && rootWindow.document) {
+          modal = rootWindow.document.getElementById('templateNameModal');
+        }
+      }
+
+      // Chercher l'input dans le modal
+      const input = modal ? modal.querySelector('#templateNameInput') : document.getElementById('templateNameInput');
+      const name = input ? input.value.trim() : '';
 
       if (!name) {
         return;
@@ -6330,14 +6385,54 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     function deleteTemplate(index) {
       currentDeleteIndex = index;
       const template = userTemplates[index];
-      document.getElementById('templateDeleteMessage').textContent =
-        `Voulez-vous vraiment supprimer le template "${template.name}" ?`;
-      document.getElementById('templateDeleteModal').style.display = 'flex';
+
+      // Chercher le modal où qu'il soit (iframe ou parent)
+      let modal = document.getElementById('templateDeleteModal');
+      const isMobile = window.innerWidth <= 768;
+
+      if (isMobile && window.parent) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+        // Si pas trouvé dans iframe, chercher dans parent
+        if (!modal && rootWindow && rootWindow.document) {
+          modal = rootWindow.document.getElementById('templateDeleteModal');
+        }
+      }
+
+      if (!modal) {
+        console.error('[TEMPLATE] templateDeleteModal introuvable');
+        return;
+      }
+
+      // Chercher le message dans le modal
+      const messageEl = modal.querySelector('#templateDeleteMessage');
+      if (messageEl) {
+        messageEl.textContent = `Voulez-vous vraiment supprimer le template "${template.name}" ?`;
+      }
+
+      modal.style.display = 'flex';
     }
 
     // Fermer popup de suppression
     function closeTemplateDeleteModal() {
-      document.getElementById('templateDeleteModal').style.display = 'none';
+      // Chercher le modal où qu'il soit (iframe ou parent)
+      let modal = document.getElementById('templateDeleteModal');
+      const isMobile = window.innerWidth <= 768;
+
+      if (isMobile && window.parent) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+        // Si pas trouvé dans iframe, chercher dans parent
+        if (!modal && rootWindow && rootWindow.document) {
+          modal = rootWindow.document.getElementById('templateDeleteModal');
+        }
+      }
+
+      if (modal) {
+        modal.style.display = 'none';
+      }
       currentDeleteIndex = null;
     }
 
@@ -6366,14 +6461,59 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     function editTemplate(index) {
       currentEditIndex = index;
       const template = userTemplates[index];
-      document.getElementById('templateEditInput').value = template.name;
-      document.getElementById('templateEditModal').style.display = 'flex';
-      document.getElementById('templateEditInput').focus();
+
+      // Chercher le modal où qu'il soit (iframe ou parent)
+      let modal = document.getElementById('templateEditModal');
+      const isMobile = window.innerWidth <= 768;
+
+      if (isMobile && window.parent) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+        // Si pas trouvé dans iframe, chercher dans parent
+        if (!modal && rootWindow && rootWindow.document) {
+          modal = rootWindow.document.getElementById('templateEditModal');
+        }
+      }
+
+      if (!modal) {
+        console.error('[TEMPLATE] templateEditModal introuvable');
+        return;
+      }
+
+      // Chercher l'input dans le modal
+      const input = modal.querySelector('#templateEditInput');
+      if (input) {
+        input.value = template.name;
+      }
+
+      modal.style.display = 'flex';
+
+      // Focus sur l'input
+      if (input) {
+        setTimeout(() => input.focus(), 100);
+      }
     }
 
     // Fermer popup de modification
     function closeTemplateEditModal() {
-      document.getElementById('templateEditModal').style.display = 'none';
+      // Chercher le modal où qu'il soit (iframe ou parent)
+      let modal = document.getElementById('templateEditModal');
+      const isMobile = window.innerWidth <= 768;
+
+      if (isMobile && window.parent) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+        // Si pas trouvé dans iframe, chercher dans parent
+        if (!modal && rootWindow && rootWindow.document) {
+          modal = rootWindow.document.getElementById('templateEditModal');
+        }
+      }
+
+      if (modal) {
+        modal.style.display = 'none';
+      }
       currentEditIndex = null;
     }
 
@@ -6381,7 +6521,23 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     async function confirmEditTemplate() {
       if (currentEditIndex === null) return;
 
-      const newName = document.getElementById('templateEditInput').value.trim();
+      // Chercher le modal où qu'il soit (iframe ou parent)
+      let modal = document.getElementById('templateEditModal');
+      const isMobile = window.innerWidth <= 768;
+
+      if (isMobile && window.parent) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+        // Si pas trouvé dans iframe, chercher dans parent
+        if (!modal && rootWindow && rootWindow.document) {
+          modal = rootWindow.document.getElementById('templateEditModal');
+        }
+      }
+
+      // Chercher l'input dans le modal
+      const input = modal ? modal.querySelector('#templateEditInput') : document.getElementById('templateEditInput');
+      const newName = input ? input.value.trim() : '';
       const template = userTemplates[currentEditIndex];
 
       if (!newName) {
@@ -6699,9 +6855,69 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
         rootWindow.closePartTravauxModal = closePartTravauxModal;
         rootWindow.confirmProductSelection = confirmProductSelection;
         rootWindow.confirmPartTravauxSelection = confirmPartTravauxSelection;
+
+        // Exposer les fonctions de templates pour que les boutons onclick fonctionnent
+        rootWindow.saveTemplatePrompt = saveTemplatePrompt;
+        rootWindow.closeTemplateNameModal = closeTemplateNameModal;
+        rootWindow.confirmSaveTemplate = confirmSaveTemplate;
+        rootWindow.deleteTemplate = deleteTemplate;
+        rootWindow.closeTemplateDeleteModal = closeTemplateDeleteModal;
+        rootWindow.confirmDeleteTemplate = confirmDeleteTemplate;
+        rootWindow.editTemplate = editTemplate;
+        rootWindow.closeTemplateEditModal = closeTemplateEditModal;
+        rootWindow.confirmEditTemplate = confirmEditTemplate;
+        rootWindow.selectTemplate = selectTemplate;
+
         console.log('[MODALS] Fonctions exposées dans le parent (apppc.html)');
       }
     }
+
+    // Sur MOBILE: déplacer les modals de templates vers le parent pour passer au-dessus des headers
+    document.addEventListener('DOMContentLoaded', function() {
+      const isMobile = window.innerWidth <= 768;
+
+      if (isMobile && window.parent) {
+        const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
+        const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
+
+        console.log('[TEMPLATE MODALS] Niveaux iframe:', isNestedIframe ? '2 (mobile)' : '1 (desktop)');
+
+        if (rootWindow && rootWindow.document) {
+          const parentBody = rootWindow.document.body;
+          const parentDoc = rootWindow.document;
+
+          // Injecter les styles nécessaires dans le parent si pas déjà fait
+          if (!parentDoc.getElementById('soumission-modal-styles')) {
+            const styleLink = parentDoc.createElement('link');
+            styleLink.id = 'soumission-modal-styles';
+            styleLink.rel = 'stylesheet';
+            styleLink.href = '/frontend/Entrepreneurs/Outils/Soumission/soumission.css';
+            parentDoc.head.appendChild(styleLink);
+
+            const baseLink = parentDoc.createElement('link');
+            baseLink.id = 'base-css-for-modal';
+            baseLink.rel = 'stylesheet';
+            baseLink.href = '/base.css';
+            parentDoc.head.appendChild(baseLink);
+          }
+
+          // Déplacer les 3 modals de templates vers le parent
+          const templateModals = [
+            'templateNameModal',
+            'templateEditModal',
+            'templateDeleteModal'
+          ];
+
+          templateModals.forEach(modalId => {
+            const modal = document.getElementById(modalId);
+            if (modal && modal.parentElement !== parentBody) {
+              parentBody.appendChild(modal);
+              console.log(`[TEMPLATE MODALS] ${modalId} déplacé vers document racine (apppc.html)`);
+            }
+          });
+        }
+      }
+    });
 
     // Gérer les sélections d'options Produit/Couleurs
     document.getElementById('productOptions').addEventListener('click', function(e) {

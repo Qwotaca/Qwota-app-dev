@@ -9882,8 +9882,15 @@ function calculateNewCosts(hours, surfaceData, selectedProduct) {
     const value = parseFloat(input.value) || 0;
     if (value > 0) {
       const dataType = input.getAttribute('data-type');
+      console.log('[REVETEMENT DEBUG] dataType:', dataType, 'value:', value, 'params:', {
+        peinture_latte_4po: params.peinture_latte_4po,
+        peinture_revetement_6po: params.peinture_revetement_6po,
+        teindre_bardeau_neuf: params.teindre_bardeau_neuf,
+        teindre_bardeau_vieux: params.teindre_bardeau_vieux
+      });
       // Calcul basé sur les ratios de productivité (ft²/h) * taux horaire
       switch(dataType) {
+        case 'peinture_latte_4po':
         case 'latte_horizontale_4':
           const latteFirstCoat = value / params.peinture_latte_4po;
           const latteSecondCoat = latteFirstCoat * params.facteur_deuxieme_couche;
@@ -9891,6 +9898,7 @@ function calculateNewCosts(hours, surfaceData, selectedProduct) {
           costs.revetement += latteTotalHours * params.taux_horaire;
           hours.revetement += latteTotalHours;
           break;
+        case 'peinture_revetement_6po':
         case 'revetement_6_75':
           const revetementFirstCoat = value / params.peinture_revetement_6po;
           const revetementSecondCoat = revetementFirstCoat * params.facteur_deuxieme_couche;
@@ -9898,6 +9906,7 @@ function calculateNewCosts(hours, surfaceData, selectedProduct) {
           costs.revetement += revetementTotalHours * params.taux_horaire;
           hours.revetement += revetementTotalHours;
           break;
+        case 'teindre_bardeau_neuf':
         case 'bardeau_neuf':
           const bardeauNeufFirstCoat = value / params.teindre_bardeau_neuf;
           const bardeauNeufSecondCoat = bardeauNeufFirstCoat * params.facteur_deuxieme_couche;
@@ -9905,6 +9914,7 @@ function calculateNewCosts(hours, surfaceData, selectedProduct) {
           costs.revetement += bardeauNeufTotalHours * params.taux_horaire;
           hours.revetement += bardeauNeufTotalHours;
           break;
+        case 'teindre_bardeau_vieux':
         case 'bardeau_vieux':
           const bardeauVieuxFirstCoat = value / params.teindre_bardeau_vieux;
           const bardeauVieuxSecondCoat = bardeauVieuxFirstCoat * params.facteur_deuxieme_couche;
@@ -9946,6 +9956,9 @@ function calculateNewCosts(hours, surfaceData, selectedProduct) {
           const solageDifficileTotalHours = solageDifficileFirstCoat + solageDifficileSecondCoat;
           costs.revetement += solageDifficileTotalHours * params.taux_horaire;
           hours.revetement += solageDifficileTotalHours;
+          break;
+        default:
+          console.warn(`[REVETEMENT] Type non reconnu: ${dataType}`);
           break;
       }
     }

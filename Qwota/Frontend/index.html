@@ -24,334 +24,326 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow-x: hidden;
+      overflow: hidden;
       position: relative;
+      margin: 0;
+      padding: 0;
     }
 
-    /* Animated background elements */
-    .bg-element {
+    /* Login preload iframe - always visible behind */
+    #login-preload {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      z-index: 1;
+      opacity: 1;
+      pointer-events: none;
+    }
+
+    /* Wrapper with background that will slide up */
+    .page-wrapper {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      z-index: 2;
+      overflow-x: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    body.exiting .page-wrapper {
+      animation: slideUpExit 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+    }
+
+    /* Grid overlay */
+    .grid-overlay {
       position: absolute;
-      border-radius: 50%;
-      opacity: 0.1;
-      animation: float 20s infinite ease-in-out;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        linear-gradient(rgba(82, 113, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(82, 113, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      z-index: 1;
+      pointer-events: none;
     }
 
-    .bg-element:nth-child(1) {
-      width: 400px;
-      height: 400px;
-      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-      top: -200px;
-      left: -200px;
-      animation-delay: 0s;
-    }
-
-    .bg-element:nth-child(2) {
-      width: 300px;
-      height: 300px;
-      background: linear-gradient(135deg, #60a5fa, #3b82f6);
-      bottom: -150px;
-      right: -150px;
-      animation-delay: 5s;
-    }
-
-    .bg-element:nth-child(3) {
-      width: 250px;
-      height: 250px;
-      background: linear-gradient(135deg, #5271ff, #3b82f6);
-      top: 50%;
-      left: 10%;
-      animation-delay: 10s;
-    }
-
-    @keyframes float {
-      0%, 100% {
-        transform: translate(0, 0) scale(1);
-      }
-      25% {
-        transform: translate(30px, -30px) scale(1.1);
-      }
-      50% {
-        transform: translate(-20px, 20px) scale(0.9);
-      }
-      75% {
-        transform: translate(20px, 30px) scale(1.05);
-      }
-    }
-
-    /* Main container */
+    /* Main container with epic reveal */
     .container {
       position: relative;
-      z-index: 1;
+      z-index: 3;
       text-align: center;
       padding: 2rem;
       max-width: 1200px;
       width: 100%;
-      animation: fadeIn 1s ease-out;
+      opacity: 0;
+      animation: epicReveal 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
-    @keyframes fadeIn {
-      from {
+    @keyframes epicReveal {
+      0% {
         opacity: 0;
-        transform: translateY(30px);
+        transform: scale(0.7) translateY(100px);
+        filter: blur(20px);
       }
-      to {
+      60% {
+        transform: scale(1.05) translateY(-10px);
+      }
+      100% {
         opacity: 1;
-        transform: translateY(0);
+        transform: scale(1) translateY(0);
+        filter: blur(0px);
       }
     }
 
-    /* Logo container */
+    /* Logo container with explosive stagger effect */
     .logo-container {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 3rem;
       margin-bottom: 3rem;
-      animation: slideDown 1.2s ease-out;
+      perspective: 1500px;
     }
 
-    @keyframes slideDown {
-      from {
+    .logo-wrapper {
+      opacity: 0;
+      transform: translateZ(-500px) rotateY(90deg);
+    }
+
+    .logo-wrapper.left {
+      animation: explosiveRevealLeft 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+    }
+
+    .logo-wrapper.right {
+      animation: explosiveRevealRight 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.7s forwards;
+    }
+
+    @keyframes explosiveRevealLeft {
+      0% {
         opacity: 0;
-        transform: translateY(-50px);
+        transform: translateZ(-500px) rotateY(90deg) translateX(-200px) scale(0.3);
       }
-      to {
+      70% {
+        transform: translateZ(50px) rotateY(-10deg) translateX(20px) scale(1.1);
+      }
+      100% {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateZ(0) rotateY(0) translateX(0) scale(1);
+      }
+    }
+
+    @keyframes explosiveRevealRight {
+      0% {
+        opacity: 0;
+        transform: translateZ(-500px) rotateY(-90deg) translateX(200px) scale(0.3);
+      }
+      70% {
+        transform: translateZ(50px) rotateY(10deg) translateX(-20px) scale(1.1);
+      }
+      100% {
+        opacity: 1;
+        transform: translateZ(0) rotateY(0) translateX(0) scale(1);
       }
     }
 
     .logo {
-      animation: float-logo 3s infinite ease-in-out;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      transform-style: preserve-3d;
+    }
+
+    .logo:hover {
+      transform: scale(1.1) translateZ(20px);
     }
 
     .logo-left {
       width: 300px;
       height: auto;
-      filter: drop-shadow(0 10px 30px rgba(59, 130, 246, 0.5));
-      animation-delay: 0s;
     }
 
     .logo-right {
       width: 300px;
       height: auto;
-      filter: drop-shadow(0 10px 30px rgba(59, 130, 246, 0.5));
-      animation-delay: 1s;
     }
 
-    @keyframes float-logo {
-      0%, 100% {
-        transform: translateY(0);
+    /* X separator with mind-blowing reveal */
+    .separator-wrapper {
+      opacity: 0;
+      animation: separatorExplosion 1.5s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
+    }
+
+    @keyframes separatorExplosion {
+      0% {
+        opacity: 0;
+        transform: scale(0) rotate(720deg);
+        filter: blur(30px);
       }
       50% {
-        transform: translateY(-10px);
+        opacity: 1;
+        filter: blur(0px);
+      }
+      70% {
+        transform: scale(1.5) rotate(-20deg);
+      }
+      85% {
+        transform: scale(0.9) rotate(10deg);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+        filter: blur(0px);
       }
     }
 
-    /* X separator */
     .separator {
       font-size: 6rem;
       font-weight: 700;
-      background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 50%, #93c5fd 100%);
+      background: linear-gradient(135deg, #5271ff 0%, #7b93ff 50%, #a8b9ff 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      animation: pulse-x 2s infinite ease-in-out;
-      text-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+      position: relative;
+      display: inline-block;
     }
 
-    @keyframes pulse-x {
-      0%, 100% {
-        opacity: 1;
-        transform: scale(1);
-      }
-      50% {
-        opacity: 0.8;
-        transform: scale(1.1);
-      }
-    }
 
-    /* Description text */
+    /* Description with cinematic fade */
     .description {
-      color: rgba(255, 255, 255, 0.8);
-      font-size: 1.25rem;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 1.35rem;
       margin-bottom: 2.5rem;
-      line-height: 1.6;
-      max-width: 700px;
+      line-height: 1.8;
+      max-width: 750px;
       margin-left: auto;
       margin-right: auto;
+      font-weight: 300;
+      letter-spacing: 0.5px;
+      opacity: 0;
+      animation: cinematicFadeIn 1.5s ease-out 1.2s forwards;
     }
 
-    /* Buttons container */
+    @keyframes cinematicFadeIn {
+      0% {
+        opacity: 0;
+        transform: translateY(50px);
+        filter: blur(10px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0px);
+      }
+    }
+
+    /* Main button container - all buttons on same line */
     .buttons-container {
       display: flex;
-      gap: 1.5rem;
+      gap: 1rem;
       justify-content: center;
       align-items: center;
       flex-wrap: wrap;
       margin-bottom: 2rem;
+      opacity: 0;
+      animation: cinematicFadeIn 1.5s ease-out 1.6s forwards;
     }
 
-    /* Primary Button */
-    .cta-button {
+    /* Hide download buttons on mobile/tablet */
+    @media (max-width: 1024px) {
+      .download-btn {
+        display: none;
+      }
+    }
+
+    /* Shared button styles */
+    .btn {
       position: relative;
-      padding: 1.25rem 3rem;
-      font-size: 1.25rem;
+      padding: 1.1rem 2.5rem;
+      font-size: 1rem;
       font-weight: 600;
       color: white;
-      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
       border: none;
-      border-radius: 50px;
+      border-radius: 12px;
       cursor: pointer;
       text-decoration: none;
       display: inline-flex;
       align-items: center;
       gap: 0.75rem;
-      transition: all 0.3s ease;
-      box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
-      animation: float-button 3s infinite ease-in-out;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
       overflow: hidden;
+      transform-style: preserve-3d;
     }
 
-    .cta-button::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-      transition: left 0.5s;
+
+    .btn:hover {
+      transform: translateY(-5px) scale(1.05);
     }
 
-    .cta-button:hover::before {
-      left: 100%;
+    .btn:active {
+      transform: translateY(-2px) scale(1.02);
+    }
+
+    /* Primary button (Login) */
+    .cta-button {
+      background: linear-gradient(135deg, #5271ff 0%, #3651d4 100%);
     }
 
     .cta-button:hover {
-      transform: translateY(-5px) scale(1.05);
-      box-shadow: 0 15px 40px rgba(59, 130, 246, 0.6);
+      background: linear-gradient(135deg, #6381ff 0%, #4761e4 100%);
     }
 
-    .cta-button:active {
-      transform: translateY(-2px) scale(1.02);
+    /* Download buttons */
+    .download-btn.windows {
+      background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%);
     }
 
-    /* Download Button */
-    .download-button {
-      position: relative;
-      padding: 1.25rem 3rem;
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: white;
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      border: none;
-      border-radius: 50px;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.75rem;
-      transition: all 0.3s ease;
-      box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
-      animation: float-button 3s infinite ease-in-out;
-      animation-delay: 0.5s;
-      overflow: hidden;
+    .download-btn.windows:hover {
+      background: linear-gradient(135deg, #1088e4 0%, #106aae 100%);
     }
 
-    .download-button::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-      transition: left 0.5s;
+    .download-btn.mac {
+      background: linear-gradient(135deg, #64748b 0%, #475569 100%);
     }
 
-    .download-button:hover::before {
-      left: 100%;
+    .download-btn.mac:hover {
+      background: linear-gradient(135deg, #74859b 0%, #576579 100%);
     }
 
-    .download-button:hover {
-      transform: translateY(-5px) scale(1.05);
-      box-shadow: 0 15px 40px rgba(16, 185, 129, 0.6);
-    }
-
-    .download-button:active {
-      transform: translateY(-2px) scale(1.02);
-    }
-
-    @keyframes float-button {
-      0%, 100% {
-        transform: translateY(0);
-      }
-      50% {
-        transform: translateY(-5px);
-      }
+    /* Disabled button */
+    .btn.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
     }
 
     /* Platform info */
     .platform-info {
       color: rgba(255, 255, 255, 0.6);
-      font-size: 0.9rem;
-      margin-top: 1rem;
+      font-size: 0.95rem;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.5rem;
+      gap: 0.75rem;
+      opacity: 0;
+      animation: cinematicFadeIn 1.5s ease-out 2.2s forwards;
     }
 
-    /* Sparkle effect */
-    @keyframes sparkle {
-      0%, 100% {
-        opacity: 0;
-        transform: scale(0);
-      }
-      50% {
-        opacity: 1;
-        transform: scale(1);
-      }
+    .platform-info i {
+      color: #5271ff;
     }
 
-    .sparkle {
-      position: absolute;
-      width: 4px;
-      height: 4px;
-      background: white;
-      border-radius: 50%;
-      animation: sparkle 2s infinite;
-    }
-
-    .sparkle:nth-child(1) {
-      top: 20%;
-      left: 10%;
-      animation-delay: 0s;
-    }
-
-    .sparkle:nth-child(2) {
-      top: 40%;
-      right: 15%;
-      animation-delay: 0.5s;
-    }
-
-    .sparkle:nth-child(3) {
-      bottom: 30%;
-      left: 20%;
-      animation-delay: 1s;
-    }
-
-    .sparkle:nth-child(4) {
-      bottom: 20%;
-      right: 10%;
-      animation-delay: 1.5s;
-    }
 
     /* Responsive - Tablet */
     @media (max-width: 1024px) {
@@ -365,14 +357,13 @@
       }
 
       .description {
-        font-size: 1.1rem;
+        font-size: 1.15rem;
         padding: 0 1rem;
       }
 
-      .cta-button,
-      .download-button {
+      .btn {
         font-size: 1.1rem;
-        padding: 1.1rem 2.5rem;
+        padding: 1.2rem 3rem;
       }
     }
 
@@ -390,17 +381,16 @@
 
       .logo-left,
       .logo-right {
-        width: 180px;
+        width: 200px;
       }
 
       .separator {
-        font-size: 3.5rem;
+        font-size: 4rem;
         transform: rotate(90deg);
-        margin: 0.5rem 0;
       }
 
       .description {
-        font-size: 1rem;
+        font-size: 1.05rem;
         margin-bottom: 2rem;
       }
 
@@ -410,12 +400,11 @@
         width: 100%;
       }
 
-      .cta-button,
-      .download-button {
+      .btn {
         font-size: 1rem;
-        padding: 1rem 2rem;
+        padding: 1.1rem 2.5rem;
         width: 100%;
-        max-width: 320px;
+        max-width: 350px;
         justify-content: center;
       }
 
@@ -430,21 +419,20 @@
     @media (max-width: 480px) {
       .logo-left,
       .logo-right {
-        width: 150px;
+        width: 160px;
       }
 
       .separator {
-        font-size: 3rem;
+        font-size: 3.5rem;
       }
 
       .description {
         font-size: 0.95rem;
       }
 
-      .cta-button,
-      .download-button {
+      .btn {
         font-size: 0.95rem;
-        padding: 0.9rem 1.75rem;
+        padding: 1rem 2rem;
       }
     }
 
@@ -464,11 +452,11 @@
 
       .logo-left,
       .logo-right {
-        width: 120px;
+        width: 130px;
       }
 
       .separator {
-        font-size: 3rem;
+        font-size: 3.5rem;
         transform: rotate(0deg);
       }
 
@@ -482,79 +470,146 @@
         gap: 1rem;
       }
 
-      .cta-button,
-      .download-button {
+      .btn {
         font-size: 0.9rem;
-        padding: 0.75rem 1.5rem;
+        padding: 0.85rem 1.8rem;
         width: auto;
+      }
+    }
+
+    /* Slide up animation when leaving */
+    @keyframes slideUpExit {
+      0% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-100vh);
       }
     }
   </style>
 </head>
 <body>
-  <!-- Background animated elements -->
-  <div class="bg-element"></div>
-  <div class="bg-element"></div>
-  <div class="bg-element"></div>
+  <!-- Login page preload (always visible behind) -->
+  <iframe id="login-preload" src="/login"></iframe>
 
-  <!-- Sparkles -->
-  <div class="sparkle"></div>
-  <div class="sparkle"></div>
-  <div class="sparkle"></div>
-  <div class="sparkle"></div>
+  <!-- Page wrapper that will slide up -->
+  <div class="page-wrapper">
+    <!-- Grid overlay -->
+    <div class="grid-overlay"></div>
 
-  <!-- Main container -->
-  <div class="container">
+    <!-- Main container -->
+    <div class="container">
     <!-- Logo section -->
     <div class="logo-container">
-      <img src="https://i.ibb.co/fzFfjJtL/7.png" alt="Qwota Logo" class="logo logo-left">
-      <div class="separator">×</div>
-      <img src="https://i.ibb.co/xK7Rtkz4/6.png" alt="Partner Logo" class="logo logo-right">
+      <div class="logo-wrapper left">
+        <img src="https://i.ibb.co/fzFfjJtL/7.png" alt="Qwota Logo" class="logo logo-left">
+      </div>
+
+      <div class="separator-wrapper">
+        <div class="separator">×</div>
+      </div>
+
+      <div class="logo-wrapper right">
+        <img src="https://i.ibb.co/xK7Rtkz4/6.png" alt="Partner Logo" class="logo logo-right">
+      </div>
     </div>
 
     <!-- Description -->
     <div class="description">
-      Automatisez vos documents professionnels en quelques minutes. Soumissions, factures et gestion simplifiée.
+      Automatisez vos documents professionnels en quelques minutes.<br>
+      Soumissions, factures et gestion simplifiée pour votre entreprise.
     </div>
 
-    <!-- Buttons -->
+    <!-- All buttons on same line -->
     <div class="buttons-container">
-      <a href="/login" class="cta-button">
-        <i class="fas fa-sign-in-alt"></i>
-        Accéder à la plateforme
+      <a href="/static/downloads/Qwota-Setup.exe" class="btn download-btn windows" download>
+        <i class="fab fa-windows"></i>
+        Télécharger pour Windows
       </a>
 
-      <a href="/static/downloads/Qwota-Setup.exe" class="download-button" download>
-        <i class="fas fa-download"></i>
-        Télécharger l'application
+      <button class="btn download-btn mac disabled" disabled>
+        <i class="fab fa-apple"></i>
+        Mac - Non disponible pour le moment
+      </button>
+
+      <a href="/login" class="btn cta-button">
+        <i class="fas fa-sign-in-alt"></i>
+        Accéder à la plateforme
       </a>
     </div>
 
     <!-- Platform info -->
     <div class="platform-info">
       <i class="fas fa-desktop"></i>
-      <span>Application Windows disponible</span>
+      <span>Applications desktop disponibles</span>
       <span>•</span>
       <span>Accès web tous appareils</span>
     </div>
   </div>
+  </div> <!-- End page-wrapper -->
 
   <script>
-    // Add extra sparkle animation on mouse move
-    document.addEventListener('mousemove', (e) => {
-      if (Math.random() > 0.95) {
-        const sparkle = document.createElement('div');
-        sparkle.className = 'sparkle';
-        sparkle.style.left = e.clientX + 'px';
-        sparkle.style.top = e.clientY + 'px';
-        sparkle.style.position = 'fixed';
-        document.body.appendChild(sparkle);
+    // Button ripple effect
+    document.querySelectorAll('.btn').forEach(button => {
+      button.addEventListener('click', function(e) {
+        const ripple = document.createElement('span');
+        const rect = this.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height);
+        const x = e.clientX - rect.left - size / 2;
+        const y = e.clientY - rect.top - size / 2;
 
-        setTimeout(() => {
-          sparkle.remove();
-        }, 2000);
-      }
+        ripple.style.width = ripple.style.height = size + 'px';
+        ripple.style.left = x + 'px';
+        ripple.style.top = y + 'px';
+        ripple.style.position = 'absolute';
+        ripple.style.borderRadius = '50%';
+        ripple.style.background = 'rgba(255, 255, 255, 0.5)';
+        ripple.style.transform = 'scale(0)';
+        ripple.style.animation = 'ripple 0.6s ease-out';
+        ripple.style.pointerEvents = 'none';
+
+        this.appendChild(ripple);
+
+        setTimeout(() => ripple.remove(), 600);
+      });
     });
+
+    // Add ripple animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes ripple {
+        to {
+          transform: scale(4);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Slide up animation when clicking "Accéder à la plateforme"
+    const loginButton = document.querySelector('.cta-button');
+    if (loginButton) {
+      loginButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        const url = this.getAttribute('href');
+
+        // Enable pointer events on iframe
+        const iframe = document.getElementById('login-preload');
+        if (iframe) {
+          iframe.style.pointerEvents = 'auto';
+        }
+
+        // Add exiting class to trigger animation
+        document.body.classList.add('exiting');
+
+        // Navigate after animation (or just remove page-wrapper to show iframe)
+        setTimeout(() => {
+          window.location.href = url;
+        }, 800);
+      });
+    }
   </script>
 </body>
 </html>

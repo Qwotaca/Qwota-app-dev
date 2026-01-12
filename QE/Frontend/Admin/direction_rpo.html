@@ -7241,20 +7241,21 @@ async function loadEntrepreneursForBusinessPlan() {
         // Afficher la valeur formatée même si c'est 0$ (0$ est une prévision valide)
         const displayValue = formatCurrency(existingValue);
 
-        // Récupérer l'objectif du coach depuis son RPO
+        // Récupérer la somme des prévisions que le coach a faites pour ses entrepreneurs
         let objectifCA = 0;
         try {
-          const rpoResponse = await fetch(`/api/rpo/objectifs/${coach.username}`);
-          const rpoData = await rpoResponse.json();
-          if (rpoData && rpoData.objectif_ca) {
-            objectifCA = rpoData.objectif_ca;
+          const coachPrevResponse = await fetch(`/api/coach/team-objectifs?coach_username=${coach.username}`);
+          const coachPrevData = await coachPrevResponse.json();
+          if (coachPrevData.success && coachPrevData.previsions) {
+            // Calculer la somme de toutes les prévisions du coach
+            objectifCA = Object.values(coachPrevData.previsions).reduce((sum, val) => sum + val, 0);
           }
         } catch (error) {
-          console.error(`[BUSINESS PLAN] Erreur chargement objectif CA pour coach ${coach.username}:`, error);
+          console.error(`[BUSINESS PLAN] Erreur chargement prévisions du coach ${coach.username}:`, error);
         }
 
         const fullName = coach.full_name || coach.username;
-        // Afficher 0,00 $ au lieu de "Non défini" car 0$ est un objectif valide
+        // Afficher la somme des prévisions du coach pour ses entrepreneurs
         const objectifDisplay = formatCurrency(objectifCA);
 
         html += `

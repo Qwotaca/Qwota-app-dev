@@ -5316,55 +5316,35 @@ let allWeeksData = [];
 function initializeAllWeeksData() {
   if (allWeeksData.length > 0) return; // Déjà initialisé
 
-  // Date de départ: 1er décembre 2025 (comme dans le plan d'affaires)
-  const startDate = new Date(2025, 11, 1); // 1er décembre 2025
+  // Date de départ: 5 janvier 2026 (lundi)
+  const startDate = new Date(2026, 0, 5); // 5 janvier 2026
 
-  // Générer 56 semaines (comme dans le plan d'affaires)
-  const totalWeeks = 56;
-  let weekCounter2025 = 1;
+  // Générer 52 semaines (du 5 janvier au 27 décembre 2026)
+  const totalWeeks = 52;
   let weekCounter2026 = 1;
 
   for (let i = 1; i <= totalWeeks; i++) {
-    // Génération continue des dates depuis le 1er décembre 2025
+    // Génération continue des dates depuis le 5 janvier 2026
     const weekStartDate = new Date(startDate.getTime() + ((i - 1) * 7 * 24 * 60 * 60 * 1000));
     const weekEndDate = new Date(weekStartDate.getTime() + (6 * 24 * 60 * 60 * 1000));
 
-    // Format: "5 janv. - 11 janv." ou "1 - 7 déc. 2025" pour décembre 2025
+    // Format: "5 janv. - 11 janv."
     const startDay = weekStartDate.getDate();
     const endDay = weekEndDate.getDate();
     const startMonth = weekStartDate.toLocaleDateString('fr-FR', { month: 'short' });
     const endMonth = weekEndDate.toLocaleDateString('fr-FR', { month: 'short' });
-    const startYear = weekStartDate.getFullYear();
-    const endYear = weekEndDate.getFullYear();
 
     let dateRangeStr;
     let weekValue;
 
-    // Pour les semaines en 2025 (décembre), ajouter l'année
-    if (startYear === 2025) {
-      if (startMonth === endMonth) {
-        dateRangeStr = `${startDay} - ${endDay} ${startMonth.replace('.', '')} 2025`;
-      } else {
-        // Si la semaine chevauche deux années (2025-2026), PAS d'année
-        if (endYear === 2026) {
-          dateRangeStr = `${startDay} ${startMonth.replace('.', '')} - ${endDay} ${endMonth.replace('.', '')}`;
-        } else {
-          // Même année 2025, mois différents
-          dateRangeStr = `${startDay} ${startMonth.replace('.', '')} - ${endDay} ${endMonth.replace('.', '')} 2025`;
-        }
-      }
-      weekValue = `2025-W${String(weekCounter2025).padStart(2, '0')}`;
-      weekCounter2025++;
+    // Toutes les semaines sont en 2026
+    if (startMonth === endMonth) {
+      dateRangeStr = `${startDay} - ${endDay} ${startMonth.replace('.', '')}`;
     } else {
-      // Pour toutes les autres semaines (2026), pas d'année
-      if (startMonth === endMonth) {
-        dateRangeStr = `${startDay} - ${endDay} ${startMonth.replace('.', '')}`;
-      } else {
-        dateRangeStr = `${startDay} ${startMonth.replace('.', '')} - ${endDay} ${endMonth.replace('.', '')}`;
-      }
-      weekValue = `2026-W${String(weekCounter2026).padStart(2, '0')}`;
-      weekCounter2026++;
+      dateRangeStr = `${startDay} ${startMonth.replace('.', '')} - ${endDay} ${endMonth.replace('.', '')}`;
     }
+    weekValue = `2026-W${String(weekCounter2026).padStart(2, '0')}`;
+    weekCounter2026++;
 
     allWeeksData.push({ value: weekValue, label: dateRangeStr });
   }
@@ -5539,11 +5519,11 @@ async function selectCoach(username, displayName) {
     // NE PAS afficher le bouton "Enregistrer" automatiquement
     // Il n'apparaîtra que lorsque l'utilisateur modifie quelque chose
 
-    // Réinitialiser le filtre de mois au mois actuel (Décembre 2025)
-    selectedMonthFilter = '12-2025';
+    // Réinitialiser le filtre de mois au mois actuel (Janvier 2026)
+    selectedMonthFilter = '01';
     const monthLabel = document.getElementById('selected-month-label');
     if (monthLabel) {
-      monthLabel.textContent = 'Décembre 2025';
+      monthLabel.textContent = 'Janvier';
     }
 
     // IMPORTANT: Réinitialiser complètement l'affichage des statistiques AVANT de charger les nouvelles données
@@ -5618,11 +5598,11 @@ function clearCoachSelection() {
   // Réinitialiser le tableau
   renderEntrepreneurWeeklyTable();
 
-  // Réinitialiser le filtre de mois au mois actuel (Décembre 2025)
-  selectedMonthFilter = '12-2025';
+  // Réinitialiser le filtre de mois au mois actuel (Janvier 2026)
+  selectedMonthFilter = '01';
   const monthLabel = document.getElementById('selected-month-label');
   if (monthLabel) {
-    monthLabel.textContent = 'Décembre 2025';
+    monthLabel.textContent = 'Janvier';
   }
 }
 
@@ -5630,7 +5610,7 @@ function clearCoachSelection() {
 // GESTION DU FILTRE DE MOIS
 // ================================================================
 
-let selectedMonthFilter = '12-2025'; // Format: "01", "02", etc. - Default: Décembre 2025
+let selectedMonthFilter = '01'; // Format: "01", "02", etc. - Default: Janvier 2026
 let selectedCoachUsername = null; // Coach sélectionné pour le suivi hebdomadaire
 
 // Toggle le dropdown du filtre de mois
@@ -6378,66 +6358,44 @@ function renderEntrepreneurWeeklyTable() {
   // Appliquer le filtre de mois si sélectionné (même logique que coach_rpo.html)
   let filteredData = entrepreneurWeeklyData;
 
-  if (selectedMonthFilter) {
-    // Gérer Décembre 2025 spécialement
-    if (selectedMonthFilter === '12-2025') {
-      filteredData = entrepreneurWeeklyData.filter(entry => {
-        const weekLabelStr = String(entry.week_label || '').toLowerCase();
+  if (selectedMonthFilter && selectedMonthFilter !== 'all') {
+    // Filtrer par mois (Janvier-Décembre 2026)
+    // Map des noms de mois français vers numéros (2026)
+    const monthNameToNumber = {
+      'janvier': '01', 'janv.': '01', 'janv': '01',
+      'février': '02', 'févr.': '02', 'févr': '02',
+      'mars': '03',
+      'avril': '04', 'avr.': '04', 'avr': '04',
+      'mai': '05',
+      'juin': '06',
+      'juillet': '07', 'juil.': '07', 'juil': '07',
+      'août': '08',
+      'septembre': '09', 'sept.': '09', 'sept': '09',
+      'octobre': '10', 'oct.': '10', 'oct': '10',
+      'novembre': '11', 'nov.': '11', 'nov': '11',
+      'décembre': '12', 'déc.': '12', 'déc': '12'
+    };
 
-        // Vérifier si la semaine COMMENCE en décembre (premier mois mentionné = déc)
-        // Ex: "29 déc - 4 janv" appartient à Décembre seulement
-        // Chercher le premier mois dans le label
-        const hasDec = weekLabelStr.includes('déc');
-        const hasJanv = weekLabelStr.includes('janv');
+    filteredData = entrepreneurWeeklyData.filter(entry => {
+      // Format possible: "5 - 11 janv" OU "26 janv - 1 févr"
+      const weekLabelStr = String(entry.week_label || '').toLowerCase();
 
-        // Si la semaine contient "déc" et "janv", vérifier lequel vient en premier
-        if (hasDec && hasJanv) {
-          const decIndex = weekLabelStr.indexOf('déc');
-          const janvIndex = weekLabelStr.indexOf('janv');
-          // N'inclure que si "déc" vient AVANT "janv" dans le texte
-          return decIndex < janvIndex;
+      // Trouver le PREMIER mois qui APPARAÎT dans le texte (par position)
+      // Ex: "29 déc - 4 janv" -> "déc" apparaît avant "janv", donc c'est Décembre
+      let firstMonthFound = null;
+      let earliestPosition = Infinity;
+
+      for (const [monthName, monthNumber] of Object.entries(monthNameToNumber)) {
+        const position = weekLabelStr.indexOf(monthName);
+        if (position !== -1 && position < earliestPosition) {
+          earliestPosition = position;
+          firstMonthFound = monthNumber;
         }
+      }
 
-        // Si seulement "déc" est mentionné, c'est Décembre 2025
-        return hasDec && weekLabelStr.includes('2025');
-      });
-    } else {
-      // Map des noms de mois français vers numéros (2026)
-      const monthNameToNumber = {
-        'janvier': '01', 'janv.': '01', 'janv': '01',
-        'février': '02', 'févr.': '02', 'févr': '02',
-        'mars': '03',
-        'avril': '04', 'avr.': '04', 'avr': '04',
-        'mai': '05',
-        'juin': '06',
-        'juillet': '07', 'juil.': '07', 'juil': '07',
-        'août': '08',
-        'septembre': '09', 'sept.': '09', 'sept': '09',
-        'octobre': '10', 'oct.': '10', 'oct': '10',
-        'novembre': '11', 'nov.': '11', 'nov': '11',
-        'décembre': '12', 'déc.': '12', 'déc': '12'
-      };
-
-      filteredData = entrepreneurWeeklyData.filter(entry => {
-        // Format possible: "5 - 11 janv" OU "26 janv - 1 févr"
-        const weekLabelStr = String(entry.week_label || '').toLowerCase();
-
-        // Trouver le PREMIER mois qui APPARAÎT dans le texte (par position)
-        // Ex: "29 déc - 4 janv" -> "déc" apparaît avant "janv", donc c'est Décembre
-        let firstMonthFound = null;
-        let earliestPosition = Infinity;
-
-        for (const [monthName, monthNumber] of Object.entries(monthNameToNumber)) {
-          const position = weekLabelStr.indexOf(monthName);
-          if (position !== -1 && position < earliestPosition) {
-            earliestPosition = position;
-            firstMonthFound = monthNumber;
-          }
-        }
-
-        return firstMonthFound === selectedMonthFilter;
-      });
-    }
+      return firstMonthFound === selectedMonthFilter;
+    });
+  }
 
     console.log('[MONTH FILTER] Filtered from', entrepreneurWeeklyData.length, 'to', filteredData.length, 'entries');
 
@@ -6708,66 +6666,43 @@ function renderCoachWeeklyTable() {
   // Appliquer le filtre de mois si sélectionné (même logique que coach_rpo.html)
   let filteredData = coachWeeklyData;
 
-  if (selectedMonthFilter) {
-    // Gérer Décembre 2025 spécialement
-    if (selectedMonthFilter === '12-2025') {
-      filteredData = coachWeeklyData.filter(entry => {
-        const weekLabelStr = String(entry.week_label || '').toLowerCase();
+  if (selectedMonthFilter && selectedMonthFilter !== 'all') {
+    // Filtrer par mois (Janvier-Décembre 2026)
+    // Map des noms de mois français vers numéros (2026)
+    const monthNameToNumber = {
+      'janvier': '01', 'janv.': '01', 'janv': '01',
+      'février': '02', 'févr.': '02', 'févr': '02',
+      'mars': '03',
+      'avril': '04', 'avr.': '04', 'avr': '04',
+      'mai': '05',
+      'juin': '06',
+      'juillet': '07', 'juil.': '07', 'juil': '07',
+      'août': '08',
+      'septembre': '09', 'sept.': '09', 'sept': '09',
+      'octobre': '10', 'oct.': '10', 'oct': '10',
+      'novembre': '11', 'nov.': '11', 'nov': '11',
+      'décembre': '12', 'déc.': '12', 'déc': '12'
+    };
 
-        // Vérifier si la semaine COMMENCE en décembre (premier mois mentionné = déc)
-        // Ex: "29 déc - 4 janv" appartient à Décembre seulement
-        // Chercher le premier mois dans le label
-        const hasDec = weekLabelStr.includes('déc');
-        const hasJanv = weekLabelStr.includes('janv');
+    filteredData = coachWeeklyData.filter(entry => {
+      // Format possible: "5 - 11 janv" OU "26 janv - 1 févr"
+      const weekLabelStr = String(entry.week_label || '').toLowerCase();
 
-        // Si la semaine contient "déc" et "janv", vérifier lequel vient en premier
-        if (hasDec && hasJanv) {
-          const decIndex = weekLabelStr.indexOf('déc');
-          const janvIndex = weekLabelStr.indexOf('janv');
-          // N'inclure que si "déc" vient AVANT "janv" dans le texte
-          return decIndex < janvIndex;
+      // Trouver le PREMIER mois qui APPARAÎT dans le texte (par position)
+      // Ex: "29 déc - 4 janv" -> "déc" apparaît avant "janv", donc c'est Décembre
+      let firstMonthFound = null;
+      let earliestPosition = Infinity;
+
+      for (const [monthName, monthNumber] of Object.entries(monthNameToNumber)) {
+        const position = weekLabelStr.indexOf(monthName);
+        if (position !== -1 && position < earliestPosition) {
+          earliestPosition = position;
+          firstMonthFound = monthNumber;
         }
+      }
 
-        // Si seulement "déc" est mentionné, c'est Décembre 2025
-        return hasDec && weekLabelStr.includes('2025');
-      });
-    } else {
-      // Map des noms de mois français vers numéros (2026)
-      const monthNameToNumber = {
-        'janvier': '01', 'janv.': '01', 'janv': '01',
-        'février': '02', 'févr.': '02', 'févr': '02',
-        'mars': '03',
-        'avril': '04', 'avr.': '04', 'avr': '04',
-        'mai': '05',
-        'juin': '06',
-        'juillet': '07', 'juil.': '07', 'juil': '07',
-        'août': '08',
-        'septembre': '09', 'sept.': '09', 'sept': '09',
-        'octobre': '10', 'oct.': '10', 'oct': '10',
-        'novembre': '11', 'nov.': '11', 'nov': '11',
-        'décembre': '12', 'déc.': '12', 'déc': '12'
-      };
-
-      filteredData = coachWeeklyData.filter(entry => {
-        // Format possible: "5 - 11 janv" OU "26 janv - 1 févr"
-        const weekLabelStr = String(entry.week_label || '').toLowerCase();
-
-        // Trouver le PREMIER mois qui APPARAÎT dans le texte (par position)
-        // Ex: "29 déc - 4 janv" -> "déc" apparaît avant "janv", donc c'est Décembre
-        let firstMonthFound = null;
-        let earliestPosition = Infinity;
-
-        for (const [monthName, monthNumber] of Object.entries(monthNameToNumber)) {
-          const position = weekLabelStr.indexOf(monthName);
-          if (position !== -1 && position < earliestPosition) {
-            earliestPosition = position;
-            firstMonthFound = monthNumber;
-          }
-        }
-
-        return firstMonthFound === selectedMonthFilter;
-      });
-    }
+      return firstMonthFound === selectedMonthFilter;
+    });
   }
 
   console.log('[RENDER COACH TABLE] Rendering', filteredData.length, 'weeks');
@@ -9204,12 +9139,11 @@ document.addEventListener('DOMContentLoaded', function() {
 let teamPlanWeeks = [];
 let teamTotalObjectif = 0;
 
-// Fonction pour générer les 56 semaines du plan d'affaire
+// Fonction pour générer les 52 semaines du plan d'affaire
 function generateTeamPlanWeeks() {
   const weeks = [];
-  const startDate = new Date(2025, 11, 1); // 1er décembre 2025
-  const totalWeeks = 56;
-  let weekCounter2025 = 1;
+  const startDate = new Date(2026, 0, 5); // 5 janvier 2026 (lundi)
+  const totalWeeks = 52;
   let weekCounter2026 = 1;
 
   for (let i = 1; i <= totalWeeks; i++) {
@@ -9221,33 +9155,19 @@ function generateTeamPlanWeeks() {
     const startMonth = weekStartDate.toLocaleDateString('fr-FR', { month: 'short' });
     const endMonth = weekEndDate.toLocaleDateString('fr-FR', { month: 'short' });
     const startYear = weekStartDate.getFullYear();
-    const endYear = weekEndDate.getFullYear();
     const weekMonth = weekStartDate.getMonth() + 1; // 1-12
 
     let dateRangeStr;
     let weekValue;
 
-    if (startYear === 2025) {
-      if (startMonth === endMonth) {
-        dateRangeStr = `${startDay} - ${endDay} ${startMonth.replace('.', '')} 2025`;
-      } else {
-        if (endYear === 2026) {
-          dateRangeStr = `${startDay} ${startMonth.replace('.', '')} - ${endDay} ${endMonth.replace('.', '')}`;
-        } else {
-          dateRangeStr = `${startDay} ${startMonth.replace('.', '')} - ${endDay} ${endMonth.replace('.', '')} 2025`;
-        }
-      }
-      weekValue = `2025-W${String(weekCounter2025).padStart(2, '0')}`;
-      weekCounter2025++;
+    // Toutes les semaines sont en 2026, sauf décembre en fin d'année
+    if (startMonth === endMonth) {
+      dateRangeStr = `${startDay} - ${endDay} ${startMonth.replace('.', '')}`;
     } else {
-      if (startMonth === endMonth) {
-        dateRangeStr = `${startDay} - ${endDay} ${startMonth}`;
-      } else {
-        dateRangeStr = `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
-      }
-      weekValue = `2026-W${String(weekCounter2026).padStart(2, '0')}`;
-      weekCounter2026++;
+      dateRangeStr = `${startDay} ${startMonth.replace('.', '')} - ${endDay} ${endMonth.replace('.', '')}`;
     }
+    weekValue = `2026-W${String(weekCounter2026).padStart(2, '0')}`;
+    weekCounter2026++;
 
     weeks.push({
       weekNumber: i,
@@ -9311,13 +9231,8 @@ function renderTeamPlanTable(weeks, filterMonth = 'all', totalObjectif = 0) {
       const weekLabelLower = w.weekLabel.toLowerCase();
       const hasMonthName = weekLabelLower.includes(monthName);
 
-      // Pour Décembre 2025, on vérifie que le label contient "2025"
-      if (year === 2025 && month === 12) {
-        return hasMonthName && weekLabelLower.includes('2025');
-      }
-
-      // Pour les autres mois de 2026, on vérifie que le label ne contient PAS "2025"
-      return hasMonthName && !weekLabelLower.includes('2025');
+      // Toutes les semaines sont en 2026
+      return hasMonthName;
     });
   }
 
@@ -9537,32 +9452,49 @@ function enableStatsPlanScroll() {
 
 // Pattern de distribution des objectifs (% de l'objectif annuel par semaine, du 12 janv au 30 août)
 const percentagePattern = [
-  0, 0, 0, 0,  // Index 0-3: 1-28 déc 2025 (pas actif, période des fêtes)
-  0,  // Index 4: 29 déc - 4 janv 2026 (pas actif)
-  0,  // Index 5: 5-11 janv 2026 (début d'activité)
-  0.5, 2.0, 2.0,  // Index 6-8: 12 janv - 1 fév
-  3.0, 2.5, 3.0, 3.0,  // Index 9-12: 2 fév - 1 mars (2-8 fév: +0.5% = 3.0%)
-  3.5, 4.0, 4.5, 5.5,  // Index 13-16: 2 mars - 29 mars (2 mars: +0.5% = 3.5%, 9-15 mars: +0.5% = 4.0%, 16-22 mars: +1% = 4.5%)
-  4.5, 6.5, 5.5, 6.0, 6.0,  // Index 17-21: 30 mars - 4 mai (30 mars: +0.5% = 4.5%)
-  4.5, 4.5, 4.5, 4.5,  // Index 22-25: 5 mai - 1 juin
-  3.5, 4.0, 3.5, 3.0,  // Index 26-29: 2 juin - 29 juin (1-7 juin: +0.5% = 3.5%, 8-14 juin: +1% = 4.0%, 15 juin: +0.5% = 3.5%)
-  3.0, 3.0, 3.0, 2.0, 1.0,  // Index 30-34: 30 juin - 3 août
-  1.0, 1.0, 1.0, 1.0,  // Index 35-38: 4 août - 31 août
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  // Index 39-51: reste (0%)
+  0,  // Index 0: 5-11 janv 2026 (semaine vide)
+  0.5, 2.0, 2.0,  // Index 1-3: 12 janv - 1 fév
+  3.0, 2.5, 3.0, 3.0,  // Index 4-7: 2 fév - 1 mars (2-8 fév: +0.5% = 3.0%)
+  3.5, 4.0, 4.5, 5.5,  // Index 8-11: 2 mars - 29 mars (2 mars: +0.5% = 3.5%, 9-15 mars: +0.5% = 4.0%, 16-22 mars: +1% = 4.5%)
+  4.5, 6.5, 5.5, 6.0, 6.0,  // Index 12-16: 30 mars - 4 mai (30 mars: +0.5% = 4.5%)
+  4.5, 4.5, 4.5, 4.5,  // Index 17-20: 5 mai - 1 juin
+  3.5, 4.0, 3.5, 3.0,  // Index 21-24: 2 juin - 29 juin (1-7 juin: +0.5% = 3.5%, 8-14 juin: +1% = 4.0%, 15 juin: +0.5% = 3.5%)
+  3.0, 3.0, 3.0, 2.0, 1.0,  // Index 25-29: 30 juin - 3 août
+  1.0, 1.0, 1.0, 1.0,  // Index 30-33: 4 août - 31 août
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  // Index 34-51: reste (0%)
 ];
 
-// Pattern de distribution de production (56 semaines, du 4 mai au 4 octobre = index 22 à 43)
+// Pattern de distribution de production (52 semaines, du 5 mai au 4 octobre = index 17 à 38)
 const productionIntensityPattern = [
-  // Index 0-21: Avant le 4 mai (22 semaines)
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  // Index 22-43: 4 mai - 4 octobre (22 semaines de production)
-  1, 4, 5, 5,
-  5, 6, 7, 7, 7,
-  7, 7, 7, 7,
-  6, 5, 5, 4, 3.6,
-  0.1, 0.1, 0.1, 0.1,
-  // Index 44-55: Après le 4 octobre (12 semaines)
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+  // Janvier - Avril 2026 (index 0-16): pas de production
+  0, 0, 0, 0, 0,  // Index 0-4: Janvier 2026
+  0, 0, 0, 0,     // Index 5-8: Février 2026
+  0, 0, 0, 0,     // Index 9-12: Mars 2026
+  0, 0, 0, 0,     // Index 13-16: Avril 2026
+
+  // Mai 2026 (index 17-20)
+  1,    // Index 17: 5 mai 2026 = 1%
+  4,    // Index 18: 12 mai 2026 = 4%
+  5,    // Index 19: 19 mai 2026 = 5%
+  5,    // Index 20: 26 mai 2026 = 5%
+
+  // Juin 2026 (index 21-24)
+  5, 6, 7, 7,
+
+  // Juillet 2026 (index 25-29)
+  7, 7, 7, 7, 7,
+
+  // Août 2026 (index 30-33)
+  6, 5, 5, 4,
+
+  // Septembre 2026 (index 34-37)
+  3.6, 0.1, 0.1, 0.1,
+
+  // Octobre - Décembre 2026 (index 38-51): après production
+  0.1,  // Index 38: Première semaine d'octobre
+  0, 0, 0, 0, 0,  // Index 39-43: Reste d'octobre
+  0, 0, 0, 0,     // Index 44-47: Novembre 2026
+  0, 0, 0, 0      // Index 48-51: Décembre 2026
 ];
 
 // Fonction pour calculer les objectifs visés de l'équipe selon le pattern
@@ -9575,9 +9507,9 @@ function calculateTeamObjectivePattern(totalObjectif, avgCM, avgRatioMktg, avgTa
 
   const weeklyObjectives = [];
 
-  // Calculer le total du pattern (en excluant les -1 et seulement index 6+)
+  // Calculer le total du pattern (en excluant les -1 et seulement index 1+)
   const totalPatternPct = percentagePattern.reduce((sum, pct, idx) => {
-    if (idx >= 6 && pct > 0) {
+    if (idx >= 1 && pct > 0) {
       return sum + pct;
     }
     return sum;
@@ -9586,11 +9518,11 @@ function calculateTeamObjectivePattern(totalObjectif, avgCM, avgRatioMktg, avgTa
   // L'objectif visé total correspond exactement à l'objectif de base (pas de multiplicateur)
   const totalObjectifVise = totalObjectif;
 
-  for (let i = 0; i < 56; i++) {
+  for (let i = 0; i < 52; i++) {
     const pct = percentagePattern[i] || 0;
 
-    if (pct === -1 || i < 6) {
-      // Semaine d'arrêt (-1) ou avant la semaine 7 (12 janvier), pas d'objectif
+    if (pct === -1 || i < 1) {
+      // Semaine d'arrêt (-1) ou avant la semaine 2 (12 janvier), pas d'objectif
       weeklyObjectives.push({
         dollarPrev: 0,
         contratPrev: 0,
@@ -9613,7 +9545,7 @@ function calculateTeamObjectivePattern(totalObjectif, avgCM, avgRatioMktg, avgTa
     }
   }
 
-  console.log('[TEAM PLAN] Objectifs calculés pour 56 semaines');
+  console.log('[TEAM PLAN] Objectifs calculés pour 52 semaines');
   console.log('[TEAM PLAN] Total pattern (%):', totalPatternPct);
   console.log('[TEAM PLAN] Objectif visé total (100%):', totalObjectifVise);
   return weeklyObjectives;
@@ -9630,7 +9562,7 @@ function calculateTeamProductionPattern(totalObjectif) {
   const totalProductionVise = totalObjectif;
 
   // Distribuer cette production selon le pattern (normaliser pour que le total = 100% de l'objectif)
-  for (let i = 0; i < 56; i++) {
+  for (let i = 0; i < 52; i++) {
     const prodVise = (totalProductionVise * productionIntensityPattern[i]) / totalIntensity;
     prodPattern.push(prodVise);
   }
@@ -9745,25 +9677,25 @@ async function loadEntrepreneurVentesProduit(username) {
   }
 }
 
-// Fonction pour convertir une date_completion en index de semaine (0-55)
-// Les semaines commencent le 1er décembre 2025
+// Fonction pour convertir une date_completion en index de semaine (0-51)
+// Les semaines commencent le 5 janvier 2026
 function getWeekIndexFromDate(dateCompletion) {
   try {
-    // Parser la date (format ISO: "2025-12-10T13:54:19.645559")
+    // Parser la date (format ISO: "2026-01-10T13:54:19.645559")
     const completionDate = new Date(dateCompletion);
 
-    // Date de début des semaines (1er décembre 2025)
-    const startDate = new Date(2025, 11, 1); // Month is 0-indexed, so 11 = December
+    // Date de début des semaines (5 janvier 2026)
+    const startDate = new Date(2026, 0, 5); // Month is 0-indexed, so 0 = January
 
     // Calculer la différence en jours
     const diffTime = completionDate - startDate;
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-    // Calculer l'index de semaine (0-55)
+    // Calculer l'index de semaine (0-51)
     const weekIndex = Math.floor(diffDays / 7);
 
-    // Valider que c'est dans la plage valide (0-55)
-    if (weekIndex < 0 || weekIndex >= 56) {
+    // Valider que c'est dans la plage valide (0-51)
+    if (weekIndex < 0 || weekIndex >= 52) {
       console.warn(`[TEAM PLAN] Date hors plage: ${dateCompletion} -> semaine ${weekIndex}`);
       return null;
     }
@@ -9808,8 +9740,8 @@ async function aggregateTeamData() {
 
   const allWeeklyData = {};
 
-  // Initialiser la structure pour 56 semaines (seulement les données réelles)
-  for (let i = 0; i < 56; i++) {
+  // Initialiser la structure pour 52 semaines (seulement les données réelles)
+  for (let i = 0; i < 52; i++) {
     allWeeklyData[i] = {
       mktgReel: 0,
       estimReel: 0,
@@ -9838,9 +9770,25 @@ async function aggregateTeamData() {
     const rpoData = await loadEntrepreneurRPOData(username);
     if (!rpoData || !rpoData.weekly) continue;
 
-    // Parcourir les données hebdomadaires (de novembre 2025 à octobre 2026)
-    let weekIndex = 0;
-    for (let monthIndex = -2; monthIndex <= 10; monthIndex++) {
+    // Parcourir les données hebdomadaires (Janvier 2026 à Décembre 2026)
+    // Mapping: mois 0 = Janvier 2026, mois 1 = Février 2026, etc.
+    // Offsets des semaines par mois (52 semaines total, du 5 janvier au 27 décembre 2026)
+    const weekOffsets = {
+      '0': 0,    // Janvier 2026 (5 semaines)
+      '1': 5,    // Février 2026 (4 semaines)
+      '2': 9,    // Mars 2026 (4 semaines)
+      '3': 13,   // Avril 2026 (5 semaines)
+      '4': 18,   // Mai 2026 (4 semaines)
+      '5': 22,   // Juin 2026 (4 semaines)
+      '6': 26,   // Juillet 2026 (5 semaines)
+      '7': 31,   // Août 2026 (4 semaines)
+      '8': 35,   // Septembre 2026 (4 semaines)
+      '9': 39,   // Octobre 2026 (5 semaines)
+      '10': 44,  // Novembre 2026 (4 semaines)
+      '11': 48   // Décembre 2026 (4 semaines)
+    };
+
+    for (let monthIndex = 0; monthIndex <= 11; monthIndex++) {
       const monthKey = String(monthIndex);
       if (!rpoData.weekly[monthKey]) continue;
 
@@ -9848,7 +9796,14 @@ async function aggregateTeamData() {
       const weekNumbers = Object.keys(monthData).sort((a, b) => parseInt(a) - parseInt(b));
 
       for (const weekNum of weekNumbers) {
-        if (weekIndex >= 56) break;
+        // Calculer le bon index de semaine basé sur le mois et le numéro de semaine
+        // Utiliser weekOffsets pour obtenir le début de chaque mois
+        const offset = weekOffsets[monthKey];
+        if (offset === undefined) continue;
+
+        const weekIndex = offset + parseInt(weekNum) - 1;
+
+        if (weekIndex < 0 || weekIndex >= 52) continue;
 
         const weekData = monthData[weekNum];
 
@@ -9863,8 +9818,7 @@ async function aggregateTeamData() {
         const dollarReel = weekData.dollar || weekData.dollar_reel || '0';
         allWeeklyData[weekIndex].dollarReel += parseFloat(String(dollarReel).replace(/[^\d]/g, '')) || 0;
 
-        // Note: prod_horaire est calculé après comme dollarReel / mktgReel pour chaque semaine
-        weekIndex++;
+        console.log(`[TEAM PLAN] ${username} mois ${monthIndex} semaine ${weekNum} -> weekIndex ${weekIndex} (${weekData.week_label || 'no label'})`);
       }
     }
 
@@ -9880,7 +9834,7 @@ async function aggregateTeamData() {
       }
 
       const weekIdx = getWeekIndexFromDate(vente.date_completion);
-      if (weekIdx !== null && weekIdx >= 0 && weekIdx < 56) {
+      if (weekIdx !== null && weekIdx >= 0 && weekIdx < 52) {
         const montant = parseMonetaryAmount(vente.prix);
         allWeeklyData[weekIdx].prodReel += montant;
         console.log(`[TEAM PLAN] ${username}: Vente de ${montant}$ ajoutée à la semaine ${weekIdx}`);
@@ -9961,7 +9915,7 @@ async function initTeamPlan() {
     ? `/api/coach/team-metrics?coach_username=${username}`
     : `/api/direction/team-metrics?direction_username=${username}`;
 
-  // Générer les 56 semaines
+  // Générer les 52 semaines
   teamPlanWeeks = generateTeamPlanWeeks();
   console.log('[DIRECTION PLAN] Semaines générées:', teamPlanWeeks.length);
 

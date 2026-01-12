@@ -6926,7 +6926,9 @@ def api_get_coach_equipe_dashboard(
     estimation_moyenne_equipe = round(team_total_estimations / team_estimation_count, 2) if team_estimation_count > 0 else 0
     heures_pap_moyenne_equipe = round(team_total_heures_pap / nb_entrepreneurs, 2) if nb_entrepreneurs > 0 else 0
     prod_horaire_moyen_equipe = round(team_total_prod_horaire / team_prod_horaire_count, 2) if team_prod_horaire_count > 0 else 0
-    pourcentage_objectif_moyen_equipe = round(team_total_pourcentage_objectif / team_pourcentage_count, 2) if team_pourcentage_count > 0 else 0
+    # CORRECTION: Calculer le pourcentage global basé sur les totaux (team_total_ca / team_total_objectif)
+    # au lieu de faire la moyenne des pourcentages individuels
+    pourcentage_objectif_equipe = round((team_total_ca / team_total_objectif) * 100, 2) if team_total_objectif > 0 else 0
     taux_marketing_moyen_equipe = round(team_total_taux_marketing / team_taux_marketing_count, 2) if team_taux_marketing_count > 0 else 0
 
     return {
@@ -6943,7 +6945,7 @@ def api_get_coach_equipe_dashboard(
             "taux_vente_moyen": taux_vente_moyen_equipe,
             "prod_horaire_moyen": prod_horaire_moyen_equipe,
             "taux_marketing_moyen": taux_marketing_moyen_equipe,
-            "pourcentage_objectif": pourcentage_objectif_moyen_equipe,
+            "pourcentage_objectif": pourcentage_objectif_equipe,
             "total_signees": team_total_signees,
             "total_en_attente": team_total_attente,
             "total_perdus": team_total_perdus,

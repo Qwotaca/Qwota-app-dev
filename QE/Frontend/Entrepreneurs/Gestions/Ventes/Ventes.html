@@ -3892,7 +3892,7 @@
     manageButton.addEventListener('mouseleave', () => manageButton.style.background = 'rgba(59, 130, 246, 0.1)');
     manageButton.addEventListener('click', () => {
       dropdown.remove();
-      ouvrirGestionEtiquettes();
+      ouvrirGestionEtiquettes('statuts');
     });
 
     statuts.forEach(statut => {
@@ -4032,7 +4032,7 @@
     manageButton.addEventListener('mouseleave', () => manageButton.style.background = 'rgba(59, 130, 246, 0.1)');
     manageButton.addEventListener('click', () => {
       dropdown.remove();
-      ouvrirGestionEtiquettes();
+      ouvrirGestionEtiquettes('provenances');
     });
 
     provenances.forEach(prov => {
@@ -4313,7 +4313,7 @@
   };
 
   // Fonction pour ouvrir la gestion des étiquettes personnalisées
-  window.ouvrirGestionEtiquettes = function() {
+  window.ouvrirGestionEtiquettes = function(type) {
     const modal = document.createElement('div');
     modal.id = 'etiquettes-modal';
     modal.style.cssText = `
@@ -4331,12 +4331,34 @@
     const currentStatuts = [...window.etiquettesPersonnalisees.statuts];
     const currentProvenances = [...window.etiquettesPersonnalisees.provenances];
 
+    // Définir le titre et l'icône selon le type
+    const config = {
+      statuts: {
+        title: 'Gérer les statuts de vente',
+        icon: 'fa-circle-notch',
+        placeholder: 'Nouvelle étiquette de statut...',
+        listId: 'statuts-list',
+        inputId: 'nouveau-statut-input',
+        btnId: 'add-statut-btn'
+      },
+      provenances: {
+        title: 'Gérer les provenances',
+        icon: 'fa-map-marker-alt',
+        placeholder: 'Nouvelle provenance...',
+        listId: 'provenances-list',
+        inputId: 'nouvelle-provenance-input',
+        btnId: 'add-provenance-btn'
+      }
+    };
+
+    const cfg = config[type];
+
     modal.innerHTML = `
-      <div class="status-card p-6" style="width: 90%; max-width: 700px; max-height: 85vh; overflow-y: auto;">
+      <div class="status-card p-6" style="width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto;">
         <div class="flex items-center justify-between mb-6">
           <h3 class="text-xl font-bold" style="color: var(--text-light);">
-            <i class="fas fa-tags mr-2" style="color: var(--primary-blue);"></i>
-            Gérer les étiquettes personnalisées
+            <i class="fas ${cfg.icon} mr-2" style="color: var(--primary-blue);"></i>
+            ${cfg.title}
           </h3>
           <button onclick="document.getElementById('etiquettes-modal').remove(); document.body.style.overflow = '';"
             class="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
@@ -4345,18 +4367,14 @@
           </button>
         </div>
 
-        <!-- Section Statuts -->
+        <!-- Liste des étiquettes -->
         <div class="mb-6">
-          <h4 class="font-bold mb-3" style="color: var(--text-light); font-size: 1.1rem;">
-            <i class="fas fa-circle-notch mr-2" style="color: var(--primary-blue);"></i>
-            Statuts de vente
-          </h4>
-          <div id="statuts-list" class="mb-3"></div>
+          <div id="${cfg.listId}" class="mb-3"></div>
           <div class="flex gap-2">
             <input
               type="text"
-              id="nouveau-statut-input"
-              placeholder="Nouvelle étiquette de statut..."
+              id="${cfg.inputId}"
+              placeholder="${cfg.placeholder}"
               style="
                 flex: 1;
                 padding: 10px;
@@ -4368,38 +4386,7 @@
               "
             />
             <button
-              id="add-statut-btn"
-              class="px-4 py-2 rounded-lg transition-colors"
-              style="background: var(--primary-blue); color: white;">
-              <i class="fas fa-plus"></i> Ajouter
-            </button>
-          </div>
-        </div>
-
-        <!-- Section Provenances -->
-        <div class="mb-6">
-          <h4 class="font-bold mb-3" style="color: var(--text-light); font-size: 1.1rem;">
-            <i class="fas fa-map-marker-alt mr-2" style="color: var(--primary-blue);"></i>
-            Provenances
-          </h4>
-          <div id="provenances-list" class="mb-3"></div>
-          <div class="flex gap-2">
-            <input
-              type="text"
-              id="nouvelle-provenance-input"
-              placeholder="Nouvelle provenance..."
-              style="
-                flex: 1;
-                padding: 10px;
-                border-radius: 6px;
-                background: #0f172a;
-                border: 2px solid var(--border-dark);
-                color: var(--text-light);
-                font-size: 0.875rem;
-              "
-            />
-            <button
-              id="add-provenance-btn"
+              id="${cfg.btnId}"
               class="px-4 py-2 rounded-lg transition-colors"
               style="background: var(--primary-blue); color: white;">
               <i class="fas fa-plus"></i> Ajouter
@@ -4432,81 +4419,63 @@
     let tempStatuts = [...currentStatuts];
     let tempProvenances = [...currentProvenances];
 
-    // Fonction pour afficher la liste des statuts
-    function afficherStatuts() {
-      const liste = document.getElementById('statuts-list');
-      liste.innerHTML = tempStatuts.map((statut, index) => `
+    // Choisir la liste temporaire selon le type
+    let tempData = type === 'statuts' ? tempStatuts : tempProvenances;
+
+    // Fonction pour afficher la liste
+    function afficherListe() {
+      const liste = document.getElementById(cfg.listId);
+      liste.innerHTML = tempData.map((item, index) => `
         <div class="flex items-center gap-2 mb-2 p-2 rounded" style="background: rgba(30, 41, 59, 0.5);">
-          <span class="flex-1" style="color: var(--text-light);">${statut}</span>
+          <span class="flex-1" style="color: var(--text-light);">${item}</span>
           <button
-            onclick="event.target.closest('.flex').remove(); window.tempStatuts.splice(${index}, 1); this.afficherStatuts();"
-            class="px-2 py-1 rounded transition-colors"
+            class="delete-item-btn px-2 py-1 rounded transition-colors"
+            data-index="${index}"
             style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">
             <i class="fas fa-trash"></i>
           </button>
         </div>
       `).join('');
+
+      // Ajouter les event listeners pour les boutons de suppression
+      liste.querySelectorAll('.delete-item-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const index = parseInt(e.currentTarget.getAttribute('data-index'));
+          tempData.splice(index, 1);
+          afficherListe();
+        });
+      });
     }
 
-    // Fonction pour afficher la liste des provenances
-    function afficherProvenances() {
-      const liste = document.getElementById('provenances-list');
-      liste.innerHTML = tempProvenances.map((prov, index) => `
-        <div class="flex items-center gap-2 mb-2 p-2 rounded" style="background: rgba(30, 41, 59, 0.5);">
-          <span class="flex-1" style="color: var(--text-light);">${prov}</span>
-          <button
-            onclick="event.target.closest('.flex').remove(); window.tempProvenances.splice(${index}, 1); this.afficherProvenances();"
-            class="px-2 py-1 rounded transition-colors"
-            style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
-      `).join('');
-    }
+    // Afficher la liste initiale
+    afficherListe();
 
-    // Exposer les variables temporaires globalement pour les handlers de suppression
-    window.tempStatuts = tempStatuts;
-    window.tempProvenances = tempProvenances;
-
-    // Afficher les listes initiales
-    afficherStatuts();
-    afficherProvenances();
-
-    // Ajouter un statut
-    document.getElementById('add-statut-btn').addEventListener('click', () => {
-      const input = document.getElementById('nouveau-statut-input');
+    // Ajouter un item
+    document.getElementById(cfg.btnId).addEventListener('click', () => {
+      const input = document.getElementById(cfg.inputId);
       const valeur = input.value.trim();
-      if (valeur && !tempStatuts.includes(valeur)) {
-        tempStatuts.push(valeur);
-        window.tempStatuts = tempStatuts;
-        afficherStatuts();
-        input.value = '';
-      }
-    });
-
-    // Ajouter une provenance
-    document.getElementById('add-provenance-btn').addEventListener('click', () => {
-      const input = document.getElementById('nouvelle-provenance-input');
-      const valeur = input.value.trim();
-      if (valeur && !tempProvenances.includes(valeur)) {
-        tempProvenances.push(valeur);
-        window.tempProvenances = tempProvenances;
-        afficherProvenances();
+      if (valeur && !tempData.includes(valeur)) {
+        tempData.push(valeur);
+        afficherListe();
         input.value = '';
       }
     });
 
     // Ajouter avec Enter
-    document.getElementById('nouveau-statut-input').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') document.getElementById('add-statut-btn').click();
-    });
-    document.getElementById('nouvelle-provenance-input').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') document.getElementById('add-provenance-btn').click();
+    document.getElementById(cfg.inputId).addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') document.getElementById(cfg.btnId).click();
     });
 
     // Sauvegarder les modifications
     document.getElementById('save-etiquettes-btn').addEventListener('click', async () => {
       try {
+        // Mettre à jour les données selon le type
+        if (type === 'statuts') {
+          tempStatuts = tempData;
+        } else {
+          tempProvenances = tempData;
+        }
+
         const response = await fetch('/api/ventes/etiquettes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

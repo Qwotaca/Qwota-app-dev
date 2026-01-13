@@ -1198,6 +1198,14 @@ def get_entrepreneurs_list_api(
                                 nombre_semaines_prod_horaire = 0
 
                                 for month_key, weeks in weekly_data.items():
+                                    # Filtrer: exclure mois 0 (décembre 2025), commencer à mois 1 (janvier 2026)
+                                    try:
+                                        month_num = int(month_key)
+                                        if month_num < 1:
+                                            continue  # Ignorer décembre 2025
+                                    except:
+                                        continue
+
                                     for week_key, week_data in weeks.items():
                                         # Heures de PÀP
                                         h_mktg = week_data.get("h_marketing", "-")
@@ -1339,6 +1347,14 @@ def get_coaches_list_api():
                                     rpo_data = json.load(f)
                                     weekly_data = rpo_data.get("weekly", {})
                                     for month_key, weeks in weekly_data.items():
+                                        # Filtrer: exclure mois 0 (décembre 2025), commencer à mois 1 (janvier 2026)
+                                        try:
+                                            month_num = int(month_key)
+                                            if month_num < 1:
+                                                continue  # Ignorer décembre 2025
+                                        except:
+                                            continue
+
                                         for week_key, week_data in weeks.items():
                                             h_mktg = week_data.get("h_marketing", "-")
                                             if h_mktg != "-":
@@ -1352,9 +1368,9 @@ def get_coaches_list_api():
 
                     # Calculer les moyennes
                     etoiles_moyennes_equipe = team_etoiles_total / team_satisfactions_total if team_satisfactions_total > 0 else 0
-                    # Taux marketing = Total soumissions / Total heures marketing
+                    # Taux marketing = Total soumissions / Total heures marketing (ratio, pas pourcentage)
                     total_soumissions_equipe = team_soumissions_signees + team_soumissions_en_attente + team_soumissions_perdues
-                    taux_marketing_moyen = (total_soumissions_equipe / team_heures_pap) * 100 if team_heures_pap > 0 else 0
+                    taux_marketing_moyen = (total_soumissions_equipe / team_heures_pap) if team_heures_pap > 0 else 0
                     # Taux de vente = Total signées / Total toutes soumissions
                     taux_vente_moyen = (team_soumissions_signees / total_soumissions_equipe) * 100 if total_soumissions_equipe > 0 else 0
                     prod_horaire_moyen = team_prod_horaire_total / nb_entrepreneurs if nb_entrepreneurs > 0 else 0
@@ -6794,12 +6810,20 @@ def api_get_coach_equipe_dashboard(
             taux_marketing = round(float(annual.get("mktg_reel", 0)), 2)
 
             # Calculer heures_pap_semaine: moyenne réelle par semaine (pas total cumulé)
-            # Compter TOUTES les semaines de l'année (déc 2025 à déc 2026)
+            # Compter SEULEMENT à partir de janvier 2026 (exclure décembre 2025)
             total_heures_pap = 0
             nombre_semaines_avec_data = 0
             weekly_data = rpo_data.get("weekly", {})
 
             for month_key, weeks in weekly_data.items():
+                # Filtrer: exclure mois 0 (décembre 2025), commencer à mois 1 (janvier 2026)
+                try:
+                    month_num = int(month_key)
+                    if month_num < 1:
+                        continue  # Ignorer décembre 2025
+                except:
+                    continue
+
                 for week_key, week_data in weeks.items():
                     h_mktg = week_data.get("h_marketing", "-")
                     # Compter toutes les valeurs sauf "-" (même 0 compte comme une semaine faite)
@@ -6987,8 +7011,8 @@ def api_get_coach_equipe_dashboard(
     # CORRECTION: Calculer le pourcentage global basé sur les totaux (team_total_ca / team_total_objectif)
     # au lieu de faire la moyenne des pourcentages individuels
     pourcentage_objectif_equipe = round((team_total_ca / team_total_objectif) * 100, 2) if team_total_objectif > 0 else 0
-    # Taux marketing = Total soumissions / Total heures marketing
-    taux_marketing_moyen_equipe = round((total_potentiel_equipe / team_total_heures_marketing_absolue) * 100, 2) if team_total_heures_marketing_absolue > 0 else 0
+    # Taux marketing = Total soumissions / Total heures marketing (ratio, pas pourcentage)
+    taux_marketing_moyen_equipe = round(total_potentiel_equipe / team_total_heures_marketing_absolue, 2) if team_total_heures_marketing_absolue > 0 else 0
 
     return {
         "entrepreneurs": entrepreneurs_data,

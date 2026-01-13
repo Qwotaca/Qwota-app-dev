@@ -1375,7 +1375,8 @@ def get_coaches_list_api():
                     taux_vente_moyen = (team_soumissions_signees / total_soumissions_equipe) * 100 if total_soumissions_equipe > 0 else 0
                     prod_horaire_moyen = team_prod_horaire_total / nb_entrepreneurs if nb_entrepreneurs > 0 else 0
                     contrat_moyen_equipe = team_ca_actuel / nb_entrepreneurs if nb_entrepreneurs > 0 else 0
-                    estimation_moyenne_equipe = round(team_total_estimations / team_estimation_count, 2) if team_estimation_count > 0 else 0
+                    # Estimation moyenne = Total soumissions / Nombre d'entrepreneurs
+                    estimation_moyenne_equipe = round(total_soumissions_equipe / nb_entrepreneurs, 2) if nb_entrepreneurs > 0 else 0
 
                     # Récupérer la photo de profil et les informations du coach
                     photo_profil = None
@@ -7004,9 +7005,17 @@ def api_get_coach_equipe_dashboard(
     # Nouvelles moyennes d'équipe
     # Contrat moyen = Total CA / Nombre d'entrepreneurs
     ca_moyen_equipe = round(team_total_ca / nb_entrepreneurs, 2) if nb_entrepreneurs > 0 else 0
-    # Estimation moyenne = nombre moyen d'estimations par entrepreneur (seulement ceux qui ont au moins 1 estimation)
-    estimation_moyenne_equipe = round(team_total_estimations / team_estimation_count, 2) if team_estimation_count > 0 else 0
-    heures_pap_moyenne_equipe = round(team_total_heures_pap / nb_entrepreneurs, 2) if nb_entrepreneurs > 0 else 0
+    # Estimation moyenne = Total estimations / Nombre d'entrepreneurs
+    estimation_moyenne_equipe = round(total_potentiel_equipe / nb_entrepreneurs, 2) if nb_entrepreneurs > 0 else 0
+
+    # Heures PAP/semaine = Total heures marketing / Nombre de semaines écoulées depuis le 5 janvier 2026
+    from datetime import datetime, timedelta
+    start_date = datetime(2026, 1, 5)
+    current_date = datetime.now()
+    days_since_start = max(0, (current_date - start_date).days)
+    nombre_semaines_ecoulees = max(1, days_since_start // 7)  # Semaines complétées, minimum 1
+    heures_pap_moyenne_equipe = round(team_total_heures_marketing_absolue / nombre_semaines_ecoulees, 2) if nombre_semaines_ecoulees > 0 else 0
+
     prod_horaire_moyen_equipe = round(team_total_prod_horaire / team_prod_horaire_count, 2) if team_prod_horaire_count > 0 else 0
     # CORRECTION: Calculer le pourcentage global basé sur les totaux (team_total_ca / team_total_objectif)
     # au lieu de faire la moyenne des pourcentages individuels

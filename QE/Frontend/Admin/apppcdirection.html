@@ -4730,6 +4730,39 @@
     }
 
     // ================================================================
+    // PRÉCHARGEMENT DU PLAN D'AFFAIRES
+    // ================================================================
+
+    async function preloadBusinessPlanData() {
+      try {
+        const username = window.username || localStorage.getItem('username');
+        if (!username) return;
+
+        // Précharger les objectifs et métriques en parallèle
+        const [objectifsRes, metricsRes] = await Promise.all([
+          fetch(`/api/direction/team-objectifs?direction_username=${username}`),
+          fetch(`/api/direction/team-metrics?direction_username=${username}`)
+        ]);
+
+        const [objectifsData, metricsData] = await Promise.all([
+          objectifsRes.json(),
+          metricsRes.json()
+        ]);
+
+        // Stocker en cache pour accès rapide dans le RPO
+        if (objectifsData.success) {
+          sessionStorage.setItem('cached_direction_objectifs', JSON.stringify(objectifsData));
+        }
+        if (metricsData.success) {
+          sessionStorage.setItem('cached_direction_metrics', JSON.stringify(metricsData));
+        }
+
+      } catch (error) {
+        // Ignorer les erreurs de préchargement
+      }
+    }
+
+    // ================================================================
     // INITIALISATION
     // ================================================================
 
@@ -4747,6 +4780,9 @@
       loadFacturationEnAttenteCount();
       // Recharger toutes les 30 secondes
       setInterval(loadFacturationEnAttenteCount, 30000);
+
+      // PRÉCHARGER les données du plan d'affaires pour que le RPO se charge plus vite
+      preloadBusinessPlanData();
 
       console.log('[LAUNCH] Qwota SPA initialized');
 

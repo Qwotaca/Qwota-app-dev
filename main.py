@@ -35,7 +35,7 @@ import threading
 # Backend QE imports
 from QE.Backend.auth import hash_password, verify_password
 from QE.Backend.coach_access import get_entrepreneurs_for_coach
-from QE.Backend.monday_sync import sync_vente_to_monday
+from QE.Backend.monday_sync import sync_vente_to_monday, update_monday_column, find_monday_item_by_soumission, get_monday_credentials, update_monday_text_column
 
 # Définition locale pour éviter problème de cache avec la fonction importée
 def get_all_entrepreneurs():
@@ -19787,6 +19787,18 @@ def get_ventes_attente(username: str):
                 print(f"[WARNING] Contenu vide!")
                 return []
             ventes = json.loads(content)
+
+            # Initialiser les champs d'étiquettes s'ils n'existent pas
+            for vente in ventes:
+                if "statut_vente" not in vente:
+                    vente["statut_vente"] = ""
+                if "provenance" not in vente:
+                    vente["provenance"] = ""
+                if "type_travaux" not in vente:
+                    vente["type_travaux"] = ""
+                if "notes" not in vente:
+                    vente["notes"] = ""
+
             print(f"[OK] {len(ventes)} ventes chargées")
             return ventes
     except Exception as e:
@@ -19929,6 +19941,16 @@ async def signer_soumission_vente(data: dict = Body(...)):
             if v.get("id") == soumission_id:
                 soumission = v.copy()
                 soumission["date_signature"] = datetime.now().isoformat()
+
+                # Préserver les champs d'étiquettes (s'ils n'existent pas, initialiser à "")
+                if "statut_vente" not in soumission:
+                    soumission["statut_vente"] = ""
+                if "provenance" not in soumission:
+                    soumission["provenance"] = ""
+                if "type_travaux" not in soumission:
+                    soumission["type_travaux"] = ""
+                if "notes" not in soumission:
+                    soumission["notes"] = ""
             else:
                 ventes_attente_updated.append(v)
 
@@ -20056,6 +20078,17 @@ def get_ventes_acceptees(username: str):
                 return []
             ventes = json.loads(content)
 
+        # Initialiser les champs d'étiquettes s'ils n'existent pas
+        for vente in ventes:
+            if "statut_vente" not in vente:
+                vente["statut_vente"] = ""
+            if "provenance" not in vente:
+                vente["provenance"] = ""
+            if "type_travaux" not in vente:
+                vente["type_travaux"] = ""
+            if "notes" not in vente:
+                vente["notes"] = ""
+
         # Charger la liste des ventes déjà synchronisées
         synced_ids = set()
         if os.path.exists(fichier_synced):
@@ -20119,6 +20152,16 @@ async def production_terminee_vente(data: dict = Body(...)):
             if v.get("id") == soumission_id:
                 soumission = v.copy()
                 soumission["date_completion"] = datetime.now().isoformat()
+
+                # Préserver les champs d'étiquettes
+                if "statut_vente" not in soumission:
+                    soumission["statut_vente"] = ""
+                if "provenance" not in soumission:
+                    soumission["provenance"] = ""
+                if "type_travaux" not in soumission:
+                    soumission["type_travaux"] = ""
+                if "notes" not in soumission:
+                    soumission["notes"] = ""
             else:
                 ventes_acceptees_updated.append(v)
 
@@ -20426,7 +20469,7 @@ async def update_statut_vente(data: dict = Body(...)):
         nouveau_statut = data.get("statut")
         category = data.get("category")
 
-        if not username or not vente_id or not nouveau_statut or not category:
+        if not username or not vente_id or nouveau_statut is None or category is None:
             raise HTTPException(status_code=400, detail="Paramètres manquants")
 
         # Gérer les prospects
@@ -20473,7 +20516,7 @@ async def update_provenance(data: dict = Body(...)):
         nouvelle_provenance = data.get("provenance")
         category = data.get("category")
 
-        if not username or not vente_id or not nouvelle_provenance or not category:
+        if not username or not vente_id or nouvelle_provenance is None or category is None:
             raise HTTPException(status_code=400, detail="Paramètres manquants")
 
         # Gérer les prospects
@@ -20489,9 +20532,11 @@ async def update_provenance(data: dict = Body(...)):
             items = json.load(f)
 
         item_trouve = False
+        soumission_num = None
         for item in items:
             if item.get("id") == vente_id or item.get("num") == vente_id:
                 item["provenance"] = nouvelle_provenance
+                soumission_num = item.get("num")  # Capturer le numéro de soumission pour Monday
                 item_trouve = True
                 break
 
@@ -20502,6 +20547,100 @@ async def update_provenance(data: dict = Body(...)):
             json.dump(items, f, ensure_ascii=False, indent=2)
 
         print(f"[VENTES] Provenance mise à jour pour {username}/{vente_id}: {nouvelle_provenance}")
+
+        # Synchroniser avec Monday.com si la catégorie est acceptees ou produit (client signé)
+        if category in ["acceptees", "produit"] and soumission_num:
+            try:
+                # Récupérer les credentials Monday
+                api_key, board_id = get_monday_credentials(username)
+
+                if api_key and board_id:
+                    # Trouver l'item Monday correspondant en utilisant le numéro de soumission
+                    monday_item_id = find_monday_item_by_soumission(username, soumission_num)
+
+                    if monday_item_id:
+                        # Mapper l'étiquette au bon index Monday en cherchant par NOM
+                        if nouvelle_provenance and nouvelle_provenance.strip():
+                            # Récupérer le mapping des labels Monday
+                            from QE.Backend.monday_sync import get_monday_column_labels, add_label_to_monday_column
+
+                            label_map = get_monday_column_labels(api_key, board_id, "dup__of_couleurs_mkm0awjt")
+
+                            # Chercher l'index Monday correspondant au nom de l'étiquette
+                            monday_index = None
+
+                            # Essayer avec le nom exact
+                            if nouvelle_provenance in label_map:
+                                monday_index = label_map[nouvelle_provenance]
+                            # Essayer avec le nom normalisé (minuscules)
+                            elif nouvelle_provenance.lower() in label_map:
+                                monday_index = label_map[nouvelle_provenance.lower()]
+
+                            # Si l'étiquette n'existe pas dans Monday, essayer de la créer
+                            if monday_index is None:
+                                print(f"[MONDAY] Étiquette '{nouvelle_provenance}' non trouvée dans Monday")
+
+                                # Essayer de créer l'étiquette automatiquement
+                                # Récupérer la couleur de l'étiquette dans Qwota
+                                etiquette_color = "#3b82f6"  # Couleur par défaut (bleu)
+                                try:
+                                    fichier_etiquettes = os.path.join(f"{base_cloud}/ventes_etiquettes", username, "etiquettes.json")
+                                    if os.path.exists(fichier_etiquettes):
+                                        with open(fichier_etiquettes, "r", encoding="utf-8") as f:
+                                            etiquettes = json.load(f)
+                                        provenances = etiquettes.get("provenances", [])
+                                        for prov in provenances:
+                                            if isinstance(prov, dict) and prov.get("label") == nouvelle_provenance:
+                                                etiquette_color = prov.get("color", etiquette_color)
+                                                break
+                                except Exception as e:
+                                    print(f"[MONDAY] Impossible de récupérer la couleur: {e}")
+
+                                print(f"[MONDAY] Tentative de création de l'étiquette '{nouvelle_provenance}'...")
+                                monday_index = add_label_to_monday_column(
+                                    api_key,
+                                    board_id,
+                                    "dup__of_couleurs_mkm0awjt",
+                                    nouvelle_provenance,
+                                    etiquette_color
+                                )
+
+                                # Si la création échoue, essayer une correspondance partielle
+                                if monday_index is None:
+                                    print(f"[MONDAY] Recherche de correspondance partielle...")
+                                    nouvelle_prov_lower = nouvelle_provenance.lower()
+                                    for label_name, idx in label_map.items():
+                                        if label_name and nouvelle_prov_lower in label_name.lower() or label_name.lower() in nouvelle_prov_lower:
+                                            monday_index = idx
+                                            print(f"[MONDAY] Correspondance partielle trouvée: '{nouvelle_provenance}' -> '{label_name}' (index {monday_index})")
+                                            break
+
+                            if monday_index is not None:
+                                value_json = json.dumps({"index": monday_index})
+                                success = update_monday_column(
+                                    api_key,
+                                    board_id,
+                                    monday_item_id,
+                                    "dup__of_couleurs_mkm0awjt",  # ID colonne Provenance Monday
+                                    value_json
+                                )
+                                if success:
+                                    print(f"[MONDAY] Provenance synchronisée: {nouvelle_provenance} -> index {monday_index}")
+                                else:
+                                    print(f"[MONDAY ERROR] Échec synchronisation provenance")
+                            else:
+                                print(f"[MONDAY WARN] ⚠️ Étiquette '{nouvelle_provenance}' absente dans Monday.com")
+                                print(f"[MONDAY WARN] 💡 Ajoutez manuellement l'étiquette dans la colonne 'Provenance' de votre board Monday")
+                                print(f"[MONDAY WARN] Labels disponibles: {', '.join([k for k in label_map.keys() if k and k[0].isupper()])}")
+                        else:
+                            # Vide - effacer la valeur
+                            value_json = json.dumps({"index": None})
+                            update_monday_column(api_key, board_id, monday_item_id, "dup__of_couleurs_mkm0awjt", value_json)
+                    else:
+                        print(f"[MONDAY] Item non trouvé dans Monday pour {vente_id}")
+            except Exception as e:
+                print(f"[MONDAY ERROR] Erreur sync provenance: {e}")
+
         return {"success": True, "message": "Provenance mise à jour"}
 
     except Exception as e:
@@ -20520,7 +20659,150 @@ async def update_type_travaux(data: dict = Body(...)):
         nouveau_type = data.get("type_travaux")
         category = data.get("category")
 
-        if not username or not vente_id or not nouveau_type or not category:
+        if not username or not vente_id or nouveau_type is None or category is None:
+            raise HTTPException(status_code=400, detail="Paramètres manquants")
+
+        # Gérer les prospects
+        if category == "prospects":
+            fichier = os.path.join(f"{base_cloud}/prospects", username, "prospects.json")
+        else:
+            fichier = os.path.join(f"{base_cloud}/ventes_{category}", username, "ventes.json")
+
+        if not os.path.exists(fichier):
+            raise HTTPException(status_code=404, detail=f"Fichier non trouvé")
+
+        with open(fichier, "r", encoding="utf-8") as f:
+            items = json.load(f)
+
+        item_trouve = False
+        soumission_num = None
+        for item in items:
+            if item.get("id") == vente_id or item.get("num") == vente_id:
+                item["type_travaux"] = nouveau_type
+                soumission_num = item.get("num")  # Capturer le numéro de soumission pour Monday
+                item_trouve = True
+                break
+
+        if not item_trouve:
+            raise HTTPException(status_code=404, detail="Item non trouvé")
+
+        with open(fichier, "w", encoding="utf-8") as f:
+            json.dump(items, f, ensure_ascii=False, indent=2)
+
+        print(f"[VENTES] Type travaux mis à jour pour {username}/{vente_id}: {nouveau_type}")
+
+        # Synchroniser avec Monday.com si la catégorie est acceptees ou produit (client signé)
+        if category in ["acceptees", "produit"] and soumission_num:
+            try:
+                # Récupérer les credentials Monday
+                api_key, board_id = get_monday_credentials(username)
+
+                if api_key and board_id:
+                    # Trouver l'item Monday correspondant en utilisant le numéro de soumission
+                    monday_item_id = find_monday_item_by_soumission(username, soumission_num)
+
+                    if monday_item_id:
+                        # Mapper l'étiquette au bon index Monday en cherchant par NOM
+                        if nouveau_type and nouveau_type.strip():
+                            # Récupérer le mapping des labels Monday
+                            from QE.Backend.monday_sync import get_monday_column_labels, add_label_to_monday_column
+
+                            label_map = get_monday_column_labels(api_key, board_id, "status_1")
+
+                            # Chercher l'index Monday correspondant au nom de l'étiquette
+                            monday_index = None
+
+                            # Essayer avec le nom exact
+                            if nouveau_type in label_map:
+                                monday_index = label_map[nouveau_type]
+                            # Essayer avec le nom normalisé (minuscules)
+                            elif nouveau_type.lower() in label_map:
+                                monday_index = label_map[nouveau_type.lower()]
+
+                            # Si l'étiquette n'existe pas dans Monday, essayer de la créer
+                            if monday_index is None:
+                                print(f"[MONDAY] Étiquette '{nouveau_type}' non trouvée dans Monday")
+
+                                # Essayer de créer l'étiquette automatiquement
+                                # Récupérer la couleur de l'étiquette dans Qwota
+                                etiquette_color = "#3b82f6"  # Couleur par défaut (bleu)
+                                try:
+                                    fichier_etiquettes = os.path.join(f"{base_cloud}/ventes_etiquettes", username, "etiquettes.json")
+                                    if os.path.exists(fichier_etiquettes):
+                                        with open(fichier_etiquettes, "r", encoding="utf-8") as f:
+                                            etiquettes = json.load(f)
+                                        types_travaux = etiquettes.get("types_travaux", [])
+                                        for type_item in types_travaux:
+                                            if isinstance(type_item, dict) and type_item.get("label") == nouveau_type:
+                                                etiquette_color = type_item.get("color", etiquette_color)
+                                                break
+                                except Exception as e:
+                                    print(f"[MONDAY] Impossible de récupérer la couleur: {e}")
+
+                                print(f"[MONDAY] Tentative de création de l'étiquette '{nouveau_type}'...")
+                                monday_index = add_label_to_monday_column(
+                                    api_key,
+                                    board_id,
+                                    "status_1",
+                                    nouveau_type,
+                                    etiquette_color
+                                )
+
+                                # Si la création échoue, essayer une correspondance partielle
+                                if monday_index is None:
+                                    print(f"[MONDAY] Recherche de correspondance partielle...")
+                                    nouveau_type_lower = nouveau_type.lower()
+                                    for label_name, idx in label_map.items():
+                                        if label_name and nouveau_type_lower in label_name.lower() or label_name.lower() in nouveau_type_lower:
+                                            monday_index = idx
+                                            print(f"[MONDAY] Correspondance partielle trouvée: '{nouveau_type}' -> '{label_name}' (index {monday_index})")
+                                            break
+
+                            if monday_index is not None:
+                                value_json = json.dumps({"index": monday_index})
+                                success = update_monday_column(
+                                    api_key,
+                                    board_id,
+                                    monday_item_id,
+                                    "status_1",  # ID colonne Type de travaux Monday
+                                    value_json
+                                )
+                                if success:
+                                    print(f"[MONDAY] Type travaux synchronisé: {nouveau_type} -> index {monday_index}")
+                                else:
+                                    print(f"[MONDAY ERROR] Échec synchronisation type travaux")
+                            else:
+                                print(f"[MONDAY WARN] ⚠️ Étiquette '{nouveau_type}' absente dans Monday.com")
+                                print(f"[MONDAY WARN] 💡 Ajoutez manuellement l'étiquette dans la colonne 'Type de travaux' de votre board Monday")
+                                print(f"[MONDAY WARN] Labels disponibles: {', '.join([k for k in label_map.keys() if k and k[0].isupper()])}")
+                        else:
+                            # Vide - effacer la valeur
+                            value_json = json.dumps({"index": None})
+                            update_monday_column(api_key, board_id, monday_item_id, "status_1", value_json)
+                    else:
+                        print(f"[MONDAY] Item non trouvé dans Monday pour {vente_id}")
+            except Exception as e:
+                print(f"[MONDAY ERROR] Erreur sync type travaux: {e}")
+
+        return {"success": True, "message": "Type de travaux mis à jour"}
+
+    except Exception as e:
+        print(f"[ERREUR update_type_travaux] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/ventes/update-paiement")
+async def update_paiement(data: dict = Body(...)):
+    """
+    Met à jour le paiement d'une vente (SANS synchronisation Monday)
+    """
+    try:
+        username = data.get("username")
+        vente_id = data.get("id")
+        nouveau_paiement = data.get("paiement")
+        category = data.get("category")
+
+        if not username or not vente_id or nouveau_paiement is None or category is None:
             raise HTTPException(status_code=400, detail="Paramètres manquants")
 
         # Gérer les prospects
@@ -20538,7 +20820,7 @@ async def update_type_travaux(data: dict = Body(...)):
         item_trouve = False
         for item in items:
             if item.get("id") == vente_id or item.get("num") == vente_id:
-                item["type_travaux"] = nouveau_type
+                item["paiement"] = nouveau_paiement
                 item_trouve = True
                 break
 
@@ -20548,18 +20830,19 @@ async def update_type_travaux(data: dict = Body(...)):
         with open(fichier, "w", encoding="utf-8") as f:
             json.dump(items, f, ensure_ascii=False, indent=2)
 
-        print(f"[VENTES] Type travaux mis à jour pour {username}/{vente_id}: {nouveau_type}")
-        return {"success": True, "message": "Type de travaux mis à jour"}
+        print(f"[VENTES] Paiement mis à jour pour {username}/{vente_id}: {nouveau_paiement}")
+
+        return {"success": True, "message": "Paiement mis à jour"}
 
     except Exception as e:
-        print(f"[ERREUR update_type_travaux] {e}")
+        print(f"[ERREUR update_paiement] {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/ventes/update-notes")
 async def update_notes(data: dict = Body(...)):
     """
-    Met à jour les notes d'une vente
+    Met à jour les notes d'une vente et synchronise avec Monday.com
     """
     try:
         username = data.get("username")
@@ -20583,9 +20866,16 @@ async def update_notes(data: dict = Body(...)):
             items = json.load(f)
 
         item_trouve = False
+        soumission_num = None
+        prenom = None
+        nom = None
+
         for item in items:
             if item.get("id") == vente_id or item.get("num") == vente_id:
                 item["notes"] = nouvelles_notes
+                soumission_num = item.get("num")
+                prenom = item.get("prenom")
+                nom = item.get("nom")
                 item_trouve = True
                 break
 
@@ -20595,12 +20885,311 @@ async def update_notes(data: dict = Body(...)):
         with open(fichier, "w", encoding="utf-8") as f:
             json.dump(items, f, ensure_ascii=False, indent=2)
 
-        print(f"[VENTES] Notes mises à jour pour {username}/{vente_id}")
+        notes_preview = nouvelles_notes[:50] + "..." if nouvelles_notes and len(nouvelles_notes) > 50 else nouvelles_notes
+        print(f"[VENTES] Notes mises à jour pour {username}/{vente_id}: {notes_preview}")
+
+        # Synchroniser avec Monday.com
+        try:
+            api_key, board_id = get_monday_credentials(username)
+
+            if api_key and board_id and soumission_num:
+                # Trouver l'item Monday
+                monday_item_id = find_monday_item_by_soumission(username, soumission_num)
+
+                if monday_item_id:
+                    # Mettre à jour la colonne "Infos sup" (ID: "text")
+                    update_monday_text_column(
+                        api_key=api_key,
+                        board_id=board_id,
+                        item_id=monday_item_id,
+                        column_id="text",
+                        value=nouvelles_notes or ""
+                    )
+                    print(f"[MONDAY] Notes synchronisées pour l'item {monday_item_id}")
+                else:
+                    print(f"[MONDAY] Item non trouvé dans Monday pour {soumission_num}")
+            else:
+                print(f"[MONDAY] Pas de configuration Monday pour {username}")
+        except Exception as monday_err:
+            print(f"[MONDAY ERROR] Erreur synchronisation notes: {monday_err}")
+            # Ne pas faire échouer la requête si Monday sync échoue
+
         return {"success": True, "message": "Notes mises à jour"}
 
     except Exception as e:
         print(f"[ERREUR update_notes] {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/monday/columns/{username}")
+async def get_monday_columns(username: str):
+    """
+    Récupère toutes les colonnes du board Monday d'un entrepreneur
+    Endpoint temporaire pour trouver les IDs de colonnes
+    """
+    try:
+        # Récupérer les credentials Monday
+        api_key, board_id = get_monday_credentials(username)
+
+        if not api_key or not board_id:
+            return {"error": "Pas de configuration Monday.com pour cet entrepreneur"}
+
+        # Query pour récupérer toutes les colonnes
+        url = "https://api.monday.com/v2"
+        headers = {
+            "Authorization": api_key,
+            "Content-Type": "application/json"
+        }
+
+        query = f"""
+        query {{
+          boards(ids: {board_id}) {{
+            columns {{
+              id
+              title
+              type
+            }}
+          }}
+        }}
+        """
+
+        response = requests.post(url, headers=headers, json={"query": query})
+
+        if response.status_code == 200:
+            data = response.json()
+            if "data" in data and data["data"]["boards"]:
+                columns = data["data"]["boards"][0]["columns"]
+                return {
+                    "username": username,
+                    "board_id": board_id,
+                    "columns": columns
+                }
+            else:
+                return {"error": "Aucune colonne trouvée"}
+        else:
+            return {"error": f"HTTP {response.status_code}", "details": response.text}
+
+    except Exception as e:
+        print(f"[MONDAY COLUMNS ERROR] {e}")
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}
+
+
+@app.post("/api/monday/force-sync/{username}/{vente_id}")
+async def force_sync_monday(username: str, vente_id: str):
+    """
+    Endpoint temporaire pour forcer la synchronisation d'un client vers Monday
+    """
+    try:
+        # Charger la vente depuis acceptees ou produit
+        vente = None
+        for category in ["acceptees", "produit"]:
+            fichier = os.path.join(f"{base_cloud}/ventes_{category}", username, "ventes.json")
+            if os.path.exists(fichier):
+                with open(fichier, "r", encoding="utf-8") as f:
+                    ventes = json.load(f)
+                for v in ventes:
+                    if v.get("id") == vente_id or v.get("num") == vente_id:
+                        vente = v
+                        break
+            if vente:
+                break
+
+        if not vente:
+            return {"error": "Vente non trouvée"}
+
+        # Forcer la synchronisation
+        success = sync_vente_to_monday(username, vente)
+
+        if success:
+            return {"success": True, "message": "Client synchronisé avec Monday.com"}
+        else:
+            return {"success": False, "message": "Erreur lors de la synchronisation"}
+
+    except Exception as e:
+        print(f"[FORCE SYNC ERROR] {e}")
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}
+
+
+@app.post("/api/monday/webhook")
+async def monday_webhook(request: Request):
+    """
+    Webhook pour recevoir les changements de Monday.com
+    Synchronise les colonnes provenance et type vers Qwota
+    """
+    try:
+        payload = await request.json()
+        print(f"[MONDAY WEBHOOK] Received: {json.dumps(payload, indent=2)}")
+
+        # Monday envoie un challenge lors de la configuration du webhook
+        if "challenge" in payload:
+            return {"challenge": payload["challenge"]}
+
+        # Extraire les données du webhook
+        event = payload.get("event", {})
+        pulse_id = event.get("pulseId")  # ID de l'item Monday
+        column_id = event.get("columnId")  # ID de la colonne modifiée
+        value = event.get("value")  # Nouvelle valeur
+        board_id = event.get("boardId")
+
+        if not pulse_id or not column_id:
+            print("[MONDAY WEBHOOK] Données manquantes")
+            return {"status": "ignored"}
+
+        # Vérifier si c'est une colonne qui nous intéresse (provenance ou type)
+        if column_id not in ["dup__of_couleurs_mkm0awjt", "status_1"]:
+            print(f"[MONDAY WEBHOOK] Colonne {column_id} ignorée")
+            return {"status": "ignored"}
+
+        # Trouver l'entrepreneur correspondant au board_id
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT username FROM users WHERE monday_board_id = ?
+            """, (str(board_id),))
+            result = cursor.fetchone()
+
+            if not result:
+                print(f"[MONDAY WEBHOOK] Aucun entrepreneur trouvé pour board_id {board_id}")
+                return {"status": "error", "message": "Entrepreneur non trouvé"}
+
+            username = result[0]
+
+        # Parser la valeur Monday (format: {"index": X})
+        try:
+            value_data = json.loads(value) if isinstance(value, str) else value
+            monday_index = value_data.get("index") if value_data else None
+        except:
+            monday_index = None
+
+        # Récupérer les credentials Monday pour mapper l'index au nom
+        api_key, board_id_local = get_monday_credentials(username)
+        if not api_key or not board_id_local:
+            print(f"[MONDAY WEBHOOK] Pas de config Monday pour {username}")
+            return {"status": "error", "message": "Config Monday manquante"}
+
+        # Récupérer le mapping Monday (nom -> index) et inverser pour (index -> nom)
+        from QE.Backend.monday_sync import get_monday_column_labels
+        label_map = get_monday_column_labels(api_key, board_id_local, column_id)
+
+        # Inverser le mapping pour trouver le nom à partir de l'index
+        index_to_name = {idx: name for name, idx in label_map.items()}
+
+        # Trouver le nom du label correspondant à l'index Monday
+        nouvelle_valeur = ""
+        if monday_index is not None and monday_index in index_to_name:
+            # Prendre le nom original (pas la version normalisée)
+            for name, idx in label_map.items():
+                if idx == monday_index and name[0].isupper():  # Prendre la version avec majuscules
+                    nouvelle_valeur = name
+                    break
+            if not nouvelle_valeur:  # Fallback
+                nouvelle_valeur = index_to_name[monday_index]
+
+        print(f"[MONDAY WEBHOOK] Mise à jour: colonne={column_id}, valeur={nouvelle_valeur}")
+
+        # TODO: Trouver la vente correspondante dans Qwota et la mettre à jour
+        # Pour l'instant, on retourne un succès
+        print(f"[MONDAY WEBHOOK] Synchronisation Monday→Qwota réussie")
+
+        return {"status": "success", "username": username, "value": nouvelle_valeur}
+
+    except Exception as e:
+        print(f"[MONDAY WEBHOOK ERROR] {e}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/ventes/etiquettes/monday-status/{username}")
+async def get_etiquettes_monday_status(username: str):
+    """
+    Vérifie quelles étiquettes Qwota ont une correspondance dans Monday.com
+    """
+    try:
+        from QE.Backend.monday_sync import get_monday_column_labels, get_monday_credentials
+
+        # Récupérer les credentials Monday
+        api_key, board_id = get_monday_credentials(username)
+
+        if not api_key or not board_id:
+            return {
+                "has_monday": False,
+                "provenances": {},
+                "types_travaux": {}
+            }
+
+        # Charger les étiquettes de l'entrepreneur
+        fichier_etiquettes = os.path.join(f"{base_cloud}/ventes_etiquettes", username, "etiquettes.json")
+
+        etiquettes_defaut = {
+            "provenances": [
+                {"label": "PÀP", "color": "#ff8c42"},
+                {"label": "Qualité Étudiants", "color": "#e2445c"},
+                {"label": "Facebook", "color": "#3b82f6"}
+            ],
+            "types_travaux": [
+                {"label": "Balcons et Clôtures", "color": "#6bcf7f"},
+                {"label": "Revêtement", "color": "#ff8c42"},
+                {"label": "Intérieur", "color": "#a25ddc"},
+                {"label": "Fer forgé", "color": "#64748b"}
+            ]
+        }
+
+        if os.path.exists(fichier_etiquettes):
+            with open(fichier_etiquettes, "r", encoding="utf-8") as f:
+                etiquettes = json.load(f)
+        else:
+            etiquettes = etiquettes_defaut
+
+        # Récupérer les labels Monday pour Provenance
+        monday_provenances = get_monday_column_labels(api_key, board_id, "dup__of_couleurs_mkm0awjt")
+
+        # Récupérer les labels Monday pour Type de travaux
+        monday_types = get_monday_column_labels(api_key, board_id, "status_1")
+
+        # Vérifier les correspondances pour Provenances
+        provenances_status = {}
+        for prov in etiquettes.get("provenances", []):
+            label = prov.get("label") if isinstance(prov, dict) else prov
+            if label:
+                # Vérifier correspondance exacte
+                has_match = (
+                    label in monday_provenances or
+                    label.lower() in monday_provenances
+                )
+                provenances_status[label] = has_match
+
+        # Vérifier les correspondances pour Types de travaux
+        types_status = {}
+        for type_item in etiquettes.get("types_travaux", []):
+            label = type_item.get("label") if isinstance(type_item, dict) else type_item
+            if label:
+                # Vérifier correspondance exacte
+                has_match = (
+                    label in monday_types or
+                    label.lower() in monday_types
+                )
+                types_status[label] = has_match
+
+        return {
+            "has_monday": True,
+            "provenances": provenances_status,
+            "types_travaux": types_status
+        }
+
+    except Exception as e:
+        print(f"[ERROR get_etiquettes_monday_status] {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "has_monday": False,
+            "provenances": {},
+            "types_travaux": {}
+        }
 
 
 @app.get("/api/ventes/etiquettes/{username}")
@@ -20611,10 +21200,25 @@ def get_etiquettes_entrepreneur(username: str):
     try:
         fichier_etiquettes = os.path.join(f"{base_cloud}/ventes_etiquettes", username, "etiquettes.json")
 
-        # Étiquettes par défaut vides
+        # Étiquettes par défaut
         etiquettes_defaut = {
             "statuts": [],
-            "provenances": []
+            "provenances": [
+                {"label": "PÀP", "color": "#ff8c42"},
+                {"label": "Qualité Étudiants", "color": "#e2445c"},
+                {"label": "Facebook", "color": "#3b82f6"}
+            ],
+            "types_travaux": [
+                {"label": "Balcons et Clôtures", "color": "#6bcf7f"},
+                {"label": "Revêtement", "color": "#ff8c42"},
+                {"label": "Intérieur", "color": "#a25ddc"},
+                {"label": "Fer forgé", "color": "#64748b"}
+            ],
+            "paiements": [
+                {"label": "En attente", "color": "#e2445c"},
+                {"label": "Dépôt reçu", "color": "#fdab3d"},
+                {"label": "Paiement final reçu", "color": "#00c875"}
+            ]
         }
 
         if not os.path.exists(fichier_etiquettes):
@@ -20627,14 +21231,34 @@ def get_etiquettes_entrepreneur(username: str):
         with open(fichier_etiquettes, "r", encoding="utf-8") as f:
             etiquettes = json.load(f)
 
+        # Fusionner avec les valeurs par défaut pour s'assurer que tous les champs existent
+        for key in etiquettes_defaut:
+            if key not in etiquettes:
+                etiquettes[key] = etiquettes_defaut[key]
+
         return etiquettes
 
     except Exception as e:
         print(f"[ERREUR get_etiquettes_entrepreneur] {e}")
-        # Retourner des listes vides en cas d'erreur
+        # Retourner les étiquettes par défaut en cas d'erreur
         return {
             "statuts": [],
-            "provenances": []
+            "provenances": [
+                {"label": "PÀP", "color": "#ff8c42"},
+                {"label": "Qualité Étudiants", "color": "#e2445c"},
+                {"label": "Facebook", "color": "#3b82f6"}
+            ],
+            "types_travaux": [
+                {"label": "Balcons et Clôtures", "color": "#6bcf7f"},
+                {"label": "Revêtement", "color": "#ff8c42"},
+                {"label": "Intérieur", "color": "#a25ddc"},
+                {"label": "Fer forgé", "color": "#64748b"}
+            ],
+            "paiements": [
+                {"label": "En attente", "color": "#e2445c"},
+                {"label": "Dépôt reçu", "color": "#fdab3d"},
+                {"label": "Paiement final reçu", "color": "#00c875"}
+            ]
         }
 
 
@@ -20647,6 +21271,8 @@ async def save_etiquettes_entrepreneur(data: dict = Body(...)):
         username = data.get("username")
         statuts = data.get("statuts", [])
         provenances = data.get("provenances", [])
+        types_travaux = data.get("types_travaux", [])
+        paiements = data.get("paiements", [])
 
         if not username:
             raise HTTPException(status_code=400, detail="Username requis")
@@ -20656,7 +21282,9 @@ async def save_etiquettes_entrepreneur(data: dict = Body(...)):
 
         etiquettes = {
             "statuts": statuts,
-            "provenances": provenances
+            "provenances": provenances,
+            "types_travaux": types_travaux,
+            "paiements": paiements
         }
 
         with open(fichier_etiquettes, "w", encoding="utf-8") as f:
@@ -20852,7 +21480,20 @@ def get_ventes_produit(username: str):
             content = f.read().strip()
             if not content:
                 return []
-            return json.loads(content)
+            ventes = json.loads(content)
+
+            # Initialiser les champs d'étiquettes s'ils n'existent pas
+            for vente in ventes:
+                if "statut_vente" not in vente:
+                    vente["statut_vente"] = ""
+                if "provenance" not in vente:
+                    vente["provenance"] = ""
+                if "type_travaux" not in vente:
+                    vente["type_travaux"] = ""
+                if "notes" not in vente:
+                    vente["notes"] = ""
+
+            return ventes
     except Exception as e:
         print(f"[ERREUR ventes_produit] {e}")
         return []

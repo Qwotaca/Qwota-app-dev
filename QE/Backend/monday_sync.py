@@ -22,6 +22,224 @@ else:
 
 DB_PATH = os.path.join(base_cloud, "qwota.db")
 
+
+def get_closest_monday_color(qwota_color: str) -> int:
+    """
+    Trouve la couleur Monday la plus proche d'une couleur hexadécimale
+
+    Args:
+        qwota_color: Couleur hex (ex: "#ff8c42")
+
+    Returns:
+        int: ID de la couleur Monday (0-40)
+    """
+    # Mapping des couleurs Monday (palette standard)
+    monday_colors = {
+        0: "#00c875",   # Vert
+        1: "#9cd326",   # Vert clair
+        2: "#cab641",   # Jaune-vert
+        3: "#ffcb00",   # Jaune
+        4: "#fdab3d",   # Orange clair
+        5: "#ff642e",   # Orange
+        6: "#ff158a",   # Rose
+        7: "#e2445c",   # Rouge
+        8: "#bb3354",   # Rouge foncé
+        9: "#a25ddc",   # Violet
+        10: "#784bd1",  # Violet foncé
+        11: "#0086c0",  # Bleu
+        12: "#579bfc",  # Bleu clair
+        13: "#66ccff",  # Cyan
+        14: "#68a1bd",  # Bleu-gris
+        15: "#9aadbd",  # Gris-bleu
+        16: "#c4c4c4",  # Gris
+        17: "#808080",  # Gris foncé
+        18: "#333333",  # Noir
+    }
+
+    # Convertir couleur hex en RGB
+    qwota_rgb = tuple(int(qwota_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+
+    # Trouver la couleur Monday la plus proche
+    min_distance = float('inf')
+    closest_id = 0
+
+    for color_id, hex_color in monday_colors.items():
+        monday_rgb = tuple(int(hex_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+        # Distance euclidienne
+        distance = sum((qwota_rgb[i] - monday_rgb[i]) ** 2 for i in range(3)) ** 0.5
+
+        if distance < min_distance:
+            min_distance = distance
+            closest_id = color_id
+
+    return closest_id
+
+
+def add_label_to_monday_column(api_key: str, board_id: str, column_id: str, label_name: str, color: str = "#3b82f6") -> Optional[int]:
+    """
+    Ajoute une nouvelle étiquette à une colonne Monday via l'API REST
+
+    Args:
+        api_key: Clé API Monday.com
+        board_id: ID du board Monday.com
+        column_id: ID de la colonne
+        label_name: Nom de l'étiquette à ajouter
+        color: Couleur hex de l'étiquette Qwota
+
+    Returns:
+        Optional[int]: Index de la nouvelle étiquette créée, None si échec
+    """
+    try:
+        # Utiliser l'API GraphQL pour récupérer les settings actuels
+        url = "https://api.monday.com/v2"
+        headers = {
+            "Authorization": api_key,
+            "Content-Type": "application/json",
+            "API-Version": "2024-01"
+        }
+
+        # 1. Récupérer les settings actuels
+        query = f"""
+        query {{
+          boards(ids: {board_id}) {{
+            columns(ids: ["{column_id}"]) {{
+              id
+              settings_str
+            }}
+          }}
+        }}
+        """
+
+        response = requests.post(url, headers=headers, json={"query": query})
+        if response.status_code != 200:
+            print(f"[MONDAY ERROR] Erreur récupération settings: {response.status_code}")
+            return None
+
+        data = response.json()
+        if "data" not in data or not data["data"]["boards"]:
+            print(f"[MONDAY ERROR] Board non trouvé")
+            return None
+
+        columns = data["data"]["boards"][0]["columns"]
+        if not columns:
+            print(f"[MONDAY ERROR] Colonne non trouvée")
+            return None
+
+        settings = json.loads(columns[0]["settings_str"])
+        labels = settings.get("labels", {})
+        labels_ids_style = settings.get("labels_ids_style", {})
+        labels_colors = settings.get("labels_colors", {})
+
+        # 2. Trouver le prochain index disponible
+        existing_indices = [int(idx) for idx in labels.keys() if idx.isdigit()]
+        new_index = max(existing_indices) + 1 if existing_indices else 0
+
+        # Vérifier si le label existe déjà
+        for idx, existing_label in labels.items():
+            if existing_label == label_name:
+                print(f"[MONDAY] Label '{label_name}' existe déjà (index {idx})")
+                return int(idx)
+
+        # 3. Ajouter la nouvelle étiquette
+        labels[str(new_index)] = label_name
+
+        # Trouver la couleur Monday la plus proche
+        color_id = get_closest_monday_color(color)
+        labels_colors[str(new_index)] = {"color": color_id, "border": color_id}
+
+        # Style par défaut
+        labels_ids_style[str(new_index)] = 1
+
+        # 4. Mettre à jour les settings
+        settings["labels"] = labels
+        settings["labels_colors"] = labels_colors
+        settings["labels_ids_style"] = labels_ids_style
+
+        # Essayer avec l'API REST Monday
+        rest_url = f"https://api.monday.com/v2/boards/{board_id}/columns/{column_id}.json"
+
+        payload = {
+            "settings_str": json.dumps(settings)
+        }
+
+        rest_response = requests.put(rest_url, headers=headers, json=payload)
+
+        if rest_response.status_code == 200:
+            print(f"[MONDAY] ✓ Étiquette '{label_name}' créée avec succès via REST API (index {new_index})")
+            return new_index
+        else:
+            print(f"[MONDAY ERROR] Erreur REST API: {rest_response.status_code}")
+            print(f"[MONDAY ERROR] Response: {rest_response.text}")
+
+            # Fallback : essayer avec GraphQL change_column_value
+            # Créer directement un item avec cette valeur pour forcer la création du label
+            print(f"[MONDAY] Tentative méthode alternative...")
+            return None
+
+    except Exception as e:
+        print(f"[MONDAY ERROR] Exception création étiquette: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
+def get_monday_column_labels(api_key: str, board_id: str, column_id: str) -> Dict[str, int]:
+    """
+    Récupère les labels d'une colonne Monday et retourne un mapping nom->index
+
+    Args:
+        api_key: Clé API Monday.com
+        board_id: ID du board Monday.com
+        column_id: ID de la colonne
+
+    Returns:
+        Dict[str, int]: Mapping nom d'étiquette -> index Monday
+    """
+    try:
+        url = "https://api.monday.com/v2"
+        headers = {
+            "Authorization": api_key,
+            "Content-Type": "application/json"
+        }
+
+        query = f"""
+        query {{
+          boards(ids: {board_id}) {{
+            columns(ids: ["{column_id}"]) {{
+              id
+              settings_str
+            }}
+          }}
+        }}
+        """
+
+        response = requests.post(url, headers=headers, json={"query": query})
+
+        if response.status_code == 200:
+            data = response.json()
+            if "data" in data and data["data"]["boards"]:
+                columns = data["data"]["boards"][0]["columns"]
+                if columns:
+                    settings = json.loads(columns[0]["settings_str"])
+                    labels = settings.get("labels", {})
+
+                    # Créer le mapping nom -> index
+                    label_map = {}
+                    for idx, label_name in labels.items():
+                        # Normaliser le nom pour comparaison (minuscules, sans accents)
+                        label_normalized = label_name.strip().lower()
+                        label_map[label_normalized] = int(idx)
+                        # Aussi garder le nom original
+                        label_map[label_name.strip()] = int(idx)
+
+                    return label_map
+
+        return {}
+    except Exception as e:
+        print(f"[MONDAY ERROR] Erreur récupération labels: {e}")
+        return {}
+
+
 def get_monday_credentials(username: str) -> tuple[Optional[str], Optional[str]]:
     """
     Récupère les credentials Monday.com d'un utilisateur depuis la base de données
@@ -145,7 +363,7 @@ def is_banned_from_monday(username: str, item_id: str) -> bool:
     return str(item_id) in banned_ids
 
 
-def find_existing_monday_item(api_key: str, board_id: str, soumission_num: str) -> Optional[str]:
+def find_existing_monday_item(api_key: str, board_id: str, soumission_num: str, prenom: str = None, nom: str = None) -> Optional[str]:
     """
     Recherche un item existant dans Monday.com par numéro de soumission
 
@@ -190,13 +408,37 @@ def find_existing_monday_item(api_key: str, board_id: str, soumission_num: str) 
             if "data" in data and data["data"]["boards"]:
                 items = data["data"]["boards"][0]["items_page"]["items"]
 
-                # Chercher un item qui contient le numéro de soumission dans son nom
+                # Construire le nom complet pour la recherche par nom
+                nom_complet_recherche = None
+                if prenom and nom:
+                    nom_complet_recherche = f"{prenom} {nom}".strip().lower()
+                    print(f"[MONDAY DEBUG] Recherche par nom: '{nom_complet_recherche}'")
+
+                print(f"[MONDAY DEBUG] {len(items)} items à examiner")
+
+                # Chercher un item qui correspond
                 for item in items:
                     item_name = item.get("name", "")
-                    # Le numéro de soumission pourrait être dans le nom ou dans une colonne
+                    item_name_lower = item_name.lower()
+                    print(f"[MONDAY DEBUG] Examen item: '{item_name}'")
+
+                    # Méthode 1: Vérifier si le numéro de soumission est dans le nom (nouveau format)
                     if soumission_num and soumission_num in item_name:
-                        print(f"[MONDAY] Item existant trouvé: {item_name} (ID: {item['id']})")
+                        print(f"[MONDAY] Item existant trouvé par numéro dans nom: {item_name} (ID: {item['id']})")
                         return item["id"]
+
+                    # Méthode 2: Vérifier si le nom complet correspond exactement (ancien format)
+                    if nom_complet_recherche and nom_complet_recherche in item_name_lower:
+                        print(f"[MONDAY] Item existant trouvé par nom complet: {item_name} (ID: {item['id']})")
+                        return item["id"]
+
+                    # Méthode 3: Vérifier dans la colonne $JOB (au cas où le numéro y serait)
+                    for col_value in item.get("column_values", []):
+                        if col_value.get("id") == "numbers4":  # Colonne $JOB
+                            job_num = col_value.get("text", "")
+                            if job_num and soumission_num in job_num:
+                                print(f"[MONDAY] Item existant trouvé par $JOB: {item_name} (ID: {item['id']}, Job: {job_num})")
+                                return item["id"]
 
                 print(f"[MONDAY] Aucun item existant trouvé avec le numéro {soumission_num}")
                 return None
@@ -246,7 +488,7 @@ def create_monday_item(api_key: str, board_id: str, item_data: Dict, username: s
         print(f"[MONDAY] Vérification doublon pour soumission #{soumission_num}: {nom_complet}")
 
         # VÉRIFICATION #2: Vérifier si un item existe déjà dans Monday.com
-        existing_item_id = find_existing_monday_item(api_key, board_id, str(soumission_num))
+        existing_item_id = find_existing_monday_item(api_key, board_id, str(soumission_num), prenom, nom)
         if existing_item_id:
             print(f"[MONDAY] ⚠️ DOUBLON DÉTECTÉ dans Monday! L'item existe déjà (ID: {existing_item_id})")
             print(f"[MONDAY] ✓ Création ignorée pour éviter le doublon")
@@ -299,7 +541,7 @@ def create_monday_item(api_key: str, board_id: str, item_data: Dict, username: s
         import json
         column_values_json = json.dumps(column_values).replace('"', '\\"')
 
-        # Nom de l'item = seulement prénom + nom
+        # Nom de l'item = seulement prénom + nom (pas de numéro visible)
         item_name = nom_complet
 
         # Query GraphQL pour créer l'item
@@ -450,6 +692,146 @@ def create_monday_item(api_key: str, board_id: str, item_data: Dict, username: s
         import traceback
         traceback.print_exc()
         return False
+
+
+def update_monday_column(api_key: str, board_id: str, item_id: str, column_id: str, value: str) -> bool:
+    """
+    Met à jour une colonne dans un item Monday existant
+
+    Args:
+        api_key: Clé API Monday.com
+        board_id: ID du board Monday.com
+        item_id: ID de l'item à mettre à jour
+        column_id: ID de la colonne à mettre à jour
+        value: Nouvelle valeur (pour les colonnes dropdown, utiliser l'index)
+
+    Returns:
+        bool: True si succès, False sinon
+    """
+    try:
+        url = "https://api.monday.com/v2"
+        headers = {
+            "Authorization": api_key,
+            "Content-Type": "application/json"
+        }
+
+        # Pour les colonnes dropdown (provenance, type), la valeur doit être {"index": X}
+        import json
+        value_escaped = value.replace('"', '\\"')
+
+        query = f'mutation {{ change_column_value(board_id: {board_id}, item_id: {item_id}, column_id: "{column_id}", value: "{value_escaped}") {{ id }} }}'
+
+        response = requests.post(url, headers=headers, json={"query": query})
+
+        if response.status_code == 200:
+            resp_data = response.json()
+            if "errors" not in resp_data:
+                print(f"[MONDAY] Colonne {column_id} mise à jour avec succès")
+                return True
+            else:
+                print(f"[MONDAY ERROR] Erreur mise à jour colonne: {resp_data['errors']}")
+                return False
+        else:
+            print(f"[MONDAY ERROR] HTTP {response.status_code} - {response.text}")
+            return False
+
+    except Exception as e:
+        print(f"[MONDAY ERROR] Exception mise à jour colonne: {e}")
+        return False
+
+
+def update_monday_text_column(api_key: str, board_id: str, item_id: str, column_id: str, value: str) -> bool:
+    """
+    Met à jour une colonne de type TEXT dans Monday.com
+
+    Args:
+        api_key: Clé API Monday.com
+        board_id: ID du board Monday.com
+        item_id: ID de l'item à mettre à jour
+        column_id: ID de la colonne texte à mettre à jour
+        value: Nouveau texte
+
+    Returns:
+        bool: True si succès, False sinon
+    """
+    try:
+        url = "https://api.monday.com/v2"
+        headers = {
+            "Authorization": api_key,
+            "Content-Type": "application/json"
+        }
+
+        # Pour les colonnes texte, la valeur doit être une simple chaîne
+        import json
+        value_escaped = value.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+
+        query = f'mutation {{ change_simple_column_value(board_id: {board_id}, item_id: {item_id}, column_id: "{column_id}", value: "{value_escaped}") {{ id }} }}'
+
+        response = requests.post(url, headers=headers, json={"query": query})
+
+        if response.status_code == 200:
+            resp_data = response.json()
+            if "errors" not in resp_data:
+                print(f"[MONDAY] Colonne texte {column_id} mise à jour avec succès")
+                return True
+            else:
+                print(f"[MONDAY ERROR] Erreur mise à jour colonne texte: {resp_data['errors']}")
+                return False
+        else:
+            print(f"[MONDAY ERROR] HTTP {response.status_code} - {response.text}")
+            return False
+
+    except Exception as e:
+        print(f"[MONDAY ERROR] Exception mise à jour colonne texte: {e}")
+        return False
+
+
+def find_monday_item_by_soumission(username: str, soumission_num: str) -> Optional[str]:
+    """
+    Trouve l'ID d'un item Monday.com par son numéro de soumission
+
+    Args:
+        username: Username de l'entrepreneur
+        soumission_num: Numéro de soumission à rechercher
+
+    Returns:
+        Optional[str]: ID de l'item Monday si trouvé, None sinon
+    """
+    import os
+    import json
+
+    api_key, board_id = get_monday_credentials(username)
+
+    if not api_key or not board_id:
+        print(f"[MONDAY] Pas de configuration Monday.com pour {username}")
+        return None
+
+    # Charger les données du client pour avoir prenom et nom
+    prenom = None
+    nom = None
+    base_cloud = "cloud" if os.path.exists("cloud") else "data"
+
+    for category in ["acceptees", "produit"]:
+        fichier = os.path.join(f"{base_cloud}/ventes_{category}", username, "ventes.json")
+        if os.path.exists(fichier):
+            try:
+                with open(fichier, "r", encoding="utf-8") as f:
+                    ventes = json.load(f)
+                for v in ventes:
+                    if v.get("num") == soumission_num:
+                        prenom = v.get("prenom") or v.get("clientPrenom", "")
+                        nom = v.get("nom") or v.get("clientNom", "")
+                        print(f"[MONDAY DEBUG] Trouvé client: prenom='{prenom}', nom='{nom}', num='{soumission_num}'")
+                        break
+                if prenom and nom:
+                    break
+            except Exception as e:
+                print(f"[MONDAY] Erreur lecture {fichier}: {e}")
+
+    if not prenom or not nom:
+        print(f"[MONDAY DEBUG] Aucun prenom/nom trouvé pour num={soumission_num}")
+
+    return find_existing_monday_item(api_key, board_id, soumission_num, prenom, nom)
 
 
 def sync_vente_to_monday(username: str, vente_data: Dict) -> bool:

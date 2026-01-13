@@ -1238,7 +1238,7 @@ def get_entrepreneurs_list_api(
 
                                 # Taux marketing depuis year_2025 (ou annual si year_2025 n'existe pas)
                                 year_data = rpo_data.get("year_2025", rpo_data.get("annual", {}))
-                                taux_marketing_rpo = year_data.get("mktg_reel", stats["metriques"]["taux_marketing"])
+                                taux_marketing_rpo = year_data.get("mktg_reel", stats["metriques"]["taux_marketing"]) / 100
                         except Exception as e:
                             print(f"[WARNING] Erreur lecture RPO pour {username}: {e}", flush=True)
 
@@ -1665,7 +1665,7 @@ def calculate_dashboard_stats(username: str, start_date=None, end_date=None) -> 
             rpo_data = load_user_rpo_data(username)
             annual = rpo_data.get("annual", {})
 
-            stats["metriques"]["taux_marketing"] = round(float(annual.get("mktg_reel", 0)), 2)
+            stats["metriques"]["taux_marketing"] = round(float(annual.get("mktg_reel", 0)) / 100, 2)
 
             # Charger prod_horaire directement depuis RPO (comme le dashboard personnel)
             prod_horaire_rpo = float(annual.get("prod_horaire", 0))
@@ -6808,7 +6808,7 @@ def api_get_coach_equipe_dashboard(
             print(f"[DEBUG OBJECTIF] {username} -> objectif_ca depuis RPO: {objectif}")
             if objectif > 0:
                 pourcentage_objectif = round((ca_actuel / objectif) * 100, 2)
-            taux_marketing = round(float(annual.get("mktg_reel", 0)), 2)
+            taux_marketing = round(float(annual.get("mktg_reel", 0)) / 100, 2)
 
             # Calculer heures_pap_semaine: moyenne réelle par semaine (pas total cumulé)
             # Compter SEULEMENT à partir de janvier 2026 (exclure décembre 2025)

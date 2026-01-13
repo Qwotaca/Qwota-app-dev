@@ -4136,6 +4136,7 @@ def envoyer_soumission_email(
     prenom_client: str = Body(...),
     lien_pdf: str = Body(...),
     prix_str: str = Body(...),
+    depot_str: str = Body(None),  # NOUVEAU: dépôt saisi dans le formulaire
     adresse: str = Body(...),
     telephone: str = Body(...),
     language: str = Body('fr')  # Nouveau paramètre: langue de la soumission ('fr' ou 'en')
@@ -4149,16 +4150,35 @@ def envoyer_soumission_email(
         print(f"[ERROR] ERREUR conversion prix dans envoyer-soumission-email: {e} - Prix reçu: '{prix_str}'")
         prix = 0.0
 
-    # Calculer taxes selon la langue
-    tps = prix * 0.05
-    if language == 'fr':
-        tvq = prix * 0.09975
-        total_avec_taxe = prix + tps + tvq
+    # Utiliser le dépôt saisi dans le formulaire, sinon calculer 25%
+    if depot_str and depot_str.strip():
+        try:
+            depot_clean = depot_str.replace(" ", "").replace("\xa0", "").replace("$", "").replace(",", ".").strip()
+            depot = float(depot_clean)
+            print(f"[DEBUG] Dépôt depuis formulaire: '{depot_str}' -> {depot}")
+        except Exception as e:
+            print(f"[WARNING] Erreur conversion dépôt: {e}, calcul automatique à 25%")
+            # Calculer taxes selon la langue
+            tps = prix * 0.05
+            if language == 'fr':
+                tvq = prix * 0.09975
+                total_avec_taxe = prix + tps + tvq
+            else:
+                tvq = 0  # Pas de TVQ pour l'anglais
+                total_avec_taxe = prix + tps
+            depot = total_avec_taxe * 0.25
     else:
-        tvq = 0  # Pas de TVQ pour l'anglais
-        total_avec_taxe = prix + tps
+        # Calculer taxes selon la langue
+        tps = prix * 0.05
+        if language == 'fr':
+            tvq = prix * 0.09975
+            total_avec_taxe = prix + tps + tvq
+        else:
+            tvq = 0  # Pas de TVQ pour l'anglais
+            total_avec_taxe = prix + tps
+        depot = total_avec_taxe * 0.25
+        print(f"[DEBUG] Dépôt calculé automatiquement (25%): {depot}")
 
-    depot = total_avec_taxe * 0.25
     depot_fmt = format_montant(depot)
 
     # Récupérer le courriel réel de l'utilisateur depuis user_info.json

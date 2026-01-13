@@ -3713,6 +3713,28 @@
   // FONCTIONS POUR NOUVEAUX BADGES
   // ===============================
 
+  // Variable globale pour stocker les étiquettes personnalisées
+  window.etiquettesPersonnalisees = {
+    statuts: ["À traiter", "En cours", "Terminé"],
+    provenances: ["Référence", "Publicité Facebook", "Publicité Google", "Site web", "Porte-à-porte", "Kiosque", "Autre"]
+  };
+
+  // Charger les étiquettes personnalisées de l'entrepreneur
+  async function chargerEtiquettesPersonnalisees() {
+    try {
+      const response = await fetch(`/api/ventes/etiquettes/${window.username}`);
+      if (response.ok) {
+        window.etiquettesPersonnalisees = await response.json();
+        log('[VENTES] Étiquettes personnalisées chargées:', window.etiquettesPersonnalisees);
+      }
+    } catch (err) {
+      error('[VENTES] Erreur chargement étiquettes:', err);
+    }
+  }
+
+  // Charger les étiquettes au démarrage
+  chargerEtiquettesPersonnalisees();
+
   // Create statut badge
   window.createStatutBadge = function(statut, venteId, category) {
     if (!statut || statut === '-') {
@@ -3831,11 +3853,47 @@
       overflow: hidden;
     `;
 
-    const statuts = [
-      { label: 'À traiter', color: '#e2445c' },
-      { label: 'En cours', color: '#fdab3d' },
-      { label: 'Terminé', color: '#00c875' }
-    ];
+    // Utiliser les étiquettes personnalisées de l'entrepreneur
+    const labels = window.etiquettesPersonnalisees?.statuts || ['À traiter', 'En cours', 'Terminé'];
+
+    // Définir les couleurs basées sur le texte de l'étiquette
+    const getColorForStatut = (label) => {
+      const labelLower = label.toLowerCase();
+      if (labelLower.includes('terminé') || labelLower.includes('termine') || labelLower.includes('complété') || labelLower.includes('complete')) {
+        return '#00c875'; // Vert
+      } else if (labelLower.includes('en cours') || labelLower.includes('traitement') || labelLower.includes('progress')) {
+        return '#fdab3d'; // Orange
+      } else {
+        return '#e2445c'; // Rouge
+      }
+    };
+
+    const statuts = labels.map(label => ({
+      label: label,
+      color: getColorForStatut(label)
+    }));
+
+    // Créer un bouton pour gérer les étiquettes
+    const manageButton = document.createElement('div');
+    manageButton.style.cssText = `
+      padding: 12px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--primary-blue);
+      font-weight: 500;
+      border-top: 2px solid var(--border-dark);
+      transition: background 0.2s;
+    `;
+    manageButton.innerHTML = '<i class="fas fa-cog"></i><span>Gérer les étiquettes</span>';
+    manageButton.addEventListener('mouseenter', () => manageButton.style.background = 'rgba(59, 130, 246, 0.2)');
+    manageButton.addEventListener('mouseleave', () => manageButton.style.background = 'rgba(59, 130, 246, 0.1)');
+    manageButton.addEventListener('click', () => {
+      dropdown.remove();
+      ouvrirGestionEtiquettes();
+    });
 
     statuts.forEach(statut => {
       const option = document.createElement('div');
@@ -3905,6 +3963,9 @@
       dropdown.appendChild(option);
     });
 
+    // Ajouter le bouton de gestion à la fin
+    dropdown.appendChild(manageButton);
+
     document.body.appendChild(dropdown);
 
     if (event && event.target) {
@@ -3941,7 +4002,8 @@
       overflow: hidden;
     `;
 
-    const provenances = [
+    // Utiliser les étiquettes personnalisées de l'entrepreneur
+    const provenances = window.etiquettesPersonnalisees?.provenances || [
       'Référence',
       'Publicité Facebook',
       'Publicité Google',
@@ -3950,6 +4012,28 @@
       'Kiosque',
       'Autre'
     ];
+
+    // Ajouter un bouton pour gérer les étiquettes
+    const manageButton = document.createElement('div');
+    manageButton.style.cssText = `
+      padding: 12px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--primary-blue);
+      font-weight: 500;
+      border-top: 2px solid var(--border-dark);
+      transition: background 0.2s;
+    `;
+    manageButton.innerHTML = '<i class="fas fa-cog"></i><span>Gérer les étiquettes</span>';
+    manageButton.addEventListener('mouseenter', () => manageButton.style.background = 'rgba(59, 130, 246, 0.2)');
+    manageButton.addEventListener('mouseleave', () => manageButton.style.background = 'rgba(59, 130, 246, 0.1)');
+    manageButton.addEventListener('click', () => {
+      dropdown.remove();
+      ouvrirGestionEtiquettes();
+    });
 
     provenances.forEach(prov => {
       const option = document.createElement('div');
@@ -4009,6 +4093,9 @@
 
       dropdown.appendChild(option);
     });
+
+    // Ajouter le bouton de gestion à la fin
+    dropdown.appendChild(manageButton);
 
     document.body.appendChild(dropdown);
 
@@ -4225,6 +4312,231 @@
     });
   };
 
+  // Fonction pour ouvrir la gestion des étiquettes personnalisées
+  window.ouvrirGestionEtiquettes = function() {
+    const modal = document.createElement('div');
+    modal.id = 'etiquettes-modal';
+    modal.style.cssText = `
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(5px);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow-y: auto;
+    `;
+
+    const currentStatuts = [...window.etiquettesPersonnalisees.statuts];
+    const currentProvenances = [...window.etiquettesPersonnalisees.provenances];
+
+    modal.innerHTML = `
+      <div class="status-card p-6" style="width: 90%; max-width: 700px; max-height: 85vh; overflow-y: auto;">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-xl font-bold" style="color: var(--text-light);">
+            <i class="fas fa-tags mr-2" style="color: var(--primary-blue);"></i>
+            Gérer les étiquettes personnalisées
+          </h3>
+          <button onclick="document.getElementById('etiquettes-modal').remove(); document.body.style.overflow = '';"
+            class="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+            style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <!-- Section Statuts -->
+        <div class="mb-6">
+          <h4 class="font-bold mb-3" style="color: var(--text-light); font-size: 1.1rem;">
+            <i class="fas fa-circle-notch mr-2" style="color: var(--primary-blue);"></i>
+            Statuts de vente
+          </h4>
+          <div id="statuts-list" class="mb-3"></div>
+          <div class="flex gap-2">
+            <input
+              type="text"
+              id="nouveau-statut-input"
+              placeholder="Nouvelle étiquette de statut..."
+              style="
+                flex: 1;
+                padding: 10px;
+                border-radius: 6px;
+                background: #0f172a;
+                border: 2px solid var(--border-dark);
+                color: var(--text-light);
+                font-size: 0.875rem;
+              "
+            />
+            <button
+              id="add-statut-btn"
+              class="px-4 py-2 rounded-lg transition-colors"
+              style="background: var(--primary-blue); color: white;">
+              <i class="fas fa-plus"></i> Ajouter
+            </button>
+          </div>
+        </div>
+
+        <!-- Section Provenances -->
+        <div class="mb-6">
+          <h4 class="font-bold mb-3" style="color: var(--text-light); font-size: 1.1rem;">
+            <i class="fas fa-map-marker-alt mr-2" style="color: var(--primary-blue);"></i>
+            Provenances
+          </h4>
+          <div id="provenances-list" class="mb-3"></div>
+          <div class="flex gap-2">
+            <input
+              type="text"
+              id="nouvelle-provenance-input"
+              placeholder="Nouvelle provenance..."
+              style="
+                flex: 1;
+                padding: 10px;
+                border-radius: 6px;
+                background: #0f172a;
+                border: 2px solid var(--border-dark);
+                color: var(--text-light);
+                font-size: 0.875rem;
+              "
+            />
+            <button
+              id="add-provenance-btn"
+              class="px-4 py-2 rounded-lg transition-colors"
+              style="background: var(--primary-blue); color: white;">
+              <i class="fas fa-plus"></i> Ajouter
+            </button>
+          </div>
+        </div>
+
+        <!-- Boutons d'action -->
+        <div class="flex gap-3 mt-6">
+          <button
+            onclick="document.getElementById('etiquettes-modal').remove(); document.body.style.overflow = '';"
+            class="px-4 py-2 rounded-lg transition-colors"
+            style="background: rgba(71, 85, 105, 0.2); color: var(--text-light);">
+            Annuler
+          </button>
+          <button
+            id="save-etiquettes-btn"
+            class="px-4 py-2 rounded-lg transition-colors"
+            style="background: var(--primary-blue); color: white; flex: 1;">
+            <i class="fas fa-save mr-2"></i>Enregistrer les modifications
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+
+    // Variables temporaires pour stocker les modifications
+    let tempStatuts = [...currentStatuts];
+    let tempProvenances = [...currentProvenances];
+
+    // Fonction pour afficher la liste des statuts
+    function afficherStatuts() {
+      const liste = document.getElementById('statuts-list');
+      liste.innerHTML = tempStatuts.map((statut, index) => `
+        <div class="flex items-center gap-2 mb-2 p-2 rounded" style="background: rgba(30, 41, 59, 0.5);">
+          <span class="flex-1" style="color: var(--text-light);">${statut}</span>
+          <button
+            onclick="event.target.closest('.flex').remove(); window.tempStatuts.splice(${index}, 1); this.afficherStatuts();"
+            class="px-2 py-1 rounded transition-colors"
+            style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    // Fonction pour afficher la liste des provenances
+    function afficherProvenances() {
+      const liste = document.getElementById('provenances-list');
+      liste.innerHTML = tempProvenances.map((prov, index) => `
+        <div class="flex items-center gap-2 mb-2 p-2 rounded" style="background: rgba(30, 41, 59, 0.5);">
+          <span class="flex-1" style="color: var(--text-light);">${prov}</span>
+          <button
+            onclick="event.target.closest('.flex').remove(); window.tempProvenances.splice(${index}, 1); this.afficherProvenances();"
+            class="px-2 py-1 rounded transition-colors"
+            style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    // Exposer les variables temporaires globalement pour les handlers de suppression
+    window.tempStatuts = tempStatuts;
+    window.tempProvenances = tempProvenances;
+
+    // Afficher les listes initiales
+    afficherStatuts();
+    afficherProvenances();
+
+    // Ajouter un statut
+    document.getElementById('add-statut-btn').addEventListener('click', () => {
+      const input = document.getElementById('nouveau-statut-input');
+      const valeur = input.value.trim();
+      if (valeur && !tempStatuts.includes(valeur)) {
+        tempStatuts.push(valeur);
+        window.tempStatuts = tempStatuts;
+        afficherStatuts();
+        input.value = '';
+      }
+    });
+
+    // Ajouter une provenance
+    document.getElementById('add-provenance-btn').addEventListener('click', () => {
+      const input = document.getElementById('nouvelle-provenance-input');
+      const valeur = input.value.trim();
+      if (valeur && !tempProvenances.includes(valeur)) {
+        tempProvenances.push(valeur);
+        window.tempProvenances = tempProvenances;
+        afficherProvenances();
+        input.value = '';
+      }
+    });
+
+    // Ajouter avec Enter
+    document.getElementById('nouveau-statut-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') document.getElementById('add-statut-btn').click();
+    });
+    document.getElementById('nouvelle-provenance-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') document.getElementById('add-provenance-btn').click();
+    });
+
+    // Sauvegarder les modifications
+    document.getElementById('save-etiquettes-btn').addEventListener('click', async () => {
+      try {
+        const response = await fetch('/api/ventes/etiquettes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: window.username,
+            statuts: tempStatuts,
+            provenances: tempProvenances
+          })
+        });
+
+        if (response.ok) {
+          log('[VENTES] ✅ Étiquettes sauvegardées');
+          // Mettre à jour les étiquettes globales
+          window.etiquettesPersonnalisees.statuts = tempStatuts;
+          window.etiquettesPersonnalisees.provenances = tempProvenances;
+          modal.remove();
+          document.body.style.overflow = '';
+          // Recharger les données pour refléter les changements
+          await loadVentesDataInternal();
+        } else {
+          error('[VENTES] ❌ Erreur sauvegarde étiquettes');
+          alert('Erreur lors de la sauvegarde des étiquettes');
+        }
+      } catch (err) {
+        error('[VENTES] ❌ Erreur réseau:', err);
+        alert('Erreur réseau lors de la sauvegarde');
+      }
+    });
+  };
+
   // Event delegation for all new badges
   document.addEventListener('click', function(event) {
     const statutBadge = event.target.closest('.statut-vente-badge');
@@ -4330,26 +4642,28 @@
         const nomComplet = `${prospect.prenom || ''} ${prospect.nom || ''}`.trim() || '-';
         const prospectId = prospect.id || prospect.num || `prospect-${Math.random()}`;
 
-        // Créer les badges pour les nouvelles colonnes
-        const statutBadge = createStatutBadge(prospect.statut_vente || 'À traiter', prospectId, 'prospects');
+        // Pour les prospects, pas de badges pour statut et type travaux
         const provenanceBadge = createProvenanceBadge(prospect.provenance || 'Non définie', prospectId, 'prospects');
-        const typeTravauxBadge = createTypeTravauxBadge(prospect.type_travaux || 'Non défini', prospectId, 'prospects');
-        const notesText = prospect.notes || '-';
+        const notesText = prospect.notes || '';
+        const hasNotes = notesText && notesText.trim() !== '';
 
         return `
         <tr style="cursor: pointer;" onclick='showClientDetails(${index}, "prospects")'>
           <td data-label="Nom" style="width: 12%;">${nomComplet}</td>
-          <td data-label="Statut" style="width: 10%;" onclick="event.stopPropagation()">${statutBadge}</td>
+          <td data-label="Statut" style="width: 10%;">-</td>
           <td data-label="Provenance" style="width: 10%;" onclick="event.stopPropagation()">${provenanceBadge}</td>
-          <td data-label="Type travaux" style="width: 10%;" onclick="event.stopPropagation()">${typeTravauxBadge}</td>
+          <td data-label="Type travaux" style="width: 10%;">-</td>
           <td data-label="Téléphone" style="width: 10%;">${prospect.telephone || '-'}</td>
           <td data-label="Adresse" style="width: 25%;">${prospect.adresse || '-'}</td>
           <td data-label="Notes" style="width: 13%;" onclick="event.stopPropagation()">
-            <span class="notes-text" style="font-size: 0.875rem; color: var(--text-gray); cursor: pointer;"
-              onclick="editNotes('${prospectId}', 'prospects', \`${notesText.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`)"
-              title="Cliquer pour modifier">
-              ${notesText.length > 30 ? notesText.substring(0, 30) + '...' : notesText}
-            </span>
+            <div style="position: relative; display: inline-block;">
+              <i class="fas fa-comment-dots"
+                style="font-size: 1.2rem; color: ${hasNotes ? 'var(--primary-blue)' : 'var(--text-gray)'}; cursor: pointer;"
+                onclick="editNotes('${prospectId}', 'prospects', \`${notesText.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`)"
+                title="${hasNotes ? 'Voir/modifier la note' : 'Ajouter une note'}">
+              </i>
+              ${hasNotes ? '<span style="position: absolute; top: -5px; right: -8px; background: #ef4444; color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold;">1</span>' : ''}
+            </div>
           </td>
           <td data-label="Paiement" style="width: 10%;">-</td>
         </tr>
@@ -4429,7 +4743,8 @@
         const statutBadge = createStatutBadge(vente.statut_vente || 'À traiter', venteId, category);
         const provenanceBadge = createProvenanceBadge(vente.provenance || 'Non définie', venteId, category);
         const typeTravauxBadge = createTypeTravauxBadge(vente.type_travaux || 'Non défini', venteId, category);
-        const notesText = vente.notes || '-';
+        const notesText = vente.notes || '';
+        const hasNotes = notesText && notesText.trim() !== '';
 
         return `
         <tr style="cursor: pointer;" onclick='showClientDetails(${index}, "${category}")'>
@@ -4440,11 +4755,14 @@
           <td data-label="Téléphone" style="width: 10%;">${vente.telephone || '-'}</td>
           <td data-label="Adresse" style="width: 25%;">${vente.adresse || '-'}</td>
           <td data-label="Notes" style="width: 13%;" onclick="event.stopPropagation()">
-            <span class="notes-text" style="font-size: 0.875rem; color: var(--text-gray); cursor: pointer;"
-              onclick="editNotes('${venteId}', '${category}', \`${notesText.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`)"
-              title="Cliquer pour modifier">
-              ${notesText.length > 30 ? notesText.substring(0, 30) + '...' : notesText}
-            </span>
+            <div style="position: relative; display: inline-block;">
+              <i class="fas fa-comment-dots"
+                style="font-size: 1.2rem; color: ${hasNotes ? 'var(--primary-blue)' : 'var(--text-gray)'}; cursor: pointer;"
+                onclick="editNotes('${venteId}', '${category}', \`${notesText.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`)"
+                title="${hasNotes ? 'Voir/modifier la note' : 'Ajouter une note'}">
+              </i>
+              ${hasNotes ? '<span style="position: absolute; top: -5px; right: -8px; background: #ef4444; color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold;">1</span>' : ''}
+            </div>
           </td>
           <td data-label="Paiement" style="width: 10%;" onclick="event.stopPropagation()">${badgePaiement}</td>
         </tr>

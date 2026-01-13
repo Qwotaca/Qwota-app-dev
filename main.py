@@ -20603,6 +20603,73 @@ async def update_notes(data: dict = Body(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/ventes/etiquettes/{username}")
+def get_etiquettes_entrepreneur(username: str):
+    """
+    Récupère les étiquettes personnalisées d'un entrepreneur
+    """
+    try:
+        fichier_etiquettes = os.path.join(f"{base_cloud}/ventes_etiquettes", username, "etiquettes.json")
+
+        # Étiquettes par défaut si le fichier n'existe pas
+        etiquettes_defaut = {
+            "statuts": ["À traiter", "En cours", "Terminé"],
+            "provenances": ["Référence", "Publicité Facebook", "Publicité Google", "Site web", "Porte-à-porte", "Kiosque", "Autre"]
+        }
+
+        if not os.path.exists(fichier_etiquettes):
+            # Créer le fichier avec les valeurs par défaut
+            os.makedirs(os.path.dirname(fichier_etiquettes), exist_ok=True)
+            with open(fichier_etiquettes, "w", encoding="utf-8") as f:
+                json.dump(etiquettes_defaut, f, ensure_ascii=False, indent=2)
+            return etiquettes_defaut
+
+        with open(fichier_etiquettes, "r", encoding="utf-8") as f:
+            etiquettes = json.load(f)
+
+        return etiquettes
+
+    except Exception as e:
+        print(f"[ERREUR get_etiquettes_entrepreneur] {e}")
+        # Retourner les étiquettes par défaut en cas d'erreur
+        return {
+            "statuts": ["À traiter", "En cours", "Terminé"],
+            "provenances": ["Référence", "Publicité Facebook", "Publicité Google", "Site web", "Porte-à-porte", "Kiosque", "Autre"]
+        }
+
+
+@app.post("/api/ventes/etiquettes")
+async def save_etiquettes_entrepreneur(data: dict = Body(...)):
+    """
+    Sauvegarde les étiquettes personnalisées d'un entrepreneur
+    """
+    try:
+        username = data.get("username")
+        statuts = data.get("statuts", [])
+        provenances = data.get("provenances", [])
+
+        if not username:
+            raise HTTPException(status_code=400, detail="Username requis")
+
+        fichier_etiquettes = os.path.join(f"{base_cloud}/ventes_etiquettes", username, "etiquettes.json")
+        os.makedirs(os.path.dirname(fichier_etiquettes), exist_ok=True)
+
+        etiquettes = {
+            "statuts": statuts,
+            "provenances": provenances
+        }
+
+        with open(fichier_etiquettes, "w", encoding="utf-8") as f:
+            json.dump(etiquettes, f, ensure_ascii=False, indent=2)
+
+        print(f"[VENTES] Étiquettes sauvegardées pour {username}")
+        return {"success": True, "message": "Étiquettes sauvegardées"}
+
+    except Exception as e:
+        print(f"[ERREUR save_etiquettes_entrepreneur] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/ventes/marquer-perdu")
 async def marquer_vente_perdue(data: dict = Body(...)):
     """

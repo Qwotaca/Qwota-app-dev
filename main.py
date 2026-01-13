@@ -7001,6 +7001,7 @@ def api_get_coach_equipe_dashboard(
             "objectif_total": round(team_total_objectif, 2),
             "estimation_moyenne": estimation_moyenne_equipe,
             "heures_pap_semaine": heures_pap_moyenne_equipe,
+            "total_heures_marketing_absolue": round(team_total_heures_marketing_absolue, 2),
             "taux_vente_moyen": taux_vente_moyen_equipe,
             "prod_horaire_moyen": prod_horaire_moyen_equipe,
             "taux_marketing_moyen": taux_marketing_moyen_equipe,

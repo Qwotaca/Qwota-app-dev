@@ -1355,7 +1355,7 @@ def get_coaches_list_api():
                     taux_marketing_moyen = team_taux_marketing_total / nb_entrepreneurs if nb_entrepreneurs > 0 else 0
                     taux_vente_moyen = team_taux_vente_total / nb_entrepreneurs if nb_entrepreneurs > 0 else 0
                     prod_horaire_moyen = team_prod_horaire_total / nb_entrepreneurs if nb_entrepreneurs > 0 else 0
-                    contrat_moyen_equipe = team_ca_actuel / team_soumissions_signees if team_soumissions_signees > 0 else 0
+                    contrat_moyen_equipe = team_ca_actuel / nb_entrepreneurs if nb_entrepreneurs > 0 else 0
                     estimation_moyenne_equipe = round(team_total_estimations / team_estimation_count, 2) if team_estimation_count > 0 else 0
 
                     # Récupérer la photo de profil et les informations du coach
@@ -6966,13 +6966,13 @@ def api_get_coach_equipe_dashboard(
     # Calculer les moyennes d'équipe
     nb_entrepreneurs = len(entrepreneurs_data)
     moyenne_etoiles_equipe = round(team_total_etoiles / team_total_avis, 1) if team_total_avis > 0 else 0.0
-    contrat_moyen_equipe = round(team_total_ca / team_total_signees, 2) if team_total_signees > 0 else 0
+    contrat_moyen_equipe = round(team_total_ca / nb_entrepreneurs, 2) if nb_entrepreneurs > 0 else 0
     total_potentiel_equipe = team_total_signees + team_total_attente + team_total_perdus
     taux_vente_moyen_equipe = round((team_total_signees / total_potentiel_equipe) * 100, 2) if total_potentiel_equipe > 0 else 0
 
     # Nouvelles moyennes d'équipe
-    # Contrat moyen = Total CA / Nombre de soumissions signées
-    ca_moyen_equipe = round(team_total_ca / team_total_signees, 2) if team_total_signees > 0 else 0
+    # Contrat moyen = Total CA / Nombre d'entrepreneurs
+    ca_moyen_equipe = round(team_total_ca / nb_entrepreneurs, 2) if nb_entrepreneurs > 0 else 0
     # Estimation moyenne = nombre moyen d'estimations par entrepreneur (seulement ceux qui ont au moins 1 estimation)
     estimation_moyenne_equipe = round(team_total_estimations / team_estimation_count, 2) if team_estimation_count > 0 else 0
     heures_pap_moyenne_equipe = round(team_total_heures_pap / nb_entrepreneurs, 2) if nb_entrepreneurs > 0 else 0

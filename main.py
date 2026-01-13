@@ -1108,9 +1108,10 @@ def get_entrepreneurs_list_api(
                     # Calculer les stats dashboard pour cet entrepreneur avec filtrage par période
                     stats = calculate_dashboard_stats(username, start_date, end_date)
 
-                    # Charger le prénom et nom depuis user_info.json
+                    # Charger le prénom, nom et grade depuis user_info.json
                     prenom = ""
                     nom = ""
+                    grade = ""
                     info_file = os.path.join(base_cloud, "signatures", username, "user_info.json")
                     try:
                         if os.path.exists(info_file):
@@ -1118,6 +1119,7 @@ def get_entrepreneurs_list_api(
                                 user_info = json.load(f)
                                 prenom = user_info.get("prenom", "")
                                 nom = user_info.get("nom", "")
+                                grade = user_info.get("grade", "")
                     except Exception as e:
                         print(f"[WARNING] Erreur lecture user_info pour {username}: {e}", flush=True)
 
@@ -1249,6 +1251,7 @@ def get_entrepreneurs_list_api(
                         "username": nom_complet,  # Afficher le nom complet au lieu du username
                         "login_username": username,  # Username de connexion pour les photos de profil
                         "role": role,
+                        "grade": grade,  # Grade depuis user_info.json
                         "ca_actuel": stats["chiffre_affaires"]["ca_actuel"],
                         "objectif": stats["chiffre_affaires"]["objectif"],
                         "montant_produit": montant_produit,  # Montant des ventes produit uniquement
@@ -7034,7 +7037,7 @@ def api_get_coach_equipe_dashboard(
     # Calculer les moyennes d'équipe
     nb_entrepreneurs = len(entrepreneurs_data)
     moyenne_etoiles_equipe = round(team_total_etoiles / team_total_avis, 1) if team_total_avis > 0 else 0.0
-    contrat_moyen_equipe = round(team_total_ca / nb_entrepreneurs, 2) if nb_entrepreneurs > 0 else 0
+    contrat_moyen_equipe = round(team_total_ca / team_total_signees, 2) if team_total_signees > 0 else 0
     total_potentiel_equipe = team_total_signees + team_total_attente + team_total_perdus
     taux_vente_moyen_equipe = round((team_total_signees / total_potentiel_equipe) * 100, 2) if total_potentiel_equipe > 0 else 0
 
@@ -22884,5 +22887,6 @@ async def get_language_preference(username: str = Query(...)):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8080, log_level="info")
+
 
 

@@ -5674,26 +5674,21 @@
           log(`[WARNING] Utilisateur ${currentUsername} non trouvé dans classementData`);
         }
 
-        // IMPORTANT: Charger les grades AVANT de trier pour que le filtre fonctionne
-        log('[CLASSEMENT] Chargement des grades pour tous les entrepreneurs...');
-        const gradePromises = classementData.map(async (entrepreneur) => {
-          const loginUsername = entrepreneur.login_username || entrepreneur.username;
-          try {
-            const userInfoResponse = await fetch(`/api/user-info/${loginUsername}`);
-            if (userInfoResponse.ok) {
-              const userInfo = await userInfoResponse.json();
-              entrepreneur.grade = userInfo.grade || 'recrue';
-              log(`[GRADE] ${loginUsername}: ${entrepreneur.grade}`);
-            } else {
-              entrepreneur.grade = 'recrue';
-            }
-          } catch (err) {
-            entrepreneur.grade = 'recrue';
-            log(`[GRADE] Erreur pour ${loginUsername}, grade par défaut: recrue`);
-          }
-        });
-        await Promise.all(gradePromises);
-        log('[CLASSEMENT] Grades chargés pour', classementData.length, 'entrepreneurs');
+        // Les grades sont maintenant inclus dans la réponse de l'API /api/entrepreneurs
+        // Pas besoin d'appels supplémentaires sauf pour les coaches (qui n'ont pas de grade)
+        if (isDashboardQualiteEtudiants) {
+          // Pour les coaches, pas de grade (mettre une valeur par défaut)
+          classementData.forEach(entrepreneur => {
+            entrepreneur.grade = entrepreneur.grade || 'coach';
+          });
+        } else {
+          // Pour les entrepreneurs, le grade est déjà inclus depuis l'API
+          // Définir une valeur par défaut seulement si vide
+          classementData.forEach(entrepreneur => {
+            entrepreneur.grade = entrepreneur.grade || 'recrue';
+          });
+        }
+        log('[CLASSEMENT] Grades configurés pour', classementData.length, 'utilisateurs');
 
         await sortClassement('ca'); // Trier par CA par défaut
       } catch (error) {
@@ -9391,34 +9386,67 @@ async function renderCoachClassementCards() {
         throw new Error(`Erreur API: ${response.status}`);
       }
       allEntrepreneurs = await response.json();
-      log(`📊 ${allEntrepreneurs.length} entrepreneurs chargés`);
+      console.log(`📊 [GRADE DEBUG] ${allEntrepreneurs.length} entrepreneurs chargés AVANT filtrage`);
 
-      // Filtrer pour ne garder que ceux avec nom complet
-      allEntrepreneurs = allEntrepreneurs.filter(e => e.username && e.username.includes(' '));
+      // Debug: afficher les grades disponibles AVANT tout filtrage
+      const gradesDisponibles = {};
+      allEntrepreneurs.forEach(e => {
+        const grade = e.grade || 'vide';
+        gradesDisponibles[grade] = (gradesDisponibles[grade] || 0) + 1;
+        console.log(`   [GRADE] ${e.username}: grade="${e.grade}", role="${e.role}"`);
+      });
+      console.log(`📋 [GRADE DEBUG] Grades disponibles dans les données brutes:`, gradesDisponibles);
+      console.log(`🔍 [GRADE DEBUG] currentCoachScope="${currentCoachScope}", currentCoachFilter="${currentCoachFilter}"`);
 
-      // Si on a un filtre de grade, filtrer par grade depuis user_info.json
-      if (currentCoachScope === 'grade' && currentCoachFilter) {
-        log(`🎯 Filtrage par grade: ${currentCoachFilter}`);
-        const filteredByGrade = [];
-
-        for (const entrepreneur of allEntrepreneurs) {
-          try {
-            const userInfoResponse = await fetch(`/api/user-info/${entrepreneur.login_username}`);
-            if (userInfoResponse.ok) {
-              const userInfo = await userInfoResponse.json();
-              const grade = userInfo.grade || '';
-
-              if (grade === currentCoachFilter) {
-                filteredByGrade.push(entrepreneur);
-              }
-            }
-          } catch (err) {
-            log(`Erreur grade pour ${entrepreneur.username}`);
-          }
+      // Filtrer pour ne garder que ceux avec nom complet ET exclure les coaches
+      const beforeRoleFilter = allEntrepreneurs.length;
+      allEntrepreneurs = allEntrepreneurs.filter(e => {
+        const hasFullName = e.username && e.username.includes(' ');
+        const isNotCoach = e.role !== 'coach' && e.role !== 'direction';
+        const keep = hasFullName && isNotCoach;
+        if (!keep) {
+          console.log(`   [FILTER OUT] ${e.username}: hasFullName=${hasFullName}, isNotCoach=${isNotCoach}`);
         }
+        return keep;
+      });
+      console.log(`🔍 [GRADE DEBUG] Après filtre rôle: ${beforeRoleFilter} -> ${allEntrepreneurs.length}`);
 
-        allEntrepreneurs = filteredByGrade;
-        log(`📊 ${allEntrepreneurs.length} entrepreneurs avec grade "${currentCoachFilter}"`);
+      // Si on a un filtre de grade, filtrer par grade depuis les données déjà chargées
+      if (currentCoachScope === 'grade' && currentCoachFilter) {
+        console.log(`🎯 [GRADE DEBUG] FILTRAGE PAR GRADE ACTIVÉ: "${currentCoachFilter}"`);
+
+        // Debug: afficher tous les grades avant le filtre
+        const gradesAvantFiltre = allEntrepreneurs.map(e => ({
+          username: e.username,
+          grade: e.grade,
+          role: e.role
+        }));
+        console.log(`📋 [GRADE DEBUG] Grades AVANT filtre de grade (${allEntrepreneurs.length} entrepreneurs):`, gradesAvantFiltre);
+
+        const beforeGradeFilter = allEntrepreneurs.length;
+        // Filtrer avec mapping des grades (ex: rookie = recrue)
+        allEntrepreneurs = allEntrepreneurs.filter(e => {
+          const grade = e.grade || '';
+          console.log(`   [GRADE CHECK] ${e.username}: grade="${grade}" vs filter="${currentCoachFilter}"`);
+
+          // Mapping pour gérer les variations de noms de grades
+          let matches = false;
+          if (currentCoachFilter === 'recrue') {
+            matches = grade === 'recrue' || grade === 'rookie';
+          } else if (currentCoachFilter === 'senior1') {
+            matches = grade === 'senior1';
+          } else if (currentCoachFilter === 'senior2') {
+            matches = grade === 'senior2';
+          } else if (currentCoachFilter === 'senior3') {
+            matches = grade === 'senior3';
+          } else {
+            matches = grade === currentCoachFilter;
+          }
+
+          console.log(`      -> matches=${matches}`);
+          return matches;
+        });
+        console.log(`📊 [GRADE DEBUG] Après filtre de grade: ${beforeGradeFilter} -> ${allEntrepreneurs.length}`);
       }
     }
 

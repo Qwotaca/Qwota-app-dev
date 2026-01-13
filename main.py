@@ -7009,7 +7009,8 @@ def api_get_coach_equipe_dashboard(
                 "prod_horaire": prod_horaire,
                 "taux_marketing": taux_marketing,
                 "estimations": estimation_count,
-                "heures_pap_semaine": heures_pap_semaine
+                "heures_pap_semaine": heures_pap_semaine,
+                "heures_pap": round(total_heures_pap, 2)  # Total absolu des heures PAP
             }
         })
 

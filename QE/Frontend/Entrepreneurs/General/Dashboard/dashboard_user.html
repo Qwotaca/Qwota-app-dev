@@ -8785,7 +8785,8 @@ async function renderCoachClassementCoachCards() {
           totalSignees += e.status_soumissions?.signees || 0;
           totalAttente += e.status_soumissions?.en_attente || 0;
           totalPerdues += e.status_soumissions?.perdus || 0;
-          totalPAP += e.metriques?.heures_pap_semaine || 0;
+          // Accumuler les heures PAP totales (pas heures/semaine)
+          totalPAP += e.metriques?.heures_pap || 0;
 
           if (e.metriques?.contrat_moyen) {
             sommeMoyenneContrat += e.metriques.contrat_moyen;
@@ -8799,10 +8800,6 @@ async function renderCoachClassementCoachCards() {
             sommeProdHoraire += e.metriques.prod_horaire;
             countProdHoraire++;
           }
-          if (e.metriques?.taux_marketing) {
-            sommeTauxMarketing += e.metriques.taux_marketing;
-            countTauxMarketing++;
-          }
           if (e.satisfaction?.etoiles_moyennes) {
             sommeEtoiles += e.satisfaction.etoiles_moyennes * (e.satisfaction.nombre_avis || 1);
             totalAvis += e.satisfaction.nombre_avis || 1;
@@ -8813,6 +8810,10 @@ async function renderCoachClassementCoachCards() {
         const nomComplet = coach.prenom && coach.nom
           ? `${coach.prenom} ${coach.nom}`
           : (coach.prenom || coach.nom || coach.username);
+
+        // Calculer le taux marketing global: Total estimations / Total heures PAP
+        const totalEstimations = totalSignees + totalAttente + totalPerdues;
+        const tauxMarketingGlobal = totalPAP > 0 ? totalEstimations / totalPAP : 0;
 
         return {
           username: nomComplet,
@@ -8827,7 +8828,7 @@ async function renderCoachClassementCoachCards() {
           contrat_moyen: countMoyenneContrat > 0 ? sommeMoyenneContrat / countMoyenneContrat : 0,
           taux_vente: countTauxVente > 0 ? sommeTauxVente / countTauxVente : 0,
           prod_horaire: countProdHoraire > 0 ? sommeProdHoraire / countProdHoraire : 0,
-          taux_marketing: countTauxMarketing > 0 ? sommeTauxMarketing / countTauxMarketing : 0,
+          taux_marketing: tauxMarketingGlobal,
           heures_pap: totalPAP
         };
       } catch (error) {

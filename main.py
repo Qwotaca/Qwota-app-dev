@@ -20415,6 +20415,194 @@ async def update_statut_paiement_vente(data: dict = Body(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/ventes/update-statut-vente")
+async def update_statut_vente(data: dict = Body(...)):
+    """
+    Met à jour le statut de vente (À traiter, En cours, Terminé)
+    """
+    try:
+        username = data.get("username")
+        vente_id = data.get("id")
+        nouveau_statut = data.get("statut")
+        category = data.get("category")
+
+        if not username or not vente_id or not nouveau_statut or not category:
+            raise HTTPException(status_code=400, detail="Paramètres manquants")
+
+        # Gérer les prospects
+        if category == "prospects":
+            fichier = os.path.join(f"{base_cloud}/prospects", username, "prospects.json")
+        else:
+            fichier = os.path.join(f"{base_cloud}/ventes_{category}", username, "ventes.json")
+
+        if not os.path.exists(fichier):
+            raise HTTPException(status_code=404, detail=f"Fichier non trouvé")
+
+        with open(fichier, "r", encoding="utf-8") as f:
+            items = json.load(f)
+
+        item_trouve = False
+        for item in items:
+            if item.get("id") == vente_id or item.get("num") == vente_id:
+                item["statut_vente"] = nouveau_statut
+                item_trouve = True
+                break
+
+        if not item_trouve:
+            raise HTTPException(status_code=404, detail="Item non trouvé")
+
+        with open(fichier, "w", encoding="utf-8") as f:
+            json.dump(items, f, ensure_ascii=False, indent=2)
+
+        print(f"[VENTES] Statut vente mis à jour pour {username}/{vente_id}: {nouveau_statut}")
+        return {"success": True, "message": "Statut de vente mis à jour"}
+
+    except Exception as e:
+        print(f"[ERREUR update_statut_vente] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/ventes/update-provenance")
+async def update_provenance(data: dict = Body(...)):
+    """
+    Met à jour la provenance d'une vente
+    """
+    try:
+        username = data.get("username")
+        vente_id = data.get("id")
+        nouvelle_provenance = data.get("provenance")
+        category = data.get("category")
+
+        if not username or not vente_id or not nouvelle_provenance or not category:
+            raise HTTPException(status_code=400, detail="Paramètres manquants")
+
+        # Gérer les prospects
+        if category == "prospects":
+            fichier = os.path.join(f"{base_cloud}/prospects", username, "prospects.json")
+        else:
+            fichier = os.path.join(f"{base_cloud}/ventes_{category}", username, "ventes.json")
+
+        if not os.path.exists(fichier):
+            raise HTTPException(status_code=404, detail=f"Fichier non trouvé")
+
+        with open(fichier, "r", encoding="utf-8") as f:
+            items = json.load(f)
+
+        item_trouve = False
+        for item in items:
+            if item.get("id") == vente_id or item.get("num") == vente_id:
+                item["provenance"] = nouvelle_provenance
+                item_trouve = True
+                break
+
+        if not item_trouve:
+            raise HTTPException(status_code=404, detail="Item non trouvé")
+
+        with open(fichier, "w", encoding="utf-8") as f:
+            json.dump(items, f, ensure_ascii=False, indent=2)
+
+        print(f"[VENTES] Provenance mise à jour pour {username}/{vente_id}: {nouvelle_provenance}")
+        return {"success": True, "message": "Provenance mise à jour"}
+
+    except Exception as e:
+        print(f"[ERREUR update_provenance] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/ventes/update-type-travaux")
+async def update_type_travaux(data: dict = Body(...)):
+    """
+    Met à jour le type de travaux d'une vente
+    """
+    try:
+        username = data.get("username")
+        vente_id = data.get("id")
+        nouveau_type = data.get("type_travaux")
+        category = data.get("category")
+
+        if not username or not vente_id or not nouveau_type or not category:
+            raise HTTPException(status_code=400, detail="Paramètres manquants")
+
+        # Gérer les prospects
+        if category == "prospects":
+            fichier = os.path.join(f"{base_cloud}/prospects", username, "prospects.json")
+        else:
+            fichier = os.path.join(f"{base_cloud}/ventes_{category}", username, "ventes.json")
+
+        if not os.path.exists(fichier):
+            raise HTTPException(status_code=404, detail=f"Fichier non trouvé")
+
+        with open(fichier, "r", encoding="utf-8") as f:
+            items = json.load(f)
+
+        item_trouve = False
+        for item in items:
+            if item.get("id") == vente_id or item.get("num") == vente_id:
+                item["type_travaux"] = nouveau_type
+                item_trouve = True
+                break
+
+        if not item_trouve:
+            raise HTTPException(status_code=404, detail="Item non trouvé")
+
+        with open(fichier, "w", encoding="utf-8") as f:
+            json.dump(items, f, ensure_ascii=False, indent=2)
+
+        print(f"[VENTES] Type travaux mis à jour pour {username}/{vente_id}: {nouveau_type}")
+        return {"success": True, "message": "Type de travaux mis à jour"}
+
+    except Exception as e:
+        print(f"[ERREUR update_type_travaux] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/ventes/update-notes")
+async def update_notes(data: dict = Body(...)):
+    """
+    Met à jour les notes d'une vente
+    """
+    try:
+        username = data.get("username")
+        vente_id = data.get("id")
+        nouvelles_notes = data.get("notes")
+        category = data.get("category")
+
+        if not username or not vente_id or category is None:
+            raise HTTPException(status_code=400, detail="Paramètres manquants")
+
+        # Gérer les prospects
+        if category == "prospects":
+            fichier = os.path.join(f"{base_cloud}/prospects", username, "prospects.json")
+        else:
+            fichier = os.path.join(f"{base_cloud}/ventes_{category}", username, "ventes.json")
+
+        if not os.path.exists(fichier):
+            raise HTTPException(status_code=404, detail=f"Fichier non trouvé")
+
+        with open(fichier, "r", encoding="utf-8") as f:
+            items = json.load(f)
+
+        item_trouve = False
+        for item in items:
+            if item.get("id") == vente_id or item.get("num") == vente_id:
+                item["notes"] = nouvelles_notes
+                item_trouve = True
+                break
+
+        if not item_trouve:
+            raise HTTPException(status_code=404, detail="Item non trouvé")
+
+        with open(fichier, "w", encoding="utf-8") as f:
+            json.dump(items, f, ensure_ascii=False, indent=2)
+
+        print(f"[VENTES] Notes mises à jour pour {username}/{vente_id}")
+        return {"success": True, "message": "Notes mises à jour"}
+
+    except Exception as e:
+        print(f"[ERREUR update_notes] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/ventes/marquer-perdu")
 async def marquer_vente_perdue(data: dict = Body(...)):
     """

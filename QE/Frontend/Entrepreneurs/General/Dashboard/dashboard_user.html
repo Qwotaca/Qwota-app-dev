@@ -7312,6 +7312,15 @@ async function chargerCoaches() {
     // Taux marketing global = Total soumissions / Total heures marketing absolues (ratio, pas pourcentage)
     const tauxMarketingGlobal = totalHeuresMarketingAbsolue > 0 ? totalSoumissions / totalHeuresMarketingAbsolue : 0;
 
+    // Calculer le nombre de semaines écoulées depuis le 5 janvier 2026
+    const startDate = new Date('2026-01-05');
+    const currentDate = new Date();
+    const daysSinceStart = Math.max(0, (currentDate - startDate) / (1000 * 60 * 60 * 24));
+    const nombreSemainesEcoulees = Math.max(1, Math.floor(daysSinceStart / 7)); // Semaines complétées, minimum 1
+
+    // Total estimations = Total soumissions (signées + en attente + perdues)
+    const totalEstimationsReelles = totalSoumissions;
+
     teamStats = {
       total_ca: totalCA,
       objectif_total: totalObjectif,
@@ -7322,8 +7331,8 @@ async function chargerCoaches() {
       total_en_attente: totalEnAttente,
       total_perdus: totalPerdus,
       taux_vente_moyen: tauxVenteGlobal,
-      estimation_moyenne: coachesData.length > 0 ? totalEstimations / coachesData.length : 0,
-      heures_pap_semaine: nbEntrepreneurs > 0 ? totalHeuresMarketingAbsolue / nbEntrepreneurs : 0,
+      estimation_moyenne: nbEntrepreneurs > 0 ? totalEstimationsReelles / nbEntrepreneurs : 0,
+      heures_pap_semaine: nombreSemainesEcoulees > 0 ? totalHeuresMarketingAbsolue / nombreSemainesEcoulees : 0,
       ca_moyen: nbEntrepreneurs > 0 ? totalCA / nbEntrepreneurs : 0,
       prod_horaire_moyen: coachesData.length > 0 ? totalProdHoraire / coachesData.length : 0,
       taux_marketing_moyen: tauxMarketingGlobal,

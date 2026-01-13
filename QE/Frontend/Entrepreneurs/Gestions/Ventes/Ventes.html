@@ -3713,10 +3713,10 @@
   // FONCTIONS POUR NOUVEAUX BADGES
   // ===============================
 
-  // Variable globale pour stocker les étiquettes personnalisées
+  // Variable globale pour stocker les étiquettes personnalisées (vides par défaut)
   window.etiquettesPersonnalisees = {
-    statuts: ["À traiter", "En cours", "Terminé"],
-    provenances: ["Référence", "Publicité Facebook", "Publicité Google", "Site web", "Porte-à-porte", "Kiosque", "Autre"]
+    statuts: [],
+    provenances: []
   };
 
   // Charger les étiquettes personnalisées de l'entrepreneur
@@ -3737,8 +3737,30 @@
 
   // Create statut badge
   window.createStatutBadge = function(statut, venteId, category) {
-    if (!statut || statut === '-') {
-      return '<span style="color: var(--text-gray);">-</span>';
+    // Si pas de statut ou vide, afficher badge gris vide cliquable
+    if (!statut || statut === '-' || statut === 'À traiter' || statut.trim() === '') {
+      return `<span
+        class="statut-vente-badge"
+        data-vente-id="${venteId}"
+        data-current-statut=""
+        data-category="${category}"
+        style="
+          display: inline-block;
+          padding: 4px 12px;
+          border-radius: 4px;
+          background-color: #64748b;
+          color: #fff;
+          font-size: 0.875rem;
+          font-weight: 500;
+          white-space: nowrap;
+          cursor: pointer;
+          transition: opacity 0.2s;
+          opacity: 0.6;
+        "
+        onmouseover="this.style.opacity='0.8'"
+        onmouseout="this.style.opacity='0.6'"
+        title="Cliquer pour définir le statut"
+      ><i class="fas fa-plus mr-1"></i>Statut</span>`;
     }
 
     let bgColor, textColor;
@@ -3779,8 +3801,30 @@
 
   // Create provenance badge
   window.createProvenanceBadge = function(provenance, venteId, category) {
-    if (!provenance || provenance === '-') {
-      return '<span style="color: var(--text-gray);">-</span>';
+    // Si pas de provenance ou vide, afficher badge gris vide cliquable
+    if (!provenance || provenance === '-' || provenance === 'Non définie' || provenance.trim() === '') {
+      return `<span
+        class="provenance-badge"
+        data-vente-id="${venteId}"
+        data-current-provenance=""
+        data-category="${category}"
+        style="
+          display: inline-block;
+          padding: 4px 12px;
+          border-radius: 4px;
+          background-color: #64748b;
+          color: #fff;
+          font-size: 0.875rem;
+          font-weight: 500;
+          white-space: nowrap;
+          cursor: pointer;
+          transition: opacity 0.2s;
+          opacity: 0.6;
+        "
+        onmouseover="this.style.opacity='0.8'"
+        onmouseout="this.style.opacity='0.6'"
+        title="Cliquer pour définir la provenance"
+      ><i class="fas fa-plus mr-1"></i>Provenance</span>`;
     }
 
     return `<span
@@ -3807,8 +3851,30 @@
 
   // Create type travaux badge
   window.createTypeTravauxBadge = function(typeTravaux, venteId, category) {
-    if (!typeTravaux || typeTravaux === '-') {
-      return '<span style="color: var(--text-gray);">-</span>';
+    // Si pas de type travaux ou vide, afficher badge gris vide cliquable
+    if (!typeTravaux || typeTravaux === '-' || typeTravaux === 'Non défini' || typeTravaux.trim() === '') {
+      return `<span
+        class="type-travaux-badge"
+        data-vente-id="${venteId}"
+        data-current-type=""
+        data-category="${category}"
+        style="
+          display: inline-block;
+          padding: 4px 12px;
+          border-radius: 4px;
+          background-color: #64748b;
+          color: #fff;
+          font-size: 0.875rem;
+          font-weight: 500;
+          white-space: nowrap;
+          cursor: pointer;
+          transition: opacity 0.2s;
+          opacity: 0.6;
+        "
+        onmouseover="this.style.opacity='0.8'"
+        onmouseout="this.style.opacity='0.6'"
+        title="Cliquer pour définir le type de travaux"
+      ><i class="fas fa-plus mr-1"></i>Type</span>`;
     }
 
     return `<span
@@ -3854,7 +3920,7 @@
     `;
 
     // Utiliser les étiquettes personnalisées de l'entrepreneur
-    const labels = window.etiquettesPersonnalisees?.statuts || ['À traiter', 'En cours', 'Terminé'];
+    const labels = window.etiquettesPersonnalisees?.statuts || [];
 
     // Définir les couleurs basées sur le texte de l'étiquette
     const getColorForStatut = (label) => {
@@ -4003,15 +4069,7 @@
     `;
 
     // Utiliser les étiquettes personnalisées de l'entrepreneur
-    const provenances = window.etiquettesPersonnalisees?.provenances || [
-      'Référence',
-      'Publicité Facebook',
-      'Publicité Google',
-      'Site web',
-      'Porte-à-porte',
-      'Kiosque',
-      'Autre'
-    ];
+    const provenances = window.etiquettesPersonnalisees?.provenances || [];
 
     // Ajouter un bouton pour gérer les étiquettes
     const manageButton = document.createElement('div');
@@ -4612,7 +4670,7 @@
         const prospectId = prospect.id || prospect.num || `prospect-${Math.random()}`;
 
         // Pour les prospects, pas de badges pour statut et type travaux
-        const provenanceBadge = createProvenanceBadge(prospect.provenance || 'Non définie', prospectId, 'prospects');
+        const provenanceBadge = createProvenanceBadge(prospect.provenance || '', prospectId, 'prospects');
         const notesText = prospect.notes || '';
         const hasNotes = notesText && notesText.trim() !== '';
 
@@ -4708,10 +4766,10 @@
         const venteId = vente.id || vente.num || `vente-${Math.random()}`;
         const badgePaiement = createPaymentBadge(statutPaiement, venteId, category);
 
-        // Créer les badges pour les nouvelles colonnes
-        const statutBadge = createStatutBadge(vente.statut_vente || 'À traiter', venteId, category);
-        const provenanceBadge = createProvenanceBadge(vente.provenance || 'Non définie', venteId, category);
-        const typeTravauxBadge = createTypeTravauxBadge(vente.type_travaux || 'Non défini', venteId, category);
+        // Créer les badges pour les nouvelles colonnes (vides par défaut)
+        const statutBadge = createStatutBadge(vente.statut_vente || '', venteId, category);
+        const provenanceBadge = createProvenanceBadge(vente.provenance || '', venteId, category);
+        const typeTravauxBadge = createTypeTravauxBadge(vente.type_travaux || '', venteId, category);
         const notesText = vente.notes || '';
         const hasNotes = notesText && notesText.trim() !== '';
 

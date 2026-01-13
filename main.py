@@ -20611,14 +20611,14 @@ def get_etiquettes_entrepreneur(username: str):
     try:
         fichier_etiquettes = os.path.join(f"{base_cloud}/ventes_etiquettes", username, "etiquettes.json")
 
-        # Étiquettes par défaut si le fichier n'existe pas
+        # Étiquettes par défaut vides
         etiquettes_defaut = {
-            "statuts": ["À traiter", "En cours", "Terminé"],
-            "provenances": ["Référence", "Publicité Facebook", "Publicité Google", "Site web", "Porte-à-porte", "Kiosque", "Autre"]
+            "statuts": [],
+            "provenances": []
         }
 
         if not os.path.exists(fichier_etiquettes):
-            # Créer le fichier avec les valeurs par défaut
+            # Créer le fichier avec des listes vides
             os.makedirs(os.path.dirname(fichier_etiquettes), exist_ok=True)
             with open(fichier_etiquettes, "w", encoding="utf-8") as f:
                 json.dump(etiquettes_defaut, f, ensure_ascii=False, indent=2)
@@ -20631,10 +20631,10 @@ def get_etiquettes_entrepreneur(username: str):
 
     except Exception as e:
         print(f"[ERREUR get_etiquettes_entrepreneur] {e}")
-        # Retourner les étiquettes par défaut en cas d'erreur
+        # Retourner des listes vides en cas d'erreur
         return {
-            "statuts": ["À traiter", "En cours", "Terminé"],
-            "provenances": ["Référence", "Publicité Facebook", "Publicité Google", "Site web", "Porte-à-porte", "Kiosque", "Autre"]
+            "statuts": [],
+            "provenances": []
         }
 
 

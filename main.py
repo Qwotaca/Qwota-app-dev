@@ -1236,9 +1236,12 @@ def get_entrepreneurs_list_api(
                                 else:
                                     prod_horaire_rpo = 0
 
-                                # Taux marketing depuis year_2025 (ou annual si year_2025 n'existe pas)
-                                year_data = rpo_data.get("year_2025", rpo_data.get("annual", {}))
-                                taux_marketing_rpo = year_data.get("mktg_reel", stats["metriques"]["taux_marketing"]) / 100
+                                # Taux marketing = Total estimations ÷ Heures PAP
+                                total_estimations = stats["status_soumissions"]["signees"] + stats["status_soumissions"]["en_attente"] + stats["status_soumissions"]["perdus"]
+                                if heures_pap > 0:
+                                    taux_marketing_rpo = round(total_estimations / heures_pap, 2)
+                                else:
+                                    taux_marketing_rpo = 0
                         except Exception as e:
                             print(f"[WARNING] Erreur lecture RPO pour {username}: {e}", flush=True)
 
@@ -1665,12 +1668,39 @@ def calculate_dashboard_stats(username: str, start_date=None, end_date=None) -> 
             rpo_data = load_user_rpo_data(username)
             annual = rpo_data.get("annual", {})
 
-            stats["metriques"]["taux_marketing"] = round(float(annual.get("mktg_reel", 0)) / 100, 2)
+            # Calculer heures PAP depuis RPO (moyenne par semaine depuis Jan 2026)
+            total_heures_pap = 0
+            nombre_semaines_avec_data = 0
+            weekly_data = rpo_data.get("weekly", {})
+
+            for month_key, weeks in weekly_data.items():
+                try:
+                    month_num = int(month_key)
+                    if month_num < 0:  # Exclure décembre 2025 et avant
+                        continue
+                except:
+                    continue
+
+                for week_key, week_data in weeks.items():
+                    h_marketing = week_data.get("h_marketing", 0)
+                    try:
+                        h_marketing_num = float(h_marketing) if h_marketing != '-' else 0
+                        if h_marketing_num > 0:
+                            total_heures_pap += h_marketing_num
+                            nombre_semaines_avec_data += 1
+                    except:
+                        pass
+
+            # Taux marketing = Total estimations ÷ Total heures PAP
+            if total_heures_pap > 0:
+                stats["metriques"]["taux_marketing"] = round(total_potentiel / total_heures_pap, 2)
+            else:
+                stats["metriques"]["taux_marketing"] = 0
 
             # Charger prod_horaire directement depuis RPO (comme le dashboard personnel)
             prod_horaire_rpo = float(annual.get("prod_horaire", 0))
             stats["metriques"]["prod_horaire"] = round(prod_horaire_rpo, 2)
-            print(f"[OK] [CLASSEMENT] {username} - Prod horaire (depuis RPO): {stats['metriques']['prod_horaire']} $/h")
+            print(f"[OK] [CLASSEMENT] {username} - Taux marketing: {stats['metriques']['taux_marketing']} (estimations/h), Prod horaire: {stats['metriques']['prod_horaire']} $/h")
         except Exception as e:
             print(f"[WARNING] [CLASSEMENT] Erreur calcul métriques RPO pour {username}: {e}")
             import traceback
@@ -6808,7 +6838,6 @@ def api_get_coach_equipe_dashboard(
             print(f"[DEBUG OBJECTIF] {username} -> objectif_ca depuis RPO: {objectif}")
             if objectif > 0:
                 pourcentage_objectif = round((ca_actuel / objectif) * 100, 2)
-            taux_marketing = round(float(annual.get("mktg_reel", 0)) / 100, 2)
 
             # Calculer heures_pap_semaine: moyenne réelle par semaine (pas total cumulé)
             # Compter SEULEMENT à partir de janvier 2026 (exclure décembre 2025)
@@ -6840,6 +6869,12 @@ def api_get_coach_equipe_dashboard(
 
             # Accumuler le total absolu des heures marketing pour le calcul du taux marketing global
             team_total_heures_marketing_absolue += total_heures_pap
+
+            # Taux marketing = Total estimations ÷ Total heures PAP
+            if total_heures_pap > 0:
+                taux_marketing = round(total_potentiel / total_heures_pap, 2)
+            else:
+                taux_marketing = 0
 
             # Calculer prod_horaire depuis les valeurs saisies dans RPO (mai à septembre)
             total_prod_horaire = 0

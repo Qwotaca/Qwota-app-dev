@@ -11435,72 +11435,84 @@ async function loadRPODataIntoPlan() {
   log('[PLAN] Chargement de toutes les données hebdomadaires pour le plan...');
 
   try {
-    // Charger tous les mois de 2026 (monthIndex 0-11)
+    // OPTIMISATION: Charger tous les 12 mois EN PARALLÈLE au lieu de séquentiellement
+    const monthPromises = [];
     for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
-      const monthResponse = await fetch(`/api/rpo/${username}/weekly/${monthIndex}`);
-      if (monthResponse.ok) {
-        const monthData = await monthResponse.json();
-        log(`[PLAN] Données mois ${monthIndex}:`, monthData);
+      monthPromises.push(
+        fetch(`/api/rpo/${username}/weekly/${monthIndex}`)
+          .then(response => response.ok ? response.json() : null)
+          .then(monthData => ({ monthIndex, monthData }))
+      );
+    }
 
-        Object.keys(monthData).forEach(weekNumber => {
-          const weekData = monthData[weekNumber];
+    // Attendre que TOUS les mois soient chargés en parallèle
+    const allMonthsResults = await Promise.all(monthPromises);
+    log('[PLAN] Tous les mois chargés en parallèle');
 
-          // NOUVEAU: Matcher par week_label au lieu d'index
-          // Normaliser le label du RPO
-          const rpoLabel = (weekData.week_label || '').toLowerCase().replace(/\./g, '').trim();
+    // Traiter les données de chaque mois
+    allMonthsResults.forEach(({ monthIndex, monthData }) => {
+      if (!monthData) return;
 
-          if (!rpoLabel) {
-            log(`[PLAN] Pas de week_label pour mois ${monthIndex} semaine ${weekNumber}, skip`);
-            return;
-          }
+      log(`[PLAN] Traitement mois ${monthIndex}:`, monthData);
 
-          // Chercher dans toutes les lignes du plan d'affaires celle qui a le même label
-          const planRows = document.querySelectorAll('#plan-weeks-body tr.plan-row');
-          let matchedPlanWeekIndex = null;
+      Object.keys(monthData).forEach(weekNumber => {
+        const weekData = monthData[weekNumber];
 
-          planRows.forEach((row, idx) => {
-            const planLabel = row.querySelector('td:first-child')?.textContent.toLowerCase().replace(/\./g, '').trim();
-            if (planLabel === rpoLabel) {
-              matchedPlanWeekIndex = idx + 1; // idx commence à 0, mais les semaines commencent à 1
-            }
-          });
+        // NOUVEAU: Matcher par week_label au lieu d'index
+        // Normaliser le label du RPO
+        const rpoLabel = (weekData.week_label || '').toLowerCase().replace(/\./g, '').trim();
 
-          if (!matchedPlanWeekIndex) {
-            log(`[PLAN] Aucune correspondance trouvée pour "${rpoLabel}"`, weekData);
-            return;
-          }
+        if (!rpoLabel) {
+          log(`[PLAN] Pas de week_label pour mois ${monthIndex} semaine ${weekNumber}, skip`);
+          return;
+        }
 
-          log(`[PLAN] Match trouvé: "${rpoLabel}" -> plan-w${matchedPlanWeekIndex}:`, weekData);
+        // Chercher dans toutes les lignes du plan d'affaires celle qui a le même label
+        const planRows = document.querySelectorAll('#plan-weeks-body tr.plan-row');
+        let matchedPlanWeekIndex = null;
 
-          // H. Marketing
-          if (weekData.h_marketing !== undefined) {
-            const input = document.getElementById(`plan-w${matchedPlanWeekIndex}-mktg-reel`);
-            if (input) {
-              const val = weekData.h_marketing;
-              input.value = (val !== null && val !== undefined && val !== '-') ? val + ' h' : '-';
-            }
-          }
-
-          // Estimation
-          if (weekData.estimation !== undefined) {
-            const input = document.getElementById(`plan-w${matchedPlanWeekIndex}-estim-reel`);
-            if (input) input.value = weekData.estimation;
-          }
-
-          // Contrat
-          if (weekData.contract !== undefined) {
-            const input = document.getElementById(`plan-w${matchedPlanWeekIndex}-contrat-reel`);
-            if (input) input.value = weekData.contract;
-          }
-
-          // Dollar
-          if (weekData.dollar !== undefined) {
-            const input = document.getElementById(`plan-w${matchedPlanWeekIndex}-dollar-reel`);
-            if (input) input.value = Math.round(weekData.dollar).toLocaleString('fr-CA') + ' $';
+        planRows.forEach((row, idx) => {
+          const planLabel = row.querySelector('td:first-child')?.textContent.toLowerCase().replace(/\./g, '').trim();
+          if (planLabel === rpoLabel) {
+            matchedPlanWeekIndex = idx + 1; // idx commence à 0, mais les semaines commencent à 1
           }
         });
-      }
-    }
+
+        if (!matchedPlanWeekIndex) {
+          log(`[PLAN] Aucune correspondance trouvée pour "${rpoLabel}"`, weekData);
+          return;
+        }
+
+        log(`[PLAN] Match trouvé: "${rpoLabel}" -> plan-w${matchedPlanWeekIndex}:`, weekData);
+
+        // H. Marketing
+        if (weekData.h_marketing !== undefined) {
+          const input = document.getElementById(`plan-w${matchedPlanWeekIndex}-mktg-reel`);
+          if (input) {
+            const val = weekData.h_marketing;
+            input.value = (val !== null && val !== undefined && val !== '-') ? val + ' h' : '-';
+          }
+        }
+
+        // Estimation
+        if (weekData.estimation !== undefined) {
+          const input = document.getElementById(`plan-w${matchedPlanWeekIndex}-estim-reel`);
+          if (input) input.value = weekData.estimation;
+        }
+
+        // Contrat
+        if (weekData.contract !== undefined) {
+          const input = document.getElementById(`plan-w${matchedPlanWeekIndex}-contrat-reel`);
+          if (input) input.value = weekData.contract;
+        }
+
+        // Dollar
+        if (weekData.dollar !== undefined) {
+          const input = document.getElementById(`plan-w${matchedPlanWeekIndex}-dollar-reel`);
+          if (input) input.value = Math.round(weekData.dollar).toLocaleString('fr-CA') + ' $';
+        }
+      });
+    });
 
     // Charger les ventes produit pour Production Réel
     await loadVentesProduitIntoPlan();

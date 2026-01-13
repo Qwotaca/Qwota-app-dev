@@ -1201,8 +1201,8 @@ def get_entrepreneurs_list_api(
                                     # Filtrer: exclure mois 0 (décembre 2025), commencer à mois 1 (janvier 2026)
                                     try:
                                         month_num = int(month_key)
-                                        if month_num < 1:
-                                            continue  # Ignorer décembre 2025
+                                        if month_num < 0:
+                                            continue  # Ignorer décembre 2025 et avant
                                     except:
                                         continue
 
@@ -1347,11 +1347,11 @@ def get_coaches_list_api():
                                     rpo_data = json.load(f)
                                     weekly_data = rpo_data.get("weekly", {})
                                     for month_key, weeks in weekly_data.items():
-                                        # Filtrer: exclure mois 0 (décembre 2025), commencer à mois 1 (janvier 2026)
+                                        # Filtrer: exclure mois négatifs (décembre 2025 et avant), garder mois >= 0 (janvier 2026+)
                                         try:
                                             month_num = int(month_key)
-                                            if month_num < 1:
-                                                continue  # Ignorer décembre 2025
+                                            if month_num < 0:
+                                                continue  # Ignorer décembre 2025 et avant
                                         except:
                                             continue
 
@@ -6816,11 +6816,11 @@ def api_get_coach_equipe_dashboard(
             weekly_data = rpo_data.get("weekly", {})
 
             for month_key, weeks in weekly_data.items():
-                # Filtrer: exclure mois 0 (décembre 2025), commencer à mois 1 (janvier 2026)
+                # Filtrer: exclure mois négatifs (décembre 2025 et avant), garder mois >= 0 (janvier 2026+)
                 try:
                     month_num = int(month_key)
-                    if month_num < 1:
-                        continue  # Ignorer décembre 2025
+                    if month_num < 0:
+                        continue  # Ignorer décembre 2025 et avant
                 except:
                     continue
 

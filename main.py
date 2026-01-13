@@ -1353,7 +1353,9 @@ def get_coaches_list_api():
                     # Calculer les moyennes
                     etoiles_moyennes_equipe = team_etoiles_total / team_satisfactions_total if team_satisfactions_total > 0 else 0
                     taux_marketing_moyen = team_taux_marketing_total / nb_entrepreneurs if nb_entrepreneurs > 0 else 0
-                    taux_vente_moyen = team_taux_vente_total / nb_entrepreneurs if nb_entrepreneurs > 0 else 0
+                    # Taux de vente = Total signées / Total toutes soumissions
+                    total_soumissions_equipe = team_soumissions_signees + team_soumissions_en_attente + team_soumissions_perdues
+                    taux_vente_moyen = (team_soumissions_signees / total_soumissions_equipe) * 100 if total_soumissions_equipe > 0 else 0
                     prod_horaire_moyen = team_prod_horaire_total / nb_entrepreneurs if nb_entrepreneurs > 0 else 0
                     contrat_moyen_equipe = team_ca_actuel / nb_entrepreneurs if nb_entrepreneurs > 0 else 0
                     estimation_moyenne_equipe = round(team_total_estimations / team_estimation_count, 2) if team_estimation_count > 0 else 0

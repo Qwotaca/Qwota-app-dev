@@ -1352,9 +1352,10 @@ def get_coaches_list_api():
 
                     # Calculer les moyennes
                     etoiles_moyennes_equipe = team_etoiles_total / team_satisfactions_total if team_satisfactions_total > 0 else 0
-                    taux_marketing_moyen = team_taux_marketing_total / nb_entrepreneurs if nb_entrepreneurs > 0 else 0
-                    # Taux de vente = Total signées / Total toutes soumissions
+                    # Taux marketing = Total soumissions / Total heures marketing
                     total_soumissions_equipe = team_soumissions_signees + team_soumissions_en_attente + team_soumissions_perdues
+                    taux_marketing_moyen = (total_soumissions_equipe / team_heures_pap) * 100 if team_heures_pap > 0 else 0
+                    # Taux de vente = Total signées / Total toutes soumissions
                     taux_vente_moyen = (team_soumissions_signees / total_soumissions_equipe) * 100 if total_soumissions_equipe > 0 else 0
                     prod_horaire_moyen = team_prod_horaire_total / nb_entrepreneurs if nb_entrepreneurs > 0 else 0
                     contrat_moyen_equipe = team_ca_actuel / nb_entrepreneurs if nb_entrepreneurs > 0 else 0
@@ -6573,6 +6574,7 @@ def api_get_coach_equipe_dashboard(
     team_total_objectif = 0
     team_total_taux_marketing = 0
     team_taux_marketing_count = 0
+    team_total_heures_marketing_absolue = 0  # Total absolu des heures marketing (pas moyenne)
     # Tableau pour le $ produit par mois (13 mois: Déc 2025 + Jan-Déc 2026)
     produit_mensuel = [0] * 13
 
@@ -6811,6 +6813,9 @@ def api_get_coach_equipe_dashboard(
             # Moyenne des heures PAP par semaine (toutes semaines de l'année)
             heures_pap_semaine = round(total_heures_pap / nombre_semaines_avec_data, 2) if nombre_semaines_avec_data > 0 else 0
 
+            # Accumuler le total absolu des heures marketing pour le calcul du taux marketing global
+            team_total_heures_marketing_absolue += total_heures_pap
+
             # Calculer prod_horaire depuis les valeurs saisies dans RPO (mai à septembre)
             total_prod_horaire = 0
             nombre_semaines_prod_horaire = 0
@@ -6982,7 +6987,8 @@ def api_get_coach_equipe_dashboard(
     # CORRECTION: Calculer le pourcentage global basé sur les totaux (team_total_ca / team_total_objectif)
     # au lieu de faire la moyenne des pourcentages individuels
     pourcentage_objectif_equipe = round((team_total_ca / team_total_objectif) * 100, 2) if team_total_objectif > 0 else 0
-    taux_marketing_moyen_equipe = round(team_total_taux_marketing / team_taux_marketing_count, 2) if team_taux_marketing_count > 0 else 0
+    # Taux marketing = Total soumissions / Total heures marketing
+    taux_marketing_moyen_equipe = round((total_potentiel_equipe / team_total_heures_marketing_absolue) * 100, 2) if team_total_heures_marketing_absolue > 0 else 0
 
     return {
         "entrepreneurs": entrepreneurs_data,

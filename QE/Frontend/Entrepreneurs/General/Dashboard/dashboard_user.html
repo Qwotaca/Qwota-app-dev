@@ -7168,7 +7168,7 @@ async function chargerCoaches() {
     const coachesData = await coachesResponse.json();
     log('[DEBUG chargerCoaches] Coaches chargés:', coachesData.length);
 
-    // Charger les stats de chaque coach (agrégées de leurs entrepreneurs)
+    // Utiliser directement les données de /api/coaches qui contiennent déjà toutes les stats
     let coachesWithStats = [];
     let totalCA = 0;
     let totalObjectif = 0;
@@ -7176,12 +7176,11 @@ async function chargerCoaches() {
     let totalSignees = 0;
     let totalEnAttente = 0;
     let totalPerdus = 0;
-    let totalHeuresPAP = 0;
+    let totalHeuresMarketingAbsolue = 0;  // Total absolu des heures marketing
     let totalEstimations = 0;
     let totalProdHoraire = 0;
     let totalTauxVente = 0;
     let totalContratMoyen = 0;
-    let totalTauxMarketing = 0;
     let nbEntrepreneurs = 0;
     let produitMensuelAggrege = new Array(13).fill(0); // 13 mois
 
@@ -7191,15 +7190,6 @@ async function chargerCoaches() {
         if (response.ok) {
           const data = await response.json();
           const stats = data.team_stats || {};
-
-          // Calculer le taux marketing moyen pour ce coach
-          let tauxMarketingMoyen = 0;
-          if (data.entrepreneurs && Array.isArray(data.entrepreneurs) && data.entrepreneurs.length > 0) {
-            const totalTauxMarketing = data.entrepreneurs.reduce((sum, entr) => {
-              return sum + (entr.metriques?.taux_marketing || 0);
-            }, 0);
-            tauxMarketingMoyen = totalTauxMarketing / data.entrepreneurs.length;
-          }
 
           // Créer un objet coach avec ses stats d'équipe agrégées
           const coachWithStats = {
@@ -7235,7 +7225,7 @@ async function chargerCoaches() {
               contrat_moyen: stats.contrat_moyen || 0,
               taux_vente: stats.taux_vente_moyen || 0,
               prod_horaire: stats.prod_horaire_moyen || 0,
-              taux_marketing: tauxMarketingMoyen,
+              taux_marketing: stats.taux_marketing_moyen || 0,
               estimations: stats.estimation_moyenne || 0,
               heures_pap_semaine: stats.heures_pap_semaine || 0
             }
@@ -7250,12 +7240,10 @@ async function chargerCoaches() {
           totalSignees += stats.total_signees || 0;
           totalEnAttente += stats.total_en_attente || 0;
           totalPerdus += stats.total_perdus || 0;
-          totalHeuresPAP += stats.heures_pap_semaine || 0;
           totalEstimations += stats.estimation_moyenne || 0;
           totalProdHoraire += stats.prod_horaire_moyen || 0;
           totalTauxVente += stats.taux_vente_moyen || 0;
           totalContratMoyen += stats.contrat_moyen || 0;
-          totalTauxMarketing += tauxMarketingMoyen;
           nbEntrepreneurs += data.entrepreneurs?.length || 0;
 
           // Agréger produit_mensuel
@@ -7268,6 +7256,11 @@ async function chargerCoaches() {
       } catch (e) {
         error(`[ERROR] Erreur chargement stats coach ${coach.username}:`, e);
       }
+    }
+
+    // Utiliser les heures marketing totales de /api/coaches
+    for (const coach of coachesData) {
+      totalHeuresMarketingAbsolue += coach.metriques?.heures_pap || 0;
     }
 
     // IMPORTANT: Remplacer totalObjectif par la somme des prévisions de Direction
@@ -7320,6 +7313,9 @@ async function chargerCoaches() {
     const totalSoumissions = totalSignees + totalEnAttente + totalPerdus;
     const tauxVenteGlobal = totalSoumissions > 0 ? (totalSignees / totalSoumissions) * 100 : 0;
 
+    // Taux marketing global = Total soumissions / Total heures marketing absolues
+    const tauxMarketingGlobal = totalHeuresMarketingAbsolue > 0 ? (totalSoumissions / totalHeuresMarketingAbsolue) * 100 : 0;
+
     teamStats = {
       total_ca: totalCA,
       objectif_total: totalObjectif,
@@ -7331,10 +7327,10 @@ async function chargerCoaches() {
       total_perdus: totalPerdus,
       taux_vente_moyen: tauxVenteGlobal,
       estimation_moyenne: coachesData.length > 0 ? totalEstimations / coachesData.length : 0,
-      heures_pap_semaine: coachesData.length > 0 ? totalHeuresPAP / coachesData.length : 0,
+      heures_pap_semaine: nbEntrepreneurs > 0 ? totalHeuresMarketingAbsolue / nbEntrepreneurs : 0,
       ca_moyen: nbEntrepreneurs > 0 ? totalCA / nbEntrepreneurs : 0,
       prod_horaire_moyen: coachesData.length > 0 ? totalProdHoraire / coachesData.length : 0,
-      taux_marketing_moyen: coachesData.length > 0 ? totalTauxMarketing / coachesData.length : 0,
+      taux_marketing_moyen: tauxMarketingGlobal,
       produit_mensuel: produitMensuelAggrege,
       paiements_recoltes: totalPaiementsRecoltes
     };

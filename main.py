@@ -186,9 +186,9 @@ app.mount("/cloud/cheques", StaticFiles(directory=f"{base_cloud}/cheques"), name
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/frontend", StaticFiles(directory="QE/Frontend"), name="frontend")
 
-# Créer le dossier uploads s'il n'existe pas
-os.makedirs(os.path.join(BASE_DIR, "uploads"), exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=os.path.join(BASE_DIR, "uploads")), name="uploads")
+# Créer le dossier uploads s'il n'existe pas (utiliser le disque persistant sur Render)
+os.makedirs(os.path.join(base_cloud, "uploads"), exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=os.path.join(base_cloud, "uploads")), name="uploads")
 
 
 # ============================================
@@ -21344,9 +21344,9 @@ def calculate_user_streak(username: str):
 # ROUTES CENTRALE ADMIN - SYSTÈME DYNAMIQUE
 # ============================================================================
 
-# Fichiers JSON pour stocker les sections
-CENTRALE_ENTREPRENEUR_FILE = os.path.join(BASE_DIR, "data", "centrale_entrepreneur_sections.json")
-CENTRALE_COACH_FILE = os.path.join(BASE_DIR, "data", "centrale_coach_sections.json")
+# Fichiers JSON pour stocker les sections (utiliser le disque persistant sur Render)
+CENTRALE_ENTREPRENEUR_FILE = os.path.join(base_cloud, "centrale_entrepreneur_sections.json")
+CENTRALE_COACH_FILE = os.path.join(base_cloud, "centrale_coach_sections.json")
 
 def load_centrale_data(centrale_type: str = "entrepreneur"):
     """Charge les données de la centrale depuis le fichier JSON"""
@@ -21543,8 +21543,8 @@ def delete_centrale_row(section_id: str, row_id: str, type: str = "entrepreneur"
 async def upload_centrale_file(section_id: str, row_id: str, file: UploadFile = File(...), type: str = "entrepreneur"):
     """Upload un fichier pour une ligne"""
     try:
-        # Créer le dossier pour les fichiers de la centrale (séparé par type)
-        upload_dir = os.path.join(BASE_DIR, "uploads", "centrale", type, section_id, row_id)
+        # Créer le dossier pour les fichiers de la centrale (séparé par type) - utiliser le disque persistant
+        upload_dir = os.path.join(base_cloud, "uploads", "centrale", type, section_id, row_id)
         os.makedirs(upload_dir, exist_ok=True)
 
         # Sauvegarder le fichier
@@ -21597,8 +21597,8 @@ async def upload_centrale_file(section_id: str, row_id: str, file: UploadFile = 
 def delete_centrale_file(section_id: str, row_id: str, filename: str, type: str = "entrepreneur"):
     """Supprime un fichier"""
     try:
-        # Supprimer le fichier physique (avec le bon type)
-        file_path = os.path.join(BASE_DIR, "uploads", "centrale", type, section_id, row_id, filename)
+        # Supprimer le fichier physique (avec le bon type) - utiliser le disque persistant
+        file_path = os.path.join(base_cloud, "uploads", "centrale", type, section_id, row_id, filename)
         if os.path.exists(file_path):
             os.remove(file_path)
 
@@ -21661,8 +21661,8 @@ def update_centrale_link(section_id: str, row_id: str, link_data: dict = Body(..
 # Route pour servir les fichiers uploadés (avec support du type dans l'URL)
 @app.get("/uploads/centrale/{type}/{section_id}/{row_id}/{filename}")
 def serve_centrale_file(type: str, section_id: str, row_id: str, filename: str):
-    """Sert un fichier uploadé"""
-    file_path = os.path.join(BASE_DIR, "uploads", "centrale", type, section_id, row_id, filename)
+    """Sert un fichier uploadé depuis le disque persistant"""
+    file_path = os.path.join(base_cloud, "uploads", "centrale", type, section_id, row_id, filename)
     if os.path.exists(file_path):
         return FileResponse(file_path)
     raise HTTPException(status_code=404, detail="Fichier non trouvé")
@@ -21671,9 +21671,9 @@ def serve_centrale_file(type: str, section_id: str, row_id: str, filename: str):
 # ROUTES CENTRALE - MONDAY BOARDS
 # ============================================================================
 
-# Fichiers de données pour les boards Monday
-CENTRALE_BOARDS_COACH_FILE = os.path.join(BASE_DIR, "data", "centrale_boards_coach.json")
-CENTRALE_BOARDS_ENTREPRENEUR_FILE = os.path.join(BASE_DIR, "data", "centrale_boards_entrepreneur.json")
+# Fichiers de données pour les boards Monday (utiliser le disque persistant)
+CENTRALE_BOARDS_COACH_FILE = os.path.join(base_cloud, "centrale_boards_coach.json")
+CENTRALE_BOARDS_ENTREPRENEUR_FILE = os.path.join(base_cloud, "centrale_boards_entrepreneur.json")
 
 def load_boards_data(centrale_type: str = "entrepreneur"):
     """Charge les boards de la centrale depuis le fichier JSON"""
@@ -21782,8 +21782,8 @@ async def upload_board_file(
 ):
     """Upload un fichier pour une cellule de board"""
     try:
-        # Créer le dossier pour les fichiers du board
-        upload_dir = os.path.join(BASE_DIR, "uploads", "centrale_boards", type, board_id, group_id, row_id)
+        # Créer le dossier pour les fichiers du board - utiliser le disque persistant
+        upload_dir = os.path.join(base_cloud, "uploads", "centrale_boards", type, board_id, group_id, row_id)
         os.makedirs(upload_dir, exist_ok=True)
 
         # Sauvegarder le fichier
@@ -21818,8 +21818,8 @@ def delete_board_file(
 ):
     """Supprime un fichier d'une cellule de board"""
     try:
-        # Supprimer le fichier physique
-        file_path = os.path.join(BASE_DIR, "uploads", "centrale_boards", type, board_id, group_id, row_id, filename)
+        # Supprimer le fichier physique - utiliser le disque persistant
+        file_path = os.path.join(base_cloud, "uploads", "centrale_boards", type, board_id, group_id, row_id, filename)
         if os.path.exists(file_path):
             os.remove(file_path)
             return {"status": "success"}

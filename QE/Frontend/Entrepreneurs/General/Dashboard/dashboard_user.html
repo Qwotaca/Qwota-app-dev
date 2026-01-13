@@ -218,6 +218,45 @@
       transform: rotate(180deg);
     }
 
+    /* Search input inside dropdown toggle */
+    .coach-dropdown-toggle input.search-input,
+    .coach-dropdown-toggle .search-input {
+      flex: 1 !important;
+      min-width: 0 !important;
+      background: transparent !important;
+      border: none !important;
+      outline: none !important;
+      color: var(--text-light) !important;
+      font-size: 15px !important;
+      line-height: normal !important;
+      font-family: inherit !important;
+      font-weight: 400 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      cursor: text !important;
+      caret-color: var(--text-light) !important;
+      height: auto !important;
+      border-radius: 0 !important;
+      box-sizing: border-box !important;
+    }
+
+    .coach-dropdown-toggle .search-input[style*="display: none"],
+    .coach-dropdown-toggle .search-input[style*="display:none"] {
+      width: 0 !important;
+      flex: 0 0 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      border: 0 !important;
+      overflow: hidden !important;
+    }
+
+    .coach-dropdown-toggle .search-input::placeholder {
+      color: var(--text-gray);
+      font-size: 15px !important;
+      font-family: inherit !important;
+      font-weight: 400 !important;
+    }
+
     .coach-dropdown-menu {
       position: absolute;
       top: calc(100% + 6px);
@@ -1978,6 +2017,12 @@
         </div>
         <div class="coach-dropdown" style="min-width: 280px; max-width: 280px;">
           <div class="coach-dropdown-toggle" id="coach-dropdown-toggle">
+            <input type="text"
+                   class="search-input"
+                   id="search-input"
+                   placeholder="Rechercher..."
+                   autocomplete="off"
+                   style="display: none;">
             <span class="placeholder">-- Sélectionner un entrepreneur --</span>
             <i class="fas fa-chevron-down chevron"></i>
           </div>
@@ -6553,18 +6598,119 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
     // Gérer le dropdown d'entrepreneur
     const dropdownToggle = document.getElementById('coach-dropdown-toggle');
     const dropdownMenu = document.getElementById('coach-dropdown-menu');
+    const searchInput = document.getElementById('search-input');
 
     if (dropdownToggle && dropdownMenu) {
       dropdownToggle.addEventListener('click', function(e) {
         e.stopPropagation();
+        const isOpening = !this.classList.contains('active');
+
         this.classList.toggle('active');
         dropdownMenu.classList.toggle('show');
+
+        const placeholderEl = dropdownToggle.querySelector('.placeholder, .selected-text');
+
+        // When dropdown opens
+        if (isOpening && searchInput) {
+          // Hide placeholder, show search input
+          if (placeholderEl) {
+            placeholderEl.style.display = 'none';
+          }
+          searchInput.style.display = '';
+          searchInput.style.removeProperty('display');
+          searchInput.value = '';
+          searchInput.focus();
+        }
+        // When dropdown closes
+        else if (searchInput) {
+          // Hide search input
+          searchInput.style.display = 'none';
+          searchInput.value = '';
+          searchInput.blur();
+
+          // Show placeholder or selected text
+          if (placeholderEl) {
+            placeholderEl.style.display = 'flex';
+          }
+
+          // Show all options again
+          const allOptions = dropdownMenu.querySelectorAll('.coach-dropdown-option');
+          allOptions.forEach(opt => opt.style.removeProperty('display'));
+
+          // Hide "no results" message
+          const noResultsMsg = dropdownMenu.querySelector('.no-results-message');
+          if (noResultsMsg) {
+            noResultsMsg.style.display = 'none';
+          }
+        }
       });
+
+      // Search input filtering
+      if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+          const searchTerm = e.target.value.toLowerCase().trim();
+          const allOptions = dropdownMenu.querySelectorAll('.coach-dropdown-option');
+          let visibleCount = 0;
+
+          allOptions.forEach(option => {
+            const displayText = option.querySelector('span')?.textContent?.toLowerCase() || '';
+            if (searchTerm === '' || displayText.includes(searchTerm)) {
+              option.style.display = 'flex';
+              visibleCount++;
+            } else {
+              option.style.display = 'none';
+            }
+          });
+
+          // Show/hide "no results" message
+          let noResultsMsg = dropdownMenu.querySelector('.no-results-message');
+
+          if (visibleCount === 0 && searchTerm !== '') {
+            if (!noResultsMsg) {
+              noResultsMsg = document.createElement('div');
+              noResultsMsg.className = 'coach-dropdown-option-disabled no-results-message';
+              noResultsMsg.textContent = 'Aucun entrepreneur trouvé...';
+              dropdownMenu.appendChild(noResultsMsg);
+            }
+            noResultsMsg.style.display = 'block';
+          } else if (noResultsMsg) {
+            noResultsMsg.style.display = 'none';
+          }
+        });
+
+        // Prevent dropdown from closing when clicking in search input
+        searchInput.addEventListener('click', function(e) {
+          e.stopPropagation();
+        });
+      }
 
       document.addEventListener('click', function(e) {
         if (!dropdownToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
           dropdownToggle.classList.remove('active');
           dropdownMenu.classList.remove('show');
+
+          if (searchInput) {
+            // Hide search input
+            searchInput.style.display = 'none';
+            searchInput.value = '';
+            searchInput.blur();
+
+            // Show placeholder or selected text
+            const placeholderEl = dropdownToggle.querySelector('.placeholder, .selected-text');
+            if (placeholderEl) {
+              placeholderEl.style.display = 'flex';
+            }
+
+            // Show all options again
+            const allOptions = dropdownMenu.querySelectorAll('.coach-dropdown-option');
+            allOptions.forEach(opt => opt.style.removeProperty('display'));
+
+            // Hide "no results" message
+            const noResultsMsg = dropdownMenu.querySelector('.no-results-message');
+            if (noResultsMsg) {
+              noResultsMsg.style.display = 'none';
+            }
+          }
         }
       });
     }

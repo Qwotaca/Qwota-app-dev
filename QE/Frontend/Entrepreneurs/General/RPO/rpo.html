@@ -4719,6 +4719,9 @@ function toggleEditWeekJan() {
   if (window.innerWidth <= 768 && typeof updateMobileWeeklyView === 'function') {
     updateMobileWeeklyView(currentMobileWeek || 1);
   }
+
+  // Réinitialiser les event listeners des étoiles après avoir changé leur visibilité/état
+  initStarRatings();
 }
 
 // Save weekly January data
@@ -7432,9 +7435,8 @@ function initStarRatings() {
   // Add new listeners
   document.querySelectorAll('.star-rating').forEach(star => {
     star.addEventListener('click', function() {
-      // Only allow clicking if in edit mode
-      const inputs = document.querySelectorAll('.week-jan-resume');
-      if (inputs.length > 0 && !inputs[0].hasAttribute('readonly')) {
+      // Only allow clicking if this star is enabled (pointer-events: auto)
+      if (this.style.pointerEvents === 'auto') {
         const week = this.dataset.week;
         const rating = parseInt(this.dataset.rating);
 

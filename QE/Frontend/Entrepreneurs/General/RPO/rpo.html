@@ -13372,6 +13372,13 @@ async function saveEtatsResultatsEdits() {
   saveBtn.style.opacity = '0.7';
 
   try {
+    // Formater toutes les cellules ACTUEL éditables (contenteditable)
+    const actuelCells = document.querySelectorAll('[data-field="actuel-montant"]');
+    actuelCells.forEach(cell => {
+      const value = parseMoneyValue(cell.textContent);
+      cell.textContent = formatMoneyValue(value);
+    });
+
     // Formater toutes les valeurs des inputs ACTUEL
     const actuelInputs = document.querySelectorAll('.etats-resultats-input');
     actuelInputs.forEach(input => {
@@ -13545,12 +13552,12 @@ async function initEtatsResultatsEditor() {
     });
 
     // Événement lorsqu'on quitte la cellule (blur)
+    // NOTE: Formatage DÉSACTIVÉ au blur - se fera seulement à l'enregistrement
     cell.addEventListener('blur', (e) => {
       const category = cell.getAttribute('data-category');
 
-      // Formater la valeur
+      // Lire la valeur sans formater
       const value = parseMoneyValue(cell.textContent);
-      cell.textContent = formatMoneyValue(value);
 
       // Calculer le pourcentage par rapport aux Ventes
       const ventesActuelCell = document.querySelector('[data-category="ventes"][data-field="actuel-montant"]');
@@ -13604,18 +13611,15 @@ async function initEtatsResultatsEditor() {
     });
 
     // Événement lorsqu'on quitte l'input (blur)
+    // NOTE: Formatage DÉSACTIVÉ au blur - se fera seulement à l'enregistrement
     input.addEventListener('blur', (e) => {
-      // Formater la valeur
-      const value = parseMoneyValue(input.value);
-      input.value = formatMoneyValue(value);
-
-      // Recalculer tous les totaux et pourcentages CIBLÉ
+      // Recalculer tous les totaux et pourcentages CIBLÉ (sans formater)
       updateCibleCalculations();
 
       // Recalculer les écarts
       updateAllCalculations();
 
-      log(`💾 CIBLÉ sauvegardé: ${category} = ${formatMoneyValue(value)}`);
+      log(`✏️ CIBLÉ modifié: ${category} = ${input.value}`);
     });
 
     // Empêcher le collage de contenu formaté

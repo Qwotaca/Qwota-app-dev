@@ -19567,6 +19567,54 @@ async def force_sync_coach_rpo(coach_username: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/rpo/sync-all-coaches")
+async def sync_all_coaches_rpo():
+    """
+    Synchronise le RPO de TOUS les coaches du système
+    Utile pour migration ou mise à jour globale
+    """
+    try:
+        from QE.Backend.rpo import sync_coach_rpo
+        from QE.Backend.user_management import get_all_users
+
+        # Récupérer tous les utilisateurs
+        all_users = get_all_users()
+
+        # Filtrer les coaches
+        coaches = [user['username'] for user in all_users if user.get('role') == 'coach']
+
+        print(f"[SYNC ALL COACHES] Found {len(coaches)} coaches to sync")
+
+        success_count = 0
+        failed_coaches = []
+
+        for coach_username in coaches:
+            try:
+                print(f"[SYNC ALL COACHES] Syncing {coach_username}...")
+                result = sync_coach_rpo(coach_username)
+                if result:
+                    success_count += 1
+                    print(f"[SYNC ALL COACHES] ✅ {coach_username} synchronized")
+                else:
+                    failed_coaches.append(coach_username)
+                    print(f"[SYNC ALL COACHES] ❌ {coach_username} failed")
+            except Exception as e:
+                failed_coaches.append(coach_username)
+                print(f"[SYNC ALL COACHES] ❌ Error syncing {coach_username}: {e}")
+
+        return {
+            "status": "success",
+            "total_coaches": len(coaches),
+            "synchronized": success_count,
+            "failed": len(failed_coaches),
+            "failed_coaches": failed_coaches,
+            "message": f"{success_count}/{len(coaches)} coaches synchronisés"
+        }
+    except Exception as e:
+        print(f"[SYNC ALL COACHES ERROR] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # [STATS] Routes États des Résultats
 
 @app.post("/api/etats-resultats/budget/{username}")

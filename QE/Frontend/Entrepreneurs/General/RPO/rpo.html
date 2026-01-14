@@ -2544,7 +2544,7 @@ window.debug = console.debug.bind(console);
 <script>
 // 🔄 FORCE CACHE RELOAD - Version check
 (function() {
-  const CURRENT_VERSION = '2026-01-14-v4'; // Incrémenter cette version à chaque déploiement important
+  const CURRENT_VERSION = '2026-01-14-v5'; // Incrémenter cette version à chaque déploiement important
   const storageKey = 'rpo_page_version';
   const lastVersion = localStorage.getItem(storageKey);
 
@@ -5446,36 +5446,37 @@ async function loadWeeklyDataForMonth(monthIndex) {
           }
         }
 
-        // Load custom objectives (display only, don't affect business plan)
-        if (data.h_marketing_obj !== undefined && data.h_marketing_obj > 0) {
+        // Load objectives from business plan (vise) - these come from the plan d'affaires
+        // Use _vise values from the business plan, NOT _obj (custom objectives are deprecated)
+        if (data.h_marketing_vise !== undefined && data.h_marketing_vise > 0) {
           const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="h_marketing_obj"]`);
           if (input) {
-            input.value = data.h_marketing_obj.toFixed(1) + ' h';
-            input.dataset.value = data.h_marketing_obj;
+            input.value = data.h_marketing_vise.toFixed(1) + ' h';
+            input.dataset.value = data.h_marketing_vise;
           }
         }
 
-        if (data.estimation_obj !== undefined && data.estimation_obj > 0) {
+        if (data.estimation_vise !== undefined && data.estimation_vise > 0) {
           const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="estimation_obj"]`);
           if (input) {
-            input.value = data.estimation_obj % 1 === 0 ? data.estimation_obj : data.estimation_obj.toFixed(1);
-            input.dataset.value = data.estimation_obj;
+            input.value = data.estimation_vise % 1 === 0 ? data.estimation_vise : data.estimation_vise.toFixed(1);
+            input.dataset.value = data.estimation_vise;
           }
         }
 
-        if (data.contract_obj !== undefined && data.contract_obj > 0) {
+        if (data.contract_vise !== undefined && data.contract_vise > 0) {
           const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="contract_obj"]`);
           if (input) {
-            input.value = data.contract_obj % 1 === 0 ? data.contract_obj : data.contract_obj.toFixed(1);
-            input.dataset.value = data.contract_obj;
+            input.value = data.contract_vise % 1 === 0 ? data.contract_vise : data.contract_vise.toFixed(1);
+            input.dataset.value = data.contract_vise;
           }
         }
 
-        if (data.dollar_obj !== undefined && data.dollar_obj > 0) {
+        if (data.dollar_vise !== undefined && data.dollar_vise > 0) {
           const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="dollar_obj"]`);
           if (input) {
-            input.value = Math.round(data.dollar_obj).toLocaleString('fr-CA') + ' $';
-            input.dataset.value = data.dollar_obj;
+            input.value = Math.round(data.dollar_vise).toLocaleString('fr-CA') + ' $';
+            input.dataset.value = data.dollar_vise;
           }
         }
 
@@ -8204,30 +8205,9 @@ async function saveWeeklyDataToBackend(monthIndex, weekNumber) {
 
   data.commentaire = `Problème: ${problemeValue} | Focus: ${focusValue}`;
 
-  // Collect custom objectives (editable) - these are for display only, don't affect business plan
-  const hMarketingObjInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="h_marketing_obj"]`);
-  if (hMarketingObjInput) {
-    const value = parseFloat(hMarketingObjInput.dataset.value);
-    data.h_marketing_obj = isNaN(value) ? 0 : value;
-  }
-
-  const estimationObjInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="estimation_obj"]`);
-  if (estimationObjInput) {
-    const value = parseFloat(estimationObjInput.dataset.value);
-    data.estimation_obj = isNaN(value) ? 0 : value;
-  }
-
-  const contractObjInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="contract_obj"]`);
-  if (contractObjInput) {
-    const value = parseFloat(contractObjInput.dataset.value);
-    data.contract_obj = isNaN(value) ? 0 : value;
-  }
-
-  const dollarObjInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="dollar_obj"]`);
-  if (dollarObjInput) {
-    const value = parseFloat(dollarObjInput.dataset.value);
-    data.dollar_obj = isNaN(value) ? 0 : value;
-  }
+  // NOTE: Custom objectives (_obj) are no longer saved - we now use _vise from the business plan
+  // The objectives displayed in the weekly table now come directly from the plan d'affaires
+  // and are updated automatically when the plan changes
 
   // ═══════════════════════════════════════════════════════════════════
   // LOG SEM2026 - Afficher les modifications

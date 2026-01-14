@@ -19449,9 +19449,15 @@ async def save_weekly_targets(data: dict):
         print(f"[SAVE TARGETS] Sauvegarde des objectifs hebdomadaires pour {username}")
 
         # Charger les données RPO en utilisant le module qui gère les chemins
-        from QE.Backend.rpo import load_user_rpo_data, save_user_rpo_data
+        from QE.Backend.rpo import load_user_rpo_data, save_user_rpo_data, get_week_number_from_date
+        from datetime import datetime
 
         rpo_data = load_user_rpo_data(username)
+
+        # Déterminer la semaine actuelle pour ne réinitialiser que les semaines futures
+        today = datetime.now().strftime('%Y-%m-%d')
+        current_month_index, current_week_num = get_week_number_from_date(today)
+        print(f"[SAVE TARGETS] Semaine actuelle: mois {current_month_index}, semaine {current_week_num}")
 
         # Mettre à jour les données hebdomadaires avec les valeurs "Visé"
         if "weekly" not in rpo_data:
@@ -19470,12 +19476,28 @@ async def save_weekly_targets(data: dict):
                 if week_key not in rpo_data["weekly"][month_key]:
                     rpo_data["weekly"][month_key][week_key] = {}
 
-                # Mettre à jour uniquement les champs "Visé" sans toucher aux "Réel"
+                # Mettre à jour les champs "Visé" du plan d'affaires
                 rpo_data["weekly"][month_key][week_key]["week_label"] = week_data.get("week_label", "")
                 rpo_data["weekly"][month_key][week_key]["h_marketing_vise"] = week_data.get("h_marketing_vise", 0)
                 rpo_data["weekly"][month_key][week_key]["estimation_vise"] = week_data.get("estimation_vise", 0)
                 rpo_data["weekly"][month_key][week_key]["contract_vise"] = week_data.get("contract_vise", 0)
                 rpo_data["weekly"][month_key][week_key]["dollar_vise"] = week_data.get("dollar_vise", 0)
+
+                # IMPORTANT: Réinitialiser les overrides à 0 SEULEMENT pour semaine actuelle et futures
+                # Garder les overrides des semaines passées car elles peuvent avoir été modifiées manuellement
+                month_idx = int(month_key)
+                week_idx = int(week_key)
+
+                is_future_week = (month_idx > current_month_index) or (month_idx == current_month_index and week_idx >= current_week_num)
+
+                if is_future_week:
+                    rpo_data["weekly"][month_key][week_key]["h_marketing_obj_modifier"] = 0
+                    rpo_data["weekly"][month_key][week_key]["estimation_obj_modifier"] = 0
+                    rpo_data["weekly"][month_key][week_key]["contract_obj_modifier"] = 0
+                    rpo_data["weekly"][month_key][week_key]["dollar_obj_modifier"] = 0
+                    print(f"[SAVE TARGETS] Reset overrides pour mois {month_key} semaine {week_key} (future)")
+                else:
+                    print(f"[SAVE TARGETS] Garde overrides pour mois {month_key} semaine {week_key} (passee)")
 
         # Sauvegarder les données RPO en utilisant le module qui gère les chemins
         save_user_rpo_data(username, rpo_data)

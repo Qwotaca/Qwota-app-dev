@@ -1144,7 +1144,7 @@
       </div>
 
       <!-- Contenu -->
-      <div class="p-6" style="background: var(--bg-card);">
+      <div id="weekly-content-section" class="p-6" style="background: var(--bg-card); position: relative;">
 
         <!-- Boutons de navigation -->
         <div class="flex items-center justify-between mb-6">
@@ -2514,6 +2514,16 @@
     opacity: 1;
     transform: scale(1) translateY(0);
   }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+  20%, 40%, 60%, 80% { transform: translateX(10px); }
+}
+
+.shake-button {
+  animation: shake 0.6s ease-in-out;
 }
 </style>
 
@@ -4632,18 +4642,33 @@ function toggleEditWeekJan() {
       }
     } else {
       input.setAttribute('readonly', 'true');
-      input.style.background = 'transparent';
-      input.style.borderBottom = 'none';
-      input.style.border = 'none';
-      input.style.color = isObjectiveField ? '#9ca3af' : 'var(--text-light)';
-      input.style.padding = '';
-      input.style.borderRadius = '';
-      input.style.outline = 'none';
 
-      // Remettre les styles non-cliquables en mode readonly
-      if (!isAutoField || isObjectiveField) {
-        input.style.cursor = 'not-allowed';
-        input.style.pointerEvents = 'none';
+      // Pour les objectifs, utiliser setProperty avec !important pour forcer les styles
+      if (isObjectiveField) {
+        input.style.setProperty('cursor', 'not-allowed', 'important');
+        input.style.setProperty('background-color', 'transparent', 'important');
+        input.style.setProperty('color', '#9ca3af', 'important');
+        input.style.setProperty('text-align', 'center', 'important');
+        input.style.setProperty('border', 'none', 'important');
+        input.style.setProperty('border-bottom', 'none', 'important');
+        input.style.setProperty('outline', 'none', 'important');
+        input.style.setProperty('pointer-events', 'none', 'important');
+        input.style.padding = '';
+        input.style.borderRadius = '';
+      } else {
+        input.style.background = 'transparent';
+        input.style.borderBottom = 'none';
+        input.style.border = 'none';
+        input.style.color = 'var(--text-light)';
+        input.style.padding = '';
+        input.style.borderRadius = '';
+        input.style.outline = 'none';
+
+        // Remettre les styles non-cliquables en mode readonly
+        if (!isAutoField) {
+          input.style.cursor = 'not-allowed';
+          input.style.pointerEvents = 'none';
+        }
       }
     }
   });
@@ -4773,12 +4798,47 @@ async function saveWeekJan() {
   // Sortir du mode édition APRÈS que les données soient sauvegardées
   toggleEditWeekJan();
 
-  // Régénérer le plan d'affaire avec animation
-  await reloadPlanWithAnimation();
+  // Recharger les données pour appliquer le formatage correct
+  await loadWeeklyDataForMonth(currentWeeklyMonthIndex);
+
+  // NE PAS régénérer le plan ici! Cela écraserait les modifications manuelles (obj_modifier)
+  // Le plan doit seulement être régénéré quand l'Objectif CA change dans le Plan d'Affaires
+  console.log('[SAVE] Données hebdomadaires sauvegardées et rechargées');
+}
+
+// Vérifier si on est en mode édition
+function isInEditMode() {
+  const saveBtn = document.getElementById('saveWeekJanBtn');
+  return saveBtn && !saveBtn.classList.contains('hidden');
+}
+
+// Faire shake le bouton Enregistrer pour attirer l'attention
+function shakeSaveButton() {
+  const saveBtn = document.getElementById('saveWeekJanBtn');
+  if (!saveBtn) return;
+
+  // Ajouter la classe shake
+  saveBtn.classList.add('shake-button');
+
+  // Changer temporairement la couleur pour attirer l'attention
+  const originalBg = saveBtn.style.backgroundColor;
+  saveBtn.style.backgroundColor = '#ef4444'; // Rouge
+
+  // Retirer après l'animation
+  setTimeout(() => {
+    saveBtn.classList.remove('shake-button');
+    saveBtn.style.backgroundColor = originalBg;
+  }, 600);
 }
 
 // Show objectifs table
 function showObjectifs() {
+  // Vérifier si on est en mode édition
+  if (isInEditMode()) {
+    shakeSaveButton();
+    return; // Empêcher le switch
+  }
+
   document.getElementById('objectifsTable').classList.remove('hidden');
   document.getElementById('resumeTable').classList.add('hidden');
 
@@ -4800,6 +4860,12 @@ function showObjectifs() {
 
 // Show resume table
 function showResume() {
+  // Vérifier si on est en mode édition
+  if (isInEditMode()) {
+    shakeSaveButton();
+    return; // Empêcher le switch
+  }
+
   document.getElementById('objectifsTable').classList.add('hidden');
   document.getElementById('resumeTable').classList.remove('hidden');
 
@@ -5193,7 +5259,7 @@ function getWeeklyTargetsFromPlan(monthIndex, weekNumber) {
     estimation: window.planWeeklyTargets.estim[globalIndex],
     contract: window.planWeeklyTargets.contrat[globalIndex],
     dollar: window.planWeeklyTargets.dollar[globalIndex],
-    prod: window.planWeeklyTargets.prod[globalIndex]
+    prod: window.planWeeklyTargets.prod ? window.planWeeklyTargets.prod[globalIndex] : 0
   };
 
   return result;
@@ -5371,7 +5437,7 @@ function initObjectiveInputListeners() {
     input.addEventListener('input', handleObjectiveInputChange);
   });
 
-  log(`[OBJECTIVE INPUTS] ${objectiveInputs.length} event listeners initialized`);
+  console.log(`[OBJECTIVE INPUTS] ${objectiveInputs.length} event listeners initialized`);
 }
 
 // Handle objective input change: update dataset.value from input.value
@@ -5386,7 +5452,7 @@ function handleObjectiveInputChange(e) {
   // Update dataset.value with the parsed number
   if (!isNaN(numericValue) && numericValue > 0) {
     input.dataset.value = numericValue;
-    log(`[OBJECTIVE INPUT] ${field} updated: ${numericValue}`);
+    console.log(`[OBJECTIVE INPUT] ${field} updated: ${numericValue}`);
   } else {
     input.dataset.value = 0;
   }
@@ -5427,7 +5493,8 @@ async function loadWeeklyDataForMonth(monthIndex) {
               input.value = '-';
               input.dataset.value = '-';
             } else {
-              input.value = data.h_marketing + ' h';
+              // Arrondir pour affichage (0.3h → 1h), mais garder la valeur décimale dans dataset
+              input.value = Math.ceil(data.h_marketing) + ' h';
               input.dataset.value = data.h_marketing;
             }
           }
@@ -5484,50 +5551,59 @@ async function loadWeeklyDataForMonth(monthIndex) {
         // 2. Otherwise, use vise from business plan (auto-calculated)
 
         // H. Marketing
+        const hMarketingVise = data.h_marketing_vise || 0;
         const hMarketingValue = (data.h_marketing_obj_modifier && data.h_marketing_obj_modifier > 0)
           ? data.h_marketing_obj_modifier
-          : (data.h_marketing_vise || 0);
+          : hMarketingVise;
         if (hMarketingValue > 0) {
           const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="h_marketing_obj"]`);
           if (input) {
-            input.value = hMarketingValue.toFixed(1) + ' h';
+            // Arrondir pour affichage (0.3h → 1h), mais garder la valeur décimale dans dataset
+            input.value = Math.ceil(hMarketingValue) + ' h';
             input.dataset.value = hMarketingValue;
+            input.dataset.vise = hMarketingVise; // Stocker la valeur du plan
           }
         }
 
         // Estimations
+        const estimationVise = data.estimation_vise || 0;
         const estimationValue = (data.estimation_obj_modifier && data.estimation_obj_modifier > 0)
           ? data.estimation_obj_modifier
-          : (data.estimation_vise || 0);
+          : estimationVise;
         if (estimationValue > 0) {
           const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="estimation_obj"]`);
           if (input) {
             input.value = estimationValue % 1 === 0 ? estimationValue : estimationValue.toFixed(1);
             input.dataset.value = estimationValue;
+            input.dataset.vise = estimationVise; // Stocker la valeur du plan
           }
         }
 
         // Contrats
+        const contractVise = data.contract_vise || 0;
         const contractValue = (data.contract_obj_modifier && data.contract_obj_modifier > 0)
           ? data.contract_obj_modifier
-          : (data.contract_vise || 0);
+          : contractVise;
         if (contractValue > 0) {
           const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="contract_obj"]`);
           if (input) {
             input.value = contractValue % 1 === 0 ? contractValue : contractValue.toFixed(1);
             input.dataset.value = contractValue;
+            input.dataset.vise = contractVise; // Stocker la valeur du plan
           }
         }
 
         // Dollar
+        const dollarVise = data.dollar_vise || 0;
         const dollarValue = (data.dollar_obj_modifier && data.dollar_obj_modifier > 0)
           ? data.dollar_obj_modifier
-          : (data.dollar_vise || 0);
+          : dollarVise;
         if (dollarValue > 0) {
           const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="dollar_obj"]`);
           if (input) {
             input.value = Math.round(dollarValue).toLocaleString('fr-CA') + ' $';
             input.dataset.value = dollarValue;
+            input.dataset.vise = dollarVise; // Stocker la valeur du plan
           }
         }
 
@@ -6214,6 +6290,55 @@ function updateMonthDropdownBadges() {
 
 // Change month function
 async function changeMonth(monthIndex) {
+  // Afficher le loader sur la section contenu uniquement (pas le header)
+  const contentSection = document.getElementById('weekly-content-section');
+  if (contentSection) {
+    const loader = document.createElement('div');
+    loader.id = 'month-change-loader';
+    loader.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(5px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10500;
+      min-height: 100%;
+    `;
+    loader.innerHTML = `
+      <div style="text-align: center;">
+        <div class="spinner" style="
+          width: 40px;
+          height: 40px;
+          border: 3px solid rgba(82, 113, 255, 0.2);
+          border-top-color: #5271ff;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+          margin: 0 auto 12px;
+        "></div>
+        <div style="color: #9ca3af; font-size: 14px;">Chargement...</div>
+      </div>
+    `;
+
+    // Ajouter l'animation de rotation
+    if (!document.getElementById('spinner-animation-style')) {
+      const style = document.createElement('style');
+      style.id = 'spinner-animation-style';
+      style.textContent = `
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    contentSection.appendChild(loader);
+  }
+
   currentWeeklyMonthIndex = monthIndex;
   const monthInfo = getMonthInfo(monthIndex);
 
@@ -6298,6 +6423,14 @@ async function changeMonth(monthIndex) {
       updateMobileWeeklyView(currentMobileWeek);
     }, 400);
   }
+
+  // Retirer le loader après que tout soit chargé et formaté
+  setTimeout(() => {
+    const loader = document.getElementById('month-change-loader');
+    if (loader) {
+      loader.remove();
+    }
+  }, 500);
 }
 
 // Ajouter des event listeners pour mise à jour en temps réel
@@ -8265,29 +8398,50 @@ async function saveWeeklyDataToBackend(monthIndex, weekNumber) {
   // Collect manually modified objectives and save them in _obj_modifier fields
   // These have priority over _vise (business plan) values when displaying
   // If user modifies an objective, it's saved as _obj_modifier and won't be affected by plan changes
+
+  console.log(`[SAVE OBJ] Starting objective collection for week ${weekNumber}`);
+
   const hMarketingObjInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="h_marketing_obj"]`);
+  console.log(`[SAVE OBJ] h_marketing_obj querySelector result: ${hMarketingObjInput ? 'FOUND' : 'NULL'}`);
   if (hMarketingObjInput) {
     const value = parseFloat(hMarketingObjInput.dataset.value);
-    data.h_marketing_obj_modifier = isNaN(value) ? 0 : value;
+    const vise = parseFloat(hMarketingObjInput.dataset.vise) || 0;
+    // Si la valeur est identique au plan (vise), envoyer 0. Sinon envoyer la modification.
+    data.h_marketing_obj_modifier = (isNaN(value) || value === vise) ? 0 : value;
+    console.log(`[SAVE OBJ] h_marketing: value=${value}, vise=${vise}, modifier=${data.h_marketing_obj_modifier}`);
   }
 
   const estimationObjInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="estimation_obj"]`);
+  console.log(`[SAVE OBJ] estimation_obj querySelector result: ${estimationObjInput ? 'FOUND' : 'NULL'}`);
   if (estimationObjInput) {
     const value = parseFloat(estimationObjInput.dataset.value);
-    data.estimation_obj_modifier = isNaN(value) ? 0 : value;
+    const vise = parseFloat(estimationObjInput.dataset.vise) || 0;
+    // Si la valeur est identique au plan (vise), envoyer 0. Sinon envoyer la modification.
+    data.estimation_obj_modifier = (isNaN(value) || value === vise) ? 0 : value;
+    console.log(`[SAVE OBJ] estimation: value=${value}, vise=${vise}, modifier=${data.estimation_obj_modifier}`);
   }
 
   const contractObjInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="contract_obj"]`);
+  console.log(`[SAVE OBJ] contract_obj querySelector result: ${contractObjInput ? 'FOUND' : 'NULL'}`);
   if (contractObjInput) {
     const value = parseFloat(contractObjInput.dataset.value);
-    data.contract_obj_modifier = isNaN(value) ? 0 : value;
+    const vise = parseFloat(contractObjInput.dataset.vise) || 0;
+    // Si la valeur est identique au plan (vise), envoyer 0. Sinon envoyer la modification.
+    data.contract_obj_modifier = (isNaN(value) || value === vise) ? 0 : value;
+    console.log(`[SAVE OBJ] contract: value=${value}, vise=${vise}, modifier=${data.contract_obj_modifier}`);
   }
 
   const dollarObjInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="dollar_obj"]`);
+  console.log(`[SAVE OBJ] dollar_obj querySelector result: ${dollarObjInput ? 'FOUND' : 'NULL'}`);
   if (dollarObjInput) {
     const value = parseFloat(dollarObjInput.dataset.value);
-    data.dollar_obj_modifier = isNaN(value) ? 0 : value;
+    const vise = parseFloat(dollarObjInput.dataset.vise) || 0;
+    // Si la valeur est identique au plan (vise), envoyer 0. Sinon envoyer la modification.
+    data.dollar_obj_modifier = (isNaN(value) || value === vise) ? 0 : value;
+    console.log(`[SAVE OBJ] dollar: value=${value}, vise=${vise}, modifier=${data.dollar_obj_modifier}`);
   }
+
+  console.log(`[SAVE OBJ] Final data object for week ${weekNumber}:`, data);
 
   // ═══════════════════════════════════════════════════════════════════
   // LOG SEM2026 - Afficher les modifications
@@ -9549,6 +9703,18 @@ async function reloadPlanWithAnimation() {
   // Attendre que toutes les opérations soient terminées
   await new Promise(resolve => setTimeout(resolve, 300));
 
+  // Recharger les tableaux hebdomadaires (Objectifs et Résultats) avec les nouvelles valeurs
+  console.log('[RELOAD PLAN] Rechargement des tableaux hebdomadaires...');
+  await loadWeeklyDataForMonth(currentWeeklyMonthIndex);
+
+  // Régénérer les tableaux pour afficher les nouvelles valeurs d'objectifs
+  console.log('[RELOAD PLAN] Régénération des tableaux avec nouvelles valeurs...');
+  refreshWeeklyTables();
+
+  // Recalculer les États des Résultats CIBLÉ avec les % sauvegardés
+  console.log('[RELOAD PLAN] Recalcul des États des Résultats avec nouveaux montants CIBLÉ...');
+  updateCibleCalculations();
+
   // Retirer l'overlay
   overlay.remove();
   planContainer.style.position = originalPosition;
@@ -9907,8 +10073,18 @@ function generatePlanWeeks() {
 
   tbody.innerHTML = html;
 
-  // Sauvegarder les valeurs "Obj." dans le JSON
-  saveWeeklyTargetsToJSON(mktgPattern, estimPattern, contratPattern, dollarPattern, startDate);
+  // NE PAS sauvegarder automatiquement ici!
+  // Cela écraserait les modifications manuelles (obj_modifier) à chaque génération
+  // La sauvegarde est faite uniquement quand l'Objectif CA change (dans reloadPlanWithAnimation)
+
+  // Stocker les patterns pour usage ultérieur si besoin
+  window.planWeeklyTargets = {
+    mktg: mktgPattern,
+    estim: estimPattern,
+    contrat: contratPattern,
+    dollar: dollarPattern,
+    prod: prodPattern
+  };
 
   // Calculer immédiatement après génération
   setTimeout(() => calculatePlan(), 100);
@@ -11403,7 +11579,8 @@ function syncPlanToRPO() {
     const rpoContratVise = tds[5]?.querySelector('input');
     const rpoDollarVise = tds[7]?.querySelector('input');
 
-    if (rpoMktgVise) rpoMktgVise.value = `${mktgPrev.toFixed(2)} h`;
+    // Arrondir h_marketing pour affichage dans RPO (0.3h → 1h)
+    if (rpoMktgVise) rpoMktgVise.value = `${Math.ceil(mktgPrev)} h`;
     if (rpoEstimVise) rpoEstimVise.value = `${Math.round(estimPrev)}`;
     if (rpoContratVise) rpoContratVise.value = `${Math.round(contratPrev)}`;
     if (rpoDollarVise) rpoDollarVise.value = `${dollarPrev.toLocaleString('fr-CA')} $`;
@@ -12492,7 +12669,8 @@ async function saveEtatsResultatsData() {
       },
       body: JSON.stringify({
         actuel_data: actuelData,
-        cible_data: cibleData
+        cible_data: cibleData,
+        budget_percent: window.customBudgetPercent || {}
       })
     });
 
@@ -12604,8 +12782,13 @@ async function loadEtatsResultatsData() {
 
     const actuelData = result.actuel_data || {};
     const cibleData = result.cible_data || {};
-    log(`🔄 [LOAD] actuelData keys: ${Object.keys(actuelData).length}, cibleData keys: ${Object.keys(cibleData).length}`);
+    const budgetPercent = result.budget_percent || {};
+
+    // Charger les % personnalisés dans la variable globale
+    window.customBudgetPercent = budgetPercent;
+    log(`🔄 [LOAD] actuelData keys: ${Object.keys(actuelData).length}, cibleData keys: ${Object.keys(cibleData).length}, budgetPercent keys: ${Object.keys(budgetPercent).length}`);
     log(`🔄 [LOAD] actuelData contenu:`, actuelData);
+    log(`🔄 [LOAD] budgetPercent contenu:`, budgetPercent);
 
     // Restaurer toutes les valeurs Actuel
     let actuelCount = 0;
@@ -12881,6 +13064,10 @@ const DEFAULT_CIBLE_PERCENT = {
   'salaires-representant': 1.33
 };
 
+// Pourcentages personnalisés (sauvegardés quand l'utilisateur modifie les $)
+// Initialisé depuis le backend au chargement
+window.customBudgetPercent = {};
+
 // Recalculer les totaux et pourcentages CIBLÉ automatiquement
 function updateCibleCalculations() {
   log('========================================');
@@ -12899,11 +13086,96 @@ function updateCibleCalculations() {
   log('[CIBLÉ DEBUG] objectifCAInput:', objectifCAInput);
   log('[CIBLÉ DEBUG] objectifCAInput.dataset.value:', objectifCAInput?.dataset.value);
 
-  const objectifCA = parseFloat(objectifCAInput?.dataset.value) || 400000;
+  const objectifCA = parseFloat(objectifCAInput?.dataset.value) || 0;
   log('[CIBLÉ DEBUG] objectifCA (parsed):', objectifCA);
 
   if (objectifCA <= 0) {
-    warn('[CIBLÉ] Objectif CA invalide, utilisation de 400,000$ par défaut');
+    warn('[CIBLÉ] Objectif CA est 0, montants Ciblé = 0$ mais % par défaut affichés');
+
+    let totalPercentCible = 0;
+
+    // S'assurer que window.customBudgetPercent est initialisé
+    if (!window.customBudgetPercent) {
+      window.customBudgetPercent = {};
+    }
+
+    // Mettre les montants à 0 mais afficher les % par défaut
+    categories.forEach(category => {
+      try {
+        const input = document.querySelector(`td[data-category="${category}"][data-field="cible-montant"] .etats-resultats-cible-input`);
+        if (input) {
+          input.value = '0,00 $';
+        }
+
+        // Afficher le % personnalisé s'il existe, sinon le % par défaut
+        let percent = 0;
+
+        // Vérifier d'abord si un % personnalisé existe
+        if (window.customBudgetPercent && window.customBudgetPercent[category] !== undefined && window.customBudgetPercent[category] !== null) {
+          percent = window.customBudgetPercent[category];
+          log(`[CIBLÉ CA=0] ${category}: utilise % CUSTOM = ${percent}`);
+        }
+        // Sinon utiliser le % par défaut
+        else if (DEFAULT_CIBLE_PERCENT[category] !== undefined && DEFAULT_CIBLE_PERCENT[category] !== null) {
+          percent = DEFAULT_CIBLE_PERCENT[category];
+          log(`[CIBLÉ CA=0] ${category}: utilise % DEFAULT = ${percent}`);
+        }
+        else {
+          log(`[CIBLÉ CA=0] ${category}: aucun %, utilise 0`);
+        }
+
+        const percentCell = document.querySelector(`[data-category="${category}"][data-field="cible-percent"]`);
+        if (percentCell) {
+          percentCell.textContent = formatPercentValue(percent);
+
+          // Colorier en rouge si > 0 (sauf redevances qui est calculé dynamiquement)
+          if (percent > 0 && category !== 'redevances') {
+            percentCell.style.color = '#ef4444';
+          } else {
+            percentCell.style.color = '';
+          }
+          log(`[CIBLÉ CA=0] ${category}: cellule mise à jour avec ${formatPercentValue(percent)}`);
+        } else {
+          log(`[CIBLÉ CA=0] ${category}: ⚠️ CELLULE PERCENT NON TROUVÉE`);
+        }
+
+        // Accumuler les % pour le total (sauf redevances)
+        if (category !== 'redevances') {
+          totalPercentCible += percent;
+        }
+      } catch (error) {
+        console.error(`[CIBLÉ CA=0] Erreur pour ${category}:`, error);
+      }
+    });
+
+    // Mettre à jour les totaux: montants = 0$, mais % = somme des %
+    const totalDepensesInput = document.querySelector(`td[data-category="total-depenses"][data-field="cible-montant"]`);
+    if (totalDepensesInput) totalDepensesInput.textContent = '0,00 $';
+
+    const totalDepensesPercent = document.querySelector(`[data-category="total-depenses"][data-field="cible-percent"]`);
+    if (totalDepensesPercent) {
+      totalDepensesPercent.textContent = formatPercentValue(totalPercentCible);
+      if (totalPercentCible > 0) {
+        totalDepensesPercent.style.color = '#ef4444';
+      }
+    }
+
+    // Profit = 100% - total des dépenses %
+    const profitPercent = 100 - totalPercentCible;
+    const profitInput = document.querySelector(`[data-category="profit"][data-field="cible-montant"]`);
+    if (profitInput) profitInput.textContent = '0,00 $';
+
+    const profitPercentCell = document.querySelector(`[data-category="profit"][data-field="cible-percent"]`);
+    if (profitPercentCell) {
+      profitPercentCell.textContent = formatPercentValue(profitPercent);
+      if (profitPercent >= 0) {
+        profitPercentCell.style.color = '#10b981'; // Vert
+      } else {
+        profitPercentCell.style.color = '#ef4444'; // Rouge
+      }
+    }
+
+    log(`[CIBLÉ] CA = 0, montants = 0$, total % dépenses = ${totalPercentCible.toFixed(2)}%, profit % = ${profitPercent.toFixed(2)}%`);
     return;
   }
 
@@ -12932,20 +13204,23 @@ function updateCibleCalculations() {
       // MODE ÉDITION: Lire la valeur de l'input (ne PAS écraser)
       montant = parseMoneyValue(input.value);
       percent = objectifCA > 0 ? (montant / objectifCA) * 100 : 0;
-      log(`[CIBLÉ DEBUG]   - ${category} (ÉDITION): valeur saisie = ${montant}`);
+
+      // Sauvegarder le % personnalisé pour cette catégorie
+      window.customBudgetPercent[category] = percent;
+      log(`[CIBLÉ DEBUG]   - ${category} (ÉDITION): valeur=${montant}, %=${percent.toFixed(2)}% sauvegardé`);
     } else if (category === 'redevances') {
       // Redevances en mode lecture: garder le système actuel
       montant = parseMoneyValue(input.value);
       percent = (montant / objectifCA) * 100;
       log(`[CIBLÉ DEBUG]   - redevances: keeping existing value ${montant}`);
     } else {
-      // MODE LECTURE: Calculer le montant à partir du % par défaut
-      percent = DEFAULT_CIBLE_PERCENT[category] || 0;
+      // MODE LECTURE: Utiliser le % personnalisé s'il existe, sinon le % par défaut
+      percent = window.customBudgetPercent[category] ?? DEFAULT_CIBLE_PERCENT[category] ?? 0;
       montant = (percent / 100) * objectifCA;
 
       // Mettre à jour l'input avec le montant calculé ET formaté
       input.value = formatMoneyValue(montant);
-      log(`[CIBLÉ DEBUG]   - ${category}: ${percent}% of ${objectifCA} = ${montant}`);
+      log(`[CIBLÉ DEBUG]   - ${category}: ${percent}% of ${objectifCA} = ${montant} ${window.customBudgetPercent[category] ? '(custom %)' : '(default %)'}`);
     }
 
     totalDepensesCible += montant;
@@ -13734,8 +14009,8 @@ async function initEtatsResultatsEditor() {
       return; // Ne pas ajouter d'event listeners
     }
 
-    // Rendre l'input éditable pour les autres catégories
-    input.removeAttribute('readonly');
+    // NE PAS rendre l'input éditable ici - il sera rendu éditable uniquement quand l'utilisateur clique sur "Modifier"
+    // input.removeAttribute('readonly'); // COMMENTÉ - les inputs doivent rester readonly par défaut
 
     // Événement lors de la saisie dans l'input CIBLÉ (mise à jour en temps réel)
     input.addEventListener('input', (e) => {
@@ -15137,11 +15412,11 @@ function formatHMarketingInput(input) {
   const numValue = parseFloat(value);
 
   if (!isNaN(numValue) && numValue >= 0) {
-    // Stocker la valeur numérique
+    // Stocker la valeur numérique décimale dans dataset
     input.dataset.value = numValue;
 
-    // Formater: enlever .0 si entier, sinon .toFixed(1)
-    const formatted = numValue % 1 === 0 ? numValue.toFixed(0) : numValue.toFixed(1);
+    // Arrondir pour affichage (0.3h → 1h)
+    const formatted = Math.ceil(numValue);
     input.value = formatted + ' h';
   } else if (value === '' || value === '-') {
     input.value = '';

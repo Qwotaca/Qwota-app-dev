@@ -19537,6 +19537,25 @@ async def sync_ventes_produit(username: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/rpo/sync-coach/{coach_username}")
+async def force_sync_coach_rpo(coach_username: str):
+    """
+    Force la synchronisation du RPO du coach
+    Agrège les données de tous ses entrepreneurs et met à jour team_previsions et team_metrics
+    """
+    try:
+        from QE.Backend.rpo import sync_coach_rpo
+
+        result = sync_coach_rpo(coach_username)
+        if result:
+            return {"status": "success", "message": f"RPO coach {coach_username} synchronisé"}
+        else:
+            raise HTTPException(status_code=500, detail="Erreur lors de la synchronisation")
+    except Exception as e:
+        print(f"[SYNC COACH ERROR] {coach_username}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # [STATS] Routes États des Résultats
 
 @app.post("/api/etats-resultats/budget/{username}")

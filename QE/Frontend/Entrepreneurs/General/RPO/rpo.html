@@ -8313,6 +8313,26 @@ function updatePlanFromWeeklyData(monthIndex, weekNumber, data) {
   console.log(`🔄 updatePlanFromWeeklyData appelé pour mois ${monthIndex}, semaine ${weekNumber}`);
   console.log('Data:', data);
 
+  // Fonction de normalisation robuste des labels (identique à loadRPODataIntoPlan)
+  const normalizeLabel = (label) => {
+    return label.toLowerCase()
+      .replace(/\./g, '')
+      .replace(/janvier|janv/g, 'janv')
+      .replace(/février|févr|fév/g, 'fevr')
+      .replace(/mars/g, 'mars')
+      .replace(/avril|avr/g, 'avr')
+      .replace(/mai/g, 'mai')
+      .replace(/juin/g, 'juin')
+      .replace(/juillet|juil/g, 'juil')
+      .replace(/août|aout/g, 'aout')
+      .replace(/septembre|sept/g, 'sept')
+      .replace(/octobre|oct/g, 'oct')
+      .replace(/novembre|nov/g, 'nov')
+      .replace(/décembre|déc|dec/g, 'dec')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
   // NOUVEAU: Générer le week_label en recalculant comme dans getWeeksForMonth
   let rpoLabel = '';
 
@@ -8321,7 +8341,7 @@ function updatePlanFromWeeklyData(monthIndex, weekNumber, data) {
   console.log(`📅 getWeeksForMonth(${monthIndex}) a retourné ${weeks?.length || 0} semaines:`, weeks);
 
   if (weeks && weeks[weekNumber - 1]) {
-    rpoLabel = weeks[weekNumber - 1].label.toLowerCase().replace(/\./g, '').trim();
+    rpoLabel = normalizeLabel(weeks[weekNumber - 1].label);
     console.log(`✅ Label brut de getWeeksForMonth[${weekNumber - 1}]: "${weeks[weekNumber - 1].label}"`);
     console.log(`✅ Label normalisé: "${rpoLabel}"`);
   } else {
@@ -8330,7 +8350,7 @@ function updatePlanFromWeeklyData(monthIndex, weekNumber, data) {
 
   // Si pas trouvé, essayer depuis window.weeklyData en fallback
   if (!rpoLabel && window.weeklyData?.[String(monthIndex)]?.[String(weekNumber)]?.week_label) {
-    rpoLabel = window.weeklyData[String(monthIndex)][String(weekNumber)].week_label.toLowerCase().replace(/\./g, '').trim();
+    rpoLabel = normalizeLabel(window.weeklyData[String(monthIndex)][String(weekNumber)].week_label);
     console.log(`📦 Label récupéré depuis window.weeklyData: "${rpoLabel}"`);
   }
 
@@ -8346,14 +8366,14 @@ function updatePlanFromWeeklyData(monthIndex, weekNumber, data) {
     planRows.forEach((row, idx) => {
       if (idx < 15) {
         const planLabelRaw = row.querySelector('td:first-child')?.textContent;
-        const planLabel = planLabelRaw?.toLowerCase().replace(/\./g, '').trim();
+        const planLabel = normalizeLabel(planLabelRaw || '');
         console.log(`  Plan semaine ${idx + 1}: brut="${planLabelRaw}" normalisé="${planLabel}"`);
       }
     });
 
     planRows.forEach((row, idx) => {
       const planLabelRaw = row.querySelector('td:first-child')?.textContent;
-      const planLabel = planLabelRaw?.toLowerCase().replace(/\./g, '').trim();
+      const planLabel = normalizeLabel(planLabelRaw || '');
       if (planLabel === rpoLabel) {
         globalWeekNum = idx + 1; // idx commence à 0, mais les semaines commencent à 1
         console.log(`✨ MATCH TROUVÉ! RPO "${rpoLabel}" = Plan ligne ${idx} (semaine ${globalWeekNum})`);
@@ -11471,8 +11491,27 @@ async function loadRPODataIntoPlan() {
         const weekData = monthData[weekNumber];
 
         // NOUVEAU: Matcher par week_label au lieu d'index
-        // Normaliser le label du RPO
-        const rpoLabel = (weekData.week_label || '').toLowerCase().replace(/\./g, '').trim();
+        // Normaliser le label du RPO avec normalisation robuste des mois
+        const normalizeLabel = (label) => {
+          return label.toLowerCase()
+            .replace(/\./g, '')
+            .replace(/janvier|janv/g, 'janv')
+            .replace(/février|févr|fév/g, 'fevr')
+            .replace(/mars/g, 'mars')
+            .replace(/avril|avr/g, 'avr')
+            .replace(/mai/g, 'mai')
+            .replace(/juin/g, 'juin')
+            .replace(/juillet|juil/g, 'juil')
+            .replace(/août|aout/g, 'aout')
+            .replace(/septembre|sept/g, 'sept')
+            .replace(/octobre|oct/g, 'oct')
+            .replace(/novembre|nov/g, 'nov')
+            .replace(/décembre|déc|dec/g, 'dec')
+            .replace(/\s+/g, ' ')
+            .trim();
+        };
+
+        const rpoLabel = normalizeLabel(weekData.week_label || '');
 
         if (!rpoLabel) {
           log(`[PLAN] Pas de week_label pour mois ${monthIndex} semaine ${weekNumber}, skip`);
@@ -11484,7 +11523,7 @@ async function loadRPODataIntoPlan() {
         let matchedPlanWeekIndex = null;
 
         planRows.forEach((row, idx) => {
-          const planLabel = row.querySelector('td:first-child')?.textContent.toLowerCase().replace(/\./g, '').trim();
+          const planLabel = normalizeLabel(row.querySelector('td:first-child')?.textContent || '');
           if (planLabel === rpoLabel) {
             matchedPlanWeekIndex = idx + 1; // idx commence à 0, mais les semaines commencent à 1
           }

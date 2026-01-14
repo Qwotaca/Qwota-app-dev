@@ -507,8 +507,11 @@ function updateAccountDisplay() {
  */
 function showNotification(message, type = 'info') {
   const notification = document.createElement('div');
-  notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transition-all duration-300 transform translate-x-full`;
-  
+  notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full`;
+
+  // Z-index élevé pour apparaître au-dessus du coach-entrepreneur-selector (z-index: 10001)
+  notification.style.zIndex = '10002';
+
   // Couleurs personnalisées
   switch(type) {
     case 'success':

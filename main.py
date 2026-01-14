@@ -19483,21 +19483,19 @@ async def save_weekly_targets(data: dict):
                 rpo_data["weekly"][month_key][week_key]["contract_vise"] = week_data.get("contract_vise", 0)
                 rpo_data["weekly"][month_key][week_key]["dollar_vise"] = week_data.get("dollar_vise", 0)
 
-                # IMPORTANT: Réinitialiser les overrides à 0 SEULEMENT pour semaine actuelle et futures
-                # Garder les overrides des semaines passées car elles peuvent avoir été modifiées manuellement
-                month_idx = int(month_key)
-                week_idx = int(week_key)
-
-                is_future_week = (month_idx > current_month_index) or (month_idx == current_month_index and week_idx >= current_week_num)
-
-                if is_future_week:
+                # IMPORTANT: NE PAS réinitialiser les *_obj_modifier!
+                # On met à jour seulement les *_vise (valeurs du plan) et on garde les modifications manuelles
+                # Si les champs *_obj_modifier n'existent pas encore, les créer à 0
+                if "h_marketing_obj_modifier" not in rpo_data["weekly"][month_key][week_key]:
                     rpo_data["weekly"][month_key][week_key]["h_marketing_obj_modifier"] = 0
+                if "estimation_obj_modifier" not in rpo_data["weekly"][month_key][week_key]:
                     rpo_data["weekly"][month_key][week_key]["estimation_obj_modifier"] = 0
+                if "contract_obj_modifier" not in rpo_data["weekly"][month_key][week_key]:
                     rpo_data["weekly"][month_key][week_key]["contract_obj_modifier"] = 0
+                if "dollar_obj_modifier" not in rpo_data["weekly"][month_key][week_key]:
                     rpo_data["weekly"][month_key][week_key]["dollar_obj_modifier"] = 0
-                    print(f"[SAVE TARGETS] Reset overrides pour mois {month_key} semaine {week_key} (future)")
-                else:
-                    print(f"[SAVE TARGETS] Garde overrides pour mois {month_key} semaine {week_key} (passee)")
+
+                print(f"[SAVE TARGETS] Mise à jour *_vise pour mois {month_key} semaine {week_key} (garde overrides existants)")
 
         # Sauvegarder les données RPO en utilisant le module qui gère les chemins
         save_user_rpo_data(username, rpo_data)
@@ -19562,9 +19560,10 @@ async def save_actuel_data(username: str, data: dict):
     try:
         actuel_data = data.get('actuel_data', {})
         cible_data = data.get('cible_data', {})
-        success = update_etats_resultats_actuel(username, actuel_data, cible_data)
+        budget_percent = data.get('budget_percent', {})
+        success = update_etats_resultats_actuel(username, actuel_data, cible_data, budget_percent)
         if success:
-            return {"status": "success", "message": "Actuel et CIBLÉ sauvegardés"}
+            return {"status": "success", "message": "Actuel, CIBLÉ et % sauvegardés"}
         else:
             raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
     except Exception as e:
@@ -19579,7 +19578,8 @@ async def get_actuel_data(username: str):
         data = get_etats_resultats_actuel(username)
         return {
             "actuel_data": data.get('actuel', {}),
-            "cible_data": data.get('cible', {})
+            "cible_data": data.get('cible', {}),
+            "budget_percent": data.get('budget_percent', {})
         }
     except Exception as e:
         print(f"[Erreur États Résultats] Chargement actuel/cible {username}: {e}")

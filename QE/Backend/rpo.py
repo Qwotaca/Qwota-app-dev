@@ -1195,11 +1195,12 @@ def get_etats_resultats_budget(username: str) -> Dict[str, float]:
     return rpo_data.get('etats_resultats', {}).get('budget_percent', {})
 
 
-def update_etats_resultats_actuel(username: str, actuel_data: Dict[str, float], cible_data: Dict[str, float] = None) -> bool:
+def update_etats_resultats_actuel(username: str, actuel_data: Dict[str, float], cible_data: Dict[str, float] = None, budget_percent: Dict[str, float] = None) -> bool:
     """
     Met à jour les montants Actuel et CIBLÉ des États des Résultats
     actuel_data: dictionnaire {category: montant}
     cible_data: dictionnaire {category: montant} (optionnel)
+    budget_percent: dictionnaire {category: pourcentage} (optionnel)
     """
     rpo_data = load_user_rpo_data(username)
 
@@ -1212,6 +1213,10 @@ def update_etats_resultats_actuel(username: str, actuel_data: Dict[str, float], 
     if cible_data is not None:
         rpo_data['etats_resultats']['cible'] = cible_data
 
+    # Sauvegarder aussi les pourcentages personnalisés si fournis
+    if budget_percent is not None:
+        rpo_data['etats_resultats']['budget_percent'] = budget_percent
+
     return save_user_rpo_data(username, rpo_data)
 
 
@@ -1221,7 +1226,8 @@ def get_etats_resultats_actuel(username: str) -> Dict[str, Any]:
     etats_resultats = rpo_data.get('etats_resultats', {})
     return {
         'actuel': etats_resultats.get('actuel', {}),
-        'cible': etats_resultats.get('cible', {})
+        'cible': etats_resultats.get('cible', {}),
+        'budget_percent': etats_resultats.get('budget_percent', {})
     }
 
 

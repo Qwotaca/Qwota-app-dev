@@ -2528,6 +2528,89 @@ window.debug = console.debug.bind(console);
     log('[RPO INIT] window.username initialisé depuis URL:', userParam);
   }
 })();
+
+// Fonction de notification personnalisée avec z-index élevé
+window.showNotification = function(message, type = 'info') {
+  // Créer le conteneur de notification
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 16px 24px;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    z-index: 10002;
+    animation: slideIn 0.3s ease-out;
+    min-width: 300px;
+    max-width: 500px;
+  `;
+
+  // Couleurs selon le type
+  const colors = {
+    success: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+    error: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+    info: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+    warning: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+  };
+
+  notification.style.background = colors[type] || colors.info;
+
+  // Icône selon le type
+  const icons = {
+    success: '<i class="fas fa-check-circle" style="margin-right: 8px;"></i>',
+    error: '<i class="fas fa-exclamation-circle" style="margin-right: 8px;"></i>',
+    info: '<i class="fas fa-info-circle" style="margin-right: 8px;"></i>',
+    warning: '<i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>'
+  };
+
+  notification.innerHTML = (icons[type] || icons.info) + message;
+
+  // Ajouter au body
+  document.body.appendChild(notification);
+
+  // Ajouter l'animation CSS si elle n'existe pas
+  if (!document.getElementById('notification-animation')) {
+    const style = document.createElement('style');
+    style.id = 'notification-animation';
+    style.textContent = `
+      @keyframes slideIn {
+        from {
+          transform: translateX(400px);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      @keyframes slideOut {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(400px);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Supprimer après 4 secondes
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s ease-in';
+    setTimeout(() => {
+      if (notification.parentElement) {
+        notification.parentElement.removeChild(notification);
+      }
+    }, 300);
+  }, 4000);
+};
 </script>
 
 <script src="/common.js"></script>

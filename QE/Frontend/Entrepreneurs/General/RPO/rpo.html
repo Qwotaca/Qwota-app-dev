@@ -8388,11 +8388,12 @@ function updatePlanFromWeeklyData(monthIndex, weekNumber, data) {
     }
   }
 
-  // Si toujours pas trouvé, utiliser la formule d'index
+  // Si toujours pas trouvé, ne PAS utiliser la formule de fallback
+  // Cette semaine n'existe pas réellement pour ce mois (ex: semaine 5 de janvier qui n'a que 4 semaines)
   if (!globalWeekNum) {
-    globalWeekNum = 5 + (monthIndex * 5) + parseInt(weekNumber);
-    console.warn(`⚙️ Formule d'index utilisée (FALLBACK): plan-w${globalWeekNum}`);
-    console.warn(`   Calcul: monthIndex=${monthIndex}, weekNumber=${weekNumber} -> 5 + (${monthIndex} * 5) + ${weekNumber} = ${globalWeekNum}`);
+    console.warn(`⚠️ SKIP: Semaine ${weekNumber} du mois ${monthIndex} n'existe pas dans le plan d'affaires`);
+    console.warn(`   getWeeksForMonth(${monthIndex}) a retourné ${weeks?.length || 0} semaines`);
+    return; // Skip cette mise à jour
   }
 
   console.log(`🎯 Résultat final: globalWeekNum = ${globalWeekNum}`);

@@ -11390,6 +11390,26 @@ function loadWeeklyDataToPlan() {
   // Cela évite que les anciennes valeurs persistent dans les semaines futures
   resetPlanReelValues();
 
+  // Fonction de normalisation robuste des labels (identique à loadRPODataIntoPlan)
+  const normalizeLabel = (label) => {
+    return label.toLowerCase()
+      .replace(/\./g, '')
+      .replace(/janvier|janv/g, 'janv')
+      .replace(/février|févr|fév/g, 'fevr')
+      .replace(/mars/g, 'mars')
+      .replace(/avril|avr/g, 'avr')
+      .replace(/mai/g, 'mai')
+      .replace(/juin/g, 'juin')
+      .replace(/juillet|juil/g, 'juil')
+      .replace(/août|aout/g, 'aout')
+      .replace(/septembre|sept/g, 'sept')
+      .replace(/octobre|oct/g, 'oct')
+      .replace(/novembre|nov/g, 'nov')
+      .replace(/décembre|déc|dec/g, 'dec')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
   // Janvier 2026+ (monthIndex 0-11): matcher par week_label
   for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
     const monthKey = String(monthIndex);
@@ -11397,8 +11417,8 @@ function loadWeeklyDataToPlan() {
       Object.keys(window.weeklyData[monthKey]).forEach(weekNumber => {
         const weekData = window.weeklyData[monthKey][weekNumber];
 
-        // NOUVEAU: Matcher par week_label au lieu d'index
-        const rpoLabel = (weekData.week_label || '').toLowerCase().replace(/\./g, '').trim();
+        // NOUVEAU: Matcher par week_label avec normalisation robuste
+        const rpoLabel = normalizeLabel(weekData.week_label || '');
 
         if (!rpoLabel) {
           log(`[PLAN] Pas de week_label pour mois ${monthIndex} semaine ${weekNumber}, skip`);
@@ -11410,7 +11430,7 @@ function loadWeeklyDataToPlan() {
         let matchedPlanWeekIndex = null;
 
         planRows.forEach((row, idx) => {
-          const planLabel = row.querySelector('td:first-child')?.textContent.toLowerCase().replace(/\./g, '').trim();
+          const planLabel = normalizeLabel(row.querySelector('td:first-child')?.textContent || '');
           if (planLabel === rpoLabel) {
             matchedPlanWeekIndex = idx + 1; // idx commence à 0, mais les semaines commencent à 1
           }

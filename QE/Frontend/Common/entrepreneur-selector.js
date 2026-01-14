@@ -64,7 +64,6 @@
     }
 
     // Mettre à jour les textes du sélecteur selon la page
-    const currentPath = window.location.pathname.toLowerCase();
     const isCoachManagementPage = currentPath.includes('coach_rpo') || currentPath.includes('suivicoach');
 
     if (userRole === 'direction' && isCoachManagementPage) {

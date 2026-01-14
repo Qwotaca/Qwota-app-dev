@@ -9197,38 +9197,40 @@ function renderTeamPlanTable(weeks, filterMonth = 'all', totalObjectif = 0) {
     });
   }
 
-  // Calculer les cumuls
-  let cumulMktg = 0;
-  let cumulMktgPrev = 0;
-  let cumulEstim = 0;
-  let cumulEstimPrev = 0;
-  let cumulContrat = 0;
-  let cumulContratPrev = 0;
-  let cumulDollar = 0;
-  let cumulDollarPrev = 0;  // Cumul des dollars PRÉVUS pour le % Objectif
-  let cumulProdVise = 0;
+  // Calculer les cumuls (objectifs et réels) pour les semaines filtrées
+  let cumulMktgObj = 0;
+  let cumulMktgReel = 0;
+  let cumulEstimObj = 0;
+  let cumulEstimReel = 0;
+  let cumulContratObj = 0;
+  let cumulContratReel = 0;
+  let cumulDollarObj = 0;
+  let cumulDollarReel = 0;
+  let cumulProdObj = 0;
   let cumulProdReel = 0;
-  let cumulPctPattern = 0;  // Cumul des pourcentages directs du pattern
+  let cumulPctPattern = 0;
+  let cumulDollarPrev = 0;
 
   filteredWeeks.forEach((week, index) => {
-    // Calculer cumuls des réels
-    cumulMktg += week.mktgReel;
-    cumulEstim += week.estimReel;
-    cumulContrat += week.contratReel;
-    cumulDollar += week.dollarReel;
+    // Calculer cumuls objectifs
+    cumulMktgObj += week.mktgPrev;
+    cumulEstimObj += week.estimPrev;
+    cumulContratObj += week.contratPrev;
+    cumulDollarObj += week.dollarPrev;
+    cumulProdObj += week.prodVise;
+
+    // Calculer cumuls réels
+    cumulMktgReel += week.mktgReel;
+    cumulEstimReel += week.estimReel;
+    cumulContratReel += week.contratReel;
+    cumulDollarReel += week.dollarReel;
     cumulProdReel += week.prodReel;
 
-    // Calculer cumuls des objectifs (Prev)
-    cumulMktgPrev += week.mktgPrev;
-    cumulEstimPrev += week.estimPrev;
-    cumulContratPrev += week.contratPrev;
-    cumulProdVise += week.prodVise;
-
-    // Trouver l'index global de cette semaine dans le tableau complet (56 semaines)
+    // Trouver l'index global de cette semaine dans le tableau complet (52 semaines)
     const globalIndex = weeks.findIndex(w => w.weekLabel === week.weekLabel);
 
-    // Accumuler les dollars PRÉVUS seulement à partir de la semaine 7 (12 janvier)
-    if (globalIndex >= 6) {
+    // Accumuler les dollars PRÉVUS seulement à partir de la semaine 2 (12 janvier)
+    if (globalIndex >= 1) {
       cumulDollarPrev += week.dollarPrev;
     }
 
@@ -9238,19 +9240,59 @@ function renderTeamPlanTable(weeks, filterMonth = 'all', totalObjectif = 0) {
     // % Objectif semaine (utiliser directement la valeur du pattern pour précision exacte)
     const pctSem = percentagePattern[globalIndex] || 0;
 
-    // % Objectif cumulatif (accumulation des % du pattern, commence à la semaine 7)
-    if (globalIndex >= 6) {
+    // % Objectif cumulatif (accumulation des % du pattern, commence à la semaine 2)
+    if (globalIndex >= 1) {
       cumulPctPattern += pctSem;
     }
-    const pctCumul = (globalIndex >= 6) ? cumulPctPattern : 0;
+    const pctCumul = (globalIndex >= 1) ? cumulPctPattern : 0;
 
-    // TV% (taux de vente cible, actif du 12 janv au 30 août = index 6 à 38)
+    // Calculer les tendances (projection annuelle basée sur le % de progression)
+    // Formule: (cumul réel / cumul % objectif) * 100 = projection annuelle
+    let tendanceMktg = '-';
+    let tendanceEstim = '-';
+    let tendanceContrat = '-';
+    let tendanceDollar = '-';
+    let tendanceProd = '-';
+
+    if (pctCumul > 0) {
+      // H. Marketing tendance
+      if (cumulMktgReel > 0) {
+        const tendanceMktgVal = (cumulMktgReel / pctCumul) * 100;
+        tendanceMktg = tendanceMktgVal.toFixed(1) + ' h';
+      }
+
+      // Estimations tendance
+      if (cumulEstimReel > 0) {
+        const tendanceEstimVal = (cumulEstimReel / pctCumul) * 100;
+        tendanceEstim = Math.round(tendanceEstimVal).toString();
+      }
+
+      // Contrats tendance
+      if (cumulContratReel > 0) {
+        const tendanceContratVal = (cumulContratReel / pctCumul) * 100;
+        tendanceContrat = tendanceContratVal.toFixed(1);
+      }
+
+      // $ Signés tendance
+      if (cumulDollarReel > 0) {
+        const tendanceDollarVal = (cumulDollarReel / pctCumul) * 100;
+        tendanceDollar = Math.round(tendanceDollarVal).toLocaleString('fr-CA') + ' $';
+      }
+
+      // Production tendance
+      if (cumulProdReel > 0) {
+        const tendanceProdVal = (cumulProdReel / pctCumul) * 100;
+        tendanceProd = Math.round(tendanceProdVal).toLocaleString('fr-CA') + ' $';
+      }
+    }
+
+    // TV% (taux de vente cible, actif du 12 janv au 30 août = index 1 à 33)
     let tvVal = '-';
-    if (globalIndex >= 6 && globalIndex <= 38) {
+    if (globalIndex >= 1 && globalIndex <= 33) {
       // Progression du TV% pendant la période de ventes
       tvVal = 25;
-      if (globalIndex >= 14) tvVal = 30;
-      if (globalIndex >= 26) tvVal = 35;
+      if (globalIndex >= 20) tvVal = 30;
+      if (globalIndex >= 32) tvVal = 35;
     }
 
     // % Production (affiche le % du pattern de production)
@@ -9264,46 +9306,46 @@ function renderTeamPlanTable(weeks, filterMonth = 'all', totalObjectif = 0) {
     tr.innerHTML = `
       <td class="plan-td-sticky" style="left: 0; width: 180px; min-width: 180px; max-width: 180px; text-align: left; font-size: 0.8rem; padding-left: 12px; color: white;">${week.weekLabel}</td>
 
-      <!-- H. Marketing (5 colonnes) -->
+      <!-- H. Marketing -->
       <td class="plan-td plan-td-prev" style="background: rgba(96, 165, 250, 0.03); color: white;">${week.mktgPrev.toFixed(1)} h</td>
       <td class="plan-td plan-td-reel" style="background: rgba(96, 165, 250, 0.08);">${week.mktgReel > 0 ? week.mktgReel.toFixed(1) + ' h' : '-'}</td>
-      <td class="plan-td plan-td-prev" style="background: rgba(96, 165, 250, 0.03); color: white;">${cumulMktgPrev.toFixed(1)} h</td>
-      <td class="plan-td plan-td-prev" style="background: rgba(96, 165, 250, 0.03); color: white;">${cumulMktg.toFixed(1)} h</td>
-      <td class="plan-td plan-td-prev" style="background: rgba(96, 165, 250, 0.03); color: white;">-</td>
+      <td class="plan-td plan-td-prev" style="background: rgba(96, 165, 250, 0.03); color: white;">${cumulMktgObj.toFixed(1)} h</td>
+      <td class="plan-td plan-td-prev" style="background: rgba(96, 165, 250, 0.03); color: white;">${cumulMktgReel.toFixed(1)} h</td>
+      <td class="plan-td plan-td-prev" style="background: rgba(96, 165, 250, 0.05); color: white;">${tendanceMktg}</td>
 
-      <!-- Estimations (6 colonnes) -->
+      <!-- Estimations -->
       <td class="plan-td plan-td-prev" style="background: rgba(52, 211, 153, 0.03); color: white;">${Math.round(week.estimPrev)}</td>
       <td class="plan-td plan-td-reel" style="background: rgba(52, 211, 153, 0.08);">${Math.round(week.estimReel)}</td>
-      <td class="plan-td plan-td-prev" style="background: rgba(52, 211, 153, 0.03); color: white;">${Math.round(cumulEstimPrev)}</td>
-      <td class="plan-td plan-td-prev" style="background: rgba(52, 211, 153, 0.03); color: white;">${Math.round(cumulEstim)}</td>
-      <td class="plan-td plan-td-prev" style="background: rgba(52, 211, 153, 0.03); color: white;">-</td>
+      <td class="plan-td plan-td-prev" style="background: rgba(52, 211, 153, 0.03); color: white;">${Math.round(cumulEstimObj)}</td>
+      <td class="plan-td plan-td-prev" style="background: rgba(52, 211, 153, 0.03); color: white;">${Math.round(cumulEstimReel)}</td>
+      <td class="plan-td plan-td-prev" style="background: rgba(52, 211, 153, 0.05); color: white;">${tendanceEstim}</td>
       <td class="plan-td plan-td-prev" style="background: rgba(52, 211, 153, 0.05); color: white;">${ratio.toFixed(2)}</td>
 
-      <!-- Contrats (5 colonnes) -->
+      <!-- Contrats -->
       <td class="plan-td plan-td-prev" style="background: rgba(251, 146, 60, 0.03); color: white;">${week.contratPrev.toFixed(1)}</td>
       <td class="plan-td plan-td-reel" style="background: rgba(251, 146, 60, 0.08);">${week.contratReel.toFixed(1)}</td>
-      <td class="plan-td plan-td-prev" style="background: rgba(251, 146, 60, 0.03); color: white;">${cumulContratPrev.toFixed(1)}</td>
-      <td class="plan-td plan-td-prev" style="background: rgba(251, 146, 60, 0.03); color: white;">${cumulContrat.toFixed(1)}</td>
-      <td class="plan-td plan-td-prev" style="background: rgba(251, 146, 60, 0.03); color: white;">-</td>
+      <td class="plan-td plan-td-prev" style="background: rgba(251, 146, 60, 0.03); color: white;">${cumulContratObj.toFixed(1)}</td>
+      <td class="plan-td plan-td-prev" style="background: rgba(251, 146, 60, 0.03); color: white;">${cumulContratReel.toFixed(1)}</td>
+      <td class="plan-td plan-td-prev" style="background: rgba(251, 146, 60, 0.05); color: white;">${tendanceContrat}</td>
 
-      <!-- $ Signés (5 colonnes) -->
+      <!-- $ Signés -->
       <td class="plan-td plan-td-prev" style="background: rgba(244, 114, 182, 0.03); color: white;">${Math.round(week.dollarPrev).toLocaleString('fr-CA')} $</td>
       <td class="plan-td plan-td-reel" style="background: rgba(244, 114, 182, 0.08);">${Math.round(week.dollarReel).toLocaleString('fr-CA')} $</td>
-      <td class="plan-td plan-td-prev" style="background: rgba(244, 114, 182, 0.03); color: white;">${globalIndex >= 6 ? Math.round(cumulDollarPrev).toLocaleString('fr-CA') + ' $' : '-'}</td>
-      <td class="plan-td" style="background: rgba(244, 114, 182, 0.03); color: white;">${Math.round(cumulDollar).toLocaleString('fr-CA')} $</td>
-      <td class="plan-td plan-td-prev" style="background: rgba(244, 114, 182, 0.03); color: white;">-</td>
+      <td class="plan-td" style="background: rgba(244, 114, 182, 0.03); color: white;">${Math.round(cumulDollarObj).toLocaleString('fr-CA')} $</td>
+      <td class="plan-td" style="background: rgba(244, 114, 182, 0.03); color: white;">${Math.round(cumulDollarReel).toLocaleString('fr-CA')} $</td>
+      <td class="plan-td plan-td-prev" style="background: rgba(244, 114, 182, 0.05); color: white;">${tendanceDollar}</td>
 
-      <!-- % Objectif (3 colonnes) -->
+      <!-- % Objectif -->
       <td class="plan-td" style="background: rgba(167, 139, 250, 0.18); font-weight: 600; min-width: 100px; color: white;">${pctSem.toFixed(1)}%</td>
       <td class="plan-td" style="background: rgba(167, 139, 250, 0.12); font-weight: 600; min-width: 100px; color: white;">${pctCumul.toFixed(2)}%</td>
       <td class="plan-td" style="background: rgba(167, 139, 250, 0.18); font-weight: 600; min-width: 100px; color: white;">${tvVal === '-' ? '-' : tvVal + '%'}</td>
 
-      <!-- Production (6 colonnes) -->
+      <!-- Production -->
       <td class="plan-td plan-td-prev" style="background: rgba(45, 212, 191, 0.03); color: white;">${Math.round(week.prodVise).toLocaleString('fr-CA')} $</td>
       <td class="plan-td plan-td-reel" style="background: rgba(45, 212, 191, 0.08);">${Math.round(week.prodReel).toLocaleString('fr-CA')} $</td>
-      <td class="plan-td plan-td-prev" style="background: rgba(45, 212, 191, 0.03); color: white;">${Math.round(cumulProdVise).toLocaleString('fr-CA')} $</td>
+      <td class="plan-td plan-td-prev" style="background: rgba(45, 212, 191, 0.03); color: white;">${Math.round(cumulProdObj).toLocaleString('fr-CA')} $</td>
       <td class="plan-td plan-td-prev" style="background: rgba(45, 212, 191, 0.03); color: white;">${Math.round(cumulProdReel).toLocaleString('fr-CA')} $</td>
-      <td class="plan-td plan-td-prev" style="background: rgba(45, 212, 191, 0.03); color: white;">-</td>
+      <td class="plan-td plan-td-prev" style="background: rgba(45, 212, 191, 0.05); color: white;">${tendanceProd}</td>
       <td class="plan-td plan-td-prev" style="background: rgba(45, 212, 191, 0.03); color: white;">${prodPct > 0 ? prodPct.toFixed(1) + '%' : '0%'}</td>
     `;
 
@@ -9683,9 +9725,9 @@ function parseMonetaryAmount(amountStr) {
   return isNaN(parsed) ? 0 : parsed;
 }
 
-// Fonction pour agréger les données de tous les entrepreneurs
+// Fonction pour charger les données pré-agrégées depuis le RPO direction
 async function aggregateTeamData() {
-  
+  console.log('[TEAM PLAN] Chargement données direction depuis RPO pré-calculé...');
 
   const entrepreneurs = await getCoachEntrepreneurs();
   if (entrepreneurs.length === 0) {
@@ -9699,9 +9741,39 @@ async function aggregateTeamData() {
   let totalTauxVente = 0;
   let countEntrepreneurs = 0;
 
+  // Charger les objectifs de chaque entrepreneur pour calculer les moyennes
+  for (const entrepreneur of entrepreneurs) {
+    const username = entrepreneur.username;
+    const objectifs = await loadEntrepreneurObjectifs(username);
+    if (objectifs) {
+      totalObjectif += objectifs.objectif_ca;
+      totalCM += objectifs.contrat_moyen;
+      totalRatioMktg += objectifs.ratio_mktg;
+      totalTauxVente += objectifs.taux_vente;
+      countEntrepreneurs++;
+    }
+  }
+
+  // NOUVEAU: Charger directement le RPO pré-agrégé de direction
+  const directionRPOData = await loadEntrepreneurRPOData('direction');
+  console.log(`[TEAM PLAN] RPO direction chargé depuis fichier JSON pré-calculé`);
+
+  if (!directionRPOData || !directionRPOData.weekly) {
+    console.warn('[TEAM PLAN] Pas de données RPO pour direction');
+    return {
+      totalObjectif,
+      averages: {
+        cm: countEntrepreneurs > 0 ? totalCM / countEntrepreneurs : 0,
+        ratioMktg: countEntrepreneurs > 0 ? totalRatioMktg / countEntrepreneurs : 0,
+        tauxVente: countEntrepreneurs > 0 ? totalTauxVente / countEntrepreneurs : 0
+      },
+      weeklyData: {}
+    };
+  }
+
   const allWeeklyData = {};
 
-  // Initialiser la structure pour 52 semaines (seulement les données réelles)
+  // Initialiser la structure pour 52 semaines
   for (let i = 0; i < 52; i++) {
     allWeeklyData[i] = {
       mktgReel: 0,
@@ -9712,96 +9784,50 @@ async function aggregateTeamData() {
     };
   }
 
-  // Charger et agréger les données de chaque entrepreneur
-  for (const entrepreneur of entrepreneurs) {
-    const username = entrepreneur.username;
-    
+  // Offsets des semaines par mois (52 semaines total, du 5 janvier au 27 décembre 2026)
+  const weekOffsets = {
+    '0': 0,    // Janvier 2026 (5 semaines)
+    '1': 5,    // Février 2026 (4 semaines)
+    '2': 9,    // Mars 2026 (4 semaines)
+    '3': 13,   // Avril 2026 (5 semaines)
+    '4': 18,   // Mai 2026 (4 semaines)
+    '5': 22,   // Juin 2026 (4 semaines)
+    '6': 26,   // Juillet 2026 (5 semaines)
+    '7': 31,   // Août 2026 (4 semaines)
+    '8': 35,   // Septembre 2026 (4 semaines)
+    '9': 39,   // Octobre 2026 (5 semaines)
+    '10': 44,  // Novembre 2026 (4 semaines)
+    '11': 48   // Décembre 2026 (4 semaines)
+  };
 
-    // Charger les objectifs
-    const objectifs = await loadEntrepreneurObjectifs(username);
-    if (objectifs) {
-      totalObjectif += objectifs.objectif_ca;
-      totalCM += objectifs.contrat_moyen;
-      totalRatioMktg += objectifs.ratio_mktg;
-      totalTauxVente += objectifs.taux_vente;
-      countEntrepreneurs++;
-    }
+  // Lire les données hebdomadaires pré-agrégées de direction
+  for (let monthIndex = 0; monthIndex <= 11; monthIndex++) {
+    const monthKey = String(monthIndex);
+    if (!directionRPOData.weekly[monthKey]) continue;
 
-    // Charger les données RPO
-    const rpoData = await loadEntrepreneurRPOData(username);
-    if (!rpoData || !rpoData.weekly) continue;
+    const monthData = directionRPOData.weekly[monthKey];
+    const weekNumbers = Object.keys(monthData).sort((a, b) => parseInt(a) - parseInt(b));
 
-    // Parcourir les données hebdomadaires (Janvier 2026 à Décembre 2026)
-    // Mapping: mois 0 = Janvier 2026, mois 1 = Février 2026, etc.
-    // Offsets des semaines par mois (52 semaines total, du 5 janvier au 27 décembre 2026)
-    const weekOffsets = {
-      '0': 0,    // Janvier 2026 (5 semaines)
-      '1': 5,    // Février 2026 (4 semaines)
-      '2': 9,    // Mars 2026 (4 semaines)
-      '3': 13,   // Avril 2026 (5 semaines)
-      '4': 18,   // Mai 2026 (4 semaines)
-      '5': 22,   // Juin 2026 (4 semaines)
-      '6': 26,   // Juillet 2026 (5 semaines)
-      '7': 31,   // Août 2026 (4 semaines)
-      '8': 35,   // Septembre 2026 (4 semaines)
-      '9': 39,   // Octobre 2026 (5 semaines)
-      '10': 44,  // Novembre 2026 (4 semaines)
-      '11': 48   // Décembre 2026 (4 semaines)
-    };
+    for (const weekNum of weekNumbers) {
+      const offset = weekOffsets[monthKey];
+      if (offset === undefined) continue;
 
-    for (let monthIndex = 0; monthIndex <= 11; monthIndex++) {
-      const monthKey = String(monthIndex);
-      if (!rpoData.weekly[monthKey]) continue;
+      const weekIndex = offset + parseInt(weekNum) - 1;
+      if (weekIndex < 0 || weekIndex >= 52) continue;
 
-      const monthData = rpoData.weekly[monthKey];
-      const weekNumbers = Object.keys(monthData).sort((a, b) => parseInt(a) - parseInt(b));
+      const weekData = monthData[weekNum];
 
-      for (const weekNum of weekNumbers) {
-        // Calculer le bon index de semaine basé sur le mois et le numéro de semaine
-        // Utiliser weekOffsets pour obtenir le début de chaque mois
-        const offset = weekOffsets[monthKey];
-        if (offset === undefined) continue;
-
-        const weekIndex = offset + parseInt(weekNum) - 1;
-
-        if (weekIndex < 0 || weekIndex >= 52) continue;
-
-        const weekData = monthData[weekNum];
-
-        // Agréger seulement les valeurs réelles (les visées sont calculées via le pattern)
-        // Les champs réels sont: h_marketing, estimation, contract, dollar, prod_horaire
-        const hMarketing = weekData.h_marketing || weekData.h_marketing_reel || 0;
-        allWeeklyData[weekIndex].mktgReel += (hMarketing === '-' || hMarketing === '') ? 0 : parseFloat(hMarketing);
-
-        allWeeklyData[weekIndex].estimReel += parseFloat(weekData.estimation || weekData.estimation_reel) || 0;
-        allWeeklyData[weekIndex].contratReel += parseFloat(weekData.contract || weekData.contract_reel) || 0;
-
-        const dollarReel = weekData.dollar || weekData.dollar_reel || '0';
-        allWeeklyData[weekIndex].dollarReel += parseFloat(String(dollarReel).replace(/[^\d]/g, '')) || 0;
-
-        
-      }
-    }
-
-    // Charger les ventes produites pour cet entrepreneur
-    const ventesProduit = await loadEntrepreneurVentesProduit(username);
-    
-
-    // Agréger les ventes par semaine selon date_completion
-    for (const vente of ventesProduit) {
-      if (!vente.date_completion) {
-        console.warn(`[TEAM PLAN] Vente sans date_completion:`, vente);
-        continue;
-      }
-
-      const weekIdx = getWeekIndexFromDate(vente.date_completion);
-      if (weekIdx !== null && weekIdx >= 0 && weekIdx < 52) {
-        const montant = parseMonetaryAmount(vente.prix);
-        allWeeklyData[weekIdx].prodReel += montant;
-        
-      }
+      // Les données sont déjà agrégées dans le fichier RPO direction
+      const hMarketing = weekData.h_marketing || 0;
+      allWeeklyData[weekIndex].mktgReel = (hMarketing === '-' || hMarketing === '') ? 0 : parseFloat(hMarketing);
+      allWeeklyData[weekIndex].estimReel = parseFloat(weekData.estimation) || 0;
+      allWeeklyData[weekIndex].contratReel = parseFloat(weekData.contract) || 0;
+      allWeeklyData[weekIndex].dollarReel = parseFloat(weekData.dollar) || 0;
+      allWeeklyData[weekIndex].prodReel = parseFloat(weekData.produit) || 0;
     }
   }
+
+  console.log('[TEAM PLAN] Données hebdomadaires chargées depuis RPO direction:', allWeeklyData);
 
   // Charger les métriques Direction (CM, Ratio Marketing, Taux de Vente)
   let directionMetrics = { cm: 0, ratioMktg: 0, tauxVente: 0 };

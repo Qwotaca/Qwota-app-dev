@@ -6,11 +6,17 @@ Gère les données annuelles, mensuelles et hebdomadaires par utilisateur
 import json
 import os
 import logging
+import threading
 from datetime import datetime
 from typing import Dict, Any, Optional
 from zoneinfo import ZoneInfo
 
 logger = logging.getLogger(__name__)
+
+# Locks pour éviter les synchronisations simultanées
+_coach_sync_locks = {}  # Dict[coach_username, Lock]
+_direction_sync_lock = threading.Lock()
+_locks_lock = threading.Lock()  # Lock pour accéder au dict des locks
 
 # Fuseau horaire de Toronto
 TORONTO_TZ = ZoneInfo("America/Toronto")
@@ -280,6 +286,16 @@ def update_weekly_data(username: str, month_index: int, week_number: int, weekly
     result = save_user_rpo_data(username, rpo_data)
     if result:
         print(f"[BACKEND-SAVE] ✅ Données sauvegardées avec succès")
+
+        # Synchroniser le RPO du coach si cet entrepreneur est assigné à un coach
+        try:
+            from QE.Backend.coach_access import get_coach_for_entrepreneur
+            coach_username = get_coach_for_entrepreneur(username)
+            if coach_username:
+                print(f"[BACKEND-SAVE] Synchronisation RPO du coach {coach_username}...", flush=True)
+                sync_coach_rpo(coach_username)
+        except Exception as coach_sync_error:
+            print(f"[WARN] [BACKEND-SAVE] Erreur synchronisation RPO coach: {coach_sync_error}", flush=True)
     else:
         print(f"[BACKEND-SAVE] ❌ Échec de la sauvegarde")
 
@@ -397,6 +413,216 @@ def get_week_number_from_date(date_str: str) -> tuple:
     except Exception as e:
         print(f"Erreur parsing date {date_str}: {e}")
         return (0, 1)  # Default janvier 2026 semaine 1
+
+
+def sync_direction_rpo() -> bool:
+    """
+    Synchronise le RPO direction en agrégeant les données de tous les coaches
+    Agrège: h_marketing, estimation, contract, dollar, produit
+    Utilise un lock pour éviter les synchronisations simultanées
+    """
+    # Acquérir le lock pour direction
+    with _direction_sync_lock:
+        try:
+            import sqlite3
+            from database import get_database_path
+
+            # Récupérer tous les coaches actifs
+            DB_PATH = get_database_path()
+            with sqlite3.connect(DB_PATH) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT username FROM users WHERE role='coach' AND is_active=1")
+                coaches = [row[0] for row in cursor.fetchall()]
+
+            if not coaches:
+                print(f"[DIRECTION RPO] Aucun coach actif trouvé", flush=True)
+                return False
+
+            print(f"[DIRECTION RPO] Agrégation de {len(coaches)} coaches: {coaches}", flush=True)
+
+            # Charger le RPO direction (ou créer structure vide)
+            direction_rpo = load_user_rpo_data('direction')
+
+            # Réinitialiser les données weekly de direction
+            if 'weekly' not in direction_rpo:
+                direction_rpo['weekly'] = {}
+
+            # Initialiser toutes les semaines à 0
+            all_months = [-2] + list(range(12))
+            for month_idx in all_months:
+                month_key = str(month_idx)
+                if month_key not in direction_rpo['weekly']:
+                    direction_rpo['weekly'][month_key] = {}
+
+                for week_number in range(1, 6):
+                    week_key = str(week_number)
+                    if week_key not in direction_rpo['weekly'][month_key]:
+                        direction_rpo['weekly'][month_key][week_key] = {}
+
+                    # Réinitialiser TOUS les champs agrégés à 0
+                    direction_rpo['weekly'][month_key][week_key]['h_marketing'] = 0
+                    direction_rpo['weekly'][month_key][week_key]['estimation'] = 0
+                    direction_rpo['weekly'][month_key][week_key]['contract'] = 0
+                    direction_rpo['weekly'][month_key][week_key]['dollar'] = 0
+                    direction_rpo['weekly'][month_key][week_key]['produit'] = 0
+
+            # Agréger les données de tous les coaches
+            for coach_username in coaches:
+                coach_rpo = load_user_rpo_data(coach_username)
+
+                if 'weekly' not in coach_rpo:
+                    continue
+
+                # Parcourir tous les mois et semaines du coach
+                for month_key, weeks_data in coach_rpo['weekly'].items():
+                    if month_key not in direction_rpo['weekly']:
+                        direction_rpo['weekly'][month_key] = {}
+
+                    for week_key, week_data in weeks_data.items():
+                        if week_key not in direction_rpo['weekly'][month_key]:
+                            direction_rpo['weekly'][month_key][week_key] = {}
+
+                        # Agréger h_marketing (ignorer les "-" et valeurs non numériques)
+                        h_marketing = week_data.get('h_marketing', '-')
+                        if h_marketing not in ['-', '', None]:
+                            try:
+                                h_value = float(h_marketing)
+                                current = direction_rpo['weekly'][month_key][week_key].get('h_marketing', 0)
+                                if current == '-' or current is None:
+                                    current = 0
+                                direction_rpo['weekly'][month_key][week_key]['h_marketing'] = float(current) + h_value
+                            except (ValueError, TypeError):
+                                pass
+
+                        # Agréger estimation, contract, dollar, produit (valeurs numériques)
+                        for field in ['estimation', 'contract', 'dollar', 'produit']:
+                            value = week_data.get(field, 0)
+                            if value and value != 0:
+                                try:
+                                    numeric_value = float(value)
+                                    current = direction_rpo['weekly'][month_key][week_key].get(field, 0)
+                                    direction_rpo['weekly'][month_key][week_key][field] = float(current) + numeric_value
+                                except (ValueError, TypeError):
+                                    pass
+
+            # Sauvegarder le RPO direction (APRÈS avoir agrégé tous les coaches)
+            save_user_rpo_data('direction', direction_rpo)
+            print(f"[DIRECTION RPO] Donnees agregees pour direction ({len(coaches)} coaches)", flush=True)
+            return True
+
+        except Exception as e:
+            print(f"[ERREUR] [DIRECTION RPO] Erreur sync direction: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            return False
+
+
+def sync_coach_rpo(coach_username: str) -> bool:
+    """
+    Synchronise le RPO d'un coach en agrégeant les données de tous ses entrepreneurs
+    Agrège: h_marketing, estimation, contract, dollar, produit
+    Utilise un lock par coach pour éviter les synchronisations simultanées
+    """
+    # Obtenir ou créer le lock pour ce coach
+    with _locks_lock:
+        if coach_username not in _coach_sync_locks:
+            _coach_sync_locks[coach_username] = threading.Lock()
+        coach_lock = _coach_sync_locks[coach_username]
+
+    # Acquérir le lock pour ce coach
+    with coach_lock:
+        try:
+            from QE.Backend.coach_access import get_entrepreneurs_for_coach
+
+            # Récupérer tous les entrepreneurs du coach
+            entrepreneurs = get_entrepreneurs_for_coach(coach_username)
+            if not entrepreneurs:
+                return False
+
+            entrepreneur_usernames = [e['username'] for e in entrepreneurs]
+
+            # Charger le RPO du coach (ou créer structure vide)
+            coach_rpo = load_user_rpo_data(coach_username)
+
+            # Réinitialiser les données weekly du coach
+            if 'weekly' not in coach_rpo:
+                coach_rpo['weekly'] = {}
+
+            # Initialiser toutes les semaines avec h_marketing à 0
+            all_months = [-2] + list(range(12))
+            for month_idx in all_months:
+                month_key = str(month_idx)
+                if month_key not in coach_rpo['weekly']:
+                    coach_rpo['weekly'][month_key] = {}
+
+                for week_number in range(1, 6):
+                    week_key = str(week_number)
+                    if week_key not in coach_rpo['weekly'][month_key]:
+                        coach_rpo['weekly'][month_key][week_key] = {}
+
+                    # Réinitialiser TOUS les champs agrégés à 0
+                    coach_rpo['weekly'][month_key][week_key]['h_marketing'] = 0
+                    coach_rpo['weekly'][month_key][week_key]['estimation'] = 0
+                    coach_rpo['weekly'][month_key][week_key]['contract'] = 0
+                    coach_rpo['weekly'][month_key][week_key]['dollar'] = 0
+                    coach_rpo['weekly'][month_key][week_key]['produit'] = 0
+
+            # Agréger les h_marketing de tous les entrepreneurs
+            for entrepreneur_username in entrepreneur_usernames:
+                entrepreneur_rpo = load_user_rpo_data(entrepreneur_username)
+
+                if 'weekly' not in entrepreneur_rpo:
+                    continue
+
+                # Parcourir tous les mois et semaines de l'entrepreneur
+                for month_key, weeks_data in entrepreneur_rpo['weekly'].items():
+                    if month_key not in coach_rpo['weekly']:
+                        coach_rpo['weekly'][month_key] = {}
+
+                    for week_key, week_data in weeks_data.items():
+                        if week_key not in coach_rpo['weekly'][month_key]:
+                            coach_rpo['weekly'][month_key][week_key] = {}
+
+                        # Agréger h_marketing (ignorer les "-" et valeurs non numériques)
+                        h_marketing = week_data.get('h_marketing', '-')
+                        if h_marketing not in ['-', '', None]:
+                            try:
+                                h_value = float(h_marketing)
+                                current = coach_rpo['weekly'][month_key][week_key].get('h_marketing', 0)
+                                if current == '-' or current is None:
+                                    current = 0
+                                coach_rpo['weekly'][month_key][week_key]['h_marketing'] = float(current) + h_value
+                            except (ValueError, TypeError):
+                                pass
+
+                        # Agréger estimation, contract, dollar, produit (valeurs numériques)
+                        for field in ['estimation', 'contract', 'dollar', 'produit']:
+                            value = week_data.get(field, 0)
+                            if value and value != 0:
+                                try:
+                                    numeric_value = float(value)
+                                    current = coach_rpo['weekly'][month_key][week_key].get(field, 0)
+                                    coach_rpo['weekly'][month_key][week_key][field] = float(current) + numeric_value
+                                except (ValueError, TypeError):
+                                    pass
+
+            # Sauvegarder le RPO du coach
+            save_user_rpo_data(coach_username, coach_rpo)
+            print(f"[COACH RPO] Donnees agregees chargees avec succes pour coach {coach_username} ({len(entrepreneur_usernames)} entrepreneurs)", flush=True)
+
+            # Synchroniser le RPO direction après avoir mis à jour le coach
+            try:
+                sync_direction_rpo()
+            except Exception as direction_sync_error:
+                print(f"[WARN] [COACH RPO] Erreur synchronisation RPO direction: {direction_sync_error}", flush=True)
+
+            return True
+
+        except Exception as e:
+            print(f"[ERREUR] [COACH RPO SYNC] Erreur sync coach {coach_username}: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            return False
 
 
 def sync_soumissions_to_rpo(username: str) -> bool:
@@ -917,6 +1143,16 @@ def sync_soumissions_to_rpo(username: str) -> bool:
                 print(f"[RPO SYNC] {len(badge_result['awarded_badges'])} badges automatiques attribues (+{badge_result['total_xp']} XP)", flush=True)
         except Exception as badge_error:
             print(f"[WARN] [RPO SYNC] Erreur verification badges automatiques: {badge_error}", flush=True)
+
+        # Synchroniser le RPO du coach si cet entrepreneur est assigné à un coach
+        try:
+            from QE.Backend.coach_access import get_coach_for_entrepreneur
+            coach_username = get_coach_for_entrepreneur(username)
+            if coach_username:
+                print(f"[RPO SYNC] Synchronisation RPO du coach {coach_username}...", flush=True)
+                sync_coach_rpo(coach_username)
+        except Exception as coach_sync_error:
+            print(f"[WARN] [RPO SYNC] Erreur synchronisation RPO coach: {coach_sync_error}", flush=True)
 
         return True
 

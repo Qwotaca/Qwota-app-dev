@@ -7746,7 +7746,7 @@ function renderTeamPlanTable(weeks, filterMonth = 'all', totalObjectif = 0) {
     });
   }
 
-  // Calculer les cumuls (objectifs et réels)
+  // Calculer les cumuls (objectifs et réels) pour les semaines filtrées
   let cumulMktgObj = 0;
   let cumulMktgReel = 0;
   let cumulEstimObj = 0;
@@ -7757,8 +7757,8 @@ function renderTeamPlanTable(weeks, filterMonth = 'all', totalObjectif = 0) {
   let cumulDollarReel = 0;
   let cumulProdObj = 0;
   let cumulProdReel = 0;
-  let cumulDollarPrev = 0;  // Cumul des dollars PRÉVUS pour le % Objectif
-  let cumulPctPattern = 0;  // Cumul des pourcentages directs du pattern
+  let cumulPctPattern = 0;
+  let cumulDollarPrev = 0;
 
   filteredWeeks.forEach((week, index) => {
     // Calculer cumuls objectifs
@@ -8272,9 +8272,9 @@ function parseMonetaryAmount(amountStr) {
   return isNaN(parsed) ? 0 : parsed;
 }
 
-// Fonction pour agréger les données de tous les entrepreneurs
+// Fonction pour charger les données pré-agrégées du coach depuis son fichier RPO
 async function aggregateTeamData() {
-  console.log('[TEAM PLAN] Début agrégation données équipe...');
+  console.log('[TEAM PLAN] Chargement données équipe depuis RPO coach...');
 
   const entrepreneurs = await getCoachEntrepreneurs();
   if (entrepreneurs.length === 0) {
@@ -8319,9 +8319,41 @@ async function aggregateTeamData() {
   let totalTauxVente = 0;
   let countEntrepreneurs = 0;
 
+  // Charger les objectifs de chaque entrepreneur pour calculer les moyennes
+  for (const entrepreneur of entrepreneurs) {
+    const username = entrepreneur.username;
+    const objectifs = await loadEntrepreneurObjectifs(username);
+    if (objectifs) {
+      const objectifToUse = coachPrevisions[username] || 0;
+      totalObjectif += objectifToUse;
+      totalCM += objectifs.contrat_moyen;
+      totalRatioMktg += objectifs.ratio_mktg;
+      totalTauxVente += objectifs.taux_vente;
+      countEntrepreneurs++;
+      console.log(`[TEAM PLAN] ${username}: Prévision=${objectifToUse}`);
+    }
+  }
+
+  // NOUVEAU: Charger directement le RPO pré-agrégé du coach
+  const coachRPOData = await loadEntrepreneurRPOData(coachUsername);
+  console.log(`[TEAM PLAN] RPO coach chargé depuis fichier JSON pré-calculé`);
+
+  if (!coachRPOData || !coachRPOData.weekly) {
+    console.warn('[TEAM PLAN] Pas de données RPO pour le coach');
+    return {
+      totalObjectif,
+      averages: {
+        cm: countEntrepreneurs > 0 ? totalCM / countEntrepreneurs : 0,
+        ratioMktg: countEntrepreneurs > 0 ? totalRatioMktg / countEntrepreneurs : 0,
+        tauxVente: countEntrepreneurs > 0 ? totalTauxVente / countEntrepreneurs : 0
+      },
+      weeklyData: {}
+    };
+  }
+
   const allWeeklyData = {};
 
-  // Initialiser la structure pour 52 semaines (seulement les données réelles)
+  // Initialiser la structure pour 52 semaines
   for (let i = 0; i < 52; i++) {
     allWeeklyData[i] = {
       mktgReel: 0,
@@ -8332,99 +8364,50 @@ async function aggregateTeamData() {
     };
   }
 
-  // Charger et agréger les données de chaque entrepreneur
-  for (const entrepreneur of entrepreneurs) {
-    const username = entrepreneur.username;
-    console.log(`[TEAM PLAN] Traitement de ${username}...`);
+  // Offsets des semaines par mois (52 semaines total, du 5 janvier au 27 décembre 2026)
+  const weekOffsets = {
+    '0': 0,    // Janvier 2026 (5 semaines)
+    '1': 5,    // Février 2026 (4 semaines)
+    '2': 9,    // Mars 2026 (4 semaines)
+    '3': 13,   // Avril 2026 (5 semaines)
+    '4': 18,   // Mai 2026 (4 semaines)
+    '5': 22,   // Juin 2026 (4 semaines)
+    '6': 26,   // Juillet 2026 (5 semaines)
+    '7': 31,   // Août 2026 (4 semaines)
+    '8': 35,   // Septembre 2026 (4 semaines)
+    '9': 39,   // Octobre 2026 (5 semaines)
+    '10': 44,  // Novembre 2026 (4 semaines)
+    '11': 48   // Décembre 2026 (4 semaines)
+  };
 
-    // Charger les objectifs
-    const objectifs = await loadEntrepreneurObjectifs(username);
-    if (objectifs) {
-      // UNIQUEMENT utiliser la prévision du coach (déjà vérifié qu'elle existe)
-      const objectifToUse = coachPrevisions[username] || 0;
-      totalObjectif += objectifToUse;
-      totalCM += objectifs.contrat_moyen;
-      totalRatioMktg += objectifs.ratio_mktg;
-      totalTauxVente += objectifs.taux_vente;
-      countEntrepreneurs++;
-      console.log(`[TEAM PLAN] ${username}: Prévision=${objectifToUse}`);
-    }
+  // Lire les données hebdomadaires pré-agrégées du coach
+  for (let monthIndex = 0; monthIndex <= 11; monthIndex++) {
+    const monthKey = String(monthIndex);
+    if (!coachRPOData.weekly[monthKey]) continue;
 
-    // Charger les données RPO
-    const rpoData = await loadEntrepreneurRPOData(username);
-    if (!rpoData || !rpoData.weekly) continue;
+    const monthData = coachRPOData.weekly[monthKey];
+    const weekNumbers = Object.keys(monthData).sort((a, b) => parseInt(a) - parseInt(b));
 
-    // Parcourir les données hebdomadaires (Janvier 2026 à Décembre 2026)
-    // Mapping: mois 0 = Janvier 2026, mois 1 = Février 2026, etc.
-    // Offsets des semaines par mois (52 semaines total, du 5 janvier au 27 décembre 2026)
-    const weekOffsets = {
-      '0': 0,    // Janvier 2026 (5 semaines)
-      '1': 5,    // Février 2026 (4 semaines)
-      '2': 9,    // Mars 2026 (4 semaines)
-      '3': 13,   // Avril 2026 (5 semaines)
-      '4': 18,   // Mai 2026 (4 semaines)
-      '5': 22,   // Juin 2026 (4 semaines)
-      '6': 26,   // Juillet 2026 (5 semaines)
-      '7': 31,   // Août 2026 (4 semaines)
-      '8': 35,   // Septembre 2026 (4 semaines)
-      '9': 39,   // Octobre 2026 (5 semaines)
-      '10': 44,  // Novembre 2026 (4 semaines)
-      '11': 48   // Décembre 2026 (4 semaines)
-    };
+    for (const weekNum of weekNumbers) {
+      const offset = weekOffsets[monthKey];
+      if (offset === undefined) continue;
 
-    for (let monthIndex = 0; monthIndex <= 11; monthIndex++) {
-      const monthKey = String(monthIndex);
-      if (!rpoData.weekly[monthKey]) continue;
+      const weekIndex = offset + parseInt(weekNum) - 1;
+      if (weekIndex < 0 || weekIndex >= 52) continue;
 
-      const monthData = rpoData.weekly[monthKey];
-      const weekNumbers = Object.keys(monthData).sort((a, b) => parseInt(a) - parseInt(b));
+      const weekData = monthData[weekNum];
 
-      for (const weekNum of weekNumbers) {
-        // Calculer le bon index de semaine basé sur le mois et le numéro de semaine
-        // Utiliser weekOffsets pour obtenir le début de chaque mois
-        const offset = weekOffsets[monthKey];
-        if (offset === undefined) continue;
-
-        const weekIndex = offset + parseInt(weekNum) - 1;
-
-        if (weekIndex < 0 || weekIndex >= 52) continue;
-
-        const weekData = monthData[weekNum];
-
-        // Agréger seulement les valeurs réelles (les visées sont calculées via le pattern)
-        // Les champs réels sont: h_marketing, estimation, contract, dollar, prod_horaire
-        const hMarketing = weekData.h_marketing || weekData.h_marketing_reel || 0;
-        allWeeklyData[weekIndex].mktgReel += (hMarketing === '-' || hMarketing === '') ? 0 : parseFloat(hMarketing);
-
-        allWeeklyData[weekIndex].estimReel += parseFloat(weekData.estimation || weekData.estimation_reel) || 0;
-        allWeeklyData[weekIndex].contratReel += parseFloat(weekData.contract || weekData.contract_reel) || 0;
-
-        const dollarReel = weekData.dollar || weekData.dollar_reel || '0';
-        allWeeklyData[weekIndex].dollarReel += parseFloat(String(dollarReel).replace(/[^\d]/g, '')) || 0;
-
-        console.log(`[TEAM PLAN] ${username} mois ${monthIndex} semaine ${weekNum} -> weekIndex ${weekIndex} (${weekData.week_label || 'no label'})`);
-      }
-    }
-
-    // Charger les ventes produites pour cet entrepreneur
-    const ventesProduit = await loadEntrepreneurVentesProduit(username);
-    console.log(`[TEAM PLAN] ${username}: ${ventesProduit.length} ventes produites`);
-
-    // Agréger les ventes par semaine selon date_completion
-    for (const vente of ventesProduit) {
-      if (!vente.date_completion) {
-        console.warn(`[TEAM PLAN] Vente sans date_completion:`, vente);
-        continue;
-      }
-
-      const weekIdx = getWeekIndexFromDate(vente.date_completion);
-      if (weekIdx !== null && weekIdx >= 0 && weekIdx < 52) {
-        const montant = parseMonetaryAmount(vente.prix);
-        allWeeklyData[weekIdx].prodReel += montant;
-        console.log(`[TEAM PLAN] ${username}: Vente de ${montant}$ ajoutée à la semaine ${weekIdx}`);
-      }
+      // Les données sont déjà agrégées dans le fichier RPO du coach
+      const hMarketing = weekData.h_marketing || 0;
+      allWeeklyData[weekIndex].mktgReel = (hMarketing === '-' || hMarketing === '') ? 0 : parseFloat(hMarketing);
+      allWeeklyData[weekIndex].estimReel = parseFloat(weekData.estimation) || 0;
+      allWeeklyData[weekIndex].contratReel = parseFloat(weekData.contract) || 0;
+      allWeeklyData[weekIndex].dollarReel = parseFloat(weekData.dollar) || 0;
+      allWeeklyData[weekIndex].prodReel = parseFloat(weekData.produit) || 0;
     }
   }
+
+  console.log('[TEAM PLAN] Données hebdomadaires chargées depuis RPO coach:', allWeeklyData);
 
   // Calculer les moyennes
   const avgCM = countEntrepreneurs > 0 ? totalCM / countEntrepreneurs : 0;

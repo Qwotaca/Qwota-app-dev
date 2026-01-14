@@ -6719,8 +6719,10 @@ function calculateAllMonthlyTotalsFromWeekly() {
     }
   }
 
-  // Recalculer les totaux annuels
-  calculateAnnualTotalsFromMonthly();
+  // NOTE: Ne PAS recalculer les totaux annuels depuis monthly car les valeurs correctes
+  // viennent déjà du JSON (calculées server-side par sync_soumissions_to_rpo)
+  // Recalculer ici causerait un doublement des valeurs annuelles
+  // calculateAnnualTotalsFromMonthly();
 }
 
 // Calculer les totaux annuels RÉEL en additionnant les 12 mois
@@ -7587,7 +7589,13 @@ window.loadRPOData = async function() {
       loadWeeklyDataToPlan();
       log('[RPO] Données hebdomadaires chargées dans le plan d\'affaire');
     }
-  }, 50);
+
+    // Calculer les cumuls et les "Devrait être à" après le chargement des données
+    if (typeof calculatePlan === 'function') {
+      calculatePlan();
+      log('[RPO] Cumuls et tendances calculés');
+    }
+  }, 100);
 
   // Réinitialiser les vues RPO
   setTimeout(async () => {
@@ -10959,7 +10967,7 @@ function syncPlanTotalsToAnnualObjectives(totalMktgPrev, totalEstimPrev, totalCo
 function calculateExpectedToDate() {
   log('📅 Calcul "Devrait être à" depuis Cumul Obj. de la semaine actuelle');
 
-  const today = createTorontoDate(); // Date d'aujourd'hui
+  const today = new Date(); // Date d'aujourd'hui
   const planStartDate = createTorontoDate(2026, 0, 5); // 5 janvier 2026
   const weeks = 52;
 
@@ -11029,13 +11037,17 @@ function calculateExpectedToDate() {
 
   const estimTendance = document.getElementById('estimation-tendance');
   if (estimTendance) {
-    estimTendance.textContent = Math.round(expectedEstim).toString();
+    // Afficher avec 1 décimale si < 10, sinon arrondir
+    const displayValue = expectedEstim < 10 ? expectedEstim.toFixed(1) : Math.round(expectedEstim).toString();
+    estimTendance.textContent = displayValue;
     estimTendance.dataset.value = expectedEstim;
   }
 
   const contractTendance = document.getElementById('contract-tendance');
   if (contractTendance) {
-    contractTendance.textContent = Math.round(expectedContrat).toString();
+    // Afficher avec 1 décimale si < 10, sinon arrondir
+    const displayValue = expectedContrat < 10 ? expectedContrat.toFixed(1) : Math.round(expectedContrat).toString();
+    contractTendance.textContent = displayValue;
     contractTendance.dataset.value = expectedContrat;
   }
 
@@ -11097,7 +11109,7 @@ function showAdvice(metricName) {
   if (retard <= 0) return; // Pas de retard
 
   // Calculer combien de semaines jusqu'à la fin de l'année fiscale
-  const today = createTorontoDate();
+  const today = new Date();
   const fiscalYearEnd = createTorontoDate(2026, 9, 4); // 4 octobre 2026
   const weeksRemaining = Math.ceil((fiscalYearEnd - today) / (7 * 24 * 60 * 60 * 1000));
 
@@ -11646,9 +11658,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('[RPO] Chargement initial des données (entrepreneur ou sélection active)');
 
   // D'abord charger les données RPO pour avoir le bon Objectif CA
-  await loadRPOData();
+  await loadRPODataInternal();
 
-  // Ensuite générer le plan avec les paramètres corrects
+  // Ensuite générer le plan avec les paramètres corrects (objectif CA chargé)
   generatePlanWeeks();
 
   // Charger les objectifs hebdomadaires sauvegardés depuis le backend
@@ -11659,14 +11671,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   // avant toute synchronisation pour éviter d'écraser les données
   await loadRPODataIntoPlan();
 
-  // S'assurer que le calcul est fait avec le bon objectif
+  // Calculer tous les cumuls, totaux et tendances
   calculatePlan();
+
+  // S'assurer que les "Devrait être à" sont calculés
+  setTimeout(() => {
+    calculateExpectedToDate();
+    console.log('[RPO] "Devrait être à" recalculés après chargement');
+  }, 150);
 
   // Ajouter des listeners sur les paramètres du plan pour recalculer automatiquement
   setupPlanParameterListeners();
 
   // Activer le drag-to-scroll sur le tableau
   enableDragScroll();
+
+  console.log('[RPO] Chargement initial terminé');
 });
 
 // Activer le scroll horizontal avec la souris (drag to scroll)

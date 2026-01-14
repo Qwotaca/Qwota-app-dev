@@ -19500,6 +19500,17 @@ async def save_weekly_targets(data: dict):
         # Sauvegarder les données RPO en utilisant le module qui gère les chemins
         save_user_rpo_data(username, rpo_data)
 
+        # Synchroniser le RPO du coach si l'utilisateur est un entrepreneur
+        try:
+            from QE.Backend.coach_access import get_coach_for_entrepreneur
+            from QE.Backend.rpo import sync_coach_rpo
+            coach_username = get_coach_for_entrepreneur(username)
+            if coach_username:
+                print(f"[SAVE TARGETS] Synchronisation RPO coach: {coach_username}")
+                sync_coach_rpo(coach_username)
+        except Exception as sync_error:
+            print(f"[SAVE TARGETS] [WARN] Erreur sync coach RPO: {sync_error}")
+
         print(f"[SAVE TARGETS] [OK] Objectifs hebdomadaires sauvegardes avec succes pour {username}")
         return {"status": "success", "message": "Objectifs hebdomadaires sauvegardés"}
 

@@ -8274,33 +8274,36 @@ function parseMonetaryAmount(amountStr) {
 
 // Fonction pour charger les données pré-agrégées du coach depuis son fichier RPO
 async function aggregateTeamData() {
-  console.log('[TEAM PLAN] Chargement données équipe depuis RPO coach...');
+  console.log('[TEAM PLAN] Chargement données équipe depuis RPO coach (JSON pré-calculé)...');
 
-  const entrepreneurs = await getCoachEntrepreneurs();
-  if (entrepreneurs.length === 0) {
-    console.warn('[TEAM PLAN] Aucun entrepreneur trouvé');
-    return null;
-  }
-
-  // Charger les prévisions du coach
   const coachUsername = window.selectedEntrepreneurUsername || window.username || localStorage.getItem('username');
-  let coachPrevisions = {};
-  let hasCoachPrevisions = false;
 
-  try {
-    const prevResponse = await fetch(`/api/coach/team-objectifs?coach_username=${coachUsername}`);
-    const prevData = await prevResponse.json();
-    if (prevData.success && prevData.previsions && Object.keys(prevData.previsions).length > 0) {
-      coachPrevisions = prevData.previsions;
-      hasCoachPrevisions = true;
-      console.log('[TEAM PLAN] Prévisions coach chargées:', coachPrevisions);
-    }
-  } catch (error) {
-    console.warn('[TEAM PLAN] Pas de prévisions coach');
+  // NOUVEAU: Charger directement le RPO pré-agrégé du coach (contient tout!)
+  const coachRPOData = await loadEntrepreneurRPOData(coachUsername);
+  console.log(`[TEAM PLAN] RPO coach chargé depuis fichier JSON pré-calculé`);
+
+  if (!coachRPOData) {
+    console.warn('[TEAM PLAN] Pas de données RPO pour le coach');
+    return {
+      totalObjectif: 0,
+      averages: {
+        cm: 0,
+        ratioMktg: 0,
+        tauxVente: 0
+      },
+      weeklyData: {}
+    };
   }
 
-  // Si pas de prévisions coach, retourner objectif à 0
-  if (!hasCoachPrevisions) {
+  // Récupérer les métriques et prévisions directement du JSON
+  const teamMetrics = coachRPOData.team_metrics || { cm: 0, ratioMktg: 0, tauxVente: 0, totalObjectif: 0 };
+  const totalObjectif = teamMetrics.totalObjectif || 0;
+
+  console.log('[TEAM PLAN] Métriques équipe depuis JSON:', teamMetrics);
+  console.log('[TEAM PLAN] Objectif total équipe:', totalObjectif);
+
+  // Si pas de prévisions, retourner objectif à 0
+  if (totalObjectif === 0) {
     console.warn('[TEAM PLAN] Aucune prévision définie - plan d\'affaire non disponible');
     return {
       totalObjectif: 0,
@@ -8313,40 +8316,11 @@ async function aggregateTeamData() {
     };
   }
 
-  let totalObjectif = 0;
-  let totalCM = 0;
-  let totalRatioMktg = 0;
-  let totalTauxVente = 0;
-  let countEntrepreneurs = 0;
-
-  // Charger les objectifs de chaque entrepreneur pour calculer les moyennes
-  for (const entrepreneur of entrepreneurs) {
-    const username = entrepreneur.username;
-    const objectifs = await loadEntrepreneurObjectifs(username);
-    if (objectifs) {
-      const objectifToUse = coachPrevisions[username] || 0;
-      totalObjectif += objectifToUse;
-      totalCM += objectifs.contrat_moyen;
-      totalRatioMktg += objectifs.ratio_mktg;
-      totalTauxVente += objectifs.taux_vente;
-      countEntrepreneurs++;
-      console.log(`[TEAM PLAN] ${username}: Prévision=${objectifToUse}`);
-    }
-  }
-
-  // NOUVEAU: Charger directement le RPO pré-agrégé du coach
-  const coachRPOData = await loadEntrepreneurRPOData(coachUsername);
-  console.log(`[TEAM PLAN] RPO coach chargé depuis fichier JSON pré-calculé`);
-
-  if (!coachRPOData || !coachRPOData.weekly) {
-    console.warn('[TEAM PLAN] Pas de données RPO pour le coach');
+  if (!coachRPOData.weekly) {
+    console.warn('[TEAM PLAN] Pas de données hebdomadaires pour le coach');
     return {
       totalObjectif,
-      averages: {
-        cm: countEntrepreneurs > 0 ? totalCM / countEntrepreneurs : 0,
-        ratioMktg: countEntrepreneurs > 0 ? totalRatioMktg / countEntrepreneurs : 0,
-        tauxVente: countEntrepreneurs > 0 ? totalTauxVente / countEntrepreneurs : 0
-      },
+      averages: teamMetrics,
       weeklyData: {}
     };
   }
@@ -8409,28 +8383,21 @@ async function aggregateTeamData() {
 
   console.log('[TEAM PLAN] Données hebdomadaires chargées depuis RPO coach:', allWeeklyData);
 
-  // Calculer les moyennes
-  const avgCM = countEntrepreneurs > 0 ? totalCM / countEntrepreneurs : 0;
-  const avgRatioMktg = countEntrepreneurs > 0 ? totalRatioMktg / countEntrepreneurs : 0;
-  const avgTauxVente = countEntrepreneurs > 0 ? totalTauxVente / countEntrepreneurs : 0;
-
-  // prodReel est déjà calculé via l'agrégation des ventes_produit
-  // Pas besoin de calculer prodReel = dollarReel / mktgReel (c'était incorrect)
+  // Les moyennes sont déjà pré-calculées dans teamMetrics!
   console.log('[TEAM PLAN] Production réelle totale (ventes produites):',
     Object.values(allWeeklyData).reduce((sum, w) => sum + w.prodReel, 0).toLocaleString('fr-CA') + ' $');
 
   console.log('[TEAM PLAN] Objectif total équipe:', totalObjectif);
-  console.log('[TEAM PLAN] Moyennes équipe:', { avgCM, avgRatioMktg, avgTauxVente });
+  console.log('[TEAM PLAN] Moyennes équipe (depuis JSON):', teamMetrics);
   console.log('[TEAM PLAN] Données hebdomadaires agrégées:', allWeeklyData);
 
   return {
     totalObjectif,
     weeklyData: allWeeklyData,
-    entrepreneurCount: entrepreneurs.length,
     averages: {
-      cm: avgCM,
-      ratioMktg: avgRatioMktg,
-      tauxVente: avgTauxVente
+      cm: teamMetrics.cm,
+      ratioMktg: teamMetrics.ratioMktg,
+      tauxVente: teamMetrics.tauxVente
     }
   };
 }

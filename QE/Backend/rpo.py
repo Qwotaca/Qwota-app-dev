@@ -552,6 +552,17 @@ def sync_coach_rpo(coach_username: str) -> bool:
             # Charger le RPO du coach (ou créer structure vide)
             coach_rpo = load_user_rpo_data(coach_username)
 
+            # Initialiser les sections team_previsions et team_metrics
+            if 'team_previsions' not in coach_rpo:
+                coach_rpo['team_previsions'] = {}
+            if 'team_metrics' not in coach_rpo:
+                coach_rpo['team_metrics'] = {
+                    'cm': 0,
+                    'ratioMktg': 0,
+                    'tauxVente': 0,
+                    'totalObjectif': 0
+                }
+
             # Réinitialiser les données weekly du coach
             if 'weekly' not in coach_rpo:
                 coach_rpo['weekly'] = {}
@@ -613,6 +624,46 @@ def sync_coach_rpo(coach_username: str) -> bool:
                                     coach_rpo['weekly'][month_key][week_key][field] = float(current) + numeric_value
                                 except (ValueError, TypeError):
                                     pass
+
+            # Charger les prévisions et métriques de chaque entrepreneur
+            total_objectif = 0
+            total_cm = 0
+            total_ratio_mktg = 0
+            total_taux_vente = 0
+            count_entrepreneurs = 0
+
+            coach_rpo['team_previsions'] = {}
+
+            for entrepreneur_username in entrepreneur_usernames:
+                entrepreneur_rpo = load_user_rpo_data(entrepreneur_username)
+
+                # Récupérer l'objectif CA annuel
+                objectif_ca = entrepreneur_rpo.get('annual', {}).get('objectif_ca', 0)
+                coach_rpo['team_previsions'][entrepreneur_username] = objectif_ca
+                total_objectif += objectif_ca
+
+                # Récupérer les métriques du plan d'affaire
+                annual_data = entrepreneur_rpo.get('annual', {})
+                cm = annual_data.get('contrat_moyen', 0)
+                ratio_mktg = annual_data.get('ratio_mktg', 0)
+                taux_vente = annual_data.get('taux_vente', 0)
+
+                if cm > 0 or ratio_mktg > 0 or taux_vente > 0:
+                    total_cm += cm
+                    total_ratio_mktg += ratio_mktg
+                    total_taux_vente += taux_vente
+                    count_entrepreneurs += 1
+
+            # Calculer les moyennes
+            coach_rpo['team_metrics'] = {
+                'cm': total_cm / count_entrepreneurs if count_entrepreneurs > 0 else 0,
+                'ratioMktg': total_ratio_mktg / count_entrepreneurs if count_entrepreneurs > 0 else 0,
+                'tauxVente': total_taux_vente / count_entrepreneurs if count_entrepreneurs > 0 else 0,
+                'totalObjectif': total_objectif
+            }
+
+            print(f"[COACH RPO] Previsions agregees: {coach_rpo['team_previsions']}", flush=True)
+            print(f"[COACH RPO] Metriques moyennes: {coach_rpo['team_metrics']}", flush=True)
 
             # Sauvegarder le RPO du coach
             save_user_rpo_data(coach_username, coach_rpo)

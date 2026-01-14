@@ -12819,22 +12819,28 @@ function updateCibleCalculations() {
 
     log(`[CIBLÉ DEBUG] ✓ ${category} input found:`, input);
 
-    // Pour les redevances, garder le système actuel (calculé dynamiquement)
-    // Pour les autres catégories, utiliser le % par défaut pour calculer le montant
+    // Vérifier si on est en mode édition (input n'a pas readonly)
+    const isEditing = !input.hasAttribute('readonly');
+
     let montant;
     let percent;
 
-    if (category === 'redevances') {
-      // Redevances: garder le système actuel (lire le montant de l'input)
+    if (isEditing) {
+      // MODE ÉDITION: Lire la valeur de l'input (ne PAS écraser)
+      montant = parseMoneyValue(input.value);
+      percent = objectifCA > 0 ? (montant / objectifCA) * 100 : 0;
+      log(`[CIBLÉ DEBUG]   - ${category} (ÉDITION): valeur saisie = ${montant}`);
+    } else if (category === 'redevances') {
+      // Redevances en mode lecture: garder le système actuel
       montant = parseMoneyValue(input.value);
       percent = (montant / objectifCA) * 100;
       log(`[CIBLÉ DEBUG]   - redevances: keeping existing value ${montant}`);
     } else {
-      // Autres catégories: calculer le montant à partir du % par défaut
+      // MODE LECTURE: Calculer le montant à partir du % par défaut
       percent = DEFAULT_CIBLE_PERCENT[category] || 0;
       montant = (percent / 100) * objectifCA;
 
-      // Mettre à jour l'input avec le montant calculé
+      // Mettre à jour l'input avec le montant calculé ET formaté
       input.value = formatMoneyValue(montant);
       log(`[CIBLÉ DEBUG]   - ${category}: ${percent}% of ${objectifCA} = ${montant}`);
     }

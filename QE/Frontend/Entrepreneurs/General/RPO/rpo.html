@@ -13372,11 +13372,17 @@ async function saveEtatsResultatsEdits() {
   saveBtn.style.opacity = '0.7';
 
   try {
-    // Formater toutes les cellules ACTUEL éditables (contenteditable)
+    // Formater les cellules ACTUEL contenteditable (celles sans input enfant)
     const actuelCells = document.querySelectorAll('[data-field="actuel-montant"]');
     actuelCells.forEach(cell => {
-      const value = parseMoneyValue(cell.textContent);
-      cell.textContent = formatMoneyValue(value);
+      // Vérifier si cette cellule contient un input
+      const hasInput = cell.querySelector('input');
+      if (!hasInput) {
+        // C'est une cellule contenteditable, formater directement
+        const value = parseMoneyValue(cell.textContent);
+        cell.textContent = formatMoneyValue(value);
+      }
+      // Si elle contient un input, il sera formaté par le code suivant
     });
 
     // Formater toutes les valeurs des inputs ACTUEL
@@ -13406,20 +13412,30 @@ async function saveEtatsResultatsEdits() {
     });
 
     // Recalculer les totaux et pourcentages CIBLÉ
+    console.log('🔍 [SAVE] Étape 1: updateCibleCalculations()...');
     updateCibleCalculations();
+    console.log('✅ [SAVE] Étape 1 terminée');
 
     // Recalculer tous les totaux et écarts
+    console.log('🔍 [SAVE] Étape 2: updateAllCalculations()...');
     updateAllCalculations();
+    console.log('✅ [SAVE] Étape 2 terminée');
 
     // Sauvegarder dans le backend
+    console.log('🔍 [SAVE] Étape 3: saveEtatsResultatsData()...');
     await saveEtatsResultatsData();
+    console.log('✅ [SAVE] Étape 3 terminée');
 
     // Quitter le mode édition
+    console.log('🔍 [SAVE] Étape 4: toggleEditEtatsResultats()...');
     toggleEditEtatsResultats();
+    console.log('✅ [SAVE] Étape 4 terminée - mode édition désactivé');
 
     // Régénérer les cartes mobiles avec les nouvelles valeurs
     if (typeof generateEtatsMobile === 'function') {
+      console.log('🔍 [SAVE] Étape 5: generateEtatsMobile()...');
       generateEtatsMobile();
+      console.log('✅ [SAVE] Étape 5 terminée');
     }
 
     // Notification de succès
@@ -13428,6 +13444,22 @@ async function saveEtatsResultatsEdits() {
     }
 
     log('[OK] États des Résultats sauvegardés');
+  } catch (error) {
+    console.error('❌ [SAVE] Erreur lors de la sauvegarde:', error);
+    console.error('❌ [SAVE] Stack:', error.stack);
+
+    // Notification d'erreur
+    if (typeof showNotification === 'function') {
+      showNotification('Erreur lors de la sauvegarde: ' + error.message, 'error');
+    }
+
+    // Quitter le mode édition même en cas d'erreur
+    console.log('🔍 [SAVE] Tentative de sortie du mode édition après erreur...');
+    try {
+      toggleEditEtatsResultats();
+    } catch (toggleError) {
+      console.error('❌ [SAVE] Impossible de sortir du mode édition:', toggleError);
+    }
   } finally {
     setTimeout(() => {
       saveBtn.innerHTML = originalHTML;

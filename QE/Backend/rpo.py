@@ -637,6 +637,10 @@ def sync_coach_rpo(coach_username: str) -> bool:
                                 except (ValueError, TypeError):
                                     pass
 
+            # Charger les PRÉVISIONS du coach (pas les objectifs réels des entrepreneurs!)
+            from QE.Backend.coach_previsions import load_coach_previsions
+            coach_previsions_data = load_coach_previsions(coach_username)
+
             # Charger les prévisions et métriques de chaque entrepreneur
             total_objectif = 0
             total_cm = 0
@@ -651,21 +655,25 @@ def sync_coach_rpo(coach_username: str) -> bool:
 
                 # Récupérer toutes les métriques de l'entrepreneur
                 annual_data = entrepreneur_rpo.get('annual', {})
-                objectif_ca = annual_data.get('objectif_ca', 0)
+                objectif_ca_reel = annual_data.get('objectif_ca', 0)
                 cm = annual_data.get('contrat_moyen', 0)
                 ratio_mktg = annual_data.get('ratio_mktg', 0)
                 taux_vente = annual_data.get('taux_vente', 0)
 
+                # Utiliser la PRÉVISION du coach si elle existe, sinon utiliser l'objectif réel
+                objectif_ca_prevision = coach_previsions_data.get(entrepreneur_username, objectif_ca_reel)
+
                 # Stocker les métriques individuelles de cet entrepreneur
                 coach_rpo['entrepreneurs_metrics'][entrepreneur_username] = {
-                    'objectif_ca': objectif_ca,
+                    'objectif_ca_reel': objectif_ca_reel,  # Objectif réel de l'entrepreneur
+                    'objectif_ca_prevision': objectif_ca_prevision,  # Prévision du coach pour cet entrepreneur
                     'cm': cm,
                     'ratioMktg': ratio_mktg,
                     'tauxVente': taux_vente
                 }
 
-                # Accumuler pour les moyennes
-                total_objectif += objectif_ca
+                # Accumuler les PRÉVISIONS (pas les objectifs réels) pour le total
+                total_objectif += objectif_ca_prevision
                 if cm > 0 or ratio_mktg > 0 or taux_vente > 0:
                     total_cm += cm
                     total_ratio_mktg += ratio_mktg

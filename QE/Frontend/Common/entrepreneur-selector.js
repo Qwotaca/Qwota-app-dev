@@ -30,6 +30,16 @@
       return; // Selector is only for coach and direction
     }
 
+    // IMPORTANT: Sur coach_rpo.html, un COACH voit son propre RPO (pas besoin de sélecteur)
+    // Seule la DIRECTION a besoin du sélecteur pour choisir quel coach consulter
+    const currentPath = window.location.pathname.toLowerCase();
+    const isCoachRPOPage = currentPath.includes('coach_rpo');
+
+    if (isCoachRPOPage && userRole === 'coach') {
+      console.log('[ENTREPRENEUR-SELECTOR] ⏭️ Skip sur coach_rpo.html (coach consulte son propre RPO)');
+      return; // Coach viewing own data, no selector needed
+    }
+
     // Add coach-mode class to body
     document.body.classList.add('coach-mode');
 

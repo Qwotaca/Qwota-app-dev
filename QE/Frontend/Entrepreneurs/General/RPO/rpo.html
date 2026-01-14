@@ -2544,7 +2544,7 @@ window.debug = console.debug.bind(console);
 <script>
 // 🔄 FORCE CACHE RELOAD - Version check
 (function() {
-  const CURRENT_VERSION = '2026-01-14-v6'; // Incrémenter cette version à chaque déploiement important
+  const CURRENT_VERSION = '2026-01-14-v7'; // Incrémenter cette version à chaque déploiement important
   const storageKey = 'rpo_page_version';
   const lastVersion = localStorage.getItem(storageKey);
 
@@ -9483,7 +9483,18 @@ async function reloadPlanWithAnimation() {
   // Régénérer le plan d'affaire
   generatePlanWeeks();
 
-  // Charger les objectifs hebdomadaires sauvegardés
+  // IMPORTANT: Sauvegarder les nouvelles valeurs du plan dans le backend
+  // Cela met à jour les *_vise avec les valeurs du nouveau plan
+  const startDate = createTorontoDate(2026, 0, 5); // 5 janvier 2026
+  await saveWeeklyTargetsToJSON(
+    window.planWeeklyTargets.mktg,
+    window.planWeeklyTargets.estim,
+    window.planWeeklyTargets.contrat,
+    window.planWeeklyTargets.dollar,
+    startDate
+  );
+
+  // Charger les objectifs hebdomadaires sauvegardés (maintenant à jour)
   await loadSavedWeeklyTargetsIntoPlan();
 
   // Synchroniser les prévisions vers RPO

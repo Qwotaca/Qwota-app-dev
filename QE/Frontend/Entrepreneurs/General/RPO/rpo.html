@@ -2544,7 +2544,7 @@ window.debug = console.debug.bind(console);
 <script>
 // 🔄 FORCE CACHE RELOAD - Version check
 (function() {
-  const CURRENT_VERSION = '2026-01-14-v7'; // Incrémenter cette version à chaque déploiement important
+  const CURRENT_VERSION = '2026-01-14-v8'; // Incrémenter cette version à chaque déploiement important
   const storageKey = 'rpo_page_version';
   const lastVersion = localStorage.getItem(storageKey);
 
@@ -5359,6 +5359,39 @@ function generateWeeklyTables(monthIndex) {
 // Store current month index for refresh
 let currentWeeklyMonthIndex = 0;
 
+// Initialize event listeners for objective inputs to update dataset.value when user types
+function initObjectiveInputListeners() {
+  const objectiveInputs = document.querySelectorAll('.rpo-objective-input');
+
+  objectiveInputs.forEach(input => {
+    // Remove any existing listener first (avoid duplicates)
+    input.removeEventListener('input', handleObjectiveInputChange);
+
+    // Add input event listener to update dataset.value when user types
+    input.addEventListener('input', handleObjectiveInputChange);
+  });
+
+  log(`[OBJECTIVE INPUTS] ${objectiveInputs.length} event listeners initialized`);
+}
+
+// Handle objective input change: update dataset.value from input.value
+function handleObjectiveInputChange(e) {
+  const input = e.target;
+  const field = input.dataset.field;
+
+  // Remove formatting (spaces, $, h) and parse the number
+  let rawValue = input.value.replace(/\s/g, '').replace(/\$/g, '').replace(/h/g, '');
+  const numericValue = parseFloat(rawValue);
+
+  // Update dataset.value with the parsed number
+  if (!isNaN(numericValue) && numericValue > 0) {
+    input.dataset.value = numericValue;
+    log(`[OBJECTIVE INPUT] ${field} updated: ${numericValue}`);
+  } else {
+    input.dataset.value = 0;
+  }
+}
+
 // Load weekly data from backend for specific month
 async function loadWeeklyDataForMonth(monthIndex) {
   const username = getCurrentUsername();
@@ -5601,6 +5634,9 @@ async function loadWeeklyDataForMonth(monthIndex) {
 
       // Recalculer le plan après avoir chargé toutes les données
       calculatePlan();
+
+      // Initialiser les event listeners pour les inputs d'objectifs
+      initObjectiveInputListeners();
 
       // Vérifier l'état final de tous les inputs prod_horaire
       const allProdHoraireInputs = document.querySelectorAll('input[data-field="prod_horaire"]');
@@ -6209,6 +6245,9 @@ async function changeMonth(monthIndex) {
 
   // Re-initialize star rating event listeners
   initStarRatings();
+
+  // Re-initialize objective input event listeners
+  initObjectiveInputListeners();
 
   // Restaurer l'onglet actif
   if (isResumeActive) {

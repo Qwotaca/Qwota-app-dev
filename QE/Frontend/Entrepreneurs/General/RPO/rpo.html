@@ -11461,10 +11461,46 @@ function loadWeeklyDataToPlan() {
   }
 }
 
+// Réinitialiser toutes les valeurs RÉEL du plan d'affaires à 0 ou "-"
+function resetPlanReelValues() {
+  log('[PLAN] Réinitialisation de toutes les valeurs RÉEL à 0...');
+
+  const planRows = document.querySelectorAll('#plan-weeks-body tr.plan-row');
+  planRows.forEach((row, idx) => {
+    const weekNum = idx + 1;
+
+    // H. Marketing Réel -> "-"
+    const mktgInput = document.getElementById(`plan-w${weekNum}-mktg-reel`);
+    if (mktgInput) mktgInput.value = '-';
+
+    // Estimation Réel -> 0
+    const estimInput = document.getElementById(`plan-w${weekNum}-estim-reel`);
+    if (estimInput) estimInput.value = 0;
+
+    // Contrat Réel -> 0
+    const contratInput = document.getElementById(`plan-w${weekNum}-contrat-reel`);
+    if (contratInput) contratInput.value = 0;
+
+    // Dollar Réel -> "0 $"
+    const dollarInput = document.getElementById(`plan-w${weekNum}-dollar-reel`);
+    if (dollarInput) dollarInput.value = '0 $';
+
+    // Production Réel -> "0 $"
+    const prodInput = document.getElementById(`plan-w${weekNum}-prod-reel`);
+    if (prodInput) prodInput.value = '0 $';
+  });
+
+  log('[PLAN] Toutes les valeurs RÉEL réinitialisées');
+}
+
 // Charger les données hebdomadaires du RPO dans le plan d'affaire
 async function loadRPODataIntoPlan() {
   const username = getCurrentUsername();
   log('[PLAN] Chargement de toutes les données hebdomadaires pour le plan...');
+
+  // IMPORTANT: Réinitialiser TOUTES les valeurs RÉEL à 0 avant de charger
+  // Cela évite que les anciennes valeurs persistent dans les semaines futures
+  resetPlanReelValues();
 
   try {
     // OPTIMISATION: Charger tous les 12 mois EN PARALLÈLE au lieu de séquentiellement

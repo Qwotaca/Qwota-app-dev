@@ -377,32 +377,40 @@ def get_week_number_from_date(date_str: str) -> tuple:
                 week_number = (days_since_first_monday // 7) + 1
 
         elif date.year == 2026 and 1 <= date.month <= 12:  # Janvier-Décembre 2026
-            # Trouver le premier lundi du mois (avec timezone de Toronto)
-            first_day = datetime(date.year, date.month, 1, tzinfo=TORONTO_TZ)
+            # NOUVELLE LOGIQUE: Une semaine appartient au mois où elle COMMENCE (lundi)
+            # Trouver le lundi de la semaine qui contient cette date
+            days_since_monday = date.weekday()  # 0=Monday, 6=Sunday
+            monday_of_week = date - timedelta(days=days_since_monday)
+
+            # CAS SPÉCIAL: Janvier 1-4 2026 (avant le 5 janvier qui est un lundi)
+            if date.month == 1 and date.day < 5:
+                print(f"[DEBUG] Date {date_str} est avant le 5 janvier -> Décembre semaine 5")
+                return (-2, 5)  # Décembre 2025, semaine 5
+
+            # Le mois auquel appartient cette semaine est le mois du LUNDI
+            week_belongs_to_month = monday_of_week.month
+            week_belongs_to_year = monday_of_week.year
+
+            # Si le lundi est dans un autre mois, rediriger vers ce mois
+            if week_belongs_to_month != date.month or week_belongs_to_year != date.year:
+                # Cette date appartient à la semaine d'un autre mois
+                # Appeler récursivement avec la date du lundi
+                print(f"[DEBUG] Date {date_str} appartient à la semaine du {monday_of_week.strftime('%Y-%m-%d')}")
+                return get_week_number_from_date(monday_of_week.strftime('%Y-%m-%d'))
+
+            # Trouver le premier lundi du mois du lundi de la semaine
+            first_day = datetime(week_belongs_to_year, week_belongs_to_month, 1, tzinfo=TORONTO_TZ)
             if first_day.weekday() == 0:  # Si le 1er est déjà un lundi
                 first_monday = first_day
             else:
                 days_until_monday = 7 - first_day.weekday()
                 first_monday = first_day + timedelta(days=days_until_monday)
 
-            # CAS SPÉCIAL: Janvier 1-4 2026 appartiennent à la semaine 5 de Décembre (29 déc - 4 jan)
-            if date.month == 1 and date < first_monday:
-                print(f"[DEBUG] Date {date_str} est avant le premier lundi de janvier -> Décembre semaine 5")
-                return (-2, 5)  # Décembre 2025, semaine 5
+            month_index = week_belongs_to_month - 1  # 0-11 pour janvier-décembre 2026
 
-            month_index = date.month - 1  # 0-11 pour janvier-décembre 2026
-
-            # Déterminer dans quelle semaine du mois tombe cette date
-            # basé sur le jeudi (ISO 8601: la semaine appartient au mois qui contient le jeudi)
-            thursday_of_week = date + timedelta(days=(3 - date.weekday()))
-
-            # Compter les lundis depuis le début du mois jusqu'à cette date
-            if date < first_monday:
-                week_number = 1  # Avant le premier lundi = semaine 1
-            else:
-                days_since_first_monday = (date - first_monday).days
-                # +1 car first_monday commence la semaine 1
-                week_number = (days_since_first_monday // 7) + 1
+            # Compter les lundis depuis le début du mois jusqu'au lundi de cette semaine
+            days_since_first_monday = (monday_of_week - first_monday).days
+            week_number = (days_since_first_monday // 7) + 1
 
         else:
             # Default: dates hors période fiscale (décembre 2025 - décembre 2026)

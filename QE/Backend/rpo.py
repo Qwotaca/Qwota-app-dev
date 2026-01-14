@@ -552,9 +552,17 @@ def sync_coach_rpo(coach_username: str) -> bool:
             # Charger le RPO du coach (ou créer structure vide)
             coach_rpo = load_user_rpo_data(coach_username)
 
-            # Initialiser les sections team_previsions et team_metrics
-            if 'team_previsions' not in coach_rpo:
-                coach_rpo['team_previsions'] = {}
+            # Initialiser les sections
+            # 1. coach_previsions: les prévisions du coach lui-même (ses propres métriques)
+            if 'coach_previsions' not in coach_rpo:
+                coach_rpo['coach_previsions'] = {
+                    'cm': 0,
+                    'ratioMktg': 0,
+                    'tauxVente': 0,
+                    'totalObjectif': 0
+                }
+
+            # 2. team_metrics: métriques moyennes de toute l'équipe
             if 'team_metrics' not in coach_rpo:
                 coach_rpo['team_metrics'] = {
                     'cm': 0,
@@ -562,6 +570,10 @@ def sync_coach_rpo(coach_username: str) -> bool:
                     'tauxVente': 0,
                     'totalObjectif': 0
                 }
+
+            # 3. entrepreneurs_metrics: métriques individuelles de chaque entrepreneur
+            if 'entrepreneurs_metrics' not in coach_rpo:
+                coach_rpo['entrepreneurs_metrics'] = {}
 
             # Réinitialiser les données weekly du coach
             if 'weekly' not in coach_rpo:
@@ -632,29 +644,44 @@ def sync_coach_rpo(coach_username: str) -> bool:
             total_taux_vente = 0
             count_entrepreneurs = 0
 
-            coach_rpo['team_previsions'] = {}
+            coach_rpo['entrepreneurs_metrics'] = {}
 
             for entrepreneur_username in entrepreneur_usernames:
                 entrepreneur_rpo = load_user_rpo_data(entrepreneur_username)
 
-                # Récupérer l'objectif CA annuel
-                objectif_ca = entrepreneur_rpo.get('annual', {}).get('objectif_ca', 0)
-                coach_rpo['team_previsions'][entrepreneur_username] = objectif_ca
-                total_objectif += objectif_ca
-
-                # Récupérer les métriques du plan d'affaire
+                # Récupérer toutes les métriques de l'entrepreneur
                 annual_data = entrepreneur_rpo.get('annual', {})
+                objectif_ca = annual_data.get('objectif_ca', 0)
                 cm = annual_data.get('contrat_moyen', 0)
                 ratio_mktg = annual_data.get('ratio_mktg', 0)
                 taux_vente = annual_data.get('taux_vente', 0)
 
+                # Stocker les métriques individuelles de cet entrepreneur
+                coach_rpo['entrepreneurs_metrics'][entrepreneur_username] = {
+                    'objectif_ca': objectif_ca,
+                    'cm': cm,
+                    'ratioMktg': ratio_mktg,
+                    'tauxVente': taux_vente
+                }
+
+                # Accumuler pour les moyennes
+                total_objectif += objectif_ca
                 if cm > 0 or ratio_mktg > 0 or taux_vente > 0:
                     total_cm += cm
                     total_ratio_mktg += ratio_mktg
                     total_taux_vente += taux_vente
                     count_entrepreneurs += 1
 
-            # Calculer les moyennes
+            # Charger les prévisions du COACH lui-même (pas les entrepreneurs)
+            coach_annual = coach_rpo.get('annual', {})
+            coach_rpo['coach_previsions'] = {
+                'cm': coach_annual.get('contrat_moyen', 0),
+                'ratioMktg': coach_annual.get('ratio_mktg', 0),
+                'tauxVente': coach_annual.get('taux_vente', 0),
+                'totalObjectif': coach_annual.get('objectif_ca', 0)
+            }
+
+            # Calculer les moyennes de l'équipe (entrepreneurs seulement)
             coach_rpo['team_metrics'] = {
                 'cm': total_cm / count_entrepreneurs if count_entrepreneurs > 0 else 0,
                 'ratioMktg': total_ratio_mktg / count_entrepreneurs if count_entrepreneurs > 0 else 0,
@@ -662,8 +689,9 @@ def sync_coach_rpo(coach_username: str) -> bool:
                 'totalObjectif': total_objectif
             }
 
-            print(f"[COACH RPO] Previsions agregees: {coach_rpo['team_previsions']}", flush=True)
-            print(f"[COACH RPO] Metriques moyennes: {coach_rpo['team_metrics']}", flush=True)
+            print(f"[COACH RPO] Previsions du coach: {coach_rpo['coach_previsions']}", flush=True)
+            print(f"[COACH RPO] Metriques individuelles des entrepreneurs: {coach_rpo['entrepreneurs_metrics']}", flush=True)
+            print(f"[COACH RPO] Metriques moyennes de l'equipe: {coach_rpo['team_metrics']}", flush=True)
 
             # Sauvegarder le RPO du coach
             save_user_rpo_data(coach_username, coach_rpo)

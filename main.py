@@ -19271,6 +19271,17 @@ async def save_annual_data(username: str, data: dict):
     try:
         success = update_annual_data(username, data)
         if success:
+            # Synchroniser le RPO du coach si l'utilisateur est un entrepreneur
+            try:
+                from QE.Backend.coach_access import get_coach_for_entrepreneur
+                from QE.Backend.rpo import sync_coach_rpo
+                coach_username = get_coach_for_entrepreneur(username)
+                if coach_username:
+                    print(f"[SAVE ANNUAL] Synchronisation RPO coach: {coach_username}")
+                    sync_coach_rpo(coach_username)
+            except Exception as sync_error:
+                print(f"[SAVE ANNUAL] [WARN] Erreur sync coach RPO: {sync_error}")
+
             return {"status": "success", "message": "Données annuelles sauvegardées"}
         else:
             raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")

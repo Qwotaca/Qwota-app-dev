@@ -2544,7 +2544,7 @@ window.debug = console.debug.bind(console);
 <script>
 // 🔄 FORCE CACHE RELOAD - Version check
 (function() {
-  const CURRENT_VERSION = '2026-01-14-v5'; // Incrémenter cette version à chaque déploiement important
+  const CURRENT_VERSION = '2026-01-14-v6'; // Incrémenter cette version à chaque déploiement important
   const storageKey = 'rpo_page_version';
   const lastVersion = localStorage.getItem(storageKey);
 
@@ -5446,37 +5446,55 @@ async function loadWeeklyDataForMonth(monthIndex) {
           }
         }
 
-        // Load objectives from business plan (vise) - these come from the plan d'affaires
-        // Use _vise values from the business plan, NOT _obj (custom objectives are deprecated)
-        if (data.h_marketing_vise !== undefined && data.h_marketing_vise > 0) {
+        // Load objectives with priority system:
+        // 1. If obj_modifier exists and > 0, use it (manual override)
+        // 2. Otherwise, use vise from business plan (auto-calculated)
+
+        // H. Marketing
+        const hMarketingValue = (data.h_marketing_obj_modifier && data.h_marketing_obj_modifier > 0)
+          ? data.h_marketing_obj_modifier
+          : (data.h_marketing_vise || 0);
+        if (hMarketingValue > 0) {
           const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="h_marketing_obj"]`);
           if (input) {
-            input.value = data.h_marketing_vise.toFixed(1) + ' h';
-            input.dataset.value = data.h_marketing_vise;
+            input.value = hMarketingValue.toFixed(1) + ' h';
+            input.dataset.value = hMarketingValue;
           }
         }
 
-        if (data.estimation_vise !== undefined && data.estimation_vise > 0) {
+        // Estimations
+        const estimationValue = (data.estimation_obj_modifier && data.estimation_obj_modifier > 0)
+          ? data.estimation_obj_modifier
+          : (data.estimation_vise || 0);
+        if (estimationValue > 0) {
           const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="estimation_obj"]`);
           if (input) {
-            input.value = data.estimation_vise % 1 === 0 ? data.estimation_vise : data.estimation_vise.toFixed(1);
-            input.dataset.value = data.estimation_vise;
+            input.value = estimationValue % 1 === 0 ? estimationValue : estimationValue.toFixed(1);
+            input.dataset.value = estimationValue;
           }
         }
 
-        if (data.contract_vise !== undefined && data.contract_vise > 0) {
+        // Contrats
+        const contractValue = (data.contract_obj_modifier && data.contract_obj_modifier > 0)
+          ? data.contract_obj_modifier
+          : (data.contract_vise || 0);
+        if (contractValue > 0) {
           const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="contract_obj"]`);
           if (input) {
-            input.value = data.contract_vise % 1 === 0 ? data.contract_vise : data.contract_vise.toFixed(1);
-            input.dataset.value = data.contract_vise;
+            input.value = contractValue % 1 === 0 ? contractValue : contractValue.toFixed(1);
+            input.dataset.value = contractValue;
           }
         }
 
-        if (data.dollar_vise !== undefined && data.dollar_vise > 0) {
+        // Dollar
+        const dollarValue = (data.dollar_obj_modifier && data.dollar_obj_modifier > 0)
+          ? data.dollar_obj_modifier
+          : (data.dollar_vise || 0);
+        if (dollarValue > 0) {
           const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="dollar_obj"]`);
           if (input) {
-            input.value = Math.round(data.dollar_vise).toLocaleString('fr-CA') + ' $';
-            input.dataset.value = data.dollar_vise;
+            input.value = Math.round(dollarValue).toLocaleString('fr-CA') + ' $';
+            input.dataset.value = dollarValue;
           }
         }
 
@@ -8205,9 +8223,32 @@ async function saveWeeklyDataToBackend(monthIndex, weekNumber) {
 
   data.commentaire = `Problème: ${problemeValue} | Focus: ${focusValue}`;
 
-  // NOTE: Custom objectives (_obj) are no longer saved - we now use _vise from the business plan
-  // The objectives displayed in the weekly table now come directly from the plan d'affaires
-  // and are updated automatically when the plan changes
+  // Collect manually modified objectives and save them in _obj_modifier fields
+  // These have priority over _vise (business plan) values when displaying
+  // If user modifies an objective, it's saved as _obj_modifier and won't be affected by plan changes
+  const hMarketingObjInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="h_marketing_obj"]`);
+  if (hMarketingObjInput) {
+    const value = parseFloat(hMarketingObjInput.dataset.value);
+    data.h_marketing_obj_modifier = isNaN(value) ? 0 : value;
+  }
+
+  const estimationObjInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="estimation_obj"]`);
+  if (estimationObjInput) {
+    const value = parseFloat(estimationObjInput.dataset.value);
+    data.estimation_obj_modifier = isNaN(value) ? 0 : value;
+  }
+
+  const contractObjInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="contract_obj"]`);
+  if (contractObjInput) {
+    const value = parseFloat(contractObjInput.dataset.value);
+    data.contract_obj_modifier = isNaN(value) ? 0 : value;
+  }
+
+  const dollarObjInput = document.querySelector(`input[data-week="${weekNumber}"][data-field="dollar_obj"]`);
+  if (dollarObjInput) {
+    const value = parseFloat(dollarObjInput.dataset.value);
+    data.dollar_obj_modifier = isNaN(value) ? 0 : value;
+  }
 
   // ═══════════════════════════════════════════════════════════════════
   // LOG SEM2026 - Afficher les modifications

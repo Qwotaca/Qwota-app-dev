@@ -224,7 +224,7 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
     # Pas d'ajustement - templates FR et EN identiques
     x = 82
     y = 460.5 + y_offset
-    max_width = 94.5
+    max_width = 84.5
     max_height = 130
     base_font_size = 7.5
     min_font_size = 4.0

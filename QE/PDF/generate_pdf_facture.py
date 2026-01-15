@@ -199,7 +199,7 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
     c.setFont("Helvetica", 7.5)
     x = 81
     y = 460
-    max_width = 90
+    max_width = 80
     max_height = 130
     base_font_size = 7.5
     min_font_size = 4.0

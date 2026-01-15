@@ -1662,32 +1662,39 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
       }, { passive: false });
     }
 
-    // Zoom via slider dans le header
+    // Zoom via slider dans le header (CSS transform - fluide)
     const zoomSlider = pdfModal.querySelector('#pdfZoomSlider');
     const zoomPercentage = pdfModal.querySelector('#zoomPercentage');
+    const baseRenderScale = 2; // Le PDF est rendu à scale 2
 
     if (zoomSlider) {
-      // Initialiser le slider avec la valeur actuelle
-      zoomSlider.value = currentScalePresent * 100;
-      if (zoomPercentage) zoomPercentage.textContent = Math.round(currentScalePresent * 100) + '%';
+      // Initialiser le slider (100% = scale 2 rendu)
+      zoomSlider.value = 100;
+      if (zoomPercentage) zoomPercentage.textContent = '100%';
 
       // Mettre à jour le gradient du slider
       const updateSliderGradient = (value) => {
-        const percent = (value - 50) / (300 - 50) * 100;
+        const percent = (value - 50) / (200 - 50) * 100;
         zoomSlider.style.background = `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${percent}%, #475569 ${percent}%, #475569 100%)`;
       };
       updateSliderGradient(zoomSlider.value);
 
-      zoomSlider.addEventListener('input', async (e) => {
-        const newScale = parseInt(e.target.value) / 100;
-        if (zoomPercentage) zoomPercentage.textContent = Math.round(newScale * 100) + '%';
+      // Appliquer le zoom CSS transform
+      zoomSlider.addEventListener('input', (e) => {
+        const zoomPercent = parseInt(e.target.value);
+        const cssScale = zoomPercent / 100;
+
+        if (zoomPercentage) zoomPercentage.textContent = zoomPercent + '%';
         updateSliderGradient(e.target.value);
 
-        if (Math.abs(newScale - currentScalePresent) > 0.02) {
-          currentScalePresent = newScale;
-          await renderAllPagesPresent(currentScalePresent);
-        }
+        // Appliquer le transform sur le conteneur des canvas
+        canvasContainer.style.transform = `scale(${cssScale})`;
+        canvasContainer.style.transformOrigin = 'top left';
       });
+
+      // Ajuster le slider min/max
+      zoomSlider.min = 50;
+      zoomSlider.max = 200;
     }
 
     // Fonction de fermeture
@@ -5489,11 +5496,11 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       <div style="display: flex; align-items: center; gap: 10px;">
         <div id="zoomSliderContainer" style="display: flex; align-items: center; gap: 8px;">
           <i class="fas fa-search-minus" style="color: #94a3b8; font-size: 11px;"></i>
-          <input type="range" id="pdfZoomSlider" min="50" max="300" value="200"
-            style="width: 80px; height: 4px; background: linear-gradient(to right, #3b82f6 0%, #3b82f6 50%, #475569 50%, #475569 100%); border-radius: 2px;"
+          <input type="range" id="pdfZoomSlider" min="50" max="200" value="100"
+            style="width: 80px; height: 4px; background: linear-gradient(to right, #3b82f6 0%, #3b82f6 33%, #475569 33%, #475569 100%); border-radius: 2px;"
           >
           <i class="fas fa-search-plus" style="color: #94a3b8; font-size: 11px;"></i>
-          <span id="zoomPercentage" style="color: #94a3b8; font-size: 11px; min-width: 35px;">200%</span>
+          <span id="zoomPercentage" style="color: #94a3b8; font-size: 11px; min-width: 35px;">100%</span>
         </div>
         <button id="closePdfBtn" class="close-btn hidden" tabindex="-1">×</button>
       </div>

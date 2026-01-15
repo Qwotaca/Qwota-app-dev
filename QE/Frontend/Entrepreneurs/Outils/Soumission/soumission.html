@@ -1304,14 +1304,34 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
         canvasContainer.appendChild(savedSignatureOverlay);
 
         // Positionner la signature en bas de la PREMIÈRE page seulement
+        // Valeurs de base à scale 1
+        const baseLeft = 117;
+        const baseWidth = 150;
+        const baseHeight = 35;
+        const baseBottomOffset = 123;
+
+        // Appliquer le scale
+        const scaledLeft = baseLeft * scale;
+        const scaledWidth = baseWidth * scale;
+        const scaledHeight = baseHeight * scale;
+        const scaledBottomOffset = baseBottomOffset * scale;
+
         const firstCanvas = canvasContainer.querySelector('canvas');
-        if (firstCanvas && numPages > 1) {
+        if (firstCanvas) {
           const firstPageHeight = firstCanvas.height;
-          const signatureBottomOffset = 123;
-          const topPosition = firstPageHeight - signatureBottomOffset - 35;
+          const topPosition = firstPageHeight - scaledBottomOffset - scaledHeight;
 
           savedSignatureOverlay.style.bottom = 'auto';
           savedSignatureOverlay.style.top = topPosition + 'px';
+          savedSignatureOverlay.style.left = scaledLeft + 'px';
+          savedSignatureOverlay.style.width = scaledWidth + 'px';
+          savedSignatureOverlay.style.height = scaledHeight + 'px';
+
+          // Mettre à jour aussi la taille du signaturePreview interne
+          const signaturePreview = savedSignatureOverlay.querySelector('#signaturePreview');
+          if (signaturePreview) {
+            signaturePreview.style.height = scaledHeight + 'px';
+          }
         }
       }
     };
@@ -1324,32 +1344,34 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
       canvasContainer.appendChild(savedSignatureOverlay);
 
       // Positionner la signature en bas de la PREMIÈRE page seulement
+      // Valeurs de base à scale 1
+      const baseLeft = 117;
+      const baseWidth = 150;
+      const baseHeight = 35;
+      const baseBottomOffset = 123;
+
+      // Appliquer le scale
+      const scaledLeft = baseLeft * currentScalePresent;
+      const scaledWidth = baseWidth * currentScalePresent;
+      const scaledHeight = baseHeight * currentScalePresent;
+      const scaledBottomOffset = baseBottomOffset * currentScalePresent;
+
       const firstCanvas = canvasContainer.querySelector('canvas');
-      if (firstCanvas && numPages > 1) {
-        // Calculer la position depuis le haut pour être en bas de la page 1
+      if (firstCanvas) {
         const firstPageHeight = firstCanvas.height;
-        const signatureBottomOffset = 123; // Distance depuis le bas de la page 1
-        const topPosition = firstPageHeight - signatureBottomOffset - 35; // 35 = hauteur de la signature
+        const topPosition = firstPageHeight - scaledBottomOffset - scaledHeight;
 
         savedSignatureOverlay.style.bottom = 'auto';
         savedSignatureOverlay.style.top = topPosition + 'px';
-      }
-    }
+        savedSignatureOverlay.style.left = scaledLeft + 'px';
+        savedSignatureOverlay.style.width = scaledWidth + 'px';
+        savedSignatureOverlay.style.height = scaledHeight + 'px';
 
-    // Remettre le signatureOverlay après les canvas (mode présentation)
-    if (savedSignatureOverlay) {
-      canvasContainer.appendChild(savedSignatureOverlay);
-
-      // Positionner la signature en bas de la PREMIÈRE page seulement
-      const firstCanvas = canvasContainer.querySelector('canvas');
-      if (firstCanvas && numPages > 1) {
-        // Calculer la position depuis le haut pour être en bas de la page 1
-        const firstPageHeight = firstCanvas.height;
-        const signatureBottomOffset = 123; // Distance depuis le bas de la page 1
-        const topPosition = firstPageHeight - signatureBottomOffset - 35; // 35 = hauteur de la signature
-
-        savedSignatureOverlay.style.bottom = 'auto';
-        savedSignatureOverlay.style.top = topPosition + 'px';
+        // Mettre à jour aussi la taille du signaturePreview interne
+        const signaturePreview = savedSignatureOverlay.querySelector('#signaturePreview');
+        if (signaturePreview) {
+          signaturePreview.style.height = scaledHeight + 'px';
+        }
       }
     }
 

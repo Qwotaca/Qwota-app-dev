@@ -237,11 +237,6 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
         c.drawString(x, current_y, line)
         current_y -= line_height
 
-    # DEBUG: Rectangle rouge autour de la zone endroit
-    c.setStrokeColorRGB(1, 0, 0)  # Rouge
-    c.setLineWidth(1)
-    c.rect(x, y, max_width, max_height, stroke=1, fill=0)
-
     c.setFont("Helvetica", 8.5)
     c.drawRightString(211, 149, prix_formate)  # Total avant taxe (+0.5px haut)
 

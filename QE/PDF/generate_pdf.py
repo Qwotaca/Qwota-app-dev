@@ -274,8 +274,8 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
     # Pas d'ajustement - templates FR et EN identiques
     x_produit = 403
     y_produit = 458.5 + y_offset
-    max_width_produit = 135  # Largeur maximale pour le texte (réduite de 25px)
-    max_height_produit = 130
+    max_width_produit = 139  # Largeur maximale pour le texte
+    max_height_produit = 286  # 2.2x plus de hauteur
 
     # Fonction pour couper les lignes trop longues (word wrap)
     def wrap_line_produit(text, max_w, font_s):

@@ -281,8 +281,8 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
     line_height_produit = font_size_produit * 1.4
     x_produit = 403
     y_produit = 458.5
-    max_width_produit = 135
-    max_height_produit = 130
+    max_width_produit = 139
+    max_height_produit = 286  # 2.2x plus de hauteur
 
     # Fonction pour couper les lignes trop longues (word wrap)
     def wrap_line_produit(text, max_w, font_s):

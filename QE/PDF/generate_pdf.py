@@ -273,7 +273,7 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
     line_height_produit = font_size_produit * 1.4
     # Pas d'ajustement - templates FR et EN identiques
     x_produit = 403
-    y_produit = 308.5 + y_offset  # 150px plus bas
+    y_produit = 293.5 + y_offset
     max_width_produit = 139  # Largeur maximale pour le texte
     max_height_produit = 286  # 2.2x plus de hauteur
 

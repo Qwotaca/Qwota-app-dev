@@ -259,11 +259,6 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
     c.drawString(476, 249.5, temps)
     c.drawString(310, 305.5, temps)
 
-    # DEBUG: Rectangle rouge autour de la zone durée des travaux (plus bas)
-    c.setStrokeColorRGB(1, 0, 0)  # Rouge
-    c.setLineWidth(1)
-    c.rect(310, 300, 80, 15, stroke=1, fill=0)
-
     # Prix avec dollar sur la même ligne (position 381, 249.5)
     try:
         prix_val = float(prix.replace("$", "").replace(",", ".").replace(" ", ""))
@@ -398,13 +393,16 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
     endroit_pattern = re.compile(r'===\s*(.+?)\s*===')
     endroit_sections = re.split(r'===\s*.+?\s*===', produit_text)
 
+    # Ajustement pour anglais seulement (-0.5px à gauche)
+    x_adjust_en = -0.5 if language == 'en' else 0
+
     # Coordonnées X pour chaque type de préparation (+0.5px droite vs soumission)
     x_coords = {
-        "lavage": 188.5,      # 188 + 0.5
-        "sablage": 329,       # 328.5 + 0.5
-        "appret": 375.7,      # 375.2 + 0.5
-        "reparations": 282.2, # 281.7 + 0.5
-        "grattage": 235.5,    # 235 + 0.5
+        "lavage": 188.5 + x_adjust_en,
+        "sablage": 329 + x_adjust_en,
+        "appret": 375.7 + x_adjust_en,
+        "reparations": 282.2 + x_adjust_en,
+        "grattage": 235.5 + x_adjust_en,
     }
 
     y_coord_base = 579     # 578.5 + 0.5 (plus haut)

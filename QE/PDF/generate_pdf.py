@@ -399,16 +399,20 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
     endroit_pattern = re.compile(r'===\s*(.+?)\s*===')
     endroit_sections = re.split(r'===\s*.+?\s*===', produit_text)
 
+    # Ajustement pour anglais seulement (X de préparation)
+    x_adjust_prep = 0.5 if language == 'en' else 0
+    y_adjust_prep = 0.5 if language == 'en' else 0
+
     # Coordonnées X pour chaque type de préparation
     x_coords = {
-        "lavage": 188,
-        "sablage": 328.5,
-        "appret": 375.2,
-        "reparations": 281.7,
-        "grattage": 235,
+        "lavage": 188 + x_adjust_prep,
+        "sablage": 328.5 + x_adjust_prep,
+        "appret": 375.2 + x_adjust_prep,
+        "reparations": 281.7 + x_adjust_prep,
+        "grattage": 235 + x_adjust_prep,
     }
 
-    y_coord_base = 578.5 + y_offset
+    y_coord_base = 578.5 + y_offset + y_adjust_prep
     y_spacing = 13.125  # Même que endroit: 7.5 × 1.75
 
     c.setFont("Helvetica", 8)

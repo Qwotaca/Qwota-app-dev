@@ -6946,9 +6946,58 @@ function calculateAllMonthlyTotalsFromWeekly() {
     }
   }
 
-  // Recalculer les totaux annuels depuis monthly data
-  // NOTE: Nécessaire car annual.dollar_reel peut ne pas être dans le JSON backend
-  calculateAnnualTotalsFromMonthly();
+  // Calculer les totaux annuels directement depuis window.weeklyData (mois 0-11 seulement)
+  let annualHrpap = 0;
+  let annualEstimation = 0;
+  let annualContract = 0;
+  let annualDollar = 0;
+
+  for (let monthIndex = 0; monthIndex <= 11; monthIndex++) {
+    const monthKey = String(monthIndex);
+    const monthWeeklyData = window.weeklyData[monthKey];
+    if (monthWeeklyData) {
+      Object.keys(monthWeeklyData).forEach(weekNumber => {
+        const weekData = monthWeeklyData[weekNumber];
+        if (weekData.h_marketing !== '-' && weekData.h_marketing !== undefined) {
+          annualHrpap += parseFloat(weekData.h_marketing) || 0;
+        }
+        if (weekData.estimation !== '-' && weekData.estimation !== undefined) {
+          annualEstimation += parseFloat(weekData.estimation) || 0;
+        }
+        if (weekData.contract !== '-' && weekData.contract !== undefined) {
+          annualContract += parseFloat(weekData.contract) || 0;
+        }
+        if (weekData.dollar !== '-' && weekData.dollar !== undefined) {
+          annualDollar += parseFloat(weekData.dollar) || 0;
+        }
+      });
+    }
+  }
+
+  // Mettre à jour les totaux annuels dans l'UI
+  const annualHrpapDiv = document.getElementById('annual-hrpap-reel');
+  const annualEstimationDiv = document.getElementById('annual-estimation-reel');
+  const annualContractDiv = document.getElementById('annual-contract-reel');
+  const annualDollarDiv = document.getElementById('annual-dollar-reel');
+
+  if (annualHrpapDiv) {
+    annualHrpapDiv.textContent = annualHrpap.toFixed(1) + ' h';
+    annualHrpapDiv.dataset.value = annualHrpap;
+  }
+  if (annualEstimationDiv) {
+    annualEstimationDiv.textContent = Math.round(annualEstimation).toString();
+    annualEstimationDiv.dataset.value = annualEstimation;
+  }
+  if (annualContractDiv) {
+    annualContractDiv.textContent = Math.round(annualContract).toString();
+    annualContractDiv.dataset.value = annualContract;
+  }
+  if (annualDollarDiv) {
+    annualDollarDiv.textContent = Math.round(annualDollar).toLocaleString('fr-CA') + ' $';
+    annualDollarDiv.dataset.value = annualDollar;
+  }
+
+  log(`[ANNUAL] Totaux calculés depuis weekly: H=${annualHrpap}h, Est=${annualEstimation}, Contrats=${annualContract}, $=${annualDollar}`);
 }
 
 // Calculer les totaux annuels RÉEL en additionnant les 12 mois

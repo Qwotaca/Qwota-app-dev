@@ -19653,42 +19653,28 @@ function initializeApp() {
     log(`🔢 Prix arrondi au 5/10: ${prix} -> ${prixBase} -> ${prixArrondi}`);
     log(`🏗️ Type de travaux détecté: "${itemTravaux}"`);
     
-    // Calculer la durée des travaux basée sur les heures
-    let heuresTotal = 0;
-    
-    // Récupérer les heures selon le type de travaux
-    if (prixExt >= 400) {
-      const heuresExtElement = document.getElementById('totalHours');
-      const heuresExt = parseFloat(heuresExtElement?.textContent) || 0;
-      heuresTotal += heuresExt;
-      log(`[TIME] Heures extérieur: ${heuresExt}h`);
-    }
-    
-    if (prixInt >= 400) {
-      const heuresIntElement = document.getElementById('totalHeuresInt');
-      const heuresInt = parseFloat(heuresIntElement?.textContent) || 0;
-      heuresTotal += heuresInt;
-      log(`[TIME] Heures intérieur: ${heuresInt}h`);
-    }
-    
-    // Convertir heures en jours avec la logique spécifique
+    // Calculer la durée des travaux basée sur le prix (1000$ = 1 à 1.5 jours)
     let dureeTravaux = '';
-    if (heuresTotal > 0) {
-      // Ratio rapide (optimiste) -> 1 jour = 16 heures
-      const joursMin = heuresTotal / 16;
+    if (prixArrondi > 0) {
+      // 1 jour par tranche de 1000$ (minimum)
+      const joursMin = prixArrondi / 1000;
       const joursMinArrondi = joursMin % 1 >= 0.5 ? Math.ceil(joursMin) : Math.floor(joursMin);
-      
-      // Ratio lent (pessimiste) -> 1 jour = 8 heures  
-      const joursMax = heuresTotal / 8;
+
+      // 1.5 jours par tranche de 1000$ (maximum)
+      const joursMax = (prixArrondi / 1000) * 1.5;
       const joursMaxArrondi = joursMax % 1 >= 0.5 ? Math.ceil(joursMax) : Math.floor(joursMax);
-      
-      if (joursMinArrondi === joursMaxArrondi) {
-        dureeTravaux = `${joursMinArrondi} jour${joursMinArrondi > 1 ? 's' : ''}`;
+
+      // Minimum 1 jour
+      const joursMinFinal = Math.max(1, joursMinArrondi);
+      const joursMaxFinal = Math.max(1, joursMaxArrondi);
+
+      if (joursMinFinal === joursMaxFinal) {
+        dureeTravaux = `${joursMinFinal} jour${joursMinFinal > 1 ? 's' : ''}`;
       } else {
-        dureeTravaux = `${joursMinArrondi}-${joursMaxArrondi} jours`;
+        dureeTravaux = `${joursMinFinal}-${joursMaxFinal} jours`;
       }
-      
-      log(`[TIME] Calcul durée: ${heuresTotal}h -> ${joursMin.toFixed(2)}/16 = ${joursMinArrondi}j min, ${joursMax.toFixed(2)}/8 = ${joursMaxArrondi}j max -> "${dureeTravaux}"`);
+
+      log(`[TIME] Calcul durée: ${prixArrondi}$ -> ${joursMinFinal}j min, ${joursMaxFinal}j max -> "${dureeTravaux}"`);
     }
     
     // Stocker le prix calculé pour le préremplissage de la soumission
@@ -19852,34 +19838,25 @@ function initializeApp() {
     }
     
     
-    // Calculer la durée basée sur les heures (seulement sections >= 400$)
-    let heuresTotal = 0;
-    
-    if (prixExt >= 400) {
-      const heuresExtElement = document.getElementById('totalHours');
-      const heuresExt = parseFloat(heuresExtElement?.textContent) || 0;
-      heuresTotal += heuresExt;
-    }
-    
-    if (prixInt >= 400) {
-      const heuresIntElement = document.getElementById('totalHeuresInt');
-      const heuresInt = parseFloat(heuresIntElement?.textContent) || 0;
-      heuresTotal += heuresInt;
-    }
-    
-    // Convertir heures en jours
+    // Calculer la durée des travaux basée sur le prix (1000$ = 1 à 1.5 jours)
     let dureeTravaux = '';
-    if (heuresTotal > 0) {
-      const joursMin = heuresTotal / 16;
+    if (prixArrondi > 0) {
+      // 1 jour par tranche de 1000$ (minimum)
+      const joursMin = prixArrondi / 1000;
       const joursMinArrondi = joursMin % 1 >= 0.5 ? Math.ceil(joursMin) : Math.floor(joursMin);
-      
-      const joursMax = heuresTotal / 8;
+
+      // 1.5 jours par tranche de 1000$ (maximum)
+      const joursMax = (prixArrondi / 1000) * 1.5;
       const joursMaxArrondi = joursMax % 1 >= 0.5 ? Math.ceil(joursMax) : Math.floor(joursMax);
-      
-      if (joursMinArrondi === joursMaxArrondi) {
-        dureeTravaux = `${joursMinArrondi} jour${joursMinArrondi > 1 ? 's' : ''}`;
+
+      // Minimum 1 jour
+      const joursMinFinal = Math.max(1, joursMinArrondi);
+      const joursMaxFinal = Math.max(1, joursMaxArrondi);
+
+      if (joursMinFinal === joursMaxFinal) {
+        dureeTravaux = `${joursMinFinal} jour${joursMinFinal > 1 ? 's' : ''}`;
       } else {
-        dureeTravaux = `${joursMinArrondi}-${joursMaxArrondi} jours`;
+        dureeTravaux = `${joursMinFinal}-${joursMaxFinal} jours`;
       }
     }
 

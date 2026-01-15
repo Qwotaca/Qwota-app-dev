@@ -280,7 +280,7 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
     font_size_produit = 7.5
     line_height_produit = font_size_produit * 1.4
     x_produit = 403
-    y_produit = 458.5
+    y_produit = 308.5  # 150px plus bas
     max_width_produit = 139
     max_height_produit = 286  # 2.2x plus de hauteur
 
@@ -378,7 +378,7 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
     line_height_part = font_size_part * 1.8  # Espacement léger
     x_part = 76
     y_part = 317.5
-    max_width_part = 330
+    max_width_part = 326
     max_height_part = 120
 
     start_y_part = y_part + max_height_part - font_size_part

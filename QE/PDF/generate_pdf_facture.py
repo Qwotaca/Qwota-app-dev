@@ -259,6 +259,11 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
     c.drawString(476, 249.5, temps)
     c.drawString(310, 305.5, temps)
 
+    # DEBUG: Rectangle rouge autour de la zone durée des travaux (plus bas)
+    c.setStrokeColorRGB(1, 0, 0)  # Rouge
+    c.setLineWidth(1)
+    c.rect(310, 300, 80, 15, stroke=1, fill=0)
+
     # Prix avec dollar sur la même ligne (position 381, 249.5)
     try:
         prix_val = float(prix.replace("$", "").replace(",", ".").replace(" ", ""))
@@ -361,6 +366,11 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
             c.setFont("Helvetica", current_font_size)
             c.drawString(x_produit, current_y, line)
 
+    # DEBUG: Rectangle rouge autour de la zone produit/couleurs
+    c.setStrokeColorRGB(1, 0, 0)  # Rouge
+    c.setLineWidth(1)
+    c.rect(x_produit, y_produit, max_width_produit, max_height_produit, stroke=1, fill=0)
+
     # === PARTICULARITÉ DES TRAVAUX ===
     # Code identique à generate_pdf.py
     lines_part = [line.strip() for line in part.split("\n") if line.strip()]
@@ -384,6 +394,11 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
         text_obj.textLine(line)
 
     c.drawText(text_obj)
+
+    # DEBUG: Rectangle rouge autour de la zone part des travaux
+    c.setStrokeColorRGB(1, 0, 0)  # Rouge
+    c.setLineWidth(1)
+    c.rect(x_part, y_part, max_width_part, max_height_part, stroke=1, fill=0)
 
     # === DESSIN DES "X" POUR MOTS CLÉS (par endroit) ===
     produit_text = produit

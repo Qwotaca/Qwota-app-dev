@@ -1,182 +1,223 @@
 """
 Direction Team Objectifs - Gestion des prévisions d'objectifs par direction pour les coaches
+UTILISE UNIQUEMENT LE FICHIER RPO JSON (direction_rpo.json)
 """
 
-import os
-import sys
-import json
-from datetime import datetime
-from pathlib import Path
+from QE.Backend.rpo import load_user_rpo_data, save_user_rpo_data
 
-# Déterminer le chemin de base selon l'OS
-if sys.platform == 'win32':
-    # Windows - remonter à la racine du projet (3 niveaux depuis QE/Backend/direction_previsions.py)
-    DATA_DIR = Path(__file__).parent.parent.parent / "data" / "direction_previsions"
-else:
-    # Unix/Linux (Production sur Render)
-    # Utiliser la variable d'environnement STORAGE_PATH si définie, sinon /mnt/cloud
-    base_cloud = os.getenv("STORAGE_PATH", "/mnt/cloud")
-    DATA_DIR = Path(base_cloud) / "direction_previsions"
-
-DATA_DIR.mkdir(parents=True, exist_ok=True)
+# Tous les users direction partagent le meme fichier: direction_rpo.json
+DIRECTION_USERNAME = "direction"
 
 
-def get_direction_previsions_file(direction_username):
-    """
-    Retourne le chemin du fichier JSON des prévisions COMMUN à tous les comptes direction
-    Le paramètre direction_username est gardé pour compatibilité API mais ignoré
-    """
-    # Tous les comptes direction partagent le même fichier
-    return DATA_DIR / "shared_direction_previsions.json"
-
-
-def load_direction_previsions(direction_username):
-    """
-    Charge les prévisions d'objectifs d'un utilisateur direction pour ses coaches
-
-    Args:
-        direction_username: Nom d'utilisateur de la direction
-
-    Returns:
-        dict: Dictionnaire {coach_username: objectif_prevision}
-    """
-    file_path = get_direction_previsions_file(direction_username)
-
-    if not file_path.exists():
-        return {}
-
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            return data.get('previsions', {})
-    except Exception as e:
-        print(f"[DIRECTION PREVISIONS] Erreur lecture fichier PARTAGÉ: {e}")
-        return {}
-
-
-def save_direction_previsions(direction_username, previsions):
-    """
-    Sauvegarde les prévisions d'objectifs d'un utilisateur direction pour ses coaches
-
-    Args:
-        direction_username: Nom d'utilisateur de la direction
-        previsions: Dictionnaire {coach_username: objectif_prevision}
-
-    Returns:
-        bool: True si succès, False sinon
-    """
-    file_path = get_direction_previsions_file(direction_username)
-
-    try:
-        print(f"[DIRECTION PREVISIONS] Tentative sauvegarde PARTAGÉE (tous les comptes direction)")
-        print(f"[DIRECTION PREVISIONS] Chemin fichier: {file_path}")
-        print(f"[DIRECTION PREVISIONS] Répertoire DATA_DIR: {DATA_DIR}")
-        print(f"[DIRECTION PREVISIONS] Existe: {DATA_DIR.exists()}")
-        print(f"[DIRECTION PREVISIONS] Prévisions: {previsions}")
-
-        data = {
-            'direction_username': 'shared',  # Commun à tous les comptes direction
-            'previsions': previsions,
-            'last_updated': datetime.now().isoformat()
-        }
-
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-
-        print(f"[DIRECTION PREVISIONS] OK Sauvegarde PARTAGÉE (tous les comptes direction): {len(previsions)} previsions")
-        return True
-
-    except Exception as e:
-        print(f"[DIRECTION PREVISIONS] ERREUR sauvegarde fichier PARTAGÉ: {e}")
-        print(f"[DIRECTION PREVISIONS] Type erreur: {type(e).__name__}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-
-def get_direction_team_objectif_total(direction_username):
-    """
-    Calcule le total des prévisions d'objectifs pour tous les coaches
-
-    Args:
-        direction_username: Nom d'utilisateur de la direction
-
-    Returns:
-        float: Total des prévisions
-    """
-    previsions = load_direction_previsions(direction_username)
-    total = sum(float(objectif) for objectif in previsions.values())
-    return total
-
-
-# ========== GESTION DES MÉTRIQUES (CM, RATIO MARKETING, TAUX DE VENTE) ==========
-
-def get_direction_metrics_file(direction_username):
-    """
-    Retourne le chemin du fichier JSON des métriques COMMUN à tous les comptes direction
-    Le paramètre direction_username est gardé pour compatibilité API mais ignoré
-    """
-    # Tous les comptes direction partagent le même fichier
-    return DATA_DIR / "shared_direction_metrics.json"
-
+# ========== GESTION DES MÉTRIQUES DIRECTION (CM, RATIO MARKETING, TAUX DE VENTE) ==========
 
 def load_direction_metrics(direction_username):
     """
-    Charge les métriques d'équipe d'un utilisateur direction (valeur unique)
+    Charge les métriques d'équipe de la direction depuis le RPO JSON
 
     Args:
-        direction_username: Nom d'utilisateur de la direction
+        direction_username: Ignoré - tous les comptes direction partagent le même fichier
 
     Returns:
         dict: Dictionnaire {cm: X, ratioMktg: Y, tauxVente: Z}
     """
-    file_path = get_direction_metrics_file(direction_username)
-
-    if not file_path.exists():
-        return {'cm': 0, 'ratioMktg': 0, 'tauxVente': 0}
-
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            return data.get('metrics', {'cm': 0, 'ratioMktg': 0, 'tauxVente': 0})
+        rpo_data = load_user_rpo_data(DIRECTION_USERNAME)
+        direction_previsions = rpo_data.get('direction_previsions', {})
+        return {
+            'cm': direction_previsions.get('cm', 0),
+            'ratioMktg': direction_previsions.get('ratioMktg', 0),
+            'tauxVente': direction_previsions.get('tauxVente', 0)
+        }
     except Exception as e:
-        print(f"[DIRECTION METRICS] Erreur lecture fichier PARTAGÉ: {e}")
+        print(f"[DIRECTION METRICS] Erreur lecture: {e}")
         return {'cm': 0, 'ratioMktg': 0, 'tauxVente': 0}
 
 
 def save_direction_metrics(direction_username, metrics):
     """
-    Sauvegarde les métriques d'équipe d'un utilisateur direction (valeur unique)
+    Sauvegarde les métriques d'équipe de la direction dans le RPO JSON
 
     Args:
-        direction_username: Nom d'utilisateur de la direction
+        direction_username: Ignoré - tous les comptes direction partagent le même fichier
         metrics: Dictionnaire {cm: X, ratioMktg: Y, tauxVente: Z}
 
     Returns:
         bool: True si succès, False sinon
     """
-    file_path = get_direction_metrics_file(direction_username)
-
     try:
-        print(f"[DIRECTION METRICS] Tentative sauvegarde PARTAGÉE (tous les comptes direction)")
-        print(f"[DIRECTION METRICS] Chemin fichier: {file_path}")
-        print(f"[DIRECTION METRICS] Métriques: {metrics}")
+        rpo_data = load_user_rpo_data(DIRECTION_USERNAME)
 
-        data = {
-            'direction_username': 'shared',  # Commun à tous les comptes direction
-            'metrics': metrics,
-            'last_updated': datetime.now().isoformat()
-        }
+        if 'direction_previsions' not in rpo_data:
+            rpo_data['direction_previsions'] = {}
 
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        rpo_data['direction_previsions']['cm'] = metrics.get('cm', 0)
+        rpo_data['direction_previsions']['ratioMktg'] = metrics.get('ratioMktg', 0)
+        rpo_data['direction_previsions']['tauxVente'] = metrics.get('tauxVente', 0)
 
-        print(f"[DIRECTION METRICS] OK Sauvegarde PARTAGÉE (tous les comptes direction): CM={metrics.get('cm')}, Ratio={metrics.get('ratioMktg')}%, Taux={metrics.get('tauxVente')}%")
+        save_user_rpo_data(DIRECTION_USERNAME, rpo_data)
+
+        print(f"[DIRECTION METRICS] Sauvegarde OK: CM={metrics.get('cm')}, Ratio={metrics.get('ratioMktg')}, Taux={metrics.get('tauxVente')}")
         return True
 
     except Exception as e:
-        print(f"[DIRECTION METRICS] ERREUR sauvegarde fichier PARTAGÉ: {e}")
-        print(f"[DIRECTION METRICS] Type erreur: {type(e).__name__}")
-        import traceback
-        traceback.print_exc()
+        print(f"[DIRECTION METRICS] ERREUR sauvegarde: {e}")
+        return False
+
+
+# ========== GESTION DES PRÉVISIONS D'OBJECTIFS PAR COACH ==========
+
+def load_direction_previsions(direction_username):
+    """
+    Charge les prévisions d'objectifs par coach (coaches_metrics)
+
+    Args:
+        direction_username: Ignoré - tous les comptes direction partagent le même fichier
+
+    Returns:
+        dict: Dictionnaire {coach_username: totalObjectif}
+    """
+    try:
+        rpo_data = load_user_rpo_data(DIRECTION_USERNAME)
+        coaches_metrics = rpo_data.get('coaches_metrics', {})
+
+        # Retourner les totalObjectif de chaque coach
+        previsions = {}
+        for coach_username, metrics in coaches_metrics.items():
+            previsions[coach_username] = metrics.get('totalObjectif', 0)
+
+        return previsions
+    except Exception as e:
+        print(f"[DIRECTION PREVISIONS] Erreur lecture: {e}")
+        return {}
+
+
+def save_direction_previsions(direction_username, previsions):
+    """
+    Sauvegarde les prévisions d'objectifs par coach dans coaches_metrics
+
+    Args:
+        direction_username: Ignoré - tous les comptes direction partagent le même fichier
+        previsions: Dictionnaire {coach_username: totalObjectif}
+
+    Returns:
+        bool: True si succès, False sinon
+    """
+    try:
+        rpo_data = load_user_rpo_data(DIRECTION_USERNAME)
+
+        if 'coaches_metrics' not in rpo_data:
+            rpo_data['coaches_metrics'] = {}
+
+        # Mettre à jour les totalObjectif
+        for coach_username, objectif in previsions.items():
+            if coach_username not in rpo_data['coaches_metrics']:
+                rpo_data['coaches_metrics'][coach_username] = {
+                    'totalObjectif': objectif,
+                    'cm': 2500,
+                    'ratioMktg': 85,
+                    'tauxVente': 30
+                }
+            else:
+                rpo_data['coaches_metrics'][coach_username]['totalObjectif'] = objectif
+
+        # Mettre à jour totalObjectif global dans direction_previsions
+        if 'direction_previsions' not in rpo_data:
+            rpo_data['direction_previsions'] = {}
+
+        total = sum(float(v) for v in previsions.values())
+        rpo_data['direction_previsions']['totalObjectif'] = total
+
+        save_user_rpo_data(DIRECTION_USERNAME, rpo_data)
+
+        print(f"[DIRECTION PREVISIONS] Sauvegarde OK: {len(previsions)} coaches, total={total}")
+        return True
+
+    except Exception as e:
+        print(f"[DIRECTION PREVISIONS] ERREUR sauvegarde: {e}")
+        return False
+
+
+def get_direction_team_objectif_total(direction_username):
+    """
+    Récupère le total des objectifs de tous les coaches
+
+    Args:
+        direction_username: Ignoré - tous les comptes direction partagent le même fichier
+
+    Returns:
+        float: Total des prévisions
+    """
+    try:
+        rpo_data = load_user_rpo_data(DIRECTION_USERNAME)
+        return rpo_data.get('direction_previsions', {}).get('totalObjectif', 0)
+    except Exception as e:
+        print(f"[DIRECTION PREVISIONS] Erreur lecture total: {e}")
+        return 0
+
+
+# ========== GESTION DES MÉTRIQUES PAR COACH ==========
+
+def load_coach_metrics_from_direction(direction_username, coach_username):
+    """
+    Charge les métriques d'un coach spécifique depuis le fichier direction
+
+    Args:
+        direction_username: Ignoré
+        coach_username: Nom d'utilisateur du coach
+
+    Returns:
+        dict: {totalObjectif, cm, ratioMktg, tauxVente}
+    """
+    try:
+        rpo_data = load_user_rpo_data(DIRECTION_USERNAME)
+        coaches_metrics = rpo_data.get('coaches_metrics', {})
+        return coaches_metrics.get(coach_username, {
+            'totalObjectif': 0,
+            'cm': 2500,
+            'ratioMktg': 85,
+            'tauxVente': 30
+        })
+    except Exception as e:
+        print(f"[DIRECTION] Erreur lecture metrics {coach_username}: {e}")
+        return {'totalObjectif': 0, 'cm': 2500, 'ratioMktg': 85, 'tauxVente': 30}
+
+
+def save_coach_metrics_from_direction(direction_username, coach_username, metrics):
+    """
+    Sauvegarde les métriques d'un coach spécifique dans le fichier direction
+
+    Args:
+        direction_username: Ignoré
+        coach_username: Nom d'utilisateur du coach
+        metrics: {totalObjectif, cm, ratioMktg, tauxVente}
+
+    Returns:
+        bool: True si succès, False sinon
+    """
+    try:
+        rpo_data = load_user_rpo_data(DIRECTION_USERNAME)
+
+        if 'coaches_metrics' not in rpo_data:
+            rpo_data['coaches_metrics'] = {}
+
+        rpo_data['coaches_metrics'][coach_username] = metrics
+
+        # Recalculer totalObjectif global
+        if 'direction_previsions' not in rpo_data:
+            rpo_data['direction_previsions'] = {}
+
+        total = sum(
+            coach.get('totalObjectif', 0)
+            for coach in rpo_data['coaches_metrics'].values()
+        )
+        rpo_data['direction_previsions']['totalObjectif'] = total
+
+        save_user_rpo_data(DIRECTION_USERNAME, rpo_data)
+
+        print(f"[DIRECTION] Sauvegarde metrics {coach_username} OK")
+        return True
+
+    except Exception as e:
+        print(f"[DIRECTION] ERREUR sauvegarde metrics {coach_username}: {e}")
         return False

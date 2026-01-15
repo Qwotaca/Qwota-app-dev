@@ -3049,14 +3049,27 @@ function showPage(pageName) {
     }
   }
 
-  // Initialiser le plan d'affaire quand on affiche la page stats
-  if (pageName === 'stats' && coachUsername) {
-    
+  // Pré-charger le plan d'affaire dès qu'on affiche la page RPO
+  if (pageName === 'rpo' && coachUsername) {
+    // Pré-charger en arrière-plan pour que Statistiques soit instantané
     setTimeout(async () => {
-      await updateTeamObjectifDisplay(); // Mettre à jour l'affichage de l'objectif immédiatement
-      await updateTeamMetricsDisplay(); // Mettre à jour l'affichage des métriques immédiatement
-      await checkAndToggleBusinessPlanView(); // Vérifier si on affiche le bouton créer ou les données
-      initTeamPlan();
+      console.log('[PRELOAD] Pré-chargement plan affaire direction...');
+      await updateTeamObjectifDisplay();
+      await updateTeamMetricsDisplay();
+      await checkAndToggleBusinessPlanView();
+      await initTeamPlan();
+      console.log('[PRELOAD] Plan affaire prêt!');
+    }, 100);
+  }
+
+  // Initialiser le plan d'affaire quand on affiche la page stats (déjà chargé si on vient de RPO)
+  if (pageName === 'stats' && coachUsername) {
+    setTimeout(async () => {
+      await updateTeamObjectifDisplay();
+      await updateTeamMetricsDisplay();
+      await checkAndToggleBusinessPlanView();
+      // Réinitialiser si besoin (au cas où les données ont changé)
+      await initTeamPlan();
     }, 100);
   }
 }
@@ -9482,7 +9495,7 @@ const productionIntensityPattern = [
   5,    // Index 20: 26 mai 2026 = 5%
 
   // Juin 2026 (index 21-24)
-  5, 6, 7, 7,
+  5, 7, 7, 7,
 
   // Juillet 2026 (index 25-29)
   7, 7, 7, 7, 7,
@@ -9727,46 +9740,55 @@ function parseMonetaryAmount(amountStr) {
 
 // Fonction pour charger les données pré-agrégées depuis le RPO direction
 async function aggregateTeamData() {
-  console.log('[TEAM PLAN] Chargement données direction depuis RPO pré-calculé...');
+  console.log('[TEAM PLAN] Chargement données direction depuis JSON (instantané)...');
 
-  const entrepreneurs = await getCoachEntrepreneurs();
-  if (entrepreneurs.length === 0) {
-    console.warn('[TEAM PLAN] Aucun entrepreneur trouvé');
-    return null;
-  }
-
-  let totalObjectif = 0;
-  let totalCM = 0;
-  let totalRatioMktg = 0;
-  let totalTauxVente = 0;
-  let countEntrepreneurs = 0;
-
-  // Charger les objectifs de chaque entrepreneur pour calculer les moyennes
-  for (const entrepreneur of entrepreneurs) {
-    const username = entrepreneur.username;
-    const objectifs = await loadEntrepreneurObjectifs(username);
-    if (objectifs) {
-      totalObjectif += objectifs.objectif_ca;
-      totalCM += objectifs.contrat_moyen;
-      totalRatioMktg += objectifs.ratio_mktg;
-      totalTauxVente += objectifs.taux_vente;
-      countEntrepreneurs++;
-    }
-  }
-
-  // NOUVEAU: Charger directement le RPO pré-agrégé de direction
+  // Charger le JSON direction (contient prévisions + réels)
   const directionRPOData = await loadEntrepreneurRPOData('direction');
-  console.log(`[TEAM PLAN] RPO direction chargé depuis fichier JSON pré-calculé`);
 
-  if (!directionRPOData || !directionRPOData.weekly) {
+  if (!directionRPOData) {
     console.warn('[TEAM PLAN] Pas de données RPO pour direction');
     return {
-      totalObjectif,
+      totalObjectif: 0,
       averages: {
-        cm: countEntrepreneurs > 0 ? totalCM / countEntrepreneurs : 0,
-        ratioMktg: countEntrepreneurs > 0 ? totalRatioMktg / countEntrepreneurs : 0,
-        tauxVente: countEntrepreneurs > 0 ? totalTauxVente / countEntrepreneurs : 0
+        cm: 0,
+        ratioMktg: 0,
+        tauxVente: 0
       },
+      weeklyData: {}
+    };
+  }
+
+  // 1. Charger les PRÉVISIONS depuis le JSON direction
+  const directionPrevisions = directionRPOData.direction_previsions || { cm: 0, ratioMktg: 0, tauxVente: 0, totalObjectif: 0 };
+  const totalObjectif = directionPrevisions.totalObjectif || 0;
+  const directionMetrics = {
+    cm: directionPrevisions.cm || 0,
+    ratioMktg: directionPrevisions.ratioMktg || 0,
+    tauxVente: directionPrevisions.tauxVente || 0
+  };
+
+  console.log('[TEAM PLAN] Prévisions depuis JSON:', { totalObjectif, ...directionMetrics });
+
+  // Si pas de prévisions, retourner objectif à 0
+  if (totalObjectif === 0) {
+    console.warn('[TEAM PLAN] Aucune prévision définie - plan d\'affaire non disponible');
+    return {
+      totalObjectif: 0,
+      averages: {
+        cm: 0,
+        ratioMktg: 0,
+        tauxVente: 0
+      },
+      weeklyData: {}
+    };
+  }
+
+  // 2. Charger les RÉELS de direction (depuis JSON - données hebdomadaires agrégées)
+  if (!directionRPOData.weekly) {
+    console.warn('[TEAM PLAN] Pas de données hebdomadaires pour direction');
+    return {
+      totalObjectif,
+      averages: directionMetrics,
       weeklyData: {}
     };
   }
@@ -9829,52 +9851,17 @@ async function aggregateTeamData() {
 
   console.log('[TEAM PLAN] Données hebdomadaires chargées depuis RPO direction:', allWeeklyData);
 
-  // Charger les métriques Direction (CM, Ratio Marketing, Taux de Vente)
-  let directionMetrics = { cm: 0, ratioMktg: 0, tauxVente: 0 };
-  try {
-    const username = window.username || localStorage.getItem('username');
-    
-    const metricsResponse = await fetch(`/api/direction/team-metrics?direction_username=${username}`);
-    const metricsData = await metricsResponse.json();
-    
-    if (metricsData.success && metricsData.metrics) {
-      directionMetrics = metricsData.metrics;
-      
-    } else {
-      console.warn('[AGGREGATE] API a répondu mais pas de métriques valides');
-    }
-  } catch (error) {
-    console.warn('[AGGREGATE] Pas de métriques Direction, utilisation des moyennes entrepreneurs:', error);
-    // Fallback sur les moyennes des entrepreneurs si pas de métriques Direction
-    directionMetrics.cm = countEntrepreneurs > 0 ? totalCM / countEntrepreneurs : 0;
-    directionMetrics.ratioMktg = countEntrepreneurs > 0 ? totalRatioMktg / countEntrepreneurs : 0;
-    directionMetrics.tauxVente = countEntrepreneurs > 0 ? totalTauxVente / countEntrepreneurs : 0;
-  }
+  // Calculer la production réelle totale
+  const productionTotale = Object.values(allWeeklyData).reduce((sum, w) => sum + w.prodReel, 0);
+  console.log('[TEAM PLAN] Production réelle totale (ventes produites):', productionTotale.toLocaleString('fr-CA') + ' $');
 
-  // prodReel est déjà calculé via l'agrégation des ventes_produit
-  // Pas besoin de calculer prodReel = dollarReel / mktgReel (c'était incorrect)
-
-
-
-  // Charger les prévisions Direction pour afficher dans la carte Objectif Vente Équipe
-  let directionTotalObjectif = 0;
-  try {
-    const username = window.username || localStorage.getItem('username');
-    const prevResponse = await fetch(`/api/direction/team-objectifs?direction_username=${username}`);
-    const prevData = await prevResponse.json();
-    if (prevData.success && prevData.total) {
-      directionTotalObjectif = prevData.total;
-      
-    }
-  } catch (error) {
-    console.warn('[TEAM PLAN] Pas de prévisions Direction');
-  }
+  console.log('[TEAM PLAN] ✅ Prévisions (JSON):', { totalObjectif, averages: directionMetrics });
+  console.log('[TEAM PLAN] ✅ Réels (JSON):', { productionTotale, nombreSemaines: Object.keys(allWeeklyData).length });
 
   return {
-    totalObjectif: directionTotalObjectif, // Utiliser les prévisions Direction au lieu des objectifs entrepreneurs
-    weeklyData: allWeeklyData,
-    entrepreneurCount: entrepreneurs.length,
-    averages: directionMetrics // Utiliser les métriques Direction au lieu des moyennes entrepreneurs
+    totalObjectif,        // Depuis JSON (prévisions)
+    weeklyData: allWeeklyData,  // Depuis JSON (réels)
+    averages: directionMetrics      // Depuis JSON (prévisions)
   };
 }
 

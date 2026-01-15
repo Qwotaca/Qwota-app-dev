@@ -1,52 +1,89 @@
 """
 Coach Team Objectifs - Gestion des prévisions d'objectifs par coach
+UTILISE UNIQUEMENT LE FICHIER RPO JSON
 """
 
-import os
-import sys
-import json
-from datetime import datetime
-from pathlib import Path
-
-# Déterminer le chemin de base selon l'OS
-if sys.platform == 'win32':
-    # Windows - remonter à la racine du projet (3 niveaux depuis QE/Backend/coach_previsions.py)
-    DATA_DIR = Path(__file__).parent.parent.parent / "data" / "coach_previsions"
-else:
-    # Unix/Linux (Production sur Render)
-    # Utiliser la variable d'environnement STORAGE_PATH si définie, sinon /mnt/cloud
-    base_cloud = os.getenv("STORAGE_PATH", "/mnt/cloud")
-    DATA_DIR = Path(base_cloud) / "coach_previsions"
-
-DATA_DIR.mkdir(parents=True, exist_ok=True)
+from QE.Backend.rpo import load_user_rpo_data, save_user_rpo_data
 
 
-def get_coach_previsions_file(coach_username):
+# ========== GESTION DES MÉTRIQUES COACH (CM, RATIO MARKETING, TAUX DE VENTE) ==========
+
+def load_coach_metrics(coach_username):
     """
-    Retourne le chemin du fichier JSON des prévisions pour un coach
-    """
-    return DATA_DIR / f"{coach_username}_previsions.json"
-
-
-def load_coach_previsions(coach_username):
-    """
-    Charge les prévisions d'objectifs d'un coach
+    Charge les métriques prévisionnelles d'un coach depuis le RPO JSON
 
     Args:
         coach_username: Nom d'utilisateur du coach
 
     Returns:
-        dict: Dictionnaire {entrepreneur_username: objectif_prevision}
+        dict: Dictionnaire {cm: X, ratioMktg: Y, tauxVente: Z}
     """
-    file_path = get_coach_previsions_file(coach_username)
-
-    if not file_path.exists():
-        return {}
-
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            return data.get('previsions', {})
+        rpo_data = load_user_rpo_data(coach_username)
+        coach_previsions = rpo_data.get('coach_previsions', {})
+        return {
+            'cm': coach_previsions.get('cm', 0),
+            'ratioMktg': coach_previsions.get('ratioMktg', 0),
+            'tauxVente': coach_previsions.get('tauxVente', 0)
+        }
+    except Exception as e:
+        print(f"[COACH METRICS] Erreur lecture {coach_username}: {e}")
+        return {'cm': 0, 'ratioMktg': 0, 'tauxVente': 0}
+
+
+def save_coach_metrics(coach_username, metrics):
+    """
+    Sauvegarde les métriques prévisionnelles d'un coach dans le RPO JSON
+
+    Args:
+        coach_username: Nom d'utilisateur du coach
+        metrics: Dictionnaire {cm: X, ratioMktg: Y, tauxVente: Z}
+
+    Returns:
+        bool: True si succès, False sinon
+    """
+    try:
+        rpo_data = load_user_rpo_data(coach_username)
+
+        if 'coach_previsions' not in rpo_data:
+            rpo_data['coach_previsions'] = {}
+
+        rpo_data['coach_previsions']['cm'] = metrics.get('cm', 0)
+        rpo_data['coach_previsions']['ratioMktg'] = metrics.get('ratioMktg', 0)
+        rpo_data['coach_previsions']['tauxVente'] = metrics.get('tauxVente', 0)
+
+        save_user_rpo_data(coach_username, rpo_data)
+
+        print(f"[COACH METRICS] Sauvegarde OK pour {coach_username}: CM={metrics.get('cm')}, Ratio={metrics.get('ratioMktg')}, Taux={metrics.get('tauxVente')}")
+        return True
+
+    except Exception as e:
+        print(f"[COACH METRICS] ERREUR sauvegarde {coach_username}: {e}")
+        return False
+
+
+# ========== GESTION DES PRÉVISIONS D'OBJECTIFS ==========
+
+def load_coach_previsions(coach_username):
+    """
+    Charge les prévisions d'objectifs d'un coach (entrepreneurs_metrics)
+
+    Args:
+        coach_username: Nom d'utilisateur du coach
+
+    Returns:
+        dict: Dictionnaire {entrepreneur_username: objectif_ca}
+    """
+    try:
+        rpo_data = load_user_rpo_data(coach_username)
+        entrepreneurs_metrics = rpo_data.get('entrepreneurs_metrics', {})
+
+        # Retourner les objectif_ca de chaque entrepreneur
+        previsions = {}
+        for ent_username, metrics in entrepreneurs_metrics.items():
+            previsions[ent_username] = metrics.get('objectif_ca', 0)
+
+        return previsions
     except Exception as e:
         print(f"[COACH PREVISIONS] Erreur lecture {coach_username}: {e}")
         return {}
@@ -54,28 +91,43 @@ def load_coach_previsions(coach_username):
 
 def save_coach_previsions(coach_username, previsions):
     """
-    Sauvegarde les prévisions d'objectifs d'un coach
+    Sauvegarde les prévisions d'objectifs dans entrepreneurs_metrics
 
     Args:
         coach_username: Nom d'utilisateur du coach
-        previsions: Dictionnaire {entrepreneur_username: objectif_prevision}
+        previsions: Dictionnaire {entrepreneur_username: objectif_ca}
 
     Returns:
         bool: True si succès, False sinon
     """
-    file_path = get_coach_previsions_file(coach_username)
-
     try:
-        data = {
-            'coach_username': coach_username,
-            'previsions': previsions,
-            'last_updated': datetime.now().isoformat()
-        }
+        rpo_data = load_user_rpo_data(coach_username)
 
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        if 'entrepreneurs_metrics' not in rpo_data:
+            rpo_data['entrepreneurs_metrics'] = {}
 
-        print(f"[COACH PREVISIONS] Sauvegarde OK pour {coach_username}: {len(previsions)} previsions")
+        # Mettre à jour les objectif_ca
+        for ent_username, objectif in previsions.items():
+            if ent_username not in rpo_data['entrepreneurs_metrics']:
+                rpo_data['entrepreneurs_metrics'][ent_username] = {
+                    'objectif_ca': objectif,
+                    'cm': 2500,
+                    'ratioMktg': 85,
+                    'tauxVente': 30
+                }
+            else:
+                rpo_data['entrepreneurs_metrics'][ent_username]['objectif_ca'] = objectif
+
+        # Mettre à jour totalObjectif dans coach_previsions
+        if 'coach_previsions' not in rpo_data:
+            rpo_data['coach_previsions'] = {}
+
+        total = sum(float(v) for v in previsions.values())
+        rpo_data['coach_previsions']['totalObjectif'] = total
+
+        save_user_rpo_data(coach_username, rpo_data)
+
+        print(f"[COACH PREVISIONS] Sauvegarde OK pour {coach_username}: {len(previsions)} previsions, total={total}")
         return True
 
     except Exception as e:
@@ -85,7 +137,7 @@ def save_coach_previsions(coach_username, previsions):
 
 def get_team_objectif_total(coach_username):
     """
-    Calcule le total des prévisions d'objectifs pour l'équipe d'un coach
+    Récupère le total des objectifs de l'équipe depuis coach_previsions
 
     Args:
         coach_username: Nom d'utilisateur du coach
@@ -93,167 +145,76 @@ def get_team_objectif_total(coach_username):
     Returns:
         float: Total des prévisions
     """
-    previsions = load_coach_previsions(coach_username)
-    total = sum(float(objectif) for objectif in previsions.values())
-    return total
-
-
-# ========== GESTION DES MÉTRIQUES COACH (CM, RATIO MARKETING, TAUX DE VENTE) ==========
-
-def get_coach_metrics_file(coach_username):
-    """
-    Retourne le chemin du fichier JSON des métriques pour un coach
-    """
-    return DATA_DIR / f"{coach_username}_metrics.json"
-
-
-def load_coach_metrics(coach_username):
-    """
-    Charge les métriques prévisionnelles d'un coach (valeur unique)
-
-    Args:
-        coach_username: Nom d'utilisateur du coach
-
-    Returns:
-        dict: Dictionnaire {cm: X, ratioMktg: Y, tauxVente: Z}
-    """
-    file_path = get_coach_metrics_file(coach_username)
-
-    if not file_path.exists():
-        return {'cm': 0, 'ratioMktg': 0, 'tauxVente': 0}
-
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            return data.get('metrics', {'cm': 0, 'ratioMktg': 0, 'tauxVente': 0})
+        rpo_data = load_user_rpo_data(coach_username)
+        return rpo_data.get('coach_previsions', {}).get('totalObjectif', 0)
     except Exception as e:
-        print(f"[COACH METRICS] Erreur lecture {coach_username}: {e}")
-        return {'cm': 0, 'ratioMktg': 0, 'tauxVente': 0}
+        print(f"[COACH PREVISIONS] Erreur lecture total {coach_username}: {e}")
+        return 0
 
 
-def save_coach_metrics(coach_username, metrics):
+# ========== GESTION DES MÉTRIQUES PAR ENTREPRENEUR ==========
+
+def load_entrepreneur_metrics(coach_username, entrepreneur_username):
     """
-    Sauvegarde les métriques prévisionnelles d'un coach (valeur unique)
-
-    Args:
-        coach_username: Nom d'utilisateur du coach
-        metrics: Dictionnaire {cm: X, ratioMktg: Y, tauxVente: Z}
-
-    Returns:
-        bool: True si succès, False sinon
-    """
-    file_path = get_coach_metrics_file(coach_username)
-
-    try:
-        data = {
-            'coach_username': coach_username,
-            'metrics': metrics,
-            'last_updated': datetime.now().isoformat()
-        }
-
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-
-        print(f"[COACH METRICS] Sauvegarde OK pour {coach_username}: CM={metrics.get('cm')}, Ratio={metrics.get('ratioMktg')}%, Taux={metrics.get('tauxVente')}%")
-        return True
-
-    except Exception as e:
-        print(f"[COACH METRICS] ERREUR sauvegarde {coach_username}: {e}")
-        return False
-
-
-# ========== GESTION DES OBJECTIFS MENSUELS PAR ENTREPRENEUR ==========
-
-def get_coach_objectifs_mensuels_file(coach_username):
-    """
-    Retourne le chemin du fichier JSON des objectifs mensuels pour un coach
-    """
-    return DATA_DIR / f"{coach_username}_objectifs_mensuels.json"
-
-
-def load_coach_objectifs_mensuels(coach_username):
-    """
-    Charge les objectifs mensuels par entrepreneur pour un coach
-
-    Args:
-        coach_username: Nom d'utilisateur du coach
-
-    Returns:
-        dict: Dictionnaire {
-            "2026-01": {
-                "entrepreneur1": 100,
-                "entrepreneur2": 120
-            },
-            "2026-02": {...}
-        }
-    """
-    file_path = get_coach_objectifs_mensuels_file(coach_username)
-
-    if not file_path.exists():
-        return {}
-
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            return data.get('objectifs', {})
-    except Exception as e:
-        print(f"[COACH OBJECTIFS MENSUELS] Erreur lecture {coach_username}: {e}")
-        return {}
-
-
-def save_coach_objectifs_mensuels(coach_username, objectifs):
-    """
-    Sauvegarde les objectifs mensuels par entrepreneur pour un coach
-
-    Args:
-        coach_username: Nom d'utilisateur du coach
-        objectifs: Dictionnaire {
-            "2026-01": {
-                "entrepreneur1": 100,
-                "entrepreneur2": 120
-            },
-            "2026-02": {...}
-        }
-
-    Returns:
-        bool: True si succès, False sinon
-    """
-    file_path = get_coach_objectifs_mensuels_file(coach_username)
-
-    try:
-        data = {
-            'coach_username': coach_username,
-            'objectifs': objectifs,
-            'last_updated': datetime.now().isoformat()
-        }
-
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-
-        print(f"[COACH OBJECTIFS MENSUELS] Sauvegarde OK pour {coach_username}: {len(objectifs)} mois")
-        return True
-
-    except Exception as e:
-        print(f"[COACH OBJECTIFS MENSUELS] ERREUR sauvegarde {coach_username}: {e}")
-        return False
-
-
-def get_entrepreneur_objectif_for_month(coach_username, entrepreneur_username, month_key):
-    """
-    Récupère l'objectif d'un entrepreneur pour un mois donné
+    Charge les métriques d'un entrepreneur spécifique
 
     Args:
         coach_username: Nom d'utilisateur du coach
         entrepreneur_username: Nom d'utilisateur de l'entrepreneur
-        month_key: Clé du mois au format "2026-01"
 
     Returns:
-        float: Valeur de l'objectif (0 si non défini)
+        dict: {objectif_ca, cm, ratioMktg, tauxVente}
     """
-    objectifs = load_coach_objectifs_mensuels(coach_username)
+    try:
+        rpo_data = load_user_rpo_data(coach_username)
+        entrepreneurs_metrics = rpo_data.get('entrepreneurs_metrics', {})
+        return entrepreneurs_metrics.get(entrepreneur_username, {
+            'objectif_ca': 0,
+            'cm': 2500,
+            'ratioMktg': 85,
+            'tauxVente': 30
+        })
+    except Exception as e:
+        print(f"[COACH] Erreur lecture metrics {entrepreneur_username}: {e}")
+        return {'objectif_ca': 0, 'cm': 2500, 'ratioMktg': 85, 'tauxVente': 30}
 
-    if month_key not in objectifs:
-        return 0
 
-    month_objectifs = objectifs[month_key]
-    return float(month_objectifs.get(entrepreneur_username, 0))
+def save_entrepreneur_metrics(coach_username, entrepreneur_username, metrics):
+    """
+    Sauvegarde les métriques d'un entrepreneur spécifique
+
+    Args:
+        coach_username: Nom d'utilisateur du coach
+        entrepreneur_username: Nom d'utilisateur de l'entrepreneur
+        metrics: {objectif_ca, cm, ratioMktg, tauxVente}
+
+    Returns:
+        bool: True si succès, False sinon
+    """
+    try:
+        rpo_data = load_user_rpo_data(coach_username)
+
+        if 'entrepreneurs_metrics' not in rpo_data:
+            rpo_data['entrepreneurs_metrics'] = {}
+
+        rpo_data['entrepreneurs_metrics'][entrepreneur_username] = metrics
+
+        # Recalculer totalObjectif
+        if 'coach_previsions' not in rpo_data:
+            rpo_data['coach_previsions'] = {}
+
+        total = sum(
+            ent.get('objectif_ca', 0)
+            for ent in rpo_data['entrepreneurs_metrics'].values()
+        )
+        rpo_data['coach_previsions']['totalObjectif'] = total
+
+        save_user_rpo_data(coach_username, rpo_data)
+
+        print(f"[COACH] Sauvegarde metrics {entrepreneur_username} OK")
+        return True
+
+    except Exception as e:
+        print(f"[COACH] ERREUR sauvegarde metrics {entrepreneur_username}: {e}")
+        return False

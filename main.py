@@ -14123,79 +14123,6 @@ async def save_coach_metrics(request: CoachMetricsRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ============================================
-# ENDPOINTS COACH - OBJECTIFS MENSUELS PAR ENTREPRENEUR
-# ============================================
-
-@app.get("/api/coach/objectifs-mensuels")
-async def get_coach_objectifs_mensuels(coach_username: str):
-    """
-    Récupère les objectifs mensuels par entrepreneur pour un coach
-
-    Query params:
-        coach_username: Nom d'utilisateur du coach
-
-    Returns:
-        {
-            "success": True,
-            "objectifs": {
-                "2026-01": {"entrepreneur1": 100, "entrepreneur2": 120},
-                "2026-02": {...}
-            }
-        }
-    """
-    try:
-        from QE.Backend.coach_previsions import load_coach_objectifs_mensuels
-
-        objectifs = load_coach_objectifs_mensuels(coach_username)
-
-        return {
-            "success": True,
-            "objectifs": objectifs
-        }
-
-    except Exception as e:
-        print(f"[COACH API] Erreur GET objectifs-mensuels: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-class CoachObjectifsMensuelsRequest(BaseModel):
-    coach_username: str
-    objectifs: dict  # {"2026-01": {"entrepreneur1": 100, "entrepreneur2": 120}, ...}
-
-
-@app.post("/api/coach/objectifs-mensuels")
-async def save_coach_objectifs_mensuels(request: CoachObjectifsMensuelsRequest):
-    """
-    Sauvegarde les objectifs mensuels par entrepreneur pour un coach
-
-    Body:
-        {
-            "coach_username": "coach1",
-            "objectifs": {
-                "2026-01": {"entrepreneur1": 100, "entrepreneur2": 120},
-                "2026-02": {...}
-            }
-        }
-
-    Returns:
-        {"success": True}
-    """
-    try:
-        from QE.Backend.coach_previsions import save_coach_objectifs_mensuels
-
-        success = save_coach_objectifs_mensuels(request.coach_username, request.objectifs)
-
-        if success:
-            return {
-                "success": True
-            }
-        else:
-            raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
-
-    except Exception as e:
-        print(f"[COACH API] Erreur POST objectifs-mensuels: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/entrepreneur/coach")
@@ -19202,11 +19129,10 @@ async def get_rpo_data(username: str, team: bool = Query(False), all_teams: bool
             usernames_to_process = [username]
 
         # Si un seul utilisateur, retourner ses données directement
+        # NOTE: Le sync se fait maintenant sur les endpoints d'action (signer-soumission, production-terminee)
+        # et non plus ici, pour éviter le double sync
         if len(usernames_to_process) == 1:
             user = usernames_to_process[0]
-            print(f"[RPO API] Appel sync_soumissions_to_rpo pour {user}", flush=True)
-            sync_result = sync_soumissions_to_rpo(user)
-            print(f"[RPO API] Résultat sync: {sync_result}", flush=True)
             data = load_user_rpo_data(user)
             return data
 
@@ -19215,10 +19141,6 @@ async def get_rpo_data(username: str, team: bool = Query(False), all_teams: bool
         aggregated_data = None
 
         for user in usernames_to_process:
-            print(f"[RPO API] Appel sync_soumissions_to_rpo pour {user}", flush=True)
-            sync_result = sync_soumissions_to_rpo(user)
-            print(f"[RPO API] Résultat sync: {sync_result}", flush=True)
-
             user_data = load_user_rpo_data(user)
 
             if aggregated_data is None:
@@ -20259,6 +20181,14 @@ async def signer_soumission_vente(data: dict = Body(...)):
         threading.Thread(target=sync_monday_background, daemon=True).start()
         print(f"[MONDAY] 🚀 Synchronisation Monday.com lancée en arrière-plan")
 
+        # --- SYNCHRONISATION RPO (entrepreneur -> coach -> direction) ---
+        try:
+            from QE.Backend.rpo import sync_soumissions_to_rpo
+            sync_soumissions_to_rpo(username)
+            print(f"[RPO SYNC] RPO synchronisé après signature pour {username}")
+        except Exception as e:
+            print(f"[RPO SYNC WARNING] Erreur synchronisation RPO: {e}")
+
         return {"success": True, "message": "Soumission acceptée"}
 
     except Exception as e:
@@ -20431,6 +20361,14 @@ async def production_terminee_vente(data: dict = Body(...)):
             envoyer_email_demande_satisfaction(username, soumission, url_avis)
         except Exception as e:
             print(f"[ERREUR] envoi email satisfaction: {e}")
+
+        # --- SYNCHRONISATION RPO (entrepreneur -> coach -> direction) ---
+        try:
+            from QE.Backend.rpo import sync_soumissions_to_rpo
+            sync_soumissions_to_rpo(username)
+            print(f"[RPO SYNC] RPO synchronisé après production terminée pour {username}")
+        except Exception as e:
+            print(f"[RPO SYNC WARNING] Erreur synchronisation RPO: {e}")
 
         return {"success": True, "message": "Production terminée"}
 

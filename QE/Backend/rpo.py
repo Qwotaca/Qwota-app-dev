@@ -64,8 +64,33 @@ else:
 os.makedirs(RPO_DATA_DIR, exist_ok=True)
 
 
+def get_user_role(username: str) -> str:
+    """Récupère le rôle d'un utilisateur depuis la base de données"""
+    try:
+        import sqlite3
+        from database import get_database_path
+        DB_PATH = get_database_path()
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT role FROM users WHERE username=?", (username,))
+            row = cursor.fetchone()
+            if row:
+                return row[0]
+    except Exception as e:
+        print(f"[RPO] Erreur get_user_role {username}: {e}")
+    return "entrepreneur"
+
+
 def get_user_rpo_file(username: str) -> str:
-    """Retourne le chemin du fichier RPO pour un utilisateur"""
+    """
+    Retourne le chemin du fichier RPO pour un utilisateur
+    NOTE: Tous les users direction partagent le même fichier direction_rpo.json
+    """
+    # Vérifier si c'est un user direction
+    role = get_user_role(username)
+    if role == "direction":
+        return os.path.join(RPO_DATA_DIR, "direction_rpo.json")
+
     return os.path.join(RPO_DATA_DIR, f"{username}_rpo.json")
 
 
@@ -451,12 +476,35 @@ def sync_direction_rpo() -> bool:
             # Charger le RPO direction (ou créer structure vide)
             direction_rpo = load_user_rpo_data('direction')
 
+            # Nettoyer les sections qui ne devraient PAS être dans le JSON direction
+            # La direction n'a pas d'états des résultats
+            if 'etats_resultats' in direction_rpo:
+                del direction_rpo['etats_resultats']
+
+            # La direction n'a pas de données monthly (seulement weekly)
+            if 'monthly' in direction_rpo:
+                del direction_rpo['monthly']
+
+            # Supprimer team_metrics et entrepreneurs_metrics (obsolètes)
+            if 'team_metrics' in direction_rpo:
+                del direction_rpo['team_metrics']
+            if 'team_previsions' in direction_rpo:
+                del direction_rpo['team_previsions']
+            if 'entrepreneurs_metrics' in direction_rpo:
+                del direction_rpo['entrepreneurs_metrics']
+
             # Réinitialiser les données weekly de direction
             if 'weekly' not in direction_rpo:
                 direction_rpo['weekly'] = {}
 
-            # Initialiser toutes les semaines à 0
-            all_months = [-2] + list(range(12))
+            # Nettoyer les anciens mois négatifs (-2, -1) s'ils existent
+            if '-2' in direction_rpo['weekly']:
+                del direction_rpo['weekly']['-2']
+            if '-1' in direction_rpo['weekly']:
+                del direction_rpo['weekly']['-1']
+
+            # Initialiser toutes les semaines à 0 (seulement mois 0-11: Janvier-Décembre 2026)
+            all_months = list(range(12))
             for month_idx in all_months:
                 month_key = str(month_idx)
                 if month_key not in direction_rpo['weekly']:
@@ -483,6 +531,10 @@ def sync_direction_rpo() -> bool:
 
                 # Parcourir tous les mois et semaines du coach
                 for month_key, weeks_data in coach_rpo['weekly'].items():
+                    # Ignorer les mois négatifs (-2, -1) lors de l'agrégation
+                    if month_key in ['-2', '-1']:
+                        continue
+
                     if month_key not in direction_rpo['weekly']:
                         direction_rpo['weekly'][month_key] = {}
 
@@ -512,6 +564,27 @@ def sync_direction_rpo() -> bool:
                                     direction_rpo['weekly'][month_key][week_key][field] = float(current) + numeric_value
                                 except (ValueError, TypeError):
                                     pass
+
+            # Charger et ajouter les prévisions direction dans le JSON
+            try:
+                from QE.Backend.direction_previsions import load_direction_metrics, get_direction_team_objectif_total
+
+                # Coach previsions (métriques globales direction + objectif total)
+                # Note: Le fichier direction_rpo.json est COMMUN à tous les utilisateurs direction
+                direction_metrics = load_direction_metrics('direction')
+                total_objectif = get_direction_team_objectif_total('direction')
+
+                direction_rpo['coach_previsions'] = {
+                    'cm': direction_metrics.get('cm', 0),
+                    'ratioMktg': direction_metrics.get('ratioMktg', 0),
+                    'tauxVente': direction_metrics.get('tauxVente', 0),
+                    'totalObjectif': total_objectif
+                }
+
+                print(f"[DIRECTION RPO] Previsions ajoutees: Total={total_objectif}, CM={direction_metrics.get('cm')}", flush=True)
+
+            except Exception as previsions_error:
+                print(f"[WARN] [DIRECTION RPO] Erreur chargement previsions: {previsions_error}", flush=True)
 
             # Sauvegarder le RPO direction (APRÈS avoir agrégé tous les coaches)
             save_user_rpo_data('direction', direction_rpo)
@@ -552,35 +625,33 @@ def sync_coach_rpo(coach_username: str) -> bool:
             # Charger le RPO du coach (ou créer structure vide)
             coach_rpo = load_user_rpo_data(coach_username)
 
-            # Initialiser les sections
-            # 1. coach_previsions: les prévisions du coach lui-même (ses propres métriques)
-            if 'coach_previsions' not in coach_rpo:
-                coach_rpo['coach_previsions'] = {
-                    'cm': 0,
-                    'ratioMktg': 0,
-                    'tauxVente': 0,
-                    'totalObjectif': 0
-                }
+            # Nettoyer les sections qui ne devraient PAS être dans le JSON coach
+            # Les coaches n'ont pas d'états des résultats
+            if 'etats_resultats' in coach_rpo:
+                del coach_rpo['etats_resultats']
 
-            # 2. team_metrics: métriques moyennes de toute l'équipe
-            if 'team_metrics' not in coach_rpo:
-                coach_rpo['team_metrics'] = {
-                    'cm': 0,
-                    'ratioMktg': 0,
-                    'tauxVente': 0,
-                    'totalObjectif': 0
-                }
+            # Les coaches n'ont pas de données monthly (seulement weekly)
+            if 'monthly' in coach_rpo:
+                del coach_rpo['monthly']
 
-            # 3. entrepreneurs_metrics: métriques individuelles de chaque entrepreneur
-            if 'entrepreneurs_metrics' not in coach_rpo:
-                coach_rpo['entrepreneurs_metrics'] = {}
+            # Supprimer team_metrics (obsolète)
+            if 'team_metrics' in coach_rpo:
+                del coach_rpo['team_metrics']
+            if 'team_previsions' in coach_rpo:
+                del coach_rpo['team_previsions']
 
             # Réinitialiser les données weekly du coach
             if 'weekly' not in coach_rpo:
                 coach_rpo['weekly'] = {}
 
-            # Initialiser toutes les semaines avec h_marketing à 0
-            all_months = [-2] + list(range(12))
+            # Nettoyer les anciens mois négatifs (-2, -1) s'ils existent
+            if '-2' in coach_rpo['weekly']:
+                del coach_rpo['weekly']['-2']
+            if '-1' in coach_rpo['weekly']:
+                del coach_rpo['weekly']['-1']
+
+            # Initialiser toutes les semaines avec h_marketing à 0 (seulement mois 0-11: Janvier-Décembre 2026)
+            all_months = list(range(12))
             for month_idx in all_months:
                 month_key = str(month_idx)
                 if month_key not in coach_rpo['weekly']:
@@ -607,6 +678,10 @@ def sync_coach_rpo(coach_username: str) -> bool:
 
                 # Parcourir tous les mois et semaines de l'entrepreneur
                 for month_key, weeks_data in entrepreneur_rpo['weekly'].items():
+                    # Ignorer les mois négatifs (-2, -1) lors de l'agrégation
+                    if month_key in ['-2', '-1']:
+                        continue
+
                     if month_key not in coach_rpo['weekly']:
                         coach_rpo['weekly'][month_key] = {}
 
@@ -637,71 +712,47 @@ def sync_coach_rpo(coach_username: str) -> bool:
                                 except (ValueError, TypeError):
                                     pass
 
-            # Charger les PRÉVISIONS du coach (pas les objectifs réels des entrepreneurs!)
-            from QE.Backend.coach_previsions import load_coach_previsions
-            coach_previsions_data = load_coach_previsions(coach_username)
+            # Charger et ajouter les prévisions coach dans le JSON
+            try:
+                from QE.Backend.coach_previsions import load_coach_previsions, load_coach_metrics, get_team_objectif_total
 
-            # Charger les prévisions et métriques de chaque entrepreneur
-            total_objectif = 0
-            total_cm = 0
-            total_ratio_mktg = 0
-            total_taux_vente = 0
-            count_entrepreneurs = 0
+                # 1. Coach previsions (métriques globales + objectif total)
+                coach_metrics = load_coach_metrics(coach_username)
+                total_objectif = get_team_objectif_total(coach_username)
 
-            coach_rpo['entrepreneurs_metrics'] = {}
-
-            for entrepreneur_username in entrepreneur_usernames:
-                entrepreneur_rpo = load_user_rpo_data(entrepreneur_username)
-
-                # Récupérer toutes les métriques de l'entrepreneur
-                annual_data = entrepreneur_rpo.get('annual', {})
-                objectif_ca_reel = annual_data.get('objectif_ca', 0)
-                cm = annual_data.get('contrat_moyen', 0)
-                ratio_mktg = annual_data.get('ratio_mktg', 0)
-                taux_vente = annual_data.get('taux_vente', 0)
-
-                # Utiliser la PRÉVISION du coach si elle existe, sinon utiliser l'objectif réel
-                objectif_ca_prevision = coach_previsions_data.get(entrepreneur_username, objectif_ca_reel)
-
-                # Stocker les métriques individuelles de cet entrepreneur
-                coach_rpo['entrepreneurs_metrics'][entrepreneur_username] = {
-                    'objectif_ca_reel': objectif_ca_reel,  # Objectif réel de l'entrepreneur
-                    'objectif_ca_prevision': objectif_ca_prevision,  # Prévision du coach pour cet entrepreneur
-                    'cm': cm,
-                    'ratioMktg': ratio_mktg,
-                    'tauxVente': taux_vente
+                coach_rpo['coach_previsions'] = {
+                    'cm': coach_metrics.get('cm', 0),
+                    'ratioMktg': coach_metrics.get('ratioMktg', 0),
+                    'tauxVente': coach_metrics.get('tauxVente', 0),
+                    'totalObjectif': total_objectif
                 }
 
-                # Accumuler les PRÉVISIONS (pas les objectifs réels) pour le total
-                total_objectif += objectif_ca_prevision
-                if cm > 0 or ratio_mktg > 0 or taux_vente > 0:
-                    total_cm += cm
-                    total_ratio_mktg += ratio_mktg
-                    total_taux_vente += taux_vente
-                    count_entrepreneurs += 1
+                # 2. Entrepreneurs metrics (objectifs et métriques par entrepreneur)
+                previsions_entrepreneurs = load_coach_previsions(coach_username)
+                entrepreneurs_metrics = {}
 
-            # Charger les prévisions du COACH lui-même (pas les entrepreneurs)
-            coach_annual = coach_rpo.get('annual', {})
-            coach_rpo['coach_previsions'] = {
-                'cm': coach_annual.get('contrat_moyen', 0),
-                'ratioMktg': coach_annual.get('ratio_mktg', 0),
-                'tauxVente': coach_annual.get('taux_vente', 0),
-                'totalObjectif': coach_annual.get('objectif_ca', 0)
-            }
+                for entrepreneur_username in entrepreneur_usernames:
+                    entrepreneur_rpo = load_user_rpo_data(entrepreneur_username)
+                    annual = entrepreneur_rpo.get('annual', {})
 
-            # Calculer les moyennes de l'équipe (entrepreneurs seulement)
-            coach_rpo['team_metrics'] = {
-                'cm': total_cm / count_entrepreneurs if count_entrepreneurs > 0 else 0,
-                'ratioMktg': total_ratio_mktg / count_entrepreneurs if count_entrepreneurs > 0 else 0,
-                'tauxVente': total_taux_vente / count_entrepreneurs if count_entrepreneurs > 0 else 0,
-                'totalObjectif': total_objectif
-            }
+                    # Objectif CA: utiliser la prévision coach si définie, sinon l'objectif entrepreneur
+                    objectif_ca = previsions_entrepreneurs.get(entrepreneur_username, annual.get('objectif_ca', 0))
 
-            print(f"[COACH RPO] Previsions du coach: {coach_rpo['coach_previsions']}", flush=True)
-            print(f"[COACH RPO] Metriques individuelles des entrepreneurs: {coach_rpo['entrepreneurs_metrics']}", flush=True)
-            print(f"[COACH RPO] Metriques moyennes de l'equipe: {coach_rpo['team_metrics']}", flush=True)
+                    entrepreneurs_metrics[entrepreneur_username] = {
+                        'objectif_ca': objectif_ca,
+                        'cm': annual.get('cm_prevision', 0),
+                        'ratioMktg': annual.get('ratio_mktg', 0),
+                        'tauxVente': annual.get('taux_vente', 0)
+                    }
 
-            # Sauvegarder le RPO du coach
+                coach_rpo['entrepreneurs_metrics'] = entrepreneurs_metrics
+
+                print(f"[COACH RPO] Previsions ajoutees: Total={total_objectif}, CM={coach_metrics.get('cm')}, {len(entrepreneurs_metrics)} entrepreneurs", flush=True)
+
+            except Exception as previsions_error:
+                print(f"[WARN] [COACH RPO] Erreur chargement previsions: {previsions_error}", flush=True)
+
+            # Sauvegarder le RPO du coach (contient données réelles agrégées + prévisions)
             save_user_rpo_data(coach_username, coach_rpo)
             print(f"[COACH RPO] Donnees agregees chargees avec succes pour coach {coach_username} ({len(entrepreneur_usernames)} entrepreneurs)", flush=True)
 
@@ -768,11 +819,8 @@ def sync_soumissions_to_rpo(username: str) -> bool:
                 rpo_data['weekly'][month_key][week_key]['estimation'] = 0
                 rpo_data['weekly'][month_key][week_key]['contract'] = 0
                 rpo_data['weekly'][month_key][week_key]['dollar'] = 0
-                rpo_data['weekly'][month_key][week_key]['depot'] = 0
-                rpo_data['weekly'][month_key][week_key]['peintre'] = 0
                 rpo_data['weekly'][month_key][week_key]['ca_cumul'] = 0
                 rpo_data['weekly'][month_key][week_key]['produit'] = 0
-                rpo_data['weekly'][month_key][week_key]['satisfaction'] = 0
 
         # Déterminer le chemin de base selon l'OS
         if sys.platform == 'win32':
@@ -905,57 +953,7 @@ def sync_soumissions_to_rpo(username: str) -> bool:
                     else:
                         print(f"    [WARN] [RPO SYNC] Mois {month_key} ou semaine {week_key} non trouve dans RPO", flush=True)
 
-        # 3. Synchroniser les dépôts depuis facturation_qe_periodes
-        periodes_path = os.path.join(base_cloud, "facturation_qe_periodes", "periodes.json")
-        if os.path.exists(periodes_path):
-            with open(periodes_path, 'r', encoding='utf-8') as f:
-                periodes_data = json.load(f)
-
-            print(f"[INFO] [RPO SYNC] Synchronisation des depots depuis facturation_qe_periodes", flush=True)
-            depot_count = 0
-
-            # Parcourir toutes les périodes
-            for periode_key, paiements in periodes_data.items():
-                for paiement in paiements:
-                    # Filtrer uniquement les dépôts pour cet entrepreneur
-                    if (paiement.get('entrepreneurUsername') == username and
-                        paiement.get('type') == 'depot' and
-                        paiement.get('statut') in ['valide', 'traite', 'traite_attente_final', 'attente_comptable']):
-
-                        date_str = paiement.get('date', '')
-                        montant_str = paiement.get('montant', '0')
-
-                        # Parser le montant (format: "431,16 $")
-                        import re
-                        montant_clean = re.sub(r'\s+', '', montant_str)
-                        montant_clean = montant_clean.replace('$', '').replace(',', '.')
-                        try:
-                            montant = float(montant_clean)
-                        except:
-                            montant = 0
-
-                        # Parser la date (format: "10/03/2026 16:25")
-                        if date_str and montant > 0:
-                            try:
-                                date_parts = date_str.split(' ')[0]  # Prendre juste la date sans l'heure
-                                # Convertir DD/MM/YYYY vers YYYY-MM-DD
-                                day, month, year = date_parts.split('/')
-                                date_formatted = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
-
-                                month_idx, week_num = get_week_number_from_date(date_formatted)
-                                month_key = str(month_idx)
-                                week_key = str(week_num)
-
-                                if month_key in rpo_data['weekly'] and week_key in rpo_data['weekly'][month_key]:
-                                    rpo_data['weekly'][month_key][week_key]['depot'] += montant
-                                    depot_count += 1
-                                    print(f"  [DEPOT] [RPO SYNC] +{montant}$ depot a semaine {week_num} du mois {month_idx} (date: {date_formatted})", flush=True)
-                            except Exception as e:
-                                print(f"  [WARN] [RPO SYNC] Erreur parsing date depot '{date_str}': {e}", flush=True)
-
-            print(f"[INFO] [RPO SYNC] {depot_count} depots synchronises", flush=True)
-
-        # 3b. Synchroniser les ventes produites depuis data/ventes_produit
+        # 3. Synchroniser les ventes produites depuis data/ventes_produit
         ventes_produit_path = os.path.join(base_cloud, "ventes_produit", username, "ventes.json")
         if os.path.exists(ventes_produit_path):
             with open(ventes_produit_path, 'r', encoding='utf-8') as f:
@@ -998,101 +996,7 @@ def sync_soumissions_to_rpo(username: str) -> bool:
 
             print(f"[INFO] [RPO SYNC] {produit_count} ventes produites synchronisees", flush=True)
 
-        # 4. Synchroniser les employés (peintres) depuis data/employes
-        employes_path_base = os.path.join(base_cloud, "employes", username)
-        if os.path.exists(employes_path_base):
-            print(f"[INFO] [RPO SYNC] Synchronisation des employes (peintres) - MODE CUMULATIF", flush=True)
-
-            # Collecter tous les peintres avec leur date d'activation
-            peintres_list = []
-            employe_files = ['nouveaux.json', 'actifs.json', 'inactifs.json']
-            statuts_valides = ['En attente de validation', 'En attente comptable', 'Actif']
-
-            for file_name in employe_files:
-                file_path = os.path.join(employes_path_base, file_name)
-                if os.path.exists(file_path):
-                    try:
-                        with open(file_path, 'r', encoding='utf-8') as f:
-                            employes = json.load(f)
-
-                        for employe in employes:
-                            poste = employe.get('poste', '').lower()
-                            poste_service = employe.get('posteService', '').lower()
-                            statut = employe.get('statut', '')
-                            date_activation_str = employe.get('dateActivation', '')
-
-                            if (('peintre' in poste or 'peintre' in poste_service) and
-                                statut in statuts_valides and
-                                date_activation_str):
-
-                                try:
-                                    # Parser la date d'activation
-                                    if '/' in date_activation_str:
-                                        day, month, year = date_activation_str.split('/')
-                                        date_formatted = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
-                                    else:
-                                        date_formatted = date_activation_str
-
-                                    peintres_list.append({
-                                        'date': date_formatted,
-                                        'nom': employe.get('nom', 'Inconnu'),
-                                        'statut': statut
-                                    })
-                                except Exception as e:
-                                    print(f"  [WARN] [RPO SYNC] Erreur parsing date activation '{date_activation_str}': {e}", flush=True)
-
-                    except Exception as e:
-                        print(f"  [WARN] [RPO SYNC] Erreur lecture fichier employes '{file_name}': {e}", flush=True)
-
-            # Trier les peintres par date d'activation
-            peintres_list.sort(key=lambda x: x['date'])
-
-            print(f"[INFO] [RPO SYNC] {len(peintres_list)} peintres trouves au total", flush=True)
-
-            # Pour chaque semaine, compter CUMULATIVEMENT tous les peintres activés jusqu'à cette semaine
-            from datetime import datetime
-            for month_idx in all_months:
-                month_key = str(month_idx)
-                if month_key in rpo_data['weekly']:
-                    for week_number in range(1, 6):
-                        week_key = str(week_number)
-                        if week_key in rpo_data['weekly'][month_key]:
-                            # Trouver la date de fin de cette semaine
-                            # On utilise la date du dimanche de cette semaine pour comparer
-                            week_data_temp = rpo_data['weekly'][month_key][week_key]
-
-                            # Calculer une date approximative pour cette semaine
-                            # Mois -2 = Oct 2025, 0 = Jan 2026, 1 = Feb 2026, etc.
-                            if month_idx == -2:
-                                year = 2025
-                                month = 10
-                            elif month_idx == -1:
-                                year = 2025
-                                month = 11
-                            else:
-                                year = 2026
-                                month = month_idx + 1
-
-                            # Approximation: semaine X = jour (X * 7)
-                            day = min(week_number * 7, 28)
-
-                            try:
-                                week_end_date = datetime(year, month, day)
-                                week_end_str = week_end_date.strftime('%Y-%m-%d')
-
-                                # Compter tous les peintres activés jusqu'à cette date
-                                cumulative_count = sum(1 for p in peintres_list if p['date'] <= week_end_str)
-
-                                rpo_data['weekly'][month_key][week_key]['peintre'] = cumulative_count
-
-                                if cumulative_count > 0:
-                                    print(f"  [PEINTRE CUMULATIF] Mois {month_idx}, Semaine {week_number}: {cumulative_count} peintres au total", flush=True)
-                            except:
-                                pass
-
-            print(f"[INFO] [RPO SYNC] Synchronisation cumulative des peintres terminee", flush=True)
-
-        # 5. Agréger les données hebdomadaires vers les totaux annuels
+        # 4. Agréger les données hebdomadaires vers les totaux annuels
         print(f"[SYNC] [RPO SYNC] Aggregation des donnees hebdomadaires vers annuel...", flush=True)
 
         total_estimation = 0

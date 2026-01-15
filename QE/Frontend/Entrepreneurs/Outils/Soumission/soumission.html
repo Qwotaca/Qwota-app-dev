@@ -190,6 +190,34 @@
       stroke-dashoffset: 100;
       animation: checkmarkDraw 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.4s forwards;
     }
+
+    /* Zoom slider style */
+    #pdfZoomSlider {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    #pdfZoomSlider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #3b82f6;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    #pdfZoomSlider::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #3b82f6;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
   </style>
 
 
@@ -1305,10 +1333,10 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
 
         // Positionner la signature en bas de la PREMIÈRE page seulement
         // Valeurs de base à scale 1 (2x plus petite, plus en bas à gauche)
-        const baseLeft = 100;
+        const baseLeft = 95;
         const baseWidth = 75;
         const baseHeight = 17.5;
-        const baseBottomOffset = 85;
+        const baseBottomOffset = 88;
 
         // Appliquer le scale
         const scaledLeft = baseLeft * scale;
@@ -1354,10 +1382,10 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
 
       // Positionner la signature en bas de la PREMIÈRE page seulement
       // Valeurs de base à scale 1 (2x plus petite, plus en bas à gauche)
-      const baseLeft = 100;
+      const baseLeft = 95;
       const baseWidth = 75;
       const baseHeight = 17.5;
-      const baseBottomOffset = 85;
+      const baseBottomOffset = 88;
 
       // Appliquer le scale
       const scaledLeft = baseLeft * currentScalePresent;
@@ -1625,25 +1653,41 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
       console.log('[PDF PRÉSENTATION MOBILE] Pan/drag activé - 1 doigt = bouger, 2 doigts = zoomer');
     }
 
-    // Support du zoom avec Ctrl+molette sur desktop
+    // Bloquer le zoom Ctrl+molette du navigateur
     if (pdfScrollContainerPresent) {
-      pdfScrollContainerPresent.addEventListener('wheel', async (e) => {
+      pdfScrollContainerPresent.addEventListener('wheel', (e) => {
         if (e.ctrlKey) {
-          e.preventDefault();
-
-          // Déterminer la direction du zoom
-          const delta = e.deltaY > 0 ? -0.1 : 0.1;
-          let newScale = currentScalePresent + delta;
-
-          // Limiter le zoom
-          newScale = Math.max(minScalePresent, Math.min(maxScalePresent, newScale));
-
-          if (newScale !== currentScalePresent) {
-            currentScalePresent = newScale;
-            await renderAllPagesPresent(currentScalePresent);
-          }
+          e.preventDefault(); // Bloquer le zoom navigateur
         }
       }, { passive: false });
+    }
+
+    // Zoom via slider dans le header
+    const zoomSlider = pdfModal.querySelector('#pdfZoomSlider');
+    const zoomPercentage = pdfModal.querySelector('#zoomPercentage');
+
+    if (zoomSlider) {
+      // Initialiser le slider avec la valeur actuelle
+      zoomSlider.value = currentScalePresent * 100;
+      if (zoomPercentage) zoomPercentage.textContent = Math.round(currentScalePresent * 100) + '%';
+
+      // Mettre à jour le gradient du slider
+      const updateSliderGradient = (value) => {
+        const percent = (value - 50) / (300 - 50) * 100;
+        zoomSlider.style.background = `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${percent}%, #475569 ${percent}%, #475569 100%)`;
+      };
+      updateSliderGradient(zoomSlider.value);
+
+      zoomSlider.addEventListener('input', async (e) => {
+        const newScale = parseInt(e.target.value) / 100;
+        if (zoomPercentage) zoomPercentage.textContent = Math.round(newScale * 100) + '%';
+        updateSliderGradient(e.target.value);
+
+        if (Math.abs(newScale - currentScalePresent) > 0.02) {
+          currentScalePresent = newScale;
+          await renderAllPagesPresent(currentScalePresent);
+        }
+      });
     }
 
     // Fonction de fermeture
@@ -5440,9 +5484,19 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 <!-- Modal PDF avec Signature Overlay -->
 <div id="pdfModal" class="hidden" tabindex="-1" aria-hidden="true">
   <div id="pdfContent" tabindex="-1">
-    <div id="pdfControls" class="pdf-header">
+    <div id="pdfControls" class="pdf-header" style="display: flex; justify-content: space-between; align-items: center;">
       <span class="pdf-header-title">Aperçu PDF</span>
-      <button id="closePdfBtn" class="close-btn hidden" tabindex="-1">×</button>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div id="zoomSliderContainer" style="display: flex; align-items: center; gap: 8px;">
+          <i class="fas fa-search-minus" style="color: #94a3b8; font-size: 11px;"></i>
+          <input type="range" id="pdfZoomSlider" min="50" max="300" value="200"
+            style="width: 80px; height: 4px; background: linear-gradient(to right, #3b82f6 0%, #3b82f6 50%, #475569 50%, #475569 100%); border-radius: 2px;"
+          >
+          <i class="fas fa-search-plus" style="color: #94a3b8; font-size: 11px;"></i>
+          <span id="zoomPercentage" style="color: #94a3b8; font-size: 11px; min-width: 35px;">200%</span>
+        </div>
+        <button id="closePdfBtn" class="close-btn hidden" tabindex="-1">×</button>
+      </div>
     </div>
 
     <div id="pdfScrollContainer" style="position: relative;" tabindex="-1">

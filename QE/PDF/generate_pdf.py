@@ -384,7 +384,7 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
     line_height_part = font_size_part * 1.8  # Espacement léger
     x_part = 76
     y_part = 317.5 + y_offset
-    max_width_part = 463
+    max_width_part = 530
     max_height_part = 120
 
     start_y_part = y_part + max_height_part - font_size_part

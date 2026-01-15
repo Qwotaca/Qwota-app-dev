@@ -378,7 +378,7 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
     line_height_part = font_size_part * 1.8  # Espacement léger
     x_part = 76
     y_part = 317.5
-    max_width_part = 463
+    max_width_part = 530
     max_height_part = 120
 
     start_y_part = y_part + max_height_part - font_size_part

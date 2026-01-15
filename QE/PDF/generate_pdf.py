@@ -98,7 +98,7 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
     prix_avec_dollar = f"{prix_formate} $" if prix_formate else ""
     c.drawRightString(443, 149.5 + y_offset, prix_formate)
     c.drawString(476, 249.5 + y_offset, temps)
-    c.drawString(260, 305.5 + y_offset, temps)
+    c.drawString(240, 305.5 + y_offset, temps)
     c.drawString(381, 249.5 + y_offset, prix_avec_dollar)
     c.drawString(76, 249.5 + y_offset, item)
 

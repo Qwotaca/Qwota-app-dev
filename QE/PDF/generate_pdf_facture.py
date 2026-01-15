@@ -8,6 +8,7 @@ import os
 import sys
 import json
 import random
+import re
 
 # Détection OS pour chemins de fichiers (même logique que main.py)
 if sys.platform == 'win32':
@@ -44,16 +45,22 @@ def formater_prix(prix_str):
         montant = 0.0
     return f"{montant:,.2f}".replace(",", "X").replace(".", ",").replace("X", " ") + " $"
 
-def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: str = "0", telephone: str = "", courriel: str = "", endroit: str = "", item: str = "", part: str = "", produit: str = "", payer_par: str = "", username: str = "", temps: str = "") -> BytesIO:
+def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: str = "0", telephone: str = "", courriel: str = "", endroit: str = "", item: str = "", part: str = "", produit: str = "", payer_par: str = "", username: str = "", temps: str = "", language: str = "fr") -> BytesIO:
     print(f"[DEBUG FACTURE] Téléphone reçu: '{telephone}'")
     print(f"[DEBUG FACTURE] Courriel reçu: '{courriel}'")
     print(f"[DEBUG FACTURE] Endroit reçu: '{endroit}'")
+    print(f"[DEBUG FACTURE] Endroit repr: {repr(endroit)}")
     print(f"[DEBUG FACTURE] Item reçu: '{item}'")
     print(f"[DEBUG FACTURE] Part reçu: '{part}'")
     print(f"[DEBUG FACTURE] Produit reçu: '{produit}'")
     print(f"[DEBUG FACTURE] Payer par reçu: '{payer_par}'")
 
-    template_path = os.path.join(BASE_DIR, "QE", "PDF", "pdf", "facture.pdf")
+    # Choisir le template selon la langue
+    if language == 'en':
+        template_path = os.path.join(BASE_DIR, "QE", "PDF", "pdf", "facture-en.pdf")
+    else:
+        template_path = os.path.join(BASE_DIR, "QE", "PDF", "pdf", "facture.pdf")
+
     if not os.path.exists(template_path):
         raise FileNotFoundError(f"Template non trouvé : {template_path}")
 
@@ -71,8 +78,16 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
         depot_val = 0.0
 
     # Les taxes sont calculées sur le montant de base complet
-    tps = round(montant * 0.05, 2)
-    tvq = round(montant * 0.09975, 2)
+    if language == 'fr':
+        # Français: TPS 5% + TVQ 9.975%
+        tps = round(montant * 0.05, 2)
+        tvq = round(montant * 0.09975, 2)
+        tvh = 0
+    else:
+        # Anglais: TVH/HST 13%
+        tps = 0
+        tvq = 0
+        tvh = round(montant * 0.13, 2)
 
     facture_num = generate_unique_facture_num()
 
@@ -92,22 +107,38 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
     except:
         prix_formate = ""
 
-    try:
-        tps_f = f"{tps:,.2f}".replace(",", "X").replace(".", ",").replace("X", " ")
-    except:
+    if language == 'fr':
+        try:
+            tps_f = f"{tps:,.2f}".replace(",", "X").replace(".", ",").replace("X", " ")
+        except:
+            tps_f = ""
+
+        try:
+            tvq_f = f"{tvq:,.2f}".replace(",", "X").replace(".", ",").replace("X", " ")
+        except:
+            tvq_f = ""
+
+        try:
+            # Total = montant + TPS + TVQ (sans soustraire le dépôt)
+            total_avec_taxes = montant + tps + tvq
+            total_f = f"{total_avec_taxes:,.2f}".replace(",", "X").replace(".", ",").replace("X", " ")
+        except:
+            total_f = ""
+    else:
+        # Anglais: TVH 13%
+        try:
+            tvh_f = f"{tvh:,.2f}".replace(",", "X").replace(".", ",").replace("X", " ")
+        except:
+            tvh_f = ""
+
+        try:
+            total_avec_taxes = montant + tvh
+            total_f = f"{total_avec_taxes:,.2f}".replace(",", "X").replace(".", ",").replace("X", " ")
+        except:
+            total_f = ""
+
         tps_f = ""
-
-    try:
-        tvq_f = f"{tvq:,.2f}".replace(",", "X").replace(".", ",").replace("X", " ")
-    except:
         tvq_f = ""
-
-    try:
-        # Total = montant + TPS + TVQ (sans soustraire le dépôt)
-        total_avec_taxes = montant + tps + tvq
-        total_f = f"{total_avec_taxes:,.2f}".replace(",", "X").replace(".", ",").replace("X", " ")
-    except:
-        total_f = ""
 
     try:
         montant_f = f"{montant:,.2f}".replace(",", "X").replace(".", ",").replace("X", " ")
@@ -164,69 +195,64 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
     print(f"[DEBUG FACTURE] Dessin courriel '{courriel}' à position (447, 685.5)")
     c.drawCentredString(447, 685.5, courriel)
 
-    # === ENDROIT (identique à generate_pdf.py) ===
+    # === ENDROIT (ligne par ligne comme generate_pdf.py) ===
     c.setFont("Helvetica", 7.5)
     x = 76
     y = 458.5
     max_width = 89.5
     max_height = 130
-    font_size = 7.5
-    min_font_size = 4.5
-    line_height_ratio = 1.3
+    base_font_size = 7.5
+    min_font_size = 4.0
+    line_height_ratio = 1.75
 
-    # Fonction pour appliquer word wrap sur UNE ligne (respecte les \n)
-    def wrap_single_line(text, size):
-        words = text.split()
-        wrapped = []
-        line = ""
-        for word in words:
-            test_line = f"{line} {word}".strip()
-            if c.stringWidth(test_line, "Helvetica", size) <= max_width:
-                line = test_line
-            else:
-                if line:
-                    wrapped.append(line)
-                line = word
-        if line:
-            wrapped.append(line)
-        return wrapped if wrapped else [""]
+    # Séparer par \n - chaque endroit = 1 ligne (pas de wrap)
+    # Fallback: si pas de \n, essayer de splitter par virgule
+    if '\n' in endroit:
+        raw_lines = [line.strip() for line in endroit.split('\n') if line.strip()]
+    else:
+        raw_lines = [line.strip() for line in endroit.split(',') if line.strip()]
 
-    # Séparer d'abord par \n, puis appliquer word wrap sur chaque ligne
-    def split_lines_with_newlines(text, size):
-        all_lines = []
-        raw_lines = text.split('\n')
-        for raw_line in raw_lines:
-            if raw_line.strip():
-                all_lines.extend(wrap_single_line(raw_line.strip(), size))
-            else:
-                all_lines.append("")  # Ligne vide
-        return all_lines
+    # Fonction pour calculer la taille de police nécessaire pour qu'une ligne tienne sur 1 seule ligne
+    def get_font_size_for_line(text, max_size, min_size, max_w):
+        size = max_size
+        while size >= min_size:
+            if c.stringWidth(text, "Helvetica", size) <= max_w:
+                return size
+            size -= 0.2
+        return min_size
 
-    while font_size >= min_font_size:
-        lines = split_lines_with_newlines(endroit, font_size)
-        line_height = font_size * line_height_ratio
-        total_height = len(lines) * line_height
-        if total_height <= max_height:
-            break
-        font_size -= 0.2
+    # Calculer la taille de police pour chaque ligne
+    line_font_sizes = []
+    for line in raw_lines:
+        font_size = get_font_size_for_line(line, base_font_size, min_font_size, max_width)
+        line_font_sizes.append(font_size)
 
-    text_obj = c.beginText()
-    text_obj.setTextOrigin(x, y + max_height - line_height)
-    text_obj.setFont("Helvetica", font_size)
-    for line in lines:
-        text_obj.textLine(line)
-    c.drawText(text_obj)
+    # Dessiner chaque ligne avec sa propre taille de police
+    line_height = base_font_size * line_height_ratio
+    current_y = y + max_height - line_height
+
+    for i, line in enumerate(raw_lines):
+        font_size = line_font_sizes[i]
+        c.setFont("Helvetica", font_size)
+        c.drawString(x, current_y, line)
+        current_y -= line_height
 
 
     c.setFont("Helvetica", 8.5)
-    c.drawRightString(211, 148.5, prix_formate)  # Prix 8px plus à droite (203+8=211)
-    c.drawRightString(211, 123.5, tps_f)  # TPS 8px plus à droite (203+8=211)
-    c.drawRightString(211, 98.5, tvq_f)  # TVQ 8px plus à droite (203+8=211)
+    c.drawRightString(211, 149, prix_formate)  # Total avant taxe (+0.5px haut)
+
+    if language == 'fr':
+        # Français: TPS, TVQ, Total
+        c.drawRightString(211, 123.5, tps_f)  # TPS
+        c.drawRightString(211, 98.5, tvq_f)  # TVQ
+        c.drawRightString(211, 72.5, total_f)  # Total (-1px bas)
+    else:
+        # Anglais: TVH en haut, Total en bas
+        c.drawRightString(211, 123.5, tvh_f)  # TVH
+        c.drawRightString(211, 97.5, total_f)  # Total (-1px bas)
 
     # Dépôt à la position exacte de generate_pdf.py
     c.drawCentredString(331, 188.5, depot_f)
-
-    c.drawRightString(211, 73.5, total_f)  # Total 8px plus à droite (203+8=211)
 
     # === ITEM ET PRIX (identique à generate_pdf.py) ===
     c.setFont("Helvetica", 8.5)
@@ -316,17 +342,25 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
 
     start_y_produit = y_produit + max_height_produit - current_font_size
 
-    text_obj = c.beginText()
-    text_obj.setFont("Helvetica", current_font_size)
+    # Dessiner chaque ligne individuellement pour pouvoir changer la police (gras pour les titres)
+    header_pattern = re.compile(r'^===\s*(.+?)\s*===$')
 
     for i, line in enumerate(lines_produit):
         current_y = start_y_produit - (i * current_line_height)
         if current_y < y_produit:
             break
-        text_obj.setTextOrigin(x_produit, current_y)
-        text_obj.textLine(line)
 
-    c.drawText(text_obj)
+        # Vérifier si c'est un header (=== Endroit ===)
+        header_match = header_pattern.match(line)
+        if header_match:
+            # Extraire le nom de l'endroit et ajouter ":"
+            endroit_name = header_match.group(1) + ":"
+            c.setFont("Helvetica-Bold", current_font_size)
+            c.drawString(x_produit, current_y, endroit_name)
+        else:
+            # Ligne normale
+            c.setFont("Helvetica", current_font_size)
+            c.drawString(x_produit, current_y, line)
 
     # === PARTICULARITÉ DES TRAVAUX ===
     # Code identique à generate_pdf.py
@@ -352,56 +386,60 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
 
     c.drawText(text_obj)
 
-    # === DESSIN DES "X" POUR MOTS CLÉS ===
-    # Code identique à generate_pdf.py
-    produit_text = produit.lower()
+    # === DESSIN DES "X" POUR MOTS CLÉS (par endroit) ===
+    produit_text = produit
     payer_par_text = payer_par.lower()
 
-    print(f"[DEBUG FACTURE] Détection mots-clés:")
-    print(f"[DEBUG FACTURE] produit_text: '{produit_text}'")
-    print(f"[DEBUG FACTURE] payer_par_text: '{payer_par_text}'")
+    # Parser les sections par endroit (=== NomEndroit ===)
+    endroit_pattern = re.compile(r'===\s*(.+?)\s*===')
+    endroit_sections = re.split(r'===\s*.+?\s*===', produit_text)
 
-    xlavage = "lavage" in produit_text
-    xsablage = "sablage" in produit_text
-    xappret = "apprêt" in produit_text
-    xreparations = "réparations" in produit_text
-    xgrattage = "grattage" in produit_text
+    # Coordonnées X pour chaque type de préparation (+0.5px droite vs soumission)
+    x_coords = {
+        "lavage": 188.5,      # 188 + 0.5
+        "sablage": 329,       # 328.5 + 0.5
+        "appret": 375.7,      # 375.2 + 0.5
+        "reparations": 282.2, # 281.7 + 0.5
+        "grattage": 235.5,    # 235 + 0.5
+    }
+
+    y_coord_base = 579     # 578.5 + 0.5 (plus haut)
+    y_spacing = 13.125  # Même que endroit: 7.5 × 1.75
+
+    c.setFont("Helvetica", 8)
+
+    # Pour chaque endroit (max 10), dessiner les X sur sa propre ligne
+    for i, section in enumerate(endroit_sections[1:11]):  # Skip first empty, max 10 endroits
+        section_lower = section.lower()
+        y_coord = y_coord_base - (i * y_spacing)
+
+        # Lavage (FR) / Pressure wash (EN)
+        if "lavage" in section_lower or "pressure wash" in section_lower:
+            c.drawString(x_coords["lavage"], y_coord, "X")
+        # Sablage (FR) / Sanding (EN)
+        if "sablage" in section_lower or "sanding" in section_lower:
+            c.drawString(x_coords["sablage"], y_coord, "X")
+        # Apprêt (FR) / Primer (EN)
+        if "apprêt" in section_lower or "appret" in section_lower or "primer" in section_lower:
+            c.drawString(x_coords["appret"], y_coord, "X")
+        # Réparations (FR) / Repairs (EN)
+        if "réparations" in section_lower or "reparations" in section_lower or "repairs" in section_lower:
+            c.drawString(x_coords["reparations"], y_coord, "X")
+        # Grattage (FR) / Scraping (EN)
+        if "grattage" in section_lower or "scraping" in section_lower:
+            c.drawString(x_coords["grattage"], y_coord, "X")
+
+    # Paiement (+0.5px gauche, +1.5px haut)
     xvirement = "virement" in payer_par_text or "interac" in payer_par_text
     xcheque = "chèque" in payer_par_text or "cheque" in payer_par_text
 
-    print(f"[DEBUG FACTURE] Détections:")
-    print(f"[DEBUG FACTURE] xvirement: {xvirement} (cherche 'virement' ou 'interac' dans '{payer_par_text}')")
-    print(f"[DEBUG FACTURE] xcheque: {xcheque} (cherche 'chèque' ou 'cheque' dans '{payer_par_text}')")
+    y_coord_virement = 191    # 189.5 + 1.5
+    y_coord_cheque = 180.7    # 179.2 + 1.5
 
-    x_coords = {
-        "xlavage": 188,
-        "xsablage": 328.5,
-        "xappret": 375.2,
-        "xreparations": 281.7,
-        "xgrattage": 235,
-        "xvirement": 450.7,
-        "xcheque": 450.7
-    }
-
-    y_coord_anciens = 578.5
-    y_coord_virement = 189.5
-    y_coord_cheque = 179.2
-
-    c.setFont("Helvetica", 8)
-    if xlavage:
-        c.drawString(x_coords["xlavage"], y_coord_anciens, "X")
-    if xsablage:
-        c.drawString(x_coords["xsablage"], y_coord_anciens, "X")
-    if xappret:
-        c.drawString(x_coords["xappret"], y_coord_anciens, "X")
-    if xreparations:
-        c.drawString(x_coords["xreparations"], y_coord_anciens, "X")
-    if xgrattage:
-        c.drawString(x_coords["xgrattage"], y_coord_anciens, "X")
     if xvirement:
-        c.drawString(x_coords["xvirement"], y_coord_virement, "X")
+        c.drawString(451.2, y_coord_virement, "X")  # 450.7 + 0.5
     if xcheque:
-        c.drawString(x_coords["xcheque"], y_coord_cheque, "X")
+        c.drawString(451.2, y_coord_cheque, "X")    # 450.7 + 0.5
 
     # === COURRIEL ENTREPRENEUR EN BAS ===
     if username:

@@ -4016,7 +4016,13 @@ async def creer_facture(request: Request):
     if not all([nom, prenom, adresse, prix]):
         raise HTTPException(status_code=400, detail="Champs manquants")
 
-    pdf_buffer: BytesIO = generate_facture_pdf(nom, prenom, adresse, prix, depot, telephone, courriel, endroit, item, part, produit, payer_par, utilisateur, temps)
+    # Détecter la langue via mots-clés anglais
+    texte_combine = " ".join([item, temps, produit, part]).lower()
+    mots_anglais = ["interior work", "exterior work", "days", "day", "weeks", "week",
+                    "pressure wash", "sanding", "liability insurance", "turnkey service"]
+    language = 'en' if any(mot in texte_combine for mot in mots_anglais) else 'fr'
+
+    pdf_buffer: BytesIO = generate_facture_pdf(nom, prenom, adresse, prix, depot, telephone, courriel, endroit, item, part, produit, payer_par, utilisateur, temps, language)
 
     user_folder = os.path.join(f"{base_cloud}/factures_completes", utilisateur)
     os.makedirs(user_folder, exist_ok=True)
@@ -4113,7 +4119,13 @@ async def generate_facture_preview(request: Request):
     if not all([nom, prenom, adresse, prix]):
         raise HTTPException(status_code=400, detail="Champs manquants")
 
-    pdf_buffer: BytesIO = generate_facture_pdf(nom, prenom, adresse, prix, depot, telephone, courriel, endroit, item, part, produit, payer_par, utilisateur, temps)
+    # Détecter la langue via mots-clés anglais
+    texte_combine = " ".join([item, temps, produit, part]).lower()
+    mots_anglais = ["interior work", "exterior work", "days", "day", "weeks", "week",
+                    "pressure wash", "sanding", "liability insurance", "turnkey service"]
+    language = 'en' if any(mot in texte_combine for mot in mots_anglais) else 'fr'
+
+    pdf_buffer: BytesIO = generate_facture_pdf(nom, prenom, adresse, prix, depot, telephone, courriel, endroit, item, part, produit, payer_par, utilisateur, temps, language)
 
     return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={
         "Content-Disposition": "inline; filename=facture.pdf"
@@ -5323,12 +5335,12 @@ def envoyer_email_demande_satisfaction(username: str, travail: dict, url_avis: s
 
     # Templates d'email bilingues
     if language == 'en':
-        subject_text = "Client Feedback Request"
+        subject_text = "Your feedback matters to us!"
         html = (
             f'<div style="font-family: Arial, sans-serif; font-size: 16px; color: #000;">'
-            f'<p>Hello {prenom_client} {nom_client},</p>'
-            f'<p>Thank you for using our services.</p><br>'
-            f'<p>I invite you to take a moment to evaluate the quality of the work I provided you.</p>'
+            f'<p>Hello {prenom_client} {nom_client},</p><br>'
+            f'<p>It was a real pleasure working with you on this project.</p><br>'
+            f'<p>Your satisfaction is my priority. Could you take a minute to evaluate the quality of my work? Your feedback is valuable to help me always better assist you.</p>'
             f'<p style="margin: 10px 0;">'
             f'  <a href="{url_avis}" target="_blank" '
             f'     style="padding: 6px 12px; background-color: #000000; color: #ffffff; text-decoration: none; '
@@ -5336,17 +5348,16 @@ def envoyer_email_demande_satisfaction(username: str, travail: dict, url_avis: s
             f'     Leave a review'
             f'  </a>'
             f'</p><br>'
-            f'<p>Your feedback is very important to us. Thank you very much!</p>'
-            f'<p>The College Painters Team</p>'
+            f'<p>Thank you for your trust and see you soon!</p>'
             f'</div>'
         )
     else:
-        subject_text = "Demande de retour client"
+        subject_text = "Votre avis compte pour nous !"
         html = (
             f'<div style="font-family: Arial, sans-serif; font-size: 16px; color: #000;">'
-            f'<p>Bonjour {prenom_client} {nom_client},</p>'
-            f"<p>Merci d'avoir fait appel à nos services.</p><br>"
-            f"<p>Je vous invite à prendre un moment pour évaluer la qualité du travail que je vous ai fourni.</p>"
+            f'<p>Bonjour {prenom_client} {nom_client},</p><br>'
+            f"<p>Ce fut un réel plaisir de collaborer avec vous sur ce projet.</p><br>"
+            f"<p>Votre satisfaction est ma priorité. Pourriez-vous prendre une minute pour évaluer la qualité de mon travail ? Vos retours sont précieux pour m'aider à toujours mieux vous accompagner.</p>"
             f'<p style="margin: 10px 0;">'
             f'  <a href="{url_avis}" target="_blank" '
             f'     style="padding: 6px 12px; background-color: #000000; color: #ffffff; text-decoration: none; '
@@ -5354,8 +5365,7 @@ def envoyer_email_demande_satisfaction(username: str, travail: dict, url_avis: s
             f'     Laisser un avis'
             f'  </a>'
             f'</p><br>'
-            f'<p>Votre retour est très important pour nous. Merci beaucoup !</p>'
-            f"<p>L'équipe Qualité Étudiants</p>"
+            f'<p>Merci de votre confiance et à très bientôt !</p>'
             f'</div>'
         )
 

@@ -418,15 +418,20 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
         section_lower = section.lower()
         y_coord = y_coord_base - (i * y_spacing)
 
-        if "lavage" in section_lower:
+        # Lavage (FR) / Pressure wash (EN)
+        if "lavage" in section_lower or "pressure wash" in section_lower:
             c.drawString(x_coords["lavage"], y_coord, "X")
-        if "sablage" in section_lower:
+        # Sablage (FR) / Sanding (EN)
+        if "sablage" in section_lower or "sanding" in section_lower:
             c.drawString(x_coords["sablage"], y_coord, "X")
-        if "apprêt" in section_lower or "appret" in section_lower:
+        # Apprêt (FR) / Primer (EN)
+        if "apprêt" in section_lower or "appret" in section_lower or "primer" in section_lower:
             c.drawString(x_coords["appret"], y_coord, "X")
-        if "réparations" in section_lower or "reparations" in section_lower:
+        # Réparations (FR) / Repairs (EN)
+        if "réparations" in section_lower or "reparations" in section_lower or "repairs" in section_lower:
             c.drawString(x_coords["reparations"], y_coord, "X")
-        if "grattage" in section_lower:
+        # Grattage (FR) / Scraping (EN)
+        if "grattage" in section_lower or "scraping" in section_lower:
             c.drawString(x_coords["grattage"], y_coord, "X")
 
     # Paiement (une seule ligne, inchangé)

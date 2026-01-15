@@ -19292,30 +19292,18 @@ async def get_month_weeks_data(username: str, month_index: int):
 
 @app.get("/api/rpo/why/{username}")
 async def get_rpo_why(username: str):
-    """Récupère le WHY (motivation) de l'entrepreneur"""
+    """Récupère le WHY (motivation) de l'entrepreneur depuis son JSON RPO"""
     try:
-        # Déterminer le chemin selon l'environnement
-        import sys
-        if sys.platform == 'win32':
-            base_cloud = "data"
-        else:
-            base_cloud = os.getenv("STORAGE_PATH", "/mnt/cloud")
+        from QE.Backend.rpo import load_user_rpo_data
 
-        # Chemin du fichier WHY
-        why_dir = os.path.join(base_cloud, "rpo_why", username)
-        why_file = os.path.join(why_dir, "why.json")
+        rpo_data = load_user_rpo_data(username)
+        why_text = rpo_data.get("why", "")
 
-        if not os.path.exists(why_file):
-            return {"success": True, "why": ""}
-
-        with open(why_file, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-
-        print(f"[WHY] ✅ Chargé pour {username}")
+        print(f"[WHY] ✅ Chargé pour {username} depuis RPO JSON")
         return {
             "success": True,
-            "why": data.get("why", ""),
-            "last_updated": data.get("last_updated", "")
+            "why": why_text,
+            "last_updated": rpo_data.get("last_updated", "")
         }
 
     except Exception as e:
@@ -19325,38 +19313,23 @@ async def get_rpo_why(username: str):
 
 @app.post("/api/rpo/why/{username}")
 async def save_rpo_why(username: str, request: Request):
-    """Sauvegarde le WHY (motivation) de l'entrepreneur"""
+    """Sauvegarde le WHY (motivation) dans le JSON RPO de l'entrepreneur"""
     try:
+        from QE.Backend.rpo import load_user_rpo_data, save_user_rpo_data
+
         data = await request.json()
         why_text = data.get("why", "")
 
-        # Déterminer le chemin selon l'environnement
-        import sys
-        if sys.platform == 'win32':
-            base_cloud = "data"
-        else:
-            base_cloud = os.getenv("STORAGE_PATH", "/mnt/cloud")
+        # Charger les données RPO existantes
+        rpo_data = load_user_rpo_data(username)
 
-        # Créer le dossier si nécessaire
-        why_dir = os.path.join(base_cloud, "rpo_why", username)
-        os.makedirs(why_dir, exist_ok=True)
-
-        # Chemin du fichier WHY
-        why_file = os.path.join(why_dir, "why.json")
-
-        # Préparer les données
-        from datetime import datetime
-        why_data = {
-            "why": why_text,
-            "last_updated": datetime.now().isoformat(),
-            "username": username
-        }
+        # Mettre à jour le WHY
+        rpo_data["why"] = why_text
 
         # Sauvegarder
-        with open(why_file, 'w', encoding='utf-8') as f:
-            json.dump(why_data, f, ensure_ascii=False, indent=2)
+        save_user_rpo_data(username, rpo_data)
 
-        print(f"[WHY] ✅ Sauvegardé pour {username}: {len(why_text)} caractères")
+        print(f"[WHY] ✅ Sauvegardé pour {username} dans RPO JSON: {len(why_text)} caractères")
         return {
             "success": True,
             "message": "WHY sauvegardé avec succès"

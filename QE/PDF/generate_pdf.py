@@ -200,6 +200,8 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
     c.setFont("Helvetica", font_size_rue)
     c.drawCentredString(adresse_center_x, adresse_y + y_offset + client_y_adjust, rue)
 
+    # Remettre la taille normale pour ville et code postal
+    c.setFont("Helvetica", 8.5)
     ville = adresse.split(",")[1].strip() if "," in adresse else ""
     c.drawCentredString(448, 720 + y_offset + client_y_adjust, ville)
     postal = adresse.split(",")[2].replace("QC", "").strip() if "," in adresse else ""

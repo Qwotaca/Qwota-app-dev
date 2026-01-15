@@ -12341,21 +12341,29 @@ function formatPercentValue(value) {
   return number.toFixed(2) + '%';
 }
 
-// Charger le chiffre d'affaires depuis les données RPO annuelles
+// Charger le chiffre d'affaires depuis les données weekly (somme des $ signés)
 async function loadChiffreAffaires() {
-  log('📊 Chargement CA depuis RPO annuel ($ SIGNÉ)');
+  log('📊 Chargement CA depuis weekly data ($ SIGNÉ)');
 
   try {
-    // Utiliser la valeur de "$ SIGNÉ Actuel" de la section RPO annuelle
-    const annualDollarReel = document.getElementById('annual-dollar-reel');
-
-    if (!annualDollarReel) {
-      error('[ERROR] annual-dollar-reel element not found');
-      return;
+    // Calculer le CA directement depuis window.weeklyData pour éviter le doublement
+    let caActuel = 0;
+    if (window.weeklyData) {
+      // Seulement les mois 0-11 (année 2026, pas décembre 2025)
+      for (let monthIndex = 0; monthIndex <= 11; monthIndex++) {
+        const monthKey = String(monthIndex);
+        const monthWeeklyData = window.weeklyData[monthKey];
+        if (monthWeeklyData) {
+          Object.keys(monthWeeklyData).forEach(weekNumber => {
+            const weekData = monthWeeklyData[weekNumber];
+            if (weekData.dollar !== '-' && weekData.dollar !== undefined) {
+              caActuel += parseFloat(weekData.dollar) || 0;
+            }
+          });
+        }
+      }
     }
-
-    const caActuel = parseFloat(annualDollarReel.dataset.value) || 0;
-    log('   CA signé (RPO): ' + caActuel + '$');
+    log('   CA signé (calculé depuis weekly): ' + caActuel + '$');
 
     // Mettre à jour la cellule Ventes Actuel (Montant)
     const ventesActuelCell = document.querySelector('[data-category="ventes"][data-field="actuel-montant"]');

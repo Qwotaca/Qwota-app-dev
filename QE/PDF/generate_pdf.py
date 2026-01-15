@@ -1,6 +1,7 @@
 from datetime import datetime
 import os
 import sys
+import re
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from io import BytesIO
@@ -103,32 +104,39 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
 
     c.setFont("Helvetica", 8.5)
 
-    # Calculer TPS
-    try:
-        tps_val = round(prix_val * 0.05, 2)
-        tps = f"{tps_val:,.2f}".replace(",", "TEMP").replace(".", ",").replace("TEMP", " ")
-    except:
-        tps_val = 0
-        tps = ""
-
-    # Calculer TVQ (uniquement pour français)
+    # Calculer les taxes selon la langue
     if language == 'fr':
+        # Français: TPS 5% + TVQ 9.975%
+        try:
+            tps_val = round(prix_val * 0.05, 2)
+            tps = f"{tps_val:,.2f}".replace(",", "TEMP").replace(".", ",").replace("TEMP", " ")
+        except:
+            tps_val = 0
+            tps = ""
+
         try:
             tvq_val = round(prix_val * 0.09975, 2)
             tvq = f"{tvq_val:,.2f}".replace(",", "TEMP").replace(".", ",").replace("TEMP", " ")
         except:
             tvq_val = 0
             tvq = ""
-    else:
-        tvq_val = 0
-        tvq = ""
 
-    # Calculer le total
-    try:
         total_val = prix_val + tps_val + tvq_val
+    else:
+        # Anglais: TVH/HST 13%
+        try:
+            tvh_val = round(prix_val * 0.13, 2)
+            tvh = f"{tvh_val:,.2f}".replace(",", "TEMP").replace(".", ",").replace("TEMP", " ")
+        except:
+            tvh_val = 0
+            tvh = ""
+
+        total_val = prix_val + tvh_val
+
+    # Calculer le total formaté
+    try:
         total = f"{total_val:,.2f}".replace(",", "TEMP").replace(".", ",").replace("TEMP", " ")
     except:
-        total_val = 0
         total = ""
 
     # Affichage selon la langue
@@ -138,8 +146,8 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
         c.drawRightString(443, 99.5 + y_offset, tps)
         c.drawRightString(443, 74.5 + y_offset, total)
     else:
-        # Anglais: TPS en haut (où était TVQ), Total en bas (où était TPS)
-        c.drawRightString(443, 124.5 + y_offset, tps)
+        # Anglais: TVH en haut, Total en bas
+        c.drawRightString(443, 124.5 + y_offset, tvh)
         c.drawRightString(443, 99.5 + y_offset, total)
 
     # Utiliser le dépôt envoyé depuis le formulaire, sinon calculer 25% du total
@@ -214,56 +222,41 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
     c.setFont("Helvetica", 7.5)
     endroit = data.get("endroit", "")
     # Pas d'ajustement - templates FR et EN identiques
-    x = 76
-    y = 458.5 + y_offset
+    x = 82
+    y = 460.5 + y_offset
     max_width = 89.5
     max_height = 130
-    font_size = 7.5
-    min_font_size = 4.5
-    line_height_ratio = 1.3
+    base_font_size = 7.5
+    min_font_size = 4.0
+    line_height_ratio = 1.75
 
-    # Fonction pour appliquer word wrap sur UNE ligne (respecte les \n)
-    def wrap_single_line(text, size):
-        words = text.split()
-        wrapped = []
-        line = ""
-        for word in words:
-            test_line = f"{line} {word}".strip()
-            if c.stringWidth(test_line, "Helvetica", size) <= max_width:
-                line = test_line
-            else:
-                if line:
-                    wrapped.append(line)
-                line = word
-        if line:
-            wrapped.append(line)
-        return wrapped if wrapped else [""]
+    # Séparer par \n - chaque endroit = 1 ligne (pas de wrap)
+    raw_lines = [line.strip() for line in endroit.split('\n') if line.strip()]
 
-    # Séparer d'abord par \n, puis appliquer word wrap sur chaque ligne
-    def split_lines_with_newlines(text, size):
-        all_lines = []
-        raw_lines = text.split('\n')
-        for raw_line in raw_lines:
-            if raw_line.strip():
-                all_lines.extend(wrap_single_line(raw_line.strip(), size))
-            else:
-                all_lines.append("")  # Ligne vide
-        return all_lines
+    # Fonction pour calculer la taille de police nécessaire pour qu'une ligne tienne sur 1 seule ligne
+    def get_font_size_for_line(text, max_size, min_size, max_w):
+        size = max_size
+        while size >= min_size:
+            if c.stringWidth(text, "Helvetica", size) <= max_w:
+                return size
+            size -= 0.2
+        return min_size  # Retourner la taille minimum si ça ne rentre toujours pas
 
-    while font_size >= min_font_size:
-        lines = split_lines_with_newlines(endroit, font_size)
-        line_height = font_size * line_height_ratio
-        total_height = len(lines) * line_height
-        if total_height <= max_height:
-            break
-        font_size -= 0.2
+    # Calculer la taille de police pour chaque ligne
+    line_font_sizes = []
+    for line in raw_lines:
+        font_size = get_font_size_for_line(line, base_font_size, min_font_size, max_width)
+        line_font_sizes.append(font_size)
 
-    text_obj = c.beginText()
-    text_obj.setTextOrigin(x, y + max_height - line_height)
-    text_obj.setFont("Helvetica", font_size)
-    for line in lines:
-        text_obj.textLine(line)
-    c.drawText(text_obj)
+    # Dessiner chaque ligne avec sa propre taille de police
+    line_height = base_font_size * line_height_ratio
+    current_y = y + max_height - line_height
+
+    for i, line in enumerate(raw_lines):
+        font_size = line_font_sizes[i]
+        c.setFont("Helvetica", font_size)
+        c.drawString(x, current_y, line)
+        current_y -= line_height
 
     # === PRODUIT / COULEURS ===
     produit = data.get("produit", "")
@@ -354,17 +347,25 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
 
     start_y_produit = y_produit + max_height_produit - current_font_size
 
-    text_obj = c.beginText()
-    text_obj.setFont("Helvetica", current_font_size)
+    # Dessiner chaque ligne individuellement pour pouvoir changer la police (gras pour les titres)
+    header_pattern = re.compile(r'^===\s*(.+?)\s*===$')
 
     for i, line in enumerate(lines_produit):
         current_y = start_y_produit - (i * current_line_height)
         if current_y < y_produit:
             break
-        text_obj.setTextOrigin(x_produit, current_y)
-        text_obj.textLine(line)
 
-    c.drawText(text_obj)
+        # Vérifier si c'est un header (=== Endroit ===)
+        header_match = header_pattern.match(line)
+        if header_match:
+            # Extraire le nom de l'endroit et ajouter ":"
+            endroit_name = header_match.group(1) + ":"
+            c.setFont("Helvetica-Bold", current_font_size)
+            c.drawString(x_produit, current_y, endroit_name)
+        else:
+            # Ligne normale
+            c.setFont("Helvetica", current_font_size)
+            c.drawString(x_produit, current_y, line)
 
     # === PARTICULARITÉ DES TRAVAUX ===
     part = data.get("part", "")
@@ -390,15 +391,45 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
 
     c.drawText(text_obj)
 
-    # === DESSIN DES "X" POUR MOTS CLÉS ===
-    produit_text = data.get("produit", "").lower()
+    # === DESSIN DES "X" POUR MOTS CLÉS (par endroit) ===
+    produit_text = data.get("produit", "")
     payer_par_text = data.get("payer_par", "").lower()
 
-    xlavage = "lavage" in produit_text
-    xsablage = "sablage" in produit_text
-    xappret = "apprêt" in produit_text
-    xreparations = "réparations" in produit_text
-    xgrattage = "grattage" in produit_text
+    # Parser les sections par endroit (=== NomEndroit ===)
+    endroit_pattern = re.compile(r'===\s*(.+?)\s*===')
+    endroit_sections = re.split(r'===\s*.+?\s*===', produit_text)
+
+    # Coordonnées X pour chaque type de préparation
+    x_coords = {
+        "lavage": 188,
+        "sablage": 328.5,
+        "appret": 375.2,
+        "reparations": 281.7,
+        "grattage": 235,
+    }
+
+    y_coord_base = 578.5 + y_offset
+    y_spacing = 13.125  # Même que endroit: 7.5 × 1.75
+
+    c.setFont("Helvetica", 8)
+
+    # Pour chaque endroit (max 10), dessiner les X sur sa propre ligne
+    for i, section in enumerate(endroit_sections[1:11]):  # Skip first empty, max 10 endroits
+        section_lower = section.lower()
+        y_coord = y_coord_base - (i * y_spacing)
+
+        if "lavage" in section_lower:
+            c.drawString(x_coords["lavage"], y_coord, "X")
+        if "sablage" in section_lower:
+            c.drawString(x_coords["sablage"], y_coord, "X")
+        if "apprêt" in section_lower or "appret" in section_lower:
+            c.drawString(x_coords["appret"], y_coord, "X")
+        if "réparations" in section_lower or "reparations" in section_lower:
+            c.drawString(x_coords["reparations"], y_coord, "X")
+        if "grattage" in section_lower:
+            c.drawString(x_coords["grattage"], y_coord, "X")
+
+    # Paiement (une seule ligne, inchangé)
     xvirement = "virement" in payer_par_text
     xcheque = "chèque" in payer_par_text
 
@@ -406,35 +437,13 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
     x_adjust_paiement = 0.5 if language == 'en' else 0
     y_adjust_paiement = 0.5 if language == 'en' else 0
 
-    x_coords = {
-        "xlavage": 188,
-        "xsablage": 328.5,
-        "xappret": 375.2,
-        "xreparations": 281.7,
-        "xgrattage": 235,
-        "xvirement": 450.7 + x_adjust_paiement,
-        "xcheque": 450.7 + x_adjust_paiement
-    }
-
-    y_coord_anciens = 578.5 + y_offset
     y_coord_virement = 189.5 + y_offset + y_adjust_paiement
     y_coord_cheque = 179.2 + y_offset + y_adjust_paiement
 
-    c.setFont("Helvetica", 8)
-    if xlavage:
-        c.drawString(x_coords["xlavage"], y_coord_anciens, "X")
-    if xsablage:
-        c.drawString(x_coords["xsablage"], y_coord_anciens, "X")
-    if xappret:
-        c.drawString(x_coords["xappret"], y_coord_anciens, "X")
-    if xreparations:
-        c.drawString(x_coords["xreparations"], y_coord_anciens, "X")
-    if xgrattage:
-        c.drawString(x_coords["xgrattage"], y_coord_anciens, "X")
     if xvirement:
-        c.drawString(x_coords["xvirement"], y_coord_virement, "X")
+        c.drawString(450.7 + x_adjust_paiement, y_coord_virement, "X")
     if xcheque:
-        c.drawString(x_coords["xcheque"], y_coord_cheque, "X")
+        c.drawString(450.7 + x_adjust_paiement, y_coord_cheque, "X")
 
     # === INFORMATIONS ENTREPRENEUR (user_info.json) ===
     username = data.get("username", "")

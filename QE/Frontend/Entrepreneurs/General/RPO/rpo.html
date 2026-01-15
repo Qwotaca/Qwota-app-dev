@@ -6946,10 +6946,9 @@ function calculateAllMonthlyTotalsFromWeekly() {
     }
   }
 
-  // NOTE: Ne PAS recalculer les totaux annuels depuis monthly car les valeurs correctes
-  // viennent déjà du JSON (calculées server-side par sync_soumissions_to_rpo)
-  // Recalculer ici causerait un doublement des valeurs annuelles
-  // calculateAnnualTotalsFromMonthly();
+  // Recalculer les totaux annuels depuis monthly data
+  // NOTE: Nécessaire car annual.dollar_reel peut ne pas être dans le JSON backend
+  calculateAnnualTotalsFromMonthly();
 }
 
 // Calculer les totaux annuels RÉEL en additionnant les 12 mois
@@ -12745,11 +12744,19 @@ async function updateRedevancePercent() {
     // Calculer le pourcentage
     const redevancePercent = calculateRedevancePercent(userGrade, ventesBudget);
 
-    // Mettre à jour le pourcentage dans le tableau
-    const redevanceBudgetPercentCell = document.querySelector('[data-category="redevances"][data-field="budget-percent"]');
-    if (redevanceBudgetPercentCell) {
-      redevanceBudgetPercentCell.textContent = formatPercentValue(redevancePercent);
+    // Mettre à jour le pourcentage dans le tableau (cible-percent)
+    const redevanceCiblePercentCell = document.querySelector('[data-category="redevances"][data-field="cible-percent"]');
+    if (redevanceCiblePercentCell) {
+      redevanceCiblePercentCell.textContent = formatPercentValue(redevancePercent);
       log(`[REDEVANCE] ${userGrade} | CA: ${ventesBudget}$ | Taux: ${redevancePercent}%`);
+    }
+
+    // Mettre à jour le montant cible des redevances
+    const redevanceCibleMontantCell = document.querySelector('[data-category="redevances"][data-field="cible-montant"] input');
+    if (redevanceCibleMontantCell) {
+      const redevanceMontant = Math.round(ventesBudget * redevancePercent / 100);
+      redevanceCibleMontantCell.value = formatMoneyValue(redevanceMontant);
+      log(`[REDEVANCE] Montant cible: ${redevanceMontant}$`);
     }
 
   } catch (error) {

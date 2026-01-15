@@ -332,7 +332,7 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
     # Code identique à generate_pdf.py
     lines_part = [line.strip() for line in part.split("\n") if line.strip()]
     font_size_part = 7.5
-    line_height_part = font_size_part * 3.6
+    line_height_part = font_size_part * 1.4  # Back to back (était 3.6)
     x_part = 76
     y_part = 317.5
     max_width_part = 463

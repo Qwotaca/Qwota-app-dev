@@ -258,11 +258,6 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
         c.drawString(x, current_y, line)
         current_y -= line_height
 
-    # DEBUG: Rectangle rouge autour de la zone endroit
-    c.setStrokeColorRGB(1, 0, 0)  # Rouge
-    c.setLineWidth(1)
-    c.rect(x, y, max_width, max_height, stroke=1, fill=0)
-
     # === PRODUIT / COULEURS ===
     produit = data.get("produit", "")
     print(f"[DEBUG] DEBUG PRODUIT - Reçu du frontend: {repr(produit)}")

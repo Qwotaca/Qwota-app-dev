@@ -273,9 +273,9 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
     line_height_produit = font_size_produit * 1.4
     # Pas d'ajustement - templates FR et EN identiques
     x_produit = 403
-    y_produit = 293.5 + y_offset
+    y_produit = 294.5 + y_offset
     max_width_produit = 139  # Largeur maximale pour le texte
-    max_height_produit = 296
+    max_height_produit = 292
 
     # Fonction pour couper les lignes trop longues (word wrap)
     def wrap_line_produit(text, max_w, font_s):
@@ -371,11 +371,6 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
             # Ligne normale
             c.setFont("Helvetica", current_font_size)
             c.drawString(x_produit, current_y, line)
-
-    # DEBUG: Rectangle rouge autour de la zone produit/couleurs
-    c.setStrokeColorRGB(1, 0, 0)  # Rouge
-    c.setLineWidth(1)
-    c.rect(x_produit, y_produit, max_width_produit, max_height_produit, stroke=1, fill=0)
 
     # === PARTICULARITÉ DES TRAVAUX ===
     part = data.get("part", "")

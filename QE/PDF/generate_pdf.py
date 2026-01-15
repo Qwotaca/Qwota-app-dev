@@ -224,7 +224,7 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
     # Pas d'ajustement - templates FR et EN identiques
     x = 82
     y = 460.5 + y_offset
-    max_width = 89.5
+    max_width = 94.5
     max_height = 130
     base_font_size = 7.5
     min_font_size = 4.0
@@ -395,11 +395,6 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
         text_obj.textLine(line)
 
     c.drawText(text_obj)
-
-    # DEBUG: Rectangle rouge autour de la zone part des travaux
-    c.setStrokeColorRGB(1, 0, 0)  # Rouge
-    c.setLineWidth(1)
-    c.rect(x_part, y_part, max_width_part, max_height_part, stroke=1, fill=0)
 
     # === DESSIN DES "X" POUR MOTS CLÉS (par endroit) ===
     produit_text = data.get("produit", "")

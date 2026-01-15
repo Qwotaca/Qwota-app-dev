@@ -199,7 +199,7 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
     c.setFont("Helvetica", 7.5)
     x = 81
     y = 460
-    max_width = 85
+    max_width = 90
     max_height = 130
     base_font_size = 7.5
     min_font_size = 4.0
@@ -389,11 +389,6 @@ def generate_facture_pdf(nom: str, prenom: str, adresse: str, prix: str, depot: 
         text_obj.textLine(line)
 
     c.drawText(text_obj)
-
-    # DEBUG: Rectangle rouge autour de la zone part des travaux
-    c.setStrokeColorRGB(1, 0, 0)  # Rouge
-    c.setLineWidth(1)
-    c.rect(x_part, y_part, max_width_part, max_height_part, stroke=1, fill=0)
 
     # === DESSIN DES "X" POUR MOTS CLÉS (par endroit) ===
     produit_text = produit

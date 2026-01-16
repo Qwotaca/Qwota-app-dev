@@ -3,6 +3,32 @@
  * À inclure dans toutes les pages de l'application
  */
 
+// ==========================================
+// BLOCAGE IMMÉDIAT MOBILE POUR COACH/DIRECTION
+// Doit être AVANT tout autre code pour éviter le chargement
+// ==========================================
+(function() {
+  'use strict';
+
+  var userRole = localStorage.getItem('userRole');
+
+  // Vérifier si c'est un coach ou direction
+  if (userRole === 'coach' || userRole === 'direction') {
+    // Détecter téléphone (pas tablette)
+    var isSmallScreen = window.innerWidth <= 768;
+    var mobileUA = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    var isTablet = /iPad/i.test(navigator.userAgent) || (window.innerWidth > 768);
+
+    if (isSmallScreen && mobileUA && !isTablet) {
+      // Bloquer IMMÉDIATEMENT - remplacer tout le document
+      document.open();
+      document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Qwota</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);min-height:100vh;display:flex;justify-content:center;align-items:center;flex-direction:column;gap:1.5rem;text-align:center;padding:2rem;color:#f1f5f9}.icon{font-size:5rem;color:#60a5fa}.message{font-size:1.5rem;font-weight:700;max-width:300px;line-height:1.4}.submessage{font-size:1rem;color:#94a3b8;max-width:280px}</style></head><body><i class="fas fa-desktop icon"></i><div class="message">Application disponible uniquement sur PC</div><div class="submessage">L\'accès Coach et Direction nécessite un ordinateur</div></body></html>');
+      document.close();
+      throw new Error('MOBILE_BLOCKED'); // Arrêter l'exécution des autres scripts
+    }
+  }
+})();
+
 // ⚡ DÉSACTIVATION DES LOGS - Performance optimization
 window.log = window.log || (() => {});
 window.warn = window.warn || (() => {});
@@ -69,56 +95,6 @@ window.debug = window.debug || (() => {});
   } else {
     createLandscapeOverlay();
   }
-})();
-
-// ==========================================
-// BLOCAGE MOBILE POUR COACH/DIRECTION
-// ==========================================
-(function() {
-  'use strict';
-
-  function isMobileDevice() {
-    // Détecter téléphone (pas tablette) via taille d'écran et user agent
-    const isSmallScreen = window.innerWidth <= 768;
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    const mobileUserAgent = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    // iPad et tablettes Android ont généralement une largeur > 768px en portrait
-    const isTablet = /iPad|Android/i.test(navigator.userAgent) && window.innerWidth > 768;
-
-    return isSmallScreen && (mobileUserAgent || isTouchDevice) && !isTablet;
-  }
-
-  function createMobileBlockOverlay() {
-    if (document.querySelector('.mobile-block-overlay')) return;
-
-    const overlay = document.createElement('div');
-    overlay.className = 'mobile-block-overlay';
-    overlay.innerHTML = `
-      <i class="fas fa-desktop mobile-block-icon"></i>
-      <div class="mobile-block-message">Application disponible uniquement sur PC</div>
-      <div class="mobile-block-submessage">L'accès Coach et Direction nécessite un ordinateur</div>
-    `;
-    document.body.innerHTML = '';
-    document.body.appendChild(overlay);
-  }
-
-  function checkCoachDirectionMobile() {
-    const userRole = localStorage.getItem('userRole');
-
-    if ((userRole === 'coach' || userRole === 'direction') && isMobileDevice()) {
-      createMobileBlockOverlay();
-    }
-  }
-
-  // Vérifier dès que le DOM est prêt
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', checkCoachDirectionMobile);
-  } else {
-    checkCoachDirectionMobile();
-  }
-
-  // Revérifier au resize (si l'utilisateur change la taille de la fenêtre)
-  window.addEventListener('resize', checkCoachDirectionMobile);
 })();
 
 // Variables globales - éviter la redéclaration

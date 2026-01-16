@@ -2240,8 +2240,55 @@ async def ajouter_prospect(data: ProspectData):
 @app.get("/prospects/{username}")
 def get_prospects(username: str):
     """
-    Récupère tous les prospects d'un utilisateur
+    Récupère tous les prospects d'un utilisateur.
+    Synchronise d'abord les événements futurs du calendrier Google vers les prospects.
     """
+    import zoneinfo
+
+    # ==========================================
+    # SYNC: Récupérer tous les événements futurs du calendrier et les ajouter aux prospects
+    # ==========================================
+    try:
+        agenda_file = os.path.join(base_cloud, "tokens", f"{username}_agenda.json")
+        if os.path.exists(agenda_file):
+            local_tz = zoneinfo.ZoneInfo("America/Toronto")
+            now_local = datetime.now(tz=local_tz)
+
+            access_token = get_valid_token(username)
+            headers = {"Authorization": f"Bearer {access_token}"}
+
+            with open(agenda_file, "r") as f:
+                agenda_id = json.load(f).get("agenda_id")
+
+            if agenda_id:
+                # Récupérer tous les événements futurs (1 an)
+                time_min = now_local.astimezone(zoneinfo.ZoneInfo("UTC")).isoformat().replace("+00:00", "Z")
+                future_date = now_local + timedelta(days=365)
+                time_max = future_date.astimezone(zoneinfo.ZoneInfo("UTC")).isoformat().replace("+00:00", "Z")
+
+                url = f"https://www.googleapis.com/calendar/v3/calendars/{agenda_id}/events"
+                params = {
+                    "timeMin": time_min,
+                    "timeMax": time_max,
+                    "singleEvents": True,
+                    "orderBy": "startTime",
+                    "maxResults": 500
+                }
+
+                r = requests.get(url, headers=headers, params=params)
+                if r.status_code == 200:
+                    all_events = r.json().get("items", [])
+                    blacklisted_ids = get_blacklisted_ids(username)
+                    filtered_events = filter_calendar_events(all_events, blacklisted_ids)
+                    sync_events_to_prospects(username, filtered_events)
+                    print(f"[SYNC] {len(filtered_events)} événements futurs synchronisés pour {username}")
+    except Exception as e:
+        print(f"[WARNING] Erreur sync calendrier pour {username}: {e}")
+        # Continue quand même pour retourner les prospects existants
+
+    # ==========================================
+    # Charger et retourner les prospects
+    # ==========================================
     prospects_dir = os.path.join(f"{base_cloud}/prospects", username)
     fichier_prospects = os.path.join(prospects_dir, "prospects.json")
 

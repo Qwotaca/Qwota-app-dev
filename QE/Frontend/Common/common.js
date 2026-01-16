@@ -43,6 +43,34 @@ window.debug = window.debug || (() => {});
   log('[STORAGE] Service workers et cache API désactivés (localStorage conservé pour username)');
 })();
 
+// ==========================================
+// BLOCAGE MODE PAYSAGE SUR TÉLÉPHONE
+// ==========================================
+(function() {
+  'use strict';
+
+  // Créer l'overlay de blocage paysage
+  function createLandscapeOverlay() {
+    if (document.querySelector('.landscape-block-overlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'landscape-block-overlay';
+    overlay.innerHTML = `
+      <i class="fas fa-mobile-alt rotate-icon"></i>
+      <div class="rotate-message">Veuillez tourner votre téléphone en mode portrait</div>
+      <div class="rotate-submessage">Cette application n'est pas disponible en mode paysage sur téléphone</div>
+    `;
+    document.body.insertBefore(overlay, document.body.firstChild);
+  }
+
+  // Ajouter l'overlay dès que le DOM est prêt
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', createLandscapeOverlay);
+  } else {
+    createLandscapeOverlay();
+  }
+})();
+
 // Variables globales - éviter la redéclaration
 if (typeof window.userRole === 'undefined') {
   window.userRole = null;

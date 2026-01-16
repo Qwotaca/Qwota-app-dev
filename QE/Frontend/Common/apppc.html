@@ -5535,7 +5535,7 @@
       }
 
       // 🔄 PRÉCHARGEMENT EN ARRIÈRE-PLAN (pages par priorité)
-      function startBackgroundPreloading() {
+      async function startBackgroundPreloading() {
         console.log(`[${deviceType}] 🔄 Démarrage du préchargement en arrière-plan...`);
 
         // ⚡ INITIALISER la barre de progression
@@ -5548,18 +5548,19 @@
         // ⚡ IMPORTANT: Récupérer le username pour l'ajouter aux URLs
         const username = window.username || localStorage.getItem('username');
 
-        // ⚡ PRELOAD API: Charger les prospects (avec sync calendrier) en arrière-plan
+        // ⚡ PRELOAD API: Charger les prospects (avec sync calendrier) AVANT les iframes
         // Ceci permet de synchroniser les événements Google Calendar pendant le loading
         if (username) {
           console.log(`[${deviceType}] 📅 Préchargement prospects + sync calendrier...`);
-          fetch(`/prospects/${username}?t=${Date.now()}`)
-            .then(response => response.json())
-            .then(data => {
-              console.log(`[${deviceType}] ✅ Prospects préchargés: ${data.length} clients potentiels`);
-              // Stocker en cache global pour accès rapide
-              window.preloadedProspects = data;
-            })
-            .catch(err => console.warn(`[${deviceType}] ⚠️ Erreur préchargement prospects:`, err));
+          try {
+            const response = await fetch(`/prospects/${username}?t=${Date.now()}`);
+            const data = await response.json();
+            console.log(`[${deviceType}] ✅ Prospects préchargés: ${data.length} clients potentiels`);
+            // Stocker en cache global pour accès rapide
+            window.preloadedProspects = data;
+          } catch (err) {
+            console.warn(`[${deviceType}] ⚠️ Erreur préchargement prospects:`, err);
+          }
         }
 
         // Pages par ordre de priorité

@@ -2895,86 +2895,44 @@ def get_blacklisted_ids(username: str) -> list:
     with open(fichier, "r", encoding="utf-8") as f:
         return json.load(f)
 
-@app.get("/evenements-a-completer")
-def evenements_a_completer(username: str):
-    import zoneinfo
-    local_tz = zoneinfo.ZoneInfo("America/Toronto")  # Québec / Toronto
-
-    access_token = get_valid_token(username)
-    headers = {"Authorization": f"Bearer {access_token}"}
-
-    # now_local avec timezone (heure locale correcte)
-    now_local = datetime.now(tz=local_tz)
-    end_of_day_local = datetime(
-        year=now_local.year,
-        month=now_local.month,
-        day=now_local.day,
-        hour=23,
-        minute=59,
-        second=59,
-        tzinfo=local_tz
-    )
-
-    time_min = now_local.astimezone(zoneinfo.ZoneInfo("UTC")).isoformat().replace("+00:00", "Z")
-    time_max = end_of_day_local.astimezone(zoneinfo.ZoneInfo("UTC")).isoformat().replace("+00:00", "Z")
-
-    print("NOW LOCAL:", now_local.isoformat())
-    print("END OF DAY LOCAL:", end_of_day_local.isoformat())
-    print("MIN (UTC):", time_min)
-    print("MAX (UTC):", time_max)
-
-    agenda_file = os.path.join(base_cloud, "tokens", f"{username}_agenda.json")
-    if not os.path.exists(agenda_file):
-        return []
-
-    with open(agenda_file, "r") as f:
-        agenda_id = json.load(f).get("agenda_id")
-
-    url = f"https://www.googleapis.com/calendar/v3/calendars/{agenda_id}/events"
-    params = {
-        "timeMin": time_min,
-        "timeMax": time_max,
-        "singleEvents": True,
-        "orderBy": "startTime"
-    }
-
-    r = requests.get(url, headers=headers, params=params)
-    if r.status_code != 200:
-        raise HTTPException(status_code=400, detail="Erreur Google Calendar")
-
-    def extract_phone_number(description):
-        """
-        Extrait un numéro de téléphone de la description.
-        Formats supportés:
-        - 0000000000 (10 chiffres) -> formaté en 000-000-0000
-        - 000-000-0000 (déjà formaté) -> gardé tel quel
-        """
-        if not description:
-            return ""
-
-        # Chercher format déjà formaté: 000-000-0000
-        formatted_pattern = r'\b(\d{3})-(\d{3})-(\d{4})\b'
-        match = re.search(formatted_pattern, description)
-        if match:
-            return match.group(0)
-
-        # Chercher format non formaté: 0000000000 (10 chiffres consécutifs)
-        unformatted_pattern = r'\b(\d{10})\b'
-        match = re.search(unformatted_pattern, description)
-        if match:
-            phone = match.group(1)
-            # Formater: 0000000000 -> 000-000-0000
-            return f"{phone[0:3]}-{phone[3:6]}-{phone[6:10]}"
-
+def extract_phone_number(description):
+    """
+    Extrait un numéro de téléphone de la description.
+    Formats supportés:
+    - 0000000000 (10 chiffres) -> formaté en 000-000-0000
+    - 000-000-0000 (déjà formaté) -> gardé tel quel
+    """
+    if not description:
         return ""
 
-    blacklisted_ids = get_blacklisted_ids(username)
+    # Chercher format déjà formaté: 000-000-0000
+    formatted_pattern = r'\b(\d{3})-(\d{3})-(\d{4})\b'
+    match = re.search(formatted_pattern, description)
+    if match:
+        return match.group(0)
+
+    # Chercher format non formaté: 0000000000 (10 chiffres consécutifs)
+    unformatted_pattern = r'\b(\d{10})\b'
+    match = re.search(unformatted_pattern, description)
+    if match:
+        phone = match.group(1)
+        # Formater: 0000000000 -> 000-000-0000
+        return f"{phone[0:3]}-{phone[3:6]}-{phone[6:10]}"
+
+    return ""
+
+def filter_calendar_events(events: list, blacklisted_ids: list) -> list:
+    """
+    Filtre les événements du calendrier selon nos critères:
+    - Pas dans la blacklist
+    - Titre non vide
+    - Pas de mots bannis (dispo, estim, pap)
+    - Exactement 2 mots (prénom + nom)
+    """
+    BANNED_WORD_STARTS = ["dispo", "estim", "pap"]
     result = []
 
-    # Mots à bannir: tout mot commençant par "dispo" ou "estim" (case-insensitive)
-    BANNED_WORD_STARTS = ["dispo", "estim", "pap"]
-
-    for event in r.json().get("items", []):
+    for event in events:
         event_id = event.get("id")
         if event_id in blacklisted_ids:
             continue
@@ -2983,7 +2941,7 @@ def evenements_a_completer(username: str):
         if not summary:
             continue
 
-        # Vérifier si le titre contient des mots bannis (commençant par dispo, estim, ou pap)
+        # Vérifier si le titre contient des mots bannis
         summary_lower = summary.lower()
         words_in_summary = summary_lower.split()
         has_banned_word = any(
@@ -3015,10 +2973,13 @@ def evenements_a_completer(username: str):
             "telephone": telephone
         })
 
-    # ==========================================
-    # SYNCHRONISATION: Ajouter les événements aux prospects
-    # Utilise l'event_id Google comme ID prospect pour synchronisation bidirectionnelle
-    # ==========================================
+    return result
+
+def sync_events_to_prospects(username: str, events: list):
+    """
+    Synchronise les événements filtrés vers les prospects.
+    Utilise l'event_id Google comme ID prospect.
+    """
     prospects_dir = os.path.join(f"{base_cloud}/prospects", username)
     os.makedirs(prospects_dir, exist_ok=True)
     fichier_prospects = os.path.join(prospects_dir, "prospects.json")
@@ -3039,17 +3000,17 @@ def evenements_a_completer(username: str):
 
     # Ajouter les nouveaux événements comme prospects
     nouveaux_prospects_ajoutes = 0
-    for event in result:
+    for event in events:
         if event["id"] not in ids_existants:
             nouveau_prospect = {
-                "id": event["id"],  # Utilise l'event_id Google comme ID
+                "id": event["id"],
                 "prenom": event["prenom"],
                 "nom": event["nom"],
                 "telephone": event["telephone"],
                 "adresse": event["adresse"],
                 "date_ajout": datetime.now().isoformat(),
                 "statut": "client_potentiel",
-                "source": "google_calendar"  # Marqueur pour identifier la source
+                "source": "google_calendar"
             }
             prospects_existants.append(nouveau_prospect)
             nouveaux_prospects_ajoutes += 1
@@ -3060,7 +3021,81 @@ def evenements_a_completer(username: str):
             json.dump(prospects_existants, f, indent=2, ensure_ascii=False)
         print(f"[SYNC] {nouveaux_prospects_ajoutes} nouveaux événements ajoutés aux prospects pour {username}")
 
-    print(f"[[INFO]] {len(result)} événements récupérés du calendrier pour {username}")
+    return nouveaux_prospects_ajoutes
+
+@app.get("/evenements-a-completer")
+def evenements_a_completer(username: str):
+    import zoneinfo
+    local_tz = zoneinfo.ZoneInfo("America/Toronto")
+
+    access_token = get_valid_token(username)
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    now_local = datetime.now(tz=local_tz)
+    end_of_day_local = datetime(
+        year=now_local.year,
+        month=now_local.month,
+        day=now_local.day,
+        hour=23,
+        minute=59,
+        second=59,
+        tzinfo=local_tz
+    )
+
+    # Pour les événements d'aujourd'hui (retournés au frontend)
+    time_min_today = now_local.astimezone(zoneinfo.ZoneInfo("UTC")).isoformat().replace("+00:00", "Z")
+    time_max_today = end_of_day_local.astimezone(zoneinfo.ZoneInfo("UTC")).isoformat().replace("+00:00", "Z")
+
+    # Pour TOUS les événements futurs (sync vers prospects) - 1 an dans le futur
+    future_date = now_local + timedelta(days=365)
+    time_max_future = future_date.astimezone(zoneinfo.ZoneInfo("UTC")).isoformat().replace("+00:00", "Z")
+
+    agenda_file = os.path.join(base_cloud, "tokens", f"{username}_agenda.json")
+    if not os.path.exists(agenda_file):
+        return []
+
+    with open(agenda_file, "r") as f:
+        agenda_id = json.load(f).get("agenda_id")
+
+    url = f"https://www.googleapis.com/calendar/v3/calendars/{agenda_id}/events"
+    blacklisted_ids = get_blacklisted_ids(username)
+
+    # ==========================================
+    # 1. Récupérer TOUS les événements futurs pour sync vers prospects
+    # ==========================================
+    params_future = {
+        "timeMin": time_min_today,
+        "timeMax": time_max_future,
+        "singleEvents": True,
+        "orderBy": "startTime",
+        "maxResults": 500
+    }
+
+    r_future = requests.get(url, headers=headers, params=params_future)
+    if r_future.status_code == 200:
+        all_future_events = r_future.json().get("items", [])
+        filtered_future = filter_calendar_events(all_future_events, blacklisted_ids)
+        sync_events_to_prospects(username, filtered_future)
+        print(f"[SYNC] {len(filtered_future)} événements futurs filtrés pour prospects")
+
+    # ==========================================
+    # 2. Récupérer les événements d'AUJOURD'HUI seulement pour retour
+    # ==========================================
+    params_today = {
+        "timeMin": time_min_today,
+        "timeMax": time_max_today,
+        "singleEvents": True,
+        "orderBy": "startTime"
+    }
+
+    r_today = requests.get(url, headers=headers, params=params_today)
+    if r_today.status_code != 200:
+        raise HTTPException(status_code=400, detail="Erreur Google Calendar")
+
+    today_events = r_today.json().get("items", [])
+    result = filter_calendar_events(today_events, blacklisted_ids)
+
+    print(f"[[INFO]] {len(result)} événements d'aujourd'hui pour {username}")
 
     return result
 

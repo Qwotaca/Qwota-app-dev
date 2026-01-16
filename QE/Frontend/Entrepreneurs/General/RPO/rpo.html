@@ -5432,12 +5432,24 @@ function initObjectiveInputListeners() {
   objectiveInputs.forEach(input => {
     // Remove any existing listener first (avoid duplicates)
     input.removeEventListener('input', handleObjectiveInputChange);
+    input.removeEventListener('focus', handleObjectiveInputFocus);
+
+    // Add focus event to save original value before editing
+    input.addEventListener('focus', handleObjectiveInputFocus);
 
     // Add input event listener to update dataset.value when user types
     input.addEventListener('input', handleObjectiveInputChange);
   });
 
   console.log(`[OBJECTIVE INPUTS] ${objectiveInputs.length} event listeners initialized`);
+}
+
+// Sauvegarder la valeur originale au focus (avant que l'utilisateur tape)
+function handleObjectiveInputFocus(e) {
+  const input = e.target;
+  // Sauvegarder la valeur actuelle dans un attribut spécial
+  input.dataset.originalValue = input.dataset.value || input.dataset.vise || '0';
+  console.log(`[OBJECTIVE FOCUS] Saved original value: ${input.dataset.originalValue}`);
 }
 
 // Handle objective input change: update dataset.value from input.value
@@ -5449,21 +5461,22 @@ function handleObjectiveInputChange(e) {
   let rawValue = input.value.replace(/\s/g, '').replace(/\$/g, '').replace(/h/g, '');
   const numericValue = parseFloat(rawValue);
 
-  // Bloquer la valeur 0 - afficher notification et reset à la valeur précédente
+  // Bloquer la valeur 0 - afficher notification et reset à la valeur originale (avant édition)
   if (rawValue === '0' || (numericValue === 0 && rawValue !== '')) {
     showZeroNotAllowedNotification();
-    // Reset à la valeur précédente (modifier sauvegardé ou vise)
-    const previousValue = parseFloat(input.dataset.value) || parseFloat(input.dataset.vise) || 0;
-    // Ne pas changer dataset.value - garder la valeur précédente
-    // Remettre l'affichage à la valeur précédente
+    // Reset à la valeur originale sauvegardée au focus
+    const originalValue = parseFloat(input.dataset.originalValue) || parseFloat(input.dataset.vise) || 0;
+    // Remettre dataset.value à la valeur originale
+    input.dataset.value = originalValue;
+    // Remettre l'affichage à la valeur originale
     if (field === 'h_marketing_obj') {
-      input.value = previousValue > 0 ? Math.ceil(previousValue) + ' h' : '';
+      input.value = originalValue > 0 ? Math.ceil(originalValue) + ' h' : '';
     } else if (field === 'dollar_obj') {
-      input.value = previousValue > 0 ? Math.round(previousValue).toLocaleString('fr-CA') + ' $' : '';
+      input.value = originalValue > 0 ? Math.round(originalValue).toLocaleString('fr-CA') + ' $' : '';
     } else {
-      input.value = previousValue > 0 ? (previousValue % 1 === 0 ? previousValue : previousValue.toFixed(1)) : '';
+      input.value = originalValue > 0 ? (originalValue % 1 === 0 ? originalValue : originalValue.toFixed(1)) : '';
     }
-    console.log(`[OBJECTIVE INPUT] ${field} - 0 non permis, reset à valeur précédente: ${previousValue}`);
+    console.log(`[OBJECTIVE INPUT] ${field} - 0 non permis, reset à valeur originale: ${originalValue}`);
     return;
   }
 

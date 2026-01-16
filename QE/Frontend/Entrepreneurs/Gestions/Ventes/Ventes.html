@@ -5760,13 +5760,15 @@
 
       // ⚡ OPTIMISATION: Utiliser les données préchargées si disponibles (depuis apppc.html)
       const parentWindow = window.parent !== window ? window.parent : window;
-      if (parentWindow.preloadedProspects && parentWindow.preloadedProspects.length > 0) {
-        prospects = parentWindow.preloadedProspects;
+      if (parentWindow.prospectsPreloaded === true) {
+        // Utiliser les données préchargées (même si tableau vide)
+        prospects = parentWindow.preloadedProspects || [];
         log('[VENTES] ⚡ Utilisation des prospects préchargés');
-        // Vider le cache après utilisation pour forcer le refresh au prochain chargement
-        parentWindow.preloadedProspects = null;
+        // Marquer comme utilisé pour forcer le refresh au prochain chargement
+        parentWindow.prospectsPreloaded = false;
       } else {
-        // Fallback: Charger depuis l'API
+        // Fallback: Charger depuis l'API (si pas de preload)
+        log('[VENTES] 📡 Chargement prospects depuis API...');
         const timestamp = new Date().getTime();
         const response = await fetch(`/prospects/${window.username}?t=${timestamp}`, {
           cache: 'no-store',

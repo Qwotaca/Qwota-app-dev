@@ -5478,29 +5478,12 @@
       // ================================================================
       // NOUVEAU SYSTÈME OPTIMISÉ - Chargement ultra-rapide
       // ================================================================
-      async function doPreloadPages() {
+      function doPreloadPages() {
       // DESKTOP & MOBILE: Chargement optimisé intelligent
       console.log('[OPTIMIZED] 🚀 DÉMARRAGE DU SYSTÈME DE CHARGEMENT ULTRA-RAPIDE');
 
       const isDesktop = window.innerWidth > 768;
       const deviceType = isDesktop ? 'DESKTOP' : 'MOBILE';
-
-      // ⚡ EXCEPTION: Précharger les prospects + sync calendrier EN PREMIER
-      // Ceci se fait pendant le loading screen, avant toute autre chose
-      const username = window.username || localStorage.getItem('username');
-      if (username) {
-        console.log(`[${deviceType}] 📅 SYNC CALENDRIER: Chargement prospects...`);
-        try {
-          const response = await fetch(`/prospects/${username}?t=${Date.now()}`);
-          const data = await response.json();
-          window.preloadedProspects = data;
-          window.prospectsPreloaded = true; // Flag pour indiquer que le preload est fait
-          console.log(`[${deviceType}] ✅ SYNC CALENDRIER: ${data.length} prospects prêts`);
-        } catch (err) {
-          console.warn(`[${deviceType}] ⚠️ Erreur sync calendrier:`, err);
-          window.prospectsPreloaded = false;
-        }
-      }
 
       // ⚡ IMPORTANT: Vider TOUTES les iframes au démarrage
       // Pour que chaque refresh recharge tout avec des données fraîches
@@ -5564,9 +5547,6 @@
 
         // ⚡ IMPORTANT: Récupérer le username pour l'ajouter aux URLs
         const username = window.username || localStorage.getItem('username');
-
-        // NOTE: Le préchargement des prospects (sync calendrier) est fait dans doPreloadPages()
-        // au tout début du loading, donc pas besoin de le refaire ici
 
         // Pages par ordre de priorité
         const preloadQueue = [

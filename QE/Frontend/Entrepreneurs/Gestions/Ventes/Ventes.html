@@ -1167,10 +1167,10 @@
                 </tr>
               </thead>
               <tbody id="potentiel-tbody">
-                <tr>
+                <tr class="loading-row">
                   <td colspan="8" class="empty-state">
-                    <i class="fas fa-user-plus" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
-                    <p style="font-size: 1rem;">Aucun client potentiel</p>
+                    <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem; color: var(--primary-blue); display: block;"></i>
+                    <p style="font-size: 1rem; color: var(--text-gray);">Chargement des clients potentiels...</p>
                   </td>
                 </tr>
               </tbody>
@@ -5755,37 +5755,34 @@
     const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
 
+    // Afficher le loading pendant le chargement
+    tbody.innerHTML = `
+      <tr class="loading-row">
+        <td colspan="8" class="empty-state">
+          <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem; color: var(--primary-blue); display: block;"></i>
+          <p style="font-size: 1rem; color: var(--text-gray);">Chargement des clients potentiels...</p>
+        </td>
+      </tr>
+    `;
+
     try {
-      let prospects = null;
-
-      // ⚡ OPTIMISATION: Utiliser les données préchargées si disponibles (depuis apppc.html)
-      const parentWindow = window.parent !== window ? window.parent : window;
-      if (parentWindow.prospectsPreloaded === true) {
-        // Utiliser les données préchargées (même si tableau vide)
-        prospects = parentWindow.preloadedProspects || [];
-        log('[VENTES] ⚡ Utilisation des prospects préchargés');
-        // Marquer comme utilisé pour forcer le refresh au prochain chargement
-        parentWindow.prospectsPreloaded = false;
-      } else {
-        // Fallback: Charger depuis l'API (si pas de preload)
-        log('[VENTES] 📡 Chargement prospects depuis API...');
-        const timestamp = new Date().getTime();
-        const response = await fetch(`/prospects/${window.username}?t=${timestamp}`, {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-          }
-        });
-
-        if (!response.ok) {
-          showEmptyTable(tbody, 'potentiel');
-          return;
+      // Désactiver complètement le cache avec timestamp et cache: 'no-store'
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/prospects/${window.username}?t=${timestamp}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         }
+      });
 
-        prospects = await response.json();
+      if (!response.ok) {
+        showEmptyTable(tbody, 'potentiel');
+        return;
       }
+
+      const prospects = await response.json();
 
       if (!prospects || prospects.length === 0) {
         showEmptyTable(tbody, 'potentiel');

@@ -5614,6 +5614,15 @@
     <div class="status-cards-container flex mb-8" style="gap: 1.5rem;">
       <!-- Colonne 1: À traiter (Urgente) -->
       <div class="status-card-wrapper" id="urgente-box">
+        <!-- Recherche Urgent (visible tablette seulement) -->
+        <div class="search-field-tablet hidden">
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-search" style="color: var(--text-gray);"></i>
+            </div>
+            <input type="text" class="search-tablet-input search-field-input" data-target="searchUrgent" placeholder="Rechercher..." style="background: var(--bg-card); border: 1px solid var(--border-dark); color: var(--text-light); width: 100%; padding: 0.75rem 0.75rem 0.75rem 2.5rem; border-radius: 0.5rem; font-size: 0.875rem;" autocomplete="off" />
+          </div>
+        </div>
         <div class="status-card p-6" style="--card-color: #f87171; min-height: 800px; max-height: 800px; display: flex; flex-direction: column;">
           <div class="mb-4">
             <div class="flex items-center justify-between">
@@ -5637,6 +5646,15 @@
 
       <!-- Colonne 2: En traitement -->
       <div class="status-card-wrapper" id="traitement-box">
+        <!-- Recherche En traitement (visible tablette seulement) -->
+        <div class="search-field-tablet hidden">
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-search" style="color: var(--text-gray);"></i>
+            </div>
+            <input type="text" class="search-tablet-input search-field-input" data-target="searchTraitement" placeholder="Rechercher..." style="background: var(--bg-card); border: 1px solid var(--border-dark); color: var(--text-light); width: 100%; padding: 0.75rem 0.75rem 0.75rem 2.5rem; border-radius: 0.5rem; font-size: 0.875rem;" autocomplete="off" />
+          </div>
+        </div>
         <div class="status-card p-6" style="--card-color: #fb923c; min-height: 800px; max-height: 800px; display: flex; flex-direction: column;">
           <div class="mb-4">
             <div class="flex items-center justify-between">
@@ -5660,6 +5678,15 @@
 
       <!-- Colonne 3: Traitées -->
       <div class="status-card-wrapper" id="traitees-box">
+        <!-- Recherche Traitées (visible tablette seulement) -->
+        <div class="search-field-tablet hidden">
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-search" style="color: var(--text-gray);"></i>
+            </div>
+            <input type="text" class="search-tablet-input search-field-input" data-target="searchTraitees" placeholder="Rechercher..." style="background: var(--bg-card); border: 1px solid var(--border-dark); color: var(--text-light); width: 100%; padding: 0.75rem 0.75rem 0.75rem 2.5rem; border-radius: 0.5rem; font-size: 0.875rem;" autocomplete="off" />
+          </div>
+        </div>
         <div class="status-card p-6" style="--card-color: #10b981; min-height: 800px; max-height: 800px; display: flex; flex-direction: column;">
           <div class="mb-4">
             <div class="flex items-center justify-between">
@@ -5690,6 +5717,13 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Indicateurs de swipe (tablette seulement) -->
+    <div class="swipe-indicators hidden" id="statusSwipeIndicators">
+      <div class="swipe-dot active" data-index="0" style="background: #f87171;"></div>
+      <div class="swipe-dot" data-index="1" style="background: #fb923c;"></div>
+      <div class="swipe-dot" data-index="2" style="background: #10b981;"></div>
     </div>
   </div>
 </div>
@@ -7302,7 +7336,76 @@
       new CustomCalendar('dateRemboursement', 'calendar-dateRemboursement');
       initEnvoyerComptable();
       initFormattingMontants();
+      initTabletPlaceholders();
+      initStatusSwipe();
     });
+
+    // Fonction pour changer les placeholders sur tablette
+    function initTabletPlaceholders() {
+      function updatePlaceholders() {
+        const isTablet = window.innerWidth >= 601 && window.innerWidth <= 1200;
+        const clientSearchFacturation = document.getElementById('clientSearchFacturation');
+        const clientSearchRemboursement = document.getElementById('clientSearchRemboursement');
+
+        if (clientSearchFacturation) {
+          clientSearchFacturation.placeholder = isTablet ? 'Rechercher...' : 'Tapez pour rechercher un client...';
+        }
+        if (clientSearchRemboursement) {
+          clientSearchRemboursement.placeholder = isTablet ? 'Rechercher...' : 'Tapez pour rechercher un client...';
+        }
+      }
+
+      updatePlaceholders();
+      window.addEventListener('resize', updatePlaceholders);
+    }
+
+    // Fonction pour initialiser le swipe des colonnes status sur tablette
+    function initStatusSwipe() {
+      const container = document.querySelector('#page2 .status-cards-container');
+      const indicators = document.getElementById('statusSwipeIndicators');
+      const dots = indicators ? indicators.querySelectorAll('.swipe-dot') : [];
+      const columns = document.querySelectorAll('#page2 .status-card-wrapper');
+
+      if (!container || !indicators || columns.length === 0) return;
+
+      // Synchroniser les inputs de recherche tablette avec les inputs PC
+      const tabletInputs = document.querySelectorAll('.search-tablet-input');
+      tabletInputs.forEach(input => {
+        const targetId = input.getAttribute('data-target');
+        const targetInput = document.getElementById(targetId);
+
+        if (targetInput) {
+          // Sync tablette -> PC
+          input.addEventListener('input', (e) => {
+            targetInput.value = e.target.value;
+            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+          });
+        }
+      });
+
+      // Mettre à jour les indicateurs lors du scroll
+      container.addEventListener('scroll', () => {
+        const scrollLeft = container.scrollLeft;
+        const columnWidth = container.offsetWidth;
+        const currentIndex = Math.round(scrollLeft / columnWidth);
+
+        dots.forEach((dot, index) => {
+          dot.classList.toggle('active', index === currentIndex);
+        });
+      });
+
+      // Clic sur les indicateurs pour naviguer
+      dots.forEach((dot) => {
+        dot.addEventListener('click', () => {
+          const index = parseInt(dot.getAttribute('data-index'));
+          const columnWidth = container.offsetWidth;
+          container.scrollTo({
+            left: index * columnWidth,
+            behavior: 'smooth'
+          });
+        });
+      });
+    }
 
     // Fonction pour initialiser le bouton "Envoyé au comptable"
     function initEnvoyerComptable() {

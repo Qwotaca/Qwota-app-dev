@@ -5449,13 +5449,91 @@ function handleObjectiveInputChange(e) {
   let rawValue = input.value.replace(/\s/g, '').replace(/\$/g, '').replace(/h/g, '');
   const numericValue = parseFloat(rawValue);
 
+  // Bloquer la valeur 0 - afficher notification et reset à la valeur du plan
+  if (rawValue === '0' || (numericValue === 0 && rawValue !== '')) {
+    showZeroNotAllowedNotification();
+    // Reset à la valeur du plan (vise)
+    const viseValue = parseFloat(input.dataset.vise) || 0;
+    input.dataset.value = viseValue;
+    // Remettre l'affichage à la valeur du plan
+    if (field === 'h_marketing_obj') {
+      input.value = viseValue > 0 ? Math.ceil(viseValue) + ' h' : '';
+    } else if (field === 'dollar_obj') {
+      input.value = viseValue > 0 ? Math.round(viseValue).toLocaleString('fr-CA') + ' $' : '';
+    } else {
+      input.value = viseValue > 0 ? (viseValue % 1 === 0 ? viseValue : viseValue.toFixed(1)) : '';
+    }
+    console.log(`[OBJECTIVE INPUT] ${field} - 0 non permis, reset à vise: ${viseValue}`);
+    return;
+  }
+
   // Update dataset.value with the parsed number
   if (!isNaN(numericValue) && numericValue > 0) {
     input.dataset.value = numericValue;
     console.log(`[OBJECTIVE INPUT] ${field} updated: ${numericValue}`);
   } else {
-    input.dataset.value = 0;
+    // Valeur vide ou invalide - garder la valeur du plan
+    const viseValue = parseFloat(input.dataset.vise) || 0;
+    input.dataset.value = viseValue;
   }
+}
+
+// Afficher notification que 0 n'est pas permis
+function showZeroNotAllowedNotification() {
+  // Vérifier si une notification existe déjà
+  let notif = document.getElementById('zero-not-allowed-notif');
+  if (notif) {
+    notif.remove();
+  }
+
+  // Créer la notification
+  notif = document.createElement('div');
+  notif.id = 'zero-not-allowed-notif';
+  notif.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 99999;
+    box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideDown 0.3s ease-out;
+  `;
+  notif.innerHTML = `
+    <i class="fas fa-exclamation-circle"></i>
+    <span>La valeur 0 n'est pas permise pour les objectifs</span>
+  `;
+
+  // Ajouter l'animation CSS si pas déjà présente
+  if (!document.getElementById('zero-notif-animation')) {
+    const style = document.createElement('style');
+    style.id = 'zero-notif-animation';
+    style.textContent = `
+      @keyframes slideDown {
+        from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
+        to { transform: translateX(-50%) translateY(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  document.body.appendChild(notif);
+
+  // Supprimer après 3 secondes
+  setTimeout(() => {
+    if (notif && notif.parentElement) {
+      notif.style.animation = 'slideDown 0.3s ease-out reverse';
+      setTimeout(() => notif.remove(), 300);
+    }
+  }, 3000);
 }
 
 // Load weekly data from backend for specific month

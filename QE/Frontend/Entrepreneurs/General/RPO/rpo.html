@@ -7994,13 +7994,13 @@ window.loadRPOData = async function() {
         await initEtatsResultatsEditor();
         log('[RPO] États des Résultats - initEtatsResultatsEditor() terminé');
       }
+      // NOTE: Ne PAS appeler updateCibleCalculations() ici car initEtatsResultatsEditor()
+      // a déjà chargé les données CIBLÉ sauvegardées. updateCibleCalculations() écraserait
+      // les valeurs chargées avec les valeurs calculées à partir des % par défaut.
+      // Générer les cartes mobiles APRÈS le chargement pour avoir les bonnes valeurs
       if (typeof generateEtatsMobile === 'function') {
         generateEtatsMobile();
         log('[RPO] États des Résultats - generateEtatsMobile() terminé');
-      }
-      if (typeof updateCibleCalculations === 'function') {
-        updateCibleCalculations();
-        log('[RPO] États des Résultats - calculs CIBLÉ mis à jour');
       }
       window.etatsResultatsInitialized = true;
     } else {
@@ -8014,13 +8014,16 @@ window.loadRPOData = async function() {
         await loadChiffreAffaires();
         log('[RPO] États des Résultats - chiffre d\'affaires rechargé');
       }
-      if (typeof updateCibleCalculations === 'function') {
-        updateCibleCalculations();
-        log('[RPO] États des Résultats - calculs CIBLÉ mis à jour');
-      }
+      // NOTE: Ne PAS appeler updateCibleCalculations() ici car les valeurs CIBLÉ
+      // viennent d'être chargées. L'appeler écraserait les valeurs sauvegardées.
       if (typeof updateAllCalculations === 'function') {
         updateAllCalculations();
         log('[RPO] États des Résultats - calculs ÉCART mis à jour');
+      }
+      // Régénérer les cartes mobiles avec les nouvelles valeurs
+      if (typeof generateEtatsMobile === 'function') {
+        generateEtatsMobile();
+        log('[RPO] États des Résultats - cartes mobiles regénérées');
       }
     }
   } catch (error) {
@@ -12844,6 +12847,11 @@ function updateAllCalculations(saveData = false) {
   // Recalculer les totaux
   calculateTotals();
 
+  // Synchroniser les % vers les spans mobile
+  if (typeof syncMobilePercents === 'function') {
+    syncMobilePercents();
+  }
+
   // Sauvegarder les données SEULEMENT si demandé explicitement
   // (pas lors du chargement initial pour ne pas écraser les données sauvegardées)
   if (saveData) {
@@ -12874,7 +12882,7 @@ async function saveEtatsResultatsData() {
 
   // Sauvegarder toutes les valeurs CIBLÉ (sauf Total dépenses, Profit, et catégories non-éditables)
   const allCibleInputs = document.querySelectorAll('.etats-resultats-cible-input');
-  const nonEditableCategories = ['assurance-qe', 'frais-garanties', 'redevances'];
+  const nonEditableCategories = ['ventes', 'profit', 'total-ecart', 'total-depenses', 'assurance-qe', 'frais-garanties', 'redevances'];
   log(`💾 Nombre total d'inputs CIBLÉ trouvés: ${allCibleInputs.length}`);
 
   allCibleInputs.forEach(input => {
@@ -12893,6 +12901,10 @@ async function saveEtatsResultatsData() {
   });
 
   try {
+    // DEBUG: Log what we're about to send
+    console.log('💾 [SAVE DEBUG] window.customBudgetPercent:', window.customBudgetPercent);
+    console.log('💾 [SAVE DEBUG] cible_percent to send:', window.customBudgetPercent || {});
+
     const response = await fetch(`/api/etats-resultats/actuel/${username}`, {
       method: 'POST',
       headers: {
@@ -12901,7 +12913,7 @@ async function saveEtatsResultatsData() {
       body: JSON.stringify({
         actuel_data: actuelData,
         cible_data: cibleData,
-        budget_percent: window.customBudgetPercent || {}
+        cible_percent: window.customBudgetPercent || {}
       })
     });
 
@@ -12909,7 +12921,7 @@ async function saveEtatsResultatsData() {
       throw new Error('Erreur lors de la sauvegarde');
     }
 
-    log('💾 Données Actuel et CIBLÉ sauvegardées dans le backend:', { actuelData, cibleData });
+    log('💾 Données Actuel et CIBLÉ sauvegardées dans le backend:', { actuelData, cibleData, cible_percent: window.customBudgetPercent });
   } catch (error) {
     error('[ERROR] Erreur lors de la sauvegarde des données:', error);
   }
@@ -13021,13 +13033,13 @@ async function loadEtatsResultatsData() {
 
     const actuelData = result.actuel_data || {};
     const cibleData = result.cible_data || {};
-    const budgetPercent = result.budget_percent || {};
+    const ciblePercent = result.cible_percent || {};
 
-    // Charger les % personnalisés dans la variable globale
-    window.customBudgetPercent = budgetPercent;
-    log(`🔄 [LOAD] actuelData keys: ${Object.keys(actuelData).length}, cibleData keys: ${Object.keys(cibleData).length}, budgetPercent keys: ${Object.keys(budgetPercent).length}`);
+    // Charger les % CIBLÉ personnalisés dans la variable globale
+    window.customBudgetPercent = ciblePercent;
+    log(`🔄 [LOAD] actuelData keys: ${Object.keys(actuelData).length}, cibleData keys: ${Object.keys(cibleData).length}, ciblePercent keys: ${Object.keys(ciblePercent).length}`);
     log(`🔄 [LOAD] actuelData contenu:`, actuelData);
-    log(`🔄 [LOAD] budgetPercent contenu:`, budgetPercent);
+    log(`🔄 [LOAD] ciblePercent contenu:`, ciblePercent);
 
     // Restaurer toutes les valeurs Actuel
     let actuelCount = 0;
@@ -13068,6 +13080,11 @@ async function loadEtatsResultatsData() {
     log(`📂 Données chargées - ${actuelCount} Actuel, ${cibleCount} CIBLÉ`);
     log('   Actuel:', actuelData);
     log('   CIBLÉ:', cibleData);
+    log('   CIBLÉ %:', ciblePercent);
+
+    // Afficher les % CIBLÉ chargés dans les cellules (sans recalculer les montants)
+    log('🔄 [LOAD] Affichage des % CIBLÉ chargés...');
+    displayLoadedCiblePercents();
 
     // Recalculer les totaux (sans écraser les montants Actuel chargés)
     log('🔄 [LOAD] Appel de recalculateTotalsOnly()');
@@ -13078,6 +13095,73 @@ async function loadEtatsResultatsData() {
     error('❌ [ERROR] Stack:', error.stack);
     throw error;
   }
+}
+
+// Afficher les % CIBLÉ chargés depuis le backend (sans recalculer les montants)
+function displayLoadedCiblePercents() {
+  const categories = [
+    'assurance-qe', 'concours', 'essence', 'entretien-voiture',
+    'fourniture-bureau', 'frais-bancaires', 'frais-cellulaire',
+    'frais-garanties', 'leads', 'peinture', 'petits-outils',
+    'repas', 'redevances', 'salaire-peintres', 'salaires-representant'
+  ];
+
+  categories.forEach(category => {
+    // Récupérer le % depuis window.customBudgetPercent ou utiliser le défaut
+    let percent = window.customBudgetPercent?.[category];
+
+    // Si pas de % personnalisé, utiliser le défaut
+    if (percent === undefined || percent === null) {
+      percent = DEFAULT_CIBLE_PERCENT?.[category] ?? 0;
+    }
+
+    // Mettre à jour la cellule %
+    const percentCell = document.querySelector(`[data-category="${category}"][data-field="cible-percent"]`);
+    if (percentCell) {
+      percentCell.textContent = formatPercentValue(percent);
+      // Colorier en rouge si > 0
+      if (percent > 0) {
+        percentCell.style.color = '#ef4444';
+      } else {
+        percentCell.style.color = 'var(--text-gray)';
+      }
+      log(`   ✓ ${category}: ${formatPercentValue(percent)}`);
+    }
+  });
+
+  // Calculer et afficher le total des dépenses %
+  let totalDepensesPercent = 0;
+  categories.forEach(category => {
+    if (category !== 'redevances') { // Redevances est calculé séparément
+      const percent = window.customBudgetPercent?.[category] ?? DEFAULT_CIBLE_PERCENT?.[category] ?? 0;
+      totalDepensesPercent += percent;
+    }
+  });
+
+  // Ajouter redevances au total
+  const redevanceInput = document.querySelector('td[data-category="redevances"][data-field="cible-montant"] input');
+  const objectifCAInput = document.getElementById('objectifCA');
+  const objectifCA = parseFloat(objectifCAInput?.dataset?.value) || parseMoneyValue(objectifCAInput?.value) || 0;
+  if (redevanceInput && objectifCA > 0) {
+    const redevanceMontant = parseMoneyValue(redevanceInput.value);
+    const redevancePercent = (redevanceMontant / objectifCA) * 100;
+    totalDepensesPercent += redevancePercent;
+  }
+
+  const totalDepensesPercentCell = document.querySelector('[data-category="total-depenses"][data-field="cible-percent"]');
+  if (totalDepensesPercentCell) {
+    totalDepensesPercentCell.textContent = formatPercentValue(totalDepensesPercent);
+  }
+
+  // Calculer et afficher le profit %
+  const profitPercent = 100 - totalDepensesPercent;
+  const profitPercentCell = document.querySelector('[data-category="profit"][data-field="cible-percent"]');
+  if (profitPercentCell) {
+    profitPercentCell.textContent = formatPercentValue(profitPercent);
+    profitPercentCell.style.color = profitPercent >= 0 ? '#10b981' : '#ef4444';
+  }
+
+  log('✅ [LOAD] % CIBLÉ affichés depuis les données chargées');
 }
 
 // Sauvegarder les données Budget dans le backend
@@ -13277,6 +13361,11 @@ function calculateBudgetTotals() {
 
   // Sauvegarder les données Budget
   saveBudgetData();
+
+  // Synchroniser les % vers les spans mobile
+  if (typeof syncMobilePercents === 'function') {
+    syncMobilePercents();
+  }
 }
 
 // ========================================
@@ -13615,6 +13704,35 @@ function updateCibleCalculations() {
   }
 
   log(`[CIBLÉ] Calculs mis à jour - Total: ${formatMoneyValue(totalDepensesCible)} (${totalPercentValue.toFixed(2)}%)`);
+
+  // Synchroniser les % vers les spans mobile
+  syncMobilePercents();
+}
+
+// Fonction pour synchroniser les % du PC vers les spans mobile
+function syncMobilePercents() {
+  const categories = [
+    'ventes', 'assurance-qe', 'concours', 'essence', 'entretien-voiture',
+    'fourniture-bureau', 'frais-bancaires', 'frais-cellulaire',
+    'frais-garanties', 'leads', 'peinture', 'petits-outils',
+    'repas', 'redevances', 'salaire-peintres', 'salaires-representant', 'profit'
+  ];
+
+  categories.forEach(category => {
+    // Sync CIBLÉ %
+    const ciblePercentCell = document.querySelector(`#etat-resultats td[data-category="${category}"][data-field="cible-percent"]`);
+    const mobileCiblePercent = document.querySelector(`.etats-mobile-cible-percent[data-category="${category}"]`);
+    if (ciblePercentCell && mobileCiblePercent) {
+      mobileCiblePercent.textContent = ciblePercentCell.textContent.trim();
+    }
+
+    // Sync ACTUEL/RÉEL %
+    const actuelPercentCell = document.querySelector(`#etat-resultats td[data-category="${category}"][data-field="actuel-percent"]`);
+    const mobileActuelPercent = document.querySelector(`.etats-mobile-actuel-percent[data-category="${category}"]`);
+    if (actuelPercentCell && mobileActuelPercent) {
+      mobileActuelPercent.textContent = actuelPercentCell.textContent.trim();
+    }
+  });
 }
 
 // Ajouter les animations CSS pour le message d'avertissement
@@ -13763,19 +13881,23 @@ function toggleEditEtatsResultats() {
   const editBtn = document.getElementById('editEtatsResultatsBtn');
   const saveBtn = document.getElementById('saveEtatsResultatsBtn');
   const cancelBtn = document.getElementById('cancelEtatsResultatsBtn');
-  const isReadonly = actuelInputs[0]?.hasAttribute('readonly');
+
+  // Vérifier si on est en mode édition en regardant l'état du bouton Modifier
+  // (plus fiable car certains inputs restent readonly comme ventes/profit)
+  const isInEditMode = editBtn?.classList.contains('hidden');
 
   console.log('🔍 [ETATS] toggleEditEtatsResultats appelé');
   console.log('🔍 [ETATS] Nombre d\'inputs actuel trouvés:', actuelInputs.length);
   console.log('🔍 [ETATS] Nombre d\'inputs cible trouvés:', cibleInputs.length);
-  console.log('🔍 [ETATS] isReadonly:', isReadonly);
+  console.log('🔍 [ETATS] isInEditMode:', isInEditMode);
 
-  if (isReadonly) {
+  if (!isInEditMode) {
     // Sauvegarder les valeurs d'origine avant d'activer le mode édition
     originalEtatsResultatsValues = { actuel: {}, cible: {} };
 
     actuelInputs.forEach(input => {
-      const category = input.closest('td')?.getAttribute('data-category');
+      // Chercher la catégorie sur le td parent OU directement sur l'input (mobile)
+      const category = input.closest('td')?.getAttribute('data-category') || input.getAttribute('data-category');
       if (category) {
         originalEtatsResultatsValues.actuel[category] = input.value;
       }
@@ -13790,8 +13912,24 @@ function toggleEditEtatsResultats() {
     });
 
     log('💾 Valeurs d\'origine sauvegardées:', originalEtatsResultatsValues);
+
+    // Catégories non-éditables (ventes et profit sont calculés automatiquement)
+    const nonEditableCategories = ['ventes', 'profit', 'total-ecart', 'total-depenses', 'assurance-qe', 'frais-garanties', 'redevances'];
+
     // Activer le mode édition pour les inputs ACTUEL
     actuelInputs.forEach(input => {
+      // Chercher la catégorie sur le td parent OU directement sur l'input (mobile)
+      const category = input.closest('td')?.getAttribute('data-category') || input.getAttribute('data-category');
+
+      // Ne PAS rendre éditable les catégories spécifiques (ventes, profit)
+      if (nonEditableCategories.includes(category)) {
+        input.setAttribute('readonly', 'true');
+        input.style.cursor = 'not-allowed';
+        input.style.opacity = '0.6';
+        input.style.background = 'transparent';
+        return; // Ne pas modifier ce champ
+      }
+
       input.removeAttribute('readonly');
       input.style.color = 'var(--primary-blue)';
       input.style.outline = 'none';
@@ -13820,10 +13958,26 @@ function toggleEditEtatsResultats() {
         input.value = String(parsedValue);
         input.placeholder = '';
       }
+
+      // Ajouter un écouteur d'événements pour recalculer automatiquement les %
+      if (!input.dataset.listenerAdded) {
+        input.addEventListener('input', () => {
+          // Si c'est un input mobile, synchroniser vers PC d'abord
+          const category = input.getAttribute('data-category');
+          if (category && !input.closest('td')) {
+            // C'est un input mobile - sync vers PC
+            const pcInput = document.querySelector(`#etat-resultats td[data-category="${category}"][data-field="actuel-montant"] input`);
+            if (pcInput) {
+              pcInput.value = input.value;
+            }
+          }
+          updateAllCalculations();
+        });
+        input.dataset.listenerAdded = 'true';
+      }
     });
 
     // Activer le mode édition pour les inputs CIBLÉ
-    const nonEditableCategories = ['assurance-qe', 'frais-garanties', 'redevances'];
 
     console.log('🔍 [ETATS] Début de la boucle cibleInputs, nombre:', cibleInputs.length);
 
@@ -13869,6 +14023,15 @@ function toggleEditEtatsResultats() {
       // Ajouter un écouteur d'événements pour recalculer automatiquement
       if (!input.dataset.listenerAdded) {
         input.addEventListener('input', () => {
+          // Si c'est un input mobile, synchroniser vers PC d'abord
+          const cat = input.getAttribute('data-category');
+          if (cat && !input.closest('td')) {
+            // C'est un input mobile - sync vers PC
+            const pcInput = document.querySelector(`#etat-resultats td[data-category="${cat}"][data-field="cible-montant"] input`);
+            if (pcInput) {
+              pcInput.value = input.value;
+            }
+          }
           updateCibleCalculations();
         });
         input.dataset.listenerAdded = 'true';
@@ -13904,7 +14067,7 @@ function toggleEditEtatsResultats() {
     });
 
     // Désactiver le mode édition pour les inputs CIBLÉ
-    const nonEditableCategories = ['assurance-qe', 'frais-garanties', 'redevances'];
+    const nonEditableCategories = ['ventes', 'profit', 'total-ecart', 'total-depenses', 'assurance-qe', 'frais-garanties', 'redevances'];
 
     cibleInputs.forEach(input => {
       const category = input.closest('td')?.getAttribute('data-category');
@@ -13954,7 +14117,8 @@ function cancelEtatsResultatsEdits() {
 
   // Restaurer les valeurs ACTUEL
   actuelInputs.forEach(input => {
-    const category = input.closest('td')?.getAttribute('data-category');
+    // Chercher la catégorie sur le td parent OU directement sur l'input (mobile)
+    const category = input.closest('td')?.getAttribute('data-category') || input.getAttribute('data-category');
     if (category && originalEtatsResultatsValues.actuel && originalEtatsResultatsValues.actuel[category]) {
       input.value = originalEtatsResultatsValues.actuel[category];
     }
@@ -13962,7 +14126,8 @@ function cancelEtatsResultatsEdits() {
 
   // Restaurer les valeurs CIBLÉ
   cibleInputs.forEach(input => {
-    const category = input.closest('td')?.getAttribute('data-category');
+    // Chercher la catégorie sur le td parent OU directement sur l'input (mobile)
+    const category = input.closest('td')?.getAttribute('data-category') || input.getAttribute('data-category');
     if (category && originalEtatsResultatsValues.cible && originalEtatsResultatsValues.cible[category]) {
       input.value = originalEtatsResultatsValues.cible[category];
     }
@@ -13991,19 +14156,41 @@ async function saveEtatsResultatsEdits() {
   saveBtn.style.opacity = '0.7';
 
   try {
-    // Synchroniser les valeurs mobile vers PC avant sauvegarde
-    const mobileInputs = document.querySelectorAll('#etats-mobile-container .etats-resultats-cible-input');
-    mobileInputs.forEach(mobileInput => {
-      const category = mobileInput.getAttribute('data-category');
-      if (category) {
-        // Trouver l'input PC correspondant
-        const pcInput = document.querySelector(`#etat-resultats td[data-category="${category}"][data-field="cible-montant"] input`);
-        if (pcInput) {
-          pcInput.value = mobileInput.value;
-          console.log(`📱→💻 Sync mobile vers PC: ${category} = ${mobileInput.value}`);
+    // Déterminer si on est sur mobile/tablette ou PC
+    // Sur mobile/tablette: sync mobile → PC (l'utilisateur a édité sur mobile)
+    // Sur PC: sync PC → mobile (l'utilisateur a édité sur PC)
+    const isMobileOrTablet = window.innerWidth <= 1200;
+    console.log(`📱💻 [SAVE] Mode: ${isMobileOrTablet ? 'Mobile/Tablette' : 'PC'} (width: ${window.innerWidth}px)`);
+
+    if (isMobileOrTablet) {
+      // Sur mobile/tablette: synchroniser mobile → PC
+      const mobileCibleInputs = document.querySelectorAll('#etats-mobile-container .etats-resultats-cible-input');
+      mobileCibleInputs.forEach(mobileInput => {
+        const category = mobileInput.getAttribute('data-category');
+        if (category) {
+          const pcInput = document.querySelector(`#etat-resultats td[data-category="${category}"][data-field="cible-montant"] input`);
+          if (pcInput) {
+            pcInput.value = mobileInput.value;
+            console.log(`📱→💻 Sync CIBLÉ mobile vers PC: ${category} = ${mobileInput.value}`);
+          }
         }
-      }
-    });
+      });
+
+      const mobileActuelInputs = document.querySelectorAll('#etats-mobile-container .etats-resultats-input');
+      mobileActuelInputs.forEach(mobileInput => {
+        const category = mobileInput.getAttribute('data-category');
+        if (category) {
+          const pcInput = document.querySelector(`#etat-resultats td[data-category="${category}"][data-field="actuel-montant"] input`);
+          if (pcInput) {
+            pcInput.value = mobileInput.value;
+            console.log(`📱→💻 Sync RÉEL mobile vers PC: ${category} = ${mobileInput.value}`);
+          }
+        }
+      });
+    } else {
+      // Sur PC: synchroniser PC → mobile (pour que generateEtatsMobile ait les bonnes valeurs)
+      console.log(`💻→📱 Mode PC: les valeurs PC sont la source de vérité`);
+    }
 
     // Formater les cellules ACTUEL contenteditable (celles sans input enfant)
     const actuelCells = document.querySelectorAll('[data-field="actuel-montant"]');
@@ -14048,6 +14235,47 @@ async function saveEtatsResultatsEdits() {
     console.log('🔍 [SAVE] Étape 1: updateCibleCalculations()...');
     updateCibleCalculations();
     console.log('✅ [SAVE] Étape 1 terminée');
+
+    // Calculer explicitement les % CIBLÉ depuis les montants actuels pour s'assurer qu'ils sont sauvegardés
+    console.log('🔍 [SAVE] Étape 1.5: Calcul explicite des % CIBLÉ...');
+    const objectifCAInput = document.getElementById('objectifCA');
+    // Essayer dataset.value d'abord, sinon parser la valeur affichée
+    let objectifCA = parseFloat(objectifCAInput?.dataset?.value) || 0;
+    if (objectifCA === 0 && objectifCAInput) {
+      // Fallback: parser la valeur affichée (ex: "400 000,00 $")
+      objectifCA = parseMoneyValue(objectifCAInput.value);
+      console.log(`📊 [SAVE] Objectif CA (fallback from displayed value) = ${objectifCA}`);
+    }
+    console.log(`📊 [SAVE] Objectif CA = ${objectifCA}`);
+
+    if (objectifCA > 0) {
+      const categoriesToCalc = [
+        'concours', 'essence', 'entretien-voiture', 'fourniture-bureau',
+        'frais-bancaires', 'frais-cellulaire', 'leads', 'peinture',
+        'petits-outils', 'repas', 'salaire-peintres', 'salaires-representant'
+      ];
+
+      // Initialiser window.customBudgetPercent si nécessaire
+      if (!window.customBudgetPercent) {
+        window.customBudgetPercent = {};
+      }
+
+      categoriesToCalc.forEach(category => {
+        // Sélecteur simplifié - cherche directement le td avec les attributs
+        const pcInput = document.querySelector(`td[data-category="${category}"][data-field="cible-montant"] input`);
+        if (pcInput) {
+          const montant = parseMoneyValue(pcInput.value);
+          const percent = (montant / objectifCA) * 100;
+          window.customBudgetPercent[category] = percent;
+          console.log(`   📊 ${category}: ${montant}$ → ${percent.toFixed(2)}%`);
+        } else {
+          console.log(`   ⚠️ ${category}: INPUT NON TROUVÉ`);
+        }
+      });
+      console.log('✅ [SAVE] Étape 1.5 terminée - % CIBLÉ calculés:', window.customBudgetPercent);
+    } else {
+      console.log('⚠️ [SAVE] Objectif CA = 0, % non calculés');
+    }
 
     // Recalculer tous les totaux et écarts
     console.log('🔍 [SAVE] Étape 2: updateAllCalculations()...');
@@ -14250,7 +14478,7 @@ async function initEtatsResultatsEditor() {
   const editableCibleInputs = document.querySelectorAll('.etats-resultats-cible-input');
 
   // Catégories qui ne doivent JAMAIS être modifiables
-  const nonEditableCategories = ['assurance-qe', 'frais-garanties', 'redevances'];
+  const nonEditableCategories = ['ventes', 'profit', 'total-ecart', 'total-depenses', 'assurance-qe', 'frais-garanties', 'redevances'];
 
   editableCibleInputs.forEach(input => {
     const category = input.closest('td')?.getAttribute('data-category');
@@ -14300,10 +14528,17 @@ async function initEtatsResultatsEditor() {
   log('[OK] Éditeur initialisé:', editableActuelCells.length, 'cellules Actuel,', editableCibleInputs.length, 'inputs CIBLÉ');
 
   // Forcer le calcul initial des écarts après l'initialisation complète
+  // NOTE: Ne PAS appeler updateCibleCalculations() ici car les données CIBLÉ
+  // ont déjà été chargées par loadEtatsResultatsData(). L'appeler écraserait
+  // les valeurs sauvegardées avec des valeurs recalculées à partir des %.
   setTimeout(() => {
-    updateCibleCalculations();
     updateAllCalculations();
-    log('🔄 Calculs initiaux des écarts et CIBLÉ effectués');
+    // Régénérer les cartes mobiles APRÈS les calculs pour avoir les écarts corrects
+    if (typeof generateEtatsMobile === 'function') {
+      generateEtatsMobile();
+      log('📱 Cartes mobiles regénérées après calculs');
+    }
+    log('🔄 Calculs initiaux des écarts effectués');
   }, 200);
 }
 
@@ -14555,23 +14790,24 @@ function generateEtatsMobile() {
         </div>
       `;
     } else if (item.type === 'row') {
-      // Récupérer les données du tableau
-      const budgetMontantCell = document.querySelector(`[data-category="${item.category}"][data-field="budget-montant"]`);
-      const budgetPercentCell = budgetMontantCell?.nextElementSibling;
-      const actuelMontantCell = document.querySelector(`[data-category="${item.category}"][data-field="actuel-montant"]`);
-      const actuelPercentCell = document.querySelector(`[data-category="${item.category}"][data-field="actuel-percent"]`);
+      // Récupérer les données du tableau PC (champs cible/budget et actuel)
+      // Note: "ventes" utilise "budget-montant" au lieu de "cible-montant"
+      const cibleFieldName = item.category === 'ventes' ? 'budget-montant' : 'cible-montant';
+      const ciblePercentFieldName = item.category === 'ventes' ? 'budget-percent' : 'cible-percent';
 
-      const budgetMontant = budgetMontantCell?.textContent.trim() || '0 $';
-      const budgetPercent = budgetPercentCell?.textContent.trim() || '0%';
+      const cibleMontantCell = document.querySelector(`#etat-resultats td[data-category="${item.category}"][data-field="${cibleFieldName}"]`);
+      const ciblePercentCell = document.querySelector(`#etat-resultats td[data-category="${item.category}"][data-field="${ciblePercentFieldName}"]`);
+      const actuelMontantCell = document.querySelector(`#etat-resultats td[data-category="${item.category}"][data-field="actuel-montant"]`);
+      const actuelPercentCell = document.querySelector(`#etat-resultats td[data-category="${item.category}"][data-field="actuel-percent"]`);
+
+      // Récupérer les valeurs (input ou texte)
+      const cibleMontant = cibleMontantCell?.querySelector('input')?.value || cibleMontantCell?.textContent.trim() || '0 $';
+      // Pour ventes, le % est toujours 100% (pas de data-field pour budget-percent)
+      const ciblePercent = item.category === 'ventes' ? '100%' : (ciblePercentCell?.textContent.trim() || '0%');
       const actuelMontant = actuelMontantCell?.querySelector('input')?.value || actuelMontantCell?.textContent.trim() || '0 $';
       const actuelPercent = actuelPercentCell?.textContent.trim() || '0%';
 
       const labelColor = item.isHighlight ? '#f87171' : 'var(--text-light)';
-
-      // Récupérer la valeur de l'input ciblé depuis le tableau PC
-      const cibleMontantCell = document.querySelector(`[data-category="${item.category}"][data-field="cible-montant"]`);
-      const cibleInput = cibleMontantCell?.querySelector('input');
-      const cibleMontant = cibleInput?.value || budgetMontant;
 
       html += `
         <div class="etats-mobile-card">
@@ -14585,7 +14821,7 @@ function generateEtatsMobile() {
           </div>
           <div class="etats-mobile-row">
             <span class="etats-mobile-label"><i class="fas fa-bullseye mr-1 text-blue-400" style="font-size: 0.7rem;"></i> CIBLÉ %</span>
-            <span class="etats-mobile-value" style="color: ${item.isHighlight && budgetPercent !== '0%' ? '#ef4444' : 'var(--text-light)'};">${budgetPercent}</span>
+            <span class="etats-mobile-value etats-mobile-cible-percent" data-category="${item.category}" style="color: ${item.isHighlight && ciblePercent !== '0%' && ciblePercent !== '0.00%' ? '#ef4444' : 'var(--text-light)'};">${ciblePercent}</span>
           </div>
           ${!hideEcart ? `
           <div class="etats-mobile-row">
@@ -14599,11 +14835,11 @@ function generateEtatsMobile() {
           ` : ''}
           <div class="etats-mobile-row">
             <span class="etats-mobile-label"><i class="fas fa-chart-bar mr-1 text-purple-400" style="font-size: 0.7rem;"></i> RÉEL Montant</span>
-            <span class="etats-mobile-value">${actuelMontant}</span>
+            <span class="etats-mobile-value"><input type="text" readonly class="etats-resultats-input bg-transparent border-none" style="color: var(--text-light); outline: none; text-align: right; width: 100%;" value="${actuelMontant}" data-category="${item.category}" data-field="actuel-montant-mobile"></span>
           </div>
           <div class="etats-mobile-row">
             <span class="etats-mobile-label"><i class="fas fa-chart-bar mr-1 text-purple-400" style="font-size: 0.7rem;"></i> RÉEL %</span>
-            <span class="etats-mobile-value">${actuelPercent}</span>
+            <span class="etats-mobile-value etats-mobile-actuel-percent" data-category="${item.category}">${actuelPercent}</span>
           </div>
         </div>
       `;
@@ -14701,9 +14937,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       log('📱 [DOM] Appel de generateEtatsMobile()');
       generateEtatsMobile();
 
-      // Appeler updateCibleCalculations() APRÈS que les données soient chargées
-      log('[INIT] Appel de updateCibleCalculations() après chargement des données');
-      updateCibleCalculations();
+      // NOTE: Ne PAS appeler updateCibleCalculations() ici car les données CIBLÉ
+      // ont déjà été chargées par initEtatsResultatsEditor(). L'appeler écraserait
+      // les valeurs sauvegardées avec les valeurs par défaut.
       log('✅ [DOM] Initialisation complète des États des Résultats');
 
       // Marquer comme initialisé

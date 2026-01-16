@@ -19744,8 +19744,12 @@ async def save_actuel_data(username: str, data: dict):
     try:
         actuel_data = data.get('actuel_data', {})
         cible_data = data.get('cible_data', {})
-        budget_percent = data.get('budget_percent', {})
-        success = update_etats_resultats_actuel(username, actuel_data, cible_data, budget_percent)
+        cible_percent = data.get('cible_percent', {})
+        print(f"[DEBUG États Résultats] Received for {username}:")
+        print(f"  - actuel_data keys: {list(actuel_data.keys()) if actuel_data else 'empty'}")
+        print(f"  - cible_data keys: {list(cible_data.keys()) if cible_data else 'empty'}")
+        print(f"  - cible_percent: {cible_percent}")
+        success = update_etats_resultats_actuel(username, actuel_data, cible_data, cible_percent)
         if success:
             return {"status": "success", "message": "Actuel, CIBLÉ et % sauvegardés"}
         else:
@@ -19763,7 +19767,7 @@ async def get_actuel_data(username: str):
         return {
             "actuel_data": data.get('actuel', {}),
             "cible_data": data.get('cible', {}),
-            "budget_percent": data.get('budget_percent', {})
+            "cible_percent": data.get('cible_percent', {})
         }
     except Exception as e:
         print(f"[Erreur États Résultats] Chargement actuel/cible {username}: {e}")

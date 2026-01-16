@@ -19590,15 +19590,15 @@ async def save_weekly_targets(data: dict):
 
                 # IMPORTANT: NE PAS réinitialiser les *_obj_modifier!
                 # On met à jour seulement les *_vise (valeurs du plan) et on garde les modifications manuelles
-                # Si les champs *_obj_modifier n'existent pas encore, les créer à 0
+                # Si les champs *_obj_modifier n'existent pas encore, les créer à null (pas de modification manuelle)
                 if "h_marketing_obj_modifier" not in rpo_data["weekly"][month_key][week_key]:
-                    rpo_data["weekly"][month_key][week_key]["h_marketing_obj_modifier"] = 0
+                    rpo_data["weekly"][month_key][week_key]["h_marketing_obj_modifier"] = None
                 if "estimation_obj_modifier" not in rpo_data["weekly"][month_key][week_key]:
-                    rpo_data["weekly"][month_key][week_key]["estimation_obj_modifier"] = 0
+                    rpo_data["weekly"][month_key][week_key]["estimation_obj_modifier"] = None
                 if "contract_obj_modifier" not in rpo_data["weekly"][month_key][week_key]:
-                    rpo_data["weekly"][month_key][week_key]["contract_obj_modifier"] = 0
+                    rpo_data["weekly"][month_key][week_key]["contract_obj_modifier"] = None
                 if "dollar_obj_modifier" not in rpo_data["weekly"][month_key][week_key]:
-                    rpo_data["weekly"][month_key][week_key]["dollar_obj_modifier"] = 0
+                    rpo_data["weekly"][month_key][week_key]["dollar_obj_modifier"] = None
 
                 print(f"[SAVE TARGETS] Mise à jour *_vise pour mois {month_key} semaine {week_key} (garde overrides existants)")
 

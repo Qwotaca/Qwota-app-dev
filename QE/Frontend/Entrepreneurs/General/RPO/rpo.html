@@ -5547,19 +5547,18 @@ async function loadWeeklyDataForMonth(monthIndex) {
         }
 
         // Load objectives with priority system:
-        // 1. If obj_modifier exists and > 0, use it (manual override)
+        // 1. If obj_modifier exists (not null/undefined), use it (manual override - even if 0)
         // 2. Otherwise, use vise from business plan (auto-calculated)
 
         // H. Marketing
         const hMarketingVise = data.h_marketing_vise || 0;
-        const hMarketingValue = (data.h_marketing_obj_modifier && data.h_marketing_obj_modifier > 0)
-          ? data.h_marketing_obj_modifier
-          : hMarketingVise;
-        if (hMarketingValue > 0) {
+        const hMarketingHasModifier = data.h_marketing_obj_modifier !== null && data.h_marketing_obj_modifier !== undefined;
+        const hMarketingValue = hMarketingHasModifier ? data.h_marketing_obj_modifier : hMarketingVise;
+        if (hMarketingValue >= 0) {
           const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="h_marketing_obj"]`);
           if (input) {
             // Arrondir pour affichage (0.3h → 1h), mais garder la valeur décimale dans dataset
-            input.value = Math.ceil(hMarketingValue) + ' h';
+            input.value = hMarketingValue > 0 ? Math.ceil(hMarketingValue) + ' h' : '0 h';
             input.dataset.value = hMarketingValue;
             input.dataset.vise = hMarketingVise; // Stocker la valeur du plan
           }
@@ -5567,10 +5566,9 @@ async function loadWeeklyDataForMonth(monthIndex) {
 
         // Estimations
         const estimationVise = data.estimation_vise || 0;
-        const estimationValue = (data.estimation_obj_modifier && data.estimation_obj_modifier > 0)
-          ? data.estimation_obj_modifier
-          : estimationVise;
-        if (estimationValue > 0) {
+        const estimationHasModifier = data.estimation_obj_modifier !== null && data.estimation_obj_modifier !== undefined;
+        const estimationValue = estimationHasModifier ? data.estimation_obj_modifier : estimationVise;
+        if (estimationValue >= 0) {
           const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="estimation_obj"]`);
           if (input) {
             input.value = estimationValue % 1 === 0 ? estimationValue : estimationValue.toFixed(1);
@@ -5581,10 +5579,9 @@ async function loadWeeklyDataForMonth(monthIndex) {
 
         // Contrats
         const contractVise = data.contract_vise || 0;
-        const contractValue = (data.contract_obj_modifier && data.contract_obj_modifier > 0)
-          ? data.contract_obj_modifier
-          : contractVise;
-        if (contractValue > 0) {
+        const contractHasModifier = data.contract_obj_modifier !== null && data.contract_obj_modifier !== undefined;
+        const contractValue = contractHasModifier ? data.contract_obj_modifier : contractVise;
+        if (contractValue >= 0) {
           const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="contract_obj"]`);
           if (input) {
             input.value = contractValue % 1 === 0 ? contractValue : contractValue.toFixed(1);
@@ -5595,13 +5592,12 @@ async function loadWeeklyDataForMonth(monthIndex) {
 
         // Dollar
         const dollarVise = data.dollar_vise || 0;
-        const dollarValue = (data.dollar_obj_modifier && data.dollar_obj_modifier > 0)
-          ? data.dollar_obj_modifier
-          : dollarVise;
-        if (dollarValue > 0) {
+        const dollarHasModifier = data.dollar_obj_modifier !== null && data.dollar_obj_modifier !== undefined;
+        const dollarValue = dollarHasModifier ? data.dollar_obj_modifier : dollarVise;
+        if (dollarValue >= 0) {
           const input = document.querySelector(`input[data-week="${weekNumber}"][data-field="dollar_obj"]`);
           if (input) {
-            input.value = Math.round(dollarValue).toLocaleString('fr-CA') + ' $';
+            input.value = dollarValue > 0 ? Math.round(dollarValue).toLocaleString('fr-CA') + ' $' : '0 $';
             input.dataset.value = dollarValue;
             input.dataset.vise = dollarVise; // Stocker la valeur du plan
           }
@@ -8476,8 +8472,8 @@ async function saveWeeklyDataToBackend(monthIndex, weekNumber) {
   if (hMarketingObjInput) {
     const value = parseFloat(hMarketingObjInput.dataset.value);
     const vise = parseFloat(hMarketingObjInput.dataset.vise) || 0;
-    // Si la valeur est identique au plan (vise), envoyer 0. Sinon envoyer la modification.
-    data.h_marketing_obj_modifier = (isNaN(value) || value === vise) ? 0 : value;
+    // Si la valeur est identique au plan (vise), envoyer null. Sinon envoyer la modification (même si 0).
+    data.h_marketing_obj_modifier = (isNaN(value) || value === vise) ? null : value;
     console.log(`[SAVE OBJ] h_marketing: value=${value}, vise=${vise}, modifier=${data.h_marketing_obj_modifier}`);
   }
 
@@ -8486,8 +8482,8 @@ async function saveWeeklyDataToBackend(monthIndex, weekNumber) {
   if (estimationObjInput) {
     const value = parseFloat(estimationObjInput.dataset.value);
     const vise = parseFloat(estimationObjInput.dataset.vise) || 0;
-    // Si la valeur est identique au plan (vise), envoyer 0. Sinon envoyer la modification.
-    data.estimation_obj_modifier = (isNaN(value) || value === vise) ? 0 : value;
+    // Si la valeur est identique au plan (vise), envoyer null. Sinon envoyer la modification (même si 0).
+    data.estimation_obj_modifier = (isNaN(value) || value === vise) ? null : value;
     console.log(`[SAVE OBJ] estimation: value=${value}, vise=${vise}, modifier=${data.estimation_obj_modifier}`);
   }
 
@@ -8496,8 +8492,8 @@ async function saveWeeklyDataToBackend(monthIndex, weekNumber) {
   if (contractObjInput) {
     const value = parseFloat(contractObjInput.dataset.value);
     const vise = parseFloat(contractObjInput.dataset.vise) || 0;
-    // Si la valeur est identique au plan (vise), envoyer 0. Sinon envoyer la modification.
-    data.contract_obj_modifier = (isNaN(value) || value === vise) ? 0 : value;
+    // Si la valeur est identique au plan (vise), envoyer null. Sinon envoyer la modification (même si 0).
+    data.contract_obj_modifier = (isNaN(value) || value === vise) ? null : value;
     console.log(`[SAVE OBJ] contract: value=${value}, vise=${vise}, modifier=${data.contract_obj_modifier}`);
   }
 
@@ -8506,8 +8502,8 @@ async function saveWeeklyDataToBackend(monthIndex, weekNumber) {
   if (dollarObjInput) {
     const value = parseFloat(dollarObjInput.dataset.value);
     const vise = parseFloat(dollarObjInput.dataset.vise) || 0;
-    // Si la valeur est identique au plan (vise), envoyer 0. Sinon envoyer la modification.
-    data.dollar_obj_modifier = (isNaN(value) || value === vise) ? 0 : value;
+    // Si la valeur est identique au plan (vise), envoyer null. Sinon envoyer la modification (même si 0).
+    data.dollar_obj_modifier = (isNaN(value) || value === vise) ? null : value;
     console.log(`[SAVE OBJ] dollar: value=${value}, vise=${vise}, modifier=${data.dollar_obj_modifier}`);
   }
 

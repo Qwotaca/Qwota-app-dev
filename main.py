@@ -2267,6 +2267,8 @@ def get_prospects(username: str):
 async def supprimer_prospect_by_id(data: dict = Body(...)):
     """
     Supprime un prospect par ID
+    Synchronisé avec le calendrier Google: si le prospect vient du calendrier,
+    il sera aussi ajouté à la blacklist pour ne plus apparaître dans les événements
     """
     try:
         username = data.get("username")
@@ -2287,16 +2289,40 @@ async def supprimer_prospect_by_id(data: dict = Body(...)):
             else:
                 prospects = json.loads(content)
 
-        # Filtrer pour retirer le prospect avec cet ID
-        nouveaux_prospects = [p for p in prospects if p.get('id') != prospect_id]
+        # Trouver le prospect à supprimer pour vérifier sa source
+        prospect_supprime = None
+        nouveaux_prospects = []
+        for p in prospects:
+            if p.get('id') == prospect_id:
+                prospect_supprime = p
+            else:
+                nouveaux_prospects.append(p)
 
-        if len(nouveaux_prospects) == len(prospects):
+        if not prospect_supprime:
             print(f"[WARNING] Aucun prospect trouvé avec ID: {prospect_id}")
             return JSONResponse({"success": False, "message": "Prospect non trouvé"})
 
         # Sauvegarder la liste mise à jour
         with open(fichier_prospects, "w", encoding="utf-8") as f:
             json.dump(nouveaux_prospects, f, indent=2, ensure_ascii=False)
+
+        # SYNCHRONISATION: Ajouter à la blacklist si c'est un événement Google Calendar
+        # (Les IDs Google Calendar ne sont pas des UUIDs standards)
+        if prospect_supprime.get("source") == "google_calendar" or not prospect_id.count("-") == 4:
+            blacklist_dir = f"{base_cloud}/blacklist"
+            os.makedirs(blacklist_dir, exist_ok=True)
+            blacklist_file = os.path.join(blacklist_dir, f"{username}.json")
+
+            ids = []
+            if os.path.exists(blacklist_file):
+                with open(blacklist_file, "r", encoding="utf-8") as f:
+                    ids = json.load(f)
+
+            if prospect_id not in ids:
+                ids.append(prospect_id)
+                with open(blacklist_file, "w", encoding="utf-8") as f:
+                    json.dump(ids, f, indent=2)
+                print(f"[SYNC] Event ID {prospect_id} ajouté à la blacklist pour {username}")
 
         print(f"[OK] Prospect supprimé: {prospect_id} pour {username}")
         return JSONResponse({"success": True, "message": "Prospect supprimé avec succès"})
@@ -2989,9 +3015,52 @@ def evenements_a_completer(username: str):
             "telephone": telephone
         })
 
-    # NOTE: Les événements calendrier ne sont plus automatiquement sauvegardés dans travaux_a_completer
-    # Ils ne deviennent des "travaux à compléter" qu'après avoir été transformés en soumissions signées
-    print(f"[[INFO]] {len(result)} événements récupérés du calendrier pour {username} (non sauvegardés automatiquement)")
+    # ==========================================
+    # SYNCHRONISATION: Ajouter les événements aux prospects
+    # Utilise l'event_id Google comme ID prospect pour synchronisation bidirectionnelle
+    # ==========================================
+    prospects_dir = os.path.join(f"{base_cloud}/prospects", username)
+    os.makedirs(prospects_dir, exist_ok=True)
+    fichier_prospects = os.path.join(prospects_dir, "prospects.json")
+
+    # Charger les prospects existants
+    prospects_existants = []
+    if os.path.exists(fichier_prospects):
+        try:
+            with open(fichier_prospects, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if content:
+                    prospects_existants = json.loads(content)
+        except:
+            prospects_existants = []
+
+    # IDs des prospects existants
+    ids_existants = {p.get("id") for p in prospects_existants}
+
+    # Ajouter les nouveaux événements comme prospects
+    nouveaux_prospects_ajoutes = 0
+    for event in result:
+        if event["id"] not in ids_existants:
+            nouveau_prospect = {
+                "id": event["id"],  # Utilise l'event_id Google comme ID
+                "prenom": event["prenom"],
+                "nom": event["nom"],
+                "telephone": event["telephone"],
+                "adresse": event["adresse"],
+                "date_ajout": datetime.now().isoformat(),
+                "statut": "client_potentiel",
+                "source": "google_calendar"  # Marqueur pour identifier la source
+            }
+            prospects_existants.append(nouveau_prospect)
+            nouveaux_prospects_ajoutes += 1
+
+    # Sauvegarder si des nouveaux prospects ont été ajoutés
+    if nouveaux_prospects_ajoutes > 0:
+        with open(fichier_prospects, "w", encoding="utf-8") as f:
+            json.dump(prospects_existants, f, indent=2, ensure_ascii=False)
+        print(f"[SYNC] {nouveaux_prospects_ajoutes} nouveaux événements ajoutés aux prospects pour {username}")
+
+    print(f"[[INFO]] {len(result)} événements récupérés du calendrier pour {username}")
 
     return result
 
@@ -3019,29 +3088,47 @@ def sauver_agenda_id(data: dict = Body(...)):
 @app.post("/supprimer-evenement")
 def supprimer_evenement(data: dict = Body(...)):
     print("🧪 DATA REÇU :", data)
-    
+
     event_id = data.get("event_id")
     username = data.get("username")
-    
+
     if not event_id or not username:
         raise HTTPException(status_code=400, detail="Champs manquants")
-    
+
+    # 1. Ajouter à la blacklist des événements
     blacklist_dir = f"{base_cloud}/blacklist"
     os.makedirs(blacklist_dir, exist_ok=True)
     blacklist_file = os.path.join(blacklist_dir, f"{username}.json")
-    
+
     if os.path.exists(blacklist_file):
         with open(blacklist_file, "r", encoding="utf-8") as f:
             ids = json.load(f)
     else:
         ids = []
-    
+
     if event_id not in ids:
         ids.append(event_id)
-    
+
     with open(blacklist_file, "w", encoding="utf-8") as f:
         json.dump(ids, f, indent=2)
-    
+
+    # 2. SYNCHRONISATION: Supprimer aussi le prospect avec cet ID
+    fichier_prospects = os.path.join(f"{base_cloud}/prospects", username, "prospects.json")
+    if os.path.exists(fichier_prospects):
+        try:
+            with open(fichier_prospects, "r", encoding="utf-8") as f:
+                prospects = json.load(f)
+
+            # Filtrer pour retirer le prospect avec cet event_id
+            prospects_filtres = [p for p in prospects if p.get("id") != event_id]
+
+            if len(prospects_filtres) < len(prospects):
+                with open(fichier_prospects, "w", encoding="utf-8") as f:
+                    json.dump(prospects_filtres, f, indent=2, ensure_ascii=False)
+                print(f"[SYNC] Prospect avec ID {event_id} supprimé des prospects pour {username}")
+        except Exception as e:
+            print(f"[WARNING] Erreur lors de la suppression du prospect synchronisé: {e}")
+
     return {"message": "Événement supprimé [OK]"}
 
 @app.post("/bannir-client-a-completer")

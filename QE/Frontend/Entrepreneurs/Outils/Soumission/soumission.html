@@ -219,12 +219,9 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
 
-    /* Mobile: cacher zoom slider et footer dans "Voir en PDF" (pinch zoom avec doigts) */
+    /* Mobile: cacher zoom slider (pinch zoom avec doigts) - footer géré via JavaScript selon le mode */
     @media (max-width: 768px) {
       #pdfModal #zoomSliderContainer {
-        display: none !important;
-      }
-      #pdfModal #pdfFooterActions {
         display: none !important;
       }
     }
@@ -934,9 +931,9 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
       const oldCanvases = canvasContainer.querySelectorAll('canvas');
       oldCanvases.forEach(cnv => cnv.remove());
 
-      // Échelle adaptée selon mobile/desktop
+      // Échelle adaptée selon mobile/desktop - mobile plus zoomer par défaut
       const isMobile = window.innerWidth <= 768;
-      let currentScale = isMobile ? 0.8 : 2;
+      let currentScale = isMobile ? 1.8 : 2;
       const minScale = 0.5;
       const maxScale = 3.0;
 
@@ -1303,9 +1300,9 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
     const oldCanvases = canvasContainer.querySelectorAll('canvas');
     oldCanvases.forEach(cnv => cnv.remove());
 
-    // Échelle adaptée selon mobile/desktop
+    // Échelle adaptée selon mobile/desktop - mobile plus zoomer par défaut
     const isMobilePresent = window.innerWidth <= 768;
-    let currentScalePresent = isMobilePresent ? 0.8 : 2;
+    let currentScalePresent = isMobilePresent ? 1.8 : 2;
     const minScalePresent = 0.5;
     const maxScalePresent = 3.0;
 
@@ -7327,6 +7324,8 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
           // Exposer les fonctions sur le parent pour que les onclick fonctionnent
           rootWindow.closeEndroitModal = window.closeEndroitModal;
           rootWindow.confirmEndroitSelection = window.confirmEndroitSelection;
+          rootWindow.addCustomEndroit = window.addCustomEndroit;
+          rootWindow.removeEndroitChip = window.removeEndroitChip;
           console.log('[MODAL ENDROIT] Fonctions exposées sur parent');
 
           // Bloquer le scroll du parent
@@ -7976,7 +7975,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     }
 
     // Fonction pour supprimer un chip endroit
-    function removeEndroitChip(index) {
+    window.removeEndroitChip = function removeEndroitChip(index) {
       const removedValue = endroitSelections[index];
       endroitSelections.splice(index, 1);
 
@@ -8003,7 +8002,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     }
 
     // Fonction pour ajouter un endroit personnalisé
-    function addCustomEndroit() {
+    window.addCustomEndroit = function addCustomEndroit() {
       let endroitModal = document.getElementById('endroitModal');
       if (!endroitModal && window.parent) {
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;

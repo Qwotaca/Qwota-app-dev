@@ -71,6 +71,56 @@ window.debug = window.debug || (() => {});
   }
 })();
 
+// ==========================================
+// BLOCAGE MOBILE POUR COACH/DIRECTION
+// ==========================================
+(function() {
+  'use strict';
+
+  function isMobileDevice() {
+    // Détecter téléphone (pas tablette) via taille d'écran et user agent
+    const isSmallScreen = window.innerWidth <= 768;
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const mobileUserAgent = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    // iPad et tablettes Android ont généralement une largeur > 768px en portrait
+    const isTablet = /iPad|Android/i.test(navigator.userAgent) && window.innerWidth > 768;
+
+    return isSmallScreen && (mobileUserAgent || isTouchDevice) && !isTablet;
+  }
+
+  function createMobileBlockOverlay() {
+    if (document.querySelector('.mobile-block-overlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'mobile-block-overlay';
+    overlay.innerHTML = `
+      <i class="fas fa-desktop mobile-block-icon"></i>
+      <div class="mobile-block-message">Application disponible uniquement sur PC</div>
+      <div class="mobile-block-submessage">L'accès Coach et Direction nécessite un ordinateur</div>
+    `;
+    document.body.innerHTML = '';
+    document.body.appendChild(overlay);
+  }
+
+  function checkCoachDirectionMobile() {
+    const userRole = localStorage.getItem('userRole');
+
+    if ((userRole === 'coach' || userRole === 'direction') && isMobileDevice()) {
+      createMobileBlockOverlay();
+    }
+  }
+
+  // Vérifier dès que le DOM est prêt
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkCoachDirectionMobile);
+  } else {
+    checkCoachDirectionMobile();
+  }
+
+  // Revérifier au resize (si l'utilisateur change la taille de la fenêtre)
+  window.addEventListener('resize', checkCoachDirectionMobile);
+})();
+
 // Variables globales - éviter la redéclaration
 if (typeof window.userRole === 'undefined') {
   window.userRole = null;

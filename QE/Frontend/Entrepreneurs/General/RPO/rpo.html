@@ -13782,7 +13782,8 @@ function toggleEditEtatsResultats() {
     });
 
     cibleInputs.forEach(input => {
-      const category = input.closest('td')?.getAttribute('data-category');
+      // Chercher la catégorie sur le td parent OU directement sur l'input (mobile)
+      const category = input.closest('td')?.getAttribute('data-category') || input.getAttribute('data-category');
       if (category) {
         originalEtatsResultatsValues.cible[category] = input.value;
       }
@@ -13827,7 +13828,8 @@ function toggleEditEtatsResultats() {
     console.log('🔍 [ETATS] Début de la boucle cibleInputs, nombre:', cibleInputs.length);
 
     cibleInputs.forEach((input, index) => {
-      const category = input.closest('td')?.getAttribute('data-category');
+      // Chercher la catégorie sur le td parent OU directement sur l'input (mobile)
+      const category = input.closest('td')?.getAttribute('data-category') || input.getAttribute('data-category');
       console.log(`🔍 [ETATS] Input ${index}: category="${category}", hasReadonly="${input.hasAttribute('readonly')}"`);
 
       // Ne PAS rendre éditable les catégories spécifiques
@@ -13853,7 +13855,7 @@ function toggleEditEtatsResultats() {
       input.style.cursor = 'text';
       input.style.opacity = '1';
 
-      // Changer le padding du td parent
+      // Changer le padding du td parent (seulement si c'est un input PC)
       const td = input.closest('td');
       if (td) {
         td.style.paddingLeft = '0.75rem';
@@ -13989,6 +13991,20 @@ async function saveEtatsResultatsEdits() {
   saveBtn.style.opacity = '0.7';
 
   try {
+    // Synchroniser les valeurs mobile vers PC avant sauvegarde
+    const mobileInputs = document.querySelectorAll('#etats-mobile-container .etats-resultats-cible-input');
+    mobileInputs.forEach(mobileInput => {
+      const category = mobileInput.getAttribute('data-category');
+      if (category) {
+        // Trouver l'input PC correspondant
+        const pcInput = document.querySelector(`#etat-resultats td[data-category="${category}"][data-field="cible-montant"] input`);
+        if (pcInput) {
+          pcInput.value = mobileInput.value;
+          console.log(`📱→💻 Sync mobile vers PC: ${category} = ${mobileInput.value}`);
+        }
+      }
+    });
+
     // Formater les cellules ACTUEL contenteditable (celles sans input enfant)
     const actuelCells = document.querySelectorAll('[data-field="actuel-montant"]');
     actuelCells.forEach(cell => {
@@ -14552,6 +14568,11 @@ function generateEtatsMobile() {
 
       const labelColor = item.isHighlight ? '#f87171' : 'var(--text-light)';
 
+      // Récupérer la valeur de l'input ciblé depuis le tableau PC
+      const cibleMontantCell = document.querySelector(`[data-category="${item.category}"][data-field="cible-montant"]`);
+      const cibleInput = cibleMontantCell?.querySelector('input');
+      const cibleMontant = cibleInput?.value || budgetMontant;
+
       html += `
         <div class="etats-mobile-card">
           <div class="etats-mobile-card-header">
@@ -14559,8 +14580,8 @@ function generateEtatsMobile() {
             <span style="color: ${labelColor};">${item.label}</span>
           </div>
           <div class="etats-mobile-row">
-            <span class="etats-mobile-label"><i class="fas fa-bullseye mr-1 text-blue-400" style="font-size: 0.7rem;"></i> CIBLÉ Budget</span>
-            <span class="etats-mobile-value">${budgetMontant}</span>
+            <span class="etats-mobile-label"><i class="fas fa-bullseye mr-1 text-blue-400" style="font-size: 0.7rem;"></i> CIBLÉ Montant</span>
+            <span class="etats-mobile-value"><input type="text" readonly class="etats-resultats-cible-input bg-transparent border-none" style="color: var(--text-light); outline: none; text-align: right; width: 100%;" value="${cibleMontant}" data-category="${item.category}" data-field="cible-montant-mobile"></span>
           </div>
           <div class="etats-mobile-row">
             <span class="etats-mobile-label"><i class="fas fa-bullseye mr-1 text-blue-400" style="font-size: 0.7rem;"></i> CIBLÉ %</span>
@@ -14577,8 +14598,8 @@ function generateEtatsMobile() {
           </div>
           ` : ''}
           <div class="etats-mobile-row">
-            <span class="etats-mobile-label"><i class="fas fa-chart-bar mr-1 text-purple-400" style="font-size: 0.7rem;"></i> RÉEL Actuel</span>
-            <span class="etats-mobile-value"><input type="text" readonly class="etats-resultats-input bg-transparent border-none" style="color: var(--text-light); outline: none; text-align: right; width: 100%;" value="${actuelMontant}" data-category="${item.category}"></span>
+            <span class="etats-mobile-label"><i class="fas fa-chart-bar mr-1 text-purple-400" style="font-size: 0.7rem;"></i> RÉEL Montant</span>
+            <span class="etats-mobile-value">${actuelMontant}</span>
           </div>
           <div class="etats-mobile-row">
             <span class="etats-mobile-label"><i class="fas fa-chart-bar mr-1 text-purple-400" style="font-size: 0.7rem;"></i> RÉEL %</span>

@@ -5736,6 +5736,10 @@
     const username = window.username;
     if (!username) {
       error('[VENTES] Aucun username défini');
+      // Signaler quand même que la page est prête (même sans données)
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'pageReady', pageId: 'ventes' }, '*');
+      }
       return;
     }
 
@@ -5753,6 +5757,12 @@
     ]);
 
     log('[VENTES] Toutes les données chargées');
+
+    // ⚡ SIGNALER à apppc.html que la page est prête (données chargées)
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'pageReady', pageId: 'ventes' }, '*');
+      log('[VENTES] 📣 Signal pageReady envoyé au parent');
+    }
   }
 
   async function loadProspects(tbodyId) {

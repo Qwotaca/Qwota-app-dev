@@ -5545,6 +5545,20 @@
         if (progressFill) progressFill.style.width = '0%';
         if (progressText) progressText.textContent = '0%';
 
+        // ⚡ SYSTÈME DE SIGNALEMENT: Les pages signalent quand leurs données sont chargées
+        window.pageReadySignals = {};
+        window.signalPageReady = function(pageId) {
+          console.log(`[PRELOAD] 📣 Page signale qu'elle est prête: ${pageId}`);
+          window.pageReadySignals[pageId] = true;
+        };
+
+        // Écouter les messages des iframes
+        window.addEventListener('message', function(event) {
+          if (event.data && event.data.type === 'pageReady' && event.data.pageId) {
+            window.signalPageReady(event.data.pageId);
+          }
+        });
+
         // ⚡ IMPORTANT: Récupérer le username pour l'ajouter aux URLs
         const username = window.username || localStorage.getItem('username');
 
@@ -5634,43 +5648,53 @@
               iframe.style.pointerEvents = 'none';
 
               iframe.addEventListener('load', function() {
-                loadedCount++;
-                batchLoaded++;
-                console.log(`[${deviceType}] ✓ (${loadedCount}/${totalPages}): ${page.name}`);
+                console.log(`[${deviceType}] ⏳ iframe load: ${page.name}, attente signal pageReady...`);
 
-                // ⚡ METTRE À JOUR LA BARRE DE PROGRESSION
-                const progress = Math.round((loadedCount / totalPages) * 100);
-                const progressFill = document.getElementById('loading-progress-fill');
-                const progressText = document.getElementById('loading-progress-text');
+                // ⚡ ATTENDRE que la page signale qu'elle est prête (données chargées)
+                const maxWait = 15000;
+                const checkInterval = 100;
+                let waited = 0;
 
-                if (progressFill) {
-                  progressFill.style.width = `${progress}%`;
-                }
-                if (progressText) {
-                  progressText.textContent = `${progress}%`;
-                }
+                function checkPageReady() {
+                  if (window.pageReadySignals[page.id] || waited >= maxWait) {
+                    if (waited >= maxWait) {
+                      console.log(`[${deviceType}] ⚠️ Timeout pour ${page.name}, on continue...`);
+                    } else {
+                      console.log(`[${deviceType}] ✅ Page prête: ${page.name}`);
+                    }
 
-                // Attendre 500ms APRÈS le load pour que TOUS les scripts/CSS se chargent
-                setTimeout(() => {
-                  // Re-cacher l'iframe maintenant que TOUT est en cache (HTML + CSS + JS)
-                  iframe.style.display = 'none';
-                  iframe.style.visibility = '';
-                  iframe.style.position = '';
-                  iframe.style.top = '';
-                  iframe.style.left = '';
-                  iframe.style.zIndex = '';
-                  iframe.style.pointerEvents = '';
-                  console.log(`[${deviceType}] 💾 HTML + CSS + JS en cache: ${page.name}`);
+                    loadedCount++;
+                    batchLoaded++;
+                    console.log(`[${deviceType}] ✓ (${loadedCount}/${totalPages}): ${page.name}`);
 
-                  // ⚡ FIX: Empêcher le double-incrément avec flag
-                  // Quand tout le batch est chargé, charger le batch suivant
-                  if (batchLoaded === batch.length && !batchCompleted) {
-                    batchCompleted = true; // Marquer comme complété
-                    currentBatchIndex++;
-                    // Petit délai entre les batchs pour ne pas surcharger
-                    setTimeout(loadNextBatch, 50);
+                    const progress = Math.round((loadedCount / totalPages) * 100);
+                    const progressFill = document.getElementById('loading-progress-fill');
+                    const progressText = document.getElementById('loading-progress-text');
+
+                    if (progressFill) progressFill.style.width = `${progress}%`;
+                    if (progressText) progressText.textContent = `${progress}%`;
+
+                    iframe.style.display = 'none';
+                    iframe.style.visibility = '';
+                    iframe.style.position = '';
+                    iframe.style.top = '';
+                    iframe.style.left = '';
+                    iframe.style.zIndex = '';
+                    iframe.style.pointerEvents = '';
+                    console.log(`[${deviceType}] 💾 Page en cache: ${page.name}`);
+
+                    if (batchLoaded === batch.length && !batchCompleted) {
+                      batchCompleted = true;
+                      currentBatchIndex++;
+                      setTimeout(loadNextBatch, 50);
+                    }
+                  } else {
+                    waited += checkInterval;
+                    setTimeout(checkPageReady, checkInterval);
                   }
-                }, 500); // Attendre 500ms pour que TOUS les scripts/CSS async se chargent
+                }
+
+                setTimeout(checkPageReady, 200);
               }, { once: true });
 
               // ⚡ IMPORTANT: Ajouter le paramètre ?user= pour éviter le rechargement lors de la navigation

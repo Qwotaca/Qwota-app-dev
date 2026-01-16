@@ -5651,13 +5651,16 @@
                 console.log(`[${deviceType}] ⏳ iframe load: ${page.name}, attente signal pageReady...`);
 
                 // ⚡ ATTENDRE que la page signale qu'elle est prête (données chargées)
-                const maxWait = 15000;
+                // Pages avec données lourdes (ventes, calcul) = 15s max
+                // Autres pages = 2s max (fallback pour pages sans signal)
+                const pagesAvecDonnees = ['ventes', 'calcul', 'rpo', 'gestionemployes', 'facturationqe'];
+                const maxWait = pagesAvecDonnees.includes(page.id) ? 15000 : 2000;
                 const checkInterval = 100;
                 let waited = 0;
 
                 function checkPageReady() {
                   if (window.pageReadySignals[page.id] || waited >= maxWait) {
-                    if (waited >= maxWait) {
+                    if (waited >= maxWait && !window.pageReadySignals[page.id]) {
                       console.log(`[${deviceType}] ⚠️ Timeout pour ${page.name}, on continue...`);
                     } else {
                       console.log(`[${deviceType}] ✅ Page prête: ${page.name}`);

@@ -5449,21 +5449,21 @@ function handleObjectiveInputChange(e) {
   let rawValue = input.value.replace(/\s/g, '').replace(/\$/g, '').replace(/h/g, '');
   const numericValue = parseFloat(rawValue);
 
-  // Bloquer la valeur 0 - afficher notification et reset à la valeur du plan
+  // Bloquer la valeur 0 - afficher notification et reset à la valeur précédente
   if (rawValue === '0' || (numericValue === 0 && rawValue !== '')) {
     showZeroNotAllowedNotification();
-    // Reset à la valeur du plan (vise)
-    const viseValue = parseFloat(input.dataset.vise) || 0;
-    input.dataset.value = viseValue;
-    // Remettre l'affichage à la valeur du plan
+    // Reset à la valeur précédente (modifier sauvegardé ou vise)
+    const previousValue = parseFloat(input.dataset.value) || parseFloat(input.dataset.vise) || 0;
+    // Ne pas changer dataset.value - garder la valeur précédente
+    // Remettre l'affichage à la valeur précédente
     if (field === 'h_marketing_obj') {
-      input.value = viseValue > 0 ? Math.ceil(viseValue) + ' h' : '';
+      input.value = previousValue > 0 ? Math.ceil(previousValue) + ' h' : '';
     } else if (field === 'dollar_obj') {
-      input.value = viseValue > 0 ? Math.round(viseValue).toLocaleString('fr-CA') + ' $' : '';
+      input.value = previousValue > 0 ? Math.round(previousValue).toLocaleString('fr-CA') + ' $' : '';
     } else {
-      input.value = viseValue > 0 ? (viseValue % 1 === 0 ? viseValue : viseValue.toFixed(1)) : '';
+      input.value = previousValue > 0 ? (previousValue % 1 === 0 ? previousValue : previousValue.toFixed(1)) : '';
     }
-    console.log(`[OBJECTIVE INPUT] ${field} - 0 non permis, reset à vise: ${viseValue}`);
+    console.log(`[OBJECTIVE INPUT] ${field} - 0 non permis, reset à valeur précédente: ${previousValue}`);
     return;
   }
 

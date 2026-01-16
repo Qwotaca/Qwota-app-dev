@@ -4783,6 +4783,50 @@ function toggleEditWeekJan() {
 
 // Save weekly January data
 async function saveWeekJan() {
+  // Valider que les objectifs n'ont pas de valeur 0
+  const objectiveInputs = document.querySelectorAll('input[data-field$="_obj"]');
+  const invalidInputs = [];
+
+  objectiveInputs.forEach(input => {
+    const value = parseFloat(input.dataset.value);
+    // Vérifier si la valeur est exactement 0 (pas 0.3, 10, etc.)
+    if (value === 0 && input.value.trim() !== '' && input.value.trim() !== '-') {
+      // Vérifier que l'utilisateur a vraiment tapé 0 (pas juste un champ vide)
+      const rawValue = input.value.replace(/\s/g, '').replace(/\$/g, '').replace(/h/g, '').replace(/,/g, '.');
+      if (rawValue === '0') {
+        invalidInputs.push(input);
+      }
+    }
+  });
+
+  // Si des valeurs 0 sont détectées, bloquer l'enregistrement
+  if (invalidInputs.length > 0) {
+    console.log(`[SAVE] Bloqué - ${invalidInputs.length} champ(s) avec valeur 0`);
+
+    // Faire les champs invalides en rouge pendant 2 secondes
+    invalidInputs.forEach(input => {
+      const originalBg = input.style.background;
+      const originalColor = input.style.color;
+      const originalBorder = input.style.border;
+
+      input.style.background = 'rgba(239, 68, 68, 0.2)';
+      input.style.color = '#ef4444';
+      input.style.border = '2px solid #ef4444';
+      input.style.borderRadius = '6px';
+
+      setTimeout(() => {
+        input.style.background = originalBg;
+        input.style.color = originalColor;
+        input.style.border = originalBorder;
+      }, 2000);
+    });
+
+    // Shake le bouton enregistrer
+    shakeSaveButton();
+
+    return; // Ne pas sauvegarder
+  }
+
   // Sauvegarder toutes les semaines visibles AVANT de sortir du mode édition
   const weekInputs = document.querySelectorAll('.week-jan-input[data-week]');
   const savedWeeks = new Set();
@@ -5458,34 +5502,15 @@ function handleObjectiveInputChange(e) {
   const field = input.dataset.field;
 
   // Remove formatting (spaces, $, h) and parse the number
-  let rawValue = input.value.replace(/\s/g, '').replace(/\$/g, '').replace(/h/g, '');
+  let rawValue = input.value.replace(/\s/g, '').replace(/\$/g, '').replace(/h/g, '').replace(/,/g, '.');
   const numericValue = parseFloat(rawValue);
 
-  // Bloquer la valeur 0 - afficher notification et reset à la valeur originale (avant édition)
-  if (rawValue === '0' || (numericValue === 0 && rawValue !== '')) {
-    showZeroNotAllowedNotification();
-    // Reset à la valeur originale sauvegardée au focus
-    const originalValue = parseFloat(input.dataset.originalValue) || parseFloat(input.dataset.vise) || 0;
-    // Remettre dataset.value à la valeur originale
-    input.dataset.value = originalValue;
-    // Remettre l'affichage à la valeur originale
-    if (field === 'h_marketing_obj') {
-      input.value = originalValue > 0 ? Math.ceil(originalValue) + ' h' : '';
-    } else if (field === 'dollar_obj') {
-      input.value = originalValue > 0 ? Math.round(originalValue).toLocaleString('fr-CA') + ' $' : '';
-    } else {
-      input.value = originalValue > 0 ? (originalValue % 1 === 0 ? originalValue : originalValue.toFixed(1)) : '';
-    }
-    console.log(`[OBJECTIVE INPUT] ${field} - 0 non permis, reset à valeur originale: ${originalValue}`);
-    return;
-  }
-
-  // Update dataset.value with the parsed number
-  if (!isNaN(numericValue) && numericValue > 0) {
+  // Update dataset.value with the parsed number (même si c'est 0, on laisse passer pour validation à l'enregistrement)
+  if (!isNaN(numericValue)) {
     input.dataset.value = numericValue;
     console.log(`[OBJECTIVE INPUT] ${field} updated: ${numericValue}`);
-  } else {
-    // Valeur vide ou invalide - garder la valeur du plan
+  } else if (rawValue === '') {
+    // Valeur vide - garder la valeur du plan
     const viseValue = parseFloat(input.dataset.vise) || 0;
     input.dataset.value = viseValue;
   }

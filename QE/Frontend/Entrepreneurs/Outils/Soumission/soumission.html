@@ -1030,6 +1030,14 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
       // Bloquer le scroll en background
       document.body.classList.add('modal-open');
 
+      // Sur mobile: cacher zoom slider et footer (pinch zoom avec doigts)
+      if (isMobile) {
+        const zoomSliderContainer = pdfModal.querySelector('#zoomSliderContainer');
+        const pdfFooterActions = pdfModal.querySelector('#pdfFooterActions');
+        if (zoomSliderContainer) zoomSliderContainer.style.display = 'none';
+        if (pdfFooterActions) pdfFooterActions.style.display = 'none';
+      }
+
       // ===== ZOOM AVEC PINCH-TO-ZOOM ET PAN/DRAG SUR MOBILE =====
 
       // Support du pinch-to-zoom ET pan/drag sur mobile
@@ -1065,22 +1073,23 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
           }
         }, { passive: false });
 
-        pdfScrollContainer.addEventListener('touchmove', async (e) => {
+        pdfScrollContainer.addEventListener('touchmove', (e) => {
           if (e.touches.length === 2) {
-            // Pinch-to-zoom
+            // Pinch-to-zoom avec CSS transform (fluide comme le slider PC)
             e.preventDefault();
             isPanning = false;
             const distance = getDistance(e.touches);
             const scaleChange = distance / initialDistance;
             let newScale = initialScale * scaleChange;
 
-            // Limiter le zoom
-            newScale = Math.max(minScale, Math.min(maxScale, newScale));
+            // Limiter le zoom (100% - 200% pour mobile)
+            newScale = Math.max(1.0, Math.min(2.0, newScale));
+            currentScale = newScale;
 
-            if (Math.abs(newScale - currentScale) > 0.05) {
-              currentScale = newScale;
-              await renderAllPages(currentScale);
-            }
+            // Utiliser CSS transform pour un zoom fluide (comme le slider PC)
+            const cssScale = currentScale;
+            canvasContainer.style.transform = `scale(${cssScale})`;
+            canvasContainer.style.transformOrigin = 'top center';
           } else if (e.touches.length === 1 && isPanning) {
             // Pan/drag dans toutes les directions
             e.preventDefault();

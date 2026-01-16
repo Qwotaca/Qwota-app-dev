@@ -2148,7 +2148,7 @@ async def creer_pdf(data: SoumissionData, request: Request):
 
         print(f"[OK] Soumission ajoutée dans ventes_attente pour {utilisateur}")
 
-        # Retirer le client des prospects s'il y était
+        # Retirer le client des prospects s'il y était ET ajouter à la blacklist du calendrier
         try:
             print(f"[PROSPECTS] Vérification et suppression du prospect: {vente['prenom']} {vente['nom']}")
             prospects_file = os.path.join(f"{base_cloud}/prospects", utilisateur, "prospects.json")
@@ -2156,20 +2156,40 @@ async def creer_pdf(data: SoumissionData, request: Request):
                 with open(prospects_file, "r", encoding="utf-8") as f:
                     prospects = json.load(f)
 
-                # Filtrer les prospects qui ne correspondent pas à ce client
-                prospects_filtered = [
-                    p for p in prospects
-                    if not (
-                        p.get("prenom", "").strip().lower() == vente['prenom'].strip().lower() and
+                # Trouver et retirer le prospect correspondant
+                prospect_trouve = None
+                prospects_filtered = []
+                for p in prospects:
+                    if (p.get("prenom", "").strip().lower() == vente['prenom'].strip().lower() and
                         p.get("nom", "").strip().lower() == vente['nom'].strip().lower() and
-                        p.get("adresse", "").strip().lower() == vente['adresse'].strip().lower()
-                    )
-                ]
+                        p.get("adresse", "").strip().lower() == vente['adresse'].strip().lower()):
+                        prospect_trouve = p
+                    else:
+                        prospects_filtered.append(p)
 
-                if len(prospects_filtered) < len(prospects):
+                if prospect_trouve:
+                    # Sauvegarder les prospects sans celui trouvé
                     with open(prospects_file, "w", encoding="utf-8") as f:
                         json.dump(prospects_filtered, f, ensure_ascii=False, indent=2)
                     print(f"[OK] Prospect {vente['prenom']} {vente['nom']} retiré de la liste des prospects")
+
+                    # SYNC: Ajouter l'ID du prospect à la blacklist du calendrier
+                    prospect_id = prospect_trouve.get("id")
+                    if prospect_id and (prospect_trouve.get("source") == "google_calendar" or not str(prospect_id).count("-") == 4):
+                        blacklist_dir = f"{base_cloud}/blacklist"
+                        os.makedirs(blacklist_dir, exist_ok=True)
+                        blacklist_file = os.path.join(blacklist_dir, f"{utilisateur}.json")
+
+                        ids = []
+                        if os.path.exists(blacklist_file):
+                            with open(blacklist_file, "r", encoding="utf-8") as f:
+                                ids = json.load(f)
+
+                        if prospect_id not in ids:
+                            ids.append(prospect_id)
+                            with open(blacklist_file, "w", encoding="utf-8") as f:
+                                json.dump(ids, f, indent=2)
+                            print(f"[SYNC] Event ID {prospect_id} ajouté à la blacklist calendrier")
                 else:
                     print(f"[INFO] Client n'était pas dans les prospects")
         except Exception as e:

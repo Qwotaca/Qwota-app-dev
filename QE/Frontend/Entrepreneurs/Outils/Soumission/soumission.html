@@ -114,15 +114,15 @@
       display: none;
     }
 
-    /* Canvas de signature plus grand sur PC */
-    @media (min-width: 768px) {
+    /* Canvas de signature plus grand sur PC et tablette */
+    @media (min-width: 601px) {
       #signatureContainer {
-        max-width: 500px !important;
+        max-width: 458px !important;
       }
 
       #presentationSignaturePad {
-        width: 475px !important;
-        height: 111px !important;
+        width: 458px !important;
+        height: 117px !important;
       }
     }
 
@@ -219,8 +219,8 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
 
-    /* Mobile: cacher zoom slider (pinch zoom avec doigts) - footer géré via JavaScript selon le mode */
-    @media (max-width: 768px) {
+    /* Mobile & Tablette: cacher zoom slider (pinch zoom avec doigts) - footer géré via JavaScript selon le mode */
+    @media (max-width: 1200px) {
       #pdfModal #zoomSliderContainer {
         display: none !important;
       }
@@ -384,7 +384,7 @@
           </div>
 
           <!-- Deuxième ligne: Toggle Province (mobile seulement - ligne complète) -->
-          <div id="languageToggleMobile" class="flex md:hidden mt-4" style="background: rgba(71, 85, 105, 0.3); border-radius: 8px; padding: 4px; gap: 4px; cursor: pointer;">
+          <div id="languageToggleMobile" class="hidden mt-4" style="background: rgba(71, 85, 105, 0.3); border-radius: 8px; padding: 4px; gap: 4px; cursor: pointer;">
             <div class="lang-option-mobile active" data-lang="fr" style="padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; font-weight: 600; transition: all 0.3s ease; color: var(--text-light);">
               Québec
             </div>
@@ -932,7 +932,7 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
       oldCanvases.forEach(cnv => cnv.remove());
 
       // Échelle adaptée selon mobile/desktop - mobile plus zoomer par défaut
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= 1200;
       let currentScale = isMobile ? 1.4 : 2;
       const minScale = 0.5;
       const maxScale = 3.0;
@@ -1301,7 +1301,7 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
     oldCanvases.forEach(cnv => cnv.remove());
 
     // Échelle adaptée selon mobile/desktop - mobile plus zoomer par défaut
-    const isMobilePresent = window.innerWidth <= 768;
+    const isMobilePresent = window.innerWidth <= 1200;
     let currentScalePresent = isMobilePresent ? 1.4 : 2;
     const minScalePresent = 0.5;
     const maxScalePresent = 3.0;
@@ -1378,7 +1378,7 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
           }
 
           // Réattacher le onclick après le clone (cloneNode ne copie pas les events)
-          const isMobileCheck = window.innerWidth <= 768;
+          const isMobileCheck = window.innerWidth <= 1200;
           if (!isMobileCheck) {
             savedSignatureOverlay.onclick = () => {
               log('[DEBUG] Click sur signature overlay détecté (après zoom)!');
@@ -1427,7 +1427,7 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
         }
 
         // Réattacher le onclick après le clone (cloneNode ne copie pas les events)
-        const isMobileCheck = window.innerWidth <= 768;
+        const isMobileCheck = window.innerWidth <= 1200;
         if (!isMobileCheck) {
           savedSignatureOverlay.onclick = () => {
             log('[DEBUG] Click sur signature overlay détecté (après init)!');
@@ -1449,7 +1449,7 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
     hasPresentationSignature = false;
 
     // Configurer le bouton selon mobile/desktop
-    const isMobilePresentation = window.innerWidth <= 768;
+    const isMobilePresentation = window.innerWidth <= 1200;
     const acceptBtn = document.getElementById('acceptPresentationBtn');
     const acceptBtnSpan = acceptBtn.querySelector('span');
 
@@ -4497,29 +4497,29 @@ window.openSignatureZoomPopup = async function() {
       pointerEvents: rootWindow.getComputedStyle(popup).pointerEvents
     });
 
-    // Ajuster les dimensions du canvas et des conteneurs sur PC
-    const isPC = window.innerWidth >= 768;
+    // Ajuster les dimensions du canvas et des conteneurs sur PC et tablette
+    const isPC = window.innerWidth >= 601;
     if (isPC) {
       // Conteneur extérieur (premier enfant du popup)
       const outerContainer = popup.querySelector('div[style*="max-width: 380px"]');
       if (outerContainer) {
-        outerContainer.style.maxWidth = '500px';
+        outerContainer.style.maxWidth = '458px';
       }
 
       // Conteneur de signature
       const signatureContainer = popup.querySelector('#signatureContainer');
       if (signatureContainer) {
-        signatureContainer.style.maxWidth = '500px';
+        signatureContainer.style.maxWidth = '458px';
       }
 
       // Canvas de signature
       const canvas = popup.querySelector('#presentationSignaturePad');
       if (canvas) {
-        canvas.style.width = '475px';
-        canvas.style.height = '111px';
+        canvas.style.width = '458px';
+        canvas.style.height = '117px';
       }
 
-      log('[SIGNATURE] Dimensions PC appliquées: 475x111px');
+      log('[SIGNATURE] Dimensions PC/tablette appliquées: 458x117px');
     } else {
       log('[SIGNATURE] Dimensions mobile maintenues: 320x75px');
     }
@@ -4585,7 +4585,7 @@ async function renderZoomedPdfBackground() {
   log('[DEBUG] Rendu du PDF zoomé sur canvas:', zoomCanvas);
 
   // Échelle de zoom - sur mobile on utilise un zoom adapté
-  const isMobileCheck = window.innerWidth <= 768 || 'ontouchstart' in window;
+  const isMobileCheck = window.innerWidth <= 1200 || 'ontouchstart' in window;
   const zoomScale = isMobileCheck ? 3.0 : 6.0; // 2x sur mobile, 4x sur desktop
   const viewport = currentPdfPage.getViewport({ scale: zoomScale });
 
@@ -4851,7 +4851,7 @@ window.validateSignature = function() {
   }
 
   // Vérifier si on est sur mobile
-  const isMobilePresentation = window.innerWidth <= 768;
+  const isMobilePresentation = window.innerWidth <= 1200;
 
   if (isMobilePresentation) {
     // Sur mobile: appeler directement acceptPresentation()
@@ -4939,11 +4939,11 @@ function initPresentationSignatureCanvas() {
   const canvasContainer = presentationSignatureCanvas.parentElement;
   const containerWidth = canvasContainer ? canvasContainer.offsetWidth : 320;
 
-  // Déterminer les dimensions selon l'appareil (PC vs mobile)
-  const isPC = window.innerWidth >= 768;
-  const maxWidth = isPC ? Math.min(containerWidth, 475) : Math.min(containerWidth, 320);
-  const canvasWidth = isPC ? 475 : maxWidth;
-  const canvasHeight = isPC ? 111 : Math.round(maxWidth / 4.27); // PC: 475x111, Mobile: ratio 4.27:1 (320/75)
+  // Déterminer les dimensions selon l'appareil (PC/tablette vs mobile)
+  const isPC = window.innerWidth >= 601;
+  const maxWidth = isPC ? Math.min(containerWidth, 458) : Math.min(containerWidth, 320);
+  const canvasWidth = isPC ? 458 : maxWidth;
+  const canvasHeight = isPC ? 117 : Math.round(maxWidth / 4.27); // PC/tablette: 458x117, Mobile: ratio 4.27:1 (320/75)
 
   // FORCER les dimensions du canvas calculées avec !important
   presentationSignatureCanvas.style.setProperty('width', canvasWidth + 'px', 'important');
@@ -4978,7 +4978,7 @@ function initPresentationSignatureCanvas() {
   presentationSignatureCtx.lineJoin = 'round';
 
   // Trait plus fin sur mobile, moyen sur desktop
-  const isMobile = window.innerWidth <= 768;
+  const isMobile = window.innerWidth <= 1200;
   presentationSignatureCtx.lineWidth = isMobile ? 1.4 : 2.5;
   presentationSignatureCtx.strokeStyle = '#000000';
 
@@ -5131,7 +5131,7 @@ window.clearPresentationSignature = function() {
   presentationPoints = [];
 
   // Remettre le bouton accepter en gris SEULEMENT sur desktop
-  const isMobileClear = window.innerWidth <= 768;
+  const isMobileClear = window.innerWidth <= 1200;
   let acceptBtn = document.getElementById('acceptPresentationBtn');
   if (!acceptBtn) acceptBtn = window.parent.document.getElementById('acceptPresentationBtn');
 
@@ -5454,7 +5454,7 @@ function attachAcceptButtonEvent() {
       log('[acceptBtn] hasPresentationSignature:', hasPresentationSignature);
 
       if (!acceptBtn.disabled) {
-        const isMobilePresentation = window.innerWidth <= 768;
+        const isMobilePresentation = window.innerWidth <= 1200;
 
         if (isMobilePresentation) {
           // Sur mobile: ouvrir le popup de signature
@@ -6573,7 +6573,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     function saveTemplatePrompt() {
       // Chercher le textarea où qu'il soit (iframe ou parent sur mobile)
       let textarea = document.getElementById('partTravauxTextarea');
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= 1200;
 
       if (isMobile && window.parent) {
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
@@ -6630,7 +6630,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     function closeTemplateNameModal() {
       // Chercher le modal où qu'il soit (iframe ou parent)
       let modal = document.getElementById('templateNameModal');
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= 1200;
 
       if (isMobile && window.parent) {
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
@@ -6651,7 +6651,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     async function confirmSaveTemplate() {
       // Chercher le modal où qu'il soit (iframe ou parent)
       let modal = document.getElementById('templateNameModal');
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= 1200;
 
       if (isMobile && window.parent) {
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
@@ -6749,7 +6749,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
       // Chercher le modal où qu'il soit (iframe ou parent)
       let modal = document.getElementById('templateDeleteModal');
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= 1200;
 
       if (isMobile && window.parent) {
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
@@ -6779,7 +6779,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     function closeTemplateDeleteModal() {
       // Chercher le modal où qu'il soit (iframe ou parent)
       let modal = document.getElementById('templateDeleteModal');
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= 1200;
 
       if (isMobile && window.parent) {
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
@@ -6825,7 +6825,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
       // Chercher le modal où qu'il soit (iframe ou parent)
       let modal = document.getElementById('templateEditModal');
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= 1200;
 
       if (isMobile && window.parent) {
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
@@ -6860,7 +6860,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
     function closeTemplateEditModal() {
       // Chercher le modal où qu'il soit (iframe ou parent)
       let modal = document.getElementById('templateEditModal');
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= 1200;
 
       if (isMobile && window.parent) {
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
@@ -6884,7 +6884,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
       // Chercher le modal où qu'il soit (iframe ou parent)
       let modal = document.getElementById('templateEditModal');
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= 1200;
 
       if (isMobile && window.parent) {
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
@@ -6958,7 +6958,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       const productModal = document.getElementById('productModal');
 
       // Sur MOBILE uniquement: déplacer modal vers parent pour passer au-dessus des headers
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= 1200;
       if (isMobile && window.parent) {
         // Détecter si iframe imbriquée (mobile: 2 niveaux) ou directe (desktop: 1 niveau)
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
@@ -7227,7 +7227,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       // Chercher le modal où qu'il soit (iframe ou parent)
       let productModal = document.getElementById('productModal');
 
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= 1200;
       if (isMobile && window.parent) {
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
         const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
@@ -7289,7 +7289,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       const endroitModal = document.getElementById('endroitModal');
 
       // Sur MOBILE uniquement: déplacer modal vers parent pour passer au-dessus des headers
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= 1200;
       if (isMobile && window.parent) {
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
         const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
@@ -7357,7 +7357,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
       let endroitModal = document.getElementById('endroitModal');
 
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= 1200;
       if (isMobile && window.parent) {
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
         const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
@@ -7534,7 +7534,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       const partTravauxModal = document.getElementById('partTravauxModal');
 
       // Sur MOBILE uniquement: déplacer modal vers parent pour passer au-dessus des headers
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= 1200;
       if (isMobile && window.parent) {
         // Détecter si iframe imbriquée (mobile: 2 niveaux) ou directe (desktop: 1 niveau)
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
@@ -7602,7 +7602,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
       // Chercher le modal où qu'il soit (iframe ou parent)
       let partTravauxModal = document.getElementById('partTravauxModal');
 
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= 1200;
       if (isMobile && window.parent) {
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;
         const rootWindow = isNestedIframe ? window.parent.parent : window.parent;
@@ -7702,7 +7702,7 @@ window.attachAcceptButtonEvent = attachAcceptButtonEvent;
 
     // Sur MOBILE: déplacer les modals de templates vers le parent pour passer au-dessus des headers
     document.addEventListener('DOMContentLoaded', function() {
-      const isMobile = window.innerWidth <= 768;
+      const isMobile = window.innerWidth <= 1200;
 
       if (isMobile && window.parent) {
         const isNestedIframe = window.parent.parent && window.parent.parent !== window.parent;

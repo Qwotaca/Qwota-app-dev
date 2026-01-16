@@ -755,9 +755,9 @@
             La signature sera utilisée dans les soumissions envoyées aux clients uniquement.
           </p>
 
-          <div id="signature-container" class="flex flex-col gap-3">
-            <div id="signature-drawing-mode">
-              <canvas id="signature-pad" style="border: 1px solid var(--border-dark); border-radius: 6px; width: 100%; max-width: 400px; height: 150px; background-color: transparent; box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.1); cursor: crosshair; touch-action: none;"></canvas>
+          <div id="signature-container" class="flex flex-col gap-3" style="width: 100%;">
+            <div id="signature-drawing-mode" style="width: 100%; max-width: 400px;">
+              <canvas id="signature-pad" style="border: 1px solid var(--border-dark); border-radius: 6px; width: 100%; min-width: 280px; max-width: 400px; height: 150px; background-color: transparent; box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.1); cursor: crosshair; touch-action: none;"></canvas>
 
               <div class="flex gap-3 mt-3 items-center">
                 <button id="clear-signature-btn" class="btn-secondary">Effacer</button>
@@ -3161,12 +3161,27 @@ document.addEventListener("DOMContentLoaded", function() {
   // Configuration du canvas - toujours 150px de hauteur
   function setupCanvas() {
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
-    const rect = canvas.getBoundingClientRect();
+
+    // Utiliser le parent container pour la largeur (plus fiable que le canvas lui-même)
+    const container = canvas.parentElement;
+    const containerWidth = container ? container.offsetWidth : window.innerWidth - 64;
 
     // Largeur responsive, hauteur fixe à 150px
     const isMobile = window.innerWidth <= 768;
-    const maxWidth = isMobile ? Math.min(rect.width, window.innerWidth - 32) : 400; // 32px pour padding
-    const canvasWidth = Math.min(maxWidth, 400);
+    const isTablet = window.innerWidth > 768 && window.innerWidth <= 1366;
+
+    // Calculer la largeur: utiliser le container ou fallback
+    let targetWidth;
+    if (isMobile) {
+      targetWidth = Math.min(containerWidth - 16, window.innerWidth - 64, 400);
+    } else if (isTablet) {
+      targetWidth = Math.min(containerWidth - 16, 400);
+    } else {
+      targetWidth = 400;
+    }
+
+    // Minimum 280px pour pouvoir signer
+    const canvasWidth = Math.max(targetWidth, 280);
     const canvasHeight = 150; // Toujours 150px
 
     canvas.width = canvasWidth * ratio;
@@ -3182,6 +3197,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // IMPORTANT: S'assurer que le fond reste transparent
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    console.log('[SIGNATURE] Canvas setup:', canvasWidth, 'x', canvasHeight, 'ratio:', ratio);
   }
 
   // Initialiser le canvas - multiple tentatives pour s'assurer que c'est correct

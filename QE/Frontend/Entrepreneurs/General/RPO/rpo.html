@@ -6285,7 +6285,23 @@ function updateMonthDropdownBadges() {
 }
 
 // Change month function
-async function changeMonth(monthIndex) {
+async function changeMonth(monthIndex, forceChange = false) {
+  // Vérifier si on est en mode édition avec des modifications non enregistrées
+  if (!forceChange && isInEditMode()) {
+    // Faire shake le bouton pour attirer l'attention
+    shakeSaveButton();
+
+    // Afficher une alerte
+    const confirmChange = confirm('⚠️ Vous avez des modifications non enregistrées!\n\nVoulez-vous quitter sans enregistrer?');
+    if (!confirmChange) {
+      // L'utilisateur veut rester - ne pas changer de mois
+      return;
+    }
+    // L'utilisateur veut quitter - cacher le bouton save et continuer
+    const saveBtn = document.getElementById('saveWeekJanBtn');
+    if (saveBtn) saveBtn.classList.add('hidden');
+  }
+
   // Afficher le loader sur la section contenu uniquement (pas le header)
   const contentSection = document.getElementById('weekly-content-section');
   if (contentSection) {
@@ -7219,7 +7235,7 @@ function calculateAnnualMetrics() {
 // Refresh weekly tables (call after monthly data changes)
 function refreshWeeklyTables() {
   if (typeof currentWeeklyMonthIndex !== 'undefined') {
-    changeMonth(currentWeeklyMonthIndex);
+    changeMonth(currentWeeklyMonthIndex, true); // forceChange=true pour le refresh interne
   }
 }
 
@@ -7897,7 +7913,7 @@ window.loadRPOData = async function() {
     }
 
     changeMonthlyView(0);
-    changeMonth(0);
+    changeMonth(0, true); // forceChange=true pour l'initialisation
     calculateMonthlyTotalsFromWeekly(0);
   }, 100);
 };
@@ -9005,7 +9021,7 @@ function selectCoach(username) {
 
     // Initialize views
     changeMonthlyView(0);
-    changeMonth(0);
+    changeMonth(0, true); // forceChange=true pour l'initialisation
     calculateMonthlyTotalsFromWeekly(0);
 
     log('[RPO] ✅ Données chargées pour le coach:', username);
@@ -9081,7 +9097,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // Initialize weekly view - THIS loads the weekly data
-    changeMonth(0);
+    changeMonth(0, true); // forceChange=true pour l'initialisation
     log('✓ [INIT] Weekly view initialized with January (monthIndex: 0)');
 
     // Calculer les totaux hebdomadaires pour janvier

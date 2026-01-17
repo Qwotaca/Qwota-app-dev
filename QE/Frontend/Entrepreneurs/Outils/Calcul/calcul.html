@@ -3345,41 +3345,12 @@
     // ========================================
 
     // Fonction pour vérifier si tous les champs requis sont remplis
+    // NOTE: Les boutons "Compléter soumission" sont gérés par enableCompleterButtons/disableCompleterButtons
+    // et ne sont activés que quand on est DANS un projet (currentLoadedProjectId est défini)
     function validateCompleterButton() {
-      const prenom = document.getElementById('clientPrenom')?.value.trim() || '';
-      const nom = document.getElementById('clientNom')?.value.trim() || '';
-      const adresse = document.getElementById('clientAddress')?.value.trim() || '';
-      const telephone = document.getElementById('clientPhone')?.value.trim() || '';
-
-      const allFieldsFilled = prenom && nom && adresse && telephone;
-
-      // Boutons "Compléter soumission" (seuls boutons restants - Auto-save activé)
-      const completerDesktop = document.getElementById('completer-btn');
-      const completerMobile = document.getElementById('completer-btn-mobile');
-
-      if (allFieldsFilled) {
-        // Activer les boutons
-        [completerDesktop, completerMobile].forEach(btn => {
-          if (btn) {
-            btn.disabled = false;
-            btn.style.opacity = '1';
-            btn.style.cursor = 'pointer';
-            btn.style.pointerEvents = 'auto';
-            btn.style.transform = '';
-          }
-        });
-      } else {
-        // Désactiver et griser les boutons
-        [completerDesktop, completerMobile].forEach(btn => {
-          if (btn) {
-            btn.disabled = true;
-            btn.style.opacity = '0.5';
-            btn.style.cursor = 'not-allowed';
-            btn.style.pointerEvents = 'none';
-            btn.style.transform = 'none';
-          }
-        });
-      }
+      // Cette fonction ne fait plus rien pour les boutons Compléter
+      // Ils sont maintenant contrôlés par createProjectFromButton et quitProject
+      // On garde la fonction pour la compatibilité avec les appels existants
     }
 
     // Fonction pour mettre à jour la bordure d'un champ client
@@ -13574,10 +13545,20 @@ function closeAllDropdowns() {
 (function() {
   const pendingProjectId = localStorage.getItem('pendingProjectLoad');
   if (pendingProjectId) {
-    // Afficher l'animation IMMÉDIATEMENT pour un chargement fluide
-    document.addEventListener('DOMContentLoaded', function() {
+    // Cacher le body IMMÉDIATEMENT pour éviter le flash
+    document.documentElement.style.visibility = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    // Afficher l'animation dès que possible
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        document.documentElement.style.visibility = 'visible';
+        showLoadingAnimation('Chargement du projet...');
+      });
+    } else {
+      document.documentElement.style.visibility = 'visible';
       showLoadingAnimation('Chargement du projet...');
-    });
+    }
   }
 })();
 

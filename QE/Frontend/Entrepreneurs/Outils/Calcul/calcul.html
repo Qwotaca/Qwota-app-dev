@@ -492,9 +492,7 @@
           <button onclick="resetForm()" class="btn-secondary" style="font-size: 12px !important; padding: 8px 12px !important;">
             <i class="fas fa-refresh mr-2"></i>Réinitialiser
           </button>
-          <button id="enregistrer-btn" onclick="enregistrerProjetRapide()" class="btn-secondary blue-hover" style="font-size: 12px !important; padding: 8px 12px !important;" disabled>
-            <i class="fas fa-save mr-2"></i>Enregistrer sans compléter
-          </button>
+          <!-- Bouton "Enregistrer sans compléter" retiré - Auto-save activé -->
           <button id="completer-btn" onclick="completerSoumission()" class="btn-primary" style="font-size: 12px !important; padding: 8px 12px !important;" disabled>
             <i class="fas fa-file-alt mr-2"></i>Compléter soumission
           </button>
@@ -507,10 +505,7 @@
           <i class="fas fa-redo-alt"></i>
           <span>Reset</span>
         </button>
-        <button id="enregistrer-btn-mobile" class="mobile-action-btn mobile-save-btn" onclick="enregistrerProjetRapide()" disabled>
-          <i class="fas fa-save"></i>
-          <span>Enregistrer</span>
-        </button>
+        <!-- Bouton "Enregistrer" mobile retiré - Auto-save activé -->
         <button id="completer-btn-mobile" class="mobile-action-btn mobile-complete-btn" onclick="completerSoumission()" disabled>
           <i class="fas fa-paper-plane"></i>
           <span>Compléter</span>
@@ -3360,17 +3355,13 @@
 
       const allFieldsFilled = prenom && nom && adresse && telephone;
 
-      // Boutons "Compléter soumission"
+      // Boutons "Compléter soumission" (seuls boutons restants - Auto-save activé)
       const completerDesktop = document.getElementById('completer-btn');
       const completerMobile = document.getElementById('completer-btn-mobile');
 
-      // Boutons "Enregistrer sans compléter"
-      const enregistrerDesktop = document.getElementById('enregistrer-btn');
-      const enregistrerMobile = document.getElementById('enregistrer-btn-mobile');
-
       if (allFieldsFilled) {
-        // Activer tous les boutons
-        [completerDesktop, completerMobile, enregistrerDesktop, enregistrerMobile].forEach(btn => {
+        // Activer les boutons
+        [completerDesktop, completerMobile].forEach(btn => {
           if (btn) {
             btn.disabled = false;
             btn.style.opacity = '1';
@@ -3380,8 +3371,8 @@
           }
         });
       } else {
-        // Désactiver et griser tous les boutons
-        [completerDesktop, completerMobile, enregistrerDesktop, enregistrerMobile].forEach(btn => {
+        // Désactiver et griser les boutons
+        [completerDesktop, completerMobile].forEach(btn => {
           if (btn) {
             btn.disabled = true;
             btn.style.opacity = '0.5';
@@ -3451,10 +3442,14 @@
         validationMessage.style.display = 'none';
         // Activer les boutons
         enableCompleterButtons();
+        // Déverrouiller les sections et créer le projet auto
+        onClientInfoValid();
       } else {
         validationMessage.style.display = 'block';
         // Désactiver les boutons
         disableCompleterButtons();
+        // Note: on ne re-verrouille pas pour ne pas perdre le travail
+        onClientInfoInvalid();
       }
     }
 
@@ -3480,6 +3475,241 @@
       });
     }
 
+    // ============================================
+    // AUTO-SAVE & SECTION LOCKING SYSTEM
+    // ============================================
+
+    let autoSaveTimeout = null;
+    let isAutoSaveEnabled = false;
+    let sectionsUnlocked = false;
+    const AUTO_SAVE_DELAY = 2000; // 2 secondes après le dernier changement
+
+    // Fonction pour désactiver le contenu des sections de calcul
+    function lockCalculationSections() {
+      if (sectionsUnlocked) return; // Déjà déverrouillé, ne pas re-verrouiller
+
+      const sectionsToLock = ['estimation-tab', 'interieur-tab', 'produits-tab'];
+
+      sectionsToLock.forEach(sectionId => {
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+
+        // Désactiver tous les inputs, selects, textareas, buttons dans la section
+        const interactiveElements = section.querySelectorAll('input, select, textarea, button:not(.tab-btn)');
+        interactiveElements.forEach(el => {
+          el.disabled = true;
+          el.style.opacity = '0.5';
+          el.style.cursor = 'not-allowed';
+        });
+
+        // Ajouter un overlay visuel
+        if (!section.querySelector('.lock-overlay')) {
+          const overlay = document.createElement('div');
+          overlay.className = 'lock-overlay';
+          overlay.innerHTML = '<div class="lock-message"><i class="fas fa-lock"></i> Remplissez les informations client pour commencer</div>';
+          overlay.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); display: flex; align-items: center; justify-content: center; z-index: 100; border-radius: 8px;';
+          overlay.querySelector('.lock-message').style.cssText = 'color: #94a3b8; font-size: 14px; text-align: center; padding: 20px;';
+          section.style.position = 'relative';
+          section.appendChild(overlay);
+        }
+      });
+
+      log('[LOCK] Sections de calcul verrouillées');
+    }
+
+    // Fonction pour activer le contenu des sections de calcul
+    function unlockCalculationSections() {
+      if (sectionsUnlocked) return; // Déjà déverrouillé
+
+      const sectionsToUnlock = ['estimation-tab', 'interieur-tab', 'produits-tab'];
+
+      sectionsToUnlock.forEach(sectionId => {
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+
+        // Réactiver tous les inputs, selects, textareas, buttons
+        const interactiveElements = section.querySelectorAll('input, select, textarea, button');
+        interactiveElements.forEach(el => {
+          el.disabled = false;
+          el.style.opacity = '';
+          el.style.cursor = '';
+        });
+
+        // Retirer l'overlay
+        const overlay = section.querySelector('.lock-overlay');
+        if (overlay) {
+          overlay.remove();
+        }
+      });
+
+      sectionsUnlocked = true;
+      isAutoSaveEnabled = true;
+      log('[UNLOCK] Sections de calcul déverrouillées - Auto-save activé');
+    }
+
+    // Fonction pour créer automatiquement un projet
+    async function autoCreateProject() {
+      // Ne pas créer si un projet est déjà chargé
+      if (currentLoadedProjectId) {
+        log('[AUTO-CREATE] Projet déjà chargé, pas de création');
+        return;
+      }
+
+      const username = localStorage.getItem('username') || 'default';
+      const prenom = document.getElementById('clientPrenom')?.value.trim() || '';
+      const nom = document.getElementById('clientNom')?.value.trim() || '';
+
+      // Créer un nouveau projet avec les infos client
+      const projectName = `${prenom} ${nom}`.trim() || 'Nouveau projet';
+
+      try {
+        showAutoSaveStatus('creating');
+
+        // Collecter les données du formulaire (utilise la fonction existante)
+        const formData = typeof collecterToutesDonnees === 'function' ? collecterToutesDonnees() : {};
+
+        const response = await fetch(`/api/projets/${username}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: projectName,
+            formData: formData
+          })
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          currentLoadedProjectId = String(result.id);
+          log(`[AUTO-CREATE] Projet créé automatiquement: ${projectName} (ID: ${currentLoadedProjectId})`);
+          showAutoSaveStatus('saved');
+        } else {
+          error('[AUTO-CREATE] Erreur création projet:', response.status);
+          showAutoSaveStatus('error');
+        }
+      } catch (err) {
+        error('[AUTO-CREATE] Erreur:', err);
+        showAutoSaveStatus('error');
+      }
+    }
+
+    // Fonction pour déclencher l'auto-save avec debounce
+    function triggerAutoSave() {
+      // Ne sauvegarder que si auto-save est activé et un projet existe
+      if (!isAutoSaveEnabled || !currentLoadedProjectId) return;
+
+      // Annuler le timeout précédent
+      if (autoSaveTimeout) {
+        clearTimeout(autoSaveTimeout);
+      }
+
+      // Afficher "Sauvegarde..."
+      showAutoSaveStatus('saving');
+
+      // Nouveau timeout pour sauvegarder
+      autoSaveTimeout = setTimeout(async () => {
+        try {
+          await autoSaveProject();
+          showAutoSaveStatus('saved');
+        } catch (err) {
+          error('[AUTO-SAVE] Erreur:', err);
+          showAutoSaveStatus('error');
+        }
+      }, AUTO_SAVE_DELAY);
+    }
+
+    // Fonction pour sauvegarder le projet automatiquement
+    async function autoSaveProject() {
+      if (!currentLoadedProjectId) return;
+
+      const username = localStorage.getItem('username') || 'default';
+      const prenom = document.getElementById('clientPrenom')?.value.trim() || '';
+      const nom = document.getElementById('clientNom')?.value.trim() || '';
+      const projectName = `${prenom} ${nom}`.trim() || 'Projet';
+
+      const formData = typeof collecterToutesDonnees === 'function' ? collecterToutesDonnees() : {};
+
+      const response = await fetch(`/api/projets/${username}/${currentLoadedProjectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: projectName,
+          formData: formData
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur sauvegarde: ${response.status}`);
+      }
+
+      log(`[AUTO-SAVE] Projet sauvegardé: ${projectName}`);
+    }
+
+    // Fonction pour afficher le statut de sauvegarde
+    function showAutoSaveStatus(status) {
+      let statusEl = document.getElementById('auto-save-status');
+
+      if (!statusEl) {
+        // Créer l'élément de statut s'il n'existe pas
+        statusEl = document.createElement('div');
+        statusEl.id = 'auto-save-status';
+        statusEl.style.cssText = 'position: fixed; bottom: 20px; right: 20px; padding: 8px 16px; border-radius: 8px; font-size: 13px; z-index: 9999; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px;';
+        document.body.appendChild(statusEl);
+      }
+
+      switch(status) {
+        case 'saving':
+          statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sauvegarde...';
+          statusEl.style.background = 'rgba(59, 130, 246, 0.9)';
+          statusEl.style.color = 'white';
+          statusEl.style.opacity = '1';
+          break;
+        case 'creating':
+          statusEl.innerHTML = '<i class="fas fa-plus-circle"></i> Création du projet...';
+          statusEl.style.background = 'rgba(139, 92, 246, 0.9)';
+          statusEl.style.color = 'white';
+          statusEl.style.opacity = '1';
+          break;
+        case 'saved':
+          statusEl.innerHTML = '<i class="fas fa-check"></i> Sauvegardé';
+          statusEl.style.background = 'rgba(34, 197, 94, 0.9)';
+          statusEl.style.color = 'white';
+          statusEl.style.opacity = '1';
+          // Cacher après 2 secondes
+          setTimeout(() => {
+            statusEl.style.opacity = '0';
+          }, 2000);
+          break;
+        case 'error':
+          statusEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erreur de sauvegarde';
+          statusEl.style.background = 'rgba(239, 68, 68, 0.9)';
+          statusEl.style.color = 'white';
+          statusEl.style.opacity = '1';
+          setTimeout(() => {
+            statusEl.style.opacity = '0';
+          }, 3000);
+          break;
+      }
+    }
+
+    // Fonction appelée quand les 4 champs client deviennent valides
+    async function onClientInfoValid() {
+      log('[CLIENT] 4 champs client valides!');
+
+      // Déverrouiller les sections
+      unlockCalculationSections();
+
+      // Créer le projet automatiquement si pas déjà chargé
+      if (!currentLoadedProjectId) {
+        await autoCreateProject();
+      }
+    }
+
+    // Fonction appelée quand les champs client deviennent invalides
+    function onClientInfoInvalid() {
+      // Ne pas re-verrouiller si déjà déverrouillé (pour éviter de perdre le travail)
+      // On laisse l'utilisateur continuer mais on désactive juste les boutons de complétion
+    }
+
     // Ajouter des écouteurs d'événements sur les champs
     document.addEventListener('DOMContentLoaded', function() {
       const fields = ['clientPrenom', 'clientNom', 'clientAddress', 'clientPhone'];
@@ -3502,6 +3732,20 @@
 
       // Validation initiale
       validateCompleterButton();
+
+      // Verrouiller les sections au démarrage si pas de projet chargé et infos client incomplètes
+      setTimeout(() => {
+        if (!currentLoadedProjectId) {
+          const prenom = document.getElementById('clientPrenom')?.value.trim() || '';
+          const nom = document.getElementById('clientNom')?.value.trim() || '';
+          const adresse = document.getElementById('clientAddress')?.value.trim() || '';
+          const telephone = document.getElementById('clientPhone')?.value.trim() || '';
+
+          if (!(prenom && nom && adresse && telephone)) {
+            lockCalculationSections();
+          }
+        }
+      }, 500);
     });
 
     // Validation initiale si le DOM est déjà chargé
@@ -7821,6 +8065,12 @@ function updateCalculation() {
 
     console.log('═══════════════════════════════════════════════════════\n');
     // ===== FIN LOGS DÉTAILLÉS =====
+
+    // ===== AUTO-SAVE =====
+    // Déclencher l'auto-save après chaque calcul (si activé et projet existant)
+    if (typeof triggerAutoSave === 'function') {
+      triggerAutoSave();
+    }
 
   } catch (error) {
     error('Erreur de calcul:', error);
@@ -18778,6 +19028,13 @@ function initializeApp() {
         }
 
         log('[OK] Projet chargé complètement!');
+
+        // Déverrouiller les sections et activer l'auto-save puisqu'un projet est chargé
+        if (typeof unlockCalculationSections === 'function') {
+          unlockCalculationSections();
+        }
+        isAutoSaveEnabled = true;
+        sectionsUnlocked = true;
 
         // Forcer la position de scroll en haut (sans animation) pour éviter tout scroll automatique
         window.scrollTo(0, 0);

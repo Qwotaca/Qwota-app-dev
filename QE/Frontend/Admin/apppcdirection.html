@@ -2918,11 +2918,14 @@
             <span class="nav-label">Niveaux & Trophées</span>
             <span class="tooltip">Niveaux & Trophées</span>
           </a>
-          <a href="#/coach_plaintes" class="nav-item" data-page="coach_plaintes">
+          <a href="#/coach_plaintes" class="nav-item" data-page="coach_plaintes" id="nav-plaintes">
             <span class="nav-icon">
               <i class="fas fa-exclamation-triangle"></i>
             </span>
-            <span class="nav-label">Gestion de Plaintes</span>
+            <span class="nav-label" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+              <span>Gestion de Plaintes</span>
+              <span id="plaintes-notification-badge" class="notification-badge" style="display: none; margin-left: auto;">0</span>
+            </span>
             <span class="tooltip">Gestion de Plaintes</span>
           </a>
         </div>
@@ -4719,6 +4722,31 @@
       }
     }
 
+    // Fonction pour charger le compteur de plaintes non réglées (pour direction)
+    async function loadPlaintesCount() {
+      try {
+        const response = await fetch('/api/plaintes/count/all');
+
+        if (response.ok) {
+          const data = await response.json();
+          const count = data.count || 0;
+
+          const badge = document.getElementById('plaintes-notification-badge');
+
+          if (badge) {
+            if (count > 0) {
+              badge.textContent = count;
+              badge.style.display = 'inline-flex';
+            } else {
+              badge.style.display = 'none';
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Erreur chargement compteur plaintes:', error);
+      }
+    }
+
     // Fonction pour charger le compteur de facturations en attente (pour direction)
     // Utilise l'API existante /api/comptable/facturation-en-traitement/liste et compte les paiements
     async function loadFacturationEnAttenteCount() {
@@ -4796,6 +4824,11 @@
       loadFacturationEnAttenteCount();
       // Recharger toutes les 30 secondes
       setInterval(loadFacturationEnAttenteCount, 30000);
+
+      // Charger le compteur de plaintes non réglées pour la direction
+      loadPlaintesCount();
+      // Recharger toutes les 30 secondes
+      setInterval(loadPlaintesCount, 30000);
 
       // PRÉCHARGER les données du plan d'affaires pour que le RPO se charge plus vite
       preloadBusinessPlanData();

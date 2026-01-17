@@ -20696,6 +20696,81 @@ def get_plaintes(username: str):
         return {"success": False, "message": str(e)}
 
 
+@app.get("/api/plaintes/count/coach/{coach_username}")
+def get_coach_plaintes_count(coach_username: str):
+    """
+    Compte toutes les plaintes non réglées pour les entrepreneurs d'un coach
+    """
+    try:
+        # Charger la liste des entrepreneurs du coach
+        entrepreneurs_file = os.path.join(base_cloud, "entrepreneurs", f"{coach_username}.json")
+
+        if not os.path.exists(entrepreneurs_file):
+            return {"success": True, "count": 0}
+
+        with open(entrepreneurs_file, "r", encoding="utf-8") as f:
+            entrepreneurs_data = json.load(f)
+
+        entrepreneurs = entrepreneurs_data.get("entrepreneurs", [])
+        total_count = 0
+
+        for entrepreneur in entrepreneurs:
+            entrepreneur_username = entrepreneur.get("username", "")
+            if not entrepreneur_username:
+                continue
+
+            fichier_plaintes = os.path.join(base_cloud, "plaintes", entrepreneur_username, "plaintes.json")
+
+            if os.path.exists(fichier_plaintes):
+                try:
+                    with open(fichier_plaintes, "r", encoding="utf-8") as f:
+                        content = f.read().strip()
+                        if content:
+                            plaintes = json.loads(content)
+                            total_count += sum(1 for p in plaintes if p.get("statut") == "actuelle")
+                except:
+                    continue
+
+        return {"success": True, "count": total_count}
+
+    except Exception as e:
+        print(f"[ERREUR get_coach_plaintes_count] {e}")
+        return {"success": False, "count": 0}
+
+
+@app.get("/api/plaintes/count/all")
+def get_all_plaintes_count():
+    """
+    Compte toutes les plaintes non réglées pour tous les entrepreneurs (pour direction)
+    """
+    try:
+        plaintes_base = os.path.join(f"{base_cloud}/plaintes")
+        total_count = 0
+
+        if not os.path.exists(plaintes_base):
+            return {"success": True, "count": 0}
+
+        for entrepreneur_folder in os.listdir(plaintes_base):
+            fichier_plaintes = os.path.join(plaintes_base, entrepreneur_folder, "plaintes.json")
+
+            if os.path.exists(fichier_plaintes):
+                try:
+                    with open(fichier_plaintes, "r", encoding="utf-8") as f:
+                        content = f.read().strip()
+                        if content:
+                            plaintes = json.loads(content)
+                            # Compter seulement les plaintes actuelles (non réglées)
+                            total_count += sum(1 for p in plaintes if p.get("statut") == "actuelle")
+                except:
+                    continue
+
+        return {"success": True, "count": total_count}
+
+    except Exception as e:
+        print(f"[ERREUR get_all_plaintes_count] {e}")
+        return {"success": False, "count": 0}
+
+
 @app.put("/api/plaintes/{plainte_id}/resoudre")
 async def resoudre_plainte(plainte_id: str):
     """

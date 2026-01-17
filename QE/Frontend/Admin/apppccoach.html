@@ -3414,11 +3414,14 @@
             </span>
             <span class="tooltip">Mon RPO</span>
           </a>
-          <a href="#/coach_plaintes" class="nav-item" data-page="coach_plaintes">
+          <a href="#/coach_plaintes" class="nav-item" data-page="coach_plaintes" id="nav-plaintes">
             <span class="nav-icon">
               <i class="fas fa-exclamation-triangle"></i>
             </span>
-            <span class="nav-label">Gestion de Plaintes</span>
+            <span class="nav-label" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+              <span>Gestion de Plaintes</span>
+              <span id="plaintes-notification-badge" class="notification-badge" style="display: none; margin-left: auto;">0</span>
+            </span>
             <span class="tooltip">Gestion de Plaintes</span>
           </a>
           <a href="#/central" class="nav-item" data-page="central">
@@ -4474,6 +4477,9 @@
       // Charger le compteur de facturations en traitement pour les coaches au démarrage
       loadFacturationEnTraitementCount();
 
+      // Charger le compteur de plaintes non réglées pour les coaches au démarrage
+      loadPlaintesCount();
+
       // Charger le compteur des objectifs mensuels manquants pour les coaches au démarrage
       // Appel avec un petit délai pour s'assurer que username est bien initialisé
       setTimeout(() => {
@@ -4531,6 +4537,39 @@
         }
       } catch (error) {
         console.error('Erreur lors du chargement du compteur employés:', error);
+      }
+    }
+
+    // Fonction pour charger le compteur de plaintes non réglées (pour coach)
+    async function loadPlaintesCount() {
+      try {
+        const userRole = localStorage.getItem('userRole');
+
+        // Afficher le badge uniquement pour les coaches
+        if (userRole !== 'coach') {
+          return;
+        }
+
+        const username = window.username || localStorage.getItem('username');
+        const response = await fetch(`/api/plaintes/count/coach/${username}`);
+
+        if (response.ok) {
+          const data = await response.json();
+          const count = data.count || 0;
+
+          const badge = document.getElementById('plaintes-notification-badge');
+
+          if (badge) {
+            if (count > 0) {
+              badge.textContent = count;
+              badge.style.display = 'inline-flex';
+            } else {
+              badge.style.display = 'none';
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Erreur chargement compteur plaintes:', error);
       }
     }
 

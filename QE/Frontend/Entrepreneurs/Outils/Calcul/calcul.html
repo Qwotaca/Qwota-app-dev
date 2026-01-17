@@ -265,17 +265,6 @@
       gap: 0.5rem !important;
     }
 
-    /* Bouton flottant "Voir Total" en haut à droite */
-    #mobile-total-btn {
-      display: flex !important;
-    }
-  }
-
-  @media (min-width: 1025px) {
-    /* Cacher le bouton total mobile sur desktop */
-    #mobile-total-btn {
-      display: none !important;
-    }
   }
 
   /* Bouton flottant Total pour mobile */
@@ -308,8 +297,8 @@
 </head>
 <body class="min-h-screen" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: var(--text-light); margin: 0; padding: 0;">
 
-  <!-- Bouton flottant Total pour mobile -->
-  <button id="mobile-total-btn" onclick="openTotalPopup()">
+  <!-- Bouton flottant Total pour mobile (visible uniquement dans un projet) -->
+  <button id="mobile-total-btn" onclick="openMobileTotalPopup()" style="display: none;">
     <i class="fas fa-dollar-sign"></i>
     <span id="mobile-total-value">0,00 $</span>
   </button>
@@ -3864,6 +3853,11 @@
         createBtn.style.opacity = '1';
         createBtn.style.cursor = 'pointer';
       }
+
+      // Afficher le bouton total mobile
+      if (typeof updateMobileTotalButton === 'function') {
+        updateMobileTotalButton();
+      }
     }
 
     // Fonction pour verrouiller les champs client (quand on est dans un projet)
@@ -3949,6 +3943,12 @@
       const statusEl = document.getElementById('auto-save-status');
       if (statusEl) {
         statusEl.style.display = 'none';
+      }
+
+      // Cacher le bouton total mobile
+      const mobileTotalBtn = document.getElementById('mobile-total-btn');
+      if (mobileTotalBtn) {
+        mobileTotalBtn.style.display = 'none';
       }
 
       // Forcer la mise à jour des calculs à 0
@@ -18494,6 +18494,12 @@ function initializeApp() {
         statusEl.style.display = 'none';
       }
 
+      // Cacher le bouton total mobile
+      const mobileTotalBtn = document.getElementById('mobile-total-btn');
+      if (mobileTotalBtn) {
+        mobileTotalBtn.style.display = 'none';
+      }
+
       // 1. RÉINITIALISER LES PIÈCES INTÉRIEURES
       piecesInterieur = [];
       const listePieces = document.getElementById('listePieces');
@@ -18888,6 +18894,12 @@ function initializeApp() {
       const statusEl = document.getElementById('auto-save-status');
       if (statusEl) {
         statusEl.style.display = 'none';
+      }
+
+      // Cacher le bouton total mobile
+      const mobileTotalBtn = document.getElementById('mobile-total-btn');
+      if (mobileTotalBtn) {
+        mobileTotalBtn.style.display = 'none';
       }
 
       // ====== RÉINITIALISER LES COMPTEURS ======
@@ -19411,6 +19423,10 @@ function initializeApp() {
         // Afficher l'indicateur de sauvegarde
         if (typeof showAutoSaveStatus === 'function') {
           showAutoSaveStatus('saved');
+        }
+        // Afficher le bouton total mobile
+        if (typeof updateMobileTotalButton === 'function') {
+          updateMobileTotalButton();
         }
 
         // Forcer la position de scroll en haut (sans animation) pour éviter tout scroll automatique
@@ -20745,6 +20761,35 @@ function initializeApp() {
   </script>
 
   <script>
+
+    // Fonction pour ouvrir le popup depuis le bouton mobile (détermine l'onglet actif)
+    function openMobileTotalPopup() {
+      // Déterminer l'onglet actif
+      const estimationTab = document.getElementById('estimation-tab');
+      const interieurTab = document.getElementById('interieur-tab');
+
+      let tabType = 'estimation'; // Par défaut
+      if (interieurTab && interieurTab.style.display !== 'none' && interieurTab.classList.contains('active')) {
+        tabType = 'interieur';
+      } else if (estimationTab && estimationTab.style.display !== 'none') {
+        tabType = 'estimation';
+      }
+
+      openTotalPopup(tabType);
+    }
+
+    // Fonction pour afficher/cacher le bouton total mobile
+    function updateMobileTotalButton() {
+      const btn = document.getElementById('mobile-total-btn');
+      if (!btn) return;
+
+      // Afficher uniquement si dans un projet ET sur mobile
+      if (currentLoadedProjectId && window.innerWidth <= 1024) {
+        btn.style.display = 'flex';
+      } else {
+        btn.style.display = 'none';
+      }
+    }
 
     // Fonction pour ouvrir le popup Total/Détails/Configuration
     function openTotalPopup(tabType) {

@@ -328,10 +328,17 @@
         </div>
       </div>
       <div class="box-body">
-        <p id="clientInfoValidationMessage" class="text-sm mb-4" style="color: #e57373;">
-          <i class="fas fa-info-circle mr-1"></i>
-          Pour créer un projet, remplissez les informations client ci-dessous
-        </p>
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <p id="clientInfoValidationMessage" class="text-sm" style="color: #e57373; margin: 0;">
+            <i class="fas fa-info-circle mr-1"></i>
+            Pour créer un projet, remplissez les informations client ci-dessous
+          </p>
+          <button id="createProjectBtn" onclick="createProjectFromButton()" disabled
+                  style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 14px; border: none; cursor: not-allowed; opacity: 0.5; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; margin-left: auto;">
+            <i class="fas fa-plus-circle"></i>
+            Créer le projet
+          </button>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-2">
@@ -367,7 +374,7 @@
             <label class="block text-sm font-medium text-gray-300 mb-2">
               <i class="fas fa-phone mr-2" style="color: var(--primary-orange);"></i>Téléphone
             </label>
-            <input type="tel" id="clientPhone" class="input-field" placeholder="000-000-0000" maxlength="12" style="border-right: 2px solid #e57373 !important;" oninput="this.style.setProperty('border-right-color', this.value.trim() ? '#4caf50' : '#e57373', 'important'); setTimeout(() => updateClientValidationMessage(), 0);">
+            <input type="tel" id="clientPhone" class="input-field" placeholder="000-000-0000" maxlength="12" style="border-right: 2px solid #e57373 !important;" oninput="const isValidPhone = /^\d{3}-\d{3}-\d{4}$/.test(this.value.trim()); this.style.setProperty('border-right-color', isValidPhone ? '#4caf50' : '#e57373', 'important'); setTimeout(() => updateClientValidationMessage(), 0);">
           </div>
         </div>
 
@@ -3388,8 +3395,15 @@
     function updateClientFieldBorder(field) {
       if (!field) return;
       const value = field.value.trim();
-      // Simplement vérifier si le champ n'est pas vide
-      const isValid = value !== '';
+
+      // Validation spécifique pour le téléphone (format XXX-XXX-XXXX)
+      let isValid;
+      if (field.id === 'clientPhone') {
+        isValid = /^\d{3}-\d{3}-\d{4}$/.test(value);
+      } else {
+        // Pour les autres champs, vérifier si non vide
+        isValid = value !== '';
+      }
 
       field.style.setProperty('border-right-color', isValid ? '#4caf50' : '#e57373', 'important');
 
@@ -3438,18 +3452,27 @@
                        hasGreenBorderCalc(clientAddressField) &&
                        hasGreenBorderCalc(clientPhoneField);
 
+      const createBtn = document.getElementById('createProjectBtn');
+
+      // Si on est déjà dans un projet, ne pas toucher au bouton
+      if (currentLoadedProjectId) return;
+
       if (allValid) {
         validationMessage.style.display = 'none';
-        // Activer les boutons
-        enableCompleterButtons();
-        // Déverrouiller les sections et créer le projet auto
-        onClientInfoValid();
+        // Activer le bouton "Créer le projet"
+        if (createBtn) {
+          createBtn.disabled = false;
+          createBtn.style.opacity = '1';
+          createBtn.style.cursor = 'pointer';
+        }
       } else {
         validationMessage.style.display = 'block';
-        // Désactiver les boutons
-        disableCompleterButtons();
-        // Note: on ne re-verrouille pas pour ne pas perdre le travail
-        onClientInfoInvalid();
+        // Désactiver le bouton "Créer le projet"
+        if (createBtn) {
+          createBtn.disabled = true;
+          createBtn.style.opacity = '0.5';
+          createBtn.style.cursor = 'not-allowed';
+        }
       }
     }
 
@@ -3482,12 +3505,12 @@
     let autoSaveTimeout = null;
     let isAutoSaveEnabled = false;
     let sectionsUnlocked = false;
+    let isCreatingProject = false; // Flag pour éviter les créations multiples
     const AUTO_SAVE_DELAY = 800; // 800ms après le dernier changement (rapide)
 
     // Fonction pour désactiver le contenu des sections de calcul
     function lockCalculationSections() {
-      if (sectionsUnlocked) return; // Déjà déverrouillé, ne pas re-verrouiller
-
+      // Permettre le re-verrouillage (pour quitter un projet)
       const tabsToLock = ['estimation-tab', 'interieur-tab', 'produits-tab'];
 
       tabsToLock.forEach(tabId => {
@@ -3541,11 +3564,18 @@
 
     // Fonction pour créer automatiquement un projet
     async function autoCreateProject() {
-      // Ne pas créer si un projet est déjà chargé
+      // Ne pas créer si un projet est déjà chargé ou en cours de création
       if (currentLoadedProjectId) {
         log('[AUTO-CREATE] Projet déjà chargé, pas de création');
         return;
       }
+      if (isCreatingProject) {
+        log('[AUTO-CREATE] Création déjà en cours, ignoré');
+        return;
+      }
+
+      // Marquer comme en cours de création AVANT tout
+      isCreatingProject = true;
 
       const username = localStorage.getItem('username') || 'default';
       const prenom = document.getElementById('clientPrenom')?.value.trim() || '';
@@ -3563,6 +3593,12 @@
         // Collecter les données du formulaire (utilise la fonction existante)
         const formData = typeof collecterToutesDonnees === 'function' ? collecterToutesDonnees() : {};
 
+        // Récupérer le total depuis #totalCombine
+        const totalCombineEl = document.getElementById('totalCombine');
+        const totalText = totalCombineEl ? totalCombineEl.textContent : '0';
+        // Convertir "800,00 $" en nombre 800.00
+        const totalValue = parseFloat(totalText.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
+
         // Utiliser le même format que completerSoumission
         const projet = {
           id: newProjectId,
@@ -3576,7 +3612,7 @@
             const day = String(now.getDate()).padStart(2, '0');
             return `${day}/${month}/${year}`;
           })(),
-          total: 0,
+          total: totalValue,
           formData: formData
         };
 
@@ -3597,10 +3633,12 @@
         } else {
           error('[AUTO-CREATE] Erreur création projet:', response.status);
           showAutoSaveStatus('error');
+          isCreatingProject = false; // Permettre une nouvelle tentative
         }
       } catch (err) {
         error('[AUTO-CREATE] Erreur:', err);
         showAutoSaveStatus('error');
+        isCreatingProject = false; // Permettre une nouvelle tentative
       }
     }
 
@@ -3642,6 +3680,12 @@
 
       const formData = typeof collecterToutesDonnees === 'function' ? collecterToutesDonnees() : {};
 
+      // Récupérer le total depuis #totalCombine
+      const totalCombineEl = document.getElementById('totalCombine');
+      const totalText = totalCombineEl ? totalCombineEl.textContent : '0';
+      // Convertir "800,00 $" en nombre 800.00
+      const totalValue = parseFloat(totalText.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
+
       // Utiliser le même format que completerSoumission
       const projet = {
         id: currentLoadedProjectId,
@@ -3655,7 +3699,7 @@
           const day = String(now.getDate()).padStart(2, '0');
           return `${day}/${month}/${year}`;
         })(),
-        total: 0, // Sera recalculé si nécessaire
+        total: totalValue,
         formData: formData
       };
 
@@ -3703,7 +3747,16 @@
           statusEl.style.color = 'white';
           break;
         case 'saved':
-          statusEl.innerHTML = '<i class="fas fa-check-circle"></i> À jour';
+          // Récupérer le nom du client pour l'afficher
+          const prenomVal = document.getElementById('clientPrenom')?.value.trim() || '';
+          const nomVal = document.getElementById('clientNom')?.value.trim() || '';
+          const clientNameDisplay = `${prenomVal} ${nomVal}`.trim();
+
+          if (clientNameDisplay) {
+            statusEl.innerHTML = `<i class="fas fa-check-circle"></i> ${clientNameDisplay} - À jour`;
+          } else {
+            statusEl.innerHTML = '<i class="fas fa-check-circle"></i> À jour';
+          }
           statusEl.style.background = 'rgba(34, 197, 94, 0.95)';
           statusEl.style.color = 'white';
           // Ne pas cacher - toujours visible
@@ -3730,23 +3783,119 @@
       }, 1000);
     });
 
-    // Fonction appelée quand les 4 champs client deviennent valides
-    async function onClientInfoValid() {
-      log('[CLIENT] 4 champs client valides!');
+    // Fonction appelée quand on clique sur "Créer le projet"
+    async function createProjectFromButton() {
+      const createBtn = document.getElementById('createProjectBtn');
+      if (!createBtn || createBtn.disabled) return;
 
-      // Déverrouiller les sections
-      unlockCalculationSections();
+      log('[PROJECT] Création du projet via bouton');
 
-      // Créer le projet automatiquement si pas déjà chargé
-      if (!currentLoadedProjectId) {
-        await autoCreateProject();
+      // Créer le projet
+      await autoCreateProject();
+
+      // Si le projet a été créé avec succès
+      if (currentLoadedProjectId) {
+        // Verrouiller les champs client (les griser)
+        lockClientInfoFields();
+
+        // Déverrouiller les sections de calcul
+        unlockCalculationSections();
+
+        // Activer les boutons de complétion
+        enableCompleterButtons();
+
+        // Changer le bouton en "Quitter le projet"
+        createBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Quitter le projet';
+        createBtn.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+        createBtn.onclick = quitProject;
+        createBtn.disabled = false;
+        createBtn.style.opacity = '1';
+        createBtn.style.cursor = 'pointer';
       }
     }
 
-    // Fonction appelée quand les champs client deviennent invalides
-    function onClientInfoInvalid() {
-      // Ne pas re-verrouiller si déjà déverrouillé (pour éviter de perdre le travail)
-      // On laisse l'utilisateur continuer mais on désactive juste les boutons de complétion
+    // Fonction pour verrouiller les champs client (quand on est dans un projet)
+    function lockClientInfoFields() {
+      const fields = ['clientPrenom', 'clientNom', 'clientAddress', 'clientPhone'];
+      fields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+          field.disabled = true;
+          field.style.opacity = '0.6';
+          field.style.cursor = 'not-allowed';
+          field.style.background = 'rgba(30, 41, 59, 0.5)';
+        }
+      });
+    }
+
+    // Fonction pour déverrouiller les champs client (quand on quitte un projet)
+    function unlockClientInfoFields() {
+      const fields = ['clientPrenom', 'clientNom', 'clientAddress', 'clientPhone'];
+      fields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+          field.disabled = false;
+          field.style.opacity = '1';
+          field.style.cursor = 'text';
+          field.style.background = '';
+        }
+      });
+    }
+
+    // Fonction pour quitter le projet actuel
+    function quitProject() {
+      log('[PROJECT] Quitter le projet');
+
+      // Réinitialiser l'ID du projet
+      currentLoadedProjectId = null;
+      isAutoSaveEnabled = false;
+      sectionsUnlocked = false;
+      isCreatingProject = false;
+
+      // Verrouiller les sections de calcul
+      lockCalculationSections();
+
+      // Déverrouiller les champs client
+      unlockClientInfoFields();
+
+      // Réinitialiser les champs client
+      const fields = ['clientPrenom', 'clientNom', 'clientAddress', 'clientPhone'];
+      fields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+          field.value = '';
+          field.style.setProperty('border-right-color', '#e57373', 'important');
+        }
+      });
+
+      // Désactiver les boutons de complétion
+      disableCompleterButtons();
+
+      // Remettre le bouton en "Créer le projet" (désactivé)
+      const createBtn = document.getElementById('createProjectBtn');
+      if (createBtn) {
+        createBtn.innerHTML = '<i class="fas fa-plus-circle"></i> Créer le projet';
+        createBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+        createBtn.onclick = createProjectFromButton;
+        createBtn.disabled = true;
+        createBtn.style.opacity = '0.5';
+        createBtn.style.cursor = 'not-allowed';
+      }
+
+      // Afficher le message de validation
+      const validationMessage = document.getElementById('clientInfoValidationMessage');
+      if (validationMessage) {
+        validationMessage.style.display = 'block';
+      }
+
+      // Cacher l'indicateur de sauvegarde
+      const statusEl = document.getElementById('auto-save-status');
+      if (statusEl) {
+        statusEl.style.display = 'none';
+      }
+
+      // Réinitialiser le formulaire (optionnel - garder les calculs ou non)
+      log('[PROJECT] Projet quitté, prêt pour un nouveau projet');
     }
 
     // Ajouter des écouteurs d'événements sur les champs
@@ -18222,6 +18371,37 @@ function initializeApp() {
 
       // Réinitialiser l'ID du projet chargé
       currentLoadedProjectId = null;
+      isAutoSaveEnabled = false;
+      sectionsUnlocked = false;
+      isCreatingProject = false;
+
+      // Remettre le bouton en "Créer le projet" (désactivé)
+      const createBtn = document.getElementById('createProjectBtn');
+      if (createBtn) {
+        createBtn.innerHTML = '<i class="fas fa-plus-circle"></i> Créer le projet';
+        createBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+        createBtn.onclick = createProjectFromButton;
+        createBtn.disabled = true;
+        createBtn.style.opacity = '0.5';
+        createBtn.style.cursor = 'not-allowed';
+      }
+
+      // Déverrouiller les champs client
+      if (typeof unlockClientInfoFields === 'function') {
+        unlockClientInfoFields();
+      }
+
+      // Afficher le message de validation
+      const validationMsg = document.getElementById('clientInfoValidationMessage');
+      if (validationMsg) {
+        validationMsg.style.display = 'block';
+      }
+
+      // Cacher l'indicateur de sauvegarde
+      const statusEl = document.getElementById('auto-save-status');
+      if (statusEl) {
+        statusEl.style.display = 'none';
+      }
 
       // 1. RÉINITIALISER LES PIÈCES INTÉRIEURES
       piecesInterieur = [];
@@ -18575,11 +18755,42 @@ function initializeApp() {
 
       // ====== RÉINITIALISER LES VARIABLES GLOBALES ======
       currentLoadedProjectId = null;
+      isAutoSaveEnabled = false;
+      sectionsUnlocked = false;
+      isCreatingProject = false;
       selectedProducts = {};
       preparationsGlobales = {};
       preparationPieceCounters = {};
       appretPieceCounters = {};
       heuresNettoyage = 0;
+
+      // ====== REMETTRE LE BOUTON EN MODE "CRÉER" ======
+      const createBtn = document.getElementById('createProjectBtn');
+      if (createBtn) {
+        createBtn.innerHTML = '<i class="fas fa-plus-circle"></i> Créer le projet';
+        createBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+        createBtn.onclick = createProjectFromButton;
+        createBtn.disabled = true;
+        createBtn.style.opacity = '0.5';
+        createBtn.style.cursor = 'not-allowed';
+      }
+
+      // Déverrouiller les champs client
+      if (typeof unlockClientInfoFields === 'function') {
+        unlockClientInfoFields();
+      }
+
+      // Afficher le message de validation
+      const validationMsg = document.getElementById('clientInfoValidationMessage');
+      if (validationMsg) {
+        validationMsg.style.display = 'block';
+      }
+
+      // Cacher l'indicateur de sauvegarde
+      const statusEl = document.getElementById('auto-save-status');
+      if (statusEl) {
+        statusEl.style.display = 'none';
+      }
 
       // ====== RÉINITIALISER LES COMPTEURS ======
       pieceCounter = 0;
@@ -19074,6 +19285,32 @@ function initializeApp() {
         }
         isAutoSaveEnabled = true;
         sectionsUnlocked = true;
+
+        // Verrouiller les champs client et changer le bouton en "Quitter le projet"
+        if (typeof lockClientInfoFields === 'function') {
+          lockClientInfoFields();
+        }
+        if (typeof enableCompleterButtons === 'function') {
+          enableCompleterButtons();
+        }
+        const createBtn = document.getElementById('createProjectBtn');
+        if (createBtn) {
+          createBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Quitter le projet';
+          createBtn.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+          createBtn.onclick = quitProject;
+          createBtn.disabled = false;
+          createBtn.style.opacity = '1';
+          createBtn.style.cursor = 'pointer';
+        }
+        // Cacher le message de validation
+        const validationMsg = document.getElementById('clientInfoValidationMessage');
+        if (validationMsg) {
+          validationMsg.style.display = 'none';
+        }
+        // Afficher l'indicateur de sauvegarde
+        if (typeof showAutoSaveStatus === 'function') {
+          showAutoSaveStatus('saved');
+        }
 
         // Forcer la position de scroll en haut (sans animation) pour éviter tout scroll automatique
         window.scrollTo(0, 0);

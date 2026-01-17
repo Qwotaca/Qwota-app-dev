@@ -991,6 +991,135 @@
     }
 
     /* ================================================================
+       POPUP RECONNEXION GOOGLE
+       ================================================================ */
+    .google-reconnect-popup {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(4px);
+      z-index: 100000;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem;
+    }
+
+    .google-reconnect-popup.active {
+      display: flex;
+    }
+
+    .google-reconnect-content {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      border-radius: 16px;
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      max-width: 500px;
+      width: 100%;
+      position: relative;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    }
+
+    .google-reconnect-content:hover {
+      border-color: rgba(96, 165, 250, 0.6);
+      transform: translateY(-2px);
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.5);
+    }
+
+    .google-reconnect-icon {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, #4285f4 0%, #34a853 50%, #fbbc05 75%, #ea4335 100%);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .google-reconnect-icon i {
+      font-size: 28px;
+      color: white;
+    }
+
+    .google-reconnect-text {
+      flex: 1;
+    }
+
+    .google-reconnect-text h3 {
+      margin: 0 0 0.25rem 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+
+    .google-reconnect-text p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+
+    .google-reconnect-arrow {
+      color: #60a5fa;
+      font-size: 1.25rem;
+      transition: transform 0.3s ease;
+    }
+
+    .google-reconnect-content:hover .google-reconnect-arrow {
+      transform: translateX(4px);
+    }
+
+    .google-reconnect-close {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      width: 28px;
+      height: 28px;
+      background: #1e293b;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #94a3b8;
+      font-size: 0.75rem;
+      transition: all 0.2s ease;
+    }
+
+    .google-reconnect-close:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: #ef4444;
+      color: #ef4444;
+    }
+
+    @media (max-width: 768px) {
+      .google-reconnect-content {
+        flex-direction: column;
+        text-align: center;
+        padding: 1.5rem;
+      }
+
+      .google-reconnect-arrow {
+        display: none;
+      }
+
+      .google-reconnect-close {
+        top: -8px;
+        right: -8px;
+      }
+    }
+
+    /* ================================================================
        MODAL STATISTIQUES
        ================================================================ */
     .stats-modal {
@@ -6031,6 +6160,89 @@
 
       // Exposer la fonction globalement pour pouvoir la rafraîchir depuis dashboard_user.html
       window.updatePlaintesBadge = updatePlaintesBadge;
+    });
+  </script>
+
+  <!-- ================================================================
+       POPUP RECONNEXION GOOGLE
+       ================================================================ -->
+  <div id="google-reconnect-popup" class="google-reconnect-popup">
+    <div class="google-reconnect-content" onclick="redirectToConnectGoogle()">
+      <div class="google-reconnect-icon">
+        <i class="fab fa-google"></i>
+      </div>
+      <div class="google-reconnect-text">
+        <h3>Reconnexion requise</h3>
+        <p>Veuillez vous reconnecter à Google pour synchroniser votre agenda et courriel</p>
+      </div>
+      <div class="google-reconnect-arrow">
+        <i class="fas fa-chevron-right"></i>
+      </div>
+      <button class="google-reconnect-close" onclick="closeGooglePopup(event)">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // ================================================================
+    // VÉRIFICATION CONNEXION GOOGLE AU DÉMARRAGE
+    // ================================================================
+    async function checkGoogleConnections() {
+      const username = localStorage.getItem('username');
+      if (!username) return;
+
+      try {
+        // Vérifier les deux connexions en parallèle
+        const [agendaResponse, emailResponse] = await Promise.all([
+          fetch(`/is-agenda-linked?username=${encodeURIComponent(username)}`),
+          fetch(`/email-connecte?username=${encodeURIComponent(username)}`).catch(() => ({ ok: false }))
+        ]);
+
+        const agendaData = await agendaResponse.json();
+        const isAgendaLinked = agendaData.linked === true;
+        const isEmailLinked = emailResponse.ok;
+
+        console.log('[GOOGLE CHECK] Agenda:', isAgendaLinked, 'Email:', isEmailLinked);
+
+        // Si au moins une des deux n'est pas connectée, afficher le popup
+        if (!isAgendaLinked || !isEmailLinked) {
+          showGoogleReconnectPopup();
+        }
+      } catch (error) {
+        console.error('[GOOGLE CHECK] Erreur:', error);
+      }
+    }
+
+    function showGoogleReconnectPopup() {
+      const popup = document.getElementById('google-reconnect-popup');
+      if (popup) {
+        popup.classList.add('active');
+      }
+    }
+
+    function closeGooglePopup(event) {
+      event.stopPropagation();
+      const popup = document.getElementById('google-reconnect-popup');
+      if (popup) {
+        popup.classList.remove('active');
+      }
+    }
+
+    function redirectToConnectGoogle() {
+      // Naviguer vers la page de connexion agenda
+      if (typeof loadPage === 'function') {
+        loadPage('connection');
+      } else {
+        window.location.hash = '#connection';
+      }
+      closeGooglePopup({ stopPropagation: () => {} });
+    }
+
+    // Vérifier les connexions Google après le chargement de l'app
+    document.addEventListener('DOMContentLoaded', () => {
+      // Attendre que l'app soit chargée avant de vérifier
+      setTimeout(checkGoogleConnections, 2000);
     });
   </script>
 

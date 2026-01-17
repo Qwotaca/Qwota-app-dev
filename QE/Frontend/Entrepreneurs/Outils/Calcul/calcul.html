@@ -3,6 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <title>Calculateur</title>
+
+  <!-- ANTI-FLASH: Masquer immédiatement si chargement de projet en cours -->
+  <script>
+    (function() {
+      if (localStorage.getItem('pendingProjectLoad')) {
+        document.documentElement.style.cssText = 'visibility:hidden!important;overflow:hidden!important;background:#0f172a!important;';
+      }
+    })();
+  </script>
+  <style>
+    /* Fallback CSS pour éviter le flash */
+    html.loading-project { visibility: hidden !important; overflow: hidden !important; background: #0f172a !important; }
+  </style>
   
   <!-- 📱 PWA Meta Tags -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13541,22 +13554,21 @@ function closeAllDropdowns() {
 }
 
 // Vérifier IMMÉDIATEMENT s'il y a un projet à charger (avant tout)
-// Cela affiche l'animation de chargement dès que la page se charge
+// Le masquage initial est fait dans <head>, ici on affiche juste l'animation
 (function() {
   const pendingProjectId = localStorage.getItem('pendingProjectLoad');
   if (pendingProjectId) {
-    // Cacher le body IMMÉDIATEMENT pour éviter le flash
-    document.documentElement.style.visibility = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
-
-    // Afficher l'animation dès que possible
+    // Afficher l'animation dès que possible (le masquage est déjà fait dans <head>)
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', function() {
+        // Rendre visible et afficher l'animation
         document.documentElement.style.visibility = 'visible';
+        document.documentElement.style.overflow = '';
         showLoadingAnimation('Chargement du projet...');
       });
     } else {
       document.documentElement.style.visibility = 'visible';
+      document.documentElement.style.overflow = '';
       showLoadingAnimation('Chargement du projet...');
     }
   }
@@ -13845,6 +13857,11 @@ function initializeApp() {
       if (overlay) {
         overlay.remove();
       }
+      // Restaurer le scroll et la visibilité de la page
+      document.documentElement.style.visibility = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.background = '';
+      document.body.style.overflow = '';
     }
     
     function showCustomConfirm(title, message, confirmText, cancelText, onConfirm) {
@@ -18726,9 +18743,13 @@ function initializeApp() {
         sessionStorage.setItem('selectedEntrepreneurBeforeReload', window.selectedEntrepreneur);
       }
 
-      // Recharger complètement la page (équivalent à resetForm + charger)
-      // L'animation de chargement s'affichera automatiquement au reload
-      window.location.reload();
+      // Afficher l'animation IMMÉDIATEMENT avant le reload pour éviter le flash
+      showLoadingAnimation('Chargement du projet...');
+
+      // Petit délai pour que l'animation soit visible avant le reload
+      setTimeout(() => {
+        window.location.reload();
+      }, 50);
     }
 
     // Fonction pour réinitialiser tous les champs du formulaire sans reload

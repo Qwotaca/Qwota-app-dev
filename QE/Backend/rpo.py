@@ -860,6 +860,8 @@ def sync_soumissions_to_rpo(username: str) -> bool:
             print(f"[WARN] [RPO SYNC] Fichier soumissions_completes non trouve pour {username}", flush=True)
 
         # Charger les clients perdus pour les exclure du RPO
+        # IMPORTANT: On matche UNIQUEMENT par id et num (identifiants uniques du contrat)
+        # PAS par nom/prénom/téléphone pour éviter d'exclure TOUS les contrats d'un même client
         clients_perdus_path = os.path.join(base_cloud, "clients_perdus", username, "clients.json")
         clients_perdus_ids = set()
         clients_perdus_count = 0
@@ -871,24 +873,19 @@ def sync_soumissions_to_rpo(username: str) -> bool:
                         clients_perdus = json.loads(content)
                         clients_perdus_count = len(clients_perdus)
                         # Créer un set d'identifiants pour vérification rapide
+                        # UNIQUEMENT id et num - pas de composite par nom pour éviter les faux positifs
                         for client in clients_perdus:
-                            # Stocker id, num
+                            # Stocker id et num (identifiants uniques du contrat)
                             if client.get('id'):
-                                clients_perdus_ids.add(client.get('id'))
+                                clients_perdus_ids.add(str(client.get('id')))
                             if client.get('num'):
-                                clients_perdus_ids.add(client.get('num'))
+                                clients_perdus_ids.add(str(client.get('num')))
 
-                            # Composite keys - gérer les deux formats possibles
                             prenom = client.get('prenom') or client.get('clientPrenom', '')
                             nom = client.get('nom') or client.get('clientNom', '')
-                            telephone = client.get('telephone', '')
+                            print(f"  [CLIENT PERDU] Ajout: {prenom} {nom} (id: {client.get('id')}, num: {client.get('num')})", flush=True)
 
-                            if prenom or nom or telephone:
-                                composite = f"{prenom}_{nom}_{telephone}".lower()
-                                clients_perdus_ids.add(composite)
-                                print(f"  [CLIENT PERDU] Ajout: {prenom} {nom} (num: {client.get('num')}, composite: {composite})", flush=True)
-
-                print(f"[INFO] [RPO SYNC] {clients_perdus_count} clients perdus, {len(clients_perdus_ids)} identifiants charges", flush=True)
+                print(f"[INFO] [RPO SYNC] {clients_perdus_count} clients perdus, {len(clients_perdus_ids)} identifiants charges (id/num uniquement)", flush=True)
             except Exception as e:
                 print(f"[WARN] [RPO SYNC] Erreur chargement clients perdus: {e}", flush=True)
         else:
@@ -903,25 +900,23 @@ def sync_soumissions_to_rpo(username: str) -> bool:
             print(f"[INFO] [RPO SYNC] {len(soumissions_signees)} soumissions signees trouvees pour {username}", flush=True)
 
             for soumission in soumissions_signees:
-                # VÉRIFIER SI CE CLIENT EST PERDU
-                soumission_id = soumission.get('id')
-                soumission_num = soumission.get('num')
+                # VÉRIFIER SI CE CONTRAT SPÉCIFIQUE EST PERDU
+                # On matche UNIQUEMENT par id et num (pas par nom) pour ne pas exclure
+                # les autres contrats du même client
+                soumission_id = str(soumission.get('id', '')) if soumission.get('id') else ''
+                soumission_num = str(soumission.get('num', '')) if soumission.get('num') else ''
 
-                # Gérer les deux formats possibles: prenom/nom OU clientPrenom/clientNom
+                # Gérer les deux formats possibles pour le logging
                 prenom = soumission.get('prenom') or soumission.get('clientPrenom', '')
                 nom = soumission.get('nom') or soumission.get('clientNom', '')
-                telephone = soumission.get('telephone', '')
 
-                soumission_composite = f"{prenom}_{nom}_{telephone}".lower()
-
-                # Si le client est perdu, on le saute
-                is_perdu = (soumission_id in clients_perdus_ids or
-                            soumission_num in clients_perdus_ids or
-                            soumission_composite in clients_perdus_ids)
+                # Si ce contrat spécifique est perdu (match par id ou num uniquement)
+                is_perdu = (soumission_id and soumission_id in clients_perdus_ids) or \
+                           (soumission_num and soumission_num in clients_perdus_ids)
 
                 if is_perdu:
                     prix_str = soumission.get('prix', '0')
-                    print(f"  [SKIP] [RPO SYNC] Client perdu exclu: {prenom} {nom} ({soumission_num}) - Prix: {prix_str}", flush=True)
+                    print(f"  [SKIP] [RPO SYNC] Contrat perdu exclu: {prenom} {nom} (id: {soumission_id}, num: {soumission_num}) - Prix: {prix_str}", flush=True)
                     continue
 
                 date_str = soumission.get('date', '')

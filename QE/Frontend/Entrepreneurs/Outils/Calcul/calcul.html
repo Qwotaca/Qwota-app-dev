@@ -3835,9 +3835,14 @@
 
     // Fonction pour quitter le projet actuel
     function quitProject() {
-      log('[PROJECT] Quitter le projet');
+      log('[PROJECT] Quitter le projet - RÉINITIALISATION COMPLÈTE');
 
-      // Réinitialiser l'ID du projet
+      // Appeler reinitialiserCalculateur pour tout remettre à zéro
+      if (typeof reinitialiserCalculateur === 'function') {
+        reinitialiserCalculateur();
+      }
+
+      // S'assurer que les flags sont réinitialisés
       currentLoadedProjectId = null;
       isAutoSaveEnabled = false;
       sectionsUnlocked = false;
@@ -3849,9 +3854,9 @@
       // Déverrouiller les champs client
       unlockClientInfoFields();
 
-      // Réinitialiser les champs client
-      const fields = ['clientPrenom', 'clientNom', 'clientAddress', 'clientPhone'];
-      fields.forEach(fieldId => {
+      // Réinitialiser les champs client (vider et mettre bordure rouge)
+      const clientFields = ['clientPrenom', 'clientNom', 'clientAddress', 'clientPhone'];
+      clientFields.forEach(fieldId => {
         const field = document.getElementById(fieldId);
         if (field) {
           field.value = '';
@@ -3885,8 +3890,12 @@
         statusEl.style.display = 'none';
       }
 
-      // Réinitialiser le formulaire (optionnel - garder les calculs ou non)
-      log('[PROJECT] Projet quitté, prêt pour un nouveau projet');
+      // Forcer la mise à jour des calculs à 0
+      if (typeof updateCalculation === 'function') {
+        setTimeout(() => updateCalculation(), 100);
+      }
+
+      log('[PROJECT] Projet quitté, tout réinitialisé, prêt pour un nouveau projet');
     }
 
     // Ajouter des écouteurs d'événements sur les champs

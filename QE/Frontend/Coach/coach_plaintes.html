@@ -4,25 +4,20 @@
   <meta charset="UTF-8" />
   <title>Gestion de Plaintes - Coach Qwota</title>
 
-  <!-- ANTI-FLASH: Cacher le contenu immédiatement pour coach/direction -->
+  <!-- ANTI-FLASH: Gérer l'affichage du contenu selon le rôle -->
   <script>
     (function() {
       const userRole = localStorage.getItem('userRole');
-      const isCoachOrDirection = userRole === 'coach' || userRole === 'direction';
-      const urlParams = new URLSearchParams(window.location.search);
-      const userParam = urlParams.get('user');
-      const currentUsername = localStorage.getItem('username');
+      const isEntrepreneur = userRole === 'entrepreneur';
 
-      // Si coach/direction sans paramètre user spécifique, cacher le contenu
-      if (isCoachOrDirection && (!userParam || userParam === currentUsername)) {
+      // Pour les entrepreneurs, afficher le contenu immédiatement
+      if (isEntrepreneur) {
         var style = document.createElement('style');
-        style.id = 'anti-flash-style';
+        style.id = 'entrepreneur-show-style';
         style.textContent = `
-          body:not(.has-selection):not(.entrepreneur-mode) .main-content,
-          body:not(.has-selection):not(.entrepreneur-mode) #main-content,
-          body:not(.has-selection):not(.entrepreneur-mode) main {
-            opacity: 0 !important;
-            pointer-events: none !important;
+          .main-content, #main-content {
+            opacity: 1 !important;
+            pointer-events: all !important;
           }
         `;
         document.head.appendChild(style);
@@ -378,8 +373,8 @@
     </div>
   </div>
 
-  <!-- Contenu principal -->
-  <div class="main-content w-full" style="width: 100%; padding: 2rem;">
+  <!-- Contenu principal (caché par défaut pour coach/direction) -->
+  <div class="main-content w-full" id="main-content" style="width: 100%; padding: 2rem; opacity: 0; pointer-events: none;">
     <div class="w-full">
 
       <!-- Header -->

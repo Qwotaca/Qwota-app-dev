@@ -1078,30 +1078,6 @@
       transform: translateX(4px);
     }
 
-    .google-reconnect-close {
-      position: absolute;
-      top: -10px;
-      right: -10px;
-      width: 28px;
-      height: 28px;
-      background: #1e293b;
-      border: 1px solid rgba(239, 68, 68, 0.4);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      color: #94a3b8;
-      font-size: 0.75rem;
-      transition: all 0.2s ease;
-    }
-
-    .google-reconnect-close:hover {
-      background: rgba(239, 68, 68, 0.2);
-      border-color: #ef4444;
-      color: #ef4444;
-    }
-
     @media (max-width: 768px) {
       .google-reconnect-content {
         flex-direction: column;
@@ -1111,11 +1087,6 @@
 
       .google-reconnect-arrow {
         display: none;
-      }
-
-      .google-reconnect-close {
-        top: -8px;
-        right: -8px;
       }
     }
 
@@ -6178,9 +6149,6 @@
       <div class="google-reconnect-arrow">
         <i class="fas fa-chevron-right"></i>
       </div>
-      <button class="google-reconnect-close" onclick="closeGooglePopup(event)">
-        <i class="fas fa-times"></i>
-      </button>
     </div>
   </div>
 
@@ -6221,8 +6189,7 @@
       }
     }
 
-    function closeGooglePopup(event) {
-      event.stopPropagation();
+    function hideGoogleReconnectPopup() {
       const popup = document.getElementById('google-reconnect-popup');
       if (popup) {
         popup.classList.remove('active');
@@ -6230,19 +6197,28 @@
     }
 
     function redirectToConnectGoogle() {
+      // Cacher le popup
+      hideGoogleReconnectPopup();
       // Naviguer vers la page de connexion agenda
-      if (typeof loadPage === 'function') {
-        loadPage('connection');
-      } else {
-        window.location.hash = '#connection';
-      }
-      closeGooglePopup({ stopPropagation: () => {} });
+      router.loadPage('connection');
     }
 
-    // Vérifier les connexions Google après le chargement de l'app
+    // Vérifier les connexions Google après que l'app soit complètement chargée
+    // On écoute quand l'écran de chargement est masqué
+    function waitForAppLoadedThenCheckGoogle() {
+      const loadingOverlay = document.getElementById('loading-overlay');
+      if (loadingOverlay && loadingOverlay.classList.contains('hidden')) {
+        // L'app est chargée, vérifier les connexions Google
+        setTimeout(checkGoogleConnections, 500);
+      } else {
+        // L'app n'est pas encore chargée, réessayer
+        setTimeout(waitForAppLoadedThenCheckGoogle, 500);
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
-      // Attendre que l'app soit chargée avant de vérifier
-      setTimeout(checkGoogleConnections, 2000);
+      // Attendre que l'app soit complètement chargée
+      waitForAppLoadedThenCheckGoogle();
     });
   </script>
 

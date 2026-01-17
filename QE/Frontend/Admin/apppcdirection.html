@@ -3530,6 +3530,9 @@
             const needsLoading = !srcAttr || srcAttr === '' || srcAttr === 'about:blank';
 
             if (needsLoading || srcAttr !== url) {
+              // ⚡ CACHER L'IFRAME IMMÉDIATEMENT pour éviter le flash
+              iframe.style.opacity = '0';
+
               // ⚡ AFFICHER le spinner IMMÉDIATEMENT (pas de délai)
               // MAIS seulement si le loading-overlay principal n'est pas visible (pas au premier lancement)
               const pageSpinner = document.getElementById('page-loading-spinner');
@@ -3553,12 +3556,16 @@
               // Charger la page
               iframe.src = url;
 
-              // Cacher le spinner quand la page est chargée
+              // Cacher le spinner quand la page est chargée (avec délai de 500ms)
               iframe.addEventListener('load', function onLoad() {
-                if (pageSpinner) {
-                  pageSpinner.style.display = 'none';
-                  console.log(`[APPPC] ✅ Spinner caché - ${pageName} chargé`);
-                }
+                setTimeout(() => {
+                  if (pageSpinner) {
+                    pageSpinner.style.display = 'none';
+                    console.log(`[APPPC] ✅ Spinner caché - ${pageName} chargé`);
+                  }
+                  // Remettre l'iframe visible
+                  iframe.style.opacity = '1';
+                }, 500);
                 iframe.removeEventListener('load', onLoad);
               });
             }

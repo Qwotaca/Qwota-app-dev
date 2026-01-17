@@ -251,22 +251,26 @@
     dropdownMenu.innerHTML = '';
 
     // Determine which count field to use based on page
-    // ONLY show badges on specific pages: Gestion Employés and Facturation QE
+    // ONLY show badges on specific pages: Gestion Employés, Facturation QE, et Plaintes
     const pathname = window.location.pathname.toLowerCase();
     const isFacturationPage = pathname.includes('facturation');
     const isGestionEmployesPage = pathname.includes('gestionemployes') || pathname.includes('employes');
-    const shouldShowBadge = isFacturationPage || isGestionEmployesPage;
+    const isPlaintesPage = pathname.includes('plaintes');
+    const shouldShowBadge = isFacturationPage || isGestionEmployesPage || isPlaintesPage;
 
     let countField = null;
     if (isFacturationPage) {
       countField = 'pending_facturations_count';
     } else if (isGestionEmployesPage) {
       countField = 'pending_count';
+    } else if (isPlaintesPage) {
+      countField = 'plaintes_count';
     }
 
     console.log('[ENTREPRENEUR-SELECTOR] pathname:', pathname);
     console.log('[ENTREPRENEUR-SELECTOR] isFacturationPage:', isFacturationPage);
     console.log('[ENTREPRENEUR-SELECTOR] isGestionEmployesPage:', isGestionEmployesPage);
+    console.log('[ENTREPRENEUR-SELECTOR] isPlaintesPage:', isPlaintesPage);
     console.log('[ENTREPRENEUR-SELECTOR] shouldShowBadge:', shouldShowBadge);
     console.log('[ENTREPRENEUR-SELECTOR] countField:', countField);
     console.log('[ENTREPRENEUR-SELECTOR] entrepreneurs:', entrepreneurs);

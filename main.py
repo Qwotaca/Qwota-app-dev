@@ -9223,6 +9223,7 @@ async def get_users_entrepreneurs_api(coach_username: Optional[str] = None):
                 username = row[0]
                 pending_employes_count = 0
                 pending_facturations_count = 0
+                plaintes_count = 0
 
                 # Calculer le nombre d'employés en attente pour cet entrepreneur (seulement si coach_username fourni)
                 if coach_username and os.path.exists(employes_dir):
@@ -9304,6 +9305,18 @@ async def get_users_entrepreneurs_api(coach_username: Optional[str] = None):
                                 remb_en_attente = sum(1 for r in remboursements if r.get("statut") == "en_attente_coach")
                                 pending_facturations_count += remb_en_attente
 
+                # Compter les plaintes actuelles (non réglées) pour cet entrepreneur
+                plaintes_file = os.path.join(base_cloud, "plaintes", username, "plaintes.json")
+                if os.path.exists(plaintes_file):
+                    try:
+                        with open(plaintes_file, "r", encoding="utf-8") as f:
+                            content = f.read().strip()
+                            if content:
+                                plaintes = json.loads(content)
+                                plaintes_count = sum(1 for p in plaintes if p.get("statut") == "actuelle")
+                    except:
+                        pass
+
                 # Récupérer prenom et nom depuis la DB, sinon depuis user_info.json
                 prenom = row[4] or ""
                 nom = row[5] or ""
@@ -9329,7 +9342,8 @@ async def get_users_entrepreneurs_api(coach_username: Optional[str] = None):
                     "nom": nom,
                     "pending_count": pending_employes_count,  # Pour compatibilité avec Gestion Employés
                     "pending_employes_count": pending_employes_count,
-                    "pending_facturations_count": pending_facturations_count
+                    "pending_facturations_count": pending_facturations_count,
+                    "plaintes_count": plaintes_count
                 })
 
             return {

@@ -3488,61 +3488,71 @@
     function lockCalculationSections() {
       if (sectionsUnlocked) return; // Déjà déverrouillé, ne pas re-verrouiller
 
-      const sectionsToLock = ['estimation-tab', 'interieur-tab', 'produits-tab'];
+      const tabsToLock = ['estimation-tab', 'interieur-tab', 'produits-tab'];
 
-      sectionsToLock.forEach(sectionId => {
-        const section = document.getElementById(sectionId);
-        if (!section) return;
+      tabsToLock.forEach(tabId => {
+        const tab = document.getElementById(tabId);
+        if (!tab) return;
 
-        // Désactiver tous les inputs, selects, textareas, buttons dans la section
-        const interactiveElements = section.querySelectorAll('input, select, textarea, button:not(.tab-btn)');
-        interactiveElements.forEach(el => {
-          el.disabled = true;
-          el.style.opacity = '0.5';
-          el.style.cursor = 'not-allowed';
+        // Trouver toutes les boxes dans ce tab
+        const boxes = tab.querySelectorAll('.box');
+
+        boxes.forEach(box => {
+          // Désactiver tous les inputs, selects, textareas, buttons dans la box
+          const interactiveElements = box.querySelectorAll('input, select, textarea, button');
+          interactiveElements.forEach(el => {
+            el.disabled = true;
+            el.style.opacity = '0.5';
+            el.style.cursor = 'not-allowed';
+          });
+
+          // Ajouter un overlay visuel sur chaque box individuellement
+          if (!box.querySelector('.lock-overlay')) {
+            const overlay = document.createElement('div');
+            overlay.className = 'lock-overlay';
+            overlay.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); z-index: 100; border-radius: 18px; pointer-events: none;';
+            box.style.position = 'relative';
+            box.appendChild(overlay);
+          }
         });
-
-        // Ajouter un overlay visuel (sans message - le message est dans clientInfoValidationMessage)
-        if (!section.querySelector('.lock-overlay')) {
-          const overlay = document.createElement('div');
-          overlay.className = 'lock-overlay';
-          overlay.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); z-index: 100; border-radius: 18px;';
-          section.style.position = 'relative';
-          section.appendChild(overlay);
-        }
       });
 
-      log('[LOCK] Sections de calcul verrouillées');
+      log('[LOCK] Sections de calcul verrouillées (par box)');
     }
 
     // Fonction pour activer le contenu des sections de calcul
     function unlockCalculationSections() {
       if (sectionsUnlocked) return; // Déjà déverrouillé
 
-      const sectionsToUnlock = ['estimation-tab', 'interieur-tab', 'produits-tab'];
+      const tabsToUnlock = ['estimation-tab', 'interieur-tab', 'produits-tab'];
 
-      sectionsToUnlock.forEach(sectionId => {
-        const section = document.getElementById(sectionId);
-        if (!section) return;
+      tabsToUnlock.forEach(tabId => {
+        const tab = document.getElementById(tabId);
+        if (!tab) return;
 
-        // Réactiver tous les inputs, selects, textareas, buttons
-        const interactiveElements = section.querySelectorAll('input, select, textarea, button');
-        interactiveElements.forEach(el => {
-          el.disabled = false;
-          el.style.opacity = '';
-          el.style.cursor = '';
+        // Trouver toutes les boxes dans ce tab
+        const boxes = tab.querySelectorAll('.box');
+
+        boxes.forEach(box => {
+          // Réactiver tous les inputs, selects, textareas, buttons
+          const interactiveElements = box.querySelectorAll('input, select, textarea, button');
+          interactiveElements.forEach(el => {
+            el.disabled = false;
+            el.style.opacity = '';
+            el.style.cursor = '';
+          });
+
+          // Retirer l'overlay
+          const overlay = box.querySelector('.lock-overlay');
+          if (overlay) {
+            overlay.remove();
+          }
         });
-
-        // Retirer l'overlay
-        const overlay = section.querySelector('.lock-overlay');
-        if (overlay) {
-          overlay.remove();
-        }
       });
 
       sectionsUnlocked = true;
       isAutoSaveEnabled = true;
-      log('[UNLOCK] Sections de calcul déverrouillées - Auto-save activé');
+      log('[UNLOCK] Sections de calcul déverrouillées (par box) - Auto-save activé');
     }
 
     // Fonction pour créer automatiquement un projet

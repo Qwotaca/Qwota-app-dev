@@ -17272,6 +17272,7 @@ function initializeApp() {
       endroitsPeinturer.forEach((endroitData, endroitIndex) => {
         // Envelopper toute l'opération dans un setTimeout pour éviter que les itérations suivantes
         // n'écrasent la valeur du dropdown avant que ajouterEndroit() ne soit appelé
+        // OPTIMISÉ: délai réduit de 1000ms à 50ms par endroit
         setTimeout(() => {
           const endroitType = endroitData.type;
 
@@ -17285,6 +17286,7 @@ function initializeApp() {
               ajouterEndroit();
 
               // Attendre que l'endroit soit créé, puis ajouter les sous-sections
+              // OPTIMISÉ: délai réduit de 300ms à 30ms
               setTimeout(() => {
                 // Trouver l'endroit qui vient d'être créé (le dernier avec ce type)
                 const createdBox = document.getElementById(`box-${endroitType}`);
@@ -17443,23 +17445,23 @@ function initializeApp() {
                                               }
                                             }
                                           });
-                                        }, 800);
+                                        }, 80);  // OPTIMISÉ: 800ms → 80ms
                                       }
                                     }
                                   }
-                                }, 100);
+                                }, 15);  // OPTIMISÉ: 100ms → 15ms
                               }
-                            }, 100);
+                            }, 15);  // OPTIMISÉ: 100ms → 15ms
                           }
-                        }, ssSectionIndex * 500);
+                        }, ssSectionIndex * 50);  // OPTIMISÉ: 500ms → 50ms par sous-section
                       });
                     }
                   }
                 }
-              }, 300);
+              }, 30);  // OPTIMISÉ: 300ms → 30ms
             }
           }
-        }, endroitIndex * 1000);
+        }, endroitIndex * 80);  // OPTIMISÉ: 1000ms → 80ms par endroit
       });
 
       log(`[OK] ${endroitsPeinturer.length} endroit(s) à peinturer en cours de restauration avec les vraies fonctions`);
@@ -18559,13 +18561,14 @@ function initializeApp() {
 
         if (formData.endroitsPeinturer) {
           // Calculer le temps nécessaire pour charger tous les endroits et sous-sections
+          // OPTIMISÉ: délais réduits de ~10x pour un chargement plus rapide
           formData.endroitsPeinturer.forEach((endroit, endroitIndex) => {
-            const endroitTime = endroitIndex * 1000 + 300; // Temps de base pour l'endroit
+            const endroitTime = endroitIndex * 80 + 30; // Temps de base pour l'endroit (optimisé)
             let maxSousSectionTime = 0;
 
             if (endroit.sousSections) {
               endroit.sousSections.forEach((sousSection, ssIndex) => {
-                const sousSectionTime = ssIndex * 500 + 100 + 100 + 800; // Tous les setTimeout imbriqués
+                const sousSectionTime = ssIndex * 50 + 15 + 15 + 80; // Tous les setTimeout imbriqués (optimisés)
                 maxSousSectionTime = Math.max(maxSousSectionTime, sousSectionTime);
               });
             }
@@ -18574,7 +18577,7 @@ function initializeApp() {
           });
 
           // Ajouter un buffer de sécurité
-          totalLoadingTime += 1000;
+          totalLoadingTime += 200;
 
           log(`[TIMING] Temps de chargement calculé: ${totalLoadingTime}ms`);
           restoreEndroitsPeinturer(formData.endroitsPeinturer);
@@ -18786,7 +18789,7 @@ function initializeApp() {
         // Cacher l'animation de chargement SEULEMENT quand tout est terminé
         hideLoadingAnimation();
 
-      }, Math.max(totalLoadingTime, 1000)); // Attendre au minimum 1 seconde ou le temps calculé
+      }, Math.max(totalLoadingTime, 300)); // OPTIMISÉ: minimum 300ms au lieu de 1000ms
 
       } catch (error) {
         error('[ERROR] Erreur chargement projet:', error);

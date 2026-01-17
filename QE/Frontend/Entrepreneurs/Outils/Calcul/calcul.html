@@ -4,18 +4,36 @@
   <meta charset="UTF-8">
   <title>Calculateur</title>
 
-  <!-- ANTI-FLASH: Masquer immédiatement si chargement de projet en cours -->
+  <!-- ANTI-FLASH: Afficher écran de chargement immédiatement si projet en cours -->
   <script>
     (function() {
       if (localStorage.getItem('pendingProjectLoad')) {
-        document.documentElement.style.cssText = 'visibility:hidden!important;overflow:hidden!important;background:#0f172a!important;';
+        // Injecter immédiatement l'écran de chargement via CSS
+        var style = document.createElement('style');
+        style.id = 'instant-loader-style';
+        style.textContent = `
+          html::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            z-index: 999999;
+          }
+          html::after {
+            content: 'Chargement du projet...';
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: system-ui, sans-serif;
+            font-size: 18px;
+            z-index: 999999;
+          }
+        `;
+        document.head.appendChild(style);
       }
     })();
   </script>
-  <style>
-    /* Fallback CSS pour éviter le flash */
-    html.loading-project { visibility: hidden !important; overflow: hidden !important; background: #0f172a !important; }
-  </style>
   
   <!-- 📱 PWA Meta Tags -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13850,12 +13868,23 @@ function initializeApp() {
       `;
 
       document.body.appendChild(overlay);
+
+      // Retirer le loader CSS instantané (celui du <head>)
+      const instantLoader = document.getElementById('instant-loader-style');
+      if (instantLoader) {
+        instantLoader.remove();
+      }
     }
 
     function hideLoadingAnimation() {
       const overlay = document.getElementById('loadingOverlay');
       if (overlay) {
         overlay.remove();
+      }
+      // Retirer le loader CSS instantané au cas où
+      const instantLoader = document.getElementById('instant-loader-style');
+      if (instantLoader) {
+        instantLoader.remove();
       }
       // Restaurer le scroll et la visibilité de la page
       document.documentElement.style.visibility = '';
@@ -18478,9 +18507,12 @@ function initializeApp() {
       // 5. RÉINITIALISER TOUS LES INPUTS ET SELECTS
       const allInputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"], input[type="email"], textarea');
       allInputs.forEach(input => {
-        if (input.id !== 'profitMargin') {
-          input.value = '';
+        if (input.id === 'profitMargin') return;
+        if (input.id === 'hauteurPiece') {
+          input.value = '8'; // Valeur par défaut
+          return;
         }
+        input.value = '';
       });
 
       const allSelects = document.querySelectorAll('select');
@@ -18811,9 +18843,12 @@ function initializeApp() {
 
       // ====== RÉINITIALISER TOUS LES INPUTS ======
       document.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"], input[type="email"]').forEach(input => {
-        if (input.id !== 'search-input') { // Garder la recherche
-          input.value = '';
+        if (input.id === 'search-input') return; // Garder la recherche
+        if (input.id === 'hauteurPiece') {
+          input.value = '8'; // Valeur par défaut
+          return;
         }
+        input.value = '';
       });
 
       // ====== RÉINITIALISER LES TEXTAREAS ======

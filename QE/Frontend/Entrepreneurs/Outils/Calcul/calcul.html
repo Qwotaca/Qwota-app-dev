@@ -3494,30 +3494,22 @@
         const tab = document.getElementById(tabId);
         if (!tab) return;
 
-        // Trouver toutes les boxes dans ce tab
-        const boxes = tab.querySelectorAll('.box');
+        // Trouver toutes les boxes ET glass-cards dans ce tab
+        const sections = tab.querySelectorAll('.box, .glass-card');
 
-        boxes.forEach(box => {
-          // Désactiver tous les inputs, selects, textareas, buttons dans la box
-          const interactiveElements = box.querySelectorAll('input, select, textarea, button');
-          interactiveElements.forEach(el => {
-            el.disabled = true;
-            el.style.opacity = '0.5';
-            el.style.cursor = 'not-allowed';
-          });
-
-          // Ajouter un overlay visuel sur chaque box individuellement
-          if (!box.querySelector('.lock-overlay')) {
+        sections.forEach(section => {
+          // Ajouter un overlay visuel sur chaque section (bloque tous les clics)
+          if (!section.querySelector('.lock-overlay')) {
             const overlay = document.createElement('div');
             overlay.className = 'lock-overlay';
-            overlay.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); z-index: 100; border-radius: 18px; pointer-events: none;';
-            box.style.position = 'relative';
-            box.appendChild(overlay);
+            overlay.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); z-index: 100; border-radius: 18px; cursor: default;';
+            section.style.position = 'relative';
+            section.appendChild(overlay);
           }
         });
       });
 
-      log('[LOCK] Sections de calcul verrouillées (par box)');
+      log('[LOCK] Sections de calcul verrouillées (par box/glass-card)');
     }
 
     // Fonction pour activer le contenu des sections de calcul
@@ -3530,20 +3522,12 @@
         const tab = document.getElementById(tabId);
         if (!tab) return;
 
-        // Trouver toutes les boxes dans ce tab
-        const boxes = tab.querySelectorAll('.box');
+        // Trouver toutes les boxes ET glass-cards dans ce tab
+        const sections = tab.querySelectorAll('.box, .glass-card');
 
-        boxes.forEach(box => {
-          // Réactiver tous les inputs, selects, textareas, buttons
-          const interactiveElements = box.querySelectorAll('input, select, textarea, button');
-          interactiveElements.forEach(el => {
-            el.disabled = false;
-            el.style.opacity = '';
-            el.style.cursor = '';
-          });
-
+        sections.forEach(section => {
           // Retirer l'overlay
-          const overlay = box.querySelector('.lock-overlay');
+          const overlay = section.querySelector('.lock-overlay');
           if (overlay) {
             overlay.remove();
           }
@@ -3552,7 +3536,7 @@
 
       sectionsUnlocked = true;
       isAutoSaveEnabled = true;
-      log('[UNLOCK] Sections de calcul déverrouillées (par box) - Auto-save activé');
+      log('[UNLOCK] Sections de calcul déverrouillées (par box/glass-card) - Auto-save activé');
     }
 
     // Fonction pour créer automatiquement un projet

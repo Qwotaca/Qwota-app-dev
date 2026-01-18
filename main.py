@@ -14825,9 +14825,9 @@ async def valider_facturation_comptable(username: str, numero_soumission: str, r
                 except:
                     notifications = []
 
-            # Récupérer le nom du client
-            client_nom = statuts[numero_soumission].get("clientNom", "")
-            client_prenom = statuts[numero_soumission].get("clientPrenom", "")
+            # Récupérer le nom du client (essayer plusieurs formats possibles)
+            client_nom = statuts[numero_soumission].get("clientNom") or statuts[numero_soumission].get("nom", "")
+            client_prenom = statuts[numero_soumission].get("clientPrenom") or statuts[numero_soumission].get("prenom", "")
             nom_complet = f"{client_prenom} {client_nom}".strip() or "Client"
 
             # Ajouter la nouvelle notification

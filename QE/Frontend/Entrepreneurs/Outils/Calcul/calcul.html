@@ -12803,30 +12803,55 @@ document.addEventListener('click', function(e) {
       const tbody = document.getElementById('products-table-body');
       if (!tbody) return;
 
+      // Vérifier le rôle - entrepreneurs ne peuvent PAS modifier les produits
+      const currentRole = localStorage.getItem('userRole') || 'entrepreneur';
+      const canEditProducts = (currentRole === 'coach' || currentRole === 'direction');
+
       // Clear existing products except the first few defaults
       tbody.innerHTML = '';
 
       products.forEach(product => {
         const newRow = document.createElement('tr');
         newRow.className = 'hover:bg-slate-700/50';
-        
-        newRow.innerHTML = `
-          <td class="border: 1px solid var(--border-dark); px-4 py-3">
-            <input type="text" value="${product.type}" class="input-field" data-field="type" onchange="syncProductChanges()">
-          </td>
-          <td class="border: 1px solid var(--border-dark); px-4 py-3">
-            <input type="number" value="${product.ratio}" class="input-field" data-field="ratio" onchange="syncProductChanges()">
-          </td>
-          <td class="border: 1px solid var(--border-dark); px-4 py-3">
-            <input type="number" value="${product.prix}" class="input-field" data-field="prix" onchange="syncProductChanges()">
-          </td>
-          <td class="border: 1px solid var(--border-dark); px-4 py-3 text-center">
-            <button class="btn-secondary text-xs px-2 py-1" onclick="removeProduct(this)" title="Supprimer">
-              <i class="fas fa-trash"></i>
-            </button>
-          </td>
-        `;
-        
+
+        if (canEditProducts) {
+          // Coach/Direction: inputs modifiables
+          newRow.innerHTML = `
+            <td class="border: 1px solid var(--border-dark); px-4 py-3">
+              <input type="text" value="${product.type}" class="input-field" data-field="type" onchange="syncProductChanges()">
+            </td>
+            <td class="border: 1px solid var(--border-dark); px-4 py-3">
+              <input type="number" value="${product.ratio}" class="input-field" data-field="ratio" onchange="syncProductChanges()">
+            </td>
+            <td class="border: 1px solid var(--border-dark); px-4 py-3">
+              <input type="number" value="${product.prix}" class="input-field" data-field="prix" onchange="syncProductChanges()">
+            </td>
+            <td class="border: 1px solid var(--border-dark); px-4 py-3 text-center">
+              <button class="btn-secondary text-xs px-2 py-1" onclick="removeProduct(this)" title="Supprimer">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          `;
+        } else {
+          // Entrepreneur: lecture seule (divs non modifiables)
+          newRow.innerHTML = `
+            <td class="border: 1px solid var(--border-dark); px-4 py-3">
+              <div class="w-full px-2 py-1 rounded" style="background-color: #172033; color: var(--text-light);">${product.type}</div>
+              <input type="hidden" data-field="type" value="${product.type}">
+            </td>
+            <td class="border: 1px solid var(--border-dark); px-4 py-3">
+              <div class="w-full px-2 py-1 rounded" style="background-color: #172033; color: var(--text-light);">${product.ratio}</div>
+              <input type="hidden" data-field="ratio" value="${product.ratio}">
+            </td>
+            <td class="border: 1px solid var(--border-dark); px-4 py-3">
+              <div class="w-full px-2 py-1 rounded" style="background-color: #172033; color: var(--text-light);">${product.prix}</div>
+              <input type="hidden" data-field="prix" value="${product.prix}">
+            </td>
+            <td class="border: 1px solid var(--border-dark); px-4 py-3 text-center" style="display: none;">
+            </td>
+          `;
+        }
+
         tbody.appendChild(newRow);
       });
     }
@@ -14317,13 +14342,20 @@ function initializeApp() {
     }
 
     function addNewProduct() {
+      // Vérifier le rôle - seuls coach/direction peuvent ajouter des produits
+      const currentRole = localStorage.getItem('userRole') || 'entrepreneur';
+      if (currentRole !== 'coach' && currentRole !== 'direction') {
+        console.log('[PRODUCTS] Ajout de produit refusé - rôle:', currentRole);
+        return;
+      }
+
       const tbody = document.getElementById('products-table-body');
       const newRow = document.createElement('tr');
       newRow.className = 'hover:bg-slate-700/50';
-      
+
       // Get next radio button value
       const existingRows = tbody.querySelectorAll('tr').length;
-      
+
       newRow.innerHTML = `
         <td class="border: 1px solid var(--border-dark); px-4 py-3">
           <input type="text" value="" class="input-field" data-field="type" placeholder="Type de produit">
@@ -14340,9 +14372,9 @@ function initializeApp() {
           </button>
         </td>
       `;
-      
+
       tbody.appendChild(newRow);
-      
+
       // Focus sur le premier champ du nouveau produit
       newRow.querySelector('input[data-field="type"]').focus();
       
@@ -14360,6 +14392,13 @@ function initializeApp() {
     }
 
     function removeProduct(button) {
+      // Vérifier le rôle - seuls coach/direction peuvent supprimer des produits
+      const currentRole = localStorage.getItem('userRole') || 'entrepreneur';
+      if (currentRole !== 'coach' && currentRole !== 'direction') {
+        console.log('[PRODUCTS] Suppression de produit refusée - rôle:', currentRole);
+        return;
+      }
+
       if (confirm('Êtes-vous sûr de vouloir supprimer ce produit?')) {
         const row = button.closest('tr');
         row.remove();

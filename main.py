@@ -9476,6 +9476,21 @@ async def user_heartbeat(request: Request):
         return {"success": False, "error": str(e)}
 
 
+@app.post("/api/users/disconnect")
+async def user_disconnect(request: Request):
+    """Marque l'utilisateur comme déconnecté immédiatement"""
+    try:
+        data = await request.json()
+        username = data.get("username")
+
+        if username and username in online_users:
+            del online_users[username]
+
+        return {"success": True}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 @app.get("/api/users/online")
 async def get_online_users():
     """Récupère la liste des utilisateurs en ligne (heartbeat < 30 secondes)"""

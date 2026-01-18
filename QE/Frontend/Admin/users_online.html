@@ -233,11 +233,7 @@
         } else {
           container.innerHTML = data.users.map(user => `
             <div class="user-item">
-              <div class="user-avatar" id="avatar-${user.username}">
-                <img src="/static/profile_photos/${user.username}.jpg"
-                     onerror="this.style.display='none'; this.parentElement.innerHTML='${getInitials(user.prenom, user.nom)}';"
-                     alt="${user.prenom} ${user.nom}">
-              </div>
+              <div class="user-avatar" id="avatar-${user.username}">${getInitials(user.prenom, user.nom)}</div>
               <div class="user-info">
                 <div class="user-name">${user.prenom || ''} ${user.nom || ''}</div>
                 <div class="user-username">@${user.username}</div>
@@ -245,6 +241,20 @@
               <span class="user-role ${getRoleClass(user.role)}">${getRoleLabel(user.role)}</span>
             </div>
           `).join('');
+
+          // Charger les photos de profil
+          data.users.forEach(async (user) => {
+            try {
+              const photoRes = await fetch(`/api/user/${user.username}/profile-photo`);
+              const photoData = await photoRes.json();
+              if (photoData.photo_url) {
+                const avatar = document.getElementById(`avatar-${user.username}`);
+                if (avatar) {
+                  avatar.innerHTML = `<img src="${photoData.photo_url}" alt="${user.prenom} ${user.nom}" onerror="this.parentElement.innerHTML='${getInitials(user.prenom, user.nom)}'">`;
+                }
+              }
+            } catch (e) {}
+          });
         }
 
         document.getElementById('last-update').textContent = new Date().toLocaleTimeString('fr-CA');

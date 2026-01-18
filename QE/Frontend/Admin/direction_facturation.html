@@ -2920,6 +2920,9 @@
 
       modalBody.innerHTML = contentHTML;
 
+      // Initialiser le formatage des inputs montant
+      initMontantInputs();
+
       // Appliquer le style selon le type de paiement
       const btnAccepter = document.getElementById('btnAccepterPaiement');
       const headerIcon = document.getElementById('modalHeaderIcon');
@@ -2968,7 +2971,9 @@
 
     // Fonction pour copier le texte dans le presse-papiers
     function copierTexte(texte, btnElement) {
-      navigator.clipboard.writeText(texte).then(() => {
+      // Nettoyer le texte (enlever le $ et les espaces pour copier juste le nombre)
+      const texteNettoye = texte.replace(/\s/g, '').replace('$', '').trim();
+      navigator.clipboard.writeText(texteNettoye).then(() => {
         // Changer l'apparence du bouton
         const icon = btnElement.querySelector('i');
         const originalIcon = icon.className;
@@ -2983,6 +2988,47 @@
         }, 1000);
       }).catch(err => {
         console.error('Erreur lors de la copie:', err);
+      });
+    }
+
+    // Formater un montant en format "1 000,00 $"
+    function formaterMontant(valeur) {
+      // Nettoyer la valeur (garder que chiffres, virgule et point)
+      let nombre = valeur.replace(/[^\d,.-]/g, '').replace(',', '.');
+      let num = parseFloat(nombre);
+      if (isNaN(num)) return valeur;
+
+      // Formater avec espace comme séparateur de milliers et virgule pour décimales
+      let formatted = num.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      return formatted + ' $';
+    }
+
+    // Déformater un montant pour l'édition (retirer espaces et $)
+    function deformaterMontant(valeur) {
+      return valeur.replace(/\s/g, '').replace('$', '').replace(',', '.').trim();
+    }
+
+    // Initialiser les événements sur les inputs montant
+    function initMontantInputs() {
+      document.querySelectorAll('.montant-editable').forEach(input => {
+        // Au focus: afficher version éditable (sans espaces ni $)
+        input.addEventListener('focus', function() {
+          let val = deformaterMontant(this.value);
+          // Remettre la virgule pour l'affichage
+          this.value = val.replace('.', ',');
+        });
+
+        // Au blur: formater avec espaces et $
+        input.addEventListener('blur', function() {
+          if (this.value.trim()) {
+            this.value = formaterMontant(this.value);
+          }
+        });
+
+        // Formater la valeur initiale si pas déjà formatée
+        if (input.value && !input.value.includes('$')) {
+          input.value = formaterMontant(input.value);
+        }
       });
     }
 
@@ -3059,6 +3105,16 @@
       } else if (typePaiement === 'autres_paiements') {
         const input = document.querySelector('.montant-editable[data-type="autres_paiements"]');
         if (input) montantModifie = input.value;
+      }
+
+      // Nettoyer et reformater le montant pour le backend (format: "1000,00 $")
+      if (montantModifie) {
+        // Enlever les espaces mais garder le format avec virgule et $
+        montantModifie = montantModifie.replace(/\s/g, '');
+        // S'assurer que le format est correct
+        if (!montantModifie.includes('$')) {
+          montantModifie = montantModifie.replace('.', ',') + ' $';
+        }
       }
 
       // Ajouter le montant modifié au paiement si différent

@@ -17255,13 +17255,25 @@ function initializeApp() {
           });
         }
 
-        if (sousSections.length > 0) {
+        // Collecter les inputs "Autres" (autre_20min, autre_30min, autre_1h, sablage_surface)
+        const autresInputs = {};
+        const autresInputElements = box.querySelectorAll('input[data-option]');
+        autresInputElements.forEach(input => {
+          const option = input.getAttribute('data-option');
+          const value = input.value || '0';
+          if (option && value !== '0' && value !== '') {
+            autresInputs[option] = value;
+          }
+        });
+
+        if (sousSections.length > 0 || Object.keys(autresInputs).length > 0) {
           data.endroitsPeinturer.push({
             boxId: boxId,
             type: endroitType,
             title: title,
             endroitId: endroitId,
-            sousSections: sousSections
+            sousSections: sousSections,
+            autresInputs: autresInputs
           });
         }
       });
@@ -17867,6 +17879,20 @@ function initializeApp() {
                   if (endroitDiv) {
                     const endroitId = endroitDiv.id;
                     const typeSelect = document.getElementById(`${endroitId}-type-select`);
+
+                    // Restaurer les inputs "Autres" (autre_20min, autre_30min, autre_1h, sablage_surface)
+                    if (endroitData.autresInputs && Object.keys(endroitData.autresInputs).length > 0) {
+                      Object.keys(endroitData.autresInputs).forEach(option => {
+                        const inputId = `${endroitId}_${option}`;
+                        const input = document.getElementById(inputId);
+                        if (input) {
+                          input.value = endroitData.autresInputs[option];
+                          log(`[OK] Input autre restauré: ${inputId} = ${endroitData.autresInputs[option]}`);
+                        } else {
+                          log(`[WARN] Input autre non trouvé: ${inputId}`);
+                        }
+                      });
+                    }
 
                     // Pour chaque sous-section
                     if (endroitData.sousSections) {

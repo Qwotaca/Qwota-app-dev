@@ -166,6 +166,10 @@ app = FastAPI()
 mobile_photo_sessions = {}
 mobile_photo_waiters = {}
 
+# Dictionnaire pour tracker les utilisateurs en ligne (heartbeat system)
+# Format: {username: {"last_seen": timestamp, "prenom": str, "nom": str, "role": str}}
+online_users = {}
+
 app.mount("/cloud/factures", StaticFiles(directory=f"{base_cloud}/factures_completes"), name="factures")
 app.mount("/cloud/soumissions_completes", StaticFiles(directory=f"{base_cloud}/soumissions_completes"), name="soumissions_completes")
 app.mount("/cloud/soumissions_signees", StaticFiles(directory=f"{base_cloud}/soumissions_signees"), name="soumissions_signees")
@@ -289,6 +293,11 @@ def apppc_file():
 def support_admin_file():
     """Page d'administration du support - Accès restreint au rôle support"""
     return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Common", "support-admin.html"))
+
+@app.get("/users-online", include_in_schema=False)
+def users_online_file():
+    """Page affichant les utilisateurs en ligne en temps réel"""
+    return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Admin", "users_online.html"))
 
 @app.get("/apppcdirection", include_in_schema=False)
 def apppcdirection_file():
@@ -9433,6 +9442,74 @@ async def get_all_direction():
     except Exception as e:
         print(f"[ERREUR] Récupération direction: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/users/heartbeat")
+async def user_heartbeat(request: Request):
+    """Enregistre un heartbeat pour marquer l'utilisateur comme en ligne"""
+    try:
+        data = await request.json()
+        username = data.get("username")
+
+        if not username:
+            return {"success": False, "error": "Username requis"}
+
+        # Récupérer les infos de l'utilisateur depuis la DB
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT first_name, last_name, role FROM users WHERE username = ?
+            """, (username,))
+            row = cursor.fetchone()
+
+            if row:
+                online_users[username] = {
+                    "last_seen": time.time(),
+                    "prenom": row[0] or "",
+                    "nom": row[1] or "",
+                    "role": row[2] or "entrepreneur"
+                }
+
+        return {"success": True}
+    except Exception as e:
+        print(f"[ERREUR] Heartbeat: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/api/users/online")
+async def get_online_users():
+    """Récupère la liste des utilisateurs en ligne (heartbeat < 30 secondes)"""
+    try:
+        current_time = time.time()
+        timeout = 30  # 30 secondes de timeout
+
+        # Filtrer les utilisateurs actifs
+        active_users = []
+        users_to_remove = []
+
+        for username, data in online_users.items():
+            if current_time - data["last_seen"] < timeout:
+                active_users.append({
+                    "username": username,
+                    "prenom": data.get("prenom", ""),
+                    "nom": data.get("nom", ""),
+                    "role": data.get("role", "entrepreneur")
+                })
+            else:
+                users_to_remove.append(username)
+
+        # Nettoyer les utilisateurs inactifs
+        for username in users_to_remove:
+            del online_users[username]
+
+        return {
+            "success": True,
+            "count": len(active_users),
+            "users": active_users
+        }
+    except Exception as e:
+        print(f"[ERREUR] Get online users: {e}")
+        return {"success": False, "count": 0, "users": []}
 
 
 @app.get("/api/user-info")

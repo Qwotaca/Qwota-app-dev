@@ -3148,9 +3148,13 @@
       }
 
       // Ajouter le montant modifié au paiement si différent
-      if (montantModifie && montantModifie !== currentPayment.montant) {
+      // Normaliser les deux montants pour la comparaison (enlever espaces)
+      const montantOriginalNormalise = (currentPayment.montant || '').replace(/\s/g, '');
+      const montantModifieNormalise = (montantModifie || '').replace(/\s/g, '');
+
+      if (montantModifie && montantModifieNormalise !== montantOriginalNormalise) {
         currentPayment.montantModifie = montantModifie;
-        console.log('[DIRECTION] Montant modifié:', montantModifie);
+        console.log('[DIRECTION] Montant modifié:', montantModifie, '(original:', currentPayment.montant, ')');
       }
 
       await traiterPaiement(currentPayment, 'valider');

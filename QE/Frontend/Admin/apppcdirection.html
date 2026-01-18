@@ -4833,18 +4833,20 @@
 
       // Charger le compteur d'employés en attente pour la direction
       loadEmployesEnAttenteCount();
-      // Recharger toutes les 30 secondes
-      setInterval(loadEmployesEnAttenteCount, 30000);
 
       // Charger le compteur de facturations en attente pour la direction
       loadFacturationEnAttenteCount();
-      // Recharger toutes les 30 secondes
-      setInterval(loadFacturationEnAttenteCount, 30000);
 
       // Charger le compteur de plaintes non réglées pour la direction
       loadPlaintesCount();
-      // Recharger toutes les 30 secondes
-      setInterval(loadPlaintesCount, 30000);
+
+      // Écouter les messages des iframes pour mise à jour instantanée du badge plaintes
+      window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'plainte-resolved') {
+          console.log('[APPPC DIRECTION] Plainte résolue - mise à jour du badge');
+          loadPlaintesCount();
+        }
+      });
 
       // PRÉCHARGER les données du plan d'affaires pour que le RPO se charge plus vite
       preloadBusinessPlanData();
@@ -5703,32 +5705,6 @@
         });
       }
 
-      // Vérifier les nouveaux messages toutes les 10 secondes (quand le chat est fermé)
-      setInterval(async () => {
-        const chatWindow = document.getElementById('chat-support-window');
-        if (!chatWindow.classList.contains('show')) {
-          const username = window.username || localStorage.getItem('username');
-          if (username) {
-            try {
-              const response = await fetch(`/api/support/unread-count/${username}`);
-              if (response.ok) {
-                const data = await response.json();
-                const badge = document.getElementById('chat-notification-badge');
-                if (badge) {
-                  if (data.count > 0) {
-                    badge.textContent = data.count;
-                    badge.classList.add('show');
-                  } else {
-                    badge.classList.remove('show');
-                  }
-                }
-              }
-            } catch (error) {
-              console.error('[CHAT] Erreur vérification notifications:', error);
-            }
-          }
-        }
-      }, 10000);
     });
   </script>
 

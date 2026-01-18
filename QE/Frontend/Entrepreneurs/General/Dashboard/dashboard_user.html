@@ -6068,12 +6068,9 @@
       }
     };
 
-    async function updatePlainteTimer() {
-      // Charger les données à chaque mise à jour
-      if (window.username) {
-        await loadPlaintesData();
-      }
-
+    function updatePlainteTimer() {
+      // Ne PAS charger les données à chaque seconde - utiliser le cache
+      // Les données sont chargées au démarrage et lors des événements (plainte résolue)
       const plaintesCount = plaintesActuellesData.length;
       const badgeDiv = document.getElementById('plainteIcon');
       const countSpan = document.getElementById('plaintesActuel');
@@ -6111,10 +6108,15 @@
     }
 
 
-    // Update timer every second
-    setInterval(updatePlainteTimer, 1000);
-    // Initial update
-    updatePlainteTimer();
+    // Charger les données des plaintes au démarrage uniquement
+    // puis mettre à jour le timer visuel chaque seconde (calcul local, pas d'API)
+    (async function initPlaintesTimer() {
+      if (window.username) {
+        await loadPlaintesData();  // Chargement au démarrage seulement
+      }
+      updatePlainteTimer();
+      setInterval(updatePlainteTimer, 1000);  // Timer visuel (pas d'API)
+    })();
 
     // Initialiser le dashboard moderne
     updateCurrentDate();
@@ -6364,10 +6366,24 @@
   // S'assurer que le menu correct reste actif selon la page
   document.addEventListener('DOMContentLoaded', function() {
     activateCurrentPageMenu();
-    
+
     // Re-activer après un délai pour contrer les autres scripts
     setTimeout(activateCurrentPageMenu, 150);
     setTimeout(activateCurrentPageMenu, 300);
+  });
+
+  // Écouter les messages de mise à jour des plaintes (quand une plainte est résolue)
+  window.addEventListener('message', async (event) => {
+    if (event.data && event.data.type === 'plainte-resolved') {
+      console.log('[DASHBOARD] Plainte résolue - mise à jour du badge');
+      // Recharger les données des plaintes
+      await loadPlaintesData();
+      // Mettre à jour le badge
+      const countSpan = document.getElementById('plaintesActuel');
+      if (countSpan) {
+        countSpan.textContent = plaintesActuellesData.length;
+      }
+    }
   });
 </script>
 

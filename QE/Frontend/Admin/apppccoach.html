@@ -4496,6 +4496,14 @@
         loadRPOObjectifsNotificationCount();
       }, 500);
 
+      // Écouter les messages des iframes pour mise à jour instantanée du badge plaintes
+      window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'plainte-resolved') {
+          console.log('[APPPC COACH] Plainte résolue - mise à jour du badge');
+          loadPlaintesCount();
+        }
+      });
+
     });
 
     // Fonction pour charger le compteur d'employés en attente
@@ -6367,33 +6375,6 @@
         });
       }
 
-      // Vérifier les nouveaux messages toutes les 10 secondes (quand le chat est fermé)
-      setInterval(async () => {
-        const chatWindow = document.getElementById('chat-support-window');
-        if (!chatWindow.classList.contains('show')) {
-          const username = window.username || localStorage.getItem('username');
-          if (username) {
-            try {
-              const badge = document.getElementById('chat-notification-badge');
-              // Ne pas exécuter si le badge n'existe pas (pas de chat pour les coaches)
-              if (!badge) return;
-
-              const response = await fetch(`/api/support/unread-count/${username}`);
-              if (response.ok) {
-                const data = await response.json();
-                if (data.count > 0) {
-                  badge.textContent = data.count;
-                  badge.classList.add('show');
-                } else {
-                  badge.classList.remove('show');
-                }
-              }
-            } catch (error) {
-              // Silencieux si pas de badge de chat
-            }
-          }
-        }
-      }, 10000);
     });
   </script>
 

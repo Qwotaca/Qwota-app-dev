@@ -6125,12 +6125,19 @@
         }
       }
 
-      // Mettre à jour le badge au chargement et toutes les 30 secondes
+      // Mettre à jour le badge au chargement seulement
       updatePlaintesBadge();
-      setInterval(updatePlaintesBadge, 30000);
 
       // Exposer la fonction globalement pour pouvoir la rafraîchir depuis dashboard_user.html
       window.updatePlaintesBadge = updatePlaintesBadge;
+
+      // Écouter les messages des iframes pour mise à jour instantanée du badge
+      window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'plainte-resolved') {
+          console.log('[APPPC] Plainte résolue - mise à jour du badge');
+          updatePlaintesBadge();
+        }
+      });
     });
   </script>
 

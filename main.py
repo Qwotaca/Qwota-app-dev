@@ -10647,15 +10647,11 @@ async def marquer_comme_perdu(data: dict = Body(...)):
 
                 signees_filtered = []
                 for soum in soumissions_signees:
-                    # Vérifier si c'est le même client
+                    # Vérifier si c'est le même client - UNIQUEMENT par num ou id (jamais par nom/prenom)
                     is_same = False
                     if client_num and soum.get('num') == client_num:
                         is_same = True
                     elif client_id and soum.get('id') == client_id:
-                        is_same = True
-                    elif (soum.get('prenom', '').strip() == client_trouve.get('prenom', '').strip() and
-                          soum.get('nom', '').strip() == client_trouve.get('nom', '').strip() and
-                          soum.get('telephone', '').strip() == client_tel.strip()):
                         is_same = True
 
                     if not is_same:
@@ -10763,18 +10759,14 @@ async def annuler_client_accepte(data: dict = Body(...)):
 
                 client_num = client_trouve.get('num')
                 client_id_val = client_trouve.get('id')
-                client_tel = client_trouve.get('telephone', '')
 
                 signees_filtered = []
                 for soum in soumissions_signees:
+                    # UNIQUEMENT par num ou id (jamais par nom/prenom)
                     is_same = False
                     if client_num and soum.get('num') == client_num:
                         is_same = True
                     elif client_id_val and soum.get('id') == client_id_val:
-                        is_same = True
-                    elif (soum.get('prenom', '').strip() == client_trouve.get('prenom', '').strip() and
-                          soum.get('nom', '').strip() == client_trouve.get('nom', '').strip() and
-                          soum.get('telephone', '').strip() == client_tel.strip()):
                         is_same = True
 
                     if not is_same:
@@ -10895,20 +10887,14 @@ async def marquer_vente_perdue(data: dict = Body(...)):
 
                 client_num = client_trouve.get('num')
                 client_id_val = client_trouve.get('id')
-                prenom = client_trouve.get('prenom') or client_trouve.get('clientPrenom', '')
-                nom = client_trouve.get('nom') or client_trouve.get('clientNom', '')
-                client_tel = client_trouve.get('telephone', '')
 
                 signees_filtered = []
                 for soum in soumissions_signees:
+                    # UNIQUEMENT par num ou id (jamais par nom/prenom)
                     is_same = False
                     if client_num and soum.get('num') == client_num:
                         is_same = True
                     elif client_id_val and soum.get('id') == client_id_val:
-                        is_same = True
-                    elif (soum.get('prenom', '').strip() == prenom.strip() and
-                          soum.get('nom', '').strip() == nom.strip() and
-                          soum.get('telephone', '').strip() == client_tel.strip()):
                         is_same = True
 
                     if not is_same:

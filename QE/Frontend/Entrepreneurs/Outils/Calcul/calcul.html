@@ -17202,6 +17202,22 @@ function initializeApp() {
               }
             });
 
+            // Collecter les inputs "travail additionnel" (sans data-section, seulement data-type)
+            // Ces inputs sont générés pour autre_20min, autre_30min, autre_1h
+            let travailAdditionnelValeur = null;
+            const travailAdditionnelTypes = ['autre_20min', 'autre_30min', 'autre_1h'];
+            const allInputs = section.querySelectorAll('input[data-type]');
+            allInputs.forEach(input => {
+              const dataType = input.getAttribute('data-type');
+              // Si c'est un travail additionnel ET pas de data-section (input unique)
+              if (travailAdditionnelTypes.includes(dataType) && !input.hasAttribute('data-section')) {
+                const value = input.value || '0';
+                if (value !== '0' && value !== '') {
+                  travailAdditionnelValeur = value;
+                }
+              }
+            });
+
             // Collecter les selects (type de produit, etc.)
             const selects = section.querySelectorAll('select');
             const options = {};
@@ -17250,7 +17266,8 @@ function initializeApp() {
               valeurs: valeurs,
               options: options,
               produitsSelectionnes: produitsSelectionnes,
-              troisiemeCouche: troisiemeCouche
+              troisiemeCouche: troisiemeCouche,
+              travailAdditionnelValeur: travailAdditionnelValeur
             });
           });
         }
@@ -17942,6 +17959,19 @@ function initializeApp() {
                                           input.value = valeurs[section];
                                         }
                                       });
+
+                                      // Restaurer l'input "travail additionnel" (sans data-section)
+                                      if (sousSection.travailAdditionnelValeur) {
+                                        const travailAdditionnelTypes = ['autre_20min', 'autre_30min', 'autre_1h'];
+                                        const allInputs = lastSousSection.querySelectorAll('input[data-type]');
+                                        allInputs.forEach(input => {
+                                          const dataType = input.getAttribute('data-type');
+                                          if (travailAdditionnelTypes.includes(dataType) && !input.hasAttribute('data-section')) {
+                                            input.value = sousSection.travailAdditionnelValeur;
+                                            log(`[OK] Travail additionnel restauré: ${dataType} = ${sousSection.travailAdditionnelValeur}`);
+                                          }
+                                        });
+                                      }
 
                                       // Cocher la 3ème couche si nécessaire
                                       if (sousSection.troisiemeCouche) {

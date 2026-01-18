@@ -17137,10 +17137,12 @@ function initializeApp() {
             const productCards = section.querySelectorAll('.product-card.selected');
             productCards.forEach(card => {
               const productName = card.querySelector('.text-sm.font-medium')?.textContent || '';
+              // Cover Stain = jammer_huile, Dulux Gripper = dulux_gripper
+              const trimmedName = productName.trim();
               produitsSelectionnes.push({
-                nom: productName.trim(),
-                type: productName.includes('Dulux') ? 'dulux_gripper' :
-                      productName.includes('Jammer') ? 'jammer_huile' : 'autre'
+                nom: trimmedName,
+                type: trimmedName.includes('Dulux') || trimmedName.includes('Gripper') ? 'dulux_gripper' :
+                      trimmedName.includes('Jammer') || trimmedName.includes('Cover Stain') ? 'jammer_huile' : 'autre'
               });
             });
 
@@ -17775,10 +17777,14 @@ function initializeApp() {
         if (primerData.produitsSelectionnes && primerData.produitsSelectionnes.length > 0) {
           setTimeout(() => {
             primerData.produitsSelectionnes.forEach(produit => {
-              // Trouver le produit correspondant par nom
+              // Trouver le produit correspondant par nom ou type
+              // Cover Stain = jammer_huile, Dulux Gripper = dulux_gripper
               let primerType = '';
-              if (produit.nom.includes('Dulux Gripper')) primerType = 'dulux_gripper';
-              else if (produit.nom.includes('Jammer')) primerType = 'jammer_huile';
+              if (produit.type === 'dulux_gripper' || produit.nom.includes('Dulux') || produit.nom.includes('Gripper')) {
+                primerType = 'dulux_gripper';
+              } else if (produit.type === 'jammer_huile' || produit.nom.includes('Jammer') || produit.nom.includes('Cover Stain')) {
+                primerType = 'jammer_huile';
+              }
 
               if (primerType && typeof togglePrimerSelection === 'function') {
                 // Trouver la carte du produit

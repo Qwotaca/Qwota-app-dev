@@ -17036,6 +17036,10 @@ function initializeApp() {
       data.endroits = collectEndroitData();
       data.piecesInterieur = piecesInterieur;
 
+      // Collecter les produits du tableau pour les sauvegarder avec le projet
+      data.produitsTable = getAllProductsFromTable();
+      log('💾 Produits tableau sauvegardés:', data.produitsTable);
+
       // NOUVEAU: Collecter les sections de lavage créées
       data.lavagesSections = [];
       const lavagesContainer = document.getElementById('lavages-container');
@@ -19241,13 +19245,26 @@ function initializeApp() {
           log('[OK] Pièces intérieures restaurées:', piecesInterieur.length);
         }
 
+        // Restaurer les produits du tableau sauvegardés avec le projet
+        if (formData.produitsTable && formData.produitsTable.length > 0) {
+          populateProductsTable(formData.produitsTable);
+          // Aussi sauvegarder dans localStorage pour synchroniser
+          const saveKey = `estimationProducts_${username}`;
+          localStorage.setItem(saveKey, JSON.stringify(formData.produitsTable));
+          // Rafraîchir l'affichage des produits dans l'onglet Estimation
+          if (typeof chargerProduitsExistants === 'function') {
+            chargerProduitsExistants();
+          }
+          log('[OK] Produits tableau restaurés:', formData.produitsTable.length);
+        }
+
         if (formData.travauxAdditionnels) {
           restoreTravauxAdditionnels(formData.travauxAdditionnels);
         }
 
         // Restaurer tous les champs inputs et selects
         Object.keys(formData).forEach(key => {
-          if (key === 'surfaces' || key === 'endroits' || key === 'piecesInterieur' || key === 'totaux_ext' || key === 'totaux_int' || key === 'ongletActif' || key === 'lavagesSections' || key === 'preparationsSections' || key === 'primersSections' || key === 'endroitsPeinturer' || key === 'travauxAdditionnels') {
+          if (key === 'surfaces' || key === 'endroits' || key === 'piecesInterieur' || key === 'produitsTable' || key === 'totaux_ext' || key === 'totaux_int' || key === 'ongletActif' || key === 'lavagesSections' || key === 'preparationsSections' || key === 'primersSections' || key === 'endroitsPeinturer' || key === 'travauxAdditionnels') {
             return; // Skip les données spéciales, on les traite séparément
           }
 

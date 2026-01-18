@@ -609,6 +609,10 @@ def read_index():
 def avisclient_file():
     return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Common", "reviews.html"))
 
+@app.get("/plainte", include_in_schema=False)
+def plainte_file():
+    return FileResponse(os.path.join(BASE_DIR, "QE", "Frontend", "Common", "plainte.html"))
+
 
 @app.get("/facture")
 def facture_index():
@@ -4125,7 +4129,7 @@ async def block_sensitive_files(request: Request, call_next):
         not path.startswith("/cloud/") and
         not path.startswith("/static/") and
         not path.startswith("/frontend/") and
-        path not in ["/", "/login", "/onboarding", "/guide", "/connect-google", "/oauth2callback", "/connect-gmail", "/gmail/callback", "/gmail-oauth2callback", "/liste-agendas", "/sauver-agenda-id", "/get-agenda-id", "/is-agenda-linked", "/google-email", "/email-connecte"] and
+        path not in ["/", "/login", "/onboarding", "/guide", "/connect-google", "/oauth2callback", "/connect-gmail", "/gmail/callback", "/gmail-oauth2callback", "/liste-agendas", "/sauver-agenda-id", "/get-agenda-id", "/is-agenda-linked", "/google-email", "/email-connecte", "/avisclient", "/plainte"] and
         not path.endswith(".css") and
         not path.endswith(".js") and
         not path.endswith(".png") and

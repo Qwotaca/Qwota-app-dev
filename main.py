@@ -14762,6 +14762,7 @@ async def valider_facturation_comptable(username: str, numero_soumission: str, r
 
         message = "Paiement validé avec succès"
         montant_modifie = data.get("montantModifie")
+        montant_original = None
 
         # Supprimer les infos de refus mais garder le statut attente_comptable
         if type_paiement == "depot":
@@ -14772,8 +14773,9 @@ async def valider_facturation_comptable(username: str, numero_soumission: str, r
                     del statuts[numero_soumission]["depot"]["refus"]
                 # Mettre à jour le montant si modifié
                 if montant_modifie:
+                    montant_original = statuts[numero_soumission]["depot"].get("montant")
                     statuts[numero_soumission]["depot"]["montant"] = montant_modifie
-                    print(f"[COMPTABLE] Montant dépôt modifié: {montant_modifie}")
+                    print(f"[COMPTABLE] Montant dépôt modifié: {montant_original} -> {montant_modifie}")
             # Supprimer aussi l'objet refus au niveau racine
             if "refus" in statuts[numero_soumission]:
                 del statuts[numero_soumission]["refus"]
@@ -14786,8 +14788,9 @@ async def valider_facturation_comptable(username: str, numero_soumission: str, r
                     del statuts[numero_soumission]["paiementFinal"]["refus"]
                 # Mettre à jour le montant si modifié
                 if montant_modifie:
+                    montant_original = statuts[numero_soumission]["paiementFinal"].get("montant")
                     statuts[numero_soumission]["paiementFinal"]["montant"] = montant_modifie
-                    print(f"[COMPTABLE] Montant paiement final modifié: {montant_modifie}")
+                    print(f"[COMPTABLE] Montant paiement final modifié: {montant_original} -> {montant_modifie}")
             # Supprimer aussi l'objet refus au niveau racine
             if "refus" in statuts[numero_soumission]:
                 del statuts[numero_soumission]["refus"]
@@ -14801,11 +14804,42 @@ async def valider_facturation_comptable(username: str, numero_soumission: str, r
                     del statuts[numero_soumission]["autresPaiements"][index]["refus"]
                 # Mettre à jour le montant si modifié
                 if montant_modifie:
+                    montant_original = statuts[numero_soumission]["autresPaiements"][index].get("montant")
                     statuts[numero_soumission]["autresPaiements"][index]["montant"] = montant_modifie
-                    print(f"[COMPTABLE] Montant autre paiement modifié: {montant_modifie}")
+                    print(f"[COMPTABLE] Montant autre paiement modifié: {montant_original} -> {montant_modifie}")
             message = "Paiement validé - En attente de rapprochement QBO"
 
         statuts[numero_soumission]["dateMiseAJour"] = datetime.now().isoformat()
+
+        # Sauvegarder la notification de modification si le montant a été modifié
+        if montant_modifie and montant_original and montant_modifie != montant_original:
+            notif_dir = os.path.join(base_cloud, "notifications_comptable", username)
+            os.makedirs(notif_dir, exist_ok=True)
+            notif_file = os.path.join(notif_dir, "modifications.json")
+
+            notifications = []
+            if os.path.exists(notif_file):
+                try:
+                    with open(notif_file, "r", encoding="utf-8") as f:
+                        notifications = json.load(f)
+                except:
+                    notifications = []
+
+            # Ajouter la nouvelle notification
+            notifications.append({
+                "id": f"{numero_soumission}_{type_paiement}_{datetime.now().timestamp()}",
+                "numero_soumission": numero_soumission,
+                "type_paiement": type_paiement,
+                "montant_original": montant_original,
+                "montant_modifie": montant_modifie,
+                "date": datetime.now().isoformat(),
+                "vu": False
+            })
+
+            with open(notif_file, "w", encoding="utf-8") as f:
+                json.dump(notifications, f, ensure_ascii=False, indent=2)
+
+            print(f"[COMPTABLE] Notification créée pour {username}: {montant_original} -> {montant_modifie}")
 
         # Sauvegarder
         with open(statuts_file, "w", encoding="utf-8") as f:
@@ -14822,6 +14856,53 @@ async def valider_facturation_comptable(username: str, numero_soumission: str, r
     except Exception as e:
         print(f"Erreur lors de la validation: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/notifications/modifications/{username}")
+async def get_notifications_modifications(username: str):
+    """Récupère les notifications de modifications de montant non vues pour un entrepreneur"""
+    try:
+        notif_file = os.path.join(base_cloud, "notifications_comptable", username, "modifications.json")
+
+        if not os.path.exists(notif_file):
+            return {"success": True, "notifications": []}
+
+        with open(notif_file, "r", encoding="utf-8") as f:
+            notifications = json.load(f)
+
+        # Filtrer les notifications non vues
+        non_vues = [n for n in notifications if not n.get("vu", False)]
+
+        return {"success": True, "notifications": non_vues}
+    except Exception as e:
+        print(f"[ERREUR] Get notifications modifications: {e}")
+        return {"success": False, "notifications": []}
+
+
+@app.post("/api/notifications/modifications/{username}/marquer-vues")
+async def marquer_notifications_vues(username: str):
+    """Marque toutes les notifications de modifications comme vues"""
+    try:
+        notif_file = os.path.join(base_cloud, "notifications_comptable", username, "modifications.json")
+
+        if not os.path.exists(notif_file):
+            return {"success": True}
+
+        with open(notif_file, "r", encoding="utf-8") as f:
+            notifications = json.load(f)
+
+        # Marquer toutes comme vues
+        for n in notifications:
+            n["vu"] = True
+
+        with open(notif_file, "w", encoding="utf-8") as f:
+            json.dump(notifications, f, ensure_ascii=False, indent=2)
+
+        return {"success": True}
+    except Exception as e:
+        print(f"[ERREUR] Marquer notifications vues: {e}")
+        return {"success": False}
+
 
 @app.post("/api/comptable/facturation/{username}/{numero_soumission}/refuser")
 async def refuser_facturation_comptable(username: str, numero_soumission: str, request: Request):

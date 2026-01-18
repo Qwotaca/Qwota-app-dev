@@ -478,8 +478,8 @@
       </div>
 
       <div class="space-y-4">
-        <!-- Statut du client (formulaire public) -->
-        <div id="detailStatutClientContainer" style="display: none;">
+        <!-- Statut du client -->
+        <div id="detailStatutClientContainer">
           <label class="block text-sm font-medium mb-2" style="color: var(--text-gray);">Statut du client</label>
           <div class="p-3 rounded-lg" style="background: #0f172a; border: 1px solid var(--border-dark);">
             <div class="flex items-center gap-2">
@@ -489,8 +489,8 @@
           </div>
         </div>
 
-        <!-- Nature de la plainte (formulaire public) -->
-        <div id="detailNatureContainer" style="display: none;">
+        <!-- Nature de la plainte -->
+        <div id="detailNatureContainer">
           <label class="block text-sm font-medium mb-2" style="color: var(--text-gray);">Nature de la plainte</label>
           <div class="p-3 rounded-lg" style="background: #0f172a; border: 1px solid var(--border-dark);">
             <div class="flex items-center gap-2">
@@ -540,8 +540,8 @@
           </div>
         </div>
 
-        <!-- Disponibilités (formulaire public) -->
-        <div id="detailDisponibilitesContainer" style="display: none;">
+        <!-- Disponibilités -->
+        <div id="detailDisponibilitesContainer">
           <label class="block text-sm font-medium mb-2" style="color: var(--text-gray);">Disponibilités pour contact</label>
           <div class="p-3 rounded-lg" style="background: #0f172a; border: 1px solid var(--border-dark);">
             <div class="flex items-center gap-2 flex-wrap">
@@ -551,16 +551,16 @@
           </div>
         </div>
 
-        <!-- Attentes (formulaire public) -->
-        <div id="detailAttentesContainer" style="display: none;">
+        <!-- Attentes -->
+        <div id="detailAttentesContainer">
           <label class="block text-sm font-medium mb-2" style="color: var(--text-gray);">Attentes du client</label>
           <div class="p-3 rounded-lg" style="background: #0f172a; border: 1px solid var(--border-dark); min-height: 60px;">
             <p id="detailAttentes" style="color: var(--text-light); white-space: pre-wrap;"></p>
           </div>
         </div>
 
-        <!-- Fichiers joints (formulaire public) -->
-        <div id="detailFichiersContainer" style="display: none;">
+        <!-- Fichiers joints -->
+        <div id="detailFichiersContainer">
           <label class="block text-sm font-medium mb-2" style="color: var(--text-gray);">Fichiers joints</label>
           <div class="p-3 rounded-lg" style="background: #0f172a; border: 1px solid var(--border-dark);">
             <div id="detailFichiers" class="flex flex-col gap-2"></div>
@@ -853,15 +853,8 @@
     function ouvrirDetailsModal(plainte) {
       selectedPlainte = plainte;
 
-      // Déterminer si c'est une plainte du formulaire public ou interne
-      const isPublic = plainte.source === 'formulaire_public';
-
-      // Nom du client (format différent selon la source)
-      if (isPublic) {
-        document.getElementById('detailClient').textContent = plainte.client_nom || '-';
-      } else {
-        document.getElementById('detailClient').textContent = `${plainte.client_prenom || ''} ${plainte.client_nom || ''}`.trim() || '-';
-      }
+      // Nom du client
+      document.getElementById('detailClient').textContent = plainte.client_nom || '-';
 
       // Téléphone et courriel
       document.getElementById('detailTelephone').textContent = plainte.client_telephone || '-';
@@ -883,72 +876,39 @@
         document.getElementById('detailDateCreation').textContent = '-';
       }
 
-      // Champs spécifiques au formulaire public
-      const statutContainer = document.getElementById('detailStatutClientContainer');
-      const natureContainer = document.getElementById('detailNatureContainer');
-      const dispoContainer = document.getElementById('detailDisponibilitesContainer');
-      const attentesContainer = document.getElementById('detailAttentesContainer');
-      const fichiersContainer = document.getElementById('detailFichiersContainer');
+      // Statut du client
+      document.getElementById('detailStatutClient').textContent = plainte.client_statut_label || '-';
 
-      if (isPublic) {
-        // Statut du client
-        if (plainte.client_statut_label) {
-          document.getElementById('detailStatutClient').textContent = plainte.client_statut_label;
-          statutContainer.style.display = 'block';
-        } else {
-          statutContainer.style.display = 'none';
-        }
+      // Nature de la plainte
+      document.getElementById('detailNature').textContent = plainte.nature_label || '-';
 
-        // Nature de la plainte
-        if (plainte.nature_label) {
-          document.getElementById('detailNature').textContent = plainte.nature_label;
-          natureContainer.style.display = 'block';
-        } else {
-          natureContainer.style.display = 'none';
-        }
-
-        // Disponibilités
-        if (plainte.disponibilites && plainte.disponibilites.length > 0) {
-          const dispoLabels = plainte.disponibilites.map(d => {
-            const parts = d.split('_');
-            const jour = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
-            const moment = parts[1] ? parts[1].toUpperCase() : '';
-            return `${jour} ${moment}`;
-          });
-          document.getElementById('detailDisponibilites').textContent = dispoLabels.join(', ');
-          dispoContainer.style.display = 'block';
-        } else {
-          dispoContainer.style.display = 'none';
-        }
-
-        // Attentes
-        if (plainte.attentes && plainte.attentes.trim()) {
-          document.getElementById('detailAttentes').textContent = plainte.attentes;
-          attentesContainer.style.display = 'block';
-        } else {
-          attentesContainer.style.display = 'none';
-        }
-
-        // Fichiers
-        if (plainte.fichiers && plainte.fichiers.length > 0) {
-          const fichiersDiv = document.getElementById('detailFichiers');
-          fichiersDiv.innerHTML = plainte.fichiers.map(f => `
-            <div class="flex items-center gap-2 p-2 rounded" style="background: rgba(96, 165, 250, 0.1);">
-              <i class="fas fa-paperclip" style="color: var(--primary-blue);"></i>
-              <span style="color: var(--text-light);">${f.nom}</span>
-            </div>
-          `).join('');
-          fichiersContainer.style.display = 'block';
-        } else {
-          fichiersContainer.style.display = 'none';
-        }
+      // Disponibilités
+      if (plainte.disponibilites && plainte.disponibilites.length > 0) {
+        const dispoLabels = plainte.disponibilites.map(d => {
+          const parts = d.split('_');
+          const jour = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+          const moment = parts[1] ? parts[1].toUpperCase() : '';
+          return `${jour} ${moment}`;
+        });
+        document.getElementById('detailDisponibilites').textContent = dispoLabels.join(', ');
       } else {
-        // Cacher les champs spécifiques au formulaire public
-        statutContainer.style.display = 'none';
-        natureContainer.style.display = 'none';
-        dispoContainer.style.display = 'none';
-        attentesContainer.style.display = 'none';
-        fichiersContainer.style.display = 'none';
+        document.getElementById('detailDisponibilites').textContent = '-';
+      }
+
+      // Attentes
+      document.getElementById('detailAttentes').textContent = plainte.attentes || '-';
+
+      // Fichiers
+      const fichiersDiv = document.getElementById('detailFichiers');
+      if (plainte.fichiers && plainte.fichiers.length > 0) {
+        fichiersDiv.innerHTML = plainte.fichiers.map(f => `
+          <div class="flex items-center gap-2 p-2 rounded" style="background: rgba(96, 165, 250, 0.1);">
+            <i class="fas fa-paperclip" style="color: var(--primary-blue);"></i>
+            <span style="color: var(--text-light);">${f.nom}</span>
+          </div>
+        `).join('');
+      } else {
+        fichiersDiv.innerHTML = '<span style="color: var(--text-gray);">Aucun fichier</span>';
       }
 
       // Afficher/cacher le bouton selon le statut

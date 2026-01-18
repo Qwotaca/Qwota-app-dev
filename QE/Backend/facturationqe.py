@@ -743,7 +743,7 @@ def get_facturations_a_traiter_count_direction():
     Parcourt tous les entrepreneurs
     """
     try:
-        statuts_dir = Path("data/facturation_qe_statuts")
+        statuts_dir = Path(base_cloud) / "facturation_qe_statuts"
         total_count = 0
         print(f"[DEBUG] Recherche dans: {statuts_dir.absolute()}")
 
@@ -785,7 +785,7 @@ def get_facturations_a_traiter_count_direction():
                         continue
 
         # Compter les remboursements en attente comptable
-        remboursements_dir = Path("data/remboursements")
+        remboursements_dir = Path(base_cloud) / "remboursements"
         if remboursements_dir.exists():
             for user_dir in remboursements_dir.iterdir():
                 if user_dir.is_dir():

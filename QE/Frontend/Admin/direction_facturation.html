@@ -877,6 +877,31 @@
       font-weight: 600;
     }
 
+    /* Input montant modifiable */
+    .montant-editable {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 6px;
+      padding: 0.4rem 0.6rem;
+      color: #22c55e;
+      font-weight: 600;
+      font-size: 0.95rem;
+      width: 120px;
+      text-align: right;
+      transition: all 0.2s ease;
+    }
+
+    .montant-editable:focus {
+      outline: none;
+      border-color: #22c55e;
+      background: rgba(34, 197, 94, 0.15);
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+    }
+
+    .montant-editable:hover {
+      border-color: rgba(34, 197, 94, 0.5);
+    }
+
     .modal-info-value.warning {
       color: #fb923c;
     }
@@ -2664,8 +2689,8 @@
             <div class="modal-info-row">
               <span class="modal-info-label">Montant</span>
               <span class="modal-info-value highlight">
-                <span>${depot.montant || 'N/A'}</span>
-                <button class="btn-copy" onclick="copierTexte('${depot.montant || 'N/A'}', this)">
+                <input type="text" class="montant-editable" id="montant-depot" value="${depot.montant || ''}" data-type="depot" data-original="${depot.montant || ''}">
+                <button class="btn-copy" onclick="copierTexte(document.getElementById('montant-depot').value, this)">
                   <i class="fas fa-copy"></i> Copier
                 </button>
               </span>
@@ -2726,8 +2751,8 @@
             <div class="modal-info-row">
               <span class="modal-info-label">Montant</span>
               <span class="modal-info-value highlight">
-                <span>${pf.montant || 'N/A'}</span>
-                <button class="btn-copy" onclick="copierTexte('${pf.montant || 'N/A'}', this)">
+                <input type="text" class="montant-editable" id="montant-paiement-final" value="${pf.montant || ''}" data-type="paiement_final" data-original="${pf.montant || ''}">
+                <button class="btn-copy" onclick="copierTexte(document.getElementById('montant-paiement-final').value, this)">
                   <i class="fas fa-copy"></i> Copier
                 </button>
               </span>
@@ -2800,8 +2825,8 @@
               <div class="modal-info-row">
                 <span class="modal-info-label">Montant</span>
                 <span class="modal-info-value highlight">
-                  <span>${ap.montant || 'N/A'}</span>
-                  <button class="btn-copy" onclick="copierTexte('${ap.montant || 'N/A'}', this)">
+                  <input type="text" class="montant-editable" id="montant-autres-${index}" value="${ap.montant || ''}" data-type="autres_paiements" data-index="${index}" data-original="${ap.montant || ''}">
+                  <button class="btn-copy" onclick="copierTexte(document.getElementById('montant-autres-${index}').value, this)">
                     <i class="fas fa-copy"></i> Copier
                   </button>
                 </span>
@@ -3020,6 +3045,28 @@
     // Valider un paiement
     async function validerPaiement() {
       if (!currentPayment) return;
+
+      // Récupérer le montant modifié si applicable
+      let montantModifie = null;
+      const typePaiement = currentPayment.type;
+
+      if (typePaiement === 'depot') {
+        const input = document.getElementById('montant-depot');
+        if (input) montantModifie = input.value;
+      } else if (typePaiement === 'paiement_final') {
+        const input = document.getElementById('montant-paiement-final');
+        if (input) montantModifie = input.value;
+      } else if (typePaiement === 'autres_paiements') {
+        const input = document.querySelector('.montant-editable[data-type="autres_paiements"]');
+        if (input) montantModifie = input.value;
+      }
+
+      // Ajouter le montant modifié au paiement si différent
+      if (montantModifie && montantModifie !== currentPayment.montant) {
+        currentPayment.montantModifie = montantModifie;
+        console.log('[DIRECTION] Montant modifié:', montantModifie);
+      }
+
       await traiterPaiement(currentPayment, 'valider');
       fermerModal();
     }
@@ -3116,6 +3163,12 @@
         const requestBody = { type: paiement.type };
         if (paiement.type === 'autres_paiements' && paiement.index !== undefined) {
           requestBody.index = paiement.index;
+        }
+
+        // Ajouter le montant modifié si présent
+        if (paiement.montantModifie) {
+          requestBody.montantModifie = paiement.montantModifie;
+          console.log('[DIRECTION] Envoi montant modifié au backend:', paiement.montantModifie);
         }
 
         // Ajouter la raison si c'est un refus

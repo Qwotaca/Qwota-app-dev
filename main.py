@@ -14761,6 +14761,7 @@ async def valider_facturation_comptable(username: str, numero_soumission: str, r
             raise HTTPException(status_code=404, detail="Soumission non trouvée")
 
         message = "Paiement validé avec succès"
+        montant_modifie = data.get("montantModifie")
 
         # Supprimer les infos de refus mais garder le statut attente_comptable
         if type_paiement == "depot":
@@ -14769,6 +14770,10 @@ async def valider_facturation_comptable(username: str, numero_soumission: str, r
             if "depot" in statuts[numero_soumission]:
                 if "refus" in statuts[numero_soumission]["depot"]:
                     del statuts[numero_soumission]["depot"]["refus"]
+                # Mettre à jour le montant si modifié
+                if montant_modifie:
+                    statuts[numero_soumission]["depot"]["montant"] = montant_modifie
+                    print(f"[COMPTABLE] Montant dépôt modifié: {montant_modifie}")
             # Supprimer aussi l'objet refus au niveau racine
             if "refus" in statuts[numero_soumission]:
                 del statuts[numero_soumission]["refus"]
@@ -14779,6 +14784,10 @@ async def valider_facturation_comptable(username: str, numero_soumission: str, r
             if "paiementFinal" in statuts[numero_soumission]:
                 if "refus" in statuts[numero_soumission]["paiementFinal"]:
                     del statuts[numero_soumission]["paiementFinal"]["refus"]
+                # Mettre à jour le montant si modifié
+                if montant_modifie:
+                    statuts[numero_soumission]["paiementFinal"]["montant"] = montant_modifie
+                    print(f"[COMPTABLE] Montant paiement final modifié: {montant_modifie}")
             # Supprimer aussi l'objet refus au niveau racine
             if "refus" in statuts[numero_soumission]:
                 del statuts[numero_soumission]["refus"]
@@ -14790,6 +14799,10 @@ async def valider_facturation_comptable(username: str, numero_soumission: str, r
                 # Juste supprimer les infos de refus
                 if "refus" in statuts[numero_soumission]["autresPaiements"][index]:
                     del statuts[numero_soumission]["autresPaiements"][index]["refus"]
+                # Mettre à jour le montant si modifié
+                if montant_modifie:
+                    statuts[numero_soumission]["autresPaiements"][index]["montant"] = montant_modifie
+                    print(f"[COMPTABLE] Montant autre paiement modifié: {montant_modifie}")
             message = "Paiement validé - En attente de rapprochement QBO"
 
         statuts[numero_soumission]["dateMiseAJour"] = datetime.now().isoformat()

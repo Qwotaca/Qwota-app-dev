@@ -3514,6 +3514,7 @@
           <a href="#/facturationqe" class="nav-item" data-page="facturationqe" id="nav-facturationqe">
             <span class="nav-icon">
               <i class="fas fa-file-invoice-dollar"></i>
+              <span class="nav-badge-modifications" id="badge-modifications-comptable" style="display: none;"></span>
             </span>
             <span class="nav-label">Facturation QE</span>
             <span class="tooltip">Facturation QE</span>
@@ -6276,6 +6277,16 @@
     .modification-item:last-child {
       margin-bottom: 0;
     }
+    .modification-client {
+      font-size: 16px;
+      color: #fff;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .modification-client i {
+      color: #f59e0b;
+      margin-right: 6px;
+    }
     .modification-soumission {
       font-size: 14px;
       color: #9ca3af;
@@ -6327,6 +6338,29 @@
     .btn-ok-modifications:hover {
       transform: translateY(-2px);
       box-shadow: 0 5px 20px rgba(34, 197, 94, 0.4);
+    }
+    /* Badge notification menu latéral */
+    .nav-badge-modifications {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      min-width: 18px;
+      height: 18px;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 5px;
+      box-shadow: 0 2px 6px rgba(245, 158, 11, 0.5);
+      animation: pulse-badge 2s infinite;
+    }
+    @keyframes pulse-badge {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
     }
   </style>
 
@@ -6397,12 +6431,17 @@
     document.addEventListener('DOMContentLoaded', () => {
       // Attendre que l'app soit complètement chargée
       waitForAppLoadedThenCheckGoogle();
+
+      // Vérifier les notifications de modifications comptable (badge seulement, pas de popup)
+      setTimeout(() => {
+        checkModificationsComptable(false);
+      }, 1000);
     });
 
     // ================================================================
     // NOTIFICATIONS MODIFICATIONS COMPTABLE
     // ================================================================
-    async function checkModificationsComptable() {
+    async function checkModificationsComptable(showPopup = true) {
       const username = localStorage.getItem('username');
       if (!username) return;
 
@@ -6411,12 +6450,29 @@
         if (!response.ok) return;
 
         const data = await response.json();
+        const count = data.notifications ? data.notifications.length : 0;
 
-        if (data.success && data.notifications && data.notifications.length > 0) {
+        // Mettre à jour le badge
+        updateBadgeModifications(count);
+
+        // Afficher le popup seulement si demandé et s'il y a des notifications
+        if (showPopup && data.success && data.notifications && data.notifications.length > 0) {
           afficherModificationsPopup(data.notifications);
         }
       } catch (error) {
         console.error('[MODIFICATIONS COMPTABLE] Erreur:', error);
+      }
+    }
+
+    function updateBadgeModifications(count) {
+      const badge = document.getElementById('badge-modifications-comptable');
+      if (!badge) return;
+
+      if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
       }
     }
 
@@ -6446,6 +6502,9 @@
       // Générer le HTML pour chaque modification
       const html = modifications.map(mod => `
         <div class="modification-item">
+          <div class="modification-client">
+            <i class="fas fa-user"></i> ${mod.nom_client || 'Client'}
+          </div>
           <div class="modification-soumission">
             <i class="fas fa-file-invoice"></i> Soumission #${mod.numero_soumission}
           </div>
@@ -6469,6 +6528,9 @@
       if (popup) {
         popup.style.display = 'none';
       }
+
+      // Cacher le badge
+      updateBadgeModifications(0);
 
       // Marquer comme vues dans le backend
       if (username) {

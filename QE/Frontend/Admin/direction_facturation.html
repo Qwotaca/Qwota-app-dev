@@ -2394,8 +2394,8 @@
         // Mettre à jour le badge des paiements dans les sous-tabs
         document.getElementById('paiements-count-badge').textContent = allPayments.length;
 
-        // Afficher le tableau
-        afficherPaiements(allPayments);
+        // Appliquer les filtres par défaut (virement)
+        applyFilters();
 
       } catch (error) {
         console.error('[Direction Facturation] Erreur:', error);
@@ -2407,7 +2407,7 @@
     // ===== FILTRES =====
     let currentFilters = {
       type: 'tous',
-      methode: 'tous'
+      methode: 'virement'  // Par défaut virement
     };
 
     // Toggle dropdown menu
@@ -2506,7 +2506,16 @@
 
       // Filtre par méthode
       if (currentFilters.methode !== 'tous') {
-        filtered = filtered.filter(p => p.methode === currentFilters.methode);
+        filtered = filtered.filter(p => {
+          const methode = (p.methode || '').toLowerCase();
+          if (currentFilters.methode === 'virement') {
+            return methode === 'virement';
+          } else if (currentFilters.methode === 'cheque') {
+            // Accepter cheque et chèque (avec ou sans accent)
+            return methode === 'cheque' || methode === 'chèque';
+          }
+          return true;
+        });
       }
 
       // Afficher les résultats filtrés

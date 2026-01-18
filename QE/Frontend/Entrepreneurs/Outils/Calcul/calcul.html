@@ -20894,25 +20894,52 @@ function initializeApp() {
     // Fonction pour afficher/cacher le bouton total mobile
     function updateMobileTotalButton() {
       var btn = document.getElementById('mobile-total-btn');
-      if (!btn) return;
+      if (!btn) {
+        console.log('[MOBILE-BTN] Bouton non trouvé dans le DOM');
+        return;
+      }
 
-      // Détecter si c'est un appareil mobile/tablette (compatible vieux Safari)
-      var ua = navigator.userAgent;
-      var isMobileOrTablet = (
-        window.innerWidth <= 1366 ||  // Capture tous les iPads (même Pro en paysage)
-        /iPad|iPhone|iPod/.test(ua) ||  // iOS devices
-        (ua.indexOf('Mac') !== -1 && 'ontouchend' in document) ||  // iPad avec iOS 13+ (se présente comme Mac)
-        /Android/i.test(ua) ||  // Android
-        ('ontouchstart' in window)  // Tout appareil tactile
-      );
+      // Détecter si c'est un appareil mobile/tablette
+      // Méthode simple et fiable: écran tactile OU petit écran OU User Agent mobile
+      var ua = navigator.userAgent || '';
+      var hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      var isSmallScreen = window.innerWidth <= 1400;
+      var isMobileUA = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+
+      var isMobileOrTablet = hasTouch || isSmallScreen || isMobileUA;
+
+      console.log('[MOBILE-BTN] Détection:', {
+        hasTouch: hasTouch,
+        isSmallScreen: isSmallScreen,
+        screenWidth: window.innerWidth,
+        isMobileUA: isMobileUA,
+        isMobileOrTablet: isMobileOrTablet,
+        currentLoadedProjectId: currentLoadedProjectId
+      });
 
       // Afficher uniquement si dans un projet ET sur mobile/tablette
       if (currentLoadedProjectId && isMobileOrTablet) {
         btn.style.display = 'flex';
+        console.log('[MOBILE-BTN] ✅ Bouton AFFICHÉ');
       } else {
         btn.style.display = 'none';
+        console.log('[MOBILE-BTN] ❌ Bouton CACHÉ - projet:', !!currentLoadedProjectId, 'mobile:', isMobileOrTablet);
       }
     }
+
+    // Mettre à jour le bouton mobile lors du redimensionnement ou changement d'orientation
+    window.addEventListener('resize', function() {
+      if (typeof updateMobileTotalButton === 'function') {
+        updateMobileTotalButton();
+      }
+    });
+    window.addEventListener('orientationchange', function() {
+      setTimeout(function() {
+        if (typeof updateMobileTotalButton === 'function') {
+          updateMobileTotalButton();
+        }
+      }, 100);
+    });
 
     // Fonction pour ouvrir le popup Total/Détails/Configuration
     function openTotalPopup(tabType) {

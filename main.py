@@ -20714,6 +20714,129 @@ def get_plaintes(username: str):
         return {"success": False, "message": str(e)}
 
 
+@app.post("/api/submit-plainte")
+async def submit_plainte_public(request: Request):
+    """
+    Endpoint public pour soumettre une plainte depuis le formulaire client
+    Gère les fichiers uploadés
+    """
+    try:
+        form = await request.form()
+
+        # Récupérer les données du formulaire
+        status = form.get("status", "")
+        entrepreneur = form.get("entrepreneur", "")
+        nature = form.get("nature", "")
+        elaboration = form.get("elaboration", "")
+        contrat = form.get("contrat", "")
+        availability_json = form.get("availability", "[]")
+        attentes = form.get("attentes", "")
+        nom = form.get("nom", "")
+        telephone = form.get("telephone", "")
+        courriel = form.get("courriel", "")
+
+        # Parser les disponibilités
+        try:
+            availability = json.loads(availability_json)
+        except:
+            availability = []
+
+        if not entrepreneur:
+            raise HTTPException(status_code=400, detail="Entrepreneur requis")
+
+        # Créer le dossier pour les plaintes de cet entrepreneur
+        plaintes_dir = os.path.join(base_cloud, "plaintes", entrepreneur)
+        os.makedirs(plaintes_dir, exist_ok=True)
+
+        # Générer un ID unique pour cette plainte
+        plainte_id = str(uuid.uuid4())
+
+        # Créer un dossier pour les fichiers de cette plainte
+        fichiers_dir = os.path.join(plaintes_dir, "fichiers", plainte_id)
+        os.makedirs(fichiers_dir, exist_ok=True)
+
+        # Sauvegarder les fichiers uploadés
+        fichiers_sauvegardes = []
+        for key in form.keys():
+            if key.startswith("file_"):
+                file = form[key]
+                if hasattr(file, 'filename') and file.filename:
+                    # Sécuriser le nom du fichier
+                    safe_filename = file.filename.replace("/", "_").replace("\\", "_")
+                    file_path = os.path.join(fichiers_dir, safe_filename)
+
+                    # Sauvegarder le fichier
+                    content = await file.read()
+                    with open(file_path, "wb") as f:
+                        f.write(content)
+
+                    fichiers_sauvegardes.append({
+                        "nom": safe_filename,
+                        "chemin": file_path
+                    })
+
+        # Charger les plaintes existantes
+        fichier_plaintes = os.path.join(plaintes_dir, "plaintes.json")
+        plaintes = []
+        if os.path.exists(fichier_plaintes):
+            with open(fichier_plaintes, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if content:
+                    plaintes = json.loads(content)
+
+        # Mapper les valeurs pour l'affichage
+        status_labels = {
+            "non_client": "Non client - a communiqué avec l'entrepreneur",
+            "travaux_non_faits": "Client - travaux non faits",
+            "travaux_en_cours": "Client - travaux en cours",
+            "travaux_termines": "Client - travaux terminés"
+        }
+
+        nature_labels = {
+            "qualite_travaux": "Qualité des travaux",
+            "qualite_communication": "Qualité de la communication",
+            "non_respect_horaire": "Non-respect de l'horaire des travaux",
+            "comportement_employes": "Comportement des employés"
+        }
+
+        # Créer la nouvelle plainte
+        nouvelle_plainte = {
+            "id": plainte_id,
+            "source": "formulaire_public",
+            "client_statut": status,
+            "client_statut_label": status_labels.get(status, status),
+            "nature": nature,
+            "nature_label": nature_labels.get(nature, nature),
+            "description": elaboration,
+            "numero_contrat": contrat,
+            "disponibilites": availability,
+            "attentes": attentes,
+            "client_nom": nom,
+            "client_telephone": telephone,
+            "client_courriel": courriel,
+            "fichiers": fichiers_sauvegardes,
+            "statut": "actuelle",
+            "date_creation": datetime.now().isoformat(),
+            "date_reglee": None
+        }
+
+        plaintes.append(nouvelle_plainte)
+
+        # Sauvegarder
+        with open(fichier_plaintes, "w", encoding="utf-8") as f:
+            json.dump(plaintes, f, ensure_ascii=False, indent=2)
+
+        print(f"[PLAINTE] Nouvelle plainte soumise pour {entrepreneur}: {plainte_id}")
+
+        return {"success": True, "message": "Plainte soumise avec succès", "plainte_id": plainte_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERREUR submit_plainte_public] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/plaintes/count/coach/{coach_username}")
 def get_coach_plaintes_count(coach_username: str):
     """

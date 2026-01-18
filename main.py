@@ -183,6 +183,7 @@ app.mount("/cloud/fichermarketing", StaticFiles(directory=f"{base_cloud}/ficherm
 app.mount("/cloud/ficherprocessus", StaticFiles(directory=f"{base_cloud}/ficherprocessus"), name="ficherprocessus")
 app.mount("/cloud/signatures", StaticFiles(directory=f"{base_cloud}/signatures"), name="signatures")
 app.mount("/cloud/cheques", StaticFiles(directory=f"{base_cloud}/cheques"), name="cheques")
+app.mount("/cloud/plaintes", StaticFiles(directory=f"{base_cloud}/plaintes"), name="plaintes")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/frontend", StaticFiles(directory="QE/Frontend"), name="frontend")
 

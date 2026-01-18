@@ -3322,7 +3322,12 @@
               ${(() => {
                 const tauxNouveau = (nouvelles.tauxHoraire || emp.tauxHoraire) ? parseFloat(nouvelles.tauxHoraire || emp.tauxHoraire).toFixed(2) + ' $' : '-';
                 const tauxAncien = anciennes.tauxHoraire ? parseFloat(anciennes.tauxHoraire).toFixed(2) + ' $' : '-';
-                return createRow('Taux horaire', tauxNouveau, tauxAncien, true, true);
+                const tauxModifie = tauxNouveau !== tauxAncien;
+                // Afficher la date de changement si le taux horaire a été modifié
+                const dateChangement = emp.date_demande_reactivation || '';
+                const dateFormatee = dateChangement ? dateChangement.split(' ')[0] : '';
+                const labelTaux = tauxModifie && dateFormatee ? 'Taux horaire (changé le ' + dateFormatee + ')' : 'Taux horaire';
+                return createRow(labelTaux, tauxNouveau, tauxAncien, true, true);
               })()}
               ${createRow('Date première journée', nouvelles.datePremiere || emp.datePremiere, anciennes.datePremiere, false, true)}
             </div>
@@ -3368,13 +3373,10 @@
         <!-- Section: Documents (pleine largeur) -->
         ${(() => {
           const entrepreneur = emp.entrepreneurUsername || emp.entrepreneur;
-          // Pour réactivation, les documents sont directement sur emp (pas dans nouvelles)
-          // car ils sont sauvegardés directement lors de la soumission du formulaire
-          const specimenDoc = emp.specimenCheque || nouvelles.specimenCheque;
-          const certificatDoc = emp.certificatSecurite || nouvelles.certificatSecurite;
-          const carteDoc = emp.carteAssurance || nouvelles.carteAssurance;
-
-          console.log('[DEBUG REACTIVATION] Documents:', {specimenDoc, certificatDoc, carteDoc, emp});
+          // Pour réactivation, les documents peuvent être dans plusieurs sources avec variations de noms
+          const specimenDoc = emp.specimenCheque || emp.specimen || nouvelles.specimenCheque || nouvelles.specimen || anciennes.specimenCheque || anciennes.specimen;
+          const certificatDoc = emp.certificatSecurite || emp.certificat || nouvelles.certificatSecurite || nouvelles.certificat || anciennes.certificatSecurite || anciennes.certificat;
+          const carteDoc = emp.carteAssurance || emp.carte || nouvelles.carteAssurance || nouvelles.carte || anciennes.carteAssurance || anciennes.carte;
 
           // Les documents sont toujours "modifiés" lors d'une réactivation car ils sont re-téléchargés
           // On les considère toujours comme modifiés s'ils existent
@@ -3580,7 +3582,12 @@
               ${(() => {
                 const tauxNouveau = nouvelles.tauxHoraire ? parseFloat(nouvelles.tauxHoraire).toFixed(2) + ' $' : '-';
                 const tauxAncien = anciennes.tauxHoraire ? parseFloat(anciennes.tauxHoraire).toFixed(2) + ' $' : '-';
-                return createRow('Taux horaire', tauxNouveau, tauxAncien);
+                const tauxModifie = tauxNouveau !== tauxAncien;
+                // Afficher la date de changement si le taux horaire a été modifié
+                const dateChangement = emp.date_demande_modification || emp.date_validation_coach_modification || '';
+                const dateFormatee = dateChangement ? dateChangement.split(' ')[0] : '';
+                const labelTaux = tauxModifie && dateFormatee ? 'Taux horaire (changé le ' + dateFormatee + ')' : 'Taux horaire';
+                return createRow(labelTaux, tauxNouveau, tauxAncien);
               })()}
               ${createRow('Date première journée', nouvelles.datePremiere || nouvelles.datePremierePaie, anciennes.datePremiere || anciennes.datePremierePaie, false)}
             </div>
@@ -3626,14 +3633,21 @@
         <!-- Section: Documents (pleine largeur) -->
         ${(() => {
           const entrepreneur = emp.entrepreneurUsername || emp.entrepreneur;
-          const specimenDoc = nouvelles.specimenCheque || emp.specimenCheque || anciennes.specimenCheque;
-          const certificatDoc = nouvelles.certificatSecurite || emp.certificatSecurite || anciennes.certificatSecurite;
-          const carteDoc = nouvelles.carteAssurance || emp.carteAssurance || anciennes.carteAssurance;
+          // Récupérer les documents avec toutes les variations de noms possibles
+          const specimenDoc = nouvelles.specimenCheque || nouvelles.specimen || emp.specimenCheque || emp.specimen || anciennes.specimenCheque || anciennes.specimen;
+          const certificatDoc = nouvelles.certificatSecurite || nouvelles.certificat || emp.certificatSecurite || emp.certificat || anciennes.certificatSecurite || anciennes.certificat;
+          const carteDoc = nouvelles.carteAssurance || nouvelles.carte || emp.carteAssurance || emp.carte || anciennes.carteAssurance || anciennes.carte;
 
-          // Vérifier si les documents ont été modifiés
-          const specimenModifie = nouvelles.specimenCheque && nouvelles.specimenCheque !== anciennes.specimenCheque;
-          const certificatModifie = nouvelles.certificatSecurite && nouvelles.certificatSecurite !== anciennes.certificatSecurite;
-          const carteModifie = nouvelles.carteAssurance && nouvelles.carteAssurance !== anciennes.carteAssurance;
+          // Vérifier si les documents ont été modifiés (comparer anciennes vs nouvelles)
+          const ancienSpecimen = anciennes.specimenCheque || anciennes.specimen;
+          const nouveauSpecimen = nouvelles.specimenCheque || nouvelles.specimen;
+          const ancienCertificat = anciennes.certificatSecurite || anciennes.certificat;
+          const nouveauCertificat = nouvelles.certificatSecurite || nouvelles.certificat;
+          const ancienneCarte = anciennes.carteAssurance || anciennes.carte;
+          const nouvelleCarte = nouvelles.carteAssurance || nouvelles.carte;
+          const specimenModifie = nouveauSpecimen && nouveauSpecimen !== ancienSpecimen;
+          const certificatModifie = nouveauCertificat && nouveauCertificat !== ancienCertificat;
+          const carteModifie = nouvelleCarte && nouvelleCarte !== ancienneCarte;
 
           function createDocLink(doc) {
             if (doc) {

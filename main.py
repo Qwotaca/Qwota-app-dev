@@ -39,15 +39,25 @@ from QE.Backend.monday_sync import sync_vente_to_monday, update_monday_column, f
 
 # Définition locale pour éviter problème de cache avec la fonction importée
 def get_all_entrepreneurs():
-    """Retourne tous les entrepreneurs de toutes les équipes (sans doublons)"""
-    coach_entrepreneurs = {
-        "coach1": ["jdupont", "mathis"],
-        "coach01": ["mathis", "admin"],
-    }
-    all_entrepreneurs = set()
-    for entrepreneurs in coach_entrepreneurs.values():
-        all_entrepreneurs.update(entrepreneurs)
-    return list(all_entrepreneurs)
+    """Retourne tous les entrepreneurs actifs qui ont un coach assigné (sans doublons)"""
+    try:
+        import sqlite3
+        from database import get_database_path
+        DB_PATH = get_database_path()
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            # Ne prendre QUE les entrepreneurs avec un coach assigné
+            cursor.execute("""
+                SELECT username FROM users
+                WHERE role = 'entrepreneur'
+                AND is_active = 1
+                AND assigned_coach IS NOT NULL
+                AND assigned_coach != ''
+            """)
+            return [row[0] for row in cursor.fetchall()]
+    except Exception as e:
+        print(f"[ERROR] get_all_entrepreneurs: {e}")
+        return []
 from QE.Backend.project_manager import (
     load_user_projects, create_project, update_project,
     delete_project, get_project,

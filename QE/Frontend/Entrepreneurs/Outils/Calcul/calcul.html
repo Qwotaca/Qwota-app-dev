@@ -20895,8 +20895,17 @@ function initializeApp() {
       const btn = document.getElementById('mobile-total-btn');
       if (!btn) return;
 
-      // Afficher uniquement si dans un projet ET sur mobile
-      if (currentLoadedProjectId && window.innerWidth <= 1024) {
+      // Détecter si c'est un appareil mobile/tablette (inclut tous les iPads)
+      const isMobileOrTablet = (
+        window.innerWidth <= 1366 ||  // Capture tous les iPads (même Pro en paysage)
+        /iPad|iPhone|iPod/.test(navigator.userAgent) ||  // iOS devices
+        (navigator.userAgent.includes('Mac') && 'ontouchend' in document) ||  // iPad avec iOS 13+ (se présente comme Mac)
+        /Android.*Mobile|Android.*Tablet/i.test(navigator.userAgent) ||  // Android
+        ('ontouchstart' in window && window.innerWidth <= 1400)  // Touch device avec écran tablette
+      );
+
+      // Afficher uniquement si dans un projet ET sur mobile/tablette
+      if (currentLoadedProjectId && isMobileOrTablet) {
         btn.style.display = 'flex';
       } else {
         btn.style.display = 'none';

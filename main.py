@@ -15608,7 +15608,7 @@ async def valider_facturation_comptable(username: str, numero_soumission: str, r
 
 @app.post("/api/comptable/facturation/retourner-general")
 async def retourner_paiements_general(request: Request):
-    """Retourne des paiements du Rapprochement QBO vers Général (retire de l'historique)"""
+    """Retourne des paiements du Rapprochement QBO vers Général (retire de l'historique + remet statut attente_comptable)"""
     try:
         data = await request.json()
         paiements = data.get("paiements", [])
@@ -15654,6 +15654,45 @@ async def retourner_paiements_general(request: Request):
             json.dump(historique_filtre, f, ensure_ascii=False, indent=2)
 
         removed_count = historique_original_len - len(historique_filtre)
+
+        # Remettre le statut à attente_comptable dans statuts_clients.json pour chaque paiement
+        for p in paiements:
+            username = p.get("entrepreneurUsername")
+            num_soumission = p.get("numeroSoumission")
+            type_paiement = p.get("type")
+            index = p.get("index")
+
+            if not username or not num_soumission:
+                continue
+
+            statuts_file = os.path.join(base_cloud, "facturation_qe_statuts", username, "statuts_clients.json")
+            if os.path.exists(statuts_file):
+                try:
+                    with open(statuts_file, "r", encoding="utf-8") as f:
+                        statuts = json.load(f)
+
+                    if num_soumission in statuts:
+                        if type_paiement == "depot":
+                            statuts[num_soumission]["statutDepot"] = "attente_comptable"
+                            if "depot" in statuts[num_soumission]:
+                                statuts[num_soumission]["depot"]["statut"] = "attente_comptable"
+                        elif type_paiement == "paiement_final":
+                            statuts[num_soumission]["statutPaiementFinal"] = "attente_comptable"
+                            if "paiementFinal" in statuts[num_soumission]:
+                                statuts[num_soumission]["paiementFinal"]["statut"] = "attente_comptable"
+                        elif type_paiement == "autres_paiements" and index is not None:
+                            if "autresPaiements" in statuts[num_soumission] and len(statuts[num_soumission]["autresPaiements"]) > index:
+                                statuts[num_soumission]["autresPaiements"][index]["statut"] = "attente_comptable"
+                            # Mettre aussi statutAutresPaiements si tous les autres sont attente_comptable
+                            statuts[num_soumission]["statutAutresPaiements"] = "attente_comptable"
+
+                        with open(statuts_file, "w", encoding="utf-8") as f:
+                            json.dump(statuts, f, ensure_ascii=False, indent=2)
+
+                        print(f"[RETOURNER GÉNÉRAL] Statut remis à attente_comptable: {username}/{num_soumission}/{type_paiement}")
+                except Exception as e:
+                    print(f"[RETOURNER GÉNÉRAL] Erreur mise à jour statut {username}/{num_soumission}: {e}")
+
         print(f"[RETOURNER GÉNÉRAL] {removed_count} paiement(s) retiré(s) de l'historique")
 
         return {"success": True, "message": f"{removed_count} paiement(s) retourné(s) à Général", "removed": removed_count}

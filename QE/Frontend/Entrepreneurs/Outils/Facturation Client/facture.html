@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Facturation Client</title>
+  
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#1f2937">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="/base.css">
+  <link rel="stylesheet" href="/entrepreneur-selector.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Styles spécifiques à la Facturation Client -->
+  <link rel="stylesheet" href="/facture.css">
+
+  <!-- Script anti-flash pour coach/direction -->
+  <script>
+    (function() {
+      const userRole = localStorage.getItem('userRole');
+      const isCoachOrDirection = userRole === 'coach' || userRole === 'direction';
+      const urlParams = new URLSearchParams(window.location.search);
+      const userParam = urlParams.get('user');
+      const coachUsername = localStorage.getItem('username');
+
+      // Afficher le sélecteur si c'est un coach/direction sans entrepreneur sélectionné
+      const shouldShowSelector = isCoachOrDirection && (!userParam || userParam === coachUsername);
+
+      if (shouldShowSelector) {
+        // Injecter le CSS immédiatement pour cacher le contenu et afficher le sélecteur
+        const style = document.createElement('style');
+        style.id = 'coach-anti-flash-css';
+        style.textContent = `
+          .main-content {
+            opacity: 0 !important;
+            pointer-events: none !important;
+          }
+          #coach-selector-backdrop {
+            display: block !important;
+            opacity: 1 !important;
+            pointer-events: all !important;
+          }
+          #coach-entrepreneur-selector {
+            display: block !important;
+            opacity: 1 !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    })();
+  </script>
+
+  <!-- Loading Animation Styles -->
+  <style>
+    /* Titre du sélecteur entrepreneur */
+    #coach-entrepreneur-selector .selector-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-light);
+      text-align: center;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    #coach-entrepreneur-selector .selector-title i {
+      color: var(--primary-blue);
+    }
+
+    #coach-entrepreneur-selector.in-header .selector-title {
+      display: none;
+    }
+
+    /* Sous-titre du sélecteur */
+    #coach-entrepreneur-selector .selector-subtitle {
+      font-size: 0.9rem;
+      color: var(--text-gray);
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    #coach-entrepreneur-selector.in-header .selector-subtitle {
+      display: none;
+    }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.95);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .loading-content {
+      text-align: center;
+      color: white;
+      animation: scaleIn 0.5s ease;
+    }
+
+    .loading-spinner {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.5rem;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 0 30px rgba(16, 185, 129, 0.5);
+      animation: pulse 1.5s ease infinite;
+    }
+
+    .loading-spinner i {
+      font-size: 32px;
+      color: white;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes scaleIn {
+      from {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 30px rgba(16, 185, 129, 0.5);
+      }
+      50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 50px rgba(16, 185, 129, 0.7);
+      }
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Zoom slider style */
+    #pdfZoomSlider {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    #pdfZoomSlider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #3b82f6;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    #pdfZoomSlider::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #3b82f6;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+  </style>
+
+</head>
+
+<body class="min-h-screen" style="margin: 0; padding: 0;">
+  <!-- Backdrop pour le sélecteur (fond noir semi-transparent) -->
+  <div id="coach-selector-backdrop"></div>
+
+  <!-- Sélecteur d'entrepreneur (visible uniquement pour les coaches) -->
+  <div id="coach-entrepreneur-selector">
+    <!-- Titre de la page avec icône Facturation -->
+    <div class="page-identity">
+      <div class="page-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3), 0 0 40px rgba(16, 185, 129, 0.15);">
+        <i class="fas fa-file-invoice-dollar"></i>
+      </div>
+      <div class="page-name" style="background: linear-gradient(135deg, #10b981 0%, #059669 50%, #34d399 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Facturation Client</div>
+    </div>
+
+    <!-- Titre et sous-titre (visibles uniquement en mode centré) -->
+    <div class="selector-title">
+      <i class="fas fa-user-tie"></i>
+      Sélectionnez un entrepreneur
+    </div>
+    <div class="selector-subtitle">Choisissez l'entrepreneur dont vous souhaitez gérer la facturation</div>
+
+    <div class="selector-container">
+      <div class="selector-label">
+        <i class="fas fa-user-tie"></i>
+        <span>Entrepreneur:</span>
+      </div>
+      <div class="coach-dropdown">
+        <div class="coach-dropdown-toggle" id="coach-dropdown-toggle">
+          <input type="text" class="search-input" id="search-input" placeholder="Rechercher..." autocomplete="off" style="display: none;">
+          <span class="placeholder">-- Sélectionner un entrepreneur --</span>
+          <i class="fas fa-chevron-down chevron"></i>
+        </div>
+        <div class="coach-dropdown-menu" id="coach-dropdown-menu"></div>
+      </div>
+    </div>
+  </div>
+
+  
+
+  <!-- Main Content - FACTURATION MODERNE DARK -->
+  <div id="main-content-wrapper" class="w-full" style="width: 100%; padding: 2rem;">
+
+    <!-- Bouton Retour -->
+    <div id="back-button-container" class="mb-6">
+      <button id="back-to-outils-btn" onclick="goBackToOutils()" class="back-button">
+        <i class="fas fa-arrow-left"></i>
+        <span class="back-button-text">Retour aux outils</span>
+      </button>
+    </div>
+
+    <!-- Header -->
+    <div class="mb-10">
+      <div class="relative">
+        <h1 class="text-4xl font-bold mb-3">
+          Facturation Client
+        </h1>
+        <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        <div class="flex items-center justify-between">
+          <p class="text-xl font-medium">Créez et gérez vos factures clients</p>
+          <div class="text-sm flex items-center" style="color: var(--text-gray);">
+            <i class="fas fa-calendar-alt mr-2"></i>
+            <span id="currentDate">Aujourd'hui</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sections modernes -->
+    <div class="space-y-8">
+
+      <!-- Créer une facture -->
+      <div class="box">
+        <div class="box-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+              <i class="fas fa-plus-circle"></i>
+            </div>
+            <h2 class="box-header-title">Créer une facture</h2>
+          </div>
+        </div>
+        <div class="box-body">
+          <form id="facture-form" class="space-y-6">
+            <input type="hidden" id="input-nom" name="nom" />
+            <input type="hidden" id="input-prenom" name="prenom" />
+            <input type="hidden" id="input-adresse" name="adresse" />
+            <input type="hidden" id="input-prix" name="prix" />
+            <input type="hidden" id="input-email" name="email" />
+            <input type="hidden" id="input-depot" name="depot" />
+
+            <!-- Input moderne pour les travaux complétés (identique à GQP) -->
+            <div class="w-full">
+              <label class="block text-sm font-semibold mb-2">
+                <i class="fas fa-check-circle mr-2" style="color: var(--primary-green);"></i>
+                Sélectionner un client
+              </label>
+              <div class="relative" style="max-width: 400px;">
+                <div class="relative">
+                  <input type="text"
+                         id="clientSearchFacture"
+                         placeholder="Tapez pour rechercher un client..."
+                         class="modern-input w-full pr-8"
+                         autocomplete="off"
+                         oninput="rechercherClientsFacture(this.value)"
+                         onclick="event.stopPropagation(); ouvrirMenuFacture()"
+                         onfocus="ouvrirMenuFacture()"
+                         style="border-right: 2px solid #e57373 !important;">
+                  <i class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none" style="color: var(--text-gray);"></i>
+                </div>
+                <!-- Menu déroulant -->
+                <div class="modern-dropdown-menu hidden absolute z-50 w-full mt-1" id="clientMenuFacture" style="max-height: 200px;" onclick="event.stopPropagation();">
+                  <!-- Les clients seront chargés dynamiquement depuis travaux_complete_facture -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Champs cachés pour compatibilité backend -->
+            <div class="hidden">
+              <input type="text" id="edit-prenom" class="modern-input" readonly>
+              <input type="text" id="edit-nom" class="modern-input" readonly>
+              <input type="email" id="edit-email" class="modern-input" readonly>
+              <input type="text" id="edit-adresse" class="modern-input" readonly>
+              <input type="text" id="edit-prix" class="modern-input" readonly>
+              <input type="text" id="edit-depot" class="modern-input" readonly>
+              <input type="text" id="edit-telephone" class="modern-input" readonly>
+              <input type="text" id="edit-endroit" class="modern-input" readonly>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div class="flex justify-between items-center pt-6" style="border-top: 1px solid var(--border-dark);">
+              <div></div>
+              <div class="flex flex-col items-end gap-2">
+                <p id="factureValidationMessage" class="text-sm" style="color: #e57373; margin: 0;">
+                  <i class="fas fa-exclamation-circle mr-1"></i>
+                  Veuillez sélectionner un client
+                </p>
+                <div class="flex space-x-4">
+                  <button type="button" class="btn-secondary px-6 py-2" id="telecharger-pdf" disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
+                    <span>Voir en PDF</span>
+                  </button>
+                  <button type="submit" class="btn-primary px-6 py-2" id="envoyer-client" disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
+                    <span>Envoyer au client</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Factures envoyées -->
+      <div class="box factures-envoyees" style="pointer-events: auto !important; position: relative !important; z-index: 1 !important;">
+        <div class="box-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+              <i class="fas fa-file-invoice"></i>
+            </div>
+            <h2 class="box-header-title">Factures envoyées</h2>
+          </div>
+        </div>
+        <div class="box-body">
+          
+          <!-- Barre de recherche moderne -->
+          <div class="mb-6 w-full">
+            <div class="search-container">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <i class="fas fa-search" style="color: var(--text-gray);"></i>
+          </div>
+              <input type="text" id="searchFacture" placeholder="Rechercher une facture..." class="modern-search" autocomplete="off" style="padding: 12px 16px 12px 35px !important;">
+            </div>
+          </div>
+
+          <!-- Tableau moderne -->
+          <div class="table-container">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>N° Soumission</th>
+                  <th>Client</th>
+                  <th>Date de création</th>
+                  <th>Adresse</th>
+                  <th>Montant</th>
+                  <th class="text-center" style="text-align: center !important;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="facture-body">
+                <tr><td colspan="6" class="empty-state loading-shimmer">Chargement des factures...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Vue Mobile: Cards -->
+          <div id="facture-mobile-cards">
+            <div id="facture-mobile-list">
+              <!-- Les cards seront injectées ici dynamiquement -->
+              <div class="facture-empty-mobile">
+                <i class="fas fa-inbox"></i>
+                <p>Aucune facture</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ✅ ACTIVATION DES LOGS - Debug mode
+    window.log = console.log.bind(console);
+    window.warn = console.warn.bind(console);
+    window.error = console.error.bind(console);
+    window.info = console.info.bind(console);
+    window.debug = console.debug.bind(console);
+
+    // Variables globales - Username is handled by common.js
+
+    // Mobile Menu Functions
+    function toggleMobileMenu() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.querySelector('.mobile-overlay');
+      
+      sidebar.classList.toggle('mobile-open');
+      overlay.classList.toggle('active');
+    }
+
+    function closeMobileMenu() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.querySelector('.mobile-overlay');
+
+      if (sidebar) sidebar.classList.remove('mobile-open');
+      if (overlay) overlay.classList.remove('active');
+    }
+
+    // Navigation: Retour aux outils
+    function goBackToOutils() {
+      // Vérifier si on est dans une iframe (système outils-mobile.html)
+      if (window.parent && window.parent !== window && typeof window.parent.returnToToolsGrid === 'function') {
+        // Nouveau système: appeler la fonction du parent pour retourner à la grille
+        console.log('[FACTURE] Retour à la grille via parent.returnToToolsGrid()');
+        window.parent.returnToToolsGrid();
+      } else {
+        // Ancien système: utiliser l'historique (pour compatibilité)
+        console.log('[FACTURE] Retour via history.back()');
+        window.history.back();
+      }
+    }
+
+    // Loading Animation Functions
+    function showLoadingAnimation(message = 'Envoi en cours...') {
+      const overlay = document.createElement('div');
+      overlay.className = 'loading-overlay';
+      overlay.id = 'loadingOverlay';
+      overlay.innerHTML = `
+        <div class="loading-content">
+          <div class="loading-spinner">
+            <i class="fas fa-paper-plane"></i>
+          </div>
+          <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">${message}</h2>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+    }
+
+    function hideLoadingAnimation() {
+      const overlay = document.getElementById('loadingOverlay');
+      if (overlay) {
+        overlay.remove();
+      }
+    }
+
+    // Fonction pour mettre à jour la date
+    function updateCurrentDate() {
+      const now = new Date();
+      const options = { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      };
+      const dateString = now.toLocaleDateString('fr-FR', options);
+      document.getElementById('currentDate').textContent = dateString;
+    }
+
+    // Initialisation
+    document.addEventListener('DOMContentLoaded', function() {
+      updateCurrentDate();
+      setupMobileMenu();
+      setupAccountMenus();
+      setupDepotFormatting();
+      activateCurrentPageMenu();
+      setupSoumissionDropdownFacture();
+      setupSearchFilter();
+      chargerFactures();
+    });
+
+    // Variables globales pour la gestion des clients
+    let todosClientsFacture = [];
+    let selectedClientData = null; // Stocker les données complètes du client sélectionné
+
+    // Setup du dropdown pour sélection de travaux
+    function setupSoumissionDropdownFacture() {
+      log('[LAUNCH] Initialisation du dropdown travaux');
+      chargerClientsFacture();
+    }
+
+    // Charger les clients depuis l'API (acceptés + produit)
+    async function chargerClientsFacture() {
+      try {
+        if (!window.username) {
+          log("[ERROR] Username non disponible pour charger les clients");
+          return;
+        }
+
+        // Récupérer les clients des ventes acceptées ET produit
+        let allClients = [];
+
+        log("[FACTURE] Début chargement clients pour username:", window.username);
+
+        // 1. Récupérer les clients acceptés
+        log("[FACTURE] Appel API ventes/acceptees...");
+        try {
+          const responseAcceptees = await fetch(`/ventes/acceptees/${window.username}`);
+          log("[FACTURE] Réponse ventes/acceptees status:", responseAcceptees.status);
+          if (responseAcceptees.ok) {
+            const dataAcceptees = await responseAcceptees.json();
+            log("[FACTURE] ✅ Ventes acceptées reçues:", dataAcceptees.length, dataAcceptees);
+            allClients = [...allClients, ...dataAcceptees];
+          } else {
+            log("[FACTURE] ❌ Réponse ventes_acceptees non OK:", responseAcceptees.status);
+          }
+        } catch (error) {
+          log("[FACTURE] ❌ Erreur chargement ventes acceptées:", error);
+        }
+
+        // 2. Récupérer les clients produit
+        log("[FACTURE] Appel API ventes/produit...");
+        try {
+          const responseProduit = await fetch(`/ventes/produit/${window.username}`);
+          log("[FACTURE] Réponse ventes/produit status:", responseProduit.status);
+          if (responseProduit.ok) {
+            const dataProduit = await responseProduit.json();
+            log("[FACTURE] ✅ Ventes produit reçues:", dataProduit.length, dataProduit);
+            allClients = [...allClients, ...dataProduit];
+          } else {
+            log("[FACTURE] ❌ Réponse ventes_produit non OK:", responseProduit.status);
+          }
+        } catch (error) {
+          log("[FACTURE] ❌ Erreur chargement ventes produit:", error);
+        }
+
+        log("[FACTURE] Total clients combinés:", allClients.length);
+
+        // Récupérer les factures déjà envoyées
+        let facturesEnvoyees = [];
+        try {
+          const facturesResponse = await fetch(`/factures/${window.username}`);
+          if (facturesResponse.ok) {
+            facturesEnvoyees = await facturesResponse.json();
+            log("[DEBUG] Factures déjà envoyées:", facturesEnvoyees);
+          }
+        } catch (error) {
+          log("ℹ️ Aucune facture envoyée trouvée");
+        }
+
+        // Dédupliquer par numéro de soumission pour éviter les doublons
+        const clientsUniques = [];
+        const numerosVus = new Set();
+
+        allClients.forEach(client => {
+          const numero = client.num || client.numero_soumission || '';
+          const nom = (client.nom || client.clientNom || '').toLowerCase();
+          const prenom = (client.prenom || client.clientPrenom || '').toLowerCase();
+          const key = numero || `${nom}-${prenom}`;
+
+          if (key && !numerosVus.has(key)) {
+            numerosVus.add(key);
+            clientsUniques.push(client);
+          }
+        });
+
+        log("[DEBUG] Clients uniques après déduplication:", clientsUniques.length);
+
+        todosClientsFacture = clientsUniques.filter((s) => {
+          const hasNom = s.nom || s.clientNom || s.lastName || s.last_name || s.name;
+          const hasPrenom = s.prenom || s.clientPrenom || s.firstName || s.first_name;
+
+          // Vérifier si ce client a déjà une facture envoyée
+          const nom = (hasNom || '').toLowerCase();
+          const prenom = (hasPrenom || '').toLowerCase();
+          const dejaFacture = facturesEnvoyees.some(f =>
+            f.nom && f.prenom && f.nom.toLowerCase() === nom && f.prenom.toLowerCase() === prenom
+          );
+
+          log('[DEBUG] Filtrage client:', {
+            nom: hasNom, prenom: hasPrenom,
+            dejaFacture,
+            result: (hasNom || hasPrenom) && !dejaFacture
+          });
+
+          // Accepter si au moins nom OU prénom existe
+          return (hasNom || hasPrenom) && !dejaFacture;
+        });
+
+        afficherClientsFacture(todosClientsFacture);
+      } catch (error) {
+        error('[ERROR] Erreur chargement clients Facture:', error);
+        todosClientsFacture = [];
+        // Afficher message d'erreur dans le dropdown
+        const menu = document.getElementById('clientMenuFacture');
+        if (menu) {
+          menu.innerHTML = `
+            <div class="dropdown-option" style="color: var(--text-gray); font-style: italic; padding: 12px;">
+              Erreur de chargement des clients
+            </div>
+          `;
+        }
+      }
+    }
+
+    function afficherClientsFacture(clients) {
+      const menu = document.getElementById('clientMenuFacture');
+      if (!menu) return;
+
+      menu.innerHTML = '';
+
+      if (clients.length === 0) {
+        menu.innerHTML = `
+          <div class="dropdown-option" style="color: var(--text-gray); font-style: italic; padding: 12px;">
+            Aucun client disponible
+          </div>
+        `;
+        return;
+      }
+
+      clients.forEach((s) => {
+        const nom = s.nom || s.clientNom || s.lastName || s.last_name || s.name;
+        const prenom = s.prenom || s.clientPrenom || s.firstName || s.first_name;
+        const numeroSoumission = s.num;
+        const nomClient = `${prenom} ${nom}`;
+
+        const option = document.createElement('div');
+        option.className = 'dropdown-option';
+        option.style.cssText = `
+          padding: 12px 16px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+          color: var(--text-light);
+        `;
+
+        // Format identique à GQP: Nom Client - N° Soumission
+        option.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 500;">${nomClient}</span>
+            <span style="color: var(--text-gray); font-size: 0.875rem;">${numeroSoumission}</span>
+          </div>
+        `;
+
+        option.addEventListener('mouseenter', () => {
+          option.style.background = 'rgba(59, 130, 246, 0.1)';
+        });
+
+        option.addEventListener('mouseleave', () => {
+          option.style.background = 'transparent';
+        });
+
+        option.addEventListener('click', () => {
+          selectionnerClientFacture(s, nomClient, numeroSoumission);
+        });
+
+        menu.appendChild(option);
+      });
+    }
+
+    function rechercherClientsFacture(terme) {
+      if (!terme.trim()) {
+        afficherClientsFacture(todosClientsFacture);
+        return;
+      }
+
+      const clientsFiltres = todosClientsFacture.filter(client => {
+        const nom = client.nom || client.clientNom || client.lastName || client.last_name || client.name || '';
+        const prenom = client.prenom || client.clientPrenom || client.firstName || client.first_name || '';
+        const rechercheText = `${prenom} ${nom}`.toLowerCase();
+        return rechercheText.includes(terme.toLowerCase());
+      });
+
+      afficherClientsFacture(clientsFiltres);
+    }
+
+    function ouvrirMenuFacture() {
+      const menu = document.getElementById('clientMenuFacture');
+      if (menu) {
+        menu.classList.remove('hidden');
+        // Charger les clients si pas encore fait
+        if (todosClientsFacture.length === 0) {
+          chargerClientsFacture();
+        }
+      }
+    }
+
+    function fermerMenuFacture() {
+      const menu = document.getElementById('clientMenuFacture');
+      if (menu) {
+        menu.classList.add('hidden');
+      }
+    }
+
+    // Fonction de validation des boutons (même style que GQP)
+    function validateFactureButtons() {
+      const telechargerBtn = document.getElementById('telecharger-pdf');
+      const envoyerBtn = document.getElementById('envoyer-client');
+      const validationMessage = document.getElementById('factureValidationMessage');
+
+      const isValid = selectedClientData !== null;
+
+      if (isValid) {
+        telechargerBtn.disabled = false;
+        telechargerBtn.style.opacity = '1';
+        telechargerBtn.style.cursor = 'pointer';
+        telechargerBtn.style.pointerEvents = 'auto';
+        envoyerBtn.disabled = false;
+        envoyerBtn.style.opacity = '1';
+        envoyerBtn.style.cursor = 'pointer';
+        envoyerBtn.style.pointerEvents = 'auto';
+        // Cacher le message de validation
+        if (validationMessage) validationMessage.style.display = 'none';
+      } else {
+        telechargerBtn.disabled = true;
+        telechargerBtn.style.opacity = '0.5';
+        telechargerBtn.style.cursor = 'not-allowed';
+        telechargerBtn.style.pointerEvents = 'none';
+        envoyerBtn.disabled = true;
+        envoyerBtn.style.opacity = '0.5';
+        envoyerBtn.style.cursor = 'not-allowed';
+        envoyerBtn.style.pointerEvents = 'none';
+        // Afficher le message de validation
+        if (validationMessage) validationMessage.style.display = 'block';
+      }
+    }
+
+    async function selectionnerClientFacture(clientData, nomClient, numeroSoumission) {
+      log("[OK] Client sélectionné:", nomClient, "- N°", numeroSoumission);
+
+      // Stocker les données complètes du client pour utilisation ultérieure
+      selectedClientData = clientData;
+      log("[DEBUG] Données complètes du client stockées:", selectedClientData);
+
+      // Valider les boutons après sélection
+      validateFactureButtons();
+
+      // Extraire les données
+      const nom = clientData.nom || clientData.clientNom || clientData.lastName || clientData.last_name || clientData.name;
+      const prenom = clientData.prenom || clientData.clientPrenom || clientData.firstName || clientData.first_name;
+      const adresse = clientData.adresse || '';
+      const prixStr = clientData.prix || '';
+      const email = clientData.courriel || clientData.email || '';
+      const telephone = clientData.telephone || '';
+      const endroit = clientData.endroit || '';
+
+      // Lire le dépôt depuis le JSON (non calculé, vient de la soumission)
+      let depot = '';
+      if (clientData.depot) {
+        try {
+          log("[DEBUG] Dépôt depuis JSON:", clientData.depot);
+          // Formater le dépôt s'il n'est pas déjà formaté
+          const depotStr = clientData.depot.toString();
+          if (depotStr.includes('$')) {
+            depot = depotStr; // Déjà formaté
+          } else {
+            depot = formaterPrix(depotStr);
+          }
+          log("[DEBUG] Dépôt formaté:", depot);
+        } catch (e) {
+          error("Erreur formatage dépôt:", e);
+          depot = '';
+        }
+      }
+
+      // Remplir les champs cachés (pour compatibilité)
+      document.getElementById("input-nom").value = nom;
+      document.getElementById("input-prenom").value = prenom;
+      document.getElementById("input-adresse").value = adresse;
+      document.getElementById("input-prix").value = prixStr;
+      document.getElementById("input-depot").value = depot;
+      document.getElementById("input-email").value = email;
+
+      // Pré-remplir les champs d'édition
+      document.getElementById("edit-nom").value = nom;
+      document.getElementById("edit-prenom").value = prenom;
+      document.getElementById("edit-adresse").value = adresse;
+      document.getElementById("edit-prix").value = prixStr ? formaterPrix(prixStr) : "";
+      document.getElementById("edit-depot").value = depot;
+      // Mettre la bordure du dépôt en vert si rempli
+      const depotInput = document.getElementById("edit-depot");
+      if (depotInput && depot && depot.trim() !== '') {
+        depotInput.style.setProperty('border-right-color', '#4caf50', 'important');
+      }
+      document.getElementById("edit-email").value = email;
+      document.getElementById("edit-telephone").value = telephone;
+      document.getElementById("edit-endroit").value = endroit;
+
+      // Fermer le menu
+      fermerMenuFacture();
+
+      // Mettre à jour l'input avec le nom du client et le numéro (comme dans GQP)
+      const inputSearch = document.getElementById('clientSearchFacture');
+      if (inputSearch) {
+        inputSearch.value = `${nomClient} - ${numeroSoumission}`;
+        // Mettre la bordure en vert quand un client est sélectionné
+        inputSearch.style.setProperty('border-right-color', '#4caf50', 'important');
+      }
+    }
+
+    // Event listener pour fermer le menu Facture en cliquant ailleurs
+    document.addEventListener('click', function(event) {
+      const input = document.getElementById('clientSearchFacture');
+      const menu = document.getElementById('clientMenuFacture');
+
+      if (input && menu) {
+        // Si on clique pas sur l'input ni sur le menu, fermer
+        if (event.target !== input && !menu.contains(event.target)) {
+          fermerMenuFacture();
+        }
+      }
+    });
+
+    // Setup du filtre de recherche
+    function setupSearchFilter() {
+      document.getElementById("searchFacture").addEventListener("input", function () {
+        const filter = this.value.toLowerCase();
+        const rows = document.querySelectorAll("#facture-body tr");
+
+        rows.forEach(row => {
+          const text = row.textContent.toLowerCase();
+          row.style.display = text.includes(filter) ? "" : "none";
+        });
+      });
+    }
+
+    // Fonctionnalité "Envoyer au client"
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById("envoyer-client").addEventListener("click", async function (e) {
+        e.preventDefault();
+
+        const btn = e.currentTarget;
+        const btnText = btn.querySelector("span");
+
+        btn.disabled = true;
+
+        // Récupère les valeurs des champs d'édition (ou cachés si pas encore sélectionné)
+        const nom = document.getElementById("edit-nom").value || document.getElementById("input-nom").value;
+        const prenom = document.getElementById("edit-prenom").value || document.getElementById("input-prenom").value;
+        const adresse = document.getElementById("edit-adresse").value || document.getElementById("input-adresse").value;
+        const prix = document.getElementById("edit-prix").value || document.getElementById("input-prix").value;
+        const depot = document.getElementById("edit-depot").value || document.getElementById("input-depot").value;
+        const emailClient = document.getElementById("edit-email").value || document.getElementById("input-email").value;
+        const telephone = document.getElementById("edit-telephone").value || "";
+        const courriel = emailClient;
+        const endroit = document.getElementById("edit-endroit").value || "";
+
+        if (!emailClient) {
+          alert("Email client introuvable dans la soumission sélectionnée.");
+          btn.disabled = false;
+          return;
+        }
+
+        // Afficher l'animation d'envoi
+        showLoadingAnimation(`Envoi de la facture à ${prenom} ${nom}...`);
+
+        try {
+          // Récupérer le numéro de soumission depuis les données du client
+          const numeroSoumission = selectedClientData?.num || selectedClientData?.numero_soumission || "";
+
+          // Préparer toutes les données pour la facture (incluant item, part, produit, payer_par)
+          const dataFacture = {
+            nom,
+            prenom,
+            adresse,
+            prix,
+            depot,
+            telephone,
+            courriel,
+            endroit: selectedClientData?.endroit || endroit || "",  // Priorité aux données originales (avec \n)
+            numero_soumission: numeroSoumission,
+            item: selectedClientData?.item || "",
+            part: selectedClientData?.part || "",
+            produit: selectedClientData?.produit || "",
+            payer_par: selectedClientData?.payer_par || "",
+            date2: selectedClientData?.date2 || ""
+          };
+
+          log("[DEBUG] Données facture envoyées:", dataFacture);
+
+          // Appel backend pour créer la facture
+          const response = await fetch(`/creer-facture?username=${encodeURIComponent(window.username)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(dataFacture),
+          });
+
+          if (!response.ok) throw new Error("Erreur lors de la création de la facture");
+
+          const data = await response.json();
+
+          // Envoi email avec le lien public reçu
+          const emailResponse = await fetch("/envoyer-facture-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: window.username,
+              emailClient,
+              nom,
+              prenom,
+              prix,
+              lienPdf: data.lien_pdf_facture,
+            }),
+          });
+
+          if (!emailResponse.ok) {
+            const errorData = await emailResponse.text();
+            error("[ERROR] Erreur backend:", errorData);
+            hideLoadingAnimation();
+            throw new Error(`Erreur lors de l'envoi de l'email: ${errorData}`);
+          }
+
+          // Masquer l'animation et afficher le succès
+          hideLoadingAnimation();
+
+          btnText.innerHTML = `Envoyé <svg class="w-4 h-4 inline ml-1 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+          </svg>`;
+
+          // Reset du bouton après 3 secondes
+          setTimeout(() => {
+            btnText.textContent = "Envoyer au client";
+            btn.disabled = false;
+          }, 3000);
+
+          // Recharger la liste des clients pour exclure celui qui vient d'être facturé
+          chargerClientsFacture();
+
+          // Recharger la table des factures envoyées
+          chargerFactures();
+
+          // Reset des champs
+          const clientSearchFacture = document.getElementById("clientSearchFacture");
+          if (clientSearchFacture) {
+            clientSearchFacture.value = "";
+            clientSearchFacture.placeholder = "Tapez pour rechercher un client...";
+          }
+
+          // Reset des champs d'édition
+          document.getElementById("edit-nom").value = "";
+          document.getElementById("edit-prenom").value = "";
+          document.getElementById("edit-adresse").value = "";
+          document.getElementById("edit-prix").value = "";
+          document.getElementById("edit-depot").value = "";
+          document.getElementById("edit-email").value = "";
+          document.getElementById("edit-telephone").value = "";
+          document.getElementById("edit-endroit").value = "";
+
+          // Recharge la liste des factures
+          chargerFactures();
+
+        } catch (error) {
+          hideLoadingAnimation();
+          error("Erreur envoi facture :", error);
+          btnText.textContent = "Erreur lors de l'envoi";
+          setTimeout(() => {
+            btnText.textContent = "Envoyer au client";
+            btn.disabled = false;
+          }, 3000);
+        }
+      });
+    });
+
+    // Fonctionnalité "Voir en PDF"
+    document.addEventListener('DOMContentLoaded', function() {
+      const voirPDFBtn = document.getElementById("telecharger-pdf");
+      if (voirPDFBtn) {
+        voirPDFBtn.addEventListener("click", async (e) => {
+          e.preventDefault();
+
+          const btn = e.currentTarget;
+          const btnText = btn.querySelector("span");
+
+          btn.disabled = true;
+          btnText.textContent = "Chargement...";
+
+          try {
+            // Récupérer les données du formulaire + les données complètes du client
+            const data = {
+              nom: document.getElementById("edit-nom").value || document.getElementById("input-nom").value,
+              prenom: document.getElementById("edit-prenom").value || document.getElementById("input-prenom").value,
+              adresse: document.getElementById("edit-adresse").value || document.getElementById("input-adresse").value,
+              prix: document.getElementById("edit-prix").value || document.getElementById("input-prix").value,
+              depot: document.getElementById("edit-depot").value || document.getElementById("input-depot").value,
+              email: document.getElementById("edit-email").value || document.getElementById("input-email").value,
+              telephone: document.getElementById("edit-telephone").value || "",
+              courriel: document.getElementById("edit-email").value || document.getElementById("input-email").value,
+              endroit: selectedClientData?.endroit || document.getElementById("edit-endroit").value || "",  // Priorité aux données originales (avec \n)
+              // Ajouter les champs depuis les données complètes du client sélectionné
+              item: selectedClientData?.item || "",
+              part: selectedClientData?.part || "",
+              produit: selectedClientData?.produit || "",
+              payer_par: selectedClientData?.payer_par || "",
+              date2: selectedClientData?.date2 || ""
+            };
+
+            log("[DEBUG VOIR PDF] Données envoyées pour génération PDF:", data);
+            log("[DEBUG VOIR PDF] selectedClientData:", selectedClientData);
+
+            // Créer le PDF de prévisualisation
+            const response = await fetch(`/generate-facture-preview?username=${encodeURIComponent(window.username)}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(data),
+            });
+
+            if (!response.ok) throw new Error("Erreur lors de la génération du PDF");
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+
+            // Afficher le PDF dans le modal
+            showPDFModal(url);
+
+          } catch (error) {
+            error("Erreur:", error);
+            alert("Erreur lors de la génération du PDF : " + error.message);
+          } finally {
+            btn.disabled = false;
+            btnText.textContent = "Voir en PDF";
+          }
+        });
+      }
+    });
+
+    // Formatte un prix en format monétaire français canadien
+    function formaterPrix(valeur) {
+      try {
+        log("[DEBUG formaterPrix] Valeur entrée:", valeur);
+        // Nettoyer: enlever $, espaces, et convertir virgule en point
+        let cleaned = valeur.toString()
+          .replace(/\s/g, '')     // Enlever tous les espaces
+          .replace('$', '')        // Enlever $
+          .replace(/,/g, '.');     // Remplacer virgules par points
+
+        // Si plusieurs points (ex: 2.555.00), garder seulement le dernier comme décimal
+        const parts = cleaned.split('.');
+        if (parts.length > 2) {
+          // Joindre tout sauf le dernier, puis ajouter le dernier comme décimales
+          cleaned = parts.slice(0, -1).join('') + '.' + parts[parts.length - 1];
+        }
+
+        let montant = parseFloat(cleaned);
+        log("[DEBUG formaterPrix] Montant parsé:", montant);
+
+        if (isNaN(montant)) return valeur;
+
+        // Format simple: X XXX,XX $
+        const formatted = montant.toFixed(2)
+          .replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+          .replace('.', ',') + ' $';
+        log("[DEBUG formaterPrix] Résultat:", formatted);
+        return formatted;
+      } catch {
+        return valeur;
+      }
+    }
+
+    // Formatte un prix simple pour la table (évite les problèmes de locale)
+    function formaterPrixSimple(valeur) {
+      try {
+        let montant = parseFloat(valeur.toString().replace(/[^\d.-]/g, "").replace(",", "."));
+        if (isNaN(montant)) return valeur;
+
+        // Format: 1 000,00 $
+        return montant.toFixed(2)
+          .replace(/\B(?=(\d{3})+(?!\d))/g, " ") // Ajouter espaces pour milliers
+          .replace(".", ",") + " $"; // Virgule française + devise
+      } catch {
+        return valeur || "-";
+      }
+    }
+
+    // Fonction de formatage du montant dépôt (copie de formatMontant de GQP.html)
+    function formatMontant(value) {
+      // Enlever tout sauf les chiffres et points/virgules
+      const cleanValue = value.replace(/[^\d.,]/g, '');
+
+      // Convertir en nombre
+      const number = parseFloat(cleanValue.replace(',', '.'));
+
+      if (isNaN(number)) return '';
+
+      // Formater avec espaces pour les milliers et virgule pour les décimales
+      const formatted = new Intl.NumberFormat('fr-CA', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(number);
+
+      return formatted + ' $';
+    }
+
+    // Configuration du formatage automatique du dépôt
+    function setupDepotFormatting() {
+      const depotInput = document.getElementById('edit-depot');
+
+      if (!depotInput) return;
+
+      depotInput.addEventListener('blur', function(e) {
+        const value = e.target.value.trim();
+        if (value && value !== '') {
+          e.target.value = formatMontant(value);
+        }
+      });
+
+      // Permettre seulement les chiffres, points, virgules et $
+      depotInput.addEventListener('input', function(e) {
+        const value = e.target.value;
+        // Garder seulement les caractères valides pour un montant
+        e.target.value = value.replace(/[^0-9.,$ ]/g, '');
+        // Mettre à jour la bordure selon si le champ est rempli ou non
+        if (e.target.value.trim() !== '') {
+          e.target.style.setProperty('border-right-color', '#4caf50', 'important');
+        } else {
+          e.target.style.setProperty('border-right-color', '#e57373', 'important');
+        }
+      });
+    }
+
+    // Fonction pour afficher le PDF avec zoom mobile et pinch-to-zoom
+    async function showPDFModal(lienPdf) {
+      try {
+        const pdfjsLib = window['pdfjs-dist/build/pdf'];
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
+
+        const pdf = await pdfjsLib.getDocument(lienPdf).promise;
+
+        const canvas = document.getElementById("pdfCanvas");
+        const context = canvas.getContext('2d');
+        const page = await pdf.getPage(1);
+
+        // Scale adapté selon la taille de l'écran
+        const isMobile = window.innerWidth <= 768;
+        let currentScale = isMobile ? 0.8 : 2; // Même zoom que soumission
+        const minScale = 0.5;
+        const maxScale = 3.0;
+
+        // Fonction pour rendre le PDF au scale actuel
+        const renderPDF = async (scale) => {
+          const viewport = page.getViewport({ scale: scale });
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          await page.render({ canvasContext: context, viewport: viewport }).promise;
+        };
+
+        // Rendu initial
+        await renderPDF(currentScale);
+
+        // Afficher modal et overlay
+        document.getElementById("pdfModal").classList.remove("hidden");
+        document.getElementById("pdfOverlay").style.display = "block";
+
+        // Bloquer le scroll de l'arrière-plan
+        document.body.style.overflow = "hidden";
+
+        // Support du pinch-to-zoom sur mobile
+        const pdfScrollContainer = document.getElementById("pdfScrollContainer");
+
+        if (isMobile) {
+          let initialDistance = 0;
+          let initialScale = currentScale;
+
+          const getDistance = (touches) => {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+          };
+
+          pdfScrollContainer.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+              e.preventDefault();
+              initialDistance = getDistance(e.touches);
+              initialScale = currentScale;
+            }
+          }, { passive: false });
+
+          pdfScrollContainer.addEventListener('touchmove', async (e) => {
+            if (e.touches.length === 2) {
+              e.preventDefault();
+              const distance = getDistance(e.touches);
+              const scaleChange = distance / initialDistance;
+              let newScale = initialScale * scaleChange;
+
+              // Limiter le zoom
+              newScale = Math.max(minScale, Math.min(maxScale, newScale));
+
+              if (Math.abs(newScale - currentScale) > 0.05) {
+                currentScale = newScale;
+                await renderPDF(currentScale);
+              }
+            }
+          }, { passive: false });
+
+          pdfScrollContainer.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+              initialDistance = 0;
+            }
+          });
+        }
+
+        // Bloquer le zoom Ctrl+molette du navigateur
+        pdfScrollContainer.addEventListener('wheel', (e) => {
+          if (e.ctrlKey) {
+            e.preventDefault(); // Bloquer le zoom navigateur
+          }
+        }, { passive: false });
+
+        // Zoom via slider dans le header (CSS transform - fluide, centré)
+        const zoomSlider = document.getElementById('pdfZoomSlider');
+        const zoomPercentage = document.getElementById('zoomPercentage');
+        const pdfCanvasContainer = document.getElementById('pdfCanvasContainer');
+
+        if (zoomSlider) {
+          // Initialiser le slider (100% par défaut, min 100%, max 130%)
+          zoomSlider.min = 100;
+          zoomSlider.max = 130;
+          zoomSlider.value = 100;
+          if (zoomPercentage) zoomPercentage.textContent = '100%';
+
+          // Mettre à jour le gradient du slider
+          const updateSliderGradient = (value) => {
+            const percent = (value - 100) / (130 - 100) * 100;
+            zoomSlider.style.background = `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${percent}%, #475569 ${percent}%, #475569 100%)`;
+          };
+          updateSliderGradient(zoomSlider.value);
+
+          // Appliquer le zoom CSS transform (centré)
+          zoomSlider.addEventListener('input', (e) => {
+            const zoomPercent = parseInt(e.target.value);
+            const cssScale = zoomPercent / 100;
+
+            if (zoomPercentage) zoomPercentage.textContent = zoomPercent + '%';
+            updateSliderGradient(e.target.value);
+
+            // Appliquer le transform centré
+            if (pdfCanvasContainer) {
+              pdfCanvasContainer.style.transform = `scale(${cssScale})`;
+              pdfCanvasContainer.style.transformOrigin = 'top center';
+            }
+          });
+        }
+
+        // Fonction de fermeture
+        const closePDF = () => {
+          document.getElementById("pdfModal").classList.add("hidden");
+          document.getElementById("pdfOverlay").style.display = "none";
+          context.clearRect(0, 0, canvas.width, canvas.height);
+
+          // Restaurer le scroll de l'arrière-plan
+          document.body.style.overflow = "";
+        };
+
+        document.getElementById("closePdfBtn").onclick = closePDF;
+        // Fermer aussi au clic sur l'overlay
+        document.getElementById("pdfOverlay").onclick = closePDF;
+
+      } catch (error) {
+        error('[ERROR] Erreur affichage PDF:', error);
+        alert('Erreur lors de l\'affichage du PDF: ' + error.message);
+      }
+    }
+
+    // Charge et affiche les factures dans le tableau
+    async function chargerFactures() {
+      const body = document.getElementById("facture-body");
+      const mobileList = document.getElementById("facture-mobile-list");
+      if (!body) return;
+
+      if (!window.username) {
+        body.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="fas fa-inbox"></i><br>Aucune facture envoyée</td></tr>';
+        if (mobileList) {
+          mobileList.innerHTML = '<div class="facture-empty-mobile"><i class="fas fa-inbox"></i><p>Aucune facture</p></div>';
+        }
+        return;
+      }
+
+      try {
+        const response = await fetch(`/factures/${window.username}`);
+        if (!response.ok) throw new Error("Erreur de chargement");
+
+        const data = await response.json();
+        body.innerHTML = "";
+        if (mobileList) mobileList.innerHTML = "";
+
+        if (data.length === 0) {
+          body.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="fas fa-inbox"></i><br>Aucune facture envoyée</td></tr>';
+          if (mobileList) {
+            mobileList.innerHTML = '<div class="facture-empty-mobile"><i class="fas fa-inbox"></i><p>Aucune facture</p></div>';
+          }
+          return;
+        }
+
+        data.forEach((f) => {
+          log("[DEBUG] Données facture:", f); // Debug pour voir les données
+
+          // Formater la date
+          const dateCreation = f.date_creation || f.date || '';
+          const dateFormatee = dateCreation ? new Date(dateCreation).toLocaleDateString('fr-CA') : '-';
+
+          // Nom complet du client
+          const clientNom = `${f.prenom || ''} ${f.nom || ''}`.trim() || '-';
+
+          // Vue Desktop: Table row
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${f.numero_soumission || f.num || '-'}</td>
+            <td>${clientNom}</td>
+            <td>${dateFormatee}</td>
+            <td>${f.adresse || '-'}</td>
+            <td>${f.prix || '-'}</td>
+            <td class="text-center">
+              <button onclick="showPDFModal('${f.pdf_url}')" class="btn-primary action-btn-send" title="Voir la facture">
+                <i class="fas fa-file-pdf"></i>
+              </button>
+              <button onclick="renvoyerFacture('${f.nom}', '${f.prenom}', '${f.pdf_url}')" class="btn-secondary action-btn-delete" title="Renvoyer par email">
+                <i class="fas fa-envelope"></i>
+              </button>
+            </td>
+          `;
+          body.appendChild(row);
+
+          // Vue Mobile: Card
+          if (mobileList) {
+            const card = document.createElement('div');
+            card.className = 'facture-mobile-card';
+            card.innerHTML = `
+              <div class="facture-card-header">
+                <div style="flex: 1;">
+                  <div class="facture-card-numero">Facture ${f.numero_soumission || f.num || ''}</div>
+                  <div class="facture-card-nom">${clientNom}</div>
+                  <div class="facture-card-adresse">
+                    <i class="fas fa-map-marker-alt" style="color: var(--primary-green); margin-top: 2px;"></i>
+                    <span>${f.adresse || '-'}</span>
+                  </div>
+                </div>
+                <div class="facture-card-prix">${f.prix || '-'}</div>
+              </div>
+              <div class="facture-card-actions">
+                <button onclick="showPDFModal('${f.pdf_url}')" class="facture-action-btn view-btn">
+                  <i class="fas fa-file-pdf"></i>
+                  <span>Voir PDF</span>
+                </button>
+                <button onclick="renvoyerFacture('${f.nom}', '${f.prenom}', '${f.pdf_url}')" class="facture-action-btn send-btn">
+                  <i class="fas fa-envelope"></i>
+                  <span>Renvoyer</span>
+                </button>
+              </div>
+            `;
+            mobileList.appendChild(card);
+          }
+        });
+
+        // Détecter si le scroll est nécessaire et ajuster le border-radius
+        setTimeout(() => {
+          const tableContainer = document.querySelector('.table-container');
+          if (tableContainer) {
+            const hasScroll = tableContainer.scrollHeight > tableContainer.clientHeight;
+            if (hasScroll) {
+              tableContainer.classList.add('has-scroll');
+            } else {
+              tableContainer.classList.remove('has-scroll');
+            }
+          }
+        }, 100);
+
+      } catch (error) {
+        error("Erreur chargement factures :", error);
+        body.innerHTML = '<tr><td colspan="6" class="empty-state" style="color: var(--primary-red);"><i class="fas fa-exclamation-triangle"></i><br>Erreur de chargement</td></tr>';
+      }
+    }
+
+    // Variables globales pour le popup de confirmation
+    let factureDataToResend = null;
+
+    // Fonction pour afficher le popup de confirmation de renvoi
+    function renvoyerFacture(nom, prenom, pdfUrl) {
+      const nomComplet = `${prenom} ${nom}`;
+      factureDataToResend = { nom, prenom, pdfUrl };
+
+      document.getElementById('confirmRenvoyerMessage').textContent =
+        `Êtes-vous sûr de vouloir renvoyer la facture à ${nomComplet} ?`;
+
+      document.getElementById('confirmRenvoyerPopup').style.display = 'flex';
+    }
+
+    // Fonction pour fermer le popup de confirmation
+    function fermerConfirmRenvoyer() {
+      document.getElementById('confirmRenvoyerPopup').style.display = 'none';
+      factureDataToResend = null;
+    }
+
+    // Fonction pour confirmer et renvoyer la facture
+    async function confirmerRenvoyerFacture() {
+      if (!factureDataToResend) return;
+
+      const { nom, prenom, pdfUrl } = factureDataToResend;
+
+      try {
+        // Fermer le popup
+        fermerConfirmRenvoyer();
+
+        log('🔄 Envoi renvoi facture:', { nom, prenom, pdfUrl, username: window.username });
+
+        // Appel à l'endpoint pour renvoyer la facture
+        const response = await fetch('/renvoyer-facture', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            nom: nom,
+            prenom: prenom,
+            pdf_url: pdfUrl,
+            username: window.username
+          })
+        });
+
+        log('📡 Réponse serveur:', response.status, response.statusText);
+
+        if (response.ok) {
+          const result = await response.json();
+          log('[OK] Succès renvoi:', result);
+          // Notification de succès
+          const notification = document.createElement('div');
+          notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--primary-green);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            z-index: 10001;
+            font-size: 14px;
+            font-weight: 500;
+          `;
+          notification.textContent = `✓ Facture renvoyée à ${prenom} ${nom}`;
+          document.body.appendChild(notification);
+
+          setTimeout(() => notification.remove(), 3000);
+        } else {
+          const errorText = await response.text();
+          error('[ERROR] Erreur HTTP:', response.status, errorText);
+          throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
+        }
+      } catch (error) {
+        error('Erreur renvoi facture:', error);
+
+        // Notification d'erreur
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: var(--primary-red);
+          color: white;
+          padding: 12px 16px;
+          border-radius: 8px;
+          z-index: 10001;
+          font-size: 14px;
+          font-weight: 500;
+        `;
+        notification.textContent = `✗ Erreur lors du renvoi de la facture`;
+        document.body.appendChild(notification);
+
+        setTimeout(() => notification.remove(), 3000);
+      }
+    }
+
+    // Fermer le popup en cliquant à l'extérieur
+    document.addEventListener('click', function(e) {
+      const popup = document.getElementById('confirmRenvoyerPopup');
+      if (e.target === popup) {
+        fermerConfirmRenvoyer();
+      }
+    });
+
+    // Setup Mobile Menu
+    function setupMobileMenu() {
+      const mobileToggle = document.getElementById('mobile-menu-toggle');
+      
+      if (mobileToggle) {
+        mobileToggle.addEventListener('click', toggleMobileMenu);
+      }
+
+      // Close menu when clicking on menu items
+      const menuLinks = document.querySelectorAll('#sidebar a');
+      menuLinks.forEach(link => {
+        link.addEventListener('click', closeMobileMenu);
+      });
+
+      // Close mobile menu when window is resized to desktop
+      window.addEventListener('resize', function() {
+        if (window.innerWidth >= 1024) {
+          closeMobileMenu();
+        }
+      });
+    }
+
+    // Setup Account Menus
+    function setupAccountMenus() {
+      // Desktop Account Menu
+      const btn = document.getElementById("account-menu-button");
+      const dropdown = document.getElementById("account-dropdown");
+
+      if (btn && dropdown) {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          dropdown.classList.toggle("hidden");
+        });
+
+        window.addEventListener("click", (e) => {
+          if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add("hidden");
+          }
+        });
+      }
+
+      // Mobile Account Menu
+      const mobileAccountBtn = document.getElementById('mobile-account-menu-button');
+      const mobileAccountDropdown = document.getElementById('mobile-account-dropdown');
+      
+      if (mobileAccountBtn && mobileAccountDropdown) {
+        mobileAccountBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          mobileAccountDropdown.classList.toggle('hidden');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+          if (!mobileAccountBtn.contains(e.target) && !mobileAccountDropdown.contains(e.target)) {
+            mobileAccountDropdown.classList.add('hidden');
+          }
+        });
+      }
+    }
+
+    // Script pour gestion menu actif
+    function activateCurrentPageMenu() {
+      const currentPath = window.location.pathname;
+      log('🌐 Page actuelle détectée:', currentPath);
+      
+      const allMenuLinks = document.querySelectorAll('#sidebar a');
+      allMenuLinks.forEach(link => {
+        link.classList.remove('menu-active');
+        link.removeAttribute('data-menu-state');
+      });
+      
+      const pageMap = {
+        '/facture': '/facture',
+        '/new_facture': '/facture',
+        '/new_facture_dark': '/facture'
+      };
+      
+      const targetPath = pageMap[currentPath] || currentPath;
+      const targetLink = document.querySelector(`#sidebar a[data-path="${targetPath}"]`);
+      
+      if (targetLink) {
+        targetLink.classList.add('menu-active');
+        targetLink.setAttribute('data-menu-state', 'active');
+        log('[OK] Menu activé pour:', targetLink.textContent.trim());
+      } else {
+        log('[WARN] Aucun menu trouvé pour la page:', currentPath);
+      }
+    }
+
+    // Fonction de déconnexion
+    window.logout = function() {
+      localStorage.removeItem('username');
+      localStorage.removeItem('token');
+      window.location.href = '/';
+    };
+
+    // Global function for entrepreneur selector to reload data
+    window.loadFacturationData = async function() {
+      log("🔄 Rechargement COMPLET des données de facturation pour l'entrepreneur sélectionné:", window.username);
+
+      // Supprimer l'anti-flash CSS pour rendre le contenu visible
+      const antiFlashStyle = document.getElementById('coach-anti-flash-css');
+      if (antiFlashStyle) {
+        antiFlashStyle.remove();
+        log('[FACTURE] Anti-flash CSS supprimé');
+      }
+
+      // 1. Vider tous les champs du formulaire
+      const inputFields = ['input-nom', 'input-prenom', 'input-adresse', 'input-prix', 'input-depot', 'input-email'];
+      inputFields.forEach(id => {
+        const field = document.getElementById(id);
+        if (field) field.value = '';
+      });
+
+      // Vider aussi le champ de recherche client
+      const searchInput = document.getElementById('clientSearchFacture');
+      if (searchInput) searchInput.value = '';
+
+      log('[FACTURE] Formulaire réinitialisé');
+
+      // 2. Recharger la liste des clients
+      if (typeof chargerClientsFacture === 'function') {
+        await chargerClientsFacture();
+        log('[FACTURE] Clients rechargés');
+      }
+
+      // 3. Recharger les factures envoyées
+      await chargerFactures();
+      log('[FACTURE] Factures rechargées');
+
+      log('[FACTURE] Interface COMPLÈTEMENT rechargée pour:', window.username);
+    };
+  </script>
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+  <script src="/entrepreneur-selector.js"></script>
+
+  <!-- Overlay flou -->
+  <div id="pdfOverlay"></div>
+  <!-- Modal PDF - IDENTIQUE à soumission -->
+  <div id="pdfModal" class="hidden" tabindex="-1" aria-hidden="true">
+    <div id="pdfContent" tabindex="-1">
+      <div id="pdfControls" class="pdf-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span class="pdf-header-title">Aperçu Facture</span>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div id="zoomSliderContainer" style="display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-search-minus" style="color: #94a3b8; font-size: 11px;"></i>
+            <input type="range" id="pdfZoomSlider" min="100" max="130" value="100"
+              style="width: 80px; height: 4px; -webkit-appearance: none; background: linear-gradient(to right, #475569 0%, #475569 100%); border-radius: 2px; cursor: pointer;"
+            >
+            <i class="fas fa-search-plus" style="color: #94a3b8; font-size: 11px;"></i>
+            <span id="zoomPercentage" style="color: #94a3b8; font-size: 11px; min-width: 35px;">100%</span>
+          </div>
+          <button id="closePdfBtn" class="close-btn" tabindex="-1">×</button>
+        </div>
+      </div>
+      <div id="pdfScrollContainer" tabindex="-1">
+        <div id="pdfCanvasContainer">
+          <canvas id="pdfCanvas" tabindex="-1"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- Popup de confirmation pour renvoyer facture -->
+<div id="confirmRenvoyerPopup" class="confirm-popup-overlay">
+  <div class="confirm-popup">
+    <h3>Confirmer l'envoi</h3>
+    <p id="confirmRenvoyerMessage">Êtes-vous sûr de vouloir renvoyer la facture à ce client ?</p>
+    <div class="confirm-popup-buttons">
+      <button class="btn-secondary" onclick="fermerConfirmRenvoyer()">Non</button>
+      <button class="btn-primary" onclick="confirmerRenvoyerFacture()">Oui</button>
+    </div>
+  </div>
+</div>
+
+<!-- Spinner de chargement pour navigation -->
+<div id="navigation-spinner" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #0f172a; z-index: 9999; align-items: center; justify-content: center;">
+  <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <!-- Spinner SVG animé -->
+    <svg width="64" height="64" viewBox="0 0 64 64" style="animation: spin 0.8s linear infinite;">
+      <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="6"/>
+      <circle cx="32" cy="32" r="28" fill="none" stroke="#3b82f6" stroke-width="6" stroke-dasharray="140" stroke-dashoffset="40" stroke-linecap="round" style="transform-origin: center; transform: rotate(-90deg);"/>
+    </svg>
+    <p style="margin-top: 1rem; color: #94a3b8; font-size: 0.875rem;">Chargement...</p>
+  </div>
+</div>
+
+<style>
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
+
+</body>
+</html>

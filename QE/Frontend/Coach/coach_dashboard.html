@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard - Coach</title>
+
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#1f2937">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Feuille de style principale - Thème Dark -->
+  <link rel="stylesheet" href="/base.css">
+
+  <style>
+    /* Barre de sélection dashboard pour coaches */
+    #coach-dashboard-selector {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%);
+      backdrop-filter: blur(10px);
+      border-bottom: 2px solid var(--border-dark);
+      padding: 0.75rem 2rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      z-index: 10001 !important;
+      display: block;
+    }
+
+    body.dashboard-mode {
+      padding-top: 60px !important;
+    }
+
+    #coach-dashboard-selector .selector-container {
+      max-width: 1400px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    #coach-dashboard-selector .selector-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-light);
+      white-space: nowrap;
+    }
+
+    #coach-dashboard-selector .selector-label i {
+      color: var(--primary-blue);
+      font-size: 1rem;
+    }
+
+    .coach-dropdown {
+      position: relative;
+      min-width: 280px;
+    }
+
+    .coach-dropdown-toggle {
+      background: rgba(30, 41, 59, 0.8);
+      border: 2px solid var(--border-dark);
+      border-radius: 10px;
+      padding: 0.625rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: var(--text-light);
+      font-size: 0.875rem;
+      gap: 0.75rem;
+    }
+
+    .coach-dropdown-toggle:hover {
+      border-color: var(--primary-blue);
+      background: rgba(30, 41, 59, 1);
+    }
+
+    .coach-dropdown-toggle.active {
+      border-color: var(--primary-blue);
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+    }
+
+    .coach-dropdown-toggle .placeholder {
+      color: var(--text-gray);
+      flex: 1;
+    }
+
+    .coach-dropdown-toggle .selected-text {
+      color: var(--text-light);
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 1;
+    }
+
+    .coach-dropdown-toggle .chevron {
+      color: var(--text-gray);
+      transition: transform 0.3s ease;
+      font-size: 0.75rem;
+    }
+
+    .coach-dropdown-toggle.active .chevron {
+      transform: rotate(180deg);
+    }
+
+    .coach-dropdown-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      right: 0;
+      background: var(--bg-card);
+      border: 2px solid var(--border-dark);
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      z-index: 10002;
+      max-height: 320px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .coach-dropdown-menu.show {
+      display: block;
+    }
+
+    .coach-dropdown-option {
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.875rem;
+      color: var(--text-light);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+    }
+
+    .coach-dropdown-option:hover {
+      background-color: rgba(59, 130, 246, 0.1);
+    }
+
+    .coach-dropdown-option:last-child {
+      border-bottom: none;
+    }
+
+    .coach-dropdown-option i {
+      font-size: 1rem;
+      color: var(--primary-blue);
+    }
+
+    .coach-dropdown-option-disabled {
+      padding: 0.75rem 1rem;
+      color: var(--text-gray);
+      font-style: italic;
+      cursor: default;
+      font-size: 0.875rem;
+    }
+  </style>
+
+</head>
+
+<body class="min-h-screen dashboard-mode" style="margin: 0; padding: 0;">
+
+  <!-- Sélecteur de dashboard (visible pour les coaches) -->
+  <div id="coach-dashboard-selector">
+    <div class="selector-container">
+      <!-- Sélecteur de type de dashboard -->
+      <div class="selector-label">
+        <i class="fas fa-building"></i>
+        <span>Dashboard:</span>
+      </div>
+      <div class="coach-dropdown" style="min-width: 220px;">
+        <div class="coach-dropdown-toggle" id="dashboard-type-toggle">
+          <span class="selected-text">
+            <i class="fas fa-user-shield"></i>
+            Dashboard Coach
+          </span>
+          <i class="fas fa-chevron-down chevron"></i>
+        </div>
+        <div class="coach-dropdown-menu" id="dashboard-type-menu">
+          <div class="coach-dropdown-option" data-type="coach">
+            <i class="fas fa-user-shield"></i>
+            <span>Dashboard Coach</span>
+          </div>
+          <div class="coach-dropdown-option" data-type="entrepreneur">
+            <i class="fas fa-users"></i>
+            <span>Dashboard Entrepreneur</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content - iframe pour charger le dashboard_user.html -->
+  <iframe
+    id="dashboard-iframe"
+    src="/dashboard"
+    style="width: 100%; height: calc(100vh - 60px); border: none; display: block; position: absolute; top: 60px; left: 0; right: 0; bottom: 0;"
+  ></iframe>
+
+  <script>
+    // Initialiser le type de dashboard (par défaut: coach)
+    window.dashboardType = 'coach';
+
+    // Gérer le sélecteur de type de dashboard
+    const dashboardTypeToggle = document.getElementById('dashboard-type-toggle');
+    const dashboardTypeMenu = document.getElementById('dashboard-type-menu');
+    const dashboardIframe = document.getElementById('dashboard-iframe');
+
+    // Vérifier les paramètres URL au chargement
+    const urlParams = new URLSearchParams(window.location.search);
+    const dashboardType = urlParams.get('type');
+    const selectedUser = urlParams.get('user');
+
+    // Si des paramètres sont fournis, les appliquer
+    if (dashboardType || selectedUser) {
+      let iframeSrc = '/dashboard';
+      const params = new URLSearchParams();
+
+      if (selectedUser) {
+        params.append('user', selectedUser);
+      }
+
+      if (params.toString()) {
+        iframeSrc += '?' + params.toString();
+      }
+
+      dashboardIframe.src = iframeSrc;
+
+      // Mettre à jour le sélecteur pour refléter le type
+      if (dashboardType === 'entrepreneur') {
+        dashboardTypeToggle.innerHTML = `
+          <span class="selected-text">
+            <i class="fas fa-users"></i>
+            Dashboard Entrepreneur
+          </span>
+          <i class="fas fa-chevron-down chevron"></i>
+        `;
+        window.dashboardType = 'entrepreneur';
+      }
+    }
+
+    if (dashboardTypeToggle && dashboardTypeMenu) {
+      // Ouvrir/fermer le dropdown
+      dashboardTypeToggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        this.classList.toggle('active');
+        dashboardTypeMenu.classList.toggle('show');
+      });
+
+      // Gérer le choix du type de dashboard
+      dashboardTypeMenu.querySelectorAll('.coach-dropdown-option').forEach(option => {
+        option.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const type = this.getAttribute('data-type');
+          selectDashboardType(type);
+        });
+      });
+
+      // Fermer le dropdown en cliquant ailleurs
+      document.addEventListener('click', function(e) {
+        if (!dashboardTypeToggle.contains(e.target) && !dashboardTypeMenu.contains(e.target)) {
+          dashboardTypeToggle.classList.remove('active');
+          dashboardTypeMenu.classList.remove('show');
+        }
+      });
+    }
+
+    // Fonction pour sélectionner le type de dashboard
+    function selectDashboardType(type) {
+      const dashboardTypeToggle = document.getElementById('dashboard-type-toggle');
+      const dashboardTypeMenu = document.getElementById('dashboard-type-menu');
+
+      // ⚡ Mapper tous les types de dashboard SANS rechargement d'iframe
+      const dashboardTypes = {
+        'mon-equipe': {
+          icon: 'fas fa-users-cog',
+          label: 'Mon Équipe'
+        },
+        'par-coach': {
+          icon: 'fas fa-chalkboard-teacher',
+          label: 'Dashboard par Coach'
+        },
+        'entrepreneur': {
+          icon: 'fas fa-users',
+          label: 'Dashboard par Entrepreneur'
+        },
+        'qualite-etudiants': {
+          icon: 'fas fa-graduation-cap',
+          label: 'Dashboard Qualité Étudiants'
+        },
+        'coach': {
+          icon: 'fas fa-user-shield',
+          label: 'Dashboard Coach'
+        }
+      };
+
+      const dashboardConfig = dashboardTypes[type];
+
+      if (dashboardConfig) {
+        // Mettre à jour l'affichage du toggle
+        dashboardTypeToggle.innerHTML = `
+          <span class="selected-text">
+            <i class="${dashboardConfig.icon}"></i>
+            ${dashboardConfig.label}
+          </span>
+          <i class="fas fa-chevron-down chevron"></i>
+        `;
+
+        window.dashboardType = type;
+        // ⚡ PAS de rechargement d'iframe - évite le spinner
+        console.log(`Dashboard ${dashboardConfig.label} sélectionné (sans rechargement)`);
+      }
+
+      // Fermer le menu
+      dashboardTypeToggle.classList.remove('active');
+      dashboardTypeMenu.classList.remove('show');
+    }
+  </script>
+
+</body>
+</html>

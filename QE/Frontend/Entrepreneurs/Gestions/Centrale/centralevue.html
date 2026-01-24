@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>La Centrale</title>
+
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#5271ff">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Feuille de style principale -->
+  <link rel="stylesheet" href="/base.css">
+
+  <!-- Styles spécifiques à La Centrale -->
+  <link rel="stylesheet" href="/Centralevue.css">
+
+  <style>
+    /* Barre de sélection entrepreneur pour coaches */
+    #coach-entrepreneur-selector {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%);
+      backdrop-filter: blur(10px);
+      border-bottom: 2px solid var(--border-dark);
+      padding: 0.75rem 2rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      z-index: 10001 !important;
+      display: none;
+    }
+
+    #coach-entrepreneur-selector.visible {
+      display: block !important;
+    }
+
+    body.coach-mode {
+      padding-top: 60px !important;
+    }
+
+    #coach-entrepreneur-selector .selector-container {
+      max-width: 1400px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    #coach-entrepreneur-selector .selector-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-light);
+      white-space: nowrap;
+    }
+
+    #coach-entrepreneur-selector .selector-label i {
+      color: var(--primary-blue);
+      font-size: 1rem;
+    }
+
+    .coach-dropdown {
+      position: relative;
+      min-width: 280px;
+    }
+
+    .coach-dropdown-toggle {
+      background: rgba(30, 41, 59, 0.8);
+      border: 2px solid var(--border-dark);
+      border-radius: 10px;
+      padding: 0.625rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: var(--text-light);
+      font-size: 0.875rem;
+      gap: 0.75rem;
+    }
+
+    .coach-dropdown-toggle:hover {
+      border-color: var(--primary-blue);
+      background: rgba(30, 41, 59, 1);
+    }
+
+    .coach-dropdown-toggle.active {
+      border-color: var(--primary-blue);
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+    }
+
+    .coach-dropdown-toggle .placeholder {
+      color: var(--text-gray);
+      flex: 1;
+    }
+
+    .coach-dropdown-toggle .selected-text {
+      color: var(--text-light);
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 1;
+    }
+
+    .coach-dropdown-toggle .chevron {
+      color: var(--text-gray);
+      transition: transform 0.3s ease;
+      font-size: 0.75rem;
+    }
+
+    .coach-dropdown-toggle.active .chevron {
+      transform: rotate(180deg);
+    }
+
+    .coach-dropdown-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      right: 0;
+      background: var(--bg-card);
+      border: 2px solid var(--border-dark);
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      z-index: 10002;
+      max-height: 320px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .coach-dropdown-menu.show {
+      display: block;
+    }
+
+    .coach-dropdown-option {
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.875rem;
+      color: var(--text-light);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+    }
+
+    .coach-dropdown-option:hover {
+      background-color: rgba(59, 130, 246, 0.1);
+    }
+
+    .coach-dropdown-option:last-child {
+      border-bottom: none;
+    }
+
+    .coach-dropdown-option i {
+      font-size: 1rem;
+      color: var(--primary-blue);
+    }
+
+    .coach-dropdown-option-disabled {
+      padding: 0.75rem 1rem;
+      color: var(--text-gray);
+      font-style: italic;
+      cursor: default;
+      font-size: 0.875rem;
+    }
+  </style>
+
+</head>
+
+<body class="min-h-screen centrale-coach" style="margin: 0; padding: 0;">
+
+  <!-- Sélecteur de centrale et entrepreneur (visible uniquement pour les coaches) -->
+  <div id="coach-entrepreneur-selector">
+    <div class="selector-container">
+      <!-- Sélecteur de type de centrale -->
+      <div class="selector-label">
+        <i class="fas fa-building"></i>
+        <span>Centrale:</span>
+      </div>
+      <div class="coach-dropdown" style="min-width: 220px;">
+        <div class="coach-dropdown-toggle" id="centrale-type-toggle">
+          <span class="selected-text">
+            <i class="fas fa-user-shield"></i>
+            Centrale Coach
+          </span>
+          <i class="fas fa-chevron-down chevron"></i>
+        </div>
+        <div class="coach-dropdown-menu" id="centrale-type-menu">
+          <div class="coach-dropdown-option" data-type="coach">
+            <i class="fas fa-user-shield"></i>
+            <span>Centrale Coach</span>
+          </div>
+          <div class="coach-dropdown-option" data-type="entrepreneur">
+            <i class="fas fa-users"></i>
+            <span>Centrale Entrepreneur</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="w-full" style="width: 100%; padding: 2rem;">
+
+    <!-- Bouton Retour -->
+    <div id="back-button-container">
+      <button id="back-to-gestions-btn" onclick="goBackToGestions()" class="back-button">
+        <i class="fas fa-arrow-left"></i>
+        <span class="back-button-text">Retour à gestions</span>
+      </button>
+    </div>
+
+    <!-- Header -->
+    <div class="mb-10">
+      <div class="relative">
+        <!-- Titre et bouton sur la même ligne -->
+        <div class="flex items-center justify-between mb-3">
+          <h1 class="text-4xl font-bold">
+            La Centrale
+          </h1>
+          <!-- Bouton pour passer à la centrale admin (visible pour les coachs uniquement) -->
+          <button id="btn-switch-to-admin" style="display: none; align-items: center; background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%); color: white; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(96, 165, 250, 0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(96, 165, 250, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(96, 165, 250, 0.3)'" onclick="console.log('[CENTRALE NAV] 🔵 Click sur Modifier la centrale'); console.log('[CENTRALE NAV] Current URL:', window.location.href); console.log('[CENTRALE NAV] Parent exists:', !!window.parent); console.log('[CENTRALE NAV] router exists:', !!(window.parent && window.parent.router)); if (window.parent && window.parent.router) { console.log('[CENTRALE NAV] ✅ Utilisation de parent.router.loadPage(centraleadmin)'); console.log('[CENTRALE NAV] Destination: /centraleadmin'); window.parent.router.loadPage('centraleadmin'); } else { console.log('[CENTRALE NAV] ⚠️ Fallback: window.location.href = /centraleadmin'); window.location.href='/centraleadmin'; }">
+            <i class="fas fa-edit mr-2"></i>
+            Modifier la centrale
+          </button>
+        </div>
+        <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        <div class="flex items-center justify-between">
+          <p class="text-xl font-medium">Centre de ressources et documentation</p>
+          <div class="text-sm flex items-center">
+            <i class="fas fa-calendar-alt mr-2"></i>
+            <span id="currentDate">Aujourd'hui</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sections dynamiques -->
+    <div class="space-y-8">
+      <div class="empty-state loading-shimmer" style="padding: 4rem 2rem; text-align: center;">
+        <i class="fas fa-spinner fa-spin" style="font-size: 3rem; color: var(--primary-blue); margin-bottom: 1rem;"></i>
+        <p style="color: var(--text-secondary); font-size: 1.125rem;">Chargement des sections...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay flou -->
+  <div id="viewerOverlay"></div>
+
+  <!-- Modal viewer -->
+  <div id="viewerModal" class="hidden">
+    <div id="viewerHeader">
+      <span id="viewerFileName"></span>
+      <div id="viewerHeaderActions">
+        <a id="viewerDownload" href="#" download title="Télécharger">
+          <i class="fas fa-download"></i>
+          <span>Enregistrer</span>
+        </a>
+        <button id="viewerClose">×</button>
+      </div>
+    </div>
+    <div id="viewerContent"></div>
+  </div>
+
+  <!-- Script pour charger les sections dynamiques -->
+  <script src="/Centralevue.js"></script>
+
+  <script>
+    // ⚡ DÉSACTIVATION DES LOGS - Performance optimization
+    window.log = window.log || (() => {});
+    window.warn = window.warn || (() => {});
+    window.error = window.error || (() => {});
+    window.info = window.info || (() => {});
+    window.debug = window.debug || (() => {});
+
+    // Fonction pour mettre à jour la date
+    function updateCurrentDate() {
+      const now = new Date();
+      const options = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      };
+      const dateString = now.toLocaleDateString('fr-FR', options);
+      const dateElement = document.getElementById('currentDate');
+      if (dateElement) {
+        dateElement.textContent = dateString;
+      }
+    }
+
+    // Fonction pour retourner à la page de gestions
+    function goBackToGestions() {
+      window.location.href = '/gestionsmobile';
+    }
+
+    // Fonction de déconnexion
+    window.logout = function() {
+      localStorage.removeItem('username');
+      localStorage.removeItem('token');
+      window.location.href = '/';
+    };
+
+    // Script pour gestion menu actif
+    function activateCurrentPageMenu() {
+      const currentPath = window.location.pathname;
+      const allMenuLinks = document.querySelectorAll('#sidebar a');
+      allMenuLinks.forEach(link => {
+        link.classList.remove('menu-active');
+        link.removeAttribute('data-menu-state');
+      });
+
+      const pageMap = {
+        '/centralevue': '/centralevue',
+        '/new_centralentrepreneur': '/centralevue'
+      };
+
+      const targetPath = pageMap[currentPath] || currentPath;
+      const targetLink = document.querySelector(`#sidebar a[data-path="${targetPath}"]`);
+
+      if (targetLink) {
+        targetLink.classList.add('menu-active');
+        targetLink.setAttribute('data-menu-state', 'active');
+      }
+    }
+
+    // Initialisation
+    document.addEventListener('DOMContentLoaded', () => {
+      updateCurrentDate();
+      activateCurrentPageMenu();
+
+      if (typeof setupMobileMenu === 'function') setupMobileMenu();
+      if (typeof setupAccountMenus === 'function') setupAccountMenus();
+    });
+  </script>
+
+  <script>
+  // Gestion du sélecteur d'entrepreneur pour les coaches et direction
+  (function() {
+    // Vérifier si l'utilisateur est un coach ou direction
+    const userRole = localStorage.getItem('userRole');
+    const isCoachOrDirection = userRole === 'coach' || userRole === 'direction';
+
+    log('DEBUG Centrale - userRole:', userRole, 'isCoachOrDirection:', isCoachOrDirection);
+
+    if (isCoachOrDirection) {
+      // Ajouter la classe coach-mode au body pour ajuster le padding
+      document.body.classList.add('coach-mode');
+
+      // Afficher le sélecteur avec la classe visible
+      const selector = document.getElementById('coach-entrepreneur-selector');
+      if (selector) {
+        selector.classList.add('visible');
+      }
+
+      // Afficher le bouton "Modifier la centrale" pour les coachs et direction
+      const btnSwitchToAdmin = document.getElementById('btn-switch-to-admin');
+      if (btnSwitchToAdmin) {
+        btnSwitchToAdmin.style.display = 'flex';
+      }
+
+      // Initialiser le type de centrale (par défaut: coach)
+      window.centraleType = 'coach';
+
+      // Gérer le sélecteur de type de centrale
+      const centraleTypeToggle = document.getElementById('centrale-type-toggle');
+      const centraleTypeMenu = document.getElementById('centrale-type-menu');
+
+      if (centraleTypeToggle && centraleTypeMenu) {
+        centraleTypeToggle.addEventListener('click', function(e) {
+          e.stopPropagation();
+          this.classList.toggle('active');
+          centraleTypeMenu.classList.toggle('show');
+        });
+
+        // Gérer le choix du type de centrale
+        centraleTypeMenu.querySelectorAll('.coach-dropdown-option').forEach(option => {
+          option.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const type = this.getAttribute('data-type');
+            selectCentraleType(type);
+          });
+        });
+
+        // Fermer le dropdown en cliquant ailleurs
+        document.addEventListener('click', function(e) {
+          if (!centraleTypeToggle.contains(e.target) && !centraleTypeMenu.contains(e.target)) {
+            centraleTypeToggle.classList.remove('active');
+            centraleTypeMenu.classList.remove('show');
+          }
+        });
+      }
+    }
+
+    // Fonction pour sélectionner le type de centrale
+    function selectCentraleType(type) {
+      const centraleTypeToggle = document.getElementById('centrale-type-toggle');
+      const centraleTypeMenu = document.getElementById('centrale-type-menu');
+      const bodyEl = document.querySelector('body');
+
+      if (type === 'coach') {
+        // Centrale Coach
+        centraleTypeToggle.innerHTML = `
+          <span class="selected-text">
+            <i class="fas fa-user-shield"></i>
+            Centrale Coach
+          </span>
+          <i class="fas fa-chevron-down chevron"></i>
+        `;
+
+        // Changer la classe du body et charger la centrale coach
+        bodyEl.classList.remove('centrale-entrepreneur');
+        bodyEl.classList.add('centrale-coach');
+
+        // Charger les sections de la centrale coach
+        window.centraleType = 'coach';
+        if (typeof window.loadCentraleSections === 'function') {
+          window.loadCentraleSections();
+        }
+
+      } else {
+        // Centrale Entrepreneur
+        centraleTypeToggle.innerHTML = `
+          <span class="selected-text">
+            <i class="fas fa-users"></i>
+            Centrale Entrepreneur
+          </span>
+          <i class="fas fa-chevron-down chevron"></i>
+        `;
+
+        // Changer la classe du body
+        bodyEl.classList.remove('centrale-coach');
+        bodyEl.classList.add('centrale-entrepreneur');
+
+        // Charger les sections de la centrale entrepreneur
+        window.centraleType = 'entrepreneur';
+        if (typeof window.loadCentraleSections === 'function') {
+          window.loadCentraleSections();
+        }
+      }
+
+      // Fermer le menu
+      centraleTypeToggle.classList.remove('active');
+      if (centraleTypeMenu) {
+        centraleTypeMenu.classList.remove('show');
+      }
+    }
+  })();
+  </script>
+
+</body>
+</html>

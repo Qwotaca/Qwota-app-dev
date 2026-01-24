@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Template - Qwota (Dark Theme)</title>
+
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#1f2937">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Feuille de style principale - Thème Dark Organisé -->
+  <link rel="stylesheet" href="/base.css">
+
+<style>
+
+/* Variables CSS thème sombre */
+:root {
+  --primary-blue: #60a5fa;
+  --primary-green: #34d399;
+  --primary-red: #f87171;
+  --primary-orange: #fb923c;
+  --bg-dark: #0f172a;
+  --bg-card: #1e293b;
+  --text-light: #f1f5f9;
+  --text-gray: #94a3b8;
+  --border-dark: #334155;
+  --shadow-dark: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-dark-medium: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  --shadow-dark-strong: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+/* Fond de page dark */
+body {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+  color: var(--text-light) !important;
+  min-height: 100vh;
+}
+
+.button3, .button4 {
+  font-size: 0.875rem !important;
+}
+
+/* Cacher éléments admin pour cette page coach */
+li[data-role*="admin"]:not([data-role*="entrepreneur"]) {
+  display: none !important;
+}
+
+/* Custom Checkbox - Thème sombre */
+.custom-checkbox {
+  cursor: pointer;
+  display: inline-block;
+  position: relative;
+}
+
+.checkbox-display {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-dark);
+  border-radius: 6px;
+  background: var(--bg-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.checkbox-icon {
+  color: transparent;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  transform: scale(0);
+}
+
+/* État hover */
+.custom-checkbox:hover .checkbox-display {
+  border-color: var(--primary-blue);
+  background: rgba(96, 165, 250, 0.1);
+}
+
+/* État sélectionné */
+.custom-checkbox.selected .checkbox-display {
+  background: var(--primary-blue);
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+}
+
+.custom-checkbox.selected .checkbox-icon {
+  color: white;
+  transform: scale(1);
+}
+
+/* Animation du check */
+.custom-checkbox.selected .checkbox-icon {
+  animation: checkmark 0.3s ease forwards;
+}
+
+@keyframes checkmark {
+  0% {
+    transform: scale(0) rotate(-45deg);
+  }
+  50% {
+    transform: scale(1.2) rotate(-45deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+</style>
+
+</head>
+
+<body class="min-h-screen p-6">
+
+  <!-- Mobile Header -->
+  <div class="md:hidden bg-slate-800 shadow-sm fixed top-0 left-0 right-0 z-30 h-16">
+    <div class="flex items-center justify-between px-4 h-full">
+      <button id="mobile-menu-toggle" class="p-2 rounded-lg">
+        <i class="fas fa-bars" style="color: var(--text-gray);"></i>
+      </button>
+      <img src="https://i.ibb.co/N6M9W7td/Design-sans-titre-46.png" alt="Logo" class="h-8">
+      <div class="relative">
+        <button id="mobile-account-menu-button" class="w-8 h-8 rounded-full flex items-center justify-center">
+          <img src="https://i.ibb.co/twJsgZrb/Design-sans-titre-39.png" alt="Compte" class="w-4 h-4">
+        </button>
+        <div id="mobile-account-dropdown" class="hidden absolute right-0 mt-2 w-56 rounded-lg shadow-lg z-50 bg-slate-800 border border-slate-600">
+          <div id="mobile-account-username" class="text-sm px-4 py-3 border-b" style="color: var(--text-gray); border-color: var(--border-dark);">Chargement...</div>
+          <button onclick="window.location.href='/connection'" class="w-full text-left px-4 py-2 text-sm !bg-transparent flex items-center" style="color: var(--text-gray);">
+            <i class="fas fa-cog mr-2"></i>Paramètres
+          </button>
+          <button onclick="logout()" class="w-full text-left px-4 py-2 text-sm text-red-400 !bg-transparent flex items-center">
+            <i class="fas fa-sign-out-alt mr-2"></i>Se déconnecter
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Overlay -->
+  <div class="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+  <!-- Menu latéral - Dark Theme (VIDE) -->
+  <div id="sidebar" class="fixed top-0 left-0 h-screen w-[14vw] shadow-lg z-20">
+    <div class="border-b flex items-center justify-start space-x-2 py-4 pl-6">
+      <img src="https://i.ibb.co/1fzHGQWw/TES-MUTE-TH-O-6.png" alt="Logo" class="h-6 w-auto object-contain">
+      <span class="text-xl font-medium">Menu</span>
+    </div>
+    <ul class="p-4 space-y-3">
+      <!-- Section Paramètres -->
+      <li>
+        <div class="text-xs font-semibold uppercase tracking-wide mb-2 px-2">Paramètres</div>
+        <li data-role="coach"><a href="/parametrecoach" class="block p-2 rounded menu-active" data-path="/parametrecoach"><i class="fas fa-cog mr-2"></i>Paramètres</a></li>
+      </li>
+
+      <!-- Séparateur avec sous-titre Général -->
+      <li class="border-t pt-3 mt-3">
+        <div class="text-xs font-semibold uppercase tracking-wide mb-2 px-2">Général</div>
+      </li>
+      <li data-role="coach"><a href="/dashboardcoach" class="block p-2 rounded" data-path="/dashboardcoach"><i class="fas fa-chart-bar mr-2"></i>Dashboard</a></li>
+      <li data-role="coach"><a href="/gestionventescoach" class="block p-2 rounded" data-path="/gestionventescoach"><i class="fas fa-handshake mr-2"></i>Gestion ventes</a></li>
+    </ul>
+  </div>
+
+  <!-- Header spécial thème dark -->
+  <div class="dark-header">
+    <div class="header-content">
+      <!-- Logo container simple -->
+      <div class="logo-container">
+        <img src="https://i.ibb.co/N6M9W7td/Design-sans-titre-46.png" alt="Logo" class="logo-image" />
+      </div>
+
+      <!-- Spacer pour pousser le menu account à droite -->
+      <div class="flex-1"></div>
+
+      <!-- Account menu stylé -->
+      <div class="account-container">
+        <button id="account-menu-button" class="account-btn">
+          <div class="account-avatar">
+            <img src="https://i.ibb.co/twJsgZrb/Design-sans-titre-39.png" alt="Compte" />
+          </div>
+          <div class="account-info" id="account-display">
+            Chargement...
+          </div>
+          <i class="fas fa-chevron-down account-chevron"></i>
+        </button>
+
+        <div id="account-dropdown" class="account-dropdown hidden">
+          <div class="dropdown-header">
+            <div class="user-avatar">
+              <img src="https://i.ibb.co/twJsgZrb/Design-sans-titre-39.png" alt="Compte" />
+            </div>
+            <div class="user-details">
+              <div class="user-name" id="account-username">Chargement...</div>
+            </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <button onclick="window.location.href='/connection'" class="dropdown-item">
+            <i class="fas fa-cog"></i>
+            <span>Paramètres</span>
+          </button>
+          <button onclick="logout()" class="dropdown-item logout">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Se déconnecter</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenu principal -->
+  <div class="main-content w-full" style="padding: 2rem; margin-top: 80px;">
+    <div class="w-full">
+
+      <!-- Header -->
+      <div class="mb-10">
+        <div class="relative">
+          <div class="flex items-center justify-between mb-3">
+            <h1 class="text-4xl font-bold" style="color: var(--text-light);">
+              Paramètres Coach
+            </h1>
+            <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+          </div>
+          <div class="flex items-center justify-between">
+            <p class="text-xl font-medium" style="color: var(--text-gray);">Gestion de vos entrepreneurs</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Liste des entrepreneurs -->
+      <div class="card p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold" style="color: var(--text-light);">
+            <i class="fas fa-users mr-3" style="color: var(--primary-blue);"></i>
+            Mes Entrepreneurs
+          </h2>
+          <div id="entrepreneurCount" class="px-4 py-2 rounded-lg" style="background: var(--bg-dark); color: var(--text-gray);">
+            <i class="fas fa-user-tie mr-2"></i>
+            <span id="countText">Chargement...</span>
+          </div>
+        </div>
+
+        <div id="entrepreneursList" class="space-y-4">
+          <!-- Loading state -->
+          <div id="loadingState" class="text-center py-8">
+            <i class="fas fa-spinner fa-spin text-4xl mb-4" style="color: var(--text-gray);"></i>
+            <p style="color: var(--text-gray);">Chargement des entrepreneurs...</p>
+          </div>
+
+          <!-- Empty state -->
+          <div id="emptyState" class="hidden text-center py-8">
+            <i class="fas fa-user-slash text-4xl mb-4" style="color: var(--text-gray);"></i>
+            <h3 class="text-lg font-semibold mb-2" style="color: var(--text-light);">Aucun entrepreneur assigné</h3>
+            <p style="color: var(--text-gray);">Contactez votre administrateur pour assigner des entrepreneurs à votre compte.</p>
+          </div>
+
+          <!-- Entrepreneurs list container -->
+          <div id="entrepreneursContainer" class="hidden">
+            <!-- Entrepreneurs will be dynamically added here -->
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="ml-[15%] mr-[15%] w-100% text-center text-sm mt-12 mb-4">
+    <a href="/politique" class="hover:underline">Politique de confidentialité</a>
+    &nbsp;|&nbsp;
+    <a href="/conditions" class="hover:underline">Conditions d'utilisation</a>
+    &nbsp;|&nbsp;
+    <a href="/support" class="hover:underline">Support client</a>
+    <br><br>
+    <span style="color: var(--text-gray);">Propulsé par <strong style="color: var(--primary-blue);">Qwota</strong></span>
+  </footer>
+
+<script>
+// Scripts de base pour le fonctionnement du template
+document.addEventListener('DOMContentLoaded', function() {
+  // Mettre à jour la visibilité du menu au chargement
+  updateMenuVisibility();
+
+  // Menu mobile toggle
+  const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+  const sidebar = document.getElementById('sidebar');
+  const mobileOverlay = document.querySelector('.mobile-overlay');
+
+  if (mobileMenuToggle) {
+    mobileMenuToggle.addEventListener('click', function() {
+      sidebar.classList.toggle('mobile-open');
+      mobileOverlay.classList.toggle('active');
+    });
+  }
+
+  // Account dropdown
+  const accountMenuButton = document.getElementById('account-menu-button');
+  const accountDropdown = document.getElementById('account-dropdown');
+
+  if (accountMenuButton && accountDropdown) {
+    accountMenuButton.addEventListener('click', function(e) {
+      e.preventDefault();
+      accountDropdown.classList.toggle('hidden');
+    });
+
+    // Fermer le dropdown en cliquant ailleurs
+    document.addEventListener('click', function(e) {
+      if (!accountMenuButton.contains(e.target) && !accountDropdown.contains(e.target)) {
+        accountDropdown.classList.add('hidden');
+      }
+    });
+  }
+
+  // Mobile account dropdown
+  const mobileAccountMenuButton = document.getElementById('mobile-account-menu-button');
+  const mobileAccountDropdown = document.getElementById('mobile-account-dropdown');
+
+  if (mobileAccountMenuButton && mobileAccountDropdown) {
+    mobileAccountMenuButton.addEventListener('click', function(e) {
+      e.preventDefault();
+      mobileAccountDropdown.classList.toggle('hidden');
+    });
+  }
+
+  // Charger les entrepreneurs du coach
+  loadCoachEntrepreneurs();
+});
+
+// Fonction pour charger les entrepreneurs du coach
+async function loadCoachEntrepreneurs() {
+  try {
+    if (!username) {
+      console.error('Username non défini');
+      return;
+    }
+
+    console.log('[DEBUG] Chargement des entrepreneurs pour le coach:', username);
+
+    // Appel API pour récupérer les vrais entrepreneurs
+    const response = await fetch(`/api/entrepreneurs/${username}`);
+
+    if (!response.ok) {
+      throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const entrepreneurs = await response.json();
+    console.log('[FILE] Entrepreneurs reçus:', entrepreneurs);
+
+    // Afficher les entrepreneurs
+    showEntrepreneurs(entrepreneurs);
+
+  } catch (error) {
+    console.error('Erreur:', error);
+    showErrorState();
+  }
+}
+
+// Afficher l'état vide
+function showEmptyState() {
+  document.getElementById('loadingState').classList.add('hidden');
+  document.getElementById('emptyState').classList.remove('hidden');
+  document.getElementById('entrepreneursContainer').classList.add('hidden');
+  document.getElementById('countText').textContent = '0 entrepreneur';
+}
+
+// Afficher l'état d'erreur
+function showErrorState() {
+  document.getElementById('loadingState').classList.add('hidden');
+  document.getElementById('emptyState').classList.remove('hidden');
+  document.getElementById('entrepreneursContainer').classList.add('hidden');
+  document.getElementById('countText').textContent = 'Erreur';
+
+  // Modifier le message d'erreur
+  const emptyStateTitle = document.querySelector('#emptyState h3');
+  const emptyStateDesc = document.querySelector('#emptyState p');
+  emptyStateTitle.textContent = 'Erreur de chargement';
+  emptyStateDesc.textContent = 'Impossible de charger la liste des entrepreneurs. Veuillez réessayer plus tard.';
+}
+
+// Afficher la liste des entrepreneurs
+function showEntrepreneurs(entrepreneurs) {
+  document.getElementById('loadingState').classList.add('hidden');
+  document.getElementById('emptyState').classList.add('hidden');
+  document.getElementById('entrepreneursContainer').classList.remove('hidden');
+
+  // Mettre à jour le compteur
+  const count = entrepreneurs.length;
+  document.getElementById('countText').textContent = `${count} entrepreneur${count > 1 ? 's' : ''}`;
+
+  // Créer la liste des entrepreneurs
+  const container = document.getElementById('entrepreneursContainer');
+  container.innerHTML = '';
+
+  entrepreneurs.forEach((entrepreneur, index) => {
+    const entrepreneurCard = createEntrepreneurCard(entrepreneur, index);
+    container.appendChild(entrepreneurCard);
+  });
+
+  // Restaurer la sélection depuis localStorage après avoir affiché tous les entrepreneurs
+  setTimeout(() => {
+    restoreEntrepreneurSelection();
+  }, 300);
+}
+
+// Créer une carte entrepreneur
+function createEntrepreneurCard(entrepreneurName, index) {
+  const card = document.createElement('div');
+  card.className = 'p-4 rounded-lg border transition-all duration-200 hover:shadow-lg mb-4';
+  card.style.cssText = `
+    background: var(--bg-dark);
+    border-color: var(--border-dark);
+    hover: border-color: var(--primary-blue);
+  `;
+
+  card.innerHTML = `
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background: var(--primary-blue);">
+          <i class="fas fa-user text-white"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold entrepreneur-name" style="color: var(--text-light); height: 29px; display: flex; align-items: center;">${entrepreneurName}</h3>
+          <p class="text-sm" style="color: var(--text-gray);">Entrepreneur</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="px-3 py-1 text-xs rounded-full" style="background: rgba(52, 211, 153, 0.1); color: var(--primary-green);">
+          <i class="fas fa-check-circle mr-1"></i>
+          Actif
+        </span>
+        <div class="custom-checkbox" onclick="selectEntrepreneur('${entrepreneurName}', this)" title="Sélectionner cet entrepreneur">
+          <input type="checkbox" class="checkbox-input" style="display: none;">
+          <div class="checkbox-display">
+            <i class="fas fa-check checkbox-icon"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  return card;
+}
+
+// Variable pour stocker l'entrepreneur sélectionné
+let selectedEntrepreneur = null;
+
+// Fonction pour sélectionner un entrepreneur
+function selectEntrepreneur(entrepreneurName, checkboxElement) {
+  console.log('[TARGET] Début sélection pour:', entrepreneurName);
+
+  // Vérifier si cette checkbox est déjà sélectionnée
+  const isAlreadySelected = checkboxElement.classList.contains('selected');
+  console.log('[TARGET] Déjà sélectionné?', isAlreadySelected);
+
+  // Restaurer tous les noms originaux
+  const allCheckboxes = document.querySelectorAll('.custom-checkbox');
+  const allNames = document.querySelectorAll('.entrepreneur-name');
+
+  // Désélectionner toutes les checkboxes
+  allCheckboxes.forEach(checkbox => {
+    checkbox.classList.remove('selected');
+  });
+
+  // Restaurer tous les noms (supprimer le texte "(sélectionné)")
+  allNames.forEach((nameElement) => {
+    const originalName = nameElement.textContent.replace(' (sélectionné)', '');
+    nameElement.innerHTML = originalName;
+  });
+
+  // Si l'élément était déjà sélectionné, on le désélectionne complètement
+  if (isAlreadySelected) {
+    selectedEntrepreneur = null;
+
+    // Supprimer l'entrepreneur du localStorage
+    localStorage.removeItem('selectedEntrepreneur');
+
+    console.log('[TARGET] Entrepreneur désélectionné');
+    console.log('[DELETE] Entrepreneur retiré du localStorage');
+    updateSelectionDisplay();
+    return; // Sortir de la fonction sans resélectionner
+  }
+
+  // Sinon, sélectionner la nouvelle checkbox
+  checkboxElement.classList.add('selected');
+  console.log('[TARGET] Checkbox sélectionnée');
+
+  // Trouver le nom de l'entrepreneur
+  let nameElement = checkboxElement.closest('.p-4').querySelector('.entrepreneur-name');
+  if (!nameElement) {
+    nameElement = checkboxElement.parentElement.parentElement.querySelector('.entrepreneur-name');
+  }
+
+  if (nameElement) {
+    nameElement.innerHTML = `${entrepreneurName} <span style="color: var(--primary-blue); font-weight: normal; font-size: 0.8em; margin-left: 8px;">(sélectionné)</span>`;
+    console.log('[TARGET] Texte "(sélectionné)" ajouté');
+  }
+
+  selectedEntrepreneur = entrepreneurName;
+
+  // Sauvegarder l'entrepreneur sélectionné en localStorage
+  localStorage.setItem('selectedEntrepreneur', entrepreneurName);
+
+  console.log('Entrepreneur sélectionné:', selectedEntrepreneur);
+  console.log('💾 Entrepreneur sauvegardé en localStorage');
+
+  updateSelectionDisplay();
+}
+
+// Fonction pour restaurer la sélection depuis localStorage
+function restoreEntrepreneurSelection() {
+  const storedEntrepreneur = localStorage.getItem('selectedEntrepreneur');
+
+  if (storedEntrepreneur) {
+    console.log('🔄 Restoration de la sélection pour:', storedEntrepreneur);
+
+    // Mettre à jour la variable globale
+    selectedEntrepreneur = storedEntrepreneur;
+
+    // Trouver l'entrepreneur dans la liste - utiliser le container
+    const container = document.getElementById('entrepreneursContainer');
+    const allEntrepreneurItems = container ? Array.from(container.children) : [];
+    console.log('[BAN] Nombre d\'items trouvés:', allEntrepreneurItems.length);
+
+    allEntrepreneurItems.forEach((item, index) => {
+      const nameElement = item.querySelector('.entrepreneur-name');
+      console.log(`[BAN] Item ${index}: nom trouvé:`, nameElement ? nameElement.textContent.trim() : 'null');
+
+      if (nameElement && nameElement.textContent.trim() === storedEntrepreneur) {
+        console.log('[TARGET] Match trouvé pour:', storedEntrepreneur);
+
+        // Marquer la checkbox comme sélectionnée
+        const checkbox = item.querySelector('.custom-checkbox');
+        console.log('[BAN] Checkbox trouvée:', !!checkbox);
+
+        if (checkbox) {
+          console.log('[BAN] Avant - Classes checkbox:', checkbox.classList.toString());
+          checkbox.classList.add('selected');
+          console.log('[BAN] Après - Classes checkbox:', checkbox.classList.toString());
+
+          // Activer la checkbox input cachée
+          const hiddenInput = checkbox.querySelector('.checkbox-input');
+          if (hiddenInput) {
+            hiddenInput.checked = true;
+            console.log('[BAN] Input caché activé');
+          }
+
+          // Ajouter le texte "(sélectionné)"
+          nameElement.innerHTML = `${storedEntrepreneur} <span style="color: var(--primary-blue); font-weight: normal; font-size: 0.8em; margin-left: 8px;">(sélectionné)</span>`;
+
+          console.log('[OK] Sélection restaurée pour:', storedEntrepreneur);
+        } else {
+          console.error('[ERROR] Checkbox non trouvée pour:', storedEntrepreneur);
+        }
+      }
+    });
+  } else {
+    console.log('💭 Aucun entrepreneur sélectionné dans localStorage');
+  }
+}
+
+// Fonction pour gérer la visibilité du menu selon l'entrepreneur sélectionné
+function updateMenuVisibility() {
+  const selectedEntrepreneur = localStorage.getItem('selectedEntrepreneur');
+
+  // Trouver la section avec le titre "Général" (pas la section Paramètres)
+  const allSections = document.querySelectorAll('#sidebar li');
+  let generalTitleSection = null;
+
+  allSections.forEach(section => {
+    const titleDiv = section.querySelector('div.text-xs');
+    if (titleDiv && titleDiv.textContent.includes('Général')) {
+      generalTitleSection = section;
+    }
+  });
+
+  // Trouver les liens spécifiques
+  const dashboardLink = document.querySelector('a[href="/dashboardcoach"]')?.closest('li');
+  const gestionventesLink = document.querySelector('a[href="/gestionventescoach"]')?.closest('li');
+
+  if (selectedEntrepreneur) {
+    // Afficher la section Général
+    if (generalTitleSection) generalTitleSection.style.display = 'block';
+    if (dashboardLink) dashboardLink.style.display = 'block';
+    if (gestionventesLink) gestionventesLink.style.display = 'block';
+    console.log('[OK] Section Général affichée');
+  } else {
+    // Cacher seulement le titre "Général" et les liens Dashboard/Gestion ventes
+    if (generalTitleSection) generalTitleSection.style.display = 'none';
+    if (dashboardLink) dashboardLink.style.display = 'none';
+    if (gestionventesLink) gestionventesLink.style.display = 'none';
+    console.log('🚫 Section Général cachée, Paramètres reste visible');
+  }
+}
+
+// Fonction pour mettre à jour l'affichage de la sélection
+function updateSelectionDisplay() {
+  // Mettre à jour la visibilité du menu
+  updateMenuVisibility();
+
+  // Tu peux ajouter ici une logique pour afficher l'entrepreneur sélectionné
+  // Par exemple, mettre à jour un élément de l'interface
+  console.log('Sélection mise à jour:', selectedEntrepreneur);
+}
+
+// Fonction pour fermer le menu mobile
+function closeMobileMenu() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.querySelector('.mobile-overlay');
+
+  sidebar.classList.remove('mobile-open');
+  overlay.classList.remove('active');
+}
+
+// Fonction logout
+function logout() {
+  if (confirm('Voulez-vous vraiment vous deconnecter ?')) {
+    // Supprimer toutes les données de session
+    localStorage.removeItem('username');
+    localStorage.removeItem('role');
+    localStorage.removeItem('qwotaCredentials'); // Supprimer les credentials "me rappeler de moi"
+    localStorage.removeItem('sidebarCollapsed');
+    localStorage.removeItem('gmail_connected');
+    window.location.href = '/login';
+  }
+}
+</script>
+
+</body>
+</html>

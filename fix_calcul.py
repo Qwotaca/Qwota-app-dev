@@ -1,0 +1,156 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+script_to_add = """    });
+  </script>
+
+<script>
+  // Gestion du sélecteur d'entrepreneur pour les coaches
+  (function() {
+    const userRole = localStorage.getItem('userRole');
+    const isCoach = userRole === 'coach';
+
+    if (isCoach) {
+      document.body.classList.add('coach-mode');
+
+      const selector = document.getElementById('coach-entrepreneur-selector');
+      const backdrop = document.getElementById('coach-selector-backdrop');
+
+      if (selector) {
+        selector.classList.add('visible');
+      }
+
+      // Afficher le backdrop en mode centré
+      if (backdrop) {
+        backdrop.classList.add('visible');
+      }
+
+      // Attendre que window.username soit disponible
+      if (window.username) {
+        loadEntrepreneursForCoach();
+      } else {
+        setTimeout(() => {
+          if (window.username) {
+            loadEntrepreneursForCoach();
+          }
+        }, 100);
+      }
+
+      const dropdownToggle = document.getElementById('coach-dropdown-toggle');
+      const dropdownMenu = document.getElementById('coach-dropdown-menu');
+
+      if (dropdownToggle && dropdownMenu) {
+        dropdownToggle.addEventListener('click', function(e) {
+          e.stopPropagation();
+          this.classList.toggle('active');
+          dropdownMenu.classList.toggle('show');
+        });
+
+        document.addEventListener('click', function(e) {
+          if (!dropdownToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
+            dropdownToggle.classList.remove('active');
+            dropdownMenu.classList.remove('show');
+          }
+        });
+      }
+    }
+
+    function selectEntrepreneur(username) {
+      const dropdownToggle = document.getElementById('coach-dropdown-toggle');
+      const dropdownMenu = document.getElementById('coach-dropdown-menu');
+      const selector = document.getElementById('coach-entrepreneur-selector');
+      const backdrop = document.getElementById('coach-selector-backdrop');
+
+      if (dropdownToggle) {
+        dropdownToggle.innerHTML = `
+          <span class="selected-text">
+            <i class="fas fa-user-circle"></i>
+            ${username}
+          </span>
+          <i class="fas fa-chevron-down chevron"></i>
+        `;
+
+        dropdownToggle.classList.remove('active');
+        if (dropdownMenu) {
+          dropdownMenu.classList.remove('show');
+        }
+
+        // Transition vers le mode header
+        if (selector) {
+          selector.classList.add('in-header');
+        }
+        if (backdrop) {
+          backdrop.classList.remove('visible');
+        }
+
+        // Révéler le contenu principal
+        document.body.classList.add('has-selection');
+
+        // Retirer le CSS anti-flash
+        const antiFlashCss = document.getElementById('coach-anti-flash-css');
+        if (antiFlashCss) {
+          antiFlashCss.remove();
+        }
+
+        window.username = username;
+
+        // Le calculateur n'a pas besoin de recharger de données spécifiques
+        // car il fonctionne déjà avec window.username
+      }
+    }
+
+    async function loadEntrepreneursForCoach() {
+      try {
+        if (!window.username) {
+          console.error('Username non défini');
+          return;
+        }
+        const response = await fetch(`/api/users/entrepreneurs?coach_username=${window.username}`);
+        const data = await response.json();
+
+        const menu = document.getElementById('coach-dropdown-menu');
+        const toggle = document.getElementById('coach-dropdown-toggle');
+        if (!menu) return;
+
+        menu.innerHTML = '';
+
+        if (data.entrepreneurs && data.entrepreneurs.length > 0) {
+          data.entrepreneurs.forEach(entrepreneur => {
+            const option = document.createElement('div');
+            option.className = 'coach-dropdown-option';
+            option.innerHTML = `
+              <i class="fas fa-user-circle"></i>
+              <span>${entrepreneur.username}</span>
+            `;
+            option.onclick = () => selectEntrepreneur(entrepreneur.username);
+            menu.appendChild(option);
+          });
+        } else {
+          const option = document.createElement('div');
+          option.className = 'coach-dropdown-option-disabled';
+          option.textContent = 'Aucun entrepreneur trouvé';
+          menu.appendChild(option);
+        }
+      } catch (error) {
+        console.error('Erreur chargement entrepreneurs:', error);
+      }
+    }
+
+    // Expose selectEntrepreneur globally for onclick handlers
+    window.selectEntrepreneur = selectEntrepreneur;
+  })();
+</script>
+
+</body>
+</html>
+"""
+
+# Lire le fichier
+with open('QE/Frontend/Entrepreneurs/Outils/Calcul/calcul.html', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# Ajouter le script à la fin
+with open('QE/Frontend/Entrepreneurs/Outils/Calcul/calcul.html', 'w', encoding='utf-8') as f:
+    f.write(content + script_to_add)
+
+print("Script ajouté avec succès!")

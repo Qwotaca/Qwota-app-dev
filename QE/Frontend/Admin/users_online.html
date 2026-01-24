@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Utilisateurs en ligne</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .online-count {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .online-count .dot {
+      width: 12px;
+      height: 12px;
+      background: white;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    .users-list {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .users-list h2 {
+      font-size: 16px;
+      color: #666;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .user-item {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 15px;
+      border-radius: 12px;
+      transition: background 0.2s;
+    }
+
+    .user-item:hover {
+      background: #f9f9f9;
+    }
+
+    .user-avatar {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 16px;
+      overflow: hidden;
+    }
+
+    .user-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .user-info {
+      flex: 1;
+    }
+
+    .user-name {
+      font-weight: 600;
+      color: #333;
+      font-size: 15px;
+    }
+
+    .user-username {
+      color: #888;
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    .user-role {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .role-direction {
+      background: #fef3c7;
+      color: #d97706;
+    }
+
+    .role-coach {
+      background: #dbeafe;
+      color: #2563eb;
+    }
+
+    .role-entrepreneur {
+      background: #d1fae5;
+      color: #059669;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #888;
+    }
+
+    .empty-state i {
+      font-size: 40px;
+      margin-bottom: 15px;
+      opacity: 0.5;
+    }
+
+    .last-update {
+      text-align: center;
+      color: #aaa;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Utilisateurs en ligne</h1>
+      <div class="online-count">
+        <span class="dot"></span>
+        <span id="count">0</span> en ligne
+      </div>
+    </div>
+
+    <div class="users-list">
+      <h2>Liste des utilisateurs connectés</h2>
+      <div id="users-container">
+        <div class="empty-state">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>Chargement...</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="last-update">
+      Dernière mise à jour: <span id="last-update">-</span>
+    </div>
+  </div>
+
+  <script>
+    function getInitials(prenom, nom) {
+      const p = prenom ? prenom.charAt(0).toUpperCase() : '';
+      const n = nom ? nom.charAt(0).toUpperCase() : '';
+      return p + n || '?';
+    }
+
+    function getRoleClass(role) {
+      if (role === 'direction') return 'role-direction';
+      if (role === 'coach') return 'role-coach';
+      return 'role-entrepreneur';
+    }
+
+    function getRoleLabel(role) {
+      if (role === 'direction') return 'Direction';
+      if (role === 'coach') return 'Coach';
+      return 'Entrepreneur';
+    }
+
+    async function loadOnlineUsers() {
+      try {
+        const response = await fetch('/api/users/online');
+        const data = await response.json();
+
+        document.getElementById('count').textContent = data.count;
+
+        const container = document.getElementById('users-container');
+
+        if (data.users.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <i class="fas fa-user-slash"></i>
+              <p>Aucun utilisateur en ligne</p>
+            </div>
+          `;
+        } else {
+          container.innerHTML = data.users.map(user => `
+            <div class="user-item">
+              <div class="user-avatar" id="avatar-${user.username}">${getInitials(user.prenom, user.nom)}</div>
+              <div class="user-info">
+                <div class="user-name">${user.prenom || ''} ${user.nom || ''}</div>
+                <div class="user-username">@${user.username}</div>
+              </div>
+              <span class="user-role ${getRoleClass(user.role)}">${getRoleLabel(user.role)}</span>
+            </div>
+          `).join('');
+
+          // Charger les photos de profil
+          data.users.forEach(async (user) => {
+            try {
+              const photoRes = await fetch(`/api/get-profile-photo/${user.username}`);
+              const photoData = await photoRes.json();
+              if (photoData.success && photoData.photoUrl) {
+                const avatar = document.getElementById(`avatar-${user.username}`);
+                if (avatar) {
+                  avatar.innerHTML = `<img src="${photoData.photoUrl}" alt="${user.prenom} ${user.nom}" onerror="this.parentElement.innerHTML='${getInitials(user.prenom, user.nom)}'">`;
+                }
+              }
+            } catch (e) {}
+          });
+        }
+
+        document.getElementById('last-update').textContent = new Date().toLocaleTimeString('fr-CA');
+      } catch (error) {
+        console.error('Erreur:', error);
+      }
+    }
+
+    // Charger au démarrage
+    loadOnlineUsers();
+
+    // Rafraîchir toutes les 3 secondes
+    setInterval(loadOnlineUsers, 3000);
+  </script>
+</body>
+</html>

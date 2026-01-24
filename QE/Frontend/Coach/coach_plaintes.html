@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gestion de Plaintes - Coach Qwota</title>
+
+  <!-- ANTI-FLASH: Gérer l'affichage du contenu selon le rôle -->
+  <script>
+    (function() {
+      const userRole = localStorage.getItem('userRole');
+      const isEntrepreneur = userRole === 'entrepreneur';
+
+      // Pour les entrepreneurs, afficher le contenu immédiatement
+      if (isEntrepreneur) {
+        var style = document.createElement('style');
+        style.id = 'entrepreneur-show-style';
+        style.textContent = `
+          .main-content, #main-content {
+            opacity: 1 !important;
+            pointer-events: all !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    })();
+  </script>
+
+  <!-- PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#1f2937">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Feuille de style principale - Theme Dark -->
+  <link rel="stylesheet" href="/base.css">
+
+  <!-- Entrepreneur Selector -->
+  <link rel="stylesheet" href="/entrepreneur-selector.css">
+
+  <style>
+    /* Override anti-flash for coaches viewing their own data */
+    body.coach-viewing-own-data .main-content,
+    body.coach-viewing-own-data #main-content,
+    body.coach-viewing-own-data #main-content-wrapper,
+    body.coach-viewing-own-data main {
+      opacity: 1 !important;
+      pointer-events: all !important;
+    }
+
+    body.coach-viewing-own-data #coach-entrepreneur-selector,
+    body.coach-viewing-own-data #coach-selector-backdrop {
+      display: none !important;
+    }
+
+    /* Main content */
+    .main-content {
+      padding: 2rem;
+      width: 100%;
+    }
+
+    #main-content {
+      padding: 2rem;
+      padding-bottom: 20rem !important;
+    }
+
+    /* Plaintes containers */
+    .plaintes-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+
+    @media (max-width: 1024px) {
+      .plaintes-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .plainte-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      border: 1px solid var(--border-dark);
+      overflow: hidden;
+      box-shadow: var(--shadow-dark);
+      min-height: 600px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .plainte-card .table-container {
+      flex: 1;
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+      padding: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .plainte-card .modern-table {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .plainte-card .modern-table tbody {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .plainte-card .modern-table tbody tr.empty-row {
+      flex: 1;
+    }
+
+    .plainte-card .modern-table tbody tr.empty-row td {
+      height: 100%;
+    }
+
+    .plainte-card .modern-table tbody tr.empty-row td .empty-state {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .plainte-card .modern-table {
+      border: none;
+      border-radius: 0;
+      overflow: hidden;
+    }
+
+    /* Override base.css section-header icon colors */
+    .plainte-card .section-header i.icon-actuelle {
+      color: #ef4444 !important;
+    }
+
+    .plainte-card .section-header i.icon-reglee {
+      color: #10b981 !important;
+    }
+
+    /* Override base.css modern-table padding */
+    .plainte-card .modern-table th {
+      padding: 1rem !important;
+      text-align: center !important;
+    }
+
+    .plainte-card .modern-table th:first-child {
+      text-align: left !important;
+      border-right: 1px solid rgba(71, 85, 105, 0.3) !important;
+    }
+
+    .plainte-card .modern-table td {
+      padding: 1rem !important;
+      vertical-align: middle !important;
+    }
+
+    .plainte-card .modern-table td:first-child {
+      text-align: left !important;
+      border-right: 1px solid rgba(71, 85, 105, 0.3) !important;
+    }
+
+    .plainte-card .modern-table td:last-child {
+      text-align: center !important;
+    }
+
+    .plainte-card .modern-table tbody tr {
+      border-bottom: 1px solid rgba(71, 85, 105, 0.3) !important;
+    }
+
+    .plainte-card .modern-table tbody tr:last-child {
+      border-bottom: none !important;
+    }
+
+    .plainte-card .modern-table tbody tr:hover {
+      background: rgba(59, 130, 246, 0.1) !important;
+      cursor: pointer;
+    }
+
+    /* Modal détails plainte - gradient rouge pour plaintes actuelles */
+    #detailsPlainteModal .status-card::before {
+      background: linear-gradient(135deg, #ef4444 0%, #fecaca 100%) !important;
+    }
+
+    /* Remove border-radius from thead */
+    .plainte-card .modern-table thead {
+      border-radius: 0;
+    }
+
+    .plainte-card .modern-table th:first-child {
+      border-top-left-radius: 0;
+    }
+
+    .plainte-card .modern-table th:last-child {
+      border-top-right-radius: 0;
+    }
+
+    /* Empty state centered */
+    .plainte-card .modern-table td .empty-state {
+      height: 100%;
+      padding: 2rem 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .plainte-card .modern-table td .empty-state i {
+      margin-bottom: 1rem;
+    }
+
+    .plainte-card .modern-table td .empty-state p {
+      margin: 0;
+    }
+
+    /* Custom scrollbar for dropdown */
+    #plainteClientMenu {
+      overflow-y: auto;
+      overflow-x: hidden;
+      max-height: 200px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(107, 114, 128, 0.4) transparent;
+    }
+
+    #plainteClientMenu::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    #plainteClientMenu::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    #plainteClientMenu::-webkit-scrollbar-thumb {
+      background: rgba(107, 114, 128, 0.4);
+      border-radius: 2px;
+    }
+
+    #plainteClientMenu::-webkit-scrollbar-thumb:hover {
+      background: rgba(107, 114, 128, 0.6);
+    }
+
+    /* Countdown Timer Circle */
+    .countdown-circle {
+      position: relative;
+      width: 60px;
+      height: 60px;
+      margin: 0 auto;
+    }
+
+    .countdown-circle svg {
+      transform: rotate(-90deg);
+    }
+
+    .countdown-circle-bg {
+      fill: none;
+      stroke: rgba(239, 68, 68, 0.2);
+      stroke-width: 6;
+    }
+
+    .countdown-circle-progress {
+      fill: none;
+      stroke: #ef4444;
+      stroke-width: 6;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s linear;
+    }
+
+    .countdown-circle-progress.warning {
+      stroke: #f59e0b;
+    }
+
+    .countdown-circle-progress.critical {
+      stroke: #ef4444;
+      animation: pulse-critical 1s ease-in-out infinite;
+    }
+
+    .countdown-circle-progress.paused {
+      stroke: #6b7280;
+    }
+
+    @keyframes pulse-critical {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .countdown-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-light);
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .countdown-label {
+      font-size: 0.625rem;
+      color: var(--text-gray);
+      display: block;
+      margin-top: 0.25rem;
+    }
+
+    .paused-badge {
+      background: rgba(107, 114, 128, 0.2);
+      color: #9ca3af;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    /* Modal Fichier Preview */
+    .modal-fichier {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(5px);
+      z-index: 100002;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-fichier.active {
+      display: flex;
+    }
+
+    .modal-fichier-content {
+      background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 20px;
+      width: 95%;
+      max-width: 1000px;
+      max-height: 90vh;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-fichier-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      background: rgba(15, 23, 42, 0.5);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .modal-fichier-header h3 {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--text-light);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .modal-fichier-header h3 i {
+      color: var(--primary-blue);
+    }
+
+    .modal-fichier-body {
+      padding: 1rem;
+      height: 70vh;
+    }
+
+    .modal-close-btn {
+      background: rgba(239, 68, 68, 0.2);
+      border: none;
+      color: #ef4444;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close-btn:hover {
+      background: rgba(239, 68, 68, 0.3);
+      transform: scale(1.1);
+    }
+  </style>
+</head>
+<body class="min-h-screen" style="margin: 0; padding: 0;">
+
+  <!-- Sélecteur d'entrepreneur pour coach -->
+  <div id="coach-selector-backdrop" class="selector-backdrop"></div>
+  <div id="coach-entrepreneur-selector" class="entrepreneur-selector">
+    <!-- Titre de la page avec icône Gestion de Plaintes -->
+    <div class="page-identity">
+      <div class="page-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 10px 30px rgba(245, 158, 11, 0.3), 0 0 40px rgba(245, 158, 11, 0.15);">
+        <i class="fas fa-exclamation-triangle"></i>
+      </div>
+      <div class="page-name" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #fbbf24 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Gestion de Plaintes</div>
+    </div>
+
+    <!-- Titre et sous-titre (visibles uniquement en mode centré) -->
+    <div class="selector-title">
+      <i class="fas fa-user-tie"></i>
+      Sélectionnez un entrepreneur
+    </div>
+    <div class="selector-subtitle">Choisissez l'entrepreneur dont vous souhaitez consulter les plaintes</div>
+
+    <div class="selector-container">
+      <div class="selector-label">
+        <i class="fas fa-user-tie"></i>
+        <span>Entrepreneur:</span>
+      </div>
+      <div class="coach-dropdown">
+        <div class="coach-dropdown-toggle" id="coach-dropdown-toggle">
+          <input type="text" class="search-input" id="search-input" placeholder="Rechercher..." autocomplete="off" style="display: none;">
+          <span class="placeholder">-- Sélectionner un entrepreneur --</span>
+          <i class="fas fa-chevron-down chevron"></i>
+        </div>
+        <div class="coach-dropdown-menu" id="coach-dropdown-menu"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenu principal (caché par défaut pour coach/direction) -->
+  <div class="main-content w-full" id="main-content" style="width: 100%; padding: 2rem; opacity: 0; pointer-events: none;">
+    <div class="w-full">
+
+      <!-- Header -->
+      <div class="mb-10 mt-5 md:mt-0">
+        <div class="relative">
+          <div class="flex items-center justify-between mb-3">
+            <h1 class="text-4xl font-bold" style="color: var(--text-light);">
+              Gestion de Plaintes
+            </h1>
+            <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+          </div>
+          <div class="flex items-center justify-between">
+            <p class="text-xl font-medium" style="color: var(--text-gray);">Gérer et suivre les plaintes des clients</p>
+            <button class="btn-primary" id="btn-ajouter-plainte" style="display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fas fa-plus"></i>
+              Ajouter une plainte
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grille des plaintes -->
+      <div class="plaintes-grid">
+        <!-- Plaintes actuelles -->
+        <div class="plainte-card">
+          <div class="section-header">
+            <h2>
+              <i class="fas fa-exclamation-circle icon-actuelle"></i>
+              Plaintes Actuelles
+            </h2>
+          </div>
+          <div class="table-container">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Client</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody id="plaintes-actuelles-body">
+                <!-- Les plaintes actuelles seront ajoutées ici -->
+                <tr>
+                  <td colspan="2">
+                    <div class="empty-state">
+                      <i class="fas fa-inbox"></i>
+                      <p>Aucune plainte actuelle</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Plaintes réglées -->
+        <div class="plainte-card">
+          <div class="section-header">
+            <h2>
+              <i class="fas fa-check-circle icon-reglee"></i>
+              Plaintes Réglées
+            </h2>
+          </div>
+          <div class="table-container">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Client</th>
+                  <th>Réglée le</th>
+                </tr>
+              </thead>
+              <tbody id="plaintes-reglees-body">
+                <!-- Les plaintes réglées seront ajoutées ici -->
+                <tr>
+                  <td colspan="2">
+                    <div class="empty-state">
+                      <i class="fas fa-inbox"></i>
+                      <p>Aucune plainte réglée</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal Détails de la plainte -->
+  <div id="detailsPlainteModal" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none;">
+    <div class="status-card max-w-3xl w-full mx-4 flex flex-col" style="max-height: 70vh;">
+      <!-- Header sticky -->
+      <div class="flex items-center justify-between p-6 pb-4" style="border-bottom: 1px solid var(--border-dark);">
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i class="fas fa-exclamation-triangle mr-2" style="color: #f59e0b;"></i>
+          Détails de la plainte
+        </h3>
+        <button onclick="fermerDetailsModal()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);" onmouseover="this.style.background='rgba(96, 165, 250, 0.3)'" onmouseout="this.style.background='rgba(96, 165, 250, 0.2)'">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <!-- Contenu scrollable -->
+      <div class="flex-1 overflow-y-auto p-6 pt-4 space-y-4">
+        <!-- Statut du client -->
+        <div id="detailStatutClientContainer">
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-gray);">Statut du client</label>
+          <div class="p-3 rounded-lg" style="background: #0f172a; border: 1px solid var(--border-dark);">
+            <div class="flex items-center gap-2">
+              <i class="fas fa-user-tag" style="color: var(--primary-blue);"></i>
+              <span id="detailStatutClient" style="color: var(--text-light); font-weight: 500;"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nature de la plainte -->
+        <div id="detailNatureContainer">
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-gray);">Nature de la plainte</label>
+          <div class="p-3 rounded-lg" style="background: #0f172a; border: 1px solid var(--border-dark);">
+            <div class="flex items-center gap-2">
+              <i class="fas fa-tag" style="color: #f59e0b;"></i>
+              <span id="detailNature" style="color: var(--text-light); font-weight: 500;"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Coordonnées du client -->
+        <div>
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-gray);">Coordonnées du client</label>
+          <div class="p-3 rounded-lg" style="background: #0f172a; border: 1px solid var(--border-dark);">
+            <div class="flex flex-col gap-3">
+              <div class="flex items-center gap-2">
+                <i class="fas fa-user" style="color: var(--primary-blue); width: 20px;"></i>
+                <span id="detailClient" style="color: var(--text-light); font-weight: 500;"></span>
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="fas fa-phone" style="color: var(--primary-blue); width: 20px;"></i>
+                <span id="detailTelephone" style="color: var(--text-light);">-</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="fas fa-envelope" style="color: var(--primary-blue); width: 20px;"></i>
+                <span id="detailCourriel" style="color: var(--text-light);">-</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Numéro de contrat/soumission -->
+        <div>
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-gray);">Numéro de contrat/soumission</label>
+          <div class="p-3 rounded-lg" style="background: #0f172a; border: 1px solid var(--border-dark);">
+            <div class="flex items-center gap-2">
+              <i class="fas fa-file-alt" style="color: var(--primary-blue);"></i>
+              <span id="detailSoumissionNum" style="color: var(--text-light); font-weight: 500;"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-gray);">Description de la plainte</label>
+          <div class="p-3 rounded-lg" style="background: #0f172a; border: 1px solid var(--border-dark); min-height: 80px;">
+            <p id="detailDescription" style="color: var(--text-light); white-space: pre-wrap;"></p>
+          </div>
+        </div>
+
+        <!-- Disponibilités -->
+        <div id="detailDisponibilitesContainer">
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-gray);">Disponibilités pour contact</label>
+          <div class="p-3 rounded-lg" style="background: #0f172a; border: 1px solid var(--border-dark);">
+            <div class="flex items-center gap-2 flex-wrap">
+              <i class="fas fa-calendar-alt" style="color: var(--primary-blue);"></i>
+              <span id="detailDisponibilites" style="color: var(--text-light);"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Attentes -->
+        <div id="detailAttentesContainer">
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-gray);">Attentes du client</label>
+          <div class="p-3 rounded-lg" style="background: #0f172a; border: 1px solid var(--border-dark); min-height: 60px;">
+            <p id="detailAttentes" style="color: var(--text-light); white-space: pre-wrap;"></p>
+          </div>
+        </div>
+
+        <!-- Fichiers joints -->
+        <div id="detailFichiersContainer">
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-gray);">Fichiers joints</label>
+          <div class="p-3 rounded-lg" style="background: #0f172a; border: 1px solid var(--border-dark);">
+            <div id="detailFichiers" class="flex flex-col gap-2"></div>
+          </div>
+        </div>
+
+        <!-- Date de création -->
+        <div>
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-gray);">Date de création</label>
+          <div class="p-3 rounded-lg" style="background: #0f172a; border: 1px solid var(--border-dark);">
+            <div class="flex items-center gap-2">
+              <i class="fas fa-clock" style="color: var(--text-gray);"></i>
+              <span id="detailDateCreation" style="color: var(--text-light);"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer sticky avec bouton -->
+      <div id="detailActionsContainer" class="flex justify-end p-6 pt-4" style="border-top: 1px solid var(--border-dark);">
+        <button id="btnMarquerReglee" onclick="marquerCommeReglee()" class="btn-primary px-4 py-2 rounded-lg">
+          <i class="fas fa-check-circle mr-2"></i>
+          Marquer comme réglée
+        </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Preview Fichier -->
+  <div id="fichierPreviewModal" class="modal-fichier">
+    <div class="modal-fichier-content">
+      <div class="modal-fichier-header">
+        <h3><i class="fas fa-file"></i> <span id="fichierPreviewTitle">Fichier</span></h3>
+        <button class="modal-close-btn" onclick="fermerFichierPreview()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-fichier-body" id="fichierPreviewContent">
+        <!-- Le contenu sera injecté ici -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Ajouter une plainte -->
+  <div id="ajouterPlainteModal" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none;">
+    <div class="status-card p-6 max-w-md w-full" style="max-height: 90vh; overflow-y: auto;">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i class="fas fa-exclamation-triangle mr-2" style="color: #f59e0b;"></i>
+          Ajouter une plainte
+        </h3>
+        <button onclick="fermerModalPlainte()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(96, 165, 250, 0.2); color: var(--primary-blue);" onmouseover="this.style.background='rgba(96, 165, 250, 0.3)'" onmouseout="this.style.background='rgba(96, 165, 250, 0.2)'">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <form id="plainteForm" class="space-y-4" autocomplete="off">
+        <!-- Client (Dropdown Custom) -->
+        <div>
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Client *</label>
+          <div class="relative">
+            <div class="modern-dropdown" id="plainteClientToggle">
+              <span class="placeholder" style="color: var(--text-gray) !important;">-- Sélectionner un client --</span>
+              <i class="fas fa-chevron-down" style="color: var(--text-gray);"></i>
+            </div>
+            <div class="modern-dropdown-menu hidden" id="plainteClientMenu">
+              <!-- Les clients seront chargés dynamiquement -->
+            </div>
+          </div>
+          <input type="hidden" id="plainteClientValue" required>
+        </div>
+
+        <!-- Description de la plainte -->
+        <div>
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-light);">Description de la plainte *</label>
+          <textarea id="plainteDescription" required
+                    class="w-full p-2 text-sm rounded-lg"
+                    style="background: #0f172a; border: 2px solid var(--border-dark); color: var(--text-light); resize: none;"
+                    placeholder="Décrivez la plainte..."
+                    rows="6"></textarea>
+        </div>
+
+        <!-- Boutons -->
+        <div class="flex space-x-3 pt-4 justify-end">
+          <button type="button" onclick="fermerModalPlainte()"
+                  class="btn-secondary px-4 py-2 rounded-lg relative overflow-hidden">
+            Annuler
+          </button>
+          <button type="submit"
+                  class="btn-primary px-4 py-2 rounded-lg relative overflow-hidden">
+            <span>Ajouter</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Script Entrepreneur Selector -->
+  <script src="/entrepreneur-selector.js"></script>
+
+  <script>
+    // Écouter l'événement de sélection d'entrepreneur
+    document.addEventListener('entrepreneurSelected', function(e) {
+      console.log('[COACH PLAINTES] Entrepreneur sélectionné:', e.detail.username);
+      window.selectedEntrepreneurUsername = e.detail.username;
+
+      // Déverrouiller le contenu de la page
+      const mainContent = document.querySelector('.main-content');
+      if (mainContent) {
+        mainContent.style.opacity = '1';
+        mainContent.style.pointerEvents = 'auto';
+      }
+
+      // Charger les clients de l'entrepreneur
+      loadClientsForPlainte(e.detail.username);
+
+      // Charger les plaintes de l'entrepreneur
+      loadPlaintes(e.detail.username);
+
+      // Mettre à jour les countdowns toutes les minutes
+      if (window.countdownInterval) {
+        clearInterval(window.countdownInterval);
+      }
+      window.countdownInterval = setInterval(() => {
+        loadPlaintes(e.detail.username);
+      }, 60000); // 60 secondes
+    });
+
+    // Ouvrir le modal ajouter plainte
+    function ouvrirModalPlainte() {
+      if (!window.selectedEntrepreneurUsername) {
+        alert('Veuillez sélectionner un entrepreneur d\'abord');
+        return;
+      }
+      document.getElementById('ajouterPlainteModal').style.display = 'flex';
+    }
+
+    // Fermer le modal ajouter plainte
+    function fermerModalPlainte() {
+      document.getElementById('ajouterPlainteModal').style.display = 'none';
+      document.getElementById('plainteForm').reset();
+
+      // Réinitialiser le dropdown
+      const toggle = document.getElementById('plainteClientToggle');
+      const placeholder = toggle.querySelector('.placeholder');
+      placeholder.textContent = '-- Sélectionner un client --';
+      placeholder.style.cssText = 'color: var(--text-gray) !important;';
+      document.getElementById('plainteClientValue').value = '';
+    }
+
+    // Variables pour le dropdown client
+    let clientsData = [];
+
+    // Charger les clients depuis les soumissions signées
+    async function loadClientsForPlainte(entrepreneurUsername) {
+      try {
+        const response = await fetch(`/api/soumissions/${entrepreneurUsername}/signed`);
+        const data = await response.json();
+
+        clientsData = [];
+        const menu = document.getElementById('plainteClientMenu');
+        menu.innerHTML = '';
+
+        if (data.success && data.soumissions && data.soumissions.length > 0) {
+          data.soumissions.forEach(soumission => {
+            const clientInfo = {
+              prenom: soumission.prenom,
+              nom: soumission.nom,
+              num: soumission.num,
+              telephone: soumission.telephone || '',
+              courriel: soumission.courriel || ''
+            };
+            clientsData.push(clientInfo);
+
+            const option = document.createElement('div');
+            option.className = 'dropdown-option';
+            option.textContent = `${soumission.prenom} ${soumission.nom} - ${soumission.num}`;
+            option.onclick = () => selectClient(clientInfo);
+            menu.appendChild(option);
+          });
+        }
+      } catch (error) {
+        console.error('[PLAINTES] Erreur chargement clients:', error);
+      }
+    }
+
+    // Gérer le dropdown client
+    const plainteClientToggle = document.getElementById('plainteClientToggle');
+    const plainteClientMenu = document.getElementById('plainteClientMenu');
+
+    plainteClientToggle.addEventListener('click', function(e) {
+      e.stopPropagation();
+      this.classList.toggle('active');
+      plainteClientMenu.classList.toggle('hidden');
+    });
+
+    // Fermer le dropdown si on clique ailleurs
+    document.addEventListener('click', function(e) {
+      if (!plainteClientToggle.contains(e.target) && !plainteClientMenu.contains(e.target)) {
+        plainteClientToggle.classList.remove('active');
+        plainteClientMenu.classList.add('hidden');
+      }
+    });
+
+    // Sélectionner un client
+    function selectClient(clientInfo) {
+      const toggle = document.getElementById('plainteClientToggle');
+      const placeholder = toggle.querySelector('.placeholder');
+
+      placeholder.textContent = `${clientInfo.prenom} ${clientInfo.nom} - ${clientInfo.num}`;
+      placeholder.style.cssText = 'color: var(--text-light) !important;';
+
+      document.getElementById('plainteClientValue').value = JSON.stringify(clientInfo);
+
+      plainteClientToggle.classList.remove('active');
+      plainteClientMenu.classList.add('hidden');
+    }
+
+    // Calculer le temps restant en heures ouvrables (excluant weekends)
+    function calculateBusinessHoursRemaining(dateCreation) {
+      const TOTAL_BUSINESS_HOURS = 24;
+      const created = new Date(dateCreation);
+      const now = new Date();
+
+      // Vérifier si c'est actuellement le weekend (Toronto time)
+      const nowDay = now.getDay();
+      const isPaused = nowDay === 0 || nowDay === 6; // 0 = Dimanche, 6 = Samedi
+
+      let businessHoursElapsed = 0;
+      let current = new Date(created);
+
+      // Calculer les heures ouvrables écoulées
+      while (current < now) {
+        const currentDay = current.getDay();
+
+        // Seulement compter si c'est un jour ouvrable (lundi à vendredi)
+        if (currentDay !== 0 && currentDay !== 6) {
+          const nextHour = new Date(current.getTime() + (60 * 60 * 1000));
+          const timeToAdd = Math.min((now - current) / (1000 * 60 * 60), 1);
+          businessHoursElapsed += timeToAdd;
+        }
+
+        current = new Date(current.getTime() + (60 * 60 * 1000));
+      }
+
+      const hoursRemaining = Math.max(0, TOTAL_BUSINESS_HOURS - businessHoursElapsed);
+      const percentRemaining = (hoursRemaining / TOTAL_BUSINESS_HOURS) * 100;
+
+      return {
+        hoursRemaining,
+        isPaused,
+        percentRemaining
+      };
+    }
+
+    // Créer le HTML du countdown circulaire
+    function createCountdownCircle(plainte) {
+      const { hoursRemaining, isPaused, percentRemaining } = calculateBusinessHoursRemaining(plainte.date_creation);
+
+      if (isPaused) {
+        return `
+          <div class="countdown-circle">
+            <svg width="60" height="60">
+              <circle class="countdown-circle-bg" cx="30" cy="30" r="25"></circle>
+              <circle class="countdown-circle-progress paused" cx="30" cy="30" r="25"
+                      stroke-dasharray="157"
+                      stroke-dashoffset="${157 * (1 - percentRemaining / 100)}"></circle>
+            </svg>
+            <div class="countdown-text">
+              <div>${Math.floor(hoursRemaining)}h</div>
+              <span class="countdown-label">PAUSE</span>
+            </div>
+          </div>
+        `;
+      }
+
+      const hours = Math.floor(hoursRemaining);
+      const minutes = Math.floor((hoursRemaining - hours) * 60);
+      const progressClass = percentRemaining < 25 ? 'critical' : (percentRemaining < 50 ? 'warning' : '');
+
+      const timeDisplay = hours > 0
+        ? `${hours}h${minutes > 0 ? String(minutes).padStart(2, '0') : ''}`
+        : `${minutes}min`;
+
+      return `
+        <div class="countdown-circle">
+          <svg width="60" height="60">
+            <circle class="countdown-circle-bg" cx="30" cy="30" r="25"></circle>
+            <circle class="countdown-circle-progress ${progressClass}" cx="30" cy="30" r="25"
+                    stroke-dasharray="157"
+                    stroke-dashoffset="${157 * (1 - percentRemaining / 100)}"></circle>
+          </svg>
+          <div class="countdown-text">
+            <div>${timeDisplay}</div>
+            <span class="countdown-label">restant</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Variable pour stocker la plainte sélectionnée
+    let selectedPlainte = null;
+
+    // Ouvrir le modal de détails
+    function ouvrirDetailsModal(plainte) {
+      selectedPlainte = plainte;
+
+      // Nom du client
+      document.getElementById('detailClient').textContent = plainte.client_nom || '-';
+
+      // Téléphone et courriel
+      document.getElementById('detailTelephone').textContent = plainte.client_telephone || '-';
+      document.getElementById('detailCourriel').textContent = plainte.client_courriel || '-';
+
+      // Numéro de contrat/soumission
+      document.getElementById('detailSoumissionNum').textContent = plainte.numero_contrat || plainte.soumission_num || '-';
+
+      // Description
+      document.getElementById('detailDescription').textContent = plainte.description || '-';
+
+      // Date de création
+      if (plainte.date_creation) {
+        const date = new Date(plainte.date_creation);
+        document.getElementById('detailDateCreation').textContent = date.toLocaleDateString('fr-CA', {
+          year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+      } else {
+        document.getElementById('detailDateCreation').textContent = '-';
+      }
+
+      // Statut du client
+      document.getElementById('detailStatutClient').textContent = plainte.client_statut_label || '-';
+
+      // Nature de la plainte
+      document.getElementById('detailNature').textContent = plainte.nature_label || '-';
+
+      // Disponibilités
+      if (plainte.disponibilites && plainte.disponibilites.length > 0) {
+        const dispoLabels = plainte.disponibilites.map(d => {
+          const parts = d.split('_');
+          const jour = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+          const moment = parts[1] ? parts[1].toUpperCase() : '';
+          return `${jour} ${moment}`;
+        });
+        document.getElementById('detailDisponibilites').textContent = dispoLabels.join(', ');
+      } else {
+        document.getElementById('detailDisponibilites').textContent = '-';
+      }
+
+      // Attentes
+      document.getElementById('detailAttentes').textContent = plainte.attentes || '-';
+
+      // Fichiers
+      const fichiersDiv = document.getElementById('detailFichiers');
+      if (plainte.fichiers && plainte.fichiers.length > 0) {
+        fichiersDiv.innerHTML = plainte.fichiers.map(f => {
+          const fileUrl = `/cloud/plaintes/${window.selectedEntrepreneurUsername}/fichiers/${plainte.id}/${encodeURIComponent(f.nom)}`;
+          return `
+            <div onclick="ouvrirFichierPreview('${fileUrl}', '${f.nom.replace(/'/g, "\\'")}')" class="flex items-center gap-2 p-2 rounded cursor-pointer transition-all" style="background: rgba(96, 165, 250, 0.1);" onmouseover="this.style.background='rgba(96, 165, 250, 0.25)'" onmouseout="this.style.background='rgba(96, 165, 250, 0.1)'">
+              <i class="fas fa-paperclip" style="color: var(--primary-blue);"></i>
+              <span style="color: var(--text-light);">${f.nom}</span>
+              <i class="fas fa-eye ml-auto" style="color: var(--text-gray); font-size: 0.75rem;"></i>
+            </div>
+          `;
+        }).join('');
+      } else {
+        fichiersDiv.innerHTML = '<span style="color: var(--text-gray);">Aucun fichier</span>';
+      }
+
+      // Afficher/cacher le bouton selon le statut
+      const actionsContainer = document.getElementById('detailActionsContainer');
+      if (plainte.statut === 'actuelle') {
+        actionsContainer.style.display = 'flex';
+      } else {
+        actionsContainer.style.display = 'none';
+      }
+
+      document.getElementById('detailsPlainteModal').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    // Fermer le modal de détails
+    function fermerDetailsModal() {
+      document.getElementById('detailsPlainteModal').style.display = 'none';
+      document.body.style.overflow = '';
+      selectedPlainte = null;
+    }
+
+    // Ouvrir le modal de preview fichier
+    function ouvrirFichierPreview(url, nom) {
+      const modal = document.getElementById('fichierPreviewModal');
+      const content = document.getElementById('fichierPreviewContent');
+      const title = document.getElementById('fichierPreviewTitle');
+
+      title.textContent = nom;
+
+      // Déterminer si c'est un PDF ou une image
+      const extension = nom.split('.').pop().toLowerCase();
+      const isPdf = extension === 'pdf';
+      const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension);
+
+      if (isPdf) {
+        content.innerHTML = `
+          <div style="width: 100%; height: 100%; background: #1a1a1a; border-radius: 8px; overflow: auto;">
+            <iframe src="${url}" type="application/pdf" style="width: 100%; height: 100%; border: none; display: block;">
+              <p style="padding: 20px; color: var(--text-light);">
+                Impossible d'afficher le PDF.
+                <a href="${url}" target="_blank" style="color: #3b82f6; text-decoration: underline;">
+                  Cliquez ici pour l'ouvrir dans un nouvel onglet
+                </a>
+              </p>
+            </iframe>
+          </div>
+        `;
+      } else if (isImage) {
+        content.innerHTML = `
+          <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #1a1a1a; border-radius: 8px; overflow: auto;">
+            <img src="${url}" alt="${nom}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+          </div>
+        `;
+      } else {
+        content.innerHTML = `
+          <div style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #1a1a1a; border-radius: 8px;">
+            <i class="fas fa-file fa-3x" style="color: var(--text-gray); margin-bottom: 1rem;"></i>
+            <p style="color: var(--text-light);">Aperçu non disponible pour ce type de fichier.</p>
+            <a href="${url}" target="_blank" class="btn-primary px-4 py-2 rounded-lg mt-4" style="text-decoration: none;">
+              <i class="fas fa-download mr-2"></i>Télécharger
+            </a>
+          </div>
+        `;
+      }
+
+      modal.classList.add('active');
+    }
+
+    // Fermer le modal de preview fichier
+    function fermerFichierPreview() {
+      const modal = document.getElementById('fichierPreviewModal');
+      modal.classList.remove('active');
+    }
+
+    // Marquer une plainte comme réglée
+    async function marquerCommeReglee() {
+      if (!selectedPlainte) return;
+
+      try {
+        const response = await fetch(`/api/plaintes/${selectedPlainte.id}/resoudre`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          fermerDetailsModal();
+          loadPlaintes(window.selectedEntrepreneurUsername);
+
+          // Recharger le sélecteur d'entrepreneur pour mettre à jour les badges
+          if (window.EntrepreneurSelector && typeof window.EntrepreneurSelector.reload === 'function') {
+            window.EntrepreneurSelector.reload();
+          }
+
+          // Notifier le parent (apppc) de mettre à jour le badge
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'plainte-resolved' }, '*');
+          }
+        } else {
+          alert('Erreur lors de la résolution de la plainte');
+        }
+      } catch (error) {
+        console.error('[PLAINTES] Erreur résolution plainte:', error);
+        alert('Erreur lors de la résolution de la plainte');
+      }
+    }
+
+    // Charger les plaintes de l'entrepreneur
+    async function loadPlaintes(entrepreneurUsername) {
+      try {
+        const response = await fetch(`/api/plaintes/${entrepreneurUsername}`);
+        const data = await response.json();
+
+        if (data.success) {
+          // Charger les plaintes actuelles
+          const plainteActuelleBody = document.getElementById('plaintes-actuelles-body');
+          plainteActuelleBody.innerHTML = '';
+
+          if (data.plaintes_actuelles && data.plaintes_actuelles.length > 0) {
+            data.plaintes_actuelles.forEach(plainte => {
+              const row = document.createElement('tr');
+              row.style.cursor = 'pointer';
+              row.innerHTML = `
+                <td>${plainte.client_prenom} ${plainte.client_nom}</td>
+                <td>${createCountdownCircle(plainte)}</td>
+              `;
+              row.addEventListener('click', () => ouvrirDetailsModal(plainte));
+              plainteActuelleBody.appendChild(row);
+            });
+          } else {
+            plainteActuelleBody.innerHTML = `
+              <tr class="empty-row">
+                <td colspan="2">
+                  <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <p>Aucune plainte actuelle</p>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }
+
+          // Charger les plaintes réglées
+          const plainteRegleeBody = document.getElementById('plaintes-reglees-body');
+          plainteRegleeBody.innerHTML = '';
+
+          if (data.plaintes_reglees && data.plaintes_reglees.length > 0) {
+            data.plaintes_reglees.forEach(plainte => {
+              const dateReglee = plainte.date_reglee ? new Date(plainte.date_reglee).toLocaleDateString('fr-CA') : '-';
+              const row = document.createElement('tr');
+              row.style.cursor = 'pointer';
+              row.innerHTML = `
+                <td>${plainte.client_prenom} ${plainte.client_nom}</td>
+                <td>${dateReglee}</td>
+              `;
+              row.addEventListener('click', () => ouvrirDetailsModal(plainte));
+              plainteRegleeBody.appendChild(row);
+            });
+          } else {
+            plainteRegleeBody.innerHTML = `
+              <tr class="empty-row">
+                <td colspan="2">
+                  <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <p>Aucune plainte réglée</p>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }
+        }
+      } catch (error) {
+        console.error('[PLAINTES] Erreur chargement plaintes:', error);
+      }
+    }
+
+    // Gérer la soumission du formulaire de plainte
+    document.getElementById('plainteForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const clientValue = document.getElementById('plainteClientValue').value;
+      if (!clientValue) {
+        alert('Veuillez sélectionner un client');
+        return;
+      }
+
+      const clientData = JSON.parse(clientValue);
+      const description = document.getElementById('plainteDescription').value;
+
+      const plainteData = {
+        entrepreneur_username: window.selectedEntrepreneurUsername,
+        client_prenom: clientData.prenom,
+        client_nom: clientData.nom,
+        client_telephone: clientData.telephone || '',
+        client_courriel: clientData.courriel || '',
+        soumission_num: clientData.num,
+        description: description,
+        statut: 'actuelle'
+      };
+
+      try {
+        const response = await fetch('/api/plaintes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(plainteData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          fermerModalPlainte();
+          // Recharger les plaintes immédiatement
+          loadPlaintes(window.selectedEntrepreneurUsername);
+        } else {
+          alert('Erreur lors de l\'ajout de la plainte: ' + (result.message || 'Erreur inconnue'));
+        }
+      } catch (error) {
+        console.error('[PLAINTES] Erreur ajout plainte:', error);
+        alert('Erreur lors de l\'ajout de la plainte');
+      }
+    });
+
+    // Ajouter l'événement au bouton "Ajouter une plainte"
+    document.getElementById('btn-ajouter-plainte').addEventListener('click', ouvrirModalPlainte);
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,3924 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>GQP de Travaux</title>
+  
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#5271ff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#5271ff">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="/base.css">
+  <link rel="stylesheet" href="/entrepreneur-selector.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Styles spécifiques au GQP -->
+  <link rel="stylesheet" href="/gqp.css">
+
+  <!-- Script anti-flash pour coach/direction -->
+  <script>
+    (function() {
+      const userRole = localStorage.getItem('userRole');
+      const isCoachOrDirection = userRole === 'coach' || userRole === 'direction';
+      const urlParams = new URLSearchParams(window.location.search);
+      const userParam = urlParams.get('user');
+      const coachUsername = localStorage.getItem('username');
+
+      // Afficher le sélecteur si c'est un coach/direction sans entrepreneur sélectionné
+      const shouldShowSelector = isCoachOrDirection && (!userParam || userParam === coachUsername);
+
+      if (shouldShowSelector) {
+        // Injecter le CSS immédiatement pour cacher le contenu et afficher le sélecteur
+        const style = document.createElement('style');
+        style.id = 'coach-anti-flash-css';
+        style.textContent = `
+          .main-content {
+            opacity: 0 !important;
+            pointer-events: none !important;
+          }
+          #coach-selector-backdrop {
+            display: block !important;
+            opacity: 1 !important;
+            pointer-events: all !important;
+          }
+          #coach-entrepreneur-selector {
+            display: block !important;
+            opacity: 1 !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    })();
+  </script>
+
+</head>
+
+<body class="min-h-screen" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: var(--text-light); margin: 0; padding: 0;">
+  <!-- Backdrop pour le sélecteur coach (état centré) -->
+  <div id="coach-selector-backdrop"></div>
+
+  <!-- Sélecteur d'entrepreneur (visible uniquement pour les coaches) -->
+  <div id="coach-entrepreneur-selector">
+    <!-- Titre de la page avec icône GQP -->
+    <div class="page-identity">
+      <div class="page-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3), 0 0 40px rgba(139, 92, 246, 0.15);">
+        <i class="fas fa-tasks"></i>
+      </div>
+      <div class="page-name" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #a78bfa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">GQP de Travaux</div>
+    </div>
+
+    <!-- Titre et sous-titre (visibles uniquement en mode centré) -->
+    <div class="selector-title">
+      <i class="fas fa-user-tie"></i>
+      Sélectionnez un entrepreneur
+    </div>
+    <div class="selector-subtitle">Choisissez l'entrepreneur dont vous souhaitez gérer les projets</div>
+
+    <div class="selector-container">
+      <div class="selector-label">
+        <i class="fas fa-user-tie"></i>
+        <span>Entrepreneur:</span>
+      </div>
+      <div class="coach-dropdown">
+        <div class="coach-dropdown-toggle" id="coach-dropdown-toggle">
+          <input type="text" class="search-input" id="search-input" placeholder="Rechercher..." autocomplete="off" style="display: none;">
+          <span class="placeholder">-- Sélectionner un entrepreneur --</span>
+          <i class="fas fa-chevron-down chevron"></i>
+        </div>
+        <div class="coach-dropdown-menu" id="coach-dropdown-menu"></div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Main Content - GQP MODERNE -->
+  <div id="main-content-wrapper" class="main-content w-full" style="width: 100%; padding: 2rem;">
+
+    <!-- Bouton Retour -->
+    <div id="back-button-container" class="mb-6">
+      <button id="back-to-outils-btn" onclick="goBackToOutils()" class="back-button">
+        <i class="fas fa-arrow-left"></i>
+        <span class="back-button-text">Retour aux outils</span>
+      </button>
+    </div>
+
+    <!-- Header -->
+    <div class="mb-10">
+      <div class="relative">
+        <h1 class="text-4xl font-bold mb-3" style="color: var(--text-light);">
+          GQP de Travaux
+        </h1>
+        <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        <div class="flex items-center justify-between">
+          <p class="text-xl font-medium" style="color: var(--text-gray);">Générez un GQP PDF professionnel à partir d'une soumission</p>
+          <div class="text-sm flex items-center" style="color: var(--text-gray);">
+            <i class="fas fa-calendar-alt mr-2"></i>
+            <span id="currentDate">Aujourd'hui</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulaire moderne dans une carte comme les status cards -->
+    <div class="status-cards-grid grid grid-cols-1 gap-6 mb-8">
+      <div class="box">
+        <div class="box-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div class="box-header-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+              <i class="fas fa-clipboard-check"></i>
+            </div>
+            <h2 class="box-header-title">Créer un GQP</h2>
+          </div>
+        </div>
+        <div class="box-body">
+
+      <form id="gqp-form" enctype="multipart/form-data">
+        <!-- Champs cachés -->
+        <input type="hidden" name="nom" id="input-nom">
+        <input type="hidden" name="prenom" id="input-prenom">
+        <input type="hidden" name="adresse" id="input-adresse">
+        <input type="hidden" name="telephone" id="input-telephone">
+        <input type="hidden" name="courriel" id="input-courriel">
+        <input type="hidden" name="endroit" id="input-endroit">
+        <input type="hidden" name="username" id="input-username" />
+        <input type="hidden" name="numero_soumission" id="input-numero-soumission" />
+
+        <div class="grid lg:grid-cols-2 gap-8 items-start">
+          
+          <!-- Colonne gauche -->
+          <div class="space-y-6 flex flex-col" id="colonne-gauche">
+
+            <!-- Sélection des travaux et équipe -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="assignement-section">
+              
+              <!-- Assignement -->
+              <div class="col-span-2">
+                <label class="block text-sm font-semibold mb-4" style="color: var(--text-light);">
+                  <i class="fas fa-route mr-2 text-purple-500"></i>
+                  Assignement
+                </label>
+                
+                <!-- Options d'assignation en deux colonnes -->
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                  <!-- Option: Assigner à une équipe (GAUCHE) -->
+                  <div class="assignment-option flex items-center cursor-pointer p-3 rounded-lg transition-all duration-200" style="background: var(--bg-card); border: 2px solid var(--border-dark);" id="assign-team-option">
+                    <input type="radio" name="assignment_type" value="team" id="assign-to-team" style="display: none;">
+                    <div class="flex-1">
+                      <div class="flex items-center mb-1">
+                        <i class="fas fa-users mr-2 text-green-400"></i>
+                        <span class="font-semibold" style="color: var(--text-light);">Assigner</span>
+                      </div>
+                      <div class="text-sm" style="color: var(--text-gray);">Envoyer à l'équipe</div>
+                    </div>
+                  </div>
+                  
+                  <!-- Option: Ne pas assigner (DROITE) -->
+                  <div class="assignment-option flex items-center cursor-pointer p-3 rounded-lg transition-all duration-200" style="background: var(--bg-card); border: 2px solid var(--border-dark);" id="no-assign-option">
+                    <input type="radio" name="assignment_type" value="none" id="no-assignment" style="display: none;">
+                    <div class="flex-1">
+                      <div class="flex items-center mb-1">
+                        <i class="fas fa-inbox mr-2 text-orange-400"></i>
+                        <span class="font-semibold" style="color: var(--text-light);">Ne pas assigner</span>
+                      </div>
+                      <div class="text-sm" style="color: var(--text-gray);">Liste d'attente</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Travaux à compléter et Choix équipe côte à côte -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="client-equipe-grid">
+                  <!-- Travaux à compléter (GAUCHE) -->
+                  <div>
+                    <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+                      <i class="fas fa-user-check mr-2 text-blue-400"></i>
+                      Sélectionner un client
+                    </label>
+                    <div class="relative">
+                      <div class="relative">
+                        <input type="text"
+                               id="clientSearchGQP"
+                               placeholder="Tapez pour rechercher un client..."
+                               class="modern-input w-full pr-8"
+                               autocomplete="off"
+                               oninput="rechercherClientsGQP(this.value)"
+                               onclick="event.stopPropagation(); ouvrirMenuGQP()"
+                               onfocus="ouvrirMenuGQP()"
+                               style="border-right: 2px solid #e57373 !important;">
+                        <i class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none" style="color: var(--text-gray);"></i>
+                      </div>
+                      <!-- Menu déroulant -->
+                      <div class="modern-dropdown-menu hidden absolute z-50 w-full mt-1" id="clientMenuGQP" style="max-height: 200px;" onclick="event.stopPropagation();">
+                        <!-- Les clients seront chargés dynamiquement depuis soumissions_signees -->
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Sélection d'équipe (DROITE - visible seulement si "Assigner" est sélectionné) -->
+                  <div id="team-selection-container" class="hidden">
+                    <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+                      <i class="fas fa-users mr-2 text-purple-400"></i>
+                      Choisir une équipe
+                    </label>
+                    <div class="relative">
+                      <div class="modern-dropdown" id="equipeToggle" style="border-right: 2px solid #e57373 !important;">
+                        <span class="placeholder" style="color: var(--text-gray);">Choisissez une équipe</span>
+                        <i class="fas fa-chevron-down" style="color: var(--text-gray);"></i>
+                      </div>
+                      <div class="modern-dropdown-menu hidden" id="equipeMenu">
+                        <!-- Options générées dynamiquement par JS -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4" id="heure-budget-section">
+              <!-- Heure du projet -->
+              <div>
+                <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+                  <i class="fas fa-clock mr-2 text-blue-500"></i>
+                  Heure du projet
+                </label>
+                <div class="relative">
+                  <input type="text" name="heure" id="heure" autocomplete="off"
+                         class="modern-input pr-10" placeholder="3,00 h"
+                         style="border-right: 2px solid #e57373 !important;">
+                  <span class="absolute right-3 top-1/2 transform -translate-y-1/2 font-medium" style="color: var(--text-gray);">h</span>
+                </div>
+              </div>
+              
+              <!-- Budget -->
+              <div>
+                <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+                  <i class="fas fa-dollar-sign mr-2 text-green-500"></i>
+                  Budget
+                </label>
+                <div class="relative">
+                  <input type="text" name="montant" id="montant" autocomplete="off"
+                         class="modern-input pr-16" placeholder="2 500,00 $"
+                         style="border-right: 2px solid #e57373 !important;">
+                  <span class="absolute right-3 top-1/2 transform -translate-y-1/2 font-medium" style="color: var(--text-gray);">$</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Upload d'images et vidéos -->
+            <div id="images-section">
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+                <i class="fas fa-photo-video mr-2 text-indigo-500"></i>
+                Images et vidéos du projet (max 16)
+              </label>
+              <div class="upload-zone" id="dropzone" style="border-right: 2px solid #e57373 !important;">
+                <div class="mb-4">
+                  <i class="fas fa-cloud-upload-alt text-4xl text-blue-500 mb-4"></i>
+                  <p class="text-lg font-medium" style="color: var(--text-light);">
+                    Glissez vos fichiers ici ou cliquez pour sélectionner
+                  </p>
+                  <p class="text-sm mt-2" style="color: var(--text-gray);">
+                    Formats acceptés: JPG, PNG, WebP, MP4, MOV, AVI
+                  </p>
+                </div>
+                <input type="file" id="photo-input" name="photos" accept="image/*,video/*" multiple class="hidden">
+              </div>
+              <div id="preview" class="flex flex-wrap gap-4 mt-4"></div>
+            </div>
+          </div>
+
+          <!-- Colonne droite -->
+          <div class="space-y-6" id="colonne-droite">
+
+            <!-- Étapes du projet -->
+            <div id="etapes-section">
+              <!-- Titre -->
+              <label class="block text-sm font-semibold mb-3" style="color: var(--text-light);">
+                <i class="fas fa-list-ol mr-2 text-teal-500"></i>
+                Étapes du projet
+              </label>
+
+              <!-- Textarea avec header templates en position absolue à l'intérieur -->
+              <div style="position: relative;">
+                <!-- Header Templates positionné DANS le textarea -->
+                <div style="position: absolute; top: 12px; left: 12px; right: 12px; display: flex; align-items: center; gap: 8px; z-index: 10; background: rgba(30, 41, 59, 0.95); padding: 8px 10px; border-radius: 8px; backdrop-filter: blur(10px); pointer-events: none;">
+                  <i class="fas fa-bookmark" style="color: var(--primary-blue); font-size: 13px;"></i>
+                  <span style="color: var(--text-light); font-weight: 600; font-size: 13px; flex-shrink: 0;">Templates</span>
+                  <div style="position: relative; flex: 1; pointer-events: auto;">
+                    <div class="modern-dropdown" id="etapesTemplateToggle" style="width: 100%; cursor: pointer; height: 40px !important; min-height: 40px !important; font-size: 13px !important; padding: 8px 12px !important;">
+                      <span class="placeholder" style="color: rgb(156 163 175); font-size: 13px;">-- Sélectionner --</span>
+                      <i class="fas fa-chevron-down" style="color: var(--text-gray); font-size: 12px;"></i>
+                    </div>
+                    <div class="modern-dropdown-menu hidden" id="etapesTemplateMenu" style="width: 100%; max-height: 200px; overflow-y: auto; z-index: 1000;">
+                      <!-- Les options seront ajoutées dynamiquement -->
+                    </div>
+                  </div>
+                  <button type="button" class="btn-primary" style="padding: 6px 10px !important; font-size: 12px !important; height: 32px !important; min-height: 32px !important; display: flex !important; align-items: center !important; justify-content: center !important; gap: 5px !important; pointer-events: auto;" onclick="saveEtapesTemplatePrompt()" title="Nouveau template">
+                    <i class="fas fa-plus" style="font-size: 11px !important;"></i>
+                    <span style="font-size: 12px !important;">Nouveau template</span>
+                  </button>
+                </div>
+
+                <!-- Textarea -->
+                <textarea name="etapes" id="etapes"
+                          class="modern-textarea"
+                          style="resize: none; height: 550px; padding-top: 75px !important; border-right: 2px solid #e57373 !important;"
+                          placeholder="Étape 1 : "></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Boutons d'action -->
+        <div class="flex flex-col items-end mt-8 pt-6" style="border-top: 1px solid var(--border-dark); gap: 0.5rem;">
+          <p id="gqpValidationMessage" class="text-sm" style="color: #e57373;">
+            <i class="fas fa-exclamation-circle mr-1"></i>
+            Veuillez remplir tous les champs obligatoires
+          </p>
+          <div class="flex space-x-4">
+            <button type="button" class="btn-secondary px-6 py-2" id="voirPDFBtn" disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
+              Voir GQP
+            </button>
+            <button type="submit" id="generateButton" class="btn-primary px-6 py-2 flex items-center gap-2" disabled style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
+              <span id="btnText">Envoyer à l'équipe</span>
+              <span id="btnSpinner" class="hidden absolute inset-0 flex items-center justify-center">
+                <span class="w-5 h-5 border-2 border-white border-t-black rounded-full animate-spin"></span>
+              </span>
+            </button>
+          </div>
+        </div>
+      </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Section Table GQP à envoyé -->
+    <div class="box mb-8">
+      <div class="box-header">
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
+          <div class="box-header-icon" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);">
+            <i class="fas fa-paper-plane"></i>
+          </div>
+          <h2 class="box-header-title">GQP à envoyer</h2>
+        </div>
+        <span id="gqp-count" class="px-3 py-1 rounded-full text-sm font-semibold" style="background: rgba(96, 165, 250, 0.2); color: #60a5fa;">
+          0 en attente
+        </span>
+      </div>
+      <div class="box-body">
+        <!-- Vue Desktop: Table -->
+        <div class="table-container">
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th>N° Soumission</th>
+                <th>Client</th>
+                <th>Date de création</th>
+                <th>Adresse</th>
+                <th>Montant</th>
+                <th class="text-center" style="text-align: center !important;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="gqp-envoys-body">
+              <tr>
+                <td colspan="6" class="empty-state">
+                  <i class="fas fa-inbox" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
+                  <p style="font-size: 1rem;">Aucun GQP envoyé pour le moment</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Vue Mobile: Cards -->
+        <div id="gqp-mobile-cards">
+          <div id="gqp-mobile-list">
+            <!-- Les cards seront injectées ici dynamiquement -->
+            <div class="gqp-empty-mobile">
+              <i class="fas fa-inbox"></i>
+              <p>Aucun GQP en attente</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal pour assigner GQP à une équipe -->
+  <div id="assign-gqp-modal" class="modal-overlay hidden" onclick="closeAssignModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3><i class="fas fa-users mr-2"></i>Assigner GQP à une équipe</h3>
+        <button onclick="closeAssignModal()" class="modal-close">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="mb-4">
+          <p class="text-sm" style="color: var(--text-gray); margin-bottom: 1rem;">
+            Client: <span id="modal-client-name" style="color: var(--text-light); font-weight: 600;"></span>
+          </p>
+          <p class="text-sm" style="color: var(--text-gray);">
+            N° Soumission: <span id="modal-soumission-number" style="color: var(--text-light); font-weight: 600;"></span>
+          </p>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <!-- Voir GQP -->
+          <button id="modal-voir-pdf" class="modal-btn modal-btn-secondary">
+            <i class="fas fa-eye mr-2"></i>
+            Voir GQP
+          </button>
+          
+          <!-- Sélection équipe -->
+          <div>
+            <label class="block text-sm font-semibold mb-2" style="color: var(--text-light);">
+              <i class="fas fa-users mr-2 text-purple-400"></i>
+              Choisir une équipe
+            </label>
+            <div class="relative">
+              <div class="modern-dropdown" id="modal-equipe-toggle">
+                <div class="placeholder" style="color: var(--text-gray);">Choisissez une équipe</div>
+                <i class="fas fa-chevron-down dropdown-icon"></i>
+              </div>
+              <div class="dropdown-menu hidden" id="modal-equipe-menu"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-actions">
+          <button onclick="closeAssignModal()" class="modal-btn modal-btn-cancel">
+            Annuler
+          </button>
+          <button id="modal-assign-btn" class="modal-btn modal-btn-primary" onclick="assignGQPToTeam()">
+            <i class="fas fa-paper-plane mr-2"></i>
+            Envoyer à l'équipe
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ⚡ DÉSACTIVATION DES LOGS - Performance optimization
+  window.log = window.log || (() => {});
+  window.warn = window.warn || (() => {});
+  window.error = window.error || (() => {});
+  window.info = window.info || (() => {});
+  window.debug = window.debug || (() => {});
+
+  // Variables globales
+  let selectedImages = [];
+  let maxImages = 16;
+  let selectedEquipe = null;
+  let selectedSoumission = null; // Pour stocker le client sélectionné
+  let currentStep = 1;
+  let allFiles = [];
+  let isAutoFilledFromTable = false; // Pour détecter si on vient d'un auto-fill
+  let currentGqpId = null; // Pour stocker l'ID du GQP en cours
+
+  // Fonction helper pour vérifier si un élément a une bordure verte
+  function hasGreenBorderGQP(element) {
+    if (!element) return false;
+
+    // D'abord vérifier le style inline (plus fiable car c'est ce qu'on définit)
+    const inlineStyle = element.style.borderRightColor;
+    if (inlineStyle) {
+      // #4caf50 ou rgb(76, 175, 80) = vert
+      if (inlineStyle.includes('4caf50') || inlineStyle.includes('76, 175, 80') || inlineStyle === 'rgb(76, 175, 80)') {
+        return true;
+      }
+      // #e57373 ou rgb(229, 115, 115) = rouge
+      if (inlineStyle.includes('e57373') || inlineStyle.includes('229, 115, 115') || inlineStyle === 'rgb(229, 115, 115)') {
+        return false;
+      }
+    }
+
+    // Fallback sur getComputedStyle
+    const borderColor = getComputedStyle(element).borderRightColor;
+    const match = borderColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (match) {
+      const r = parseInt(match[1]);
+      const g = parseInt(match[2]);
+      const b = parseInt(match[3]);
+      return g > r && g > b;
+    }
+    return false;
+  }
+
+  // Fonction pour mettre à jour la bordure d'un champ
+  function updateFieldBorder(element, isValid) {
+    if (!element) return;
+    element.style.setProperty('border-right-color', isValid ? '#4caf50' : '#e57373', 'important');
+  }
+
+  // Fonction de validation des champs requis (client, équipe si assigner, heure, budget, images, étapes)
+  function validateRequiredFields() {
+    const etapes = document.getElementById('etapes');
+    const montant = document.getElementById('montant');
+    const heure = document.getElementById('heure');
+    const clientSearch = document.getElementById('clientSearchGQP');
+    const equipeToggle = document.getElementById('equipeToggle');
+    const dropzone = document.getElementById('dropzone');
+    const voirPDFBtn = document.getElementById('voirPDFBtn');
+    const generateButton = document.getElementById('generateButton');
+    const validationMessage = document.getElementById('gqpValidationMessage');
+
+    // Vérifier si "Assigner" est sélectionné
+    const isAssignMode = document.getElementById('assign-to-team')?.checked;
+    const teamContainer = document.getElementById('team-selection-container');
+
+    // Valider chaque champ et mettre à jour sa bordure
+    const clientValid = clientSearch && clientSearch.value.trim() !== '' && typeof selectedSoumission !== 'undefined' && selectedSoumission !== null;
+    updateFieldBorder(clientSearch, clientValid);
+
+    const heureValid = heure && heure.value.trim() !== '';
+    updateFieldBorder(heure, heureValid);
+
+    const montantValid = montant && montant.value.trim() !== '';
+    updateFieldBorder(montant, montantValid);
+
+    const etapesValid = etapes && etapes.value.trim() !== '';
+    updateFieldBorder(etapes, etapesValid);
+
+    // Vérifier images/vidéos (minimum 1)
+    const hasFiles = allFiles && allFiles.length > 0;
+    updateFieldBorder(dropzone, hasFiles);
+
+    // Vérifier équipe seulement si en mode "Assigner"
+    let equipeValid = true;
+    if (isAssignMode && teamContainer && !teamContainer.classList.contains('hidden')) {
+      equipeValid = selectedEquipe !== null;
+      updateFieldBorder(equipeToggle, equipeValid);
+    } else {
+      // Si pas en mode assigner, mettre bordure par défaut
+      if (equipeToggle) {
+        equipeToggle.style.setProperty('border-right', '2px solid var(--border-dark)', 'important');
+      }
+    }
+
+    // Validation globale
+    const isValid = clientValid && heureValid && montantValid && etapesValid && hasFiles && equipeValid;
+
+    if (isValid) {
+      voirPDFBtn.disabled = false;
+      voirPDFBtn.style.opacity = '1';
+      voirPDFBtn.style.cursor = 'pointer';
+      voirPDFBtn.style.pointerEvents = 'auto';
+      generateButton.disabled = false;
+      generateButton.style.opacity = '1';
+      generateButton.style.cursor = 'pointer';
+      generateButton.style.pointerEvents = 'auto';
+      if (validationMessage) validationMessage.style.display = 'none';
+    } else {
+      voirPDFBtn.disabled = true;
+      voirPDFBtn.style.opacity = '0.5';
+      voirPDFBtn.style.cursor = 'not-allowed';
+      voirPDFBtn.style.pointerEvents = 'none';
+      generateButton.disabled = true;
+      generateButton.style.opacity = '0.5';
+      generateButton.style.cursor = 'not-allowed';
+      generateButton.style.pointerEvents = 'none';
+      if (validationMessage) validationMessage.style.display = 'block';
+    }
+  }
+
+  // Initialisation
+  document.addEventListener('DOMContentLoaded', function() {
+    setupDropzone();
+    setupDropdowns();
+    setupForm();
+    setupEtapesTextarea();
+    setupMontantFormatting();
+    setupHeureFormatting();
+    setupAssignmentOptions();
+    loadData();
+    activateCurrentPageMenu();
+    setupMobileMenu();
+    updateCurrentDate();
+
+    // Ajouter des listeners pour validation
+    const etapes = document.getElementById('etapes');
+    const montant = document.getElementById('montant');
+    const heure = document.getElementById('heure');
+    const clientSearch = document.getElementById('clientSearchGQP');
+
+    if (etapes) etapes.addEventListener('input', validateRequiredFields);
+    if (montant) montant.addEventListener('input', validateRequiredFields);
+    if (heure) heure.addEventListener('input', validateRequiredFields);
+    if (clientSearch) {
+      clientSearch.addEventListener('input', function() {
+        // Si le texte est effacé, réinitialiser la sélection
+        if (this.value.trim() === '') {
+          selectedSoumission = null;
+        }
+        validateRequiredFields();
+      });
+    }
+
+    // Validation initiale
+    validateRequiredFields();
+
+    // Note: loadGqpQueue sera appelé dans l'autre DOMContentLoaded où elle est définie
+  });
+
+  // Configuration du formatage automatique du montant
+  function setupMontantFormatting() {
+    const montantInput = document.getElementById('montant');
+    
+    if (!montantInput) return;
+    
+    montantInput.addEventListener('blur', function(e) {
+      const value = e.target.value.trim();
+      if (value && value !== '') {
+        e.target.value = formatMontant(value);
+      }
+    });
+    
+    // Permettre seulement les chiffres, points, virgules et $
+    montantInput.addEventListener('input', function(e) {
+      const value = e.target.value;
+      // Garder seulement les caractères valides pour un montant
+      e.target.value = value.replace(/[^0-9.,$ ]/g, '');
+    });
+  }
+  
+  // Fonction de formatage du montant (copie de formatPrice de creer_soumission)
+  function formatMontant(value) {
+    // Enlever tout sauf les chiffres et points/virgules
+    const cleanValue = value.replace(/[^\d.,]/g, '');
+    
+    // Convertir en nombre
+    const number = parseFloat(cleanValue.replace(',', '.'));
+    
+    if (isNaN(number)) return '';
+    
+    // Formater avec espaces pour les milliers et virgule pour les décimales
+    const formatted = new Intl.NumberFormat('fr-CA', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(number);
+    
+    return formatted + ' $';
+  }
+
+  // Configuration du formatage automatique des heures
+  function setupHeureFormatting() {
+    const heureInput = document.getElementById('heure');
+    
+    if (!heureInput) return;
+    
+    heureInput.addEventListener('blur', function(e) {
+      const value = e.target.value.trim();
+      if (value && value !== '') {
+        e.target.value = formatHeure(value);
+      }
+    });
+    
+    // Permettre seulement les chiffres, points, virgules et h
+    heureInput.addEventListener('input', function(e) {
+      const value = e.target.value;
+      // Garder seulement les caractères valides pour les heures
+      e.target.value = value.replace(/[^0-9.,h ]/g, '');
+    });
+  }
+  
+  // Fonction de formatage des heures
+  function formatHeure(value) {
+    // Enlever tout sauf les chiffres et points/virgules
+    const cleanValue = value.replace(/[^\d.,]/g, '');
+    
+    // Convertir en nombre
+    const number = parseFloat(cleanValue.replace(',', '.'));
+    
+    if (isNaN(number)) return '';
+    
+    // Formater avec espaces pour les milliers et virgule pour les décimales
+    const formatted = new Intl.NumberFormat('fr-CA', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(number);
+    
+    return formatted + ' h';
+  }
+
+  // Fonction pour mettre à jour la date - EXACT COPY de new_dashboard.html
+  function updateCurrentDate() {
+    const now = new Date();
+    const options = { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    };
+    const dateString = now.toLocaleDateString('fr-FR', options);
+    document.getElementById('currentDate').textContent = dateString;
+  }
+
+  // Fonction pour mettre à jour les informations du compte dans le header
+  function updateAccountInfo() {
+    const now = new Date();
+    const options = { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    };
+    const dateString = now.toLocaleDateString('fr-FR', options);
+    
+    log('🔄 Mise à jour account info:', dateString);
+    
+    // Mettre à jour l'affichage account avec la date
+    const accountDisplay = document.getElementById('account-display');
+    if (accountDisplay) {
+      accountDisplay.textContent = dateString;
+      log('[OK] account-display mis à jour:', dateString);
+    } else {
+      log('[ERROR] Élément account-display non trouvé');
+    }
+    
+    // Mettre à jour le username dans le dropdown
+    const accountUsername = document.getElementById('account-username');
+    if (accountUsername && window.username) {
+      accountUsername.textContent = window.username;
+      log('[OK] account-username mis à jour:', window.username);
+    } else {
+      log('[ERROR] Élément account-username non trouvé ou username non défini');
+    }
+  }
+
+  // Configuration du textarea des étapes avec la fonctionnalité originale de gqp.html
+  function setupEtapesTextarea() {
+    const etapes = document.getElementById('etapes');
+    
+    etapes.addEventListener("focus", () => {
+      if (etapes.value.trim() === "") {
+        etapes.value = "Étape 1 : ";
+        setTimeout(() => {
+          etapes.selectionStart = etapes.selectionEnd = etapes.value.length;
+        }, 0);
+      }
+    });
+
+    etapes.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const val = etapes.value.trimEnd();
+
+        // Détecter tous les numéros d'étapes existants dans le texte
+        const etapeRegex = /Étape\s+(\d+)/gi;
+        const matches = [...val.matchAll(etapeRegex)];
+
+        let nextStep = 1;
+        if (matches.length > 0) {
+          // Extraire tous les numéros d'étapes et les trier
+          const existingNumbers = matches.map(m => parseInt(m[1])).sort((a, b) => a - b);
+
+          // Trouver le premier numéro manquant dans la séquence
+          for (let i = 0; i < existingNumbers.length; i++) {
+            if (existingNumbers[i] === nextStep) {
+              nextStep++;
+            } else if (existingNumbers[i] > nextStep) {
+              // On a trouvé un trou, nextStep est le numéro manquant
+              break;
+            }
+          }
+        }
+
+        etapes.value = val + "\n\nÉtape " + nextStep + " : ";
+      }
+    });
+  }
+
+  // Configuration de la zone de dépôt d'images
+  function setupDropzone() {
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('photo-input');
+    const preview = document.getElementById('preview');
+
+    dropzone.addEventListener('click', () => fileInput.click());
+
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = '#3b82f6';
+      dropzone.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+      dropzone.style.backgroundColor = '';
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+      dropzone.style.backgroundColor = '';
+      
+      const files = Array.from(e.dataTransfer.files);
+      handleFileSelection(files);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const files = Array.from(e.target.files);
+      handleFileSelection(files);
+    });
+  }
+
+  // Gestion de la sélection de fichiers (images et vidéos)
+  function handleFileSelection(files) {
+    const mediaFiles = files.filter(file => file.type.startsWith('image/') || file.type.startsWith('video/'));
+
+    if (allFiles.length + mediaFiles.length > maxImages) {
+      showError(`Le maximum est de ${maxImages} fichiers.`);
+      return;
+    }
+
+    mediaFiles.forEach(file => {
+      const maxSize = file.type.startsWith('video/') ? 50 * 1024 * 1024 : 10 * 1024 * 1024; // 50MB pour vidéos, 10MB pour images
+      if (file.size > maxSize) {
+        const maxSizeMB = maxSize / (1024 * 1024);
+        showError(`Le fichier ${file.name} est trop volumineux (max ${maxSizeMB}MB).`);
+        return;
+      }
+
+      // Ajouter aux deux arrays pour compatibilité
+      allFiles.push(file);
+
+      const isVideo = file.type.startsWith('video/');
+
+      if (isVideo) {
+        // Pour les vidéos, créer une URL blob directement
+        const videoUrl = URL.createObjectURL(file);
+        selectedImages.push({
+          file: file,
+          src: videoUrl,
+          id: Date.now() + Math.random(),
+          isVideo: true
+        });
+        updatePreview();
+
+        // Synchroniser fileInput
+        const dataTransfer = new DataTransfer();
+        allFiles.forEach(f => dataTransfer.items.add(f));
+        document.getElementById('photo-input').files = dataTransfer.files;
+      } else {
+        // Pour les images, utiliser FileReader
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          selectedImages.push({
+            file: file,
+            src: e.target.result,
+            id: Date.now() + Math.random(),
+            isVideo: false
+          });
+          updatePreview();
+
+          // Synchroniser fileInput
+          const dataTransfer = new DataTransfer();
+          allFiles.forEach(f => dataTransfer.items.add(f));
+          document.getElementById('photo-input').files = dataTransfer.files;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  // Mise à jour de l'aperçu des images et vidéos
+  function updatePreview() {
+    const preview = document.getElementById('preview');
+    preview.innerHTML = '';
+
+    selectedImages.forEach((media, index) => {
+      const mediaDiv = document.createElement('div');
+      mediaDiv.className = 'media-preview relative';
+
+      if (media.isVideo) {
+        mediaDiv.innerHTML = `
+          <video src="${media.src}" muted></video>
+          <div class="video-icon"><i class="fas fa-play-circle"></i></div>
+          <button type="button" class="delete-btn" onclick="removeImage(${media.id})">
+            <i class="fas fa-times"></i>
+          </button>
+        `;
+      } else {
+        mediaDiv.innerHTML = `
+          <img src="${media.src}" alt="Aperçu ${index + 1}">
+          <button type="button" class="delete-btn" onclick="removeImage(${media.id})">
+            <i class="fas fa-times"></i>
+          </button>
+        `;
+      }
+      preview.appendChild(mediaDiv);
+    });
+
+    // Valider les champs après mise à jour des images
+    validateRequiredFields();
+  }
+
+  // Suppression d'une image
+  function removeImage(imageId) {
+    const imageIndex = selectedImages.findIndex(img => img.id === imageId);
+    if (imageIndex !== -1) {
+      // Supprimer de selectedImages
+      const removedImage = selectedImages.splice(imageIndex, 1)[0];
+      
+      // Supprimer de allFiles
+      const fileIndex = allFiles.findIndex(f => f.name === removedImage.file.name);
+      if (fileIndex !== -1) {
+        allFiles.splice(fileIndex, 1);
+      }
+      
+      updatePreview();
+      
+      // Synchroniser fileInput
+      const dataTransfer = new DataTransfer();
+      allFiles.forEach(f => dataTransfer.items.add(f));
+      document.getElementById('photo-input').files = dataTransfer.files;
+    }
+  }
+
+  // Configuration des dropdowns
+  function setupDropdowns() {
+    // On ne configure plus 'soumissionToggle' car il a été remplacé par clientSearchGQP
+    setupDropdown('equipeToggle', 'equipeMenu');
+  }
+
+  function setupDropdown(toggleId, menuId) {
+    const toggle = document.getElementById(toggleId);
+    const menu = document.getElementById(menuId);
+    
+    if (!toggle || !menu) {
+      error(`[ERROR] Dropdown non trouvé: ${toggleId} ou ${menuId}`);
+      return;
+    }
+
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Fermer tous les autres dropdowns
+      document.querySelectorAll('.modern-dropdown-menu').forEach(m => {
+        if (m !== menu) m.classList.add('hidden');
+      });
+      document.querySelectorAll('.modern-dropdown').forEach(d => {
+        if (d !== toggle) d.classList.remove('active');
+      });
+      
+      menu.classList.toggle('hidden');
+      toggle.classList.toggle('active');
+    });
+
+    document.addEventListener('click', () => {
+      menu.classList.add('hidden');
+      toggle.classList.remove('active');
+    });
+  }
+
+  // Chargement des données
+  async function loadData() {
+    if (!window.username) {
+      error('Username non défini');
+      return;
+    }
+
+    // Mettre à jour les infos du compte maintenant que username est disponible
+    updateAccountInfo();
+
+    try {
+      await chargerClientsGQP();
+      await loadEquipes();
+    } catch (err) {
+      error('Erreur chargement données:', err);
+    }
+  }
+
+  // Chargement et recherche des travaux à compléter (ventes acceptées)
+  let todosClients = [];
+
+  async function chargerClientsGQP() {
+    log('🔄 Chargement clients acceptés depuis ventes_acceptees:', window.username);
+    try {
+      const username = window.username;
+      const response = await fetch(`/ventes/acceptees/${username}`);
+      if (!response.ok) throw new Error('Erreur chargement ventes acceptées');
+
+      const ventesAcceptees = await response.json();
+      log('[BAN] Ventes acceptées reçues:', ventesAcceptees.length);
+
+      // Filtrer les clients qui n'ont PAS encore de GQP envoyé
+      const clientsSansGQP = ventesAcceptees.filter(client => {
+        // Vérifier si le client a déjà un GQP (vérifier tous les champs possibles)
+        const hasGQP = (client.gqp && client.gqp !== 'Non disponible') ||
+                       (client.lien_gqp && client.lien_gqp !== 'Non disponible') ||
+                       (client.documents && client.documents.gqp && client.documents.gqp !== 'Non disponible');
+
+        // Retourner true seulement si le client N'A PAS de GQP
+        return !hasGQP;
+      });
+
+      log(`[DEBUG] Filtrage: ${ventesAcceptees.length} clients acceptés -> ${clientsSansGQP.length} clients sans GQP`);
+
+      // Formater les données pour l'affichage (identique à facturationqe)
+      todosClients = clientsSansGQP.map(client => ({
+        nom_client: `${client.prenom || client.clientPrenom || ''} ${client.nom || client.clientNom || ''}`.trim(),
+        numero_soumission: client.num || '',
+        client_data: client
+      }));
+
+      log('[OK] Clients GQP formatés:', todosClients.length);
+      log('[BAN] Exemple client:', todosClients[0]);
+
+      // Afficher tous les clients au départ
+      afficherClientsGQP(todosClients);
+    } catch (err) {
+      error('[ERROR] Erreur chargement clients GQP:', err);
+      todosClients = [];
+      // Afficher message d'erreur dans le dropdown
+      const menu = document.getElementById('clientMenuGQP');
+      if (menu) {
+        menu.innerHTML = `
+          <div class="dropdown-option" style="color: var(--text-gray); font-style: italic; padding: 12px;">
+            Erreur de chargement des clients
+          </div>
+        `;
+      }
+    }
+  }
+
+  function afficherClientsGQP(clients) {
+    const menu = document.getElementById('clientMenuGQP');
+    if (!menu) return;
+    
+    menu.innerHTML = '';
+    
+    if (clients.length === 0) {
+      const noResult = document.createElement('div');
+      noResult.className = 'dropdown-option-disabled';
+      noResult.textContent = 'Aucun client accepté disponible';
+      noResult.style.cssText = 'padding: 12px 16px; color: var(--text-gray); font-style: italic;';
+      menu.appendChild(noResult);
+      return;
+    }
+    
+    clients.forEach(client => {
+      const option = document.createElement('div');
+      option.className = 'dropdown-option';
+      option.style.cssText = `
+        padding: 12px 16px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+        color: var(--text-light);
+      `;
+      
+      // Format: Nom Client - N° Soumission
+      option.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: 500;">${client.nom_client}</span>
+          <span style="color: var(--text-gray); font-size: 0.875rem;">${client.numero_soumission}</span>
+        </div>
+      `;
+      
+      option.addEventListener('mouseenter', () => {
+        option.style.background = 'rgba(59, 130, 246, 0.1)';
+      });
+      
+      option.addEventListener('mouseleave', () => {
+        option.style.background = 'transparent';
+      });
+      
+      option.addEventListener('click', () => {
+        selectionnerClientGQP(client.numero_soumission, client.nom_client);
+      });
+      
+      menu.appendChild(option);
+    });
+  }
+
+  function rechercherClientsGQP(query) {
+    if (!query || query.trim() === '') {
+      afficherClientsGQP(todosClients);
+      return;
+    }
+
+    const queryLower = query.toLowerCase();
+    const clientsFiltres = todosClients.filter(client =>
+      client.nom_client.toLowerCase().includes(queryLower) ||
+      client.numero_soumission.toLowerCase().includes(queryLower)
+    );
+
+    afficherClientsGQP(clientsFiltres);
+  }
+
+  // Fonction pour retirer un client du dropdown après envoi du GQP
+  function retirerClientDuDropdown(numeroSoumission) {
+    log('🗑️ Retrait du client du dropdown:', numeroSoumission);
+
+    // Retirer de la liste locale
+    todosClients = todosClients.filter(client => client.numero_soumission !== numeroSoumission);
+
+    // Rafraîchir l'affichage du dropdown
+    afficherClientsGQP(todosClients);
+
+    // Réinitialiser le champ de recherche
+    const inputSearch = document.getElementById('clientSearchGQP');
+    if (inputSearch) {
+      inputSearch.value = '';
+    }
+
+    log('[OK] Client retiré, clients restants:', todosClients.length);
+  }
+
+  function ouvrirMenuGQP() {
+    const menu = document.getElementById('clientMenuGQP');
+    if (menu) {
+      menu.classList.remove('hidden');
+      // Charger les clients si pas encore fait
+      if (todosClients.length === 0) {
+        chargerClientsGQP();
+      }
+    }
+  }
+
+  function fermerMenuGQP() {
+    const menu = document.getElementById('clientMenuGQP');
+    if (menu) {
+      menu.classList.add('hidden');
+    }
+  }
+
+  async function selectionnerClientGQP(numeroSoumission, nomClient) {
+    log('[TARGET] Sélection client GQP:', numeroSoumission, nomClient);
+    
+    // Fermer le menu
+    fermerMenuGQP();
+    
+    // Mettre à jour l'input avec le nom du client
+    const inputSearch = document.getElementById('clientSearchGQP');
+    if (inputSearch) {
+      inputSearch.value = `${nomClient} - ${numeroSoumission}`;
+    }
+    
+    try {
+      // Récupérer les données complètes des ventes acceptées avec tous les champs
+      const response = await fetch(`/ventes/acceptees/${window.username}`);
+      if (!response.ok) throw new Error('Erreur récupération ventes acceptées');
+
+      const soumissions = await response.json();
+      
+      // Trouver la soumission correspondante par numéro
+      log('[DEBUG] Recherche soumission:', numeroSoumission);
+      log('[DEBUG] Soumissions disponibles:', soumissions.map(s => ({num: s.num, numero: s.numero_soumission})));
+      
+      const soumissionData = soumissions.find(s => 
+        s.num === numeroSoumission
+      );
+      if (!soumissionData) {
+        error('[ERROR] Soumission non trouvée pour:', numeroSoumission);
+        throw new Error('Soumission non trouvée');
+      }
+      
+      log('[OK] Soumission trouvée:', soumissionData);
+      log('[DEBUG] Clés disponibles:', Object.keys(soumissionData));
+      log('[DEBUG] clientNom:', soumissionData.clientNom);
+      log('[DEBUG] clientPrenom:', soumissionData.clientPrenom);
+      
+      // Remplir les champs cachés avec les vraies données de la soumission
+      document.getElementById('input-nom').value = soumissionData.clientNom || '';
+      document.getElementById('input-prenom').value = soumissionData.clientPrenom || '';
+      document.getElementById('input-adresse').value = soumissionData.adresse || '';
+      document.getElementById('input-telephone').value = soumissionData.telephone || '';
+      document.getElementById('input-courriel').value = soumissionData.courriel || '';
+      document.getElementById('input-endroit').value = soumissionData.endroit || '';
+      document.getElementById('input-username').value = window.username;
+      document.getElementById('input-numero-soumission').value = numeroSoumission || '';
+
+      // Log pour vérifier les valeurs
+      log('[BAN] Valeurs remplies dans les champs cachés:');
+      log('  - Nom:', soumissionData.clientNom);
+      log('  - Prénom:', soumissionData.clientPrenom);
+      log('  - Courriel:', soumissionData.courriel);
+      log('  - Endroit:', soumissionData.endroit);
+      log('  - Adresse:', soumissionData.adresse);
+      log('  - Téléphone:', soumissionData.telephone);
+      
+      // Stocker la sélection complète
+      selectedSoumission = {
+        nom_client: nomClient,
+        numero_soumission: numeroSoumission,
+        nom: soumissionData.clientNom,
+        prenom: soumissionData.clientPrenom,
+        adresse: soumissionData.adresse,
+        telephone: soumissionData.telephone,
+        courriel: soumissionData.courriel,
+        endroit: soumissionData.endroit,
+        prix: soumissionData.prix || ''
+      };
+      
+      log('[OK] Client GQP sélectionné avec données complètes:', selectedSoumission);
+      
+    } catch (err) {
+      error('[ERROR] Erreur récupération données soumission:', err);
+      
+      // Fallback: utiliser les données basiques
+      document.getElementById('input-nom').value = '';
+      document.getElementById('input-prenom').value = '';
+      document.getElementById('input-username').value = window.username;
+      document.getElementById('input-numero-soumission').value = numeroSoumission || '';
+
+      selectedSoumission = {
+        nom_client: nomClient,
+        numero_soumission: numeroSoumission
+      };
+    }
+
+    // Valider les champs après sélection du client
+    validateRequiredFields();
+  }
+
+  // Ancienne fonction loadTravauxACompleter remplacée par chargerClientsGQP
+
+  // Chargement des équipes depuis connect_agenda
+  async function loadEquipes() {
+    log('🔄 Chargement équipes pour:', window.username);
+    try {
+      const response = await fetch(`/get-equipes/${window.username}`);
+      if (!response.ok) throw new Error('Erreur chargement équipes');
+      
+      const equipes = await response.json();
+      log('[BAN] Équipes reçues:', equipes);
+      const menu = document.getElementById('equipeMenu');
+      
+      menu.innerHTML = '';
+      
+      if (!equipes || equipes.length === 0) {
+        log('[WARN] Aucune équipe trouvée');
+        const option = document.createElement('div');
+        option.className = 'dropdown-option';
+        option.textContent = 'Aucune équipe créée';
+        option.style.color = 'var(--text-gray)';
+        option.style.fontStyle = 'italic';
+        menu.appendChild(option);
+        return;
+      }
+      
+      log(`[OK] ${equipes.length} équipe(s) trouvée(s)`);
+      equipes.forEach(equipe => {
+        const option = document.createElement('div');
+        option.className = 'dropdown-option';
+        option.textContent = equipe.name || 'Équipe sans nom';
+        option.onclick = () => selectEquipe(equipe);
+        menu.appendChild(option);
+        log('[ADD] Équipe ajoutée:', equipe.name);
+      });
+    } catch (err) {
+      error('[ERROR] Erreur chargement équipes:', err);
+    }
+  }
+
+  // Event listener pour fermer le menu GQP en cliquant ailleurs
+  document.addEventListener('click', function(event) {
+    const input = document.getElementById('clientSearchGQP');
+    const menu = document.getElementById('clientMenuGQP');
+    
+    if (input && menu) {
+      // Si on clique pas sur l'input ni sur le menu, fermer
+      if (event.target !== input && !menu.contains(event.target)) {
+        fermerMenuGQP();
+      }
+    }
+  });
+
+  // Gestion du changement de statut dans la table
+  function toggleAssignmentStatus(badge, gqpId) {
+    const isCurrentlyAssigned = badge.classList.contains('status-assigned');
+    
+    if (isCurrentlyAssigned) {
+      // Changer vers "Non assigné"
+      badge.classList.remove('status-assigned');
+      badge.classList.add('status-unassigned');
+      badge.innerHTML = '<i class="fas fa-times-circle mr-1"></i>Non assigné';
+      log(`GQP ${gqpId} marqué comme non assigné`);
+    } else {
+      // Changer vers "Assigné à une équipe"
+      badge.classList.remove('status-unassigned');
+      badge.classList.add('status-assigned');
+      badge.innerHTML = '<i class="fas fa-check-circle mr-1"></i>Assigné';
+      log(`GQP ${gqpId} marqué comme assigné à une équipe`);
+    }
+    
+    // Ici tu pourras ajouter l'appel API pour sauvegarder le changement
+    // saveGqpAssignmentStatus(gqpId, !isCurrentlyAssigned);
+  }
+
+  // Configuration des options d'assignation
+  function setupAssignmentOptions() {
+    const assignToTeam = document.getElementById('assign-to-team');
+    const noAssignment = document.getElementById('no-assignment');
+    const teamSelectionContainer = document.getElementById('team-selection-container');
+    const btnText = document.getElementById('btnText');
+    
+    if (!assignToTeam || !noAssignment || !teamSelectionContainer || !btnText) {
+      error('[ERROR] Éléments d\'assignation non trouvés');
+      return;
+    }
+    
+    function updateUI() {
+      log('🔄 UpdateUI appelé - assignToTeam.checked:', assignToTeam.checked);
+
+      if (assignToTeam.checked) {
+        teamSelectionContainer.classList.remove('hidden');
+        teamSelectionContainer.style.display = 'block';
+        btnText.textContent = "Envoyer à l'équipe";
+        log('[OK] Affichage sélection équipe activé');
+      } else if (noAssignment.checked) {
+        teamSelectionContainer.classList.add('hidden');
+        teamSelectionContainer.style.display = 'none';
+        btnText.textContent = "Enregistrer sans envoyer";
+        // Reset équipe sélectionnée
+        const equipeToggle = document.getElementById('equipeToggle');
+        if (equipeToggle) {
+          const placeholder = equipeToggle.querySelector('.placeholder');
+          if (placeholder) {
+            placeholder.textContent = 'Choisissez une équipe';
+            placeholder.className = 'placeholder';
+            placeholder.style.color = 'var(--text-gray)';
+          }
+        }
+        selectedEquipe = null;
+        log('[OK] Sélection équipe masquée');
+      }
+      // Revalider les champs après changement de mode
+      validateRequiredFields();
+    }
+    
+    // Test direct des éléments
+    log('[DEBUG] Debug elements:', {
+      assignToTeam: assignToTeam,
+      noAssignment: noAssignment,
+      teamContainer: teamSelectionContainer,
+      btnText: btnText
+    });
+    
+    // Ajouter les événements avec des logs
+    assignToTeam.addEventListener('change', function(e) {
+      log('📻 Radio "Assigner à équipe" changé:', e.target.checked);
+      updateUI();
+    });
+    
+    noAssignment.addEventListener('change', function(e) {
+      log('📻 Radio "Ne pas assigner" changé:', e.target.checked);
+      updateUI();
+    });
+    
+    // Ajouter aussi des événements de clic direct sur les labels
+    const assignTeamOption = document.getElementById('assign-team-option');
+    const noAssignOption = document.getElementById('no-assign-option');
+    
+    if (assignTeamOption) {
+      assignTeamOption.addEventListener('click', function() {
+        log('🖱️ Clic sur div "Assigner à équipe"');
+        assignToTeam.checked = true;
+        noAssignment.checked = false;
+        updateUI();
+      });
+    }
+    
+    if (noAssignOption) {
+      noAssignOption.addEventListener('click', function() {
+        log('🖱️ Clic sur div "Ne pas assigner"');
+        noAssignment.checked = true;
+        assignToTeam.checked = false;
+        updateUI();
+      });
+    }
+    
+    // Par défaut, sélectionner "Assigner"
+    assignToTeam.checked = true;
+    updateUI();
+    
+    log('[OK] Options d\'assignation configurées avec debug');
+  }
+
+  // Fonction pour mettre à jour le compteur de GQP (définie tôt pour être disponible)
+  function updateGqpCount() {
+    const tbody = document.getElementById('gqp-envoys-body');
+    const countElement = document.getElementById('gqp-count');
+
+    if (!tbody || !countElement) return;
+
+    // Compter les lignes qui ne sont pas des états vides
+    const rows = tbody.querySelectorAll('tr:not(.empty-state-row)');
+    const emptyState = tbody.querySelector('.empty-state');
+    const count = emptyState ? 0 : rows.length;
+
+    countElement.textContent = count === 0 ? '0 en attente' : count === 1 ? '1 en attente' : `${count} en attente`;
+  }
+
+  // Fonction pour afficher un message de succès
+  function showSuccess(message) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #10b981;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 99999;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    `;
+    toast.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  // Fonction pour afficher un message d'erreur
+  function showError(message) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #ef4444;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 99999;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    `;
+    toast.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
+  }
+
+  // Fonction pour afficher le popup de confirmation de suppression GQP
+  function showDeleteGqpConfirmPopup(gqpId) {
+    // Créer l'overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'deleteGqpConfirmOverlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `;
+
+    // Créer la modal
+    const popup = document.createElement('div');
+    popup.style.cssText = `
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 450px;
+      width: 90%;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(71, 85, 105, 0.3);
+      transform: scale(0.9);
+      opacity: 0;
+      transition: all 0.3s ease;
+    `;
+
+    popup.innerHTML = `
+      <div style="text-align: center;">
+        <div style="width: 64px; height: 64px; background: rgba(239, 68, 68, 0.2); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center;">
+          <i class="fas fa-exclamation-triangle" style="color: #ef4444; font-size: 28px;"></i>
+        </div>
+        <h3 style="color: white; font-size: 24px; font-weight: bold; margin-bottom: 16px;">Supprimer cette soumission</h3>
+        <p style="color: #cbd5e1; font-size: 16px; line-height: 1.5; margin-bottom: 32px;">Êtes-vous sûr de vouloir supprimer cette soumission ? Cette action est irréversible.</p>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+          <button id="cancelDeleteGqpBtn" class="btn-secondary" style="font-size: 16px;">Annuler</button>
+          <button id="confirmDeleteGqpBtn" class="btn-primary" style="
+            background: #ef4444 !important;
+            border-color: #ef4444 !important;
+            border-radius: 24px !important;
+            font-size: 16px;
+          ">Supprimer</button>
+        </div>
+      </div>
+    `;
+
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+
+    // Animation d'apparition
+    setTimeout(() => {
+      popup.style.transform = 'scale(1)';
+      popup.style.opacity = '1';
+    }, 10);
+
+    // Gérer les clics
+    document.getElementById('cancelDeleteGqpBtn').addEventListener('click', () => {
+      overlay.remove();
+    });
+
+    document.getElementById('confirmDeleteGqpBtn').addEventListener('click', async () => {
+      try {
+        const username = localStorage.getItem('username');
+
+        // Appeler l'API pour supprimer du serveur
+        const response = await fetch('/delete-gqp-from-queue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: username,
+            gqp_id: gqpId.toString()
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Erreur serveur lors de la suppression');
+        }
+
+        log('[DELETE] GQP supprimé:', gqpId);
+
+        // Fermer le popup
+        overlay.remove();
+
+        // Supprimer de la vue Desktop
+        const tbody = document.getElementById('gqp-envoys-body');
+        const row = tbody.querySelector(`tr[data-gqp-id="${gqpId}"]`);
+        if (row) {
+          row.remove();
+        }
+
+        // Supprimer de la vue Mobile
+        const mobileList = document.getElementById('gqp-mobile-list');
+        const card = mobileList.querySelector(`.gqp-mobile-card[data-gqp-id="${gqpId}"]`);
+        if (card) {
+          card.remove();
+        }
+
+        // Vérifier si la liste est vide et ajouter message vide
+        const remainingRows = tbody.querySelectorAll('tr');
+        if (remainingRows.length === 0) {
+          const emptyRow = document.createElement('tr');
+          emptyRow.innerHTML = `
+            <td colspan="6" class="empty-state">
+              <i class="fas fa-inbox" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
+              <p style="font-size: 1rem;">Aucun GQP en attente d'envoi</p>
+            </td>
+          `;
+          tbody.appendChild(emptyRow);
+        }
+
+        const remainingCards = mobileList.querySelectorAll('.gqp-mobile-card');
+        if (remainingCards.length === 0) {
+          const emptyCard = document.createElement('div');
+          emptyCard.className = 'gqp-empty-mobile';
+          emptyCard.innerHTML = '<i class="fas fa-inbox"></i><p>Aucun GQP en attente</p>';
+          mobileList.appendChild(emptyCard);
+        }
+
+        // Mettre à jour le compteur
+        updateGqpCount();
+
+      } catch (err) {
+        error('[ERROR] Erreur suppression GQP:', err);
+        showError('Erreur lors de la suppression: ' + error.message);
+        overlay.remove();
+      }
+    });
+
+    // Fermer en cliquant sur l'overlay
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        overlay.remove();
+      }
+    });
+  }
+
+  // Fonction pour supprimer un GQP de la queue
+  function deleteGqpFromQueue(gqpId) {
+    showDeleteGqpConfirmPopup(gqpId);
+  }
+
+  // Fonction pour formater une date ISO en format français DD/MM/YYYY
+  function formatDateFr(dateStr) {
+    if (!dateStr) return 'N/A';
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return 'N/A';
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch (e) {
+      return 'N/A';
+    }
+  }
+
+  // Fonction pour ajouter une entrée à la table "GQP à envoyé"
+  function addGqpToTable(clientName, numeroSoumission, pdfUrl = null, gqpId = null, dateCreation = '', adresse = '', montant = '') {
+    const tbody = document.getElementById('gqp-envoys-body');
+    const mobileList = document.getElementById('gqp-mobile-list');
+
+    // Supprimer le message d'état vide s'il existe (desktop)
+    const emptyState = tbody.querySelector('.empty-state');
+    if (emptyState) {
+      emptyState.parentElement.remove();
+    }
+
+    // Supprimer le message d'état vide mobile
+    const mobileEmpty = mobileList.querySelector('.gqp-empty-mobile');
+    if (mobileEmpty) {
+      mobileEmpty.remove();
+    }
+
+    const finalGqpId = gqpId || Date.now(); // Utiliser l'ID de la base ou un ID temporaire
+    const displayDate = formatDateFr(dateCreation);
+    const displayAdresse = adresse || 'N/A';
+    const displayMontant = montant ? `${montant} $` : 'N/A';
+
+    // Vue Desktop: Table row (même format que soumission à envoyer)
+    const row = document.createElement('tr');
+    row.setAttribute('data-gqp-id', finalGqpId);
+    row.setAttribute('data-pdf-url', pdfUrl || '');
+
+    row.innerHTML = `
+      <td>${numeroSoumission}</td>
+      <td>${clientName}</td>
+      <td>${displayDate}</td>
+      <td>${displayAdresse}</td>
+      <td>${displayMontant}</td>
+      <td class="text-center">
+        <button onclick="assignToFormFromTable('${clientName}', '${numeroSoumission}', '${finalGqpId}')"
+                class="btn-primary action-btn-send"
+                title="Assigner">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button onclick="deleteGqpFromQueue('${finalGqpId}')"
+                class="btn-secondary action-btn-delete"
+                title="Supprimer">
+          <i class="fas fa-trash"></i>
+        </button>
+      </td>
+    `;
+
+    tbody.appendChild(row);
+
+    // Vue Mobile: Card (même format que soumission)
+    const card = document.createElement('div');
+    card.className = 'gqp-mobile-card';
+    card.setAttribute('data-gqp-id', finalGqpId);
+
+    card.innerHTML = `
+      <div class="gqp-card-header">
+        <div style="flex: 1;">
+          <div class="gqp-card-numero">GQP ${numeroSoumission}</div>
+          <div class="gqp-card-client">${clientName}</div>
+          <div class="gqp-card-adresse">
+            <i class="fas fa-map-marker-alt" style="color: var(--primary-green); margin-top: 2px;"></i>
+            <span>${displayAdresse}</span>
+          </div>
+        </div>
+        <div class="gqp-card-montant">${displayMontant}</div>
+      </div>
+      <div class="gqp-card-actions">
+        <button onclick="assignToFormFromTable('${clientName}', '${numeroSoumission}', '${finalGqpId}')" class="gqp-action-btn assign-btn">
+          <i class="fas fa-edit"></i>
+          <span>Assigner</span>
+        </button>
+        <button onclick="deleteGqpFromQueue('${finalGqpId}')" class="gqp-action-btn delete-btn">
+          <i class="fas fa-trash"></i>
+          <span>Supprimer</span>
+        </button>
+      </div>
+    `;
+
+    mobileList.appendChild(card);
+
+    // Mettre à jour le compteur
+    updateGqpCount();
+
+    log('[OK] GQP ajouté à la table et mobile:', clientName, numeroSoumission, 'ID:', finalGqpId);
+  }
+
+  // Sélection d'une équipe
+  function selectEquipe(equipe) {
+    const toggle = document.getElementById('equipeToggle');
+    if (!toggle) return;
+
+    const placeholder = toggle.querySelector('.placeholder');
+    if (!placeholder) return;
+
+    // Afficher le nom de l'équipe
+    const equipeName = equipe.name || 'Équipe sans nom';
+    placeholder.textContent = equipeName;
+    placeholder.className = 'selected';
+    placeholder.style.color = 'var(--text-light)';
+
+    // Stocker l'équipe sélectionnée (objet complet avec painters)
+    selectedEquipe = equipe;
+
+    // Fermer le dropdown
+    const equipeMenu = document.getElementById('equipeMenu');
+    if (equipeMenu) equipeMenu.classList.add('hidden');
+    if (toggle) toggle.classList.remove('active');
+
+    // Valider les champs après sélection
+    validateRequiredFields();
+  }
+
+  // Configuration du formulaire
+  function setupForm() {
+    const form = document.getElementById('gqp-form');
+    const generateButton = document.getElementById('generateButton');
+    const btnText = document.getElementById('btnText');
+    const etapes = document.getElementById('etapes');
+    const voirPDFBtn = document.getElementById('voirPDFBtn');
+
+    // Setup original functionality from gqp.html for "Envoyer à l'équipe" button
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      log("Soumission du formulaire");
+
+      document.getElementById("input-username").value = window.username;
+
+      if (!etapes.value.trim()) {
+        showError("Veuillez remplir les étapes.");
+        return;
+      }
+
+      btnText.textContent = "Envoi en cours...";
+      generateButton.disabled = true;
+
+      // Afficher l'animation de chargement
+      showLoadingAnimation('Génération du GQP...');
+
+      try {
+        let response;
+        
+        // Debug des variables d'état
+        log('[DEBUG] DEBUG - isAutoFilledFromTable:', isAutoFilledFromTable);
+        log('[DEBUG] DEBUG - currentGqpId:', currentGqpId);
+        
+        // Si on vient d'un auto-fill depuis la table, utiliser l'endpoint pour données stockées
+        if (isAutoFilledFromTable && currentGqpId) {
+          log('🔄 Génération PDF depuis données stockées pour GQP:', currentGqpId);
+          
+          const gqpData = {
+            nom: document.getElementById('input-nom').value,
+            prenom: document.getElementById('input-prenom').value,
+            adresse: document.getElementById('input-adresse').value,
+            telephone: document.getElementById('input-telephone').value,
+            courriel: document.getElementById('input-courriel').value,
+            endroit: document.getElementById('input-endroit').value,
+            etapes: etapes.value,
+            heure: document.getElementById('heure').value,
+            montant: document.getElementById('montant').value
+          };
+          
+          response = await fetch('/generate-gqp-from-stored', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              username: window.username,
+              gqp_id: currentGqpId,
+              gqp_data: gqpData
+            })
+          });
+        } else {
+          // Sinon, utiliser l'endpoint classique avec FormData
+          log('🔄 Génération PDF classique avec FormData');
+          
+          const formData = new FormData(document.getElementById("gqp-form"));
+          allFiles.forEach(file => {
+            log("Fichier attaché :", file.name);
+            formData.append("photos", file);
+          });
+          
+          response = await fetch('/generate-gqp-pdf', {
+            method: 'POST',
+            body: formData
+          });
+        }
+        log("Réponse serveur :", response);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erreur lors de la génération du GQP : ${errorText}`);
+        }
+
+        const json = await response.json();
+        const lienPdf = json.lien_pdf || json.pdf_url;
+
+        // Vérifier le type d'assignation sélectionné
+        const assignToTeam = document.getElementById('assign-to-team').checked;
+        const noAssignment = document.getElementById('no-assignment').checked;
+        
+        if (assignToTeam) {
+          // Mode: Assigner à une équipe
+          if (!selectedEquipe) {
+            showError("Veuillez sélectionner une équipe");
+            btnText.textContent = "Erreur";
+            generateButton.disabled = false;
+            return;
+          }
+          
+          const emails = selectedEquipe?.painters
+            .map(p => p.courriel)
+            .filter(e => e && e.trim() !== "") || [];
+
+          if (emails.length === 0) {
+            showError("L'équipe sélectionnée ne contient aucun email valide");
+            btnText.textContent = "Erreur";
+            generateButton.disabled = false;
+            return;
+          }
+
+          // Préparation du payload pour l'envoi d'email
+          const mailPayload = {
+            username: window.username,
+            nom: document.getElementById("input-nom").value,
+            prenom: document.getElementById("input-prenom").value,
+            adresse: document.getElementById("input-adresse").value,
+            endroit: document.getElementById("input-endroit").value,
+            emails: emails,
+            lien_pdf: lienPdf
+          };
+
+          // Envoi de l'email via API
+          const mailResponse = await fetch('/envoyer-gqp-email-simple', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(mailPayload)
+          });
+
+          if (!mailResponse.ok) {
+            const errText = await mailResponse.text();
+            throw new Error(`Erreur lors de l'envoi des mails : ${errText}`);
+          }
+
+          log('[OK] Email envoyé avec succès, maintenant liaison du GQP au client...');
+
+          // NOUVEAU: Lier le GQP au client après envoi email réussi
+          try {
+            const liaisonPayload = {
+              username: window.username,
+              client_name: `${document.getElementById("input-prenom").value} ${document.getElementById("input-nom").value}`.trim(),
+              numero_soumission: selectedSoumission?.numero_soumission || "",
+              gqp_url: lienPdf
+            };
+
+            log('🔗 Tentative liaison GQP:', liaisonPayload);
+
+            const liaisonResponse = await fetch('/lier-gqp-simple', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(liaisonPayload)
+            });
+
+            if (liaisonResponse.ok) {
+              const liaisonResult = await liaisonResponse.json();
+              log('[OK] Liaison GQP réussie:', liaisonResult);
+            } else {
+              warn('[WARN] Échec liaison GQP:', await liaisonResponse.text());
+            }
+          } catch (liaisonError) {
+            error('[ERROR] Erreur lors de la liaison GQP:', liaisonError);
+            // Ne pas faire échouer le processus global si la liaison échoue
+          }
+
+          // Afficher l'animation de succès
+          showSuccessAnimation(`GQP envoyé à l'équipe ${selectedEquipe.nom}!`);
+
+          btnText.innerHTML = `Envoyé <svg class="w-4 h-4 inline ml-1 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>`;
+
+          // Retirer immédiatement le client du dropdown
+          if (selectedSoumission?.numero_soumission) {
+            retirerClientDuDropdown(selectedSoumission.numero_soumission);
+          }
+
+          // Recharger la liste des clients pour s'assurer de la synchronisation avec le serveur
+          log('🔄 Rechargement de la liste des clients après envoi GQP');
+          await chargerClientsGQP();
+
+          // Si c'est un auto-fill depuis la table, supprimer le GQP de la queue serveur et de la table
+          if (isAutoFilledFromTable && currentGqpId) {
+            log('[DELETE] Suppression du GQP de la queue après envoi:', currentGqpId);
+            
+            try {
+              // Supprimer du serveur
+              const removeResponse = await fetch('/remove-gqp-from-queue', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  username: window.username,
+                  gqp_id: currentGqpId
+                })
+              });
+              
+              if (removeResponse.ok) {
+                log('[OK] GQP supprimé de la queue serveur');
+              }
+            } catch (err) {
+              error('[WARN] Erreur suppression serveur:', err);
+            }
+            
+            // Supprimer de la table UI
+            removeGqpFromTable(currentGqpId);
+          }
+          
+        } else if (noAssignment) {
+          // Mode: Ne pas assigner - sauvegarder en base et ajouter à la table "GQP à envoyé"
+          const clientName = selectedSoumission?.nom_client || "Client inconnu";
+          const numeroSoumission = selectedSoumission?.numero_soumission || "N/A";
+          
+          // Préparer les données GQP pour la sauvegarde
+          const gqpData = {
+            nom: document.getElementById('input-nom').value,
+            prenom: document.getElementById('input-prenom').value,
+            adresse: document.getElementById('input-adresse').value,
+            telephone: document.getElementById('input-telephone').value,
+            courriel: document.getElementById('input-courriel').value,
+            endroit: document.getElementById('input-endroit').value,
+            heure: heure.value,
+            montant: montant.value,
+            etapes: etapes.value,
+            prix: selectedSoumission?.prix || '',
+            images_info: allFiles.map(file => ({
+              name: file.name,
+              size: file.size,
+              type: file.type
+            }))
+          };
+          
+          // Sauvegarder en base via l'API avec les images
+          try {
+            const formData = new FormData();
+            formData.append('username', window.username);
+            formData.append('client_name', clientName);
+            formData.append('numero_soumission', numeroSoumission);
+            formData.append('gqp_data', JSON.stringify(gqpData));
+            formData.append('pdf_url', lienPdf);
+            
+            // Ajouter toutes les images
+            allFiles.forEach((file, index) => {
+              formData.append('images', file);
+            });
+            
+            const saveResponse = await fetch('/save-gqp-to-queue', {
+              method: 'POST',
+              body: formData
+            });
+            
+            if (!saveResponse.ok) {
+              throw new Error('Erreur sauvegarde GQP');
+            }
+            
+            const saveResult = await saveResponse.json();
+            log('[OK] GQP sauvegardé en base:', saveResult.gqp_id);
+
+            // Ajouter à la table IMMÉDIATEMENT avec l'ID de la base et toutes les données
+            const dateCreation = new Date().toISOString();
+            const adresseDisplay = gqpData.adresse || '';
+            const prixDisplay = gqpData.prix || '';
+            addGqpToTable(clientName, numeroSoumission, lienPdf, saveResult.gqp_id, dateCreation, adresseDisplay, prixDisplay);
+
+          } catch (err) {
+            error('[ERROR] Erreur sauvegarde GQP:', err);
+            // Ajouter quand même à la table en mode fallback avec les données disponibles
+            const dateCreation = new Date().toISOString();
+            const adresseDisplay = gqpData.adresse || '';
+            const prixDisplay = gqpData.prix || '';
+            addGqpToTable(clientName, numeroSoumission, lienPdf, null, dateCreation, adresseDisplay, prixDisplay);
+          }
+
+          // Afficher l'animation de succès
+          showSuccessAnimation('GQP enregistré avec succès!');
+          btnText.innerHTML = `GQP généré <svg class="w-4 h-4 inline ml-1 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>`;
+        }
+
+      } catch (err) {
+        error("Erreur réseau :", err);
+        // Masquer l'animation de chargement
+        hideLoadingAnimation();
+        showError(err.message || "Erreur serveur");
+        btnText.textContent = "Erreur serveur";
+      } finally {
+        setTimeout(() => {
+          btnText.textContent = "Envoyer à l'équipe";
+          generateButton.disabled = false;
+          allFiles = [];
+          selectedImages = [];
+          updatePreview();
+          currentStep = 1;
+          etapes.value = "";
+          resetForm();
+          // Reset des variables d'auto-fill
+          isAutoFilledFromTable = false;
+          currentGqpId = null;
+        }, 3000);
+      }
+    });
+
+    // Setup "Voir en PDF" button functionality from gqp.html
+    voirPDFBtn.addEventListener("click", async () => {
+      if (!etapes.value.trim()) {
+        showError("Veuillez remplir les étapes.");
+        return;
+      }
+
+      voirPDFBtn.disabled = true;
+      voirPDFBtn.textContent = "Génération...";
+
+      const formData = new FormData(document.getElementById("gqp-form"));
+      allFiles.forEach(file => formData.append("photos", file));
+
+      // Log pour debug - voir ce qui est envoyé
+      log('📤 FormData envoyée au backend:');
+      for (let [key, value] of formData.entries()) {
+        log(`  ${key}: ${value}`);
+      }
+
+      try {
+        const response = await fetch('/generate-gqp-pdf', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erreur lors de la génération du GQP : ${errorText}`);
+        }
+
+        const json = await response.json();
+        const lienPdf = json.lien_pdf;
+
+        // Afficher le PDF dans la modal (voir gqp.html pour l'implémentation complète)
+        showPDFModal(lienPdf);
+
+      } catch (err) {
+        showError(err.message || "Erreur lors de la génération du PDF");
+      } finally {
+        voirPDFBtn.disabled = false;
+        voirPDFBtn.textContent = "Voir GQP";
+      }
+    });
+  }
+
+  // Fonction d'erreur
+  function showError(msg) {
+    alert(msg); // Simple pour l'instant
+  }
+
+  // Fonction pour afficher le GQP (maintenant en HTML avec support vidéo)
+  async function showPDFModal(lienGqp) {
+    // Ouvrir le GQP HTML dans une modal popup intégrée
+    log('[GQP] Ouverture du GQP dans modal:', lienGqp);
+
+    const modal = document.getElementById('gqpPreviewModal');
+    const iframe = document.getElementById('gqpPreviewFrame');
+
+    iframe.src = lienGqp;
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    return; // Fin de la fonction - pas besoin du code PDF ci-dessous
+
+    // --- ANCIEN CODE PDF (conservé pour référence) ---
+    try {
+      const pdfjsLib = window['pdfjs-dist/build/pdf'];
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
+
+      const pdf = await pdfjsLib.getDocument(lienGqp).promise;
+      log('[FILE] PDF chargé avec', pdf.numPages, 'pages');
+
+      const totalPages = pdf.numPages;
+      const canvasContainer = document.getElementById("pdfCanvasContainer");
+      
+      // Variables pour le zoom - Base 150% = 1.5 (affiché comme 100%)
+      let currentScale = 1.5;
+      const zoomLevels = [1.2, 1.5, 1.8]; // 80%, 100%, 120%
+      let currentZoomIndex = 1; // Commence à 100% (index 1)
+      
+      // Vider le conteneur et créer un canvas pour chaque page
+      canvasContainer.innerHTML = '';
+      const canvases = [];
+      const contexts = [];
+      
+      // Fonction pour rendre toutes les pages
+      async function renderAllPages(scale) {
+        const containerWidth = document.getElementById("pdfScrollContainer").clientWidth - 40;
+        const maxWidth = containerWidth * 0.95;
+        
+        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+          const page = await pdf.getPage(pageNum);
+          const canvas = canvases[pageNum - 1];
+          const context = contexts[pageNum - 1];
+          
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          const viewport = page.getViewport({ scale: scale });
+          
+          if (viewport.width > maxWidth) {
+            const adjustedScale = scale * (maxWidth / viewport.width);
+            const adjustedViewport = page.getViewport({ scale: adjustedScale });
+            canvas.width = adjustedViewport.width;
+            canvas.height = adjustedViewport.height;
+            await page.render({ canvasContext: context, viewport: adjustedViewport }).promise;
+          } else {
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+          }
+        }
+        
+        // Mettre à jour l'affichage du zoom
+        const displayPercentage = Math.round((scale / 1.5) * 100);
+        document.getElementById("zoomLevel").textContent = `${displayPercentage}%`;
+        updateZoomButtons();
+      }
+      
+      // Créer les canvas pour toutes les pages
+      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        const canvas = document.createElement('canvas');
+        canvas.className = 'pdf-page-canvas';
+        canvas.id = `pdfCanvas-${pageNum}`;
+        
+        const context = canvas.getContext('2d');
+        canvases.push(canvas);
+        contexts.push(context);
+        canvasContainer.appendChild(canvas);
+      }
+      
+      // Fonction pour mettre à jour l'état des boutons de zoom
+      function updateZoomButtons() {
+        const zoomInBtn = document.getElementById("zoomIn");
+        const zoomOutBtn = document.getElementById("zoomOut");
+        
+        if (currentZoomIndex >= zoomLevels.length - 1) {
+          zoomInBtn.style.opacity = "0.5";
+          zoomInBtn.style.cursor = "not-allowed";
+          zoomInBtn.disabled = true;
+        } else {
+          zoomInBtn.style.opacity = "1";
+          zoomInBtn.style.cursor = "pointer";
+          zoomInBtn.disabled = false;
+        }
+        
+        if (currentZoomIndex <= 0) {
+          zoomOutBtn.style.opacity = "0.5";
+          zoomOutBtn.style.cursor = "not-allowed";
+          zoomOutBtn.disabled = true;
+        } else {
+          zoomOutBtn.style.opacity = "1";
+          zoomOutBtn.style.cursor = "pointer";
+          zoomOutBtn.disabled = false;
+        }
+      }
+      
+      // Rendu initial de toutes les pages
+      await renderAllPages(currentScale);
+      
+      // Contrôles de zoom
+      document.getElementById("zoomIn").onclick = async () => {
+        if (currentZoomIndex < zoomLevels.length - 1) {
+          currentZoomIndex++;
+          currentScale = zoomLevels[currentZoomIndex];
+          await renderAllPages(currentScale);
+        }
+      };
+      
+      document.getElementById("zoomOut").onclick = async () => {
+        if (currentZoomIndex > 0) {
+          currentZoomIndex--;
+          currentScale = zoomLevels[currentZoomIndex];
+          await renderAllPages(currentScale);
+        }
+      };
+      
+      // Support du zoom avec la molette de la souris
+      document.getElementById("pdfScrollContainer").addEventListener("wheel", async (e) => {
+        if (e.ctrlKey) {
+          e.preventDefault();
+          if (e.deltaY < 0) {
+            // Zoom in
+            if (currentZoomIndex < zoomLevels.length - 1) {
+              currentZoomIndex++;
+              currentScale = zoomLevels[currentZoomIndex];
+              await renderAllPages(currentScale);
+            }
+          } else {
+            // Zoom out
+            if (currentZoomIndex > 0) {
+              currentZoomIndex--;
+              currentScale = zoomLevels[currentZoomIndex];
+              await renderAllPages(currentScale);
+            }
+          }
+        }
+      });
+      
+      // Afficher modal et overlay
+      document.getElementById("pdfModal").classList.remove("hidden");
+      document.getElementById("pdfOverlay").style.display = "block";
+      document.getElementById("closePdfBtn").classList.remove("hidden");
+      
+      // Bloquer le scroll de l'arrière-plan
+      document.body.style.overflow = "hidden";
+      
+      // Forcer un nouveau rendu après affichage du modal
+      setTimeout(async () => {
+        await renderAllPages(currentScale);
+      }, 100);
+      
+      // Fonction de fermeture
+      const closePDF = () => {
+        document.getElementById("pdfModal").classList.add("hidden");
+        document.getElementById("pdfOverlay").style.display = "none";
+        document.getElementById("closePdfBtn").classList.add("hidden");
+        
+        // Nettoyer tous les canvas
+        canvases.forEach(canvas => {
+          const context = canvas.getContext('2d');
+          context.clearRect(0, 0, canvas.width, canvas.height);
+        });
+        canvasContainer.innerHTML = '';
+        
+        URL.revokeObjectURL(lienPdf);
+        
+        // Restaurer le scroll de l'arrière-plan
+        document.body.style.overflow = "";
+        
+        // Nettoyer les event listeners
+        document.getElementById("zoomIn").onclick = null;
+        document.getElementById("zoomOut").onclick = null;
+      };
+      
+      document.getElementById("closePdfBtn").onclick = closePDF;
+      // Fermer aussi au clic sur l'overlay
+      document.getElementById("pdfOverlay").onclick = closePDF;
+      
+    } catch (err) {
+      error('[ERROR] Erreur affichage PDF:', err);
+      alert('Erreur lors de l\'affichage du PDF: ' + error.message);
+    }
+  }
+
+  // Validation du formulaire
+  function validateForm() {
+    const nom = document.getElementById('input-nom').value;
+    const clientSearch = document.getElementById('clientSearchGQP').value;
+    const assignToTeam = document.getElementById('assign-to-team').checked;
+    
+    if (!nom || !clientSearch || !selectedSoumission) {
+      alert('Veuillez sélectionner une soumission.');
+      return false;
+    }
+    
+    // Si on veut assigner à une équipe, vérifier qu'une équipe est sélectionnée
+    if (assignToTeam && !selectedEquipe) {
+      alert('Veuillez sélectionner une équipe.');
+      return false;
+    }
+    
+    return true;
+  }
+
+  // Soumission du formulaire
+  async function submitForm() {
+    const formData = new FormData();
+    
+    // Ajouter tous les champs
+    const form = document.getElementById('gqp-form');
+    const inputs = form.querySelectorAll('input, textarea');
+    
+    inputs.forEach(input => {
+      if (input.type !== 'file') {
+        formData.append(input.name, input.value);
+      }
+    });
+    
+    // Ajouter les images
+    selectedImages.forEach((image, index) => {
+      formData.append('photos', image.file);
+    });
+    
+    const response = await fetch('/generer-gqp', {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Erreur serveur: ${response.status}`);
+    }
+    
+    // Télécharger le PDF
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `GQP_${new Date().toISOString().split('T')[0]}.pdf`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
+    // alert('GQP généré avec succès!'); // Retiré
+  }
+
+  // Réinitialisation du formulaire
+  function resetForm() {
+    document.getElementById('gqp-form').reset();
+    selectedImages = [];
+    updatePreview();
+    
+    // Réinitialiser les dropdowns
+    document.querySelectorAll('.placeholder, .selected').forEach(el => {
+      el.textContent = el.closest('#soumissionToggle') ? 
+        'Choisissez une soumission' : 
+        'Choisissez une équipe';
+      el.className = 'placeholder text-gray-400';
+    });
+  }
+
+  // Menu mobile
+  function setupMobileMenu() {
+    const mobileToggle = document.getElementById('mobile-menu-toggle');
+    const mobileAccountBtn = document.getElementById('mobile-account-menu-button');
+    const mobileAccountDropdown = document.getElementById('mobile-account-dropdown');
+    
+    if (mobileToggle) {
+      mobileToggle.addEventListener('click', toggleMobileMenu);
+    }
+    
+    if (mobileAccountBtn && mobileAccountDropdown) {
+      mobileAccountBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        mobileAccountDropdown.classList.toggle('hidden');
+      });
+    }
+  }
+
+  function toggleMobileMenu() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.querySelector('.mobile-overlay');
+    
+    sidebar.classList.toggle('mobile-open');
+    overlay.classList.toggle('active');
+  }
+
+  function closeMobileMenu() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.querySelector('.mobile-overlay');
+
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('active');
+  }
+
+  // Navigation: Retour aux outils
+  function goBackToOutils() {
+    // Vérifier si on est dans une iframe (système outils-mobile.html)
+    if (window.parent && window.parent !== window && typeof window.parent.returnToToolsGrid === 'function') {
+      // Nouveau système: appeler la fonction du parent pour retourner à la grille
+      console.log('[GQP] Retour à la grille via parent.returnToToolsGrid()');
+      window.parent.returnToToolsGrid();
+    } else {
+      // Ancien système: utiliser l'historique (pour compatibilité)
+      console.log('[GQP] Retour via history.back()');
+      window.history.back();
+    }
+  }
+
+  // Menu compte - géré plus bas dans le DOM loaded
+
+  // Script pour gestion menu actif - EXACT COPY de new_dashboard.html
+  function activateCurrentPageMenu() {
+    const currentPath = window.location.pathname;
+    log('🌐 Page actuelle détectée:', currentPath);
+    
+    const allMenuLinks = document.querySelectorAll('#sidebar a');
+    allMenuLinks.forEach(link => {
+      link.classList.remove('menu-active');
+      link.removeAttribute('data-menu-state');
+    });
+    
+    const pageMap = {
+      '/gqp': '/gqp',
+      '/newgqp': '/gqp'
+    };
+    
+    const targetPath = pageMap[currentPath] || currentPath;
+    const targetLink = document.querySelector(`#sidebar a[data-path="${targetPath}"]`);
+    
+    if (targetLink) {
+      targetLink.classList.add('menu-active');
+      targetLink.setAttribute('data-menu-state', 'active');
+      log('[OK] Menu activé pour:', targetLink.textContent.trim());
+    } else {
+      log('[WARN] Aucun menu trouvé pour la page:', currentPath);
+    }
+  }
+
+  // S'assurer que le menu correct reste actif selon la page
+  document.addEventListener('DOMContentLoaded', function() {
+    activateCurrentPageMenu();
+    setTimeout(activateCurrentPageMenu, 150);
+    setTimeout(activateCurrentPageMenu, 300);
+  });
+
+  // Global function for entrepreneur selector to reload data
+  window.loadGQPData = async function() {
+    log("🔄 Rechargement COMPLET des données GQP pour l'entrepreneur sélectionné:", window.username);
+
+    // Supprimer l'anti-flash CSS pour rendre le contenu visible
+    const antiFlashStyle = document.getElementById('coach-anti-flash-css');
+    if (antiFlashStyle) {
+      antiFlashStyle.remove();
+      log('[GQP] Anti-flash CSS supprimé');
+    }
+
+    // 1. Réinitialiser le formulaire
+    if (typeof resetForm === 'function') {
+      resetForm();
+      log('[GQP] Formulaire réinitialisé');
+    }
+
+    // 2. Recharger toutes les données (clients, équipes)
+    await loadData();
+
+    // 3. Recharger la queue des GQP à envoyer
+    if (typeof loadGqpQueue === 'function') {
+      await loadGqpQueue();
+      log('[GQP] Queue GQP à envoyer rechargée');
+    }
+
+    log('[GQP] Interface COMPLÈTEMENT rechargée pour:', window.username);
+  };
+</script>
+
+<!-- Script commun -->
+<script src="/common.js"></script>
+<script src="/entrepreneur-selector.js"></script>
+
+<script>
+// Fonction logout
+function logout() {
+  localStorage.removeItem("qwotaCredentials");
+  localStorage.removeItem("rememberMe");
+  window.location.href = "/login";
+}
+
+// Menu compte utilisateur - s'assurer que le DOM est chargé
+document.addEventListener('DOMContentLoaded', function() {
+  const btn = document.getElementById("account-dropdown-toggle");
+  const dropdown = document.getElementById("account-dropdown");
+
+  log('[DEBUG] Bouton account trouvé:', btn);
+  log('[DEBUG] Dropdown trouvé:', dropdown);
+
+  if (btn && dropdown) {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      log('👆 Click sur account button');
+      
+      if (dropdown.classList.contains("hidden")) {
+        dropdown.classList.remove("hidden");
+        log('[UNLOCK] Dropdown ouvert');
+      } else {
+        dropdown.classList.add("hidden");
+        log('[LOCK] Dropdown fermé');
+      }
+      
+      log('[BAN] Dropdown classes:', dropdown.className);
+    });
+
+    window.addEventListener("click", (e) => {
+      if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.add("hidden");
+      }
+    });
+    log('[OK] Event listeners ajoutés');
+  } else {
+    // error('[ERROR] Bouton ou dropdown non trouvé');
+  }
+  
+  // Variables globales pour le modal  
+  let modalSelectedEquipe = null;
+  let currentGqpData = null;
+
+  // Fonction pour auto-remplir le formulaire depuis la table GQP
+  async function assignToFormFromTable(clientName, numeroSoumission, gqpId) {
+    try {
+      log('🔄 Auto-remplissage formulaire depuis table GQP:', { clientName, numeroSoumission, gqpId });
+      
+      // 1. Récupérer les données GQP depuis la queue (déjà chargée)
+      const response = await fetch(`/get-gqp-queue/${window.username}`);
+      if (!response.ok) {
+        throw new Error('Impossible de récupérer la queue GQP');
+      }
+      
+      const queueData = await response.json();
+      
+      // 2. Trouver le GQP correspondant par ID
+      const gqpItem = queueData.gqps.find(item => item.id === gqpId);
+      if (!gqpItem) {
+        throw new Error('GQP non trouvé dans la queue');
+      }
+      
+      const gqpData = gqpItem.gqp_data;
+      log('[BAN] Données GQP récupérées:', gqpData);
+      
+      // 3. Auto-remplir tous les champs cachés
+      document.getElementById('input-nom').value = gqpData.nom || '';
+      document.getElementById('input-prenom').value = gqpData.prenom || '';
+      document.getElementById('input-adresse').value = gqpData.adresse || '';
+      document.getElementById('input-telephone').value = gqpData.telephone || '';
+      document.getElementById('input-courriel').value = gqpData.courriel || '';
+      document.getElementById('input-endroit').value = gqpData.endroit || '';
+      document.getElementById('input-username').value = window.username;
+      document.getElementById('input-numero-soumission').value = numeroSoumission || '';
+
+      // 4. Remplir les champs visibles
+      document.getElementById('heure').value = gqpData.heure || '';
+      document.getElementById('montant').value = gqpData.montant || '';
+      document.getElementById('etapes').value = gqpData.etapes || '';
+      
+      // 5. Remplir le champ de recherche client
+      const clientSearch = document.getElementById('clientSearchGQP');
+      if (clientSearch) {
+        clientSearch.value = `${clientName} - ${numeroSoumission}`;
+      }
+      
+      // 6. Sélectionner "Assigner à équipe" automatiquement
+      const assignToTeam = document.getElementById('assign-to-team');
+      if (assignToTeam) {
+        assignToTeam.checked = true;
+        // Déclencher l'event pour mettre à jour l'UI
+        assignToTeam.dispatchEvent(new Event('change'));
+      }
+      
+      // 7. Gérer les images - charger les images stockées réellement
+      allFiles = [];
+      selectedImages = [];
+      updatePreview();
+      
+      // Nettoyer les anciens messages d'info
+      const oldInfoMessages = document.querySelectorAll('.image-info-message');
+      oldInfoMessages.forEach(msg => msg.remove());
+      
+      // Charger les images réelles depuis le serveur
+      if (gqpItem.images && gqpItem.images.length > 0) {
+        log(`📸 Chargement de ${gqpItem.images.length} image(s) stockée(s):`, gqpItem.images);
+        
+        for (const imageInfo of gqpItem.images) {
+          try {
+            // Récupérer l'image depuis le serveur
+            const imageResponse = await fetch(`/get-gqp-images/${window.username}/${gqpId}/${imageInfo.filename}`);
+            if (imageResponse.ok) {
+              const imageBlob = await imageResponse.blob();
+              
+              // Créer un File object depuis le blob
+              const file = new File([imageBlob], imageInfo.original_name, { type: imageBlob.type });
+              
+              // Ajouter aux arrays
+              allFiles.push(file);
+              
+              // Créer une URL pour l'aperçu
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                selectedImages.push({
+                  file: file,
+                  src: e.target.result,
+                  id: Date.now() + Math.random()
+                });
+                updatePreview();
+              };
+              reader.readAsDataURL(file);
+              
+              log(`[OK] Image "${imageInfo.original_name}" chargée avec succès`);
+            } else {
+              warn(`[WARN] Impossible de charger l'image "${imageInfo.original_name}"`);
+            }
+          } catch (err) {
+            error(`[ERROR] Erreur lors du chargement de l'image "${imageInfo.original_name}":`, err);
+          }
+        }
+        
+        log(`[OK] Images auto-remplies: ${gqpItem.images.length} image(s) chargée(s)`);
+      } else {
+        log('📸 Aucune image stockée trouvée pour ce GQP');
+      }
+      
+      // 7.5. Marquer comme auto-rempli depuis la table
+      isAutoFilledFromTable = true;
+      currentGqpId = gqpId;
+      
+      log('[FIX] Variables d\'état définies:', { isAutoFilledFromTable, currentGqpId });
+      
+      // 8. Stocker la sélection
+      selectedSoumission = {
+        nom_client: clientName,
+        numero_soumission: numeroSoumission,
+        nom: gqpData.nom,
+        prenom: gqpData.prenom,
+        adresse: gqpData.adresse,
+        telephone: gqpData.telephone,
+        courriel: gqpData.courriel,
+        endroit: gqpData.endroit
+      };
+      
+      // 9. Scroller vers le haut pour voir le formulaire
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      // 10. Valider les champs pour activer les boutons
+      validateRequiredFields();
+
+      log('[OK] Formulaire auto-rempli avec succès');
+
+    } catch (err) {
+      error('[ERROR] Erreur auto-remplissage:', err);
+      alert('Erreur lors du remplissage automatique: ' + error.message);
+    }
+  }
+
+  // Rendre la fonction accessible globalement pour les onclick HTML
+  window.assignToFormFromTable = assignToFormFromTable;
+  window.removeGqpFromTable = removeGqpFromTable;
+
+  // Fonctions pour le modal d'assignation
+  function openAssignModal(clientName, numeroSoumission, gqpId) {
+    currentGqpId = gqpId;
+    currentGqpData = { clientName, numeroSoumission };
+    
+    // Remplir les informations du modal
+    document.getElementById('modal-client-name').textContent = clientName;
+    document.getElementById('modal-soumission-number').textContent = numeroSoumission;
+    
+    // Reset équipe sélectionnée
+    modalSelectedEquipe = null;
+    const modalToggle = document.getElementById('modal-equipe-toggle');
+    const placeholder = modalToggle.querySelector('.placeholder');
+    if (placeholder) {
+      placeholder.textContent = 'Choisissez une équipe';
+      placeholder.className = 'placeholder';
+      placeholder.style.color = 'var(--text-gray)';
+    }
+    
+    // Charger les équipes dans le modal
+    setupModalEquipeDropdown();
+    
+    // Afficher le modal
+    document.getElementById('assign-gqp-modal').classList.remove('hidden');
+  }
+
+  function closeAssignModal() {
+    document.getElementById('assign-gqp-modal').classList.add('hidden');
+    currentGqpId = null;
+    modalSelectedEquipe = null;
+    currentGqpData = null;
+  }
+
+  function setupModalEquipeDropdown() {
+    const modalToggle = document.getElementById('modal-equipe-toggle');
+    const modalMenu = document.getElementById('modal-equipe-menu');
+    
+    if (!modalToggle || !modalMenu) return;
+    
+    // Event pour ouvrir/fermer le dropdown
+    modalToggle.addEventListener('click', function() {
+      modalMenu.classList.toggle('hidden');
+      loadModalEquipes();
+    });
+    
+    // Fermer le dropdown si on clique ailleurs
+    document.addEventListener('click', function(e) {
+      if (!modalToggle.contains(e.target) && !modalMenu.contains(e.target)) {
+        modalMenu.classList.add('hidden');
+      }
+    });
+  }
+
+  async function loadModalEquipes() {
+    const modalMenu = document.getElementById('modal-equipe-menu');
+    if (!modalMenu) return;
+    
+    try {
+      const response = await fetch(`/get-teams?username=${window.username}`);
+      if (!response.ok) {
+        throw new Error('Erreur lors du chargement des équipes');
+      }
+      
+      const equipes = await response.json();
+      modalMenu.innerHTML = '';
+      
+      if (equipes.length === 0) {
+        const noTeamOption = document.createElement('div');
+        noTeamOption.className = 'dropdown-option-disabled';
+        noTeamOption.textContent = 'Aucune équipe disponible';
+        noTeamOption.style.cssText = 'padding: 12px 16px; color: var(--text-gray); font-style: italic;';
+        modalMenu.appendChild(noTeamOption);
+        return;
+      }
+      
+      equipes.forEach(equipe => {
+        const option = document.createElement('div');
+        option.className = 'dropdown-option';
+        option.style.cssText = `
+          padding: 12px 16px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+          color: var(--text-light);
+        `;
+        
+        option.innerHTML = `
+          <div style="font-weight: 500; margin-bottom: 4px;">${equipe.nom}</div>
+          <div style="font-size: 0.75rem; color: var(--text-gray);">
+            ${equipe.peintres.map(p => `${p.prenom} ${p.nom}`).join(', ')}
+          </div>
+        `;
+        
+        option.addEventListener('mouseenter', () => {
+          option.style.background = 'rgba(59, 130, 246, 0.1)';
+        });
+        
+        option.addEventListener('mouseleave', () => {
+          option.style.background = 'transparent';
+        });
+        
+        option.addEventListener('click', () => {
+          selectModalEquipe(equipe);
+        });
+        
+        modalMenu.appendChild(option);
+      });
+      
+    } catch (err) {
+      error('[ERROR] Erreur lors du chargement des équipes:', err);
+      modalMenu.innerHTML = '<div class="dropdown-option-disabled" style="padding: 12px 16px; color: var(--text-gray);">Erreur de chargement</div>';
+    }
+  }
+
+  function selectModalEquipe(equipe) {
+    modalSelectedEquipe = equipe;
+    
+    const modalToggle = document.getElementById('modal-equipe-toggle');
+    const modalMenu = document.getElementById('modal-equipe-menu');
+    const placeholder = modalToggle.querySelector('.placeholder');
+    
+    if (placeholder) {
+      placeholder.innerHTML = `
+        <div style="font-weight: 500;">${equipe.nom}</div>
+        <div style="font-size: 0.75rem; color: var(--text-gray); margin-top: 2px;">
+          ${equipe.peintres.map(p => `${p.prenom} ${p.nom}`).join(', ')}
+        </div>
+      `;
+      placeholder.className = 'selected';
+      placeholder.style.color = 'var(--text-light)';
+    }
+    
+    modalMenu.classList.add('hidden');
+    log('[OK] Équipe sélectionnée dans modal:', equipe.nom);
+  }
+
+  // Fonction pour voir le GQP dans le modal
+  document.getElementById('modal-voir-pdf').addEventListener('click', function() {
+    if (!currentGqpData) return;
+
+    // Ouvrir le lien GQP dans un nouvel onglet
+    openGQPFromModal();
+  });
+
+  async function openGQPFromModal() {
+    if (!currentGqpData) return;
+
+    try {
+      log('[GQP] Ouverture GQP pour:', currentGqpData);
+
+      // Si on a déjà un lien GQP, l'ouvrir dans la modal intégrée
+      if (currentGqpData.lien_pdf) {
+        showPDFModal(currentGqpData.lien_pdf);
+        return;
+      }
+
+      // Sinon, informer l'utilisateur
+      showError('Aucun lien GQP disponible');
+
+    } catch (err) {
+      error('[ERROR] Erreur ouverture GQP:', err);
+      showError('Erreur lors de l\'ouverture du GQP');
+    }
+  }
+
+  // Fonction pour fermer la modal GQP Preview
+  function closeGqpPreviewModal(event) {
+    const modal = document.getElementById('gqpPreviewModal');
+    const iframe = document.getElementById('gqpPreviewFrame');
+
+    modal.classList.add('hidden');
+    iframe.src = '';
+    document.body.style.overflow = '';
+  }
+
+  // Fonction pour assigner le GQP à l'équipe
+  async function assignGQPToTeam() {
+    if (!modalSelectedEquipe) {
+      showError('Veuillez sélectionner une équipe');
+      return;
+    }
+    
+    if (!currentGqpData || !currentGqpId) {
+      showError('Erreur: données GQP manquantes');
+      return;
+    }
+    
+    try {
+      log('📤 Envoi GQP à équipe:', modalSelectedEquipe.nom);
+
+      // Afficher l'animation de chargement
+      showLoadingAnimation(`Envoi à l'équipe ${modalSelectedEquipe.nom}...`);
+
+      // Assigner le GQP à l'équipe via l'API
+      const response = await fetch('/assign-gqp-to-team', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: window.username,
+          gqp_id: currentGqpId,
+          team_data: modalSelectedEquipe
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erreur serveur: ${errorText}`);
+      }
+      
+      const result = await response.json();
+      log('[OK] GQP assigné:', result);
+
+      // Afficher l'animation de succès
+      showSuccessAnimation(`GQP assigné à l'équipe ${modalSelectedEquipe.nom}!`);
+
+      showSuccess(`GQP assigné à l'équipe ${modalSelectedEquipe.nom}`);
+      closeAssignModal();
+
+      // Supprimer la ligne du tableau
+      removeGqpFromTable(currentGqpId);
+
+      // Retirer immédiatement le client du dropdown
+      if (currentGqpData?.numeroSoumission) {
+        retirerClientDuDropdown(currentGqpData.numeroSoumission);
+      }
+
+      // Recharger la liste des clients pour s'assurer de la synchronisation avec le serveur
+      log('🔄 Rechargement de la liste des clients après assignation GQP');
+      await chargerClientsGQP();
+
+    } catch (err) {
+      error('[ERROR] Erreur assignation GQP:', err);
+      // Masquer l'animation de chargement
+      hideLoadingAnimation();
+      showError('Erreur lors de l\'assignation du GQP: ' + error.message);
+    }
+  }
+  
+  // Fonction pour mettre à jour le compteur de GQP
+  function updateGqpCount() {
+    const tbody = document.getElementById('gqp-envoys-body');
+    const countElement = document.getElementById('gqp-count');
+
+    if (!tbody || !countElement) return;
+
+    // Compter les lignes qui ne sont pas des états vides
+    const rows = tbody.querySelectorAll('tr:not(.empty-state-row)');
+    const emptyState = tbody.querySelector('.empty-state');
+    const count = emptyState ? 0 : rows.length;
+
+    countElement.textContent = count === 0 ? '0 en attente' : count === 1 ? '1 en attente' : `${count} en attente`;
+  }
+
+  // Fonction pour supprimer un GQP de la table
+  function removeGqpFromTable(gqpId) {
+    const tbody = document.getElementById('gqp-envoys-body');
+    const rows = tbody.querySelectorAll('tr');
+    
+    for (let row of rows) {
+      if (row.getAttribute('data-gqp-id') === gqpId.toString()) {
+        row.remove();
+        log('[OK] Ligne supprimée de la table pour GQP:', gqpId);
+        break;
+      }
+    }
+    
+    // Si plus de lignes, remettre le message vide
+    const remainingRows = tbody.querySelectorAll('tr');
+    if (remainingRows.length === 0) {
+      const emptyRow = document.createElement('tr');
+      emptyRow.innerHTML = `
+        <td colspan="6" class="empty-state">
+          <div style="text-align: center; color: var(--text-gray);">
+            <i class="fas fa-inbox fa-3x mb-4" style="display: block;"></i>
+            <p>Aucun GQP en attente d'assignation</p>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(emptyRow);
+    }
+
+    // Supprimer aussi la carte mobile si présente
+    const mobileList = document.getElementById('gqp-mobile-list');
+    if (mobileList) {
+      const mobileCard = mobileList.querySelector(`.gqp-mobile-card[data-gqp-id="${gqpId}"]`);
+      if (mobileCard) {
+        mobileCard.remove();
+      }
+
+      // Si plus de cartes, remettre le message vide mobile
+      const remainingCards = mobileList.querySelectorAll('.gqp-mobile-card');
+      if (remainingCards.length === 0) {
+        const existingEmpty = mobileList.querySelector('.gqp-empty-mobile');
+        if (!existingEmpty) {
+          const emptyCard = document.createElement('div');
+          emptyCard.className = 'gqp-empty-mobile';
+          emptyCard.innerHTML = '<i class="fas fa-inbox"></i><p>Aucun GQP en attente</p>';
+          mobileList.appendChild(emptyCard);
+        }
+      }
+    }
+
+    // Mettre à jour le compteur
+    updateGqpCount();
+  }
+  
+  // Fonction pour charger les GQP en attente au démarrage
+  async function loadGqpQueue() {
+    try {
+      const response = await fetch(`/get-gqp-queue/${window.username}`);
+      if (!response.ok) {
+        throw new Error('Erreur chargement queue GQP');
+      }
+      
+      const data = await response.json();
+      log('[BAN] GQP en attente chargés:', data.gqps.length);
+      
+      // Vider la table d'abord
+      const tbody = document.getElementById('gqp-envoys-body');
+      tbody.innerHTML = '';
+      
+      if (data.gqps.length === 0) {
+        // Pas de GQP, afficher le message vide
+        const emptyRow = document.createElement('tr');
+        emptyRow.innerHTML = `
+          <td colspan="6" class="empty-state">
+            <i class="fas fa-inbox mr-2"></i>
+            Aucun GQP envoyé pour le moment
+          </td>
+        `;
+        tbody.appendChild(emptyRow);
+      } else {
+        // Ajouter chaque GQP à la table
+        data.gqps.forEach(gqp => {
+          // Extraire adresse et prix de gqp_data (données de la soumission)
+          const adresse = gqp.gqp_data?.adresse || '';
+          const prix = gqp.gqp_data?.prix || '';
+          addGqpToTable(gqp.client_name, gqp.numero_soumission, gqp.pdf_url, gqp.id, gqp.date_creation, adresse, prix);
+        });
+      }
+      
+    } catch (err) {
+      error('[ERROR] Erreur chargement queue GQP:', err);
+      // En cas d'erreur, laisser la table avec le message vide par défaut
+    }
+  }
+
+  // Fonction pour charger les GQP en attente (globale pour être accessible par loadGQPData)
+  window.loadGqpQueue = async function() {
+    try {
+      log('🔄 Chargement de la queue GQP...');
+
+      const response = await fetch(`/get-gqp-queue/${window.username}`);
+      if (!response.ok) {
+        throw new Error('Erreur lors du chargement de la queue GQP');
+      }
+      
+      const data = await response.json();
+      log('[BAN] Queue GQP récupérée:', data);
+      log('[BAN] Nombre de GQPs:', data.gqps ? data.gqps.length : 0);
+      log('[BAN] Premier GQP exemple:', data.gqps && data.gqps[0] ? data.gqps[0] : 'Aucun');
+
+      const tbody = document.getElementById('gqp-envoys-body');
+      if (!tbody) return;
+
+      // Mettre à jour le compteur
+      const count = data.gqps ? data.gqps.length : 0;
+      const countElement = document.getElementById('gqp-count');
+      if (countElement) {
+        countElement.textContent = count === 0 ? '0 en attente' : count === 1 ? '1 en attente' : `${count} en attente`;
+      }
+
+      // Vider la table actuelle
+      tbody.innerHTML = '';
+
+      if (!data.gqps || data.gqps.length === 0) {
+        // Aucun GQP en attente - afficher le message vide
+        const emptyRow = document.createElement('tr');
+        emptyRow.innerHTML = `
+          <td colspan="6" class="empty-state">
+            <div style="text-align: center; color: var(--text-gray);">
+              <i class="fas fa-inbox fa-3x mb-4"></i>
+              <p>Aucun GQP en attente d'assignation</p>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(emptyRow);
+      } else {
+        // Ajouter chaque GQP à la table
+        data.gqps.forEach((gqp, index) => {
+          log(`[BAN] Ajout GQP ${index + 1}:`, gqp.client_name, gqp.numero_soumission, gqp.id);
+          // Extraire adresse et prix de gqp_data (données de la soumission)
+          const adresse = gqp.gqp_data?.adresse || '';
+          const prix = gqp.gqp_data?.prix || '';
+          addGqpToTable(gqp.client_name, gqp.numero_soumission, gqp.pdf_url, gqp.id, gqp.date_creation, adresse, prix);
+        });
+
+        log(`[OK] ${data.gqps.length} GQP(s) chargé(s) dans la table`);
+      }
+      
+    } catch (err) {
+      error('[ERROR] Erreur chargement queue GQP:', err);
+      // En cas d'erreur, laisser la table avec le message vide par défaut
+    }
+  }
+
+  // Charger les GQP en attente au démarrage (seulement si pas coach/direction)
+  setTimeout(() => {
+    const userRole = localStorage.getItem('userRole');
+    const isCoachOrDirection = userRole === 'coach' || userRole === 'direction';
+
+    // Pour coach/direction, le chargement sera fait par loadGQPData après sélection entrepreneur
+    if (!isCoachOrDirection) {
+      loadGqpQueue();
+    }
+  }, 500);
+});
+</script>
+
+<!-- PDF Viewer Modal (copié depuis créer_soumission) -->
+<!-- Overlay flou -->
+<div id="pdfOverlay"></div>
+
+<!-- Modal GQP Preview (iframe popup) -->
+<div id="gqpPreviewModal" class="gqp-preview-overlay hidden" onclick="closeGqpPreviewModal(event)">
+  <div class="gqp-preview-container" onclick="event.stopPropagation()">
+    <div class="gqp-preview-header">
+      <span class="gqp-preview-title">Aperçu GQP</span>
+      <button class="gqp-preview-close" onclick="closeGqpPreviewModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <iframe id="gqpPreviewFrame" src="" frameborder="0"></iframe>
+  </div>
+</div>
+
+<style>
+  /* Titre du sélecteur entrepreneur */
+  #coach-entrepreneur-selector .selector-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-light);
+    text-align: center;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  #coach-entrepreneur-selector .selector-title i {
+    color: var(--primary-blue);
+  }
+
+  #coach-entrepreneur-selector.in-header .selector-title {
+    display: none;
+  }
+
+  /* Sous-titre du sélecteur */
+  #coach-entrepreneur-selector .selector-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-gray);
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  #coach-entrepreneur-selector.in-header .selector-subtitle {
+    display: none;
+  }
+
+  /* Styles des boutons d'action GQP - même style que soumission */
+  .action-btn-send {
+    font-size: 11px !important;
+    padding: 4px 8px !important;
+  }
+
+  .action-btn-delete {
+    font-size: 11px !important;
+    padding: 4px 8px !important;
+    margin-left: 0.5rem;
+  }
+
+  /* GQP Action buttons mobile (identique à soumission.css) */
+  .gqp-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+  }
+
+  .gqp-action-btn {
+    flex: 1;
+    padding: 0.625rem;
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    transition: all 0.2s ease;
+    border: 1px solid;
+    cursor: pointer;
+  }
+
+  .gqp-action-btn.assign-btn {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: var(--primary-blue);
+    color: var(--primary-blue);
+  }
+
+  .gqp-action-btn.delete-btn {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+    color: #ef4444;
+  }
+
+  .gqp-action-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* GQP Preview Modal - Compact et solide */
+  .gqp-preview-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #0f172a;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .gqp-preview-overlay.hidden {
+    display: none;
+  }
+  .gqp-preview-container {
+    width: 100%;
+    max-width: 900px;
+    height: 90vh;
+    max-height: 750px;
+    background: #1e293b;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #334155;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+  /* Scrollbar discret pour le conteneur */
+  .gqp-preview-container::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .gqp-preview-container::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .gqp-preview-container::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.4);
+    border-radius: 3px;
+  }
+  .gqp-preview-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.6);
+  }
+  .gqp-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: #0f172a;
+    border-bottom: 1px solid #334155;
+    flex-shrink: 0;
+  }
+  .gqp-preview-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #60a5fa;
+  }
+  .gqp-preview-close {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #94a3b8;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .gqp-preview-close:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+  }
+  #gqpPreviewFrame {
+    flex: 1;
+    width: 100%;
+    border: none;
+    background: #0f172a;
+  }
+
+  /* Animation de chargement */
+  .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .loading-content {
+    text-align: center;
+    color: white;
+    animation: scaleIn 0.5s ease;
+  }
+
+  .loading-spinner {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+    animation: pulse 1.5s ease infinite;
+  }
+
+  .loading-spinner i {
+    font-size: 32px;
+    color: white;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes scaleIn {
+    from {
+      transform: scale(0.8);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+    }
+    50% {
+      transform: scale(1.05);
+      box-shadow: 0 0 50px rgba(59, 130, 246, 0.7);
+    }
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* Animation de succès */
+  @keyframes successFadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes checkmarkDraw {
+    0% {
+      stroke-dashoffset: 100;
+    }
+    100% {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  .success-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: successFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .success-content {
+    text-align: center;
+    color: white;
+    animation: successFadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+  }
+
+  .success-checkmark {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    margin: 0 auto 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4);
+  }
+
+  .success-checkmark svg {
+    stroke: white;
+    stroke-width: 3;
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    animation: checkmarkDraw 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.4s forwards;
+  }
+</style>
+
+<script>
+  // Animation de chargement
+  function showLoadingAnimation(message = 'Envoi en cours...') {
+    const overlay = document.createElement('div');
+    overlay.className = 'loading-overlay';
+    overlay.id = 'loadingOverlay';
+    overlay.innerHTML = `
+      <div class="loading-content">
+        <div class="loading-spinner">
+          <i class="fas fa-paper-plane"></i>
+        </div>
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">${message}</h2>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+  }
+
+  function hideLoadingAnimation() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+      overlay.remove();
+    }
+  }
+
+  // Animation de succès avec checkmark vert
+  function showSuccessAnimation(message = 'GQP envoyé avec succès!') {
+    // Masquer l'animation de chargement d'abord
+    hideLoadingAnimation();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'success-overlay';
+    overlay.innerHTML = `
+      <div class="success-content">
+        <div class="success-checkmark">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <path d="M8 20 L16 28 L32 12" stroke="white" stroke-width="3"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">${message}</h2>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Retirer l'overlay après 2 secondes
+    setTimeout(() => {
+      overlay.remove();
+    }, 2000);
+  }
+
+  // Fonction globale pour fermer la modal GQP Preview
+  function closeGqpPreviewModal(event) {
+    const modal = document.getElementById('gqpPreviewModal');
+    const iframe = document.getElementById('gqpPreviewFrame');
+    if (modal) {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+    if (iframe) {
+      iframe.src = '';
+    }
+  }
+</script>
+
+<!-- Modal PDF -->
+<div id="pdfModal" class="hidden">
+  <div id="pdfContent">
+    <div id="pdfControls">
+      <div class="zoom-controls">
+        <button id="zoomOut" class="btn-secondary">−</button>
+        <span id="zoomLevel">100%</span>
+        <button id="zoomIn" class="btn-secondary">+</button>
+      </div>
+      <button id="closePdfBtn" class="hidden">×</button>
+    </div>
+    <div id="pdfScrollContainer">
+      <div id="pdfCanvasContainer">
+        <!-- Les canvas seront créés dynamiquement pour chaque page -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== GESTION DES TEMPLATES ÉTAPES =====
+let etapesUserTemplates = [];
+let etapesCurrentEditIndex = null;
+let etapesCurrentDeleteIndex = null;
+let etapesSelectedTemplateIndex = null;
+
+// Charger les templates d'étapes depuis le backend
+async function loadEtapesUserTemplates() {
+  const username = localStorage.getItem('username');
+
+  if (!username) {
+    etapesUserTemplates = [];
+    updateEtapesTemplateSelect();
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/templates/etapes/${username}`);
+    if (response.ok) {
+      etapesUserTemplates = await response.json();
+      updateEtapesTemplateSelect();
+    }
+  } catch (err) {
+    error('Erreur chargement templates étapes:', err);
+    etapesUserTemplates = [];
+    updateEtapesTemplateSelect();
+  }
+}
+
+// Mettre à jour le dropdown de sélection
+function updateEtapesTemplateSelect() {
+  const menu = document.getElementById('etapesTemplateMenu');
+  menu.innerHTML = '';
+
+  if (etapesUserTemplates.length === 0) {
+    const emptyOption = document.createElement('div');
+    emptyOption.className = 'dropdown-option';
+    emptyOption.style.color = 'rgb(156 163 175)';
+    emptyOption.style.fontStyle = 'italic';
+    emptyOption.style.cursor = 'default';
+    emptyOption.textContent = 'Pas de template enregistré';
+    menu.appendChild(emptyOption);
+  } else {
+    etapesUserTemplates.forEach((template, index) => {
+      const option = document.createElement('div');
+      option.className = 'dropdown-option';
+      option.style.display = 'flex';
+      option.style.alignItems = 'center';
+      option.style.justifyContent = 'space-between';
+      option.style.gap = '8px';
+      option.style.height = '40px';
+      option.style.minHeight = '40px';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = template.name;
+      nameSpan.style.flex = '1';
+      nameSpan.onclick = function(e) {
+        e.stopPropagation();
+        selectEtapesTemplate(index, template.name);
+      };
+
+      const actionsDiv = document.createElement('div');
+      actionsDiv.style.display = 'flex';
+      actionsDiv.style.gap = '4px';
+      actionsDiv.style.alignItems = 'center';
+
+      // Bouton modifier
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.innerHTML = '<i class="fas fa-pencil-alt" style="font-size: 10px !important;"></i>';
+      editBtn.className = 'btn-primary';
+      editBtn.style.cssText = 'padding: 3px 6px !important; font-size: 10px !important; height: 24px !important; min-height: 24px !important;';
+      editBtn.title = 'Modifier';
+      editBtn.onclick = function(e) {
+        e.stopPropagation();
+        editEtapesTemplate(index);
+      };
+
+      // Bouton supprimer
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.innerHTML = '<i class="fas fa-trash" style="font-size: 10px !important;"></i>';
+      deleteBtn.className = 'btn-secondary';
+      deleteBtn.style.cssText = 'padding: 3px 6px !important; font-size: 10px !important; height: 24px !important; min-height: 24px !important;';
+      deleteBtn.title = 'Supprimer';
+      deleteBtn.onclick = function(e) {
+        e.stopPropagation();
+        deleteEtapesTemplate(index);
+      };
+
+      actionsDiv.appendChild(editBtn);
+      actionsDiv.appendChild(deleteBtn);
+
+      option.appendChild(nameSpan);
+      option.appendChild(actionsDiv);
+      menu.appendChild(option);
+    });
+  }
+
+  // Reset le toggle
+  const toggle = document.getElementById('etapesTemplateToggle');
+  toggle.innerHTML = '<span class="placeholder" style="color: rgb(156 163 175); font-size: 13px;">-- Sélectionner --</span>';
+  toggle.classList.remove('has-selection');
+  etapesSelectedTemplateIndex = null;
+}
+
+// Sélectionner et charger un template
+function selectEtapesTemplate(index, name) {
+  const toggle = document.getElementById('etapesTemplateToggle');
+  const menu = document.getElementById('etapesTemplateMenu');
+
+  // Mettre à jour l'affichage du dropdown
+  toggle.innerHTML = `<span class="tag" style="padding: 0px 8px;">${name}</span>`;
+  toggle.classList.add('has-selection');
+  menu.classList.add('hidden');
+
+  // Sauvegarder l'index sélectionné
+  etapesSelectedTemplateIndex = index;
+
+  // Charger le contenu du template
+  const template = etapesUserTemplates[index];
+  if (template) {
+    document.getElementById('etapes').value = template.content;
+  }
+}
+
+// Toggle du dropdown
+// Fonction globale pour fermer tous les dropdowns
+function closeAllDropdowns(exceptId = null) {
+  const allDropdowns = document.querySelectorAll('.modern-dropdown-menu');
+  allDropdowns.forEach(dropdown => {
+    if (dropdown.id !== exceptId) {
+      dropdown.classList.add('hidden');
+    }
+  });
+}
+
+function initEtapesTemplateDropdown() {
+  const toggle = document.getElementById('etapesTemplateToggle');
+  const menu = document.getElementById('etapesTemplateMenu');
+
+  if (!toggle || !menu) return;
+
+  toggle.addEventListener('click', function(e) {
+    e.stopPropagation();
+    // Fermer tous les autres dropdowns avant de toggler celui-ci
+    closeAllDropdowns(menu.id);
+    menu.classList.toggle('hidden');
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!toggle.contains(e.target) && !menu.contains(e.target)) {
+      menu.classList.add('hidden');
+    }
+  });
+}
+
+// Ouvrir le popup pour demander le nom du template
+function saveEtapesTemplatePrompt() {
+  const content = document.getElementById('etapes').value.trim();
+
+  if (!content) {
+    alert('Veuillez d\'abord saisir les étapes du projet avant de créer un template.');
+    return;
+  }
+
+  const modal = document.getElementById('etapesTemplateNameModal');
+  const input = document.getElementById('etapesTemplateNameInput');
+  modal.style.display = 'flex';
+  input.value = '';
+  input.focus();
+}
+
+// Fermer le popup de nom
+function closeEtapesTemplateNameModal() {
+  document.getElementById('etapesTemplateNameModal').style.display = 'none';
+}
+
+// Confirmer et sauvegarder le template
+async function confirmSaveEtapesTemplate() {
+  const name = document.getElementById('etapesTemplateNameInput').value.trim();
+
+  if (!name) {
+    return;
+  }
+
+  const content = document.getElementById('etapes').value.trim();
+  const username = localStorage.getItem('username');
+
+  if (!username) {
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/templates/etapes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: username,
+        name: name,
+        content: content
+      })
+    });
+
+    if (response.ok) {
+      closeEtapesTemplateNameModal();
+      await loadEtapesUserTemplates();
+      const newIndex = etapesUserTemplates.findIndex(t => t.name === name);
+      if (newIndex !== -1) {
+        selectEtapesTemplate(newIndex, name);
+      }
+    }
+  } catch (err) {
+    error('Erreur sauvegarde template étapes:', err);
+  }
+}
+
+// Ouvrir popup pour supprimer un template
+function deleteEtapesTemplate(index) {
+  etapesCurrentDeleteIndex = index;
+  const template = etapesUserTemplates[index];
+  document.getElementById('etapesTemplateDeleteMessage').textContent =
+    `Voulez-vous vraiment supprimer le template "${template.name}" ?`;
+  document.getElementById('etapesTemplateDeleteModal').style.display = 'flex';
+}
+
+// Fermer popup de suppression
+function closeEtapesTemplateDeleteModal() {
+  document.getElementById('etapesTemplateDeleteModal').style.display = 'none';
+  etapesCurrentDeleteIndex = null;
+}
+
+// Confirmer la suppression
+async function confirmDeleteEtapesTemplate() {
+  if (etapesCurrentDeleteIndex === null) return;
+
+  const template = etapesUserTemplates[etapesCurrentDeleteIndex];
+  const username = localStorage.getItem('username');
+
+  try {
+    const response = await fetch(`/api/templates/etapes/${username}/${encodeURIComponent(template.name)}`, {
+      method: 'DELETE'
+    });
+
+    if (response.ok) {
+      closeEtapesTemplateDeleteModal();
+      await loadEtapesUserTemplates();
+    }
+  } catch (err) {
+    error('Erreur suppression template étapes:', err);
+  }
+}
+
+// Ouvrir popup pour modifier un template
+function editEtapesTemplate(index) {
+  etapesCurrentEditIndex = index;
+  const template = etapesUserTemplates[index];
+  document.getElementById('etapesTemplateEditInput').value = template.name;
+  document.getElementById('etapesTemplateEditModal').style.display = 'flex';
+  document.getElementById('etapesTemplateEditInput').focus();
+}
+
+// Fermer popup de modification
+function closeEtapesTemplateEditModal() {
+  document.getElementById('etapesTemplateEditModal').style.display = 'none';
+  etapesCurrentEditIndex = null;
+}
+
+// Confirmer la modification
+async function confirmEditEtapesTemplate() {
+  if (etapesCurrentEditIndex === null) return;
+
+  const newName = document.getElementById('etapesTemplateEditInput').value.trim();
+  const template = etapesUserTemplates[etapesCurrentEditIndex];
+
+  if (!newName) {
+    return;
+  }
+
+  if (newName === template.name) {
+    closeEtapesTemplateEditModal();
+    return;
+  }
+
+  const username = localStorage.getItem('username');
+
+  try {
+    // Supprimer l'ancien
+    await fetch(`/api/templates/etapes/${username}/${encodeURIComponent(template.name)}`, {
+      method: 'DELETE'
+    });
+
+    // Créer le nouveau avec le nouveau nom
+    const response = await fetch('/api/templates/etapes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: username,
+        name: newName,
+        content: template.content
+      })
+    });
+
+    if (response.ok) {
+      closeEtapesTemplateEditModal();
+      await loadEtapesUserTemplates();
+      const newIndex = etapesUserTemplates.findIndex(t => t.name === newName);
+      if (newIndex !== -1) {
+        selectEtapesTemplate(newIndex, newName);
+      }
+    }
+  } catch (err) {
+    error('Erreur modification template étapes:', err);
+  }
+}
+
+// Support de la touche Enter
+document.addEventListener('DOMContentLoaded', function() {
+  const nameInput = document.getElementById('etapesTemplateNameInput');
+  if (nameInput) {
+    nameInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        confirmSaveEtapesTemplate();
+      }
+    });
+  }
+
+  const editInput = document.getElementById('etapesTemplateEditInput');
+  if (editInput) {
+    editInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        confirmEditEtapesTemplate();
+      }
+    });
+  }
+
+  // Initialiser le dropdown et charger les templates
+  initEtapesTemplateDropdown();
+  loadEtapesUserTemplates();
+
+  // Gestion globale de tous les dropdowns modern-dropdown
+  const allDropdowns = document.querySelectorAll('.modern-dropdown');
+  allDropdowns.forEach(toggle => {
+    // Ne pas ajouter l'event listener sur etapesTemplateToggle ou equipeToggle car ils sont déjà gérés
+    if (toggle.id === 'etapesTemplateToggle' || toggle.id === 'equipeToggle') return;
+
+    toggle.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const menu = toggle.nextElementSibling;
+      if (menu && menu.classList.contains('modern-dropdown-menu')) {
+        // Fermer tous les autres dropdowns avant de toggler celui-ci
+        closeAllDropdowns(menu.id);
+        // Toggle le menu actuel
+        menu.classList.toggle('hidden');
+      }
+    });
+  });
+});
+</script>
+
+<!-- Popup pour nom du template Étapes (Nouveau) -->
+<div id="etapesTemplateNameModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999999; justify-content: center; align-items: center;">
+  <div style="background: var(--bg-card); border-radius: 12px; padding: 24px; width: 400px; max-width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+    <h3 style="color: var(--text-light); margin-bottom: 16px; font-size: 18px; font-weight: 600;">
+      <i class="fas fa-bookmark" style="color: var(--primary-blue); margin-right: 8px;"></i>
+      Nouveau template
+    </h3>
+    <input type="text" id="etapesTemplateNameInput" placeholder="Nom du template..." class="modern-input" style="width: 100%; margin-bottom: 16px;" autocomplete="off">
+    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+      <button class="btn-secondary px-4 py-2" onclick="closeEtapesTemplateNameModal()">Annuler</button>
+      <button class="btn-primary px-4 py-2" onclick="confirmSaveEtapesTemplate()">
+        <i class="fas fa-save" style="margin-right: 6px;"></i>
+        Sauvegarder
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Popup pour modifier un template Étapes -->
+<div id="etapesTemplateEditModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999999; justify-content: center; align-items: center;">
+  <div style="background: var(--bg-card); border-radius: 12px; padding: 24px; width: 400px; max-width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+    <h3 style="color: var(--text-light); margin-bottom: 16px; font-size: 18px; font-weight: 600;">
+      <i class="fas fa-pencil-alt" style="color: var(--primary-blue); margin-right: 8px;"></i>
+      Modifier le template
+    </h3>
+    <input type="text" id="etapesTemplateEditInput" placeholder="Nouveau nom..." class="modern-input" style="width: 100%; margin-bottom: 16px;" autocomplete="off">
+    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+      <button class="btn-secondary px-4 py-2" onclick="closeEtapesTemplateEditModal()">Annuler</button>
+      <button class="btn-primary px-4 py-2" onclick="confirmEditEtapesTemplate()">
+        <i class="fas fa-check" style="margin-right: 6px;"></i>
+        Modifier
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Popup pour supprimer un template Étapes -->
+<div id="etapesTemplateDeleteModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999999; justify-content: center; align-items: center;">
+  <div style="background: var(--bg-card); border-radius: 12px; padding: 24px; width: 400px; max-width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+    <h3 style="color: var(--text-light); margin-bottom: 16px; font-size: 18px; font-weight: 600;">
+      <i class="fas fa-trash" style="color: #ef4444; margin-right: 8px;"></i>
+      Supprimer le template
+    </h3>
+    <p id="etapesTemplateDeleteMessage" style="color: var(--text-muted); margin-bottom: 16px;"></p>
+    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+      <button class="btn-secondary px-4 py-2" onclick="closeEtapesTemplateDeleteModal()">Annuler</button>
+      <button class="btn-secondary px-4 py-2" onclick="confirmDeleteEtapesTemplate()">
+        <i class="fas fa-trash" style="margin-right: 6px;"></i>
+        Supprimer
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Spinner de chargement pour navigation -->
+<div id="navigation-spinner" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #0f172a; z-index: 9999; align-items: center; justify-content: center;">
+  <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <!-- Spinner SVG animé -->
+    <svg width="64" height="64" viewBox="0 0 64 64" style="animation: spin 0.8s linear infinite;">
+      <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="6"/>
+      <circle cx="32" cy="32" r="28" fill="none" stroke="#3b82f6" stroke-width="6" stroke-dasharray="140" stroke-dashoffset="40" stroke-linecap="round" style="transform-origin: center; transform: rotate(-90deg);"/>
+    </svg>
+    <p style="margin-top: 1rem; color: #94a3b8; font-size: 0.875rem;">Chargement...</p>
+  </div>
+</div>
+
+<style>
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
+
+</body>
+</html>

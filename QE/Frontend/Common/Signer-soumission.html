@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="fr" id="html-root">
+<head>
+    <meta charset="UTF-8" />
+    <title id="page-title">Signer la soumission</title>
+    
+    <!-- 📱 PWA Meta Tags -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#5271ff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Qwota">
+    <meta name="msapplication-TileColor" content="#5271ff">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.webmanifest">
+
+    <!-- Icônes PWA -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <!-- Script Service Worker -->
+    <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        /* DISABLED - Service Worker
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('SW registered: ', registration);
+          })
+          .catch((registrationError) => {
+            console.log('SW registration failed: ', registrationError);
+          });
+        */
+      });
+    }
+    </script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: white;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Header avec logo */
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .logo {
+            width: 120px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .header p {
+            font-size: 16px;
+            color: #666;
+        }
+
+        /* Contenu principal */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        /* PDF Viewer */
+        .pdf-viewer {
+            width: 100%;
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .pdf-viewer {
+                max-width: 500px;
+            }
+        }
+
+        .pdf-title {
+            color: #333;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        #pdf-container {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        canvas#pdf-render {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        /* Bouton principal mobile-first */
+        .sign-button {
+            background: linear-gradient(135deg, #5271ff 0%, #3b82f6 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 18px 40px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(82, 113, 255, 0.4);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sign-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(82, 113, 255, 0.5);
+        }
+
+        .sign-button:active {
+            transform: translateY(0);
+        }
+
+        /* Popup de signature - Mobile optimisé */
+        .signature-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            /* Empêcher le scroll */
+            overflow: hidden;
+        }
+
+        .signature-popup.active {
+            display: flex;
+        }
+
+        .signature-modal {
+            background: white;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 450px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .signature-header {
+            background: linear-gradient(135deg, #5271ff 0%, #3b82f6 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .signature-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .signature-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .signature-content {
+            padding: 25px;
+            color: #333;
+        }
+
+        .signature-label {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+            text-align: center;
+        }
+
+        /* Zone de signature tactile */
+        #signature-pad {
+            width: 100%;
+            height: 180px;
+            border: 2px dashed #5271ff;
+            border-radius: 12px;
+            background: #f8faff;
+            cursor: crosshair;
+            touch-action: none;
+            margin-bottom: 20px;
+        }
+
+        /* Boutons du popup */
+        .signature-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .btn-clear {
+            flex: 1;
+            background: #f1f5f9;
+            color: #64748b;
+            border: none;
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-clear:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-accept {
+            flex: 2;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-accept:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-accept:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Confirmation finale */
+        .confirmation-screen {
+            display: none;
+            min-height: 100vh;
+            background: white;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .confirmation-screen.active {
+            display: flex;
+        }
+
+        .confirmation-box {
+            background: white;
+            border-radius: 24px;
+            padding: 50px 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .email-icons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .email-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .email-icon:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .gmail-icon, .outlook-icon {
+            background: white;
+            border: 2px solid #e5e7eb;
+        }
+
+        .email-icon img {
+            width: 30px;
+            height: 30px;
+            object-fit: contain;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            position: relative;
+            animation: successPulse 0.6s ease-out;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .success-icon::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            opacity: 0.3;
+            animation: successRing 1s ease-out infinite;
+        }
+
+        .checkmark {
+            width: 48px;
+            height: 48px;
+            position: relative;
+            transform: rotate(45deg);
+            margin: auto;
+        }
+
+        .checkmark::before {
+            content: '';
+            position: absolute;
+            width: 6px;
+            height: 24px;
+            background: white;
+            bottom: 13px;
+            right: 18px;
+            border-radius: 3px;
+            animation: checkmarkLong 0.5s ease-out 0.2s both;
+        }
+
+        .checkmark::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 6px;
+            background: white;
+            bottom: 12px;
+            right: 18px;
+            border-radius: 3px;
+            animation: checkmarkShort 0.3s ease-out 0.4s both;
+        }
+
+        @keyframes successPulse {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes successRing {
+            0% {
+                transform: scale(1);
+                opacity: 0.3;
+            }
+            100% {
+                transform: scale(1.4);
+                opacity: 0;
+            }
+        }
+
+        @keyframes checkmarkLong {
+            0% {
+                height: 0;
+            }
+            100% {
+                height: 24px;
+            }
+        }
+
+        @keyframes checkmarkShort {
+            0% {
+                width: 0;
+            }
+            100% {
+                width: 12px;
+            }
+        }
+
+        .confirmation-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .confirmation-text {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+
+        /* Responsive amélioré */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .pdf-viewer {
+                margin-bottom: 20px;
+                padding: 15px;
+            }
+
+            .sign-button {
+                font-size: 16px;
+                padding: 16px 35px;
+            }
+
+            .signature-modal {
+                margin: 10px;
+                max-height: 85vh;
+            }
+
+            .signature-content {
+                padding: 20px;
+            }
+
+            #signature-pad {
+                height: 160px;
+            }
+        }
+
+        /* Empêcher le scroll de la page quand popup ouvert */
+        body.no-scroll {
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Popup de zoom PDF */
+        .pdf-zoom-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 10000;
+            display: none;
+            flex-direction: column;
+        }
+
+        .pdf-zoom-popup.active {
+            display: flex;
+        }
+
+        .pdf-zoom-header {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .pdf-zoom-title {
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .pdf-zoom-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 32px;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .pdf-zoom-close:hover {
+            transform: scale(1.1);
+        }
+
+        .pdf-zoom-content {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .pdf-zoom-canvas-container {
+            position: relative;
+            display: inline-block;
+            touch-action: pan-x pan-y pinch-zoom;
+        }
+
+        #pdf-render-zoom {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            cursor: grab;
+        }
+
+        #pdf-render-zoom:active {
+            cursor: grabbing;
+        }
+
+        /* Contrôles de zoom */
+        .zoom-controls {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: none; /* Caché complètement */
+            gap: 10px;
+            z-index: 10001;
+        }
+
+        .zoom-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            color: #333;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .zoom-btn:hover {
+            background: white;
+            transform: scale(1.1);
+        }
+
+        .zoom-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Bouton agrandir près du PDF */
+        .zoom-trigger {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(82, 113, 255, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .zoom-trigger:hover {
+            background: rgba(82, 113, 255, 1);
+            transform: scale(1.1);
+        }
+
+        /* Cacher le bouton zoom sur desktop uniquement */
+        @media (min-width: 769px) {
+            .zoom-trigger {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .zoom-controls {
+                bottom: 20px;
+                right: 20px;
+            }
+
+            .zoom-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Écran principal -->
+    <div class="main-screen">
+        <!-- Header avec logo -->
+        <div class="header">
+            <img src="https://i.ibb.co/Z1msnQVG/Design-sans-titre-45.png" alt="Logo Qualité Étudiants" class="logo" />
+            <h1 data-i18n="header_title">Signature de soumission</h1>
+            <p data-i18n="header_subtitle">Veuillez consulter et signer votre soumission</p>
+        </div>
+
+        <!-- Contenu principal -->
+        <div class="main-content">
+            <!-- Viewer PDF -->
+            <div class="pdf-viewer" style="position: relative;">
+                <div class="pdf-title" data-i18n="pdf_title">Votre soumission</div>
+                <button class="zoom-trigger" onclick="openPdfZoom()">
+                    <i class="fas fa-search"></i>
+                </button>
+                <div id="pdf-container">
+                    <canvas id="pdf-render"></canvas>
+                </div>
+            </div>
+
+            <!-- Bouton principal -->
+            <button class="sign-button" onclick="openSignaturePopup()">
+                <i class="fas fa-signature" style="margin-right: 10px;"></i>
+                <span data-i18n="sign_button">Signer la soumission</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Popup de signature -->
+    <div class="signature-popup" id="signaturePopup">
+        <div class="signature-modal">
+            <div class="signature-header">
+                <button class="close-btn" onclick="closeSignaturePopup()">×</button>
+                <h2 data-i18n="popup_title">Signature électronique</h2>
+                <p data-i18n="popup_subtitle">Signez avec votre doigt ou votre souris</p>
+            </div>
+            <div class="signature-content">
+                <div class="signature-label" data-i18n="signature_label">Dessinez votre signature ci-dessous :</div>
+                <canvas id="signature-pad"></canvas>
+                <div class="signature-actions">
+                    <button class="btn-clear" onclick="clearSignature()" data-i18n="btn_clear">Effacer</button>
+                    <button class="btn-accept" id="acceptBtn" onclick="acceptSubmission()" disabled data-i18n="btn_accept">
+                        J'accepte la soumission
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Écran de confirmation -->
+    <div class="confirmation-screen" id="confirmationScreen">
+        <div class="confirmation-box">
+            <div class="success-icon">
+                <div class="checkmark"></div>
+            </div>
+            <h1 class="confirmation-title" data-i18n="confirmation_title">Soumission signée !</h1>
+            <p class="confirmation-text" data-i18n="confirmation_text">Votre signature a été enregistrée avec succès. Vous recevrez une confirmation par email.</p>
+
+            <div class="email-icons">
+                <a href="https://gmail.com" target="_blank" class="email-icon gmail-icon" title="Ouvrir Gmail">
+                    <img src="https://i.ibb.co/7tNWnB9D/Design-sans-titre-73.png" alt="Gmail" style="width: 30px; height: 30px;" />
+                </a>
+                <a href="https://outlook.live.com" target="_blank" class="email-icon outlook-icon" title="Ouvrir Outlook">
+                    <img src="https://i.ibb.co/m53v2Ypt/Design-sans-titre-74.png" alt="Outlook" style="width: 30px; height: 30px;" />
+                </a>
+            </div>
+
+            <img src="https://i.ibb.co/Z1msnQVG/Design-sans-titre-45.png" alt="Logo" class="logo" />
+        </div>
+    </div>
+
+    <!-- Popup de zoom PDF -->
+    <div class="pdf-zoom-popup" id="pdfZoomPopup">
+        <div class="pdf-zoom-header">
+            <div class="pdf-zoom-title" data-i18n="zoom_title">Votre soumission - Vue agrandie</div>
+            <button class="pdf-zoom-close" onclick="closePdfZoom()">×</button>
+        </div>
+        <div class="pdf-zoom-content" id="pdfZoomContent">
+            <div class="pdf-zoom-canvas-container">
+                <canvas id="pdf-render-zoom"></canvas>
+            </div>
+        </div>
+        <div class="zoom-controls">
+            <button class="zoom-btn" onclick="zoomOut()" title="Zoom arrière">−</button>
+            <button class="zoom-btn" onclick="zoomIn()" title="Zoom avant">+</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
+    <script>
+        // === SYSTÈME DE TRADUCTION ===
+        let currentLanguage = 'fr';
+        let translations = {};
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const pdfUrl = urlParams.get('pdf');
+        const username = urlParams.get('username');
+        const clientEmail = urlParams.get('clientEmail');
+        const clientNom = urlParams.get('clientNom');
+        const clientPrenom = urlParams.get('clientPrenom');
+        const adresse = urlParams.get('adresse') || "";
+        const telephone = urlParams.get('telephone') || "";
+        const langParam = urlParams.get('lang') || 'fr';
+
+        // Définir la langue courante
+        currentLanguage = (langParam === 'en') ? 'en' : 'fr';
+
+        // Fonction pour charger les traductions
+        async function loadTranslations() {
+            try {
+                const response = await fetch(`/frontend/Common/translations/signer-soumission-${currentLanguage}.json`);
+                if (!response.ok) {
+                    console.error('Erreur chargement traductions, utilisation du français par défaut');
+                    currentLanguage = 'fr';
+                    const fallbackResponse = await fetch('/frontend/Common/translations/signer-soumission-fr.json');
+                    translations = await fallbackResponse.json();
+                } else {
+                    translations = await response.json();
+                }
+                applyTranslations();
+            } catch (error) {
+                console.error('Erreur chargement traductions:', error);
+            }
+        }
+
+        // Fonction pour appliquer les traductions
+        function applyTranslations() {
+            // Mettre à jour l'attribut lang du HTML
+            document.getElementById('html-root').setAttribute('lang', currentLanguage);
+
+            // Mettre à jour le titre de la page
+            document.getElementById('page-title').textContent = translations.page_title || 'Signer la soumission';
+
+            // Appliquer toutes les traductions avec data-i18n
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (translations[key]) {
+                    element.textContent = translations[key];
+                }
+            });
+        }
+
+        // Fonction pour obtenir une traduction
+        function t(key) {
+            return translations[key] || key;
+        }
+
+        // Charger les traductions au démarrage
+        loadTranslations();
+
+        if (!pdfUrl) {
+            alert(t('alert_missing_pdf') || "URL PDF manquant dans les paramètres");
+            throw new Error("PDF URL manquante");
+        }
+
+        const pdfjsLib = window['pdfjs-dist/build/pdf'];
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
+
+        const canvasPdf = document.getElementById('pdf-render');
+        const ctxPdf = canvasPdf.getContext('2d');
+
+        pdfjsLib.getDocument(pdfUrl).promise.then(pdfDoc => {
+            pdfDoc.getPage(1).then(page => {
+                const viewport = page.getViewport({ scale: 1.5 });
+                canvasPdf.width = viewport.width;
+                canvasPdf.height = viewport.height;
+
+                const renderContext = {
+                    canvasContext: ctxPdf,
+                    viewport: viewport
+                };
+                page.render(renderContext);
+            });
+        }).catch(err => {
+            alert(t('alert_error_loading') + err.message);
+        });
+
+        // Variables globales pour le zoom PDF
+        let pdfDocument = null;
+        let currentZoomScale = 2.5;
+        const MIN_SCALE = 1.5;
+        const MAX_SCALE = 5;
+        const SCALE_STEP = 0.5;
+
+        // Charger le document PDF pour le zoom
+        pdfjsLib.getDocument(pdfUrl).promise.then(doc => {
+            pdfDocument = doc;
+        });
+
+        // Ouvrir le popup de zoom
+        function openPdfZoom() {
+            const popup = document.getElementById('pdfZoomPopup');
+            popup.classList.add('active');
+            document.body.classList.add('no-scroll');
+
+            // Rendre le PDF avec le zoom initial
+            renderZoomedPdf(currentZoomScale);
+        }
+
+        // Fermer le popup de zoom
+        function closePdfZoom() {
+            const popup = document.getElementById('pdfZoomPopup');
+            popup.classList.remove('active');
+            document.body.classList.remove('no-scroll');
+        }
+
+        // Zoom avant
+        function zoomIn() {
+            if (currentZoomScale < MAX_SCALE) {
+                currentZoomScale += SCALE_STEP;
+                renderZoomedPdf(currentZoomScale);
+            }
+        }
+
+        // Zoom arrière
+        function zoomOut() {
+            if (currentZoomScale > MIN_SCALE) {
+                currentZoomScale -= SCALE_STEP;
+                renderZoomedPdf(currentZoomScale);
+            }
+        }
+
+        // Rendre le PDF zoomé
+        function renderZoomedPdf(scale) {
+            if (!pdfDocument) return;
+
+            const canvas = document.getElementById('pdf-render-zoom');
+            const ctx = canvas.getContext('2d');
+
+            pdfDocument.getPage(1).then(page => {
+                const viewport = page.getViewport({ scale: scale });
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+
+                page.render(renderContext).promise.then(() => {
+                    console.log('PDF zoomé rendu à l\'échelle:', scale);
+                });
+            });
+        }
+
+        // Variables globales pour la signature
+        let signatureCanvas = null;
+        let signatureCtx = null;
+        let isDrawing = false;
+        let hasSignature = false;
+        let points = [];
+
+        // Fonctions pour le popup de signature
+        function openSignaturePopup() {
+            const popup = document.getElementById('signaturePopup');
+            popup.classList.add('active');
+            document.body.classList.add('no-scroll');
+
+            // Initialiser le canvas de signature
+            initializeSignatureCanvas();
+        }
+
+        function closeSignaturePopup() {
+            const popup = document.getElementById('signaturePopup');
+            popup.classList.remove('active');
+            document.body.classList.remove('no-scroll');
+        }
+
+        function initializeSignatureCanvas() {
+            signatureCanvas = document.getElementById('signature-pad');
+            signatureCtx = signatureCanvas.getContext('2d');
+
+            // Configuration du canvas avec dimensions fixes
+            const rect = signatureCanvas.getBoundingClientRect();
+            signatureCanvas.width = rect.width;
+            signatureCanvas.height = rect.height;
+
+            // Configuration du style de dessin
+            signatureCtx.lineCap = 'round';
+            signatureCtx.lineJoin = 'round';
+            signatureCtx.lineWidth = 2;
+            signatureCtx.strokeStyle = '#000';  // Noir pur comme entrepreneur
+            signatureCtx.fillStyle = 'transparent';
+
+            // Événements tactiles et souris
+            signatureCanvas.addEventListener('pointerdown', startDrawing);
+            signatureCanvas.addEventListener('pointermove', draw);
+            signatureCanvas.addEventListener('pointerup', stopDrawing);
+            signatureCanvas.addEventListener('pointercancel', stopDrawing);
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            points = [];
+            const rect = signatureCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            points.push({ x, y });
+            signatureCtx.beginPath();
+            signatureCtx.moveTo(x, y);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+
+            const rect = signatureCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            points.push({ x, y });
+
+            if (points.length >= 3) {
+                const [p0, p1, p2] = points.slice(-3);
+                const cpx = (p0.x + p1.x) / 2;
+                const cpy = (p0.y + p1.y) / 2;
+                signatureCtx.quadraticCurveTo(p0.x, p0.y, cpx, cpy);
+                signatureCtx.stroke();
+                signatureCtx.beginPath();
+                signatureCtx.moveTo(cpx, cpy);
+            } else {
+                signatureCtx.lineTo(x, y);
+                signatureCtx.stroke();
+            }
+
+            // Activer le bouton d'acceptation
+            hasSignature = true;
+            document.getElementById('acceptBtn').disabled = false;
+        }
+
+        function stopDrawing() {
+            if (!isDrawing) return;
+            isDrawing = false;
+
+            if (points.length >= 3) {
+                const lastTwoPoints = points.slice(-2);
+                signatureCtx.lineTo(lastTwoPoints[1].x, lastTwoPoints[1].y);
+                signatureCtx.stroke();
+            }
+            signatureCtx.closePath();
+        }
+
+        function clearSignature() {
+            if (signatureCtx && signatureCanvas) {
+                signatureCtx.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+                hasSignature = false;
+                document.getElementById('acceptBtn').disabled = true;
+                points = [];
+            }
+        }
+
+        async function getSoumissionData(username, pdfUrl) {
+            try {
+                const res = await fetch(`/soumissions/${username}`);
+                if (!res.ok) throw new Error("Erreur récupération soumissions");
+                const soumissions = await res.json();
+
+                const soumission = soumissions.find(s => s.pdf_url === pdfUrl);
+                if (soumission) {
+                    return {
+                        prix: soumission.prix || "",
+                        id: soumission.id || soumission.num || "",
+                        num: soumission.num || ""
+                    };
+                }
+                return { prix: "", id: "", num: "" };
+            } catch (e) {
+                console.error("Erreur fetch soumission:", e);
+                return { prix: "", id: "", num: "" };
+            }
+        }
+
+        async function acceptSubmission() {
+            if (!hasSignature) {
+                alert(t('alert_missing_signature'));
+                return;
+            }
+
+            const btn = document.getElementById('acceptBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = t('btn_sending');
+
+            try {
+                const signatureDataUrl = signatureCanvas.toDataURL('image/png');
+
+                if (!pdfUrl || !username || !clientEmail || !clientNom || !clientPrenom) {
+                    throw new Error('Paramètres manquants. Veuillez vérifier le lien.');
+                }
+
+                // Récupérer les données de la soumission
+                const soumissionData = await getSoumissionData(username, pdfUrl);
+
+                const response = await fetch('/api/envoyer-soumission-signee', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username,
+                        clientEmail,
+                        clientNom,
+                        clientPrenom,
+                        pdfUrl,
+                        signatureDataUrl,
+                        prix_str: soumissionData.prix,
+                        soumission_id: soumissionData.id,
+                        num: soumissionData.num,
+                        adresse,
+                        telephone,
+                        language: currentLanguage  // NOUVEAU: Envoyer la langue
+                    }),
+                });
+
+                if (!response.ok) throw new Error(`Erreur ${response.status}`);
+
+                // Fermer le popup et afficher la confirmation
+                closeSignaturePopup();
+                showConfirmation();
+
+            } catch (err) {
+                alert(t('alert_error'));
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
+        function showConfirmation() {
+            // Masquer l'écran principal
+            document.querySelector('.main-screen').style.display = 'none';
+            // Afficher l'écran de confirmation
+            document.getElementById('confirmationScreen').classList.add('active');
+        }
+    </script>
+</body>
+</html>

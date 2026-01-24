@@ -1,0 +1,1949 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Assignation de Badges - Qwota Direction</title>
+
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#1f2937">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Feuille de style principale - Thème Dark -->
+  <link rel="stylesheet" href="/base.css">
+
+  <!-- Styles spécifiques à Gamification -->
+  <link rel="stylesheet" href="/gamification.css">
+
+  <style>
+    /* Surcharge du style empty-state i de base.css pour cette page */
+    .empty-state i {
+      font-size: inherit;
+      margin-bottom: 0;
+      opacity: 1;
+    }
+
+    /* Styles critiques pour les boutons Ajouter/Retirer */
+    .badge-card {
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .badge-card:hover {
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    }
+
+
+    /* Badge count indicator (x2, x3, etc.) - Jaune-orange avec border blanc et ombre */
+    .badge-count {
+      position: absolute;
+      top: 1.5rem;
+      right: 2rem;
+      background: transparent;
+      color: #fbbf24;
+      padding: 0;
+      font-size: 1.875rem;
+      font-weight: 900;
+      z-index: 5;
+      text-shadow:
+        0 2px 8px rgba(251, 191, 36, 0.3),
+        2px 2px 4px rgba(0, 0, 0, 0.8),
+        -1px -1px 2px rgba(0, 0, 0, 0.6),
+        0 4px 12px rgba(0, 0, 0, 0.5);
+      letter-spacing: 1px;
+      -webkit-text-stroke: 0.5px white;
+      text-stroke: 0.5px white;
+      paint-order: stroke fill;
+      filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.7));
+    }
+
+    /* Badge control buttons container - À GAUCHE */
+    .badge-controls {
+      position: absolute;
+      top: 0.5rem;
+      left: 0.5rem;
+      display: flex;
+      gap: 0.25rem;
+      z-index: 10;
+    }
+
+    .badge-controls .badge-control-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .badge-controls .badge-control-btn.increment {
+      background: #60a5fa;
+      color: white;
+    }
+
+    .badge-controls .badge-control-btn.decrement {
+      background: var(--bg-card);
+      color: var(--text-light);
+      border: 2px solid var(--border-dark);
+    }
+
+    .badge-controls .badge-control-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+    }
+
+    .badge-controls .badge-control-btn i {
+      font-size: 0.625rem;
+    }
+
+    /* Dropdown custom entrepreneurs */
+    .modern-dropdown {
+      background: #172033;
+      border: 2px solid var(--border-dark);
+      border-radius: 12px;
+      padding: 12px 16px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      color: var(--text-light);
+      font-size: 14px;
+    }
+
+    .modern-dropdown:hover {
+      border-color: var(--primary-blue);
+    }
+
+    .modern-dropdown.active {
+      border-color: var(--primary-blue);
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+    }
+
+    .modern-dropdown .placeholder {
+      color: var(--text-gray);
+      flex: 1;
+    }
+
+    .modern-dropdown .selected-text {
+      color: var(--text-light);
+      font-weight: 500;
+    }
+
+    .modern-dropdown i {
+      color: var(--text-gray);
+      transition: transform 0.3s ease;
+    }
+
+    .modern-dropdown.active i {
+      transform: rotate(180deg);
+    }
+
+    /* Search Input inside dropdown toggle */
+    .modern-dropdown .search-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-light);
+      font-size: 14px;
+      font-family: inherit;
+      padding: 0;
+      margin: 0;
+    }
+
+    .modern-dropdown .search-input::placeholder {
+      color: var(--text-gray);
+    }
+
+    .modern-dropdown-menu {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background: var(--bg-card);
+      border: 2px solid var(--border-dark);
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      z-index: 1000;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 4px;
+    }
+
+    .modern-dropdown-menu.hidden {
+      display: none;
+    }
+
+    /* Scrollbar for dropdown menu */
+    .modern-dropdown-menu::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    .modern-dropdown-menu::-webkit-scrollbar-track {
+      background: rgba(71, 85, 105, 0.1);
+      border-radius: 10px;
+      margin: 4px;
+    }
+
+    .modern-dropdown-menu::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.3);
+      border-radius: 10px;
+    }
+
+    .modern-dropdown-menu::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.5);
+    }
+
+    .dropdown-option {
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 14px;
+      color: var(--text-light);
+      border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+    }
+
+    .dropdown-option:hover {
+      background-color: rgba(59, 130, 246, 0.1);
+    }
+
+    .dropdown-option:first-child {
+      border-radius: 10px 10px 0 0;
+    }
+
+    .dropdown-option:last-child {
+      border-radius: 0 0 10px 10px;
+      border-bottom: none;
+    }
+
+    .dropdown-option-disabled {
+      padding: 12px 16px;
+      color: var(--text-gray);
+      font-style: italic;
+      cursor: default;
+    }
+  </style>
+</head>
+<body class="min-h-screen" style="margin: 0; padding: 0;">
+
+  <!-- Contenu principal -->
+  <div class="main-content w-full" style="width: 100%; padding: 2rem;">
+    <div class="w-full">
+
+    <!-- Header -->
+    <div class="mb-10 mt-5 md:mt-0">
+      <div class="relative">
+        <h1 class="text-4xl font-bold mb-3">
+          Assignation de Badges
+        </h1>
+        <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        <div class="flex items-center justify-between">
+          <p class="text-xl font-medium">
+            <span>Gérer les badges des entrepreneurs</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sélection Coach ou Entrepreneur -->
+    <div class="user-selection" style="background: var(--bg-card); border-radius: 16px; padding: 2rem; margin-bottom: 2rem; box-shadow: var(--shadow-dark-medium); border: 1px solid var(--border-dark);">
+      <h3 style="display: flex; align-items: center; gap: 0.5rem; font-size: 1.25rem; font-weight: 600; color: var(--text-light); margin-bottom: 1.5rem;">
+        <i class="fas fa-users"></i> Sélectionner une Personne
+      </h3>
+
+      <!-- Deux dropdowns côte à côte -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; max-width: 850px;">
+
+        <!-- Type de personne (Coach/Entrepreneur) -->
+        <div style="position: relative;">
+          <label style="display: block; color: var(--text-gray); font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">
+            <i class="fas fa-tag"></i> Type
+          </label>
+          <div class="modern-dropdown" id="userTypeToggle">
+            <span class="placeholder">-- Choisir le type --</span>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+          <div class="modern-dropdown-menu hidden" id="userTypeMenu">
+            <div class="dropdown-option" data-type="coach">
+              <i class="fas fa-user-graduate" style="margin-right: 0.5rem; color: var(--primary-blue);"></i>
+              Coach
+            </div>
+            <div class="dropdown-option" data-type="entrepreneur">
+              <i class="fas fa-user-tie" style="margin-right: 0.5rem; color: var(--primary-green);"></i>
+              Entrepreneur
+            </div>
+          </div>
+        </div>
+
+        <!-- Liste des personnes -->
+        <div style="position: relative;">
+          <label style="display: block; color: var(--text-gray); font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">
+            <i class="fas fa-user"></i> Personne
+          </label>
+          <div class="modern-dropdown" id="userSelectToggle" style="opacity: 0.5; pointer-events: none;">
+            <input type="text" class="search-input" id="userSearchInput" placeholder="Rechercher..." style="display: none;" />
+            <span class="placeholder">Sélectionnez d'abord un type</span>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+          <div class="modern-dropdown-menu hidden" id="userSelectMenu" style="max-height: 220px; overflow-y: auto;"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Section Progression -->
+    <div class="progress-section" id="progress-section" style="display: none;">
+      <!-- Header Profil -->
+      <div class="profile-header">
+        <div class="profile-photo-banner">
+          <div class="profile-photo-wrapper">
+            <div id="profilePhotoContainer" class="profile-photo-container">
+              <img id="profilePhoto" src="" alt="Profile" class="profile-photo" onerror="this.style.display='none'">
+            </div>
+            <div class="photo-level-banner">
+              <span>Niv. <span id="photo-level-text">1</span></span>
+            </div>
+          </div>
+        </div>
+        <div class="profile-info">
+          <h2 id="profileName">Chargement...</h2>
+          <div id="entrepreneurGrade" class="entrepreneur-grade">Chargement...</div>
+        </div>
+        <!-- Badge du grade actuel -->
+        <div class="profile-grade-badge">
+          <img id="profileCurrentGrade" src="" alt="Grade actuel">
+          <div>
+            <div class="profile-grade-name" id="profileGradeName">Démarrage</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barre de progression XP -->
+      <div class="xp-progress-container">
+        <div class="xp-progress-header">
+          <span><i class="fas fa-bolt"></i> Expérience</span>
+          <span id="xpText">0 / 100 XP</span>
+        </div>
+        <div class="xp-progress-bar">
+          <div id="xpProgressFill" class="xp-progress-fill" style="width: 0%"></div>
+          <div id="xpProgressText" class="xp-progress-text">0%</div>
+        </div>
+      </div>
+
+      <!-- Statistiques -->
+      <div class="stats-header">
+        <span class="stats-title">Statistiques</span>
+        <div style="display: flex; gap: 0.75rem;">
+          <button class="view-grades-btn" onclick="checkAutomaticBadges()">
+            <i class="fas fa-trophy"></i>
+            <span>Vérifier badges auto</span>
+          </button>
+          <button class="view-grades-btn" onclick="openGradesModal()">
+            <i class="fas fa-ranking-star"></i>
+            <span>Parcours</span>
+          </button>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">
+            <span>XP Total</span>
+            <i class="fas fa-bolt stat-icon"></i>
+          </div>
+          <div id="totalXp" class="stat-value">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">
+            <span>Badges Obtenus</span>
+            <i class="fas fa-trophy stat-icon"></i>
+          </div>
+          <div id="badgesEarned" class="stat-value">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">
+            <span>Vers Prochain Grade</span>
+            <i class="fas fa-ranking-star stat-icon"></i>
+          </div>
+          <div class="grade-progress-container">
+            <!-- Ligne du haut : badges et texte -->
+            <div class="grade-progress-top">
+              <div class="grade-progress-badge">
+                <img id="currentGradeBadge" src="" alt="Grade actuel">
+              </div>
+              <div class="grade-progress-text" id="gradeProgressText">Niv. 1 / 1</div>
+              <div class="grade-progress-badge">
+                <img id="nextGradeBadge" src="" alt="Prochain grade">
+              </div>
+            </div>
+            <!-- Barre de progression en dessous -->
+            <div class="grade-progress-bar-container">
+              <div class="grade-progress-bar-fill" id="gradeProgressBarFill" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Parcours de Progression -->
+    <div class="grades-modal" id="gradesModal" onclick="closeGradesModal(event)">
+      <div class="grades-modal-content" onclick="event.stopPropagation()">
+        <button class="grades-modal-close" onclick="closeGradesModal()">
+          <i class="fas fa-times"></i>
+        </button>
+
+        <!-- Section Grades / Rangs -->
+        <div class="grades-section">
+      <div class="grades-header">
+        <h3><i class="fas fa-ranking-star"></i> Parcours de Progression</h3>
+        <p class="grades-subtitle">Évoluez à travers 7 grades prestigieux</p>
+      </div>
+
+      <!-- Info Grade Actuel -->
+      <div class="grades-current-info">
+        <!-- Section Gauche: Statistiques -->
+        <div class="grades-stats-section">
+          <div class="grades-section-title">Statistiques</div>
+          <div class="grades-current-stats">
+            <div class="grades-stat-item">
+              <div class="grades-stat-label">XP Total</div>
+              <div class="grades-stat-value highlight" id="statsCurrentXP">0</div>
+            </div>
+            <div class="grades-stat-item">
+              <div class="grades-stat-label">Badges</div>
+              <div class="grades-stat-value" id="statsCurrentBadges">0</div>
+            </div>
+            <div class="grades-stat-item">
+              <div class="grades-stat-label">Niveau</div>
+              <div class="grades-stat-value" id="statsCurrentLevel">1</div>
+            </div>
+          </div>
+          <!-- Instructions -->
+          <div class="grades-current-instruction">
+            <strong>Comment progresser :</strong> Gagnez de l'expérience en complétant des tâches, en obtenant des badges, et en participant activement. Chaque niveau vous rapproche du prochain grade prestigieux !
+          </div>
+        </div>
+
+        <!-- Section Droite: Grade Actuel -->
+        <div class="grades-current-section">
+          <div class="grades-section-title">Votre Grade Actuel</div>
+          <div class="grades-current-content">
+            <!-- Icône du grade actuel -->
+            <div class="grades-current-icon" id="currentGradeIcon">
+              <i class="fas fa-star"></i>
+            </div>
+            <div class="grades-current-name" id="currentGradeName">Chargement...</div>
+            <div class="grades-current-xp" id="currentGradeXP">0 XP</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progression Container -->
+      <div class="grades-progression-container">
+        <!-- Ligne de progression -->
+        <div class="grades-progression-line" id="gradesProgressionLine">
+          <div class="grades-progression-fill" id="gradesProgressionFill" style="width: 0%"></div>
+          <!-- Points de progression pour chaque grade (positionnés dynamiquement) -->
+        </div>
+
+        <!-- Grilles des grades -->
+        <div class="grades-grid">
+        <!-- Démarrage -->
+        <div class="grade-card" data-grade="demarrage">
+          <div class="grade-icon-wrapper">
+            <img src="https://i.ibb.co/v6PRQ6RX/2.png" alt="Démarrage" class="grade-icon">
+          </div>
+          <div class="grade-info">
+            <h4 class="grade-name">Démarrage</h4>
+            <p class="grade-levels">Niv. 1</p>
+          </div>
+        </div>
+
+        <!-- Apprenti -->
+        <div class="grade-card" data-grade="apprenti">
+          <div class="grade-icon-wrapper">
+            <img src="https://i.ibb.co/CpT20JQK/3.png" alt="Apprenti" class="grade-icon">
+          </div>
+          <div class="grade-info">
+            <h4 class="grade-name">Apprenti</h4>
+            <p class="grade-levels">Niv. 2-10</p>
+          </div>
+        </div>
+
+        <!-- Pilier -->
+        <div class="grade-card" data-grade="pilier">
+          <div class="grade-icon-wrapper">
+            <img src="https://i.ibb.co/ksw5bZnH/4.png" alt="Pilier" class="grade-icon">
+          </div>
+          <div class="grade-info">
+            <h4 class="grade-name">Pilier</h4>
+            <p class="grade-levels">Niv. 11-30</p>
+          </div>
+        </div>
+
+        <!-- Expert -->
+        <div class="grade-card" data-grade="expert">
+          <div class="grade-icon-wrapper">
+            <img src="https://i.ibb.co/HfDN4YV2/5.png" alt="Expert" class="grade-icon">
+          </div>
+          <div class="grade-info">
+            <h4 class="grade-name">Expert</h4>
+            <p class="grade-levels">Niv. 31-50</p>
+          </div>
+        </div>
+
+        <!-- Maître -->
+        <div class="grade-card" data-grade="maitre">
+          <div class="grade-icon-wrapper">
+            <img src="https://i.ibb.co/PvmNXcqX/22.png" alt="Maître" class="grade-icon">
+          </div>
+          <div class="grade-info">
+            <h4 class="grade-name">Maître</h4>
+            <p class="grade-levels">Niv. 51-75</p>
+          </div>
+        </div>
+
+        <!-- Héros -->
+        <div class="grade-card" data-grade="heros">
+          <div class="grade-icon-wrapper">
+            <img src="https://i.ibb.co/XfBWrtLB/22.png" alt="Héros" class="grade-icon">
+          </div>
+          <div class="grade-info">
+            <h4 class="grade-name">Héros</h4>
+            <p class="grade-levels">Niv. 76-90</p>
+          </div>
+        </div>
+
+        <!-- Prestige -->
+        <div class="grade-card" data-grade="prestige">
+          <div class="grade-icon-wrapper">
+            <img src="https://i.ibb.co/Zp0YrH31/23.png" alt="Prestige" class="grade-icon">
+          </div>
+          <div class="grade-info">
+            <h4 class="grade-name">Prestige</h4>
+            <p class="grade-levels">Niv. 91-100</p>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+
+      </div>
+    </div>
+
+    <!-- Section Badges -->
+    <div class="status-card">
+      <div id="badgesGrid" class="empty-state" style="padding: 6rem 3rem; text-align: center;">
+        <i class="fas fa-users" style="font-size: 3rem; color: rgba(100, 116, 139, 0.3); margin-bottom: 1.5rem; display: block;"></i>
+        <p style="color: var(--text-light); margin-bottom: 0.5rem;">Sélectionnez une personne</p>
+        <p style="color: var(--text-gray); opacity: 0.8;">Choisissez un coach ou un entrepreneur pour gérer ses badges et progression</p>
+      </div>
+    </div>
+
+    </div>
+  </div>
+
+  <script>
+    let selectedUser = null;
+    let userProfile = null;
+    let allBadges = {};
+    let userBadges = [];
+    let userFullName = '';
+    let allEntrepreneurs = [];
+    let allCoaches = [];
+    let selectedUserType = null; // 'coach' ou 'entrepreneur'
+
+    // Initialisation
+    async function init() {
+      try {
+        // Charger tous les badges
+        await loadAllBadges();
+      } catch (error) {
+        console.error('Erreur d\'initialisation:', error);
+      }
+    }
+
+    // Charger la liste selon le type sélectionné
+    async function loadPeopleByType(type) {
+      try {
+        selectedUserType = type;
+        const menu = document.getElementById('userSelectMenu');
+        const userToggle = document.getElementById('userSelectToggle');
+        menu.innerHTML = '';
+
+        let apiUrl, data, iconClass, iconColor;
+
+        if (type === 'coach') {
+          apiUrl = '/api/users/coaches';
+          iconClass = 'fa-user-graduate';
+          iconColor = 'var(--primary-blue)';
+        } else {
+          apiUrl = '/api/entrepreneurs';
+          iconClass = 'fa-user-tie';
+          iconColor = 'var(--primary-green)';
+        }
+
+        const response = await fetch(apiUrl);
+        data = await response.json();
+
+        // Gérer les différentes structures de réponse
+        let people = [];
+        if (type === 'coach' && data.success) {
+          people = data.coaches || [];
+        } else if (type === 'entrepreneur') {
+          people = data || [];
+        }
+
+        console.log(`[DEBUG] ${type}s reçus:`, people);
+
+        if (people.length === 0) {
+          const emptyOption = document.createElement('div');
+          emptyOption.className = 'dropdown-option-disabled';
+          emptyOption.textContent = `Aucun ${type === 'coach' ? 'coach' : 'entrepreneur'} disponible`;
+          menu.appendChild(emptyOption);
+          return;
+        }
+
+        people.forEach(person => {
+          const option = document.createElement('div');
+          option.className = 'dropdown-option';
+
+          let displayName, realUsername;
+
+          if (type === 'coach') {
+            realUsername = person.username;
+            displayName = person.prenom && person.nom
+              ? `${person.prenom} ${person.nom} (${person.username})`
+              : person.username;
+          } else {
+            realUsername = person.login_username || person.username;
+            displayName = person.username;
+          }
+
+          option.innerHTML = `
+            <i class="fas ${iconClass}" style="margin-right: 0.5rem; color: ${iconColor};"></i>
+            ${displayName}
+          `;
+          option.dataset.username = realUsername;
+
+          option.onclick = () => {
+            selectUser(realUsername);
+            updateUserDropdownSelection(displayName);
+            closeUserDropdown();
+          };
+
+          menu.appendChild(option);
+        });
+
+        // Activer le dropdown de sélection des personnes
+        userToggle.style.opacity = '1';
+        userToggle.style.pointerEvents = 'all';
+        const placeholder = userToggle.querySelector('.placeholder, .selected-text');
+        if (placeholder) {
+          placeholder.textContent = `-- Sélectionner un ${type === 'coach' ? 'coach' : 'entrepreneur'} --`;
+          placeholder.classList.remove('selected-text');
+          placeholder.classList.add('placeholder');
+        }
+
+        console.log(`✅ ${people.length} ${type}s chargés`);
+      } catch (error) {
+        console.error(`Erreur chargement ${type}s:`, error);
+        const menu = document.getElementById('userSelectMenu');
+        menu.innerHTML = '<div class="dropdown-option-disabled">Erreur de chargement</div>';
+      }
+    }
+
+    // Mettre à jour l'affichage du dropdown Type
+    function updateTypeDropdownSelection(displayName) {
+      const toggle = document.getElementById('userTypeToggle');
+      const placeholder = toggle.querySelector('.placeholder, .selected-text');
+
+      if (displayName) {
+        placeholder.textContent = displayName;
+        placeholder.classList.remove('placeholder');
+        placeholder.classList.add('selected-text');
+      } else {
+        placeholder.textContent = '-- Choisir le type --';
+        placeholder.classList.remove('selected-text');
+        placeholder.classList.add('placeholder');
+      }
+    }
+
+    // Mettre à jour l'affichage du dropdown Personne
+    function updateUserDropdownSelection(displayName) {
+      const toggle = document.getElementById('userSelectToggle');
+      const placeholder = toggle.querySelector('.placeholder, .selected-text');
+
+      if (displayName) {
+        placeholder.textContent = displayName;
+        placeholder.classList.remove('placeholder');
+        placeholder.classList.add('selected-text');
+      } else {
+        const typeText = selectedUserType === 'coach' ? 'coach' : 'entrepreneur';
+        placeholder.textContent = `-- Sélectionner un ${typeText} --`;
+        placeholder.classList.remove('selected-text');
+        placeholder.classList.add('placeholder');
+      }
+    }
+
+    // Fermer le dropdown Type
+    function closeTypeDropdown() {
+      const toggle = document.getElementById('userTypeToggle');
+      const menu = document.getElementById('userTypeMenu');
+
+      toggle.classList.remove('active');
+      menu.classList.add('hidden');
+    }
+
+    // Fermer le dropdown Personne
+    function closeUserDropdown() {
+      const toggle = document.getElementById('userSelectToggle');
+      const menu = document.getElementById('userSelectMenu');
+      const searchInput = document.getElementById('userSearchInput');
+
+      toggle.classList.remove('active');
+      menu.classList.add('hidden');
+
+      // Cacher l'input de recherche et afficher le texte sélectionné
+      if (searchInput) {
+        searchInput.style.display = 'none';
+        searchInput.value = '';
+      }
+
+      const placeholderEl = toggle.querySelector('.placeholder, .selected-text');
+      if (placeholderEl) {
+        placeholderEl.style.display = '';
+      }
+
+      // Réafficher toutes les options pour la prochaine ouverture
+      const allOptions = menu.querySelectorAll('.dropdown-option');
+      allOptions.forEach(opt => opt.style.display = '');
+
+      // Cacher le message "no results"
+      const noResultsMsg = menu.querySelector('.no-results-message');
+      if (noResultsMsg) {
+        noResultsMsg.style.display = 'none';
+      }
+    }
+
+    // Event listeners pour les dropdowns
+    document.addEventListener('DOMContentLoaded', () => {
+      // Dropdown Type (Coach/Entrepreneur)
+      const typeToggle = document.getElementById('userTypeToggle');
+      const typeMenu = document.getElementById('userTypeMenu');
+
+      if (typeToggle && typeMenu) {
+        typeToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          typeToggle.classList.toggle('active');
+          typeMenu.classList.toggle('hidden');
+        });
+
+        // Gestion des options du menu Type
+        const typeOptions = typeMenu.querySelectorAll('.dropdown-option');
+        typeOptions.forEach(option => {
+          option.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const type = option.dataset.type;
+            const displayName = option.textContent.trim();
+
+            // Mettre à jour l'affichage
+            updateTypeDropdownSelection(displayName);
+            closeTypeDropdown();
+
+            // Charger les personnes du type sélectionné
+            loadPeopleByType(type);
+          });
+        });
+      }
+
+      // Dropdown Personne (liste des coaches/entrepreneurs)
+      const userToggle = document.getElementById('userSelectToggle');
+      const userMenu = document.getElementById('userSelectMenu');
+      const searchInput = document.getElementById('userSearchInput');
+
+      if (userToggle && userMenu) {
+        userToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          // Ne pas ouvrir si le dropdown est désactivé
+          if (userToggle.style.pointerEvents === 'none') return;
+
+          const isOpening = !userToggle.classList.contains('active');
+
+          userToggle.classList.toggle('active');
+          userMenu.classList.toggle('hidden');
+
+          const placeholderEl = userToggle.querySelector('.placeholder, .selected-text');
+
+          // When dropdown opens
+          if (isOpening && searchInput) {
+            // Hide placeholder, show search input
+            if (placeholderEl) {
+              placeholderEl.style.display = 'none';
+            }
+            searchInput.style.display = '';
+            searchInput.value = '';
+            searchInput.focus();
+          }
+          // When dropdown closes
+          else if (searchInput) {
+            // Hide search input
+            searchInput.style.display = 'none';
+            searchInput.value = '';
+
+            // Show placeholder or selected text
+            if (placeholderEl) {
+              placeholderEl.style.display = '';
+            }
+
+            // Show all options again
+            const allOptions = userMenu.querySelectorAll('.dropdown-option');
+            allOptions.forEach(opt => opt.style.display = '');
+
+            // Hide "no results" message
+            const noResultsMsg = userMenu.querySelector('.no-results-message');
+            if (noResultsMsg) {
+              noResultsMsg.style.display = 'none';
+            }
+          }
+        });
+
+        // Search input functionality
+        if (searchInput) {
+          searchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const allOptions = userMenu.querySelectorAll('.dropdown-option');
+            let visibleCount = 0;
+
+            allOptions.forEach(option => {
+              const text = option.textContent.toLowerCase();
+              if (searchTerm === '' || text.includes(searchTerm)) {
+                option.style.display = '';
+                visibleCount++;
+              } else {
+                option.style.display = 'none';
+              }
+            });
+
+            // Show/hide "no results" message
+            let noResultsMsg = userMenu.querySelector('.no-results-message');
+
+            if (visibleCount === 0 && searchTerm !== '') {
+              if (!noResultsMsg) {
+                noResultsMsg = document.createElement('div');
+                noResultsMsg.className = 'dropdown-option-disabled no-results-message';
+                noResultsMsg.textContent = 'Personne à ce nom...';
+                userMenu.appendChild(noResultsMsg);
+              }
+              noResultsMsg.style.display = 'block';
+            } else if (noResultsMsg) {
+              noResultsMsg.style.display = 'none';
+            }
+          });
+
+          // Prevent dropdown from closing when clicking in search input
+          searchInput.addEventListener('click', function(e) {
+            e.stopPropagation();
+          });
+        }
+      }
+
+      // Fermer les dropdowns quand on clique ailleurs
+      document.addEventListener('click', (e) => {
+        if (typeToggle && typeMenu && !typeToggle.contains(e.target) && !typeMenu.contains(e.target)) {
+          closeTypeDropdown();
+        }
+        if (userToggle && userMenu && !userToggle.contains(e.target) && !userMenu.contains(e.target)) {
+          // Close dropdown and reset search
+          if (searchInput) {
+            searchInput.style.display = 'none';
+            searchInput.value = '';
+
+            const placeholderEl = userToggle.querySelector('.placeholder, .selected-text');
+            if (placeholderEl) {
+              placeholderEl.style.display = '';
+            }
+
+            // Show all options
+            const allOptions = userMenu.querySelectorAll('.dropdown-option');
+            allOptions.forEach(opt => opt.style.display = '');
+
+            // Hide "no results" message
+            const noResultsMsg = userMenu.querySelector('.no-results-message');
+            if (noResultsMsg) {
+              noResultsMsg.style.display = 'none';
+            }
+          }
+          closeUserDropdown();
+        }
+      });
+    });
+
+    // Charger tous les badges
+    async function loadAllBadges() {
+      try {
+        const response = await fetch('/api/gamification/badges/all');
+        const data = await response.json();
+
+        if (data.status === 'success') {
+          allBadges = data.all_badges;
+          console.log(`✅ ${data.total} badges chargés`);
+        }
+      } catch (error) {
+        console.error('Erreur chargement badges:', error);
+      }
+    }
+
+    // Afficher le spinner de chargement
+    function showLoadingSpinner() {
+      const progressSection = document.getElementById('progress-section');
+      const badgesGrid = document.getElementById('badgesGrid');
+
+      // Afficher la section de progression (elle contient déjà les éléments avec "Chargement...")
+      progressSection.style.display = 'block';
+
+      // Créer un overlay de chargement au-dessus de la section de progression
+      let loadingOverlay = document.getElementById('progress-loading-overlay');
+      if (!loadingOverlay) {
+        loadingOverlay = document.createElement('div');
+        loadingOverlay.id = 'progress-loading-overlay';
+        loadingOverlay.style.cssText = `
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(15, 23, 42, 0.8);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 16px;
+          z-index: 10;
+        `;
+        loadingOverlay.innerHTML = `
+          <i class="fas fa-spinner fa-spin" style="font-size: 3rem; color: var(--primary-blue);"></i>
+        `;
+        progressSection.style.position = 'relative';
+        progressSection.appendChild(loadingOverlay);
+      } else {
+        loadingOverlay.style.display = 'flex';
+      }
+
+      // Afficher un spinner dans la grille de badges
+      badgesGrid.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6rem 3rem; text-align: center;">
+          <i class="fas fa-spinner fa-spin" style="font-size: 4rem; color: var(--primary-blue); margin-bottom: 2rem;"></i>
+          <p style="font-size: 1.25rem; font-weight: 600; color: var(--text-light); margin-bottom: 0.5rem;">Chargement en cours...</p>
+          <p style="font-size: 1rem; color: var(--text-gray); opacity: 0.8;">Veuillez patienter</p>
+        </div>
+      `;
+    }
+
+    // Cacher le spinner de chargement
+    function hideLoadingSpinner() {
+      const loadingOverlay = document.getElementById('progress-loading-overlay');
+      if (loadingOverlay) {
+        loadingOverlay.style.display = 'none';
+      }
+    }
+
+    // Rafraîchir les données de l'utilisateur (sans spinner)
+    async function refreshUserData() {
+      if (!selectedUser) return;
+
+      try {
+        // Charger le profil de gamification
+        const profileResponse = await fetch(`/api/gamification/profile/${selectedUser}`);
+        const profileData = await profileResponse.json();
+
+        if (profileData.status === 'success') {
+          userProfile = profileData.profile;
+        }
+
+        // Charger les badges de l'utilisateur
+        const badgesResponse = await fetch(`/api/gamification/badges/user/${selectedUser}`);
+        const badgesData = await badgesResponse.json();
+        userBadges = badgesData.badges || [];
+
+        // Mettre à jour l'affichage (sans spinner)
+        if (userProfile) {
+          // Mettre à jour les stats
+          const totalXpEl = document.getElementById('totalXp');
+          if (totalXpEl) {
+            totalXpEl.textContent = userProfile.total_xp.toLocaleString();
+          }
+          const badgesEarnedEl = document.getElementById('badgesEarned');
+          if (badgesEarnedEl) {
+            badgesEarnedEl.textContent = userBadges.length;
+          }
+
+          // Mettre à jour la barre XP
+          const xpTextEl = document.getElementById('xpText');
+          if (xpTextEl) {
+            xpTextEl.textContent = `${userProfile.xp_progress} / ${userProfile.xp_for_next_level} XP`;
+          }
+          const xpProgressFillEl = document.getElementById('xpProgressFill');
+          if (xpProgressFillEl) {
+            xpProgressFillEl.style.width = `${userProfile.progress_percentage}%`;
+          }
+          const xpProgressTextEl = document.getElementById('xpProgressText');
+          if (xpProgressTextEl) {
+            xpProgressTextEl.textContent = `${userProfile.progress_percentage}%`;
+          }
+
+          // Mettre à jour le niveau
+          const photoLevelTextEl = document.getElementById('photo-level-text');
+          if (photoLevelTextEl) {
+            photoLevelTextEl.textContent = userProfile.level;
+          }
+        }
+
+        // Re-rendre les badges
+        renderBadges();
+
+      } catch (error) {
+        console.error('[ERROR] Erreur rafraîchissement données utilisateur:', error);
+      }
+    }
+
+    // Sélectionner une personne (coach ou entrepreneur)
+    async function selectUser(username) {
+      if (!username) {
+        selectedUser = null;
+        userProfile = null;
+        updateUserDropdownSelection('');
+        document.getElementById('progress-section').style.display = 'none';
+        document.getElementById('badgesGrid').innerHTML = `
+          <div class="empty-state" style="padding: 6rem 3rem; text-align: center;">
+            <i class="fas fa-users" style="font-size: 6rem; color: rgba(100, 116, 139, 0.25); margin-bottom: 2.5rem; display: block;"></i>
+            <p style="font-size: 1.5rem; font-weight: 600; color: var(--text-light); margin-bottom: 0.75rem;">Sélectionnez une personne</p>
+            <p style="font-size: 1.125rem; color: var(--text-gray); opacity: 0.8;">Choisissez un coach ou un entrepreneur pour gérer ses badges et progression</p>
+          </div>
+        `;
+        return;
+      }
+
+      selectedUser = username;
+      console.log(`[DEBUG] Sélection de l'entrepreneur: ${username}`);
+
+      // Afficher le spinner de chargement
+      showLoadingSpinner();
+
+      try {
+        // Charger le profil de gamification
+        const profileResponse = await fetch(`/api/gamification/profile/${username}`);
+        const profileData = await profileResponse.json();
+        console.log('[DEBUG] Profil reçu:', profileData);
+
+        if (profileData.status === 'success') {
+          userProfile = profileData.profile;
+          console.log('[DEBUG] userProfile chargé:', userProfile);
+        } else {
+          console.error('[ERROR] Échec chargement profil:', profileData);
+        }
+
+        // Charger les badges de l'utilisateur
+        const badgesResponse = await fetch(`/api/gamification/badges/user/${username}`);
+        const badgesData = await badgesResponse.json();
+        console.log('[DEBUG] Badges reçus:', badgesData);
+
+        userBadges = badgesData.badges || [];
+        console.log(`[DEBUG] ${userBadges.length} badges chargés pour ${username}`);
+
+        // Charger les informations utilisateur pour le nom complet
+        try {
+          const userResponse = await fetch(`/api/me/${username}`);
+          const userData = await userResponse.json();
+          console.log('[DEBUG] Infos utilisateur:', userData);
+
+          if (userData.prenom && userData.nom) {
+            userFullName = `${userData.prenom} ${userData.nom}`;
+          } else {
+            userFullName = username;
+          }
+        } catch (error) {
+          console.error('[ERROR] Erreur chargement infos utilisateur:', error);
+          userFullName = username;
+        }
+
+        // Afficher la section de progression et rendre le profil
+        document.getElementById('progress-section').style.display = 'block';
+
+        if (userProfile) {
+          await renderProfile();
+        } else {
+          console.error('[ERROR] userProfile est null, impossible de rendre le profil');
+        }
+
+        renderBadges();
+
+        // Cacher le spinner une fois le chargement terminé
+        hideLoadingSpinner();
+      } catch (error) {
+        console.error('[ERROR] Erreur chargement données utilisateur:', error);
+
+        // Cacher le spinner même en cas d'erreur
+        hideLoadingSpinner();
+
+        // Afficher un message d'erreur
+        document.getElementById('progress-section').style.display = 'none';
+        document.getElementById('badgesGrid').innerHTML = `
+          <div class="empty-state" style="padding: 6rem 3rem; text-align: center;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 6rem; color: rgba(239, 68, 68, 0.25); margin-bottom: 2.5rem; display: block;"></i>
+            <p style="font-size: 1.5rem; font-weight: 600; color: var(--text-light); margin-bottom: 0.75rem;">Erreur de chargement</p>
+            <p style="font-size: 1.125rem; color: var(--text-gray); opacity: 0.8;">Impossible de charger les données de cet utilisateur</p>
+          </div>
+        `;
+      }
+    }
+
+
+    // Fonction pour obtenir l'icône du grade (avec images)
+    function getGradeIcon(category) {
+      const images = {
+        'Démarrage': 'https://i.ibb.co/rGtd1CBF/Design-sans-titre-81.png',
+        'Apprenti': 'https://i.ibb.co/6cYBGTG8/Design-sans-titre-82.png',
+        'Pilier': 'https://i.ibb.co/FbxZNYxQ/Design-sans-titre-88.png',
+        'Expert': 'https://i.ibb.co/HD7d2fx0/Design-sans-titre-86.png',
+        'Maître': 'https://i.ibb.co/PvmNXcqX/22.png',
+        'Héros': 'https://i.ibb.co/XfBWrtLB/22.png',
+        'Prestige': 'https://i.ibb.co/Zp0YrH31/23.png'
+      };
+
+      const fallbackIcons = {
+        'Démarrage': 'fas fa-seedling',
+        'Apprenti': 'fas fa-user-graduate',
+        'Pilier': 'fas fa-shield-alt',
+        'Expert': 'fas fa-crown',
+        'Maître': 'fas fa-gem',
+        'Héros': 'fas fa-dragon',
+        'Prestige': 'fas fa-star'
+      };
+
+      if (images[category]) {
+        return `<img src="${images[category]}" alt="${category}" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'${fallbackIcons[category] || 'fas fa-certificate'}\\'></i>'">`;
+      }
+      return `<i class="${fallbackIcons[category] || 'fas fa-certificate'}"></i>`;
+    }
+
+    // Rendre le profil
+    async function renderProfile() {
+      if (!userProfile) {
+        console.error('[ERROR] userProfile est null dans renderProfile');
+        return;
+      }
+
+      // Récupérer la photo de profil via l'API
+      const photoEl = document.getElementById('profilePhoto');
+
+      if (photoEl) {
+        try {
+          const res = await fetch(`/api/get-profile-photo/${selectedUser}`);
+          const data = await res.json();
+          if (data.success && data.photoUrl) {
+            photoEl.style.display = 'block';
+            photoEl.src = data.photoUrl;
+          } else {
+            // Utiliser la photo par défaut
+            const initial = userFullName ? userFullName.charAt(0).toUpperCase() : currentUser.charAt(0).toUpperCase();
+            photoEl.style.display = 'block';
+            photoEl.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+          }
+        } catch (error) {
+          console.error('Erreur chargement photo:', error);
+          if (photoEl) {
+            const initial = userFullName ? userFullName.charAt(0).toUpperCase() : currentUser.charAt(0).toUpperCase();
+            photoEl.style.display = 'block';
+            photoEl.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2360a5fa" width="100" height="100"/><text x="50" y="50" font-size="50" text-anchor="middle" dy=".3em" fill="white">${initial}</text></svg>`;
+          }
+        }
+      }
+
+      // Mettre à jour le nom avec le nom complet
+      const displayName = userFullName || currentUser;
+      const profileNameEl = document.getElementById('profileName');
+      if (profileNameEl) {
+        profileNameEl.textContent = displayName;
+      }
+
+      // Mettre à jour le niveau dans le banner sous la photo
+      const photoLevelTextEl = document.getElementById('photo-level-text');
+      if (photoLevelTextEl) {
+        photoLevelTextEl.textContent = userProfile.level;
+      }
+
+      // Récupérer et afficher le grade d'entrepreneur
+      await fetchEntrepreneurGrade();
+
+      // Mettre à jour le badge du grade actuel dans le header
+      const currentCategory = userProfile.category;
+      const gradeImageMap = {
+        'Démarrage': 'https://i.ibb.co/v6PRQ6RX/2.png',
+        'Apprenti': 'https://i.ibb.co/CpT20JQK/3.png',
+        'Pilier': 'https://i.ibb.co/ksw5bZnH/4.png',
+        'Expert': 'https://i.ibb.co/HfDN4YV2/5.png',
+        'Maître': 'https://i.ibb.co/PvmNXcqX/22.png',
+        'Héros': 'https://i.ibb.co/XfBWrtLB/22.png',
+        'Prestige': 'https://i.ibb.co/Zp0YrH31/23.png'
+      };
+
+      const gradeImage = gradeImageMap[currentCategory];
+      const profileCurrentGradeEl = document.getElementById('profileCurrentGrade');
+      if (gradeImage && profileCurrentGradeEl) {
+        profileCurrentGradeEl.src = gradeImage;
+      }
+      const profileGradeNameEl = document.getElementById('profileGradeName');
+      if (profileGradeNameEl) {
+        profileGradeNameEl.textContent = currentCategory;
+      }
+
+      // Appliquer le contour avec XP au conteneur de photo de profil
+      const profilePhotoContainer = document.getElementById('profilePhotoContainer');
+      if (profilePhotoContainer) {
+        // Retirer toutes les anciennes classes de grade
+        const classList = profilePhotoContainer.className.split(' ');
+        profilePhotoContainer.className = classList.filter(c => !c.startsWith('grade-')).join(' ');
+        // Ajouter la nouvelle classe de grade
+        const gradeClass = 'grade-' + currentCategory.toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/\s+/g, '-');
+        profilePhotoContainer.classList.add(gradeClass);
+      }
+
+      // Mettre à jour la barre de progression XP
+      const xpTextEl = document.getElementById('xpText');
+      if (xpTextEl) {
+        xpTextEl.textContent = `${userProfile.xp_progress} / ${userProfile.xp_for_next_level} XP`;
+      }
+      const xpProgressFillEl = document.getElementById('xpProgressFill');
+      if (xpProgressFillEl) {
+        xpProgressFillEl.style.width = `${userProfile.progress_percentage}%`;
+      }
+      const xpProgressTextEl = document.getElementById('xpProgressText');
+      if (xpProgressTextEl) {
+        xpProgressTextEl.textContent = `${userProfile.progress_percentage}%`;
+      }
+
+      // Mettre à jour les statistiques
+      const totalXpEl = document.getElementById('totalXp');
+      if (totalXpEl) {
+        totalXpEl.textContent = userProfile.total_xp.toLocaleString();
+      }
+      const badgesEarnedEl = document.getElementById('badgesEarned');
+      if (badgesEarnedEl) {
+        badgesEarnedEl.textContent = userBadges.length;
+      }
+
+      // Calculer la progression vers le prochain grade
+      const gradeLevels = [
+        { name: 'Démarrage', minLevel: 1, maxLevel: 1 },
+        { name: 'Apprenti', minLevel: 2, maxLevel: 10 },
+        { name: 'Pilier', minLevel: 11, maxLevel: 30 },
+        { name: 'Expert', minLevel: 31, maxLevel: 50 },
+        { name: 'Maître', minLevel: 51, maxLevel: 75 },
+        { name: 'Héros', minLevel: 76, maxLevel: 90 },
+        { name: 'Prestige', minLevel: 91, maxLevel: 100 }
+      ];
+
+      const currentLevel = userProfile.level;
+      const currentGradeIndex = gradeLevels.findIndex(g => currentLevel >= g.minLevel && currentLevel <= g.maxLevel);
+      const currentGrade = gradeLevels[currentGradeIndex];
+
+      if (currentGrade) {
+        // Mettre à jour le badge actuel
+        const currentGradeBadgeEl = document.getElementById('currentGradeBadge');
+        if (currentGradeBadgeEl) {
+          currentGradeBadgeEl.src = gradeImageMap[currentGrade.name];
+        }
+
+        if (currentGrade.name === 'Prestige') {
+          // Grade maximum atteint
+          const gradeProgressTextEl = document.getElementById('gradeProgressText');
+          if (gradeProgressTextEl) {
+            gradeProgressTextEl.innerHTML = `<span style="color: var(--primary-gold);">Max</span>`;
+          }
+          const gradeProgressBarFillEl = document.getElementById('gradeProgressBarFill');
+          if (gradeProgressBarFillEl) {
+            gradeProgressBarFillEl.style.width = '100%';
+          }
+          const nextGradeBadgeEl = document.getElementById('nextGradeBadge');
+          if (nextGradeBadgeEl) {
+            nextGradeBadgeEl.src = gradeImageMap['Prestige'];
+          }
+        } else {
+          // Prochain grade
+          const nextGrade = gradeLevels[currentGradeIndex + 1];
+          const nextGradeLevel = nextGrade.minLevel;
+
+          // Mettre à jour le badge suivant
+          const nextGradeBadgeEl = document.getElementById('nextGradeBadge');
+          if (nextGradeBadgeEl) {
+            nextGradeBadgeEl.src = gradeImageMap[nextGrade.name];
+          }
+
+          // Afficher niveau actuel / niveau du prochain grade
+          const gradeProgressTextEl = document.getElementById('gradeProgressText');
+          if (gradeProgressTextEl) {
+            gradeProgressTextEl.textContent = `Niv. ${currentLevel} / ${nextGradeLevel}`;
+          }
+
+          // Calculer le pourcentage de progression dans le grade actuel
+          const levelsInCurrentGrade = currentGrade.maxLevel - currentGrade.minLevel + 1;
+          const levelProgress = currentLevel - currentGrade.minLevel;
+          const progressPercentage = (levelProgress / levelsInCurrentGrade) * 100;
+          const gradeProgressBarFillEl = document.getElementById('gradeProgressBarFill');
+          if (gradeProgressBarFillEl) {
+            gradeProgressBarFillEl.style.width = `${progressPercentage}%`;
+          }
+        }
+      }
+    }
+
+    // Récupérer et afficher le grade d'entrepreneur
+    async function fetchEntrepreneurGrade() {
+      try {
+        // Si c'est un coach, afficher "Coach" directement
+        if (selectedUserType === 'coach') {
+          const entrepreneurGradeEl = document.getElementById('entrepreneurGrade');
+          if (entrepreneurGradeEl) {
+            entrepreneurGradeEl.textContent = 'Coach';
+          }
+          return;
+        }
+
+        const response = await fetch(`/api/get-info/${selectedUser}`);
+        if (!response.ok) throw new Error('Erreur lors de la récupération du grade');
+
+        const result = await response.json();
+        const grade = result.data?.grade;
+
+        // Formater le nom du grade
+        let gradeDisplay = 'Non défini';
+        if (grade) {
+          switch(grade) {
+            case 'recrue':
+              gradeDisplay = 'Recrue';
+              break;
+            case 'senior1':
+              gradeDisplay = 'Senior | 1';
+              break;
+            case 'senior2':
+              gradeDisplay = 'Senior | 2';
+              break;
+            case 'senior3':
+              gradeDisplay = 'Senior | 3';
+              break;
+            default:
+              gradeDisplay = grade.charAt(0).toUpperCase() + grade.slice(1);
+          }
+        }
+
+        // Afficher le grade
+        const entrepreneurGradeEl = document.getElementById('entrepreneurGrade');
+        if (entrepreneurGradeEl) {
+          entrepreneurGradeEl.textContent = gradeDisplay;
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération du grade:', error);
+        // Si c'est un coach, afficher "Coach" même en cas d'erreur
+        const entrepreneurGradeEl = document.getElementById('entrepreneurGrade');
+        if (entrepreneurGradeEl) {
+          if (selectedUserType === 'coach') {
+            entrepreneurGradeEl.textContent = 'Coach';
+          } else {
+            entrepreneurGradeEl.textContent = 'Non défini';
+          }
+        }
+      }
+    }
+
+    // Rendre les badges par catégorie
+    function renderBadges() {
+      console.log('[DEBUG] renderBadges() appelé');
+      console.log('[DEBUG] userBadges:', userBadges);
+      console.log('[DEBUG] allBadges:', Object.keys(allBadges).length, 'badges au total');
+
+      // Créer une Map badge_id -> count pour un accès rapide
+      const userBadgeMap = new Map(userBadges.map(b => [b.badge_id, b.count || 1]));
+      console.log('[DEBUG] userBadgeMap:', userBadgeMap);
+
+      // Grouper les badges par type ET rareté
+      const badgesByType = {
+        fleur: { Commun: [], Rare: [], Épique: [], Légendaire: [], Mythique: [], 'Anti-Badge': [] },
+        etoile: { Commun: [], Rare: [], Épique: [], Légendaire: [], Mythique: [], 'Anti-Badge': [] },
+        trophee: { Commun: [], Rare: [], Épique: [], Légendaire: [], Mythique: [], 'Anti-Badge': [] },
+        badge: { Commun: [], Rare: [], Épique: [], Légendaire: [], Mythique: [], 'Anti-Badge': [] }
+      };
+
+      Object.entries(allBadges).forEach(([badgeId, badge]) => {
+        const type = badge.type || 'fleur';
+        const rarity = badge.rarity || 'Commun';
+        if (badgesByType[type] && badgesByType[type][rarity]) {
+          badgesByType[type][rarity].push([badgeId, badge]);
+        }
+      });
+
+      // Créer le HTML pour chaque catégorie
+      const categoryConfig = {
+        fleur: { icon: '<i class="fas fa-spa"></i>', name: 'Fleurs' },
+        etoile: { icon: '<i class="fas fa-star"></i>', name: 'Étoiles' },
+        trophee: { icon: '<i class="fas fa-trophy"></i>', name: 'Trophées' },
+        badge: { icon: '<i class="fas fa-medal"></i>', name: 'Badges' }
+      };
+
+      // Ordre des raretés (du plus faible au plus fort)
+      const rarityOrder = ['Commun', 'Rare', 'Légendaire', 'Mythique', 'Épique', 'Anti-Badge'];
+
+      let sectionsHTML = '';
+
+      Object.entries(badgesByType).forEach(([type, rarities]) => {
+        // Compter le nombre total de badges de ce type
+        const totalBadges = Object.values(rarities).reduce((sum, arr) => sum + arr.length, 0);
+        if (totalBadges === 0) return;
+
+        const config = categoryConfig[type];
+        const earnedCount = Object.values(rarities)
+          .flat()
+          .filter(([id]) => userBadgeMap.has(id)).length;
+
+        // Header de la catégorie (type)
+        sectionsHTML += `
+          <div class="badge-category">
+            <div class="category-header">
+              <span class="category-icon">${config.icon}</span>
+              <h3>${config.name}</h3>
+              <span class="category-count">${earnedCount} / ${totalBadges}</span>
+            </div>
+        `;
+
+        // Sections par rareté
+        rarityOrder.forEach(rarity => {
+          const badges = rarities[rarity];
+          if (!badges || badges.length === 0) return;
+
+          const rarityClass = rarity.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]/g, '-');
+
+          const earnedCountRarity = badges.filter(([id]) => userBadgeMap.has(id)).length;
+
+          const badgesHTML = badges.map(([badgeId, badge]) => {
+            const badgeCount = userBadgeMap.get(badgeId) || 0;
+            const isEarned = badgeCount > 0;
+            const xpClass = badge.xp_bonus < 0 ? 'negative' : '';
+
+            // PRIORISER image_url (PNG) sur icon (emoji)
+            const imageUrl = badge.image_url || '';
+            const icon = badge.icon || '';
+
+            let iconDisplay = '';
+            if (imageUrl && imageUrl.startsWith('http')) {
+              // Priorité 1: PNG/URL externe
+              iconDisplay = `<img src="${imageUrl}" alt="${badge.name}" />`;
+            } else if (icon && (icon.startsWith('http') || icon.startsWith('/static/'))) {
+              // Priorité 2: URL ou chemin local dans le champ icon
+              iconDisplay = `<img src="${icon}" alt="${badge.name}" />`;
+            } else if (icon && icon.endsWith('.png')) {
+              // Priorité 3: Chemin PNG sans /static/ (ancien format)
+              iconDisplay = `<img src="/static/badges/${icon}" alt="${badge.name}" />`;
+            } else {
+              // Priorité 4: Emoji
+              iconDisplay = icon;
+            }
+
+            return `
+              <div class="badge-card ${isEarned ? '' : 'locked'}">
+                ${!isEarned ? `<div class="badge-locked-icon"><i class="fas fa-lock"></i></div>` : ''}
+                <div class="badge-controls">
+                  <div class="badge-control-btn decrement" onclick="event.stopPropagation(); decrementBadge('${badgeId}', ${badgeCount})">
+                    <i class="fas fa-minus"></i>
+                  </div>
+                  <div class="badge-control-btn increment" onclick="event.stopPropagation(); incrementBadge('${badgeId}', ${badgeCount})">
+                    <i class="fas fa-plus"></i>
+                  </div>
+                </div>
+                ${badgeCount > 1 ? `<div class="badge-count">x${badgeCount}</div>` : ''}
+                <div class="badge-name">
+                  <span class="badge-name-text">${badge.name}</span>
+                  <div class="badge-name-tooltip">${badge.name}</div>
+                </div>
+                <span class="badge-rarity-visible rarity-${badge.rarity.toLowerCase()}">${badge.rarity}</span>
+                <div class="badge-icon">${iconDisplay}</div>
+                <div class="badge-info-icon" onclick="event.stopPropagation()">
+                  <i class="fas fa-info"></i>
+                  <div class="badge-tooltip">
+                    <div class="tooltip-description">${badge.description}</div>
+                    <div class="tooltip-footer">
+                      <span class="badge-xp ${xpClass}">
+                        ${badge.xp_bonus > 0 ? '+' : ''}${badge.xp_bonus} XP
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          sectionsHTML += `
+            <div class="rarity-section">
+              <div class="rarity-section-title">
+                <span class="badge-rarity ${rarityClass}">${rarity}</span>
+                <span class="rarity-badge-count">${earnedCountRarity} / ${badges.length}</span>
+              </div>
+              <div class="badges-grid">
+                ${badgesHTML}
+              </div>
+            </div>
+          `;
+        });
+
+        sectionsHTML += `</div>`; // Fermer badge-category
+      });
+
+      if (sectionsHTML === '') {
+        document.getElementById('badgesGrid').innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-medal"></i>
+            <p>Aucun badge dans cette catégorie</p>
+          </div>
+        `;
+      } else {
+        document.getElementById('badgesGrid').innerHTML = sectionsHTML;
+
+        // Détecter les titres tronqués et ajouter une classe pour le hover
+        setTimeout(() => {
+          const badgeNames = document.querySelectorAll('.badge-name');
+          badgeNames.forEach(nameEl => {
+            const textSpan = nameEl.querySelector('.badge-name-text');
+            if (textSpan && textSpan.scrollWidth > textSpan.clientWidth) {
+              nameEl.classList.add('truncated');
+              nameEl.setAttribute('data-full-name', textSpan.textContent);
+            }
+          });
+        }, 100);
+      }
+    }
+
+    // Fonctions pour le modal des grades
+    function openGradesModal() {
+      const modal = document.getElementById('gradesModal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden'; // Empêcher le scroll du body
+      updateGradesProgression();
+    }
+
+    // Mettre à jour la progression des grades
+    function updateGradesProgression() {
+      if (!userProfile) return;
+
+      const currentLevel = userProfile.level;
+      const currentXP = userProfile.total_xp;
+      const currentCategory = userProfile.category;
+
+      // Afficher les informations du grade actuel
+      document.getElementById('currentGradeName').textContent = currentCategory;
+      document.getElementById('currentGradeXP').textContent = `${currentXP.toLocaleString()} XP - Niveau ${currentLevel}`;
+
+      // Mettre à jour l'icône du grade actuel avec images
+      const gradeImageMap = {
+        'Démarrage': 'https://i.ibb.co/v6PRQ6RX/2.png',
+        'Apprenti': 'https://i.ibb.co/CpT20JQK/3.png',
+        'Pilier': 'https://i.ibb.co/ksw5bZnH/4.png',
+        'Expert': 'https://i.ibb.co/HfDN4YV2/5.png',
+        'Maître': 'https://i.ibb.co/PvmNXcqX/22.png',
+        'Héros': 'https://i.ibb.co/XfBWrtLB/22.png',
+        'Prestige': 'https://i.ibb.co/Zp0YrH31/23.png'
+      };
+
+      const gradeFallbackIcons = {
+        'Démarrage': 'fas fa-seedling',
+        'Apprenti': 'fas fa-user-graduate',
+        'Pilier': 'fas fa-shield-alt',
+        'Expert': 'fas fa-crown',
+        'Maître': 'fas fa-gem',
+        'Héros': 'fas fa-dragon',
+        'Prestige': 'fas fa-star'
+      };
+
+      const imageUrl = gradeImageMap[currentCategory];
+      const fallbackIcon = gradeFallbackIcons[currentCategory] || 'fas fa-star';
+
+      if (imageUrl) {
+        document.getElementById('currentGradeIcon').innerHTML = `<img src="${imageUrl}" alt="${currentCategory}" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'${fallbackIcon}\\'></i>'">`;
+      } else {
+        document.getElementById('currentGradeIcon').innerHTML = `<i class="${fallbackIcon}"></i>`;
+      }
+
+      // Mettre à jour les statistiques
+      document.getElementById('statsCurrentXP').textContent = currentXP.toLocaleString();
+      document.getElementById('statsCurrentBadges').textContent = userBadges.length;
+      document.getElementById('statsCurrentLevel').textContent = currentLevel;
+
+      // Définir les paliers de grades (en niveau)
+      const gradeLevels = [
+        { name: 'Démarrage', minLevel: 1, maxLevel: 1 },
+        { name: 'Apprenti', minLevel: 2, maxLevel: 10 },
+        { name: 'Pilier', minLevel: 11, maxLevel: 30 },
+        { name: 'Expert', minLevel: 31, maxLevel: 50 },
+        { name: 'Maître', minLevel: 51, maxLevel: 75 },
+        { name: 'Héros', minLevel: 76, maxLevel: 90 },
+        { name: 'Prestige', minLevel: 91, maxLevel: 100 }
+      ];
+
+      // Trouver l'index du grade actuel
+      let currentGradeIndex = 0;
+      for (let i = 0; i < gradeLevels.length; i++) {
+        if (currentLevel >= gradeLevels[i].minLevel && currentLevel <= gradeLevels[i].maxLevel) {
+          currentGradeIndex = i;
+          break;
+        }
+      }
+
+      // Calculer le pourcentage de progression
+      let progressPercentage = (currentGradeIndex / (gradeLevels.length - 1)) * 100;
+
+      // Créer les points de progression alignés avec les cartes
+      const progressionLine = document.getElementById('gradesProgressionLine');
+      const allGradeCards = document.querySelectorAll('.grade-card');
+      const progressionLineRect = progressionLine.getBoundingClientRect();
+
+      // Retirer les anciens points s'ils existent
+      const oldPoints = progressionLine.querySelectorAll('.progress-point');
+      oldPoints.forEach(point => point.remove());
+
+      // Créer un point pour chaque carte et calculer la position
+      let currentGradePosition = 0;
+      let nextGradePosition = 0;
+      const cardPositions = [];
+
+      allGradeCards.forEach((card, index) => {
+        const cardRect = card.getBoundingClientRect();
+        const cardCenter = cardRect.left + (cardRect.width / 2);
+        const lineLeft = progressionLineRect.left;
+        const lineWidth = progressionLineRect.width;
+
+        // Calculer la position en pourcentage
+        const positionPercent = ((cardCenter - lineLeft) / lineWidth) * 100;
+        cardPositions.push(positionPercent);
+
+        // Sauvegarder la position du grade actuel et du suivant
+        if (index === currentGradeIndex) {
+          currentGradePosition = positionPercent;
+        }
+        if (index === currentGradeIndex + 1) {
+          nextGradePosition = positionPercent;
+        }
+
+        // Créer le point
+        const point = document.createElement('div');
+        point.className = 'progress-point';
+        point.style.left = `${positionPercent}%`;
+        progressionLine.appendChild(point);
+      });
+
+      // Calculer la progression à l'intérieur du grade actuel
+      let finalProgressPosition = currentGradePosition;
+      if (currentGradeIndex < gradeLevels.length - 1) {
+        const currentGrade = gradeLevels[currentGradeIndex];
+        const levelsInGrade = currentGrade.maxLevel - currentGrade.minLevel + 1;
+        const levelProgress = currentLevel - currentGrade.minLevel;
+        const progressRatio = levelProgress / levelsInGrade;
+
+        // Interpoler entre la position actuelle et la suivante
+        const segmentWidth = nextGradePosition - currentGradePosition;
+        finalProgressPosition = currentGradePosition + (progressRatio * segmentWidth);
+      }
+
+      // Mettre à jour la barre de progression
+      document.getElementById('gradesProgressionFill').style.width = `${finalProgressPosition}%`;
+
+      // Marquer les cartes de grades
+      const gradeCards = allGradeCards;
+      gradeCards.forEach((card, index) => {
+        card.classList.remove('current', 'completed', 'locked');
+
+        if (index < currentGradeIndex) {
+          card.classList.add('completed');
+        } else if (index === currentGradeIndex) {
+          card.classList.add('current');
+        } else {
+          card.classList.add('locked');
+        }
+      });
+
+      // Marquer les points de progression
+      const progressPoints = document.querySelectorAll('.progress-point');
+      progressPoints.forEach((point, index) => {
+        // Forcer les dimensions pour TOUS les cercles (plus petits)
+        point.style.width = '14px';
+        point.style.height = '14px';
+        point.style.borderRadius = '50%';
+        point.style.position = 'absolute';
+        point.style.top = '50%';
+
+        if (index < currentGradeIndex) {
+          // Points complétés (BLEU OPAQUE PLEIN avec contour bleu AUTOUR - MÊME TAILLE)
+          point.style.setProperty('background', 'rgba(96, 165, 250, 1)', 'important');
+          point.style.setProperty('background-color', 'rgba(96, 165, 250, 1)', 'important');
+          point.style.setProperty('opacity', '1', 'important');
+          point.style.setProperty('border', 'none', 'important');
+          point.style.boxShadow = '0 0 0 2px #60a5fa, 0 0 10px rgba(96, 165, 250, 0.8)';
+          point.style.transform = 'translate(-50%, -50%) scale(1.3)';
+        } else if (index === currentGradeIndex) {
+          // Point actuel (BLEU OPAQUE PLEIN même taille mais plus lumineux avec contour bleu AUTOUR)
+          point.style.setProperty('background', 'rgba(96, 165, 250, 1)', 'important');
+          point.style.setProperty('background-color', 'rgba(96, 165, 250, 1)', 'important');
+          point.style.setProperty('opacity', '1', 'important');
+          point.style.setProperty('border', 'none', 'important');
+          point.style.boxShadow = '0 0 0 3px #60a5fa, 0 0 20px rgba(96, 165, 250, 1), 0 0 10px rgba(96, 165, 250, 0.7)';
+          point.style.transform = 'translate(-50%, -50%) scale(1.3)';
+        } else {
+          // Points futurs (fond bg-card avec contour bleu AUTOUR - taille normale)
+          point.style.setProperty('background', 'var(--bg-card)', 'important');
+          point.style.setProperty('background-color', 'var(--bg-card)', 'important');
+          point.style.setProperty('border', 'none', 'important');
+          point.style.boxShadow = '0 0 0 2px #60a5fa, 0 0 8px rgba(96, 165, 250, 0.6)';
+          point.style.transform = 'translate(-50%, -50%) scale(1)';
+        }
+      });
+    }
+
+    function closeGradesModal(event) {
+      // Si event est undefined, c'est un appel direct (bouton close)
+      // Si event existe et que c'est le background, fermer aussi
+      if (!event || event.target.id === 'gradesModal') {
+        const modal = document.getElementById('gradesModal');
+        modal.classList.remove('active');
+        document.body.style.overflow = ''; // Réactiver le scroll du body
+      }
+    }
+
+    // Fermer avec la touche Escape
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        closeGradesModal();
+      }
+    });
+
+    // Repositionner les points lors du redimensionnement de la fenêtre
+    window.addEventListener('resize', function() {
+      const modal = document.getElementById('gradesModal');
+      if (modal && modal.classList.contains('active')) {
+        // Petit délai pour que le DOM se mette à jour
+        setTimeout(() => {
+          updateGradesProgression();
+        }, 100);
+      }
+    });
+
+    // Fonction pour incrémenter le compteur d'un badge
+    async function incrementBadge(badgeId, currentCount) {
+      if (!selectedUser) {
+        alert('Veuillez sélectionner un entrepreneur');
+        return;
+      }
+
+      // Trouver le bouton et afficher le spinner
+      const allIncrementButtons = document.querySelectorAll(`.increment[onclick*="${badgeId}"]`);
+      let targetButton = null;
+      allIncrementButtons.forEach(btn => {
+        if (btn.getAttribute('onclick').includes(`incrementBadge('${badgeId}'`)) {
+          targetButton = btn;
+        }
+      });
+
+      if (targetButton) {
+        const originalContent = targetButton.innerHTML;
+        targetButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        targetButton.style.pointerEvents = 'none';
+      }
+
+      try {
+        const response = await fetch('/api/gamification/badges/unlock', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            username: selectedUser,
+            badge_id: badgeId,
+            reason: 'Incrémentation manuelle par admin'
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'success') {
+          console.log(`✅ Badge ${badgeId} incrémenté (${currentCount} -> ${data.result?.count || currentCount + 1})`);
+          // Rafraîchir les données de l'utilisateur (sans spinner)
+          await refreshUserData();
+        } else {
+          // Restaurer le bouton en cas d'erreur
+          if (targetButton) {
+            targetButton.innerHTML = '<i class="fas fa-plus"></i>';
+            targetButton.style.pointerEvents = '';
+          }
+          alert(`Erreur: ${data.message || 'Impossible d\'incrémenter le badge'}`);
+        }
+      } catch (error) {
+        console.error(`Erreur lors de l'incrémentation du badge:`, error);
+        // Restaurer le bouton en cas d'erreur
+        if (targetButton) {
+          targetButton.innerHTML = '<i class="fas fa-plus"></i>';
+          targetButton.style.pointerEvents = '';
+        }
+        alert(`Erreur lors de l'incrémentation du badge`);
+      }
+    }
+
+    // Fonction pour décrémenter le compteur d'un badge
+    async function decrementBadge(badgeId, currentCount) {
+      if (!selectedUser) {
+        alert('Veuillez sélectionner un entrepreneur');
+        return;
+      }
+
+      if (currentCount === 0) {
+        return; // Ne rien faire si le badge n'est pas possédé
+      }
+
+      // Trouver le bouton et afficher le spinner
+      const allDecrementButtons = document.querySelectorAll(`.decrement[onclick*="${badgeId}"]`);
+      let targetButton = null;
+      allDecrementButtons.forEach(btn => {
+        if (btn.getAttribute('onclick').includes(`decrementBadge('${badgeId}'`)) {
+          targetButton = btn;
+        }
+      });
+
+      if (targetButton) {
+        const originalContent = targetButton.innerHTML;
+        targetButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        targetButton.style.pointerEvents = 'none';
+      }
+
+      try {
+        const response = await fetch('/api/gamification/badges/remove', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            username: selectedUser,
+            badge_id: badgeId
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'success') {
+          const newCount = data.result?.count || 0;
+          console.log(`✅ Badge ${badgeId} décrémenté (${currentCount} -> ${newCount})`);
+          // Rafraîchir les données de l'utilisateur (sans spinner)
+          await refreshUserData();
+        } else {
+          // Restaurer le bouton en cas d'erreur
+          if (targetButton) {
+            targetButton.innerHTML = '<i class="fas fa-minus"></i>';
+            targetButton.style.pointerEvents = '';
+          }
+          alert(`Erreur: ${data.message || 'Impossible de décrémenter le badge'}`);
+        }
+      } catch (error) {
+        console.error(`Erreur lors de la décrémentation du badge:`, error);
+        // Restaurer le bouton en cas d'erreur
+        if (targetButton) {
+          targetButton.innerHTML = '<i class="fas fa-minus"></i>';
+          targetButton.style.pointerEvents = '';
+        }
+        alert(`Erreur lors de la décrémentation du badge`);
+      }
+    }
+
+    // Vérifier et attribuer automatiquement les badges basés sur les données RPO
+    async function checkAutomaticBadges() {
+      if (!selectedUser) {
+        alert('Veuillez sélectionner un entrepreneur ou coach');
+        return;
+      }
+
+      const userType = selectedUserType === 'coach' ? 'coach' : 'entrepreneur';
+
+      if (!confirm(`Voulez-vous vérifier et attribuer automatiquement les badges pour ${userFullName || selectedUser}?\n\nCela vérifiera:\n- Ventes totales (Cap des Six Chiffres, Ascension, etc.)\n- Ventes hebdomadaires (Sprint de Vente, Semaine de Feu, etc.)\n- Production hebdomadaire (Opération 10K, Roue de production, etc.)`)) {
+        return;
+      }
+
+      try {
+        console.log(`[AUTO BADGES] Vérification des badges automatiques pour ${selectedUser}...`);
+
+        const response = await fetch(`/api/gamification/badges/check-automatic/${selectedUser}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'success') {
+          const awardedCount = data.awarded_badges.length;
+          const totalXp = data.total_xp;
+
+          if (awardedCount > 0) {
+            let message = `✅ ${awardedCount} badge${awardedCount > 1 ? 's' : ''} automatique${awardedCount > 1 ? 's' : ''} attribué${awardedCount > 1 ? 's' : ''} !\n\n`;
+            message += `Total XP gagné: +${totalXp} XP\n\n`;
+            message += `Badges attribués:\n`;
+            data.awarded_badges.forEach(badge => {
+              const weekInfo = badge.week ? ` (semaine ${badge.week})` : '';
+              message += `• ${badge.badge_name}${weekInfo} (+${badge.xp} XP)\n`;
+            });
+            alert(message);
+
+            // Rafraîchir les données pour afficher les nouveaux badges
+            await refreshUserData();
+          } else {
+            alert('Aucun nouveau badge automatique à attribuer.\n\nTous les badges automatiques possibles ont déjà été attribués selon les données RPO actuelles.');
+          }
+        } else {
+          alert(`Erreur: ${data.message || 'Impossible de vérifier les badges automatiques'}`);
+        }
+      } catch (error) {
+        console.error('[ERROR] Erreur vérification badges automatiques:', error);
+        alert('Erreur lors de la vérification des badges automatiques');
+      }
+    }
+
+    // Démarrer l'application
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+
+  <!-- Updated: Points centered on progress line with 2rem padding -->
+</body>
+</html>

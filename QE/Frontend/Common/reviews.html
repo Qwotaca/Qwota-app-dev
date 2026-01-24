@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title data-i18n="page_title">Donnez votre avis - Qualit&eacute; &Eacute;tudiants</title>
+
+  <!-- PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icons -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8f9fa;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    /* Main Container */
+    .review-container {
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      max-width: 440px;
+      width: 100%;
+      padding: 2.5rem 2rem;
+      text-align: center;
+    }
+
+    /* Logo */
+    .logo-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .logo-section img {
+      height: 56px;
+      width: auto;
+      object-fit: contain;
+    }
+
+    .company-name {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-top: 0.75rem;
+    }
+
+    /* Subtitle */
+    .subtitle {
+      font-size: 0.875rem;
+      color: #5f6368;
+      margin-bottom: 2rem;
+    }
+
+    /* Stars Rating */
+    .stars-container {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 2rem;
+    }
+
+    .star-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      transition: transform 0.15s ease;
+    }
+
+    .star-btn:hover {
+      transform: scale(1.15);
+    }
+
+    .star-btn:focus {
+      outline: none;
+    }
+
+    .star-btn svg {
+      width: 40px;
+      height: 40px;
+      transition: all 0.2s ease;
+    }
+
+    .star-btn svg path {
+      fill: #dadce0;
+      transition: fill 0.2s ease;
+    }
+
+    .star-btn.filled svg path {
+      fill: #fbbc04;
+    }
+
+    .star-btn:hover svg path {
+      fill: #fbbc04;
+    }
+
+    /* Rating Label */
+    .rating-label {
+      font-size: 0.875rem;
+      color: #5f6368;
+      margin-bottom: 1.5rem;
+      min-height: 20px;
+    }
+
+    /* Textarea */
+    .comment-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .comment-label {
+      display: block;
+      text-align: left;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #3c4043;
+      margin-bottom: 0.5rem;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 0.875rem 1rem;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      color: #1a1a1a;
+      resize: vertical;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: #1a73e8;
+      box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+    }
+
+    textarea::placeholder {
+      color: #9aa0a6;
+    }
+
+    /* Submit Button */
+    .submit-btn {
+      width: 100%;
+      padding: 0.875rem 1.5rem;
+      background: #1a73e8;
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+
+    .submit-btn:hover {
+      background: #1557b0;
+    }
+
+    .submit-btn:active {
+      transform: scale(0.98);
+    }
+
+    .submit-btn:disabled {
+      background: #dadce0;
+      color: #9aa0a6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Thank You View */
+    .thank-you-view {
+      display: none;
+    }
+
+    .thank-you-view.active {
+      display: block;
+    }
+
+    .review-form.hidden {
+      display: none;
+    }
+
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.5rem;
+      background: #e8f5e9;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .success-icon svg {
+      width: 40px;
+      height: 40px;
+      color: #34a853;
+    }
+
+    .thank-you-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 0.75rem;
+    }
+
+    .thank-you-message {
+      font-size: 1rem;
+      color: #5f6368;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    .redirect-notice {
+      font-size: 0.875rem;
+      color: #1a73e8;
+      font-weight: 500;
+    }
+
+    .countdown {
+      display: inline-block;
+      min-width: 20px;
+    }
+
+    /* Footer */
+    .footer-note {
+      margin-top: 1.5rem;
+      font-size: 0.75rem;
+      color: #9aa0a6;
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .review-container {
+        padding: 2rem 1.5rem;
+      }
+
+      .star-btn svg {
+        width: 36px;
+        height: 36px;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="/entrepreneur-selector.css">
+</head>
+<body>
+  <div class="review-container">
+    <!-- Review Form -->
+    <div class="review-form" id="reviewForm">
+      <div class="logo-section">
+        <img src="https://i.ibb.co/N6M9W7td/Design-sans-titre-46.png" alt="Logo Qualit&eacute; &Eacute;tudiants" />
+        <div class="company-name" data-i18n="company_name">Qualit&eacute; &Eacute;tudiants</div>
+      </div>
+
+      <p class="subtitle" data-i18n="subtitle">Partagez votre exp&eacute;rience avec nous</p>
+
+      <div class="stars-container" role="radiogroup" aria-label="Note de 1 &agrave; 5 &eacute;toiles" data-i18n-aria-label="aria_stars">
+        <button class="star-btn" data-value="1" role="radio" aria-label="1 &eacute;toile" aria-checked="false">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+          </svg>
+        </button>
+        <button class="star-btn" data-value="2" role="radio" aria-label="2 &eacute;toiles" aria-checked="false">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+          </svg>
+        </button>
+        <button class="star-btn" data-value="3" role="radio" aria-label="3 &eacute;toiles" aria-checked="false">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+          </svg>
+        </button>
+        <button class="star-btn" data-value="4" role="radio" aria-label="4 &eacute;toiles" aria-checked="false">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+          </svg>
+        </button>
+        <button class="star-btn" data-value="5" role="radio" aria-label="5 &eacute;toiles" aria-checked="false">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="rating-label" id="ratingLabel"></div>
+
+      <div class="comment-section">
+        <label class="comment-label" for="comment" data-i18n="comment_label">Votre commentaire (optionnel)</label>
+        <textarea id="comment" placeholder="Dites-nous en plus sur votre exp&eacute;rience..." data-i18n-placeholder="comment_placeholder"></textarea>
+      </div>
+
+      <button class="submit-btn" id="submitBtn" disabled data-i18n="submit_btn">Envoyer mon avis</button>
+
+      <p class="footer-note" data-i18n="footer_note">Votre avis nous aide &agrave; am&eacute;liorer nos services</p>
+    </div>
+
+    <!-- Thank You View -->
+    <div class="thank-you-view" id="thankYouView">
+      <div class="success-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+      <h2 class="thank-you-title" data-i18n="thank_you_title">Merci pour votre avis !</h2>
+      <p class="thank-you-message" id="thankYouMessage" data-i18n="thank_you_message">Votre retour est pr&eacute;cieux et nous aide &agrave; nous am&eacute;liorer.</p>
+      <p class="redirect-notice" id="redirectNotice" style="display: none;" data-i18n-html="redirect_notice">
+        Redirection vers Google dans <span class="countdown" id="countdown">3</span> secondes...
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const stars = document.querySelectorAll('.star-btn');
+    const ratingLabel = document.getElementById('ratingLabel');
+    const commentField = document.getElementById('comment');
+    const submitBtn = document.getElementById('submitBtn');
+    const reviewForm = document.getElementById('reviewForm');
+    const thankYouView = document.getElementById('thankYouView');
+    const thankYouMessage = document.getElementById('thankYouMessage');
+    const redirectNotice = document.getElementById('redirectNotice');
+    const countdownEl = document.getElementById('countdown');
+
+    let rating = 0;
+    let translations = {};
+
+    // URL parameters
+    const params = new URLSearchParams(window.location.search);
+    const username = params.get('username');
+    const nom = params.get('nom') || "";
+    const prenom = params.get('prenom') || "";
+    const urlLang = params.get('lang') || 'fr';
+    let currentLanguage = urlLang;
+
+    // Google Review URL (popup search page)
+    const googleReviewUrl = "https://www.google.com/search?sca_esv=1939b7fac6b66ed5&sxsrf=AE3TifOeVHLWMrLVFeb_2JMBuCwwrNbblQ:1764344026051&si=AMgyJEtREmoPL4P1I5IDCfuA8gybfVI2d5Uj7QMwYCZHKDZ-E0TZtn2sx7JA57nKBLaWYhdII87abp9-EEyZ6i97g_Wzt4MlQiypgAAOtepwfwzDV55i7c8Gt_4buRFPPrvs1gXRRVPmaAMSkk5nn38yTUWMwpDLCg%3D%3D&q=Qualit%C3%A9+%C3%89tudiants+Avis&sa=X&ved=2ahUKEwigw7zXlZWRAxVpMlkFHdZGI9EQ0bkNegQIIxAE&biw=1920&bih=945&dpr=1#lrd=0x4cc923555f1a6a9b:0x2bcea2516ab153c5,3,,,,";
+
+    // Load translations
+    async function loadTranslations() {
+      try {
+        const response = await fetch(`/frontend/Common/translations/reviews-${currentLanguage}.json`);
+        if (!response.ok) {
+          console.warn(`Failed to load ${currentLanguage} translations, falling back to French`);
+          const fallbackResponse = await fetch('/frontend/Common/translations/reviews-fr.json');
+          translations = await fallbackResponse.json();
+        } else {
+          translations = await response.json();
+        }
+        applyTranslations();
+      } catch (error) {
+        console.error('Error loading translations:', error);
+      }
+    }
+
+    // Apply translations to the page
+    function applyTranslations() {
+      // Update document title
+      const titleElement = document.querySelector('title[data-i18n]');
+      if (titleElement && translations.page_title) {
+        titleElement.textContent = translations.page_title;
+      }
+
+      // Update all elements with data-i18n attribute
+      document.querySelectorAll('[data-i18n]').forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        if (translations[key]) {
+          element.textContent = translations[key];
+        }
+      });
+
+      // Update all elements with data-i18n-html attribute
+      document.querySelectorAll('[data-i18n-html]').forEach(element => {
+        const key = element.getAttribute('data-i18n-html');
+        if (translations[key]) {
+          element.innerHTML = translations[key];
+        }
+      });
+
+      // Update placeholder attributes
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+        const key = element.getAttribute('data-i18n-placeholder');
+        if (translations[key]) {
+          element.placeholder = translations[key];
+        }
+      });
+
+      // Update aria-label attributes
+      document.querySelectorAll('[data-i18n-aria-label]').forEach(element => {
+        const key = element.getAttribute('data-i18n-aria-label');
+        if (translations[key]) {
+          element.setAttribute('aria-label', translations[key]);
+        }
+      });
+    }
+
+    function setRating(value) {
+      rating = parseInt(value);
+      stars.forEach(star => {
+        const starValue = parseInt(star.dataset.value);
+        star.classList.toggle('filled', starValue <= rating);
+        star.setAttribute('aria-checked', starValue === rating);
+      });
+
+      // Use translations if available, otherwise fallback to hardcoded French
+      const ratingLabelsTranslated = translations.rating_labels || {
+        1: "Très insatisfait",
+        2: "Insatisfait",
+        3: "Neutre",
+        4: "Satisfait",
+        5: "Très satisfait"
+      };
+      ratingLabel.innerHTML = ratingLabelsTranslated[rating] || '';
+      submitBtn.disabled = rating === 0;
+    }
+
+    stars.forEach(star => {
+      star.addEventListener('click', () => setRating(star.dataset.value));
+      star.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setRating(star.dataset.value);
+        }
+      });
+    });
+
+    submitBtn.addEventListener('click', async () => {
+      if (rating === 0) {
+        return;
+      }
+
+      if (!username) {
+        alert(translations.alert_missing_username || "Nom d'utilisateur manquant dans l'URL");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = translations.submit_btn_sending || 'Envoi en cours...';
+
+      const data = {
+        username: username,
+        rating: rating,
+        comment: commentField.value.trim(),
+        nom: nom,
+        prenom: prenom
+      };
+
+      try {
+        const response = await fetch('/api/submit-review', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) throw new Error('Erreur serveur');
+
+        // Show thank you view
+        reviewForm.classList.add('hidden');
+        thankYouView.classList.add('active');
+
+        // If 4 or 5 stars, redirect to Google Reviews
+        if (rating >= 4) {
+          thankYouMessage.innerHTML = translations.thank_you_message_high_rating || "Nous sommes ravis que vous ayez appr&eacute;ci&eacute; nos services !<br>Partagez votre exp&eacute;rience sur Google pour aider d'autres personnes.";
+          redirectNotice.style.display = 'block';
+
+          let countdown = 3;
+          countdownEl.textContent = countdown;
+
+          const interval = setInterval(() => {
+            countdown--;
+            countdownEl.textContent = countdown;
+            if (countdown <= 0) {
+              clearInterval(interval);
+              window.location.href = googleReviewUrl;
+            }
+          }, 1000);
+        }
+        // If 1, 2 or 3 stars, redirect to complaint form
+        else {
+          thankYouMessage.innerHTML = translations.thank_you_message_low_rating || "Nous sommes désolés que votre expérience n'ait pas été à la hauteur.<br>Aidez-nous à nous améliorer en déposant une plainte.";
+          redirectNotice.style.display = 'block';
+          redirectNotice.innerHTML = translations.redirect_notice_plainte || `Redirection vers le formulaire de plainte dans <span class="countdown" id="countdown">3</span> secondes...`;
+
+          let countdown = 3;
+          const countdownElLow = document.getElementById('countdown');
+          countdownElLow.textContent = countdown;
+
+          const interval = setInterval(() => {
+            countdown--;
+            countdownElLow.textContent = countdown;
+            if (countdown <= 0) {
+              clearInterval(interval);
+              window.location.href = '/plainte';
+            }
+          }, 1000);
+        }
+
+      } catch (err) {
+        alert(translations.alert_error || "Erreur lors de l'envoi. Veuillez r&eacute;essayer.");
+        submitBtn.disabled = false;
+        submitBtn.textContent = translations.submit_btn || 'Envoyer mon avis';
+      }
+    });
+
+    // Load translations on page load
+    loadTranslations();
+  </script>
+  <script src="/entrepreneur-selector.js"></script>
+</body>
+</html>

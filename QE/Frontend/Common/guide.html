@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guide de démarrage - Qwota</title>
+
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="theme-color" content="#5271ff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#5271ff">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="/favicon" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+
+  <style>
+:root {
+  --primary-blue: #60a5fa;
+  --primary-green: #34d399;
+  --bg-dark: #0f172a;
+  --bg-card: #1e293b;
+  --text-light: #f1f5f9;
+  --text-gray: #94a3b8;
+  --border-dark: #334155;
+  --shadow-dark: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-dark-medium: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  --shadow-dark-strong: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: var(--text-light);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Scrollbar globale - plus large */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) rgba(51, 65, 85, 0.3);
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(51, 65, 85, 0.3);
+  border-radius: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 10px;
+  border: 2px solid rgba(30, 41, 59, 0.6);
+  transition: background 0.2s ease;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+.video-container {
+  position: relative;
+  width: 100%;
+  max-width: 900px;
+  aspect-ratio: 16 / 9;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-dark-strong);
+  border: 2px solid rgba(96, 165, 250, 0.2);
+}
+
+.video-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-blue) 0%, #3b82f6 100%);
+  color: white;
+  border-radius: 28px;
+  font-weight: 700;
+  padding: 14px 36px;
+  box-shadow: var(--shadow-dark-medium);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: var(--shadow-dark-strong);
+  background: linear-gradient(135deg, #3b82f6 0%, var(--primary-blue) 100%);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(10px);
+  color: var(--text-light);
+  border: 2px solid rgba(96, 165, 250, 0.3);
+  border-radius: 28px;
+  font-weight: 600;
+  padding: 12px 32px;
+  box-shadow: var(--shadow-dark);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.btn-secondary:hover {
+  border-color: rgba(96, 165, 250, 0.5);
+  background: rgba(30, 41, 59, 0.8);
+  transform: translateY(-1px);
+}
+
+.progress-indicator {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.progress-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.3);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.progress-dot.completed {
+  background: var(--primary-green);
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.5);
+}
+
+.progress-dot.current {
+  background: var(--primary-blue);
+  box-shadow: 0 0 16px rgba(96, 165, 250, 0.6);
+  transform: scale(1.4);
+}
+
+.video-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 3px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--primary-blue);
+  transition: width 0.1s linear;
+  box-shadow: 0 0 8px rgba(96, 165, 250, 0.6);
+}
+
+.time-display {
+  font-size: 0.875rem;
+  color: var(--text-light);
+  font-weight: 500;
+  min-width: 100px;
+  text-align: center;
+}
+
+.card {
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(20px);
+  border: 2px solid rgba(96, 165, 250, 0.15);
+  border-radius: 24px;
+  padding: 2.5rem;
+  box-shadow: var(--shadow-dark-medium);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(96, 165, 250, 0.15);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--primary-blue);
+}
+  </style>
+</head>
+<body>
+
+<div class="min-h-screen flex flex-col items-center justify-center p-6">
+  <!-- Header -->
+  <div class="text-center mb-8">
+    <div class="flex items-center justify-center gap-3 mb-4">
+      <h1 class="text-4xl font-bold">
+        Guide de démarrage Qwota
+      </h1>
+    </div>
+    <p class="text-lg text-gray-400">
+      Bienvenue chez Qwota! Regardez ces vidéos pour bien démarrer avec la plateforme
+    </p>
+    <div class="mt-4">
+      <span class="badge">
+        <i class="fas fa-play-circle"></i>
+        <span id="video-count">Vidéo 1 / 5</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Progress Indicator -->
+  <div class="progress-indicator">
+    <div class="progress-dot current" id="dot-1"></div>
+    <div class="progress-dot" id="dot-2"></div>
+    <div class="progress-dot" id="dot-3"></div>
+    <div class="progress-dot" id="dot-4"></div>
+    <div class="progress-dot" id="dot-5"></div>
+  </div>
+
+  <!-- Video Container -->
+  <div class="card max-w-5xl w-full mb-8">
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold mb-2" id="video-title">Introduction à Qwota</h2>
+      <p class="text-gray-400" id="video-description">Découvrez les fonctionnalités principales de la plateforme</p>
+    </div>
+
+    <div class="video-container" id="video-wrapper">
+      <div class="video-placeholder">
+        <div class="text-center">
+          <i class="fas fa-film text-6xl text-gray-600 mb-4"></i>
+          <p class="text-xl text-gray-400">La vidéo sera ajoutée ici</p>
+        </div>
+      </div>
+
+      <!-- Video Controls -->
+      <div class="video-controls">
+        <button class="text-white hover:text-blue-400 transition-colors" id="play-pause">
+          <i class="fas fa-play text-xl"></i>
+        </button>
+        <div class="progress-bar" id="progress-bar">
+          <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
+        </div>
+        <div class="time-display">
+          <span id="current-time">0:00</span> / <span id="duration">0:00</span>
+        </div>
+        <button class="text-white hover:text-blue-400 transition-colors" id="volume-btn" title="Volume">
+          <i class="fas fa-volume-up text-lg"></i>
+        </button>
+        <input type="range" id="volume-slider" min="0" max="100" value="100"
+               style="width: 80px; height: 4px; background: rgba(148, 163, 184, 0.3); border-radius: 2px; cursor: pointer;">
+        <button class="text-white hover:text-blue-400 transition-colors" id="fullscreen-btn" title="Plein écran">
+          <i class="fas fa-expand text-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="flex justify-between items-center mt-8">
+      <button class="btn-secondary" id="prev-btn" style="visibility: hidden;">
+        <i class="fas fa-arrow-left"></i>
+        Précédent
+      </button>
+
+      <button class="btn-primary" id="next-btn" disabled>
+        <span id="next-text">Terminer la vidéo pour continuer</span>
+        <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Info Card -->
+  <div class="max-w-5xl w-full">
+    <div class="bg-blue-500/10 border-2 border-blue-500/30 rounded-2xl p-6">
+      <div class="flex items-start gap-4">
+        <div class="text-blue-400 text-2xl">
+          <i class="fas fa-info-circle"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold mb-2 text-blue-400">Important</h3>
+          <p class="text-gray-300 leading-relaxed">
+            Vous devez regarder chaque vidéo en entier avant de passer à la suivante.
+            Cela vous permettra de bien comprendre toutes les fonctionnalités de Qwota.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Configuration des vidéos
+const videos = [
+  {
+    title: "Introduction à Qwota",
+    description: "Découvrez les fonctionnalités principales de la plateforme",
+    url: null // URL sera ajoutée plus tard
+  },
+  {
+    title: "Gestion de vos projets",
+    description: "Apprenez à créer et gérer vos projets efficacement",
+    url: null
+  },
+  {
+    title: "Facturation et comptabilité",
+    description: "Maîtrisez les outils de facturation Qwota",
+    url: null
+  },
+  {
+    title: "Collaboration en équipe",
+    description: "Travaillez efficacement avec votre équipe",
+    url: null
+  },
+  {
+    title: "Analyses et rapports",
+    description: "Exploitez vos données avec les outils d'analyse",
+    url: null
+  }
+];
+
+let currentVideo = 0;
+let videoWatched = [false, false, false, false, false];
+let simulatedProgress = 0;
+let progressInterval = null;
+
+// Récupérer le username depuis les cookies
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return null;
+}
+
+const username = getCookie('username');
+
+// Charger la progression depuis le backend
+async function loadProgress() {
+  try {
+    const response = await fetch(`/api/guide-progress/${username}`);
+    if (response.ok) {
+      const data = await response.json();
+      videoWatched[0] = data.video_1 || false;
+      videoWatched[1] = data.video_2 || false;
+      videoWatched[2] = data.video_3 || false;
+      videoWatched[3] = data.video_4 || false;
+      videoWatched[4] = data.video_5 || false;
+
+      if (data.completed) {
+        // Si le guide est déjà complété, rediriger
+        window.location.href = '/dashboard';
+        return;
+      }
+
+      updateUI();
+    }
+  } catch (error) {
+    console.error('Erreur chargement progression:', error);
+  }
+}
+
+// Sauvegarder la progression d'une vidéo
+async function saveVideoProgress(videoNumber) {
+  try {
+    const response = await fetch('/api/complete-video', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: username,
+        video_number: videoNumber
+      })
+    });
+
+    if (response.ok) {
+      videoWatched[videoNumber - 1] = true;
+      updateProgressDots();
+    }
+  } catch (error) {
+    console.error('Erreur sauvegarde progression:', error);
+  }
+}
+
+// Marquer le guide comme complété
+async function completeGuide() {
+  try {
+    const response = await fetch('/api/complete-guide', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: username
+      })
+    });
+
+    if (response.ok) {
+      // Rediriger vers le dashboard
+      window.location.href = '/dashboard';
+    }
+  } catch (error) {
+    console.error('Erreur complétion guide:', error);
+  }
+}
+
+// Simuler la progression de la vidéo (puisque pas de vraie vidéo pour l'instant)
+function startVideoSimulation() {
+  if (progressInterval) clearInterval(progressInterval);
+
+  simulatedProgress = 0;
+  const duration = 30; // 30 secondes pour le test
+  const interval = 100; // Update every 100ms
+  const increment = (100 / duration) / (1000 / interval);
+
+  progressInterval = setInterval(() => {
+    simulatedProgress += increment;
+
+    document.getElementById('progress-fill').style.width = simulatedProgress + '%';
+    document.getElementById('current-time').textContent = formatTime((simulatedProgress / 100) * duration);
+    document.getElementById('duration').textContent = formatTime(duration);
+
+    if (simulatedProgress >= 100) {
+      clearInterval(progressInterval);
+      onVideoComplete();
+    }
+  }, interval);
+
+  document.getElementById('play-pause').innerHTML = '<i class="fas fa-pause text-xl"></i>';
+}
+
+function formatTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+function onVideoComplete() {
+  const videoNumber = currentVideo + 1;
+
+  // Sauvegarder la progression
+  saveVideoProgress(videoNumber);
+
+  // Activer le bouton suivant
+  const nextBtn = document.getElementById('next-btn');
+  nextBtn.disabled = false;
+
+  if (currentVideo < videos.length - 1) {
+    document.getElementById('next-text').textContent = 'Vidéo suivante';
+  } else {
+    document.getElementById('next-text').textContent = 'Terminer le guide';
+  }
+}
+
+function updateUI() {
+  const video = videos[currentVideo];
+  document.getElementById('video-title').textContent = video.title;
+  document.getElementById('video-description').textContent = video.description;
+  document.getElementById('video-count').textContent = `Vidéo ${currentVideo + 1} / ${videos.length}`;
+
+  // Bouton précédent
+  const prevBtn = document.getElementById('prev-btn');
+  if (currentVideo === 0) {
+    prevBtn.style.visibility = 'hidden';
+  } else {
+    prevBtn.style.visibility = 'visible';
+  }
+
+  // Bouton suivant
+  const nextBtn = document.getElementById('next-btn');
+  if (videoWatched[currentVideo]) {
+    nextBtn.disabled = false;
+    if (currentVideo < videos.length - 1) {
+      document.getElementById('next-text').textContent = 'Vidéo suivante';
+    } else {
+      document.getElementById('next-text').textContent = 'Terminer le guide';
+    }
+  } else {
+    nextBtn.disabled = true;
+    document.getElementById('next-text').textContent = 'Terminer la vidéo pour continuer';
+  }
+
+  // Reset progress
+  simulatedProgress = 0;
+  document.getElementById('progress-fill').style.width = '0%';
+  document.getElementById('current-time').textContent = '0:00';
+  document.getElementById('play-pause').innerHTML = '<i class="fas fa-play text-xl"></i>';
+
+  if (progressInterval) {
+    clearInterval(progressInterval);
+    progressInterval = null;
+  }
+
+  updateProgressDots();
+}
+
+function updateProgressDots() {
+  for (let i = 0; i < 5; i++) {
+    const dot = document.getElementById(`dot-${i + 1}`);
+    dot.classList.remove('current', 'completed');
+
+    if (videoWatched[i]) {
+      dot.classList.add('completed');
+    } else if (i === currentVideo) {
+      dot.classList.add('current');
+    }
+  }
+}
+
+// Event Listeners
+document.getElementById('play-pause').addEventListener('click', () => {
+  if (!progressInterval) {
+    startVideoSimulation();
+  } else {
+    clearInterval(progressInterval);
+    progressInterval = null;
+    document.getElementById('play-pause').innerHTML = '<i class="fas fa-play text-xl"></i>';
+  }
+});
+
+document.getElementById('prev-btn').addEventListener('click', () => {
+  if (currentVideo > 0) {
+    currentVideo--;
+    updateUI();
+  }
+});
+
+document.getElementById('next-btn').addEventListener('click', () => {
+  if (currentVideo < videos.length - 1) {
+    currentVideo++;
+    updateUI();
+  } else {
+    // Toutes les vidéos sont terminées
+    completeGuide();
+  }
+});
+
+// Gestion du volume
+let currentVolume = 100;
+document.getElementById('volume-slider').addEventListener('input', (e) => {
+  currentVolume = e.target.value;
+  const volumeBtn = document.getElementById('volume-btn');
+
+  // Changer l'icône selon le niveau de volume
+  if (currentVolume == 0) {
+    volumeBtn.innerHTML = '<i class="fas fa-volume-mute text-lg"></i>';
+  } else if (currentVolume < 50) {
+    volumeBtn.innerHTML = '<i class="fas fa-volume-down text-lg"></i>';
+  } else {
+    volumeBtn.innerHTML = '<i class="fas fa-volume-up text-lg"></i>';
+  }
+});
+
+// Toggle mute/unmute
+document.getElementById('volume-btn').addEventListener('click', () => {
+  const volumeSlider = document.getElementById('volume-slider');
+  const volumeBtn = document.getElementById('volume-btn');
+
+  if (currentVolume > 0) {
+    // Mute
+    volumeSlider.value = 0;
+    volumeBtn.innerHTML = '<i class="fas fa-volume-mute text-lg"></i>';
+    currentVolume = 0;
+  } else {
+    // Unmute
+    volumeSlider.value = 100;
+    volumeBtn.innerHTML = '<i class="fas fa-volume-up text-lg"></i>';
+    currentVolume = 100;
+  }
+});
+
+// Plein écran
+document.getElementById('fullscreen-btn').addEventListener('click', () => {
+  const videoWrapper = document.getElementById('video-wrapper');
+  const fullscreenBtn = document.getElementById('fullscreen-btn');
+
+  if (!document.fullscreenElement) {
+    // Entrer en plein écran
+    if (videoWrapper.requestFullscreen) {
+      videoWrapper.requestFullscreen();
+    } else if (videoWrapper.webkitRequestFullscreen) {
+      videoWrapper.webkitRequestFullscreen();
+    } else if (videoWrapper.mozRequestFullScreen) {
+      videoWrapper.mozRequestFullScreen();
+    } else if (videoWrapper.msRequestFullscreen) {
+      videoWrapper.msRequestFullscreen();
+    }
+    fullscreenBtn.innerHTML = '<i class="fas fa-compress text-lg"></i>';
+  } else {
+    // Sortir du plein écran
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.mozCancelFullScreen) {
+      document.mozCancelFullScreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
+    }
+    fullscreenBtn.innerHTML = '<i class="fas fa-expand text-lg"></i>';
+  }
+});
+
+// Écouter les changements de plein écran
+document.addEventListener('fullscreenchange', () => {
+  const fullscreenBtn = document.getElementById('fullscreen-btn');
+  if (document.fullscreenElement) {
+    fullscreenBtn.innerHTML = '<i class="fas fa-compress text-lg"></i>';
+  } else {
+    fullscreenBtn.innerHTML = '<i class="fas fa-expand text-lg"></i>';
+  }
+});
+
+// Charger la progression au démarrage
+loadProgress();
+updateUI();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>La Centrale - Admin</title>
+
+  <!-- PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#1f2937">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Feuille de style principale -->
+  <link rel="stylesheet" href="/base.css">
+
+  <!-- Feuille de style centraleadmin -->
+  <link rel="stylesheet" href="/centraleadmin.css">
+</head>
+
+<body class="min-h-screen centrale-admin">
+
+  <!-- Main Content -->
+  <div class="w-full" style="padding: 2rem;">
+
+    <!-- Header -->
+    <div class="mb-10">
+      <div class="relative">
+        <!-- Titre et bouton Vue normale sur la même ligne -->
+        <div class="flex items-center justify-between mb-3">
+          <h1 class="text-4xl font-bold">
+            La Centrale
+          </h1>
+          <!-- Bouton pour revenir à la centrale normale (visible pour les coachs uniquement) -->
+          <button id="btn-switch-to-normal" style="display: none; align-items: center; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(16, 185, 129, 0.3)'" onclick="console.log('[CENTRALE NAV] 🟢 Click sur Vue normale'); console.log('[CENTRALE NAV] Current URL:', window.location.href); console.log('[CENTRALE NAV] Parent exists:', !!window.parent); console.log('[CENTRALE NAV] router exists:', !!(window.parent && window.parent.router)); if (window.parent && window.parent.router) { console.log('[CENTRALE NAV] ✅ Utilisation de parent.router.loadPage(centralevue)'); console.log('[CENTRALE NAV] Destination: /centralevue'); window.parent.router.loadPage('centralevue'); } else { console.log('[CENTRALE NAV] ⚠️ Fallback: window.location.href = /centralevue'); window.location.href='/centralevue'; }">
+            <i class="fas fa-eye mr-2"></i>
+            Vue normale
+          </button>
+        </div>
+        <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        <div class="flex items-center justify-between mt-6">
+          <p class="text-xl font-medium">Centre de ressources et documentation</p>
+          <button id="add-section-btn" class="btn-primary">
+            <i class="fas fa-plus mr-2"></i>Ajouter une section
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sélecteur de type de centrale -->
+    <div style="background: var(--bg-card); border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: var(--shadow-dark-medium); border: 1px solid var(--border-dark);">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <label style="font-size: 1rem; font-weight: 600; color: var(--text-light); display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fas fa-building"></i>
+          <span>Gérer la centrale:</span>
+        </label>
+        <div style="display: flex; gap: 1rem;">
+          <button id="select-coach-centrale" class="btn-primary" style="padding: 0.5rem 1.5rem;">
+            <i class="fas fa-user-shield mr-2"></i>Centrale Coach
+          </button>
+          <button id="select-entrepreneur-centrale" class="btn-secondary" style="padding: 0.5rem 1.5rem;">
+            <i class="fas fa-users mr-2"></i>Centrale Entrepreneur
+          </button>
+        </div>
+        <span id="current-centrale-type" style="margin-left: auto; font-size: 0.875rem; color: var(--text-gray); font-style: italic;">
+          Actuellement: <strong id="current-centrale-name">Centrale Coach</strong>
+        </span>
+      </div>
+    </div>
+
+    <!-- Sections dynamiques -->
+    <div id="sections-container" class="space-y-8">
+      <div class="empty-state" style="padding: 4rem 2rem; text-align: center;">
+        <i class="fas fa-folder-open" style="font-size: 3rem; color: var(--text-gray); margin-bottom: 1rem;"></i>
+        <p style="color: var(--text-secondary); font-size: 1.125rem;">Aucune section créée</p>
+        <p style="color: var(--text-gray); font-size: 0.875rem; margin-top: 0.5rem;">Cliquez sur "Ajouter une section" pour commencer</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bouton Sauvegarder sticky en bas à droite -->
+  <button id="save-all-btn" class="btn-primary" style="position: fixed; bottom: 2rem; right: 2rem; z-index: 100; display: none; align-items: center; background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4); padding: 1rem 1.5rem; font-size: 1.125rem;">
+    <i class="fas fa-save mr-2"></i>Sauvegarder
+  </button>
+
+  <!-- Modal: Choisir une icône -->
+  <div id="sectionModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 700px;">
+      <h3 class="modal-title">
+        <i class="fas fa-icons mr-2"></i>
+        <span>Choisir une icône</span>
+      </h3>
+
+      <div class="modal-body">
+        <div class="icon-grid" id="iconGrid">
+          <!-- Les icônes seront générées ici -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="sectionCancel" class="btn-secondary">Annuler</button>
+        <button id="sectionSave" class="btn-primary">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Ajouter une colonne -->
+  <div id="columnModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+      <h3 class="modal-title">
+        <i class="fas fa-columns mr-2"></i>
+        Ajouter une colonne
+      </h3>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Choisissez le type de colonne</label>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-top: 0.5rem;">
+            <div class="column-type-card" data-type="fichier" style="position: relative;">
+              <span style="position: absolute; top: 8px; right: 10px; font-size: 0.75rem; font-weight: 700; color: var(--text-gray); opacity: 0.6;">1</span>
+              <i class="fas fa-file-upload" style="font-size: 1.5rem; color: var(--primary-blue); margin-bottom: 0.5rem;"></i>
+              <span style="font-weight: 600;">Fichier</span>
+              <span style="font-size: 0.75rem; color: var(--text-gray);">Upload de fichiers (max 3)</span>
+            </div>
+            <div class="column-type-card" data-type="numero" style="position: relative;">
+              <span style="position: absolute; top: 8px; right: 10px; font-size: 0.75rem; font-weight: 700; color: var(--text-gray); opacity: 0.6;">2</span>
+              <i class="fas fa-hashtag" style="font-size: 1.5rem; color: var(--primary-blue); margin-bottom: 0.5rem;"></i>
+              <span style="font-weight: 600;">Numéro</span>
+              <span style="font-size: 0.75rem; color: var(--text-gray);">Champ numérique</span>
+            </div>
+            <div class="column-type-card" data-type="texte" style="position: relative;">
+              <span style="position: absolute; top: 8px; right: 10px; font-size: 0.75rem; font-weight: 700; color: var(--text-gray); opacity: 0.6;">3</span>
+              <i class="fas fa-font" style="font-size: 1.5rem; color: var(--primary-blue); margin-bottom: 0.5rem;"></i>
+              <span style="font-weight: 600;">Texte</span>
+              <span style="font-size: 0.75rem; color: var(--text-gray);">Champ texte libre</span>
+            </div>
+            <div class="column-type-card" data-type="lien" style="position: relative;">
+              <span style="position: absolute; top: 8px; right: 10px; font-size: 0.75rem; font-weight: 700; color: var(--text-gray); opacity: 0.6;">4</span>
+              <i class="fas fa-link" style="font-size: 1.5rem; color: var(--primary-blue); margin-bottom: 0.5rem;"></i>
+              <span style="font-weight: 600;">Lien</span>
+              <span style="font-size: 0.75rem; color: var(--text-gray);">Lien externe cliquable</span>
+            </div>
+          </div>
+          <p style="font-size: 0.875rem; color: var(--text-gray); margin-top: 1rem; text-align: center;">
+            <i class="fas fa-info-circle mr-2"></i>Vous pourrez modifier le nom de la colonne après sa création
+          </p>
+          <p style="font-size: 0.75rem; color: var(--text-gray); margin-top: 0.5rem; text-align: center; opacity: 0.8;">
+            <i class="fas fa-keyboard mr-1"></i>Astuce: Utilisez les touches 1-4, double-clic ou Entrée pour aller plus vite
+          </p>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="columnCancel" class="btn-secondary">Annuler</button>
+        <button id="columnSave" class="btn-primary">Ajouter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Modifier Lien -->
+  <div id="linkModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content">
+      <h3 class="modal-title">
+        <i class="fas fa-link mr-2"></i>
+        Modifier le lien
+      </h3>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Texte d'affichage</label>
+          <input type="text" id="linkText" placeholder="Ex: Voir la présentation" class="input-field">
+        </div>
+
+        <div class="form-group">
+          <label>URL</label>
+          <input type="url" id="linkUrl" placeholder="https://exemple.com" class="input-field">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="linkCancel" class="btn-secondary">Annuler</button>
+        <button id="linkSave" class="btn-primary">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal viewer -->
+  <div id="centraleViewerModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 90vw; max-height: 90vh; position: relative;">
+      <button id="closeViewer" class="viewer-close">
+        <i class="fas fa-times"></i>
+      </button>
+      <div id="centraleViewerContent" class="viewer-content"></div>
+    </div>
+  </div>
+
+  <!-- Modal de confirmation personnalisé -->
+  <div id="confirmModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 450px;">
+      <h3 class="modal-title" id="confirmTitle">
+        <i class="fas fa-exclamation-triangle mr-2" style="color: #f59e0b;"></i>
+        <span>Confirmation</span>
+      </h3>
+
+      <div class="modal-body">
+        <p id="confirmMessage" style="color: var(--text-primary); font-size: 1rem; line-height: 1.6;"></p>
+      </div>
+
+      <div class="modal-footer">
+        <button id="confirmCancel" class="btn-secondary">Annuler</button>
+        <button id="confirmOk" class="btn-primary" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal d'alerte personnalisé -->
+  <div id="alertModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 450px;">
+      <h3 class="modal-title" id="alertTitle">
+        <i class="fas fa-info-circle mr-2" style="color: var(--primary-blue);"></i>
+        <span>Information</span>
+      </h3>
+
+      <div class="modal-body">
+        <p id="alertMessage" style="color: var(--text-primary); font-size: 1rem; line-height: 1.6;"></p>
+      </div>
+
+      <div class="modal-footer">
+        <button id="alertOk" class="btn-primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Fonction pour activer le menu de la page actuelle
+    function activateCurrentPageMenu() {
+      // Vérifier si on est dans un iframe
+      if (window.parent && window.parent.document) {
+        const parentDoc = window.parent.document;
+        const allMenuLinks = parentDoc.querySelectorAll('#sidebar a');
+
+        // Désactiver tous les menus
+        allMenuLinks.forEach(link => {
+          link.classList.remove('menu-active');
+          link.removeAttribute('data-menu-state');
+        });
+
+        // Activer le menu "La Centrale"
+        const centraleLink = parentDoc.querySelector('#sidebar a[data-path="/centralevue"]');
+        if (centraleLink) {
+          centraleLink.classList.add('menu-active');
+          centraleLink.setAttribute('data-menu-state', 'active');
+        }
+      }
+    }
+
+    // Afficher le bouton "Vue normale" pour les coachs et direction
+    document.addEventListener('DOMContentLoaded', () => {
+      const userRole = localStorage.getItem('userRole');
+      const isCoachOrDirection = userRole === 'coach' || userRole === 'direction';
+
+      if (isCoachOrDirection) {
+        const btnSwitchToNormal = document.getElementById('btn-switch-to-normal');
+        if (btnSwitchToNormal) {
+          btnSwitchToNormal.style.display = 'flex';
+        }
+      }
+
+      // Activer le menu de la centrale
+      activateCurrentPageMenu();
+    });
+  </script>
+
+  <script src="/centraleadmin.js"></script>
+</body>
+</html>

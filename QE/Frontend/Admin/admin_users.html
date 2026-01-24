@@ -1,0 +1,2186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin - Gestion des Équipes</title>
+
+  <!-- PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Feuille de style principale -->
+  <link rel="stylesheet" href="/base.css">
+
+  <style>
+    /* Global Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -1000px 0;
+      }
+      100% {
+        background-position: 1000px 0;
+      }
+    }
+
+    /* Statistiques Cards */
+    .stat-card {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(51, 65, 85, 0.6) 100%);
+      border: 1px solid rgba(71, 85, 105, 0.3);
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transition: left 0.5s ease;
+    }
+
+    .stat-card:hover::after {
+      left: 100%;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      border-color: rgba(96, 165, 250, 0.5);
+    }
+
+    .stat-card.active {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(96, 165, 250, 0.25) 100%);
+      border-color: rgba(59, 130, 246, 0.6);
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+      transform: translateY(-4px);
+    }
+
+    .stat-card.active::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.6);
+    }
+
+    .stat-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .stat-card:hover .stat-icon {
+      transform: scale(1.1) rotate(-5deg);
+    }
+
+    .stat-icon-blue {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+    }
+
+    .stat-icon-purple {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
+    }
+
+    .stat-icon-green {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+    }
+
+    /* Team Cards */
+    .team-card {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(51, 65, 85, 0.7) 100%);
+      border: 1px solid rgba(71, 85, 105, 0.4);
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    /* Team Cards with fixed height for teams view */
+    #teams-container .team-card,
+    #all-entrepreneurs-container .team-card,
+    #unassigned-container .team-card {
+      display: flex;
+      flex-direction: column;
+      min-height: 500px;
+    }
+
+    /* Auto height for all users view */
+    #all-users-container .team-card {
+      min-height: auto;
+    }
+
+    .team-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(96, 165, 250, 0.3), transparent);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .team-card:hover::before {
+      opacity: 1;
+    }
+
+    .team-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+      border-color: rgba(96, 165, 250, 0.5);
+    }
+
+    .coach-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 12px;
+      margin-bottom: 1rem;
+    }
+
+    .coach-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+
+    .entrepreneur-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.875rem 1.125rem;
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(51, 65, 85, 0.5) 100%);
+      border: 1px solid rgba(71, 85, 105, 0.4);
+      border-radius: 12px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .entrepreneur-item:hover {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(96, 165, 250, 0.15) 100%);
+      border-color: rgba(59, 130, 246, 0.4);
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+    }
+
+    .entrepreneur-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+      transition: all 0.3s ease;
+    }
+
+    .entrepreneur-item:hover .entrepreneur-avatar {
+      box-shadow: 0 6px 16px rgba(59, 130, 246, 0.5);
+    }
+
+    .add-entrepreneur-btn {
+      width: 100%;
+      padding: 0.875rem;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.12) 100%);
+      border: 2px dashed rgba(16, 185, 129, 0.4);
+      border-radius: 12px;
+      color: #10b981;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.625rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      font-size: 0.95rem;
+    }
+
+    .add-entrepreneur-btn:hover {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.25) 100%);
+      border-color: rgba(16, 185, 129, 0.6);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+    }
+
+    .add-entrepreneur-btn:active {
+      transform: translateY(0);
+    }
+
+    /* Team Card Layout */
+    .team-members-container {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 1rem;
+    }
+
+    .team-footer {
+      margin-top: auto;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(71, 85, 105, 0.3);
+    }
+
+    /* Modal */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0);
+      backdrop-filter: blur(0px);
+      z-index: 10000;
+      padding: 2rem;
+      overflow-y: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modal.active {
+      opacity: 1;
+      pointer-events: all;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(12px);
+    }
+
+    .modal-content {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(51, 65, 85, 0.98) 100%);
+      border: 1px solid rgba(71, 85, 105, 0.5);
+      border-radius: 20px;
+      padding: 2.5rem;
+      max-width: 900px;
+      width: 100%;
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
+      animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: visible;
+    }
+
+    .modal-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-light);
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-title i {
+      font-size: 1rem;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+      border-bottom: 2px solid rgba(71, 85, 105, 0.4);
+      position: relative;
+    }
+
+    .tab {
+      padding: 0.875rem 1.75rem;
+      background: transparent;
+      border: none;
+      color: var(--text-gray);
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 8px 8px 0 0;
+    }
+
+    .tab:hover {
+      color: var(--text-light);
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    .tab.active {
+      color: #60a5fa;
+      background: rgba(59, 130, 246, 0.12);
+    }
+
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.6);
+    }
+
+    .tab i {
+      transition: transform 0.3s ease;
+    }
+
+    .tab:hover i {
+      transform: scale(1.1);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* User Selection List */
+    .user-select-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .user-select-item {
+      padding: 1.125rem;
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(51, 65, 85, 0.5) 100%);
+      border: 1.5px solid rgba(71, 85, 105, 0.4);
+      border-radius: 12px;
+      margin-bottom: 0.625rem;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .user-select-item:hover {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(96, 165, 250, 0.15) 100%);
+      border-color: rgba(59, 130, 246, 0.5);
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+    }
+
+    .user-select-item.selected {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(96, 165, 250, 0.25) 100%);
+      border-color: rgba(59, 130, 246, 0.6);
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+    }
+
+    .user-select-item.selected:hover {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(96, 165, 250, 0.3) 100%);
+    }
+
+    .empty-team {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-gray);
+    }
+
+    /* Scrollbar */
+    .user-select-list::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .user-select-list::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.4);
+      border-radius: 4px;
+    }
+
+    .user-select-list::-webkit-scrollbar-thumb {
+      background: rgba(96, 165, 250, 0.3);
+      border-radius: 4px;
+    }
+
+    .user-select-list::-webkit-scrollbar-thumb:hover {
+      background: rgba(96, 165, 250, 0.5);
+    }
+
+    /* Unassigned Section */
+    .unassigned-section {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .unassigned-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #ef4444;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    /* Status Badges */
+    .status-badge-active {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.375rem 0.875rem;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.25) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      border-radius: 14px;
+      color: #10b981;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    .status-badge-active:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+
+    .status-badge-inactive {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.375rem 0.875rem;
+      background: linear-gradient(135deg, rgba(107, 114, 128, 0.25) 0%, rgba(75, 85, 99, 0.25) 100%);
+      border: 1px solid rgba(107, 114, 128, 0.5);
+      border-radius: 14px;
+      color: #9ca3af;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    .status-badge-inactive:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(107, 114, 128, 0.4);
+    }
+
+    .user-info-detail {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+      margin-top: 0.5rem;
+    }
+
+    .user-info-detail-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-gray);
+      font-size: 0.875rem;
+    }
+
+    .user-info-detail-item i {
+      width: 16px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    /* Modal Form Layout */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group-full {
+      grid-column: 1 / -1;
+    }
+
+    .checkbox-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1.125rem;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(96, 165, 250, 0.12) 100%);
+      border: 1.5px solid rgba(59, 130, 246, 0.35);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .checkbox-wrapper:hover {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(96, 165, 250, 0.2) 100%);
+      border-color: rgba(59, 130, 246, 0.5);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .checkbox-wrapper input[type="checkbox"] {
+      width: 22px;
+      height: 22px;
+      cursor: pointer;
+      accent-color: #3b82f6;
+      transition: transform 0.2s ease;
+    }
+
+    .checkbox-wrapper input[type="checkbox"]:checked {
+      transform: scale(1.1);
+    }
+
+    .checkbox-label {
+      font-weight: 600;
+      color: var(--text-light);
+      cursor: pointer;
+      user-select: none;
+      font-size: 0.95rem;
+    }
+
+    /* Enhanced Input Fields */
+    .input-field {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      cursor: text !important;
+      caret-color: #60a5fa !important;
+    }
+
+    .input-field:hover {
+      border-color: rgba(96, 165, 250, 0.5);
+    }
+
+    .input-field:focus {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+      cursor: text !important;
+      outline: none;
+    }
+
+    /* Enhanced Form Labels */
+    .form-label {
+      transition: color 0.2s ease;
+      font-weight: 600;
+      font-size: 0.9rem;
+      letter-spacing: 0.3px;
+    }
+
+    .form-group:focus-within .form-label {
+      color: #60a5fa;
+    }
+
+    /* Enhanced Buttons */
+    .btn-primary, .btn-secondary {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
+
+    .btn-secondary:active {
+      transform: scale(0.98);
+    }
+
+    /* Enhanced Scrollbar for Modal */
+    .modal::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .modal::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 5px;
+    }
+
+    .modal::-webkit-scrollbar-thumb {
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      border-radius: 5px;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+    }
+
+    .modal::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+    }
+
+    /* Loading State Animation */
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    .loading {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    /* Enhanced Delete Modal */
+    #delete-modal .modal-content {
+      border-left: 4px solid #ef4444;
+    }
+
+    /* Enhanced Assign Modal */
+    #assign-modal .modal-content {
+      border-left: 4px solid #10b981;
+    }
+
+    @media (max-width: 768px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .modal-content {
+        max-width: 100%;
+        padding: 1.5rem;
+      }
+
+      .stat-card {
+        animation: none;
+      }
+
+      .team-card {
+        animation: none;
+      }
+    }
+  </style>
+</head>
+
+<body class="min-h-screen">
+
+  <!-- Main Content -->
+  <div class="w-full" style="padding: 2rem;">
+
+    <!-- Header -->
+    <div class="mb-10" style="animation: fadeIn 0.5s ease-out;">
+      <div class="relative">
+        <h1 class="text-4xl font-bold mb-3">
+          Gestion des Utilisateurs
+        </h1>
+        <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        <div class="flex items-center justify-between">
+          <p class="text-xl font-medium">
+            <span style="color: var(--text-gray);">Gérer les coachs, entrepreneurs et leurs équipes</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" style="display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; gap: 0.5rem;">
+        <button class="tab active" onclick="switchTab('teams')" data-tab="teams">
+          <i class="fas fa-users mr-2"></i>Vue Équipes
+        </button>
+        <button class="tab" onclick="switchTab('all')" data-tab="all">
+          <i class="fas fa-list mr-2"></i>Tous les utilisateurs
+        </button>
+      </div>
+      <button onclick="openCreateModal('entrepreneur')" class="btn-primary" style="
+        padding: 0.75rem 1.5rem;
+        font-size: 0.95rem;
+        font-weight: 700;
+        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 24px rgba(59, 130, 246, 0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 16px rgba(59, 130, 246, 0.4)'">
+        <i class="fas fa-user-plus mr-2"></i>Nouvel Utilisateur
+      </button>
+    </div>
+
+    <!-- Vue Équipes -->
+    <div id="teams-view" class="tab-content active">
+      <!-- Statistiques / Filtres -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div class="stat-card active" onclick="switchTeamFilter('active')" data-filter="active" style="cursor: pointer;">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm" style="color: var(--text-muted);">Équipes actives</p>
+              <p id="stat-teams" class="text-3xl font-bold mt-1">0</p>
+            </div>
+            <div class="stat-icon stat-icon-purple">
+              <i class="fas fa-users text-white text-xl"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-card" onclick="switchTeamFilter('unassigned')" data-filter="unassigned" style="cursor: pointer;">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm" style="color: var(--text-muted);">Non assignés</p>
+              <p id="stat-unassigned" class="text-3xl font-bold mt-1">0</p>
+            </div>
+            <div class="stat-icon stat-icon-green">
+              <i class="fas fa-user-clock text-white text-xl"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Équipes (Équipes actives filter) -->
+      <div id="teams-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Les équipes seront chargées ici -->
+      </div>
+
+      <!-- All Entrepreneurs (Entrepreneurs filter) -->
+      <div id="all-entrepreneurs-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6" style="display: none;">
+        <!-- Tous les entrepreneurs seront affichés ici -->
+      </div>
+
+      <!-- Entrepreneurs non assignés (Non assignés filter) -->
+      <div id="unassigned-container" style="display: none;">
+        <!-- Les entrepreneurs non assignés seront affichés ici -->
+      </div>
+    </div>
+
+    <!-- Vue Tous les utilisateurs -->
+    <div id="all-view" class="tab-content">
+      <!-- Filtres et Recherche -->
+      <div class="flex flex-col md:flex-row gap-4 mb-6">
+        <div class="flex-1">
+          <input
+            type="text"
+            id="search-input"
+            placeholder="Rechercher un utilisateur..."
+            onkeyup="filterAllUsers()"
+            class="input-field"
+          >
+        </div>
+
+        <div style="min-width: 200px; position: relative;">
+          <div class="dropdown-secondary" id="role-filter-dropdown" onclick="toggleRoleFilterDropdown()" style="width: 100% !important; display: flex; align-items: center; cursor: pointer; border-color: var(--border-dark); box-shadow: none;">
+            <span id="role-filter-selected">Tous les rôles</span>
+            <i class="fas fa-chevron-down" style="margin-left: auto; font-size: 0.75rem; color: var(--text-gray);"></i>
+          </div>
+          <div class="dropdown-secondary-menu" id="role-filter-menu">
+            <div class="dropdown-secondary-option" onclick="selectRoleFilter('all', 'Tous les rôles')">Tous les rôles</div>
+            <div class="dropdown-secondary-option" onclick="selectRoleFilter('entrepreneur', 'Entrepreneurs')">Entrepreneurs</div>
+            <div class="dropdown-secondary-option" onclick="selectRoleFilter('coach', 'Coaches')">Coaches</div>
+            <div class="dropdown-secondary-option" onclick="selectRoleFilter('direction', 'Direction')">Direction</div>
+          </div>
+          <input type="hidden" id="role-filter" value="all">
+        </div>
+
+      </div>
+
+      <!-- Liste tous les utilisateurs -->
+      <div id="all-users-container" class="grid grid-cols-1 gap-4">
+        <!-- Les utilisateurs seront chargés ici -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal Créer/Modifier Utilisateur -->
+  <div id="user-modal" class="modal">
+    <div class="modal-content">
+      <div class="flex justify-between items-center mb-6">
+        <h2 id="modal-title" class="modal-title">
+          <i class="fas fa-user-plus mr-2"></i>
+          Nouvel Utilisateur
+        </h2>
+        <button onclick="closeModal()" class="text-2xl" style="
+          color: var(--text-muted);
+          transition: all 0.3s ease;
+          padding: 0.5rem;
+          border-radius: 8px;
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        " onmouseover="this.style.color='#ef4444'; this.style.background='rgba(239, 68, 68, 0.1)'; this.style.transform='rotate(90deg)'" onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'; this.style.transform='rotate(0)'">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <form id="user-form" onsubmit="saveUser(event)">
+        <input type="hidden" id="user-id" value="">
+
+        <!-- Grille 2 colonnes horizontales pour entrepreneur, 1 colonne pour coach -->
+        <div id="form-layout" style="display: flex; flex-direction: column; gap: 2rem; max-width: 900px;">
+
+          <!-- Colonne gauche: Champs de base -->
+          <div id="basic-fields-column">
+            <!-- Username -->
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+              <label class="form-label" style="display: block; margin-bottom: 0.5rem;">
+                <i class="fas fa-user mr-2"></i>Username
+              </label>
+              <input
+                type="text"
+                id="username"
+                required
+                class="input-field"
+                placeholder="Ex: jdupont"
+                style="width: 100%;"
+              >
+            </div>
+
+            <!-- Rôle -->
+            <div class="form-group" style="margin-bottom: 1.5rem; position: relative;">
+              <label class="form-label" style="display: block; margin-bottom: 0.5rem;">
+                <i class="fas fa-user-tag mr-2"></i>Rôle
+              </label>
+              <div class="dropdown-secondary" id="role-dropdown" onclick="toggleRoleDropdown()" style="width: 100% !important; display: flex; align-items: center; cursor: pointer; border-color: var(--border-dark); box-shadow: none;">
+                <span id="role-selected">Sélectionner un rôle</span>
+                <i class="fas fa-chevron-down" style="margin-left: auto; font-size: 0.75rem; color: var(--text-gray);"></i>
+              </div>
+              <div class="dropdown-secondary-menu" id="role-menu" style="z-index: 1000;">
+                <div class="dropdown-secondary-option" onclick="selectRole('entrepreneur', 'Entrepreneur')">Entrepreneur</div>
+                <div class="dropdown-secondary-option" onclick="selectRole('coach', 'Coach')">Coach</div>
+                <div class="dropdown-secondary-option" onclick="selectRole('direction', 'Direction')">Direction</div>
+              </div>
+              <input type="hidden" id="role" required>
+            </div>
+
+            <!-- Mot de passe -->
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+              <label class="form-label" style="display: block; margin-bottom: 0.5rem;">
+                <i class="fas fa-lock mr-2"></i>Mot de passe
+                <span id="password-hint" style="color: var(--text-muted); font-size: 0.75rem; font-weight: normal;"></span>
+              </label>
+              <div style="position: relative;">
+                <input
+                  type="password"
+                  id="password"
+                  required
+                  class="input-field"
+                  placeholder="Minimum 6 caractères"
+                  minlength="6"
+                  style="width: 100%; padding-right: 2.5rem;"
+                >
+                <button
+                  type="button"
+                  onclick="togglePasswordVisibility()"
+                  style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-gray); cursor: pointer; padding: 0.5rem; transition: color 0.2s ease;"
+                  onmouseover="this.style.color='var(--primary-blue)'"
+                  onmouseout="this.style.color='var(--text-gray)'"
+                >
+                  <i id="password-toggle-icon" class="fas fa-eye"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Département (pour entrepreneurs uniquement) -->
+            <div class="form-group" id="department-field" style="margin-bottom: 1.5rem; display: none;">
+              <label class="form-label" style="display: block; margin-bottom: 0.5rem;">
+                <i class="fas fa-building mr-2"></i>Département <span style="color: #64748b; font-size: 0.85rem;">(Facultatif)</span>
+              </label>
+              <input
+                type="text"
+                id="department"
+                class="input-field"
+                placeholder="Ex: 101"
+                style="width: 100%;"
+              >
+            </div>
+          </div>
+
+          <!-- Colonne droite: Champs Monday.com (visibles seulement pour entrepreneurs) -->
+          <div id="monday-fields" style="display: none;">
+            <div style="padding: 1.5rem; border-radius: 12px; background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%); border: 1px solid rgba(102, 126, 234, 0.2); height: 100%;">
+              <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                <img src="https://i.ibb.co/Z6kNyHsg/monday-200x200-1.png" alt="Monday.com" style="width: 24px; height: 24px; margin-right: 0.75rem;" />
+                <h3 style="color: var(--text-light); font-size: 1rem; font-weight: 600; margin: 0;">Configuration Monday.com</h3>
+              </div>
+              <p style="color: var(--text-gray); font-size: 0.875rem; margin-bottom: 1.5rem;">
+                <i class="fas fa-info-circle mr-1"></i>Ces informations permettent de synchroniser les données de l'entrepreneur avec Monday.com.
+              </p>
+
+              <!-- Clé API Monday.com -->
+              <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label class="form-label" style="display: block; margin-bottom: 0.5rem;">
+                  <i class="fas fa-key mr-2"></i>Clé API Monday.com <span style="color: #64748b; font-size: 0.85rem;">(Facultatif)</span>
+                </label>
+                <input
+                  type="password"
+                  id="monday-api-key"
+                  class="input-field"
+                  placeholder="Entrez la clé API Monday.com"
+                  style="width: 100%;"
+                >
+                <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.5rem;">
+                  <i class="fas fa-info-circle mr-1"></i>
+                  Monday.com → Avatar → Developers → API
+                </p>
+              </div>
+
+              <!-- Board ID -->
+              <div class="form-group">
+                <label class="form-label" style="display: block; margin-bottom: 0.5rem;">
+                  <i class="fas fa-clipboard-list mr-2"></i>ID du Board Monday.com <span style="color: #64748b; font-size: 0.85rem;">(Facultatif)</span>
+                </label>
+                <input
+                  type="text"
+                  id="monday-board-id"
+                  class="input-field"
+                  placeholder="Ex: 1234567890"
+                  style="width: 100%;"
+                >
+                <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.5rem;">
+                  <i class="fas fa-info-circle mr-1"></i>
+                  L'ID se trouve dans l'URL: monday.com/boards/<strong>1234567890</strong>
+                </p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(71, 85, 105, 0.3);">
+          <button type="button" onclick="closeModal()" class="btn-secondary" style="
+            padding: 0.75rem 2rem;
+            font-size: 0.95rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+          " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.2)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0, 0, 0, 0.15)'">
+            <i class="fas fa-times mr-2"></i>Annuler
+          </button>
+          <button type="submit" class="btn-primary" style="
+            padding: 0.75rem 2rem;
+            font-size: 0.95rem;
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+          " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 24px rgba(59, 130, 246, 0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 16px rgba(59, 130, 246, 0.4)'">
+            <i class="fas fa-save mr-2"></i>
+            Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Assigner Entrepreneurs -->
+  <div id="assign-modal" class="modal">
+    <div class="modal-content">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="modal-title">
+          <i class="fas fa-user-plus mr-2"></i>
+          Assigner des Entrepreneurs
+        </h2>
+        <button onclick="closeAssignModal()" class="text-2xl" style="
+          color: var(--text-muted);
+          transition: all 0.3s ease;
+          padding: 0.5rem;
+          border-radius: 8px;
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        " onmouseover="this.style.color='#ef4444'; this.style.background='rgba(239, 68, 68, 0.1)'; this.style.transform='rotate(90deg)'" onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'; this.style.transform='rotate(0)'">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <p class="mb-4" style="color: var(--text-gray);">
+        Coach: <strong id="assign-coach-name" style="color: var(--text-light);"></strong>
+      </p>
+
+      <div class="user-select-list" id="entrepreneur-select-list">
+        <!-- Liste des entrepreneurs disponibles -->
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(71, 85, 105, 0.3);">
+        <button onclick="closeAssignModal()" class="btn-secondary" style="
+          padding: 0.75rem 2rem;
+          font-size: 0.95rem;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.2)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0, 0, 0, 0.15)'">
+          <i class="fas fa-times mr-2"></i>Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Confirmation Suppression -->
+  <div id="delete-modal" class="modal">
+    <div class="modal-content">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="modal-title">
+          <i class="fas fa-exclamation-triangle mr-2" style="color: #ef4444;"></i>
+          Confirmer la suppression
+        </h2>
+        <button onclick="closeDeleteModal()" class="text-2xl" style="
+          color: var(--text-muted);
+          transition: all 0.3s ease;
+          padding: 0.5rem;
+          border-radius: 8px;
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        " onmouseover="this.style.color='#ef4444'; this.style.background='rgba(239, 68, 68, 0.1)'; this.style.transform='rotate(90deg)'" onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'; this.style.transform='rotate(0)'">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <p class="mb-6" style="color: var(--text-muted);">
+        Êtes-vous sûr de vouloir <strong id="delete-action-text" style="color: var(--text-light);">désactiver</strong> l'utilisateur <strong id="delete-username" style="color: var(--text-light);"></strong> ?
+        <br><br>
+        <span id="delete-description"></span>
+      </p>
+
+      <div style="display: flex; justify-content: flex-end; gap: 1rem; padding-top: 1.5rem; border-top: 1px solid rgba(71, 85, 105, 0.3);">
+        <button onclick="closeDeleteModal()" class="btn-secondary" style="
+          padding: 0.75rem 2rem;
+          font-size: 0.95rem;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.2)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0, 0, 0, 0.15)'">
+          <i class="fas fa-times mr-2"></i>Annuler
+        </button>
+        <button id="confirm-delete-btn" onclick="confirmDelete()" class="btn-primary btn-delete" style="
+          padding: 0.75rem 2rem;
+          font-size: 0.95rem;
+          background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+          box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
+        " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 24px rgba(239, 68, 68, 0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 16px rgba(239, 68, 68, 0.4)'">
+          <i class="fas fa-trash mr-2"></i>
+          Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Variables globales
+    let allUsers = [];
+    let coaches = [];
+    let entrepreneurs = [];
+    let currentDeleteId = null;
+    let currentAssignCoachId = null;
+    let currentTab = 'teams';
+    let currentTeamFilter = 'active';
+
+    // Helper: Générer l'avatar avec photo de profil ou icône fallback
+    async function getUserAvatar(username, role, size = 60) {
+      const isCoach = role === 'coach';
+      const isEntrepreneur = role === 'entrepreneur';
+      const gradientColor = isCoach ? '#8b5cf6, #7c3aed' : isEntrepreneur ? '#3b82f6, #2563eb' : '#10b981, #059669';
+      const iconClass = isCoach ? 'chalkboard-teacher' : isEntrepreneur ? 'briefcase' : 'user';
+
+      // Try to fetch the profile photo
+      let photoUrl = null;
+      try {
+        const photoResponse = await fetch(`/api/get-profile-photo/${username}`);
+        if (photoResponse.ok) {
+          const photoResult = await photoResponse.json();
+          photoUrl = photoResult.photoUrl || null;
+        }
+      } catch (error) {
+        // Photo not available, will use fallback
+      }
+
+      // If photo exists, show image; otherwise show icon
+      if (photoUrl) {
+        return `
+          <div style="
+            width: ${size}px;
+            height: ${size}px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+          ">
+            <img
+              src="${photoUrl}"
+              alt="${username}"
+              style="
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+              "
+            />
+          </div>
+        `;
+      } else {
+        return `
+          <div style="
+            width: ${size}px;
+            height: ${size}px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, ${gradientColor});
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          ">
+            <i class="fas fa-${iconClass} text-white" style="font-size: ${size/3}px;"></i>
+          </div>
+        `;
+      }
+    }
+
+    // Charger les utilisateurs au démarrage
+    document.addEventListener('DOMContentLoaded', function() {
+      loadUsers();
+    });
+
+    // Switch entre les tabs
+    function switchTab(tabName) {
+      currentTab = tabName;
+
+      // Mettre à jour les boutons de tab
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
+
+      // Mettre à jour le contenu
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.getElementById(`${tabName}-view`).classList.add('active');
+    }
+
+    // Switch entre les filtres de la vue équipes
+    function switchTeamFilter(filterName) {
+      currentTeamFilter = filterName;
+
+      // Mettre à jour les stat-cards (filtres)
+      document.querySelectorAll('.stat-card').forEach(card => {
+        card.classList.remove('active');
+      });
+      document.querySelector(`.stat-card[data-filter="${filterName}"]`).classList.add('active');
+
+      // Afficher/cacher les conteneurs appropriés
+      const teamsContainer = document.getElementById('teams-container');
+      const entrepreneursContainer = document.getElementById('all-entrepreneurs-container');
+      const unassignedContainer = document.getElementById('unassigned-container');
+
+      // Cacher tous les conteneurs
+      teamsContainer.style.display = 'none';
+      entrepreneursContainer.style.display = 'none';
+      unassignedContainer.style.display = 'none';
+
+      // Afficher le conteneur approprié
+      if (filterName === 'active') {
+        teamsContainer.style.display = 'grid';
+      } else if (filterName === 'entrepreneurs') {
+        entrepreneursContainer.style.display = 'grid';
+      } else if (filterName === 'unassigned') {
+        unassignedContainer.style.display = 'block';
+      }
+    }
+
+    // Charger tous les utilisateurs avec option d'inclure inactifs
+    async function loadUsers() {
+      try {
+        console.log('Chargement des utilisateurs...');
+        const response = await fetch('/admin/users?include_inactive=true');
+
+        if (!response.ok) {
+          throw new Error('Erreur de chargement');
+        }
+
+        const data = await response.json();
+        let users = Array.isArray(data) ? data : (data.users || []);
+
+        // Filtrer pour exclure les utilisateurs avec le rôle "support"
+        allUsers = users.filter(u => u.role !== 'support');
+
+        // Séparer coaches et entrepreneurs
+        coaches = allUsers.filter(u => u.role === 'coach');
+        entrepreneurs = allUsers.filter(u => u.role === 'entrepreneur');
+
+        updateStatistics();
+        await renderTeams();
+        await renderAllEntrepreneurs();
+        await renderUnassignedEntrepreneurs();
+        await renderAllUsers();
+
+      } catch (error) {
+        console.error('Erreur:', error);
+        showToast('Erreur de chargement des utilisateurs', 'error');
+      }
+    }
+
+    // Charger tous les utilisateurs (pour la vue "Tous les utilisateurs")
+    async function loadAllUsers() {
+      await loadUsers();
+    }
+
+    // Mettre à jour les statistiques
+    function updateStatistics() {
+      const stats = {
+        teams: coaches.length,
+        unassigned: entrepreneurs.filter(e => !e.coach_id).length
+      };
+
+      document.getElementById('stat-teams').textContent = stats.teams;
+      document.getElementById('stat-unassigned').textContent = stats.unassigned;
+    }
+
+    // Afficher les équipes (pour le filtre "Équipes actives")
+    async function renderTeams() {
+      const container = document.getElementById('teams-container');
+
+      if (coaches.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-2 text-center py-12" style="color: var(--text-muted);">
+            <i class="fas fa-users text-5xl mb-4"></i>
+            <p>Aucun coach créé</p>
+            <button onclick="openCreateModal('coach')" class="btn-primary mt-4">
+              <i class="fas fa-plus mr-2"></i>Créer un coach
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      // Load all coach avatars in parallel
+      const coachAvatarPromises = coaches.map(coach => getUserAvatar(coach.username, 'coach', 60));
+      const coachAvatars = await Promise.all(coachAvatarPromises);
+
+      // Load all entrepreneur avatars in parallel
+      const allTeamMembers = coaches.flatMap(coach => entrepreneurs.filter(e => e.coach_id === coach.id));
+      const entrepreneurAvatarPromises = allTeamMembers.map(e => getUserAvatar(e.username, 'entrepreneur', 44));
+      const entrepreneurAvatars = await Promise.all(entrepreneurAvatarPromises);
+
+      let entrepreneurAvatarIndex = 0;
+
+      // Afficher chaque équipe
+      container.innerHTML = coaches.map((coach, coachIndex) => {
+        const teamMembers = entrepreneurs.filter(e => e.coach_id === coach.id);
+
+        return `
+          <div class="team-card">
+            <div class="coach-header">
+              ${coachAvatars[coachIndex]}
+              <div class="flex-1">
+                <h3 class="text-xl font-bold" style="color: var(--text-light);">${coach.username}</h3>
+                <p style="color: var(--text-gray); font-size: 0.875rem;">
+                  <i class="fas fa-users mr-1"></i>${teamMembers.length} entrepreneur(s)
+                </p>
+              </div>
+            </div>
+
+            <div class="team-members-container">
+              <div class="space-y-2">
+                ${teamMembers.length > 0 ? teamMembers.map(entrepreneur => {
+                  const avatar = entrepreneurAvatars[entrepreneurAvatarIndex++];
+                  return `
+                    <div class="entrepreneur-item">
+                      <div class="flex items-center gap-3">
+                        ${avatar}
+                        <div class="flex-1">
+                          <p class="font-semibold" style="color: var(--text-light);">${entrepreneur.username}</p>
+                          <p style="color: var(--text-gray); font-size: 0.75rem;">Entrepreneur</p>
+                        </div>
+                      </div>
+                      <button onclick="unassignEntrepreneur(${entrepreneur.id})" class="btn-secondary px-3 py-1.5 text-sm" title="Désassigner" style="
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+                      " onmouseover="this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.2)'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0, 0, 0, 0.15)'">
+                        <i class="fas fa-unlink mr-1"></i>Désassigner
+                      </button>
+                    </div>
+                  `;
+                }).join('') : '<div class="empty-team"><i class="fas fa-user-slash text-2xl mb-2"></i><p>Aucun entrepreneur assigné</p></div>'}
+              </div>
+            </div>
+
+            <div class="team-footer">
+              <button onclick="openAssignModal(${coach.id}, '${coach.username}')" class="add-entrepreneur-btn">
+                <i class="fas fa-plus"></i>
+                Assigner un entrepreneur
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Afficher tous les entrepreneurs (pour le filtre "Entrepreneurs")
+    async function renderAllEntrepreneurs() {
+      const container = document.getElementById('all-entrepreneurs-container');
+
+      if (entrepreneurs.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-2 text-center py-12" style="color: var(--text-muted);">
+            <i class="fas fa-briefcase text-5xl mb-4"></i>
+            <p>Aucun entrepreneur créé</p>
+            <button onclick="openCreateModal('entrepreneur')" class="btn-primary mt-4">
+              <i class="fas fa-plus mr-2"></i>Créer un entrepreneur
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      // Load all entrepreneur avatars in parallel
+      const avatarPromises = entrepreneurs.map(e => getUserAvatar(e.username, 'entrepreneur', 60));
+      const avatars = await Promise.all(avatarPromises);
+
+      container.innerHTML = entrepreneurs.map((entrepreneur, index) => {
+        const coachName = entrepreneur.coach_id ?
+          coaches.find(c => c.id === entrepreneur.coach_id)?.username : null;
+
+        return `
+          <div class="team-card">
+            <div class="entrepreneur-item" style="padding: 1.25rem;">
+              <div class="flex items-center gap-3">
+                ${avatars[index]}
+                <div class="flex-1">
+                  <p class="text-xl font-bold" style="color: var(--text-light);">${entrepreneur.username}</p>
+                  <p style="color: var(--text-gray); font-size: 0.875rem;">
+                    <i class="fas fa-briefcase mr-1"></i>Entrepreneur
+                  </p>
+                  ${coachName ? `
+                    <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.25rem;">
+                      <i class="fas fa-link mr-1"></i>Coach: ${coachName}
+                    </p>
+                  ` : `
+                    <p style="color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem;">
+                      <i class="fas fa-exclamation-circle mr-1"></i>Non assigné
+                    </p>
+                  `}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Afficher les entrepreneurs non assignés (pour le filtre "Non assignés")
+    async function renderUnassignedEntrepreneurs() {
+      const container = document.getElementById('unassigned-container');
+      const unassigned = entrepreneurs.filter(e => !e.coach_id);
+
+      if (unassigned.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12" style="color: var(--text-muted);">
+            <i class="fas fa-check-circle text-5xl mb-4" style="color: #10b981;"></i>
+            <p class="text-xl font-semibold" style="color: var(--text-light);">Tous les entrepreneurs sont assignés!</p>
+            <p class="mt-2">Aucun entrepreneur non assigné</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Load all unassigned entrepreneur avatars in parallel
+      const avatarPromises = unassigned.map(e => getUserAvatar(e.username, 'entrepreneur', 44));
+      const avatars = await Promise.all(avatarPromises);
+
+      container.innerHTML = `
+        <div class="unassigned-section">
+          <div class="unassigned-header">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>Entrepreneurs non assignés (${unassigned.length})</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            ${unassigned.map((entrepreneur, index) => `
+              <div class="entrepreneur-item">
+                <div class="flex items-center gap-3 flex-1">
+                  ${avatars[index]}
+                  <div>
+                    <p class="font-semibold" style="color: var(--text-light);">${entrepreneur.username}</p>
+                    <p style="color: var(--text-gray); font-size: 0.75rem;">Entrepreneur</p>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Afficher tous les utilisateurs
+    async function renderAllUsers() {
+      const container = document.getElementById('all-users-container');
+      const searchTerm = document.getElementById('search-input').value.toLowerCase();
+      const roleFilter = document.getElementById('role-filter').value;
+
+      const filteredUsers = allUsers.filter(user => {
+        const matchesSearch = user.username.toLowerCase().includes(searchTerm) ||
+                            (user.first_name && user.first_name.toLowerCase().includes(searchTerm)) ||
+                            (user.last_name && user.last_name.toLowerCase().includes(searchTerm));
+        const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+        return matchesSearch && matchesRole;
+      });
+
+      if (filteredUsers.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12" style="color: var(--text-muted);">
+            <i class="fas fa-users text-5xl mb-4"></i>
+            <p>Aucun utilisateur trouvé</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Load all avatars in parallel
+      const avatarPromises = filteredUsers.map(user => getUserAvatar(user.username, user.role, 60));
+      const avatars = await Promise.all(avatarPromises);
+
+      container.innerHTML = filteredUsers.map((user, index) => {
+        const isCoach = user.role === 'coach';
+        const isEntrepreneur = user.role === 'entrepreneur';
+        const isActive = user.is_active !== false;
+        const teamInfo = isEntrepreneur && user.coach_id ?
+          entrepreneurs.find(e => e.id === user.id)?.coach_id : null;
+        const coachName = teamInfo ? coaches.find(c => c.id === teamInfo)?.username : null;
+
+        const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ');
+        const createdDate = user.created_at ? new Date(user.created_at).toLocaleDateString('fr-FR') : null;
+
+        return `
+          <div class="team-card" style="padding: 1.5rem;">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+              <div class="flex items-center gap-4 flex-1">
+                ${avatars[index]}
+
+                <div class="flex-1">
+                  <div class="flex items-center gap-3 flex-wrap mb-2">
+                    <h3 class="text-xl font-bold" style="color: var(--text-light);">${user.username}</h3>
+                    ${isActive ?
+                      '<span class="status-badge-active"><i class="fas fa-check-circle"></i> Actif</span>' :
+                      '<span class="status-badge-inactive"><i class="fas fa-ban"></i> Inactif</span>'
+                    }
+                  </div>
+                  <div class="flex items-center gap-2 flex-wrap mb-2">
+                    <span class="role-badge role-${user.role}">${getRoleLabel(user.role)}</span>
+                    ${coachName ? `<span style="color: var(--text-muted); font-size: 0.875rem;">
+                      <i class="fas fa-link mr-1"></i>Coach: ${coachName}
+                    </span>` : ''}
+                  </div>
+                  <div class="user-info-detail">
+                    ${fullName ? `
+                      <div class="user-info-detail-item">
+                        <i class="fas fa-id-card"></i>
+                        <span>${fullName}</span>
+                      </div>
+                    ` : ''}
+                    ${createdDate ? `
+                      <div class="user-info-detail-item">
+                        <i class="fas fa-calendar-plus"></i>
+                        <span>Créé le ${createdDate}</span>
+                      </div>
+                    ` : ''}
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex gap-2 flex-wrap">
+                <button onclick="editUser(${user.id})" class="btn-secondary px-4 py-2" title="Modifier">
+                  <i class="fas fa-edit mr-2"></i>Modifier
+                </button>
+                <button onclick="openDeleteModal(${user.id}, '${user.username}')" class="btn-secondary px-4 py-2" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);" title="Supprimer">
+                  <i class="fas fa-trash mr-2"></i>Supprimer
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Filtrer tous les utilisateurs
+    async function filterAllUsers() {
+      await renderAllUsers();
+    }
+
+    // Gestion de la visibilité du mot de passe
+    function togglePasswordVisibility() {
+      const passwordInput = document.getElementById('password');
+      const toggleIcon = document.getElementById('password-toggle-icon');
+
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.classList.remove('fa-eye');
+        toggleIcon.classList.add('fa-eye-slash');
+      } else {
+        passwordInput.type = 'password';
+        toggleIcon.classList.remove('fa-eye-slash');
+        toggleIcon.classList.add('fa-eye');
+      }
+    }
+
+    // Gestion du dropdown de rôle
+    function toggleRoleDropdown() {
+      const menu = document.getElementById('role-menu');
+      menu.classList.toggle('show');
+    }
+
+    function selectRole(value, label) {
+      document.getElementById('role').value = value;
+      document.getElementById('role-selected').textContent = label;
+      document.getElementById('role-menu').classList.remove('show');
+
+      // Afficher/cacher les champs Monday.com et département selon le rôle
+      const formLayout = document.getElementById('form-layout');
+      const basicFields = document.getElementById('basic-fields-column');
+      const mondayFields = document.getElementById('monday-fields');
+      const departmentField = document.getElementById('department-field');
+      const mondayApiKey = document.getElementById('monday-api-key');
+      const mondayBoardId = document.getElementById('monday-board-id');
+
+      if (value === 'entrepreneur') {
+        // Passer en mode horizontal (2 colonnes côte à côte)
+        formLayout.style.flexDirection = 'row';
+        formLayout.style.alignItems = 'flex-start';
+        basicFields.style.maxWidth = '900px';
+        basicFields.style.flex = '1';
+        mondayFields.style.flex = '1';
+        mondayFields.style.display = 'block';
+        departmentField.style.display = 'block';  // Afficher le département pour entrepreneur
+      } else {
+        // Passer en mode vertical (1 colonne)
+        formLayout.style.flexDirection = 'column';
+        formLayout.style.alignItems = '';
+        basicFields.style.maxWidth = '';
+        basicFields.style.flex = '';
+        mondayFields.style.flex = '';
+        mondayFields.style.display = 'none';
+        departmentField.style.display = 'none';  // Cacher le département pour coach et direction
+        // Vider les champs Monday.com et département pour coach et direction
+        document.getElementById('department').value = '';
+        mondayApiKey.value = '';
+        mondayBoardId.value = '';
+      }
+    }
+
+    // Fermer le dropdown si on clique ailleurs
+    document.addEventListener('click', function(e) {
+      const dropdown = document.getElementById('role-dropdown');
+      const menu = document.getElementById('role-menu');
+      if (dropdown && menu && !dropdown.contains(e.target) && !menu.contains(e.target)) {
+        menu.classList.remove('show');
+      }
+
+      // Fermer le dropdown du filtre de rôle si on clique ailleurs
+      const filterDropdown = document.getElementById('role-filter-dropdown');
+      const filterMenu = document.getElementById('role-filter-menu');
+      if (filterDropdown && filterMenu && !filterDropdown.contains(e.target) && !filterMenu.contains(e.target)) {
+        filterMenu.classList.remove('show');
+      }
+
+      // Fermer le dropdown du filtre de statut si on clique ailleurs
+      const statusFilterDropdown = document.getElementById('status-filter-dropdown');
+      const statusFilterMenu = document.getElementById('status-filter-menu');
+      if (statusFilterDropdown && statusFilterMenu && !statusFilterDropdown.contains(e.target) && !statusFilterMenu.contains(e.target)) {
+        statusFilterMenu.classList.remove('show');
+      }
+    });
+
+    // Gestion du dropdown du filtre de rôle
+    function toggleRoleFilterDropdown() {
+      const menu = document.getElementById('role-filter-menu');
+      menu.classList.toggle('show');
+    }
+
+    function selectRoleFilter(value, label) {
+      document.getElementById('role-filter').value = value;
+      document.getElementById('role-filter-selected').textContent = label;
+      document.getElementById('role-filter-menu').classList.remove('show');
+      filterAllUsers();
+    }
+
+    // Gestion du dropdown du filtre de statut
+    function toggleStatusFilterDropdown() {
+      const menu = document.getElementById('status-filter-menu');
+      menu.classList.toggle('show');
+    }
+
+    function selectStatusFilter(value, label) {
+      document.getElementById('status-filter').value = value;
+      document.getElementById('status-filter-selected').textContent = label;
+      document.getElementById('status-filter-menu').classList.remove('show');
+      filterAllUsers();
+    }
+
+    // Ouvrir modal création
+    function openCreateModal() {
+      document.getElementById('modal-title').innerHTML = `<i class="fas fa-user-plus mr-2"></i>Nouvel Utilisateur`;
+      document.getElementById('user-form').reset();
+      document.getElementById('user-id').value = '';
+      document.getElementById('password').required = true;
+      document.getElementById('password-hint').textContent = '';
+
+      // Réinitialiser les champs
+      document.getElementById('username').value = '';
+
+      // Réinitialiser le dropdown personnalisé - AUCUN rôle sélectionné par défaut
+      document.getElementById('role').value = '';
+      document.getElementById('role-selected').textContent = 'Sélectionner un rôle';
+
+      // Cacher les champs Monday.com par défaut
+      const mondayFields = document.getElementById('monday-fields');
+      const mondayApiKey = document.getElementById('monday-api-key');
+      const mondayBoardId = document.getElementById('monday-board-id');
+
+      mondayFields.style.display = 'none';
+      mondayApiKey.value = '';
+      mondayBoardId.value = '';
+
+      // Réinitialiser le layout du formulaire en mode colonne
+      const formLayout = document.getElementById('form-layout');
+      const basicFields = document.getElementById('basic-fields-column');
+      formLayout.style.flexDirection = 'column';
+      formLayout.style.alignItems = '';
+      basicFields.style.maxWidth = '';
+      basicFields.style.flex = '';
+      mondayFields.style.flex = '';
+
+      document.getElementById('user-modal').classList.add('active');
+    }
+
+    // Éditer un utilisateur
+    function editUser(id) {
+      const user = allUsers.find(u => u.id === id);
+      if (!user) return;
+
+      console.log('📝 Édition utilisateur:', user);
+
+      document.getElementById('modal-title').innerHTML = '<i class="fas fa-user-edit mr-2"></i>Modifier Utilisateur';
+      document.getElementById('user-id').value = user.id;
+      document.getElementById('username').value = user.username;
+      document.getElementById('department').value = user.department || '';
+
+      // Afficher le mot de passe en clair seulement si l'utilisateur connecté est "direction"
+      const currentUserRole = localStorage.getItem('userRole');
+      if (currentUserRole === 'direction') {
+        document.getElementById('password').value = user.password_clear || '';
+      } else {
+        document.getElementById('password').value = '';
+      }
+      document.getElementById('password').required = false;
+      document.getElementById('password-hint').textContent = '';
+
+      // Mettre à jour le dropdown personnalisé
+      document.getElementById('role').value = user.role;
+      const roleLabels = {
+        'entrepreneur': 'Entrepreneur',
+        'coach': 'Coach',
+        'direction': 'Direction',
+        'comptable': 'Comptable'
+      };
+      document.getElementById('role-selected').textContent = roleLabels[user.role] || 'Sélectionner un rôle';
+
+      // Charger les données Monday.com et département si l'utilisateur est entrepreneur
+      const formLayout = document.getElementById('form-layout');
+      const basicFields = document.getElementById('basic-fields-column');
+      const mondayFields = document.getElementById('monday-fields');
+      const departmentField = document.getElementById('department-field');
+      const mondayApiKey = document.getElementById('monday-api-key');
+      const mondayBoardId = document.getElementById('monday-board-id');
+
+      if (user.role === 'entrepreneur') {
+        // Passer en mode horizontal (2 colonnes côte à côte)
+        formLayout.style.flexDirection = 'row';
+        formLayout.style.alignItems = 'flex-start';
+        basicFields.style.maxWidth = '900px';
+        basicFields.style.flex = '1';
+        mondayFields.style.flex = '1';
+        mondayFields.style.display = 'block';
+        departmentField.style.display = 'block';  // Afficher le département pour entrepreneur
+
+        // Charger les données Monday.com de l'utilisateur
+        console.log('🔑 Monday API Key:', user.monday_api_key);
+        console.log('📋 Monday Board ID:', user.monday_board_id);
+        mondayApiKey.value = user.monday_api_key || '';
+        mondayBoardId.value = user.monday_board_id || '';
+      } else {
+        // Passer en mode vertical (1 colonne) pour coach/direction
+        formLayout.style.flexDirection = 'column';
+        formLayout.style.alignItems = '';
+        basicFields.style.maxWidth = '';
+        basicFields.style.flex = '';
+        mondayFields.style.flex = '';
+        mondayFields.style.display = 'none';
+        departmentField.style.display = 'none';  // Cacher le département pour coach et direction
+
+        // Vider les champs Monday.com
+        mondayApiKey.value = '';
+        mondayBoardId.value = '';
+      }
+
+      document.getElementById('user-modal').classList.add('active');
+
+      // Force reflow to ensure proper rendering and cursor display
+      setTimeout(() => {
+        const usernameInput = document.getElementById('username');
+        if (usernameInput) {
+          usernameInput.focus();
+          usernameInput.blur();
+        }
+      }, 50);
+    }
+
+    // Fermer modal
+    function closeModal() {
+      document.getElementById('user-modal').classList.remove('active');
+
+      // Réinitialiser le rôle
+      document.getElementById('role').value = '';
+      document.getElementById('role-selected').textContent = 'Sélectionner un rôle';
+
+      // Réinitialiser et cacher les champs Monday.com
+      const mondayFields = document.getElementById('monday-fields');
+      const mondayApiKey = document.getElementById('monday-api-key');
+      const mondayBoardId = document.getElementById('monday-board-id');
+
+      mondayFields.style.display = 'none';
+      mondayApiKey.value = '';
+      mondayBoardId.value = '';
+
+      // Réinitialiser le layout du formulaire
+      const formLayout = document.getElementById('form-layout');
+      const basicFields = document.getElementById('basic-fields-column');
+      formLayout.style.flexDirection = 'column';
+      formLayout.style.alignItems = '';
+      basicFields.style.maxWidth = '';
+      basicFields.style.flex = '';
+      mondayFields.style.flex = '';
+    }
+
+    // Sauvegarder utilisateur
+    async function saveUser(event) {
+      event.preventDefault();
+
+      const userId = document.getElementById('user-id').value;
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const role = document.getElementById('role').value;
+      const department = document.getElementById('department').value;
+
+      const isEdit = userId !== '';
+
+      try {
+        const url = isEdit ? '/api/admin/users/update' : '/api/admin/users/create';
+
+        const body = {
+          username,
+          role
+        };
+
+        // Ajouter le département si renseigné
+        if (department) {
+          body.department = department;
+        }
+
+        if (isEdit) {
+          body.id = parseInt(userId);
+          if (password) {
+            body.password = password;
+          }
+        } else {
+          body.password = password;
+        }
+
+        // Ajouter les données Monday.com si c'est un entrepreneur
+        if (role === 'entrepreneur') {
+          const mondayApiKey = document.getElementById('monday-api-key').value;
+          const mondayBoardId = document.getElementById('monday-board-id').value;
+
+          if (mondayApiKey && mondayBoardId) {
+            body.monday_api_key = mondayApiKey;
+            body.monday_board_id = mondayBoardId;
+          }
+        }
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || 'Erreur lors de la sauvegarde');
+        }
+
+        showToast(isEdit ? 'Utilisateur modifié avec succès' : 'Utilisateur créé avec succès', 'success');
+        closeModal();
+        loadUsers();
+
+      } catch (error) {
+        console.error('Erreur:', error);
+        showToast(error.message, 'error');
+      }
+    }
+
+    // Ouvrir modal assignation
+    function openAssignModal(coachId, coachName) {
+      currentAssignCoachId = coachId;
+      document.getElementById('assign-coach-name').textContent = coachName;
+
+      // Afficher la liste des entrepreneurs disponibles
+      const availableEntrepreneurs = entrepreneurs.filter(e => !e.coach_id || e.coach_id === coachId);
+      const listContainer = document.getElementById('entrepreneur-select-list');
+
+      if (availableEntrepreneurs.length === 0) {
+        listContainer.innerHTML = `
+          <div class="text-center py-8" style="color: var(--text-muted);">
+            <i class="fas fa-user-slash text-3xl mb-2"></i>
+            <p>Tous les entrepreneurs sont déjà assignés</p>
+          </div>
+        `;
+      } else {
+        listContainer.innerHTML = availableEntrepreneurs.map(entrepreneur => {
+          const isAssigned = entrepreneur.coach_id === coachId;
+          return `
+            <div class="user-select-item ${isAssigned ? 'selected' : ''}" onclick="toggleAssignment(${entrepreneur.id}, ${coachId})">
+              <div class="entrepreneur-avatar">
+                <i class="fas fa-briefcase text-white"></i>
+              </div>
+              <div class="flex-1">
+                <p class="font-semibold" style="color: var(--text-light);">${entrepreneur.username}</p>
+                <p style="color: var(--text-gray); font-size: 0.75rem;">Entrepreneur</p>
+              </div>
+              <i class="fas fa-${isAssigned ? 'check-circle' : 'circle'}" style="color: ${isAssigned ? '#10b981' : 'var(--text-gray)'};"></i>
+            </div>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('assign-modal').classList.add('active');
+    }
+
+    // Toggle assignation
+    async function toggleAssignment(entrepreneurId, coachId) {
+      const entrepreneur = entrepreneurs.find(e => e.id === entrepreneurId);
+      if (!entrepreneur) return;
+
+      const newCoachId = entrepreneur.coach_id === coachId ? null : coachId;
+
+      try {
+        const response = await fetch('/api/admin/users/assign-coach', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entrepreneur_id: entrepreneurId,
+            coach_id: newCoachId
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Erreur lors de l\'assignation');
+        }
+
+        // Assignation réussie - pas de message
+        await loadUsers();
+
+        // Réouvrir le modal avec les données mises à jour
+        const coach = coaches.find(c => c.id === coachId);
+        if (coach) {
+          openAssignModal(coachId, coach.username);
+        }
+
+        // Rafraîchir la vue courante
+        switchTeamFilter(currentTeamFilter);
+
+      } catch (error) {
+        console.error('Erreur:', error);
+        showToast(error.message, 'error');
+      }
+    }
+
+    // Désassigner un entrepreneur
+    async function unassignEntrepreneur(entrepreneurId) {
+      try {
+        const response = await fetch('/api/admin/users/assign-coach', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entrepreneur_id: entrepreneurId,
+            coach_id: null
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Erreur lors de la désassignation');
+        }
+
+        // Désassignation réussie - pas de message
+        await loadUsers();
+
+      } catch (error) {
+        console.error('Erreur:', error);
+        showToast(error.message, 'error');
+      }
+    }
+
+    // Fermer modal assignation
+    function closeAssignModal() {
+      document.getElementById('assign-modal').classList.remove('active');
+      currentAssignCoachId = null;
+    }
+
+    // Activer/Désactiver un utilisateur
+    async function toggleUserActive(userId, isActive) {
+      try {
+        const response = await fetch('/api/admin/users/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: userId,
+            is_active: isActive
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || 'Erreur lors de la modification');
+        }
+
+        if (isActive) {
+          showToast('Utilisateur réactivé avec succès', 'success');
+        }
+        loadUsers();
+
+      } catch (error) {
+        console.error('Erreur:', error);
+        showToast(error.message, 'error');
+      }
+    }
+
+    // Ouvrir modal suppression
+    function openDeleteModal(id, username) {
+      currentDeleteId = id;
+      document.getElementById('delete-username').textContent = username;
+      document.getElementById('delete-action-text').textContent = 'supprimer définitivement';
+      document.getElementById('delete-description').textContent = "Cette action est irréversible et supprimera définitivement toutes les données de l'utilisateur (compte, fichiers, dossiers, etc.).";
+      document.getElementById('confirm-delete-btn').innerHTML = '<i class="fas fa-trash mr-2"></i>Supprimer';
+      document.getElementById('delete-modal').classList.add('active');
+    }
+
+    // Fermer modal suppression
+    function closeDeleteModal() {
+      document.getElementById('delete-modal').classList.remove('active');
+      currentDeleteId = null;
+    }
+
+    // Confirmer suppression/désactivation
+    async function confirmDelete() {
+      if (!currentDeleteId) return;
+
+      try {
+        const response = await fetch('/api/admin/users/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: currentDeleteId })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.detail || 'Erreur lors de la suppression');
+        }
+
+        closeDeleteModal();
+        loadUsers();
+
+      } catch (error) {
+        console.error('Erreur:', error);
+        showToast(error.message, 'error');
+      }
+    }
+
+    // Utilitaires
+    function getRoleLabel(role) {
+      const labels = {
+        'entrepreneur': 'Entrepreneur',
+        'coach': 'Coach',
+        'direction': 'Direction'
+      };
+      return labels[role] || role;
+    }
+
+    function showToast(message, type = 'info') {
+      // Créer le conteneur de toast s'il n'existe pas
+      let toastContainer = document.getElementById('toast-container');
+      if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.style.cssText = `
+          position: fixed;
+          top: 2rem;
+          right: 2rem;
+          z-index: 99999;
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        `;
+        document.body.appendChild(toastContainer);
+      }
+
+      // Créer le toast
+      const toast = document.createElement('div');
+      toast.className = 'custom-toast';
+
+      const config = {
+        success: {
+          icon: 'fa-check-circle',
+          color: '#10b981',
+          bg: 'rgba(16, 185, 129, 0.1)'
+        },
+        error: {
+          icon: 'fa-exclamation-circle',
+          color: '#ef4444',
+          bg: 'rgba(239, 68, 68, 0.1)'
+        },
+        info: {
+          icon: 'fa-info-circle',
+          color: '#3b82f6',
+          bg: 'rgba(59, 130, 246, 0.1)'
+        }
+      };
+
+      const toastConfig = config[type] || config.info;
+
+      toast.innerHTML = `
+        <div style="
+          background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%);
+          border: 2px solid ${toastConfig.color};
+          border-radius: 16px;
+          padding: 1.25rem 1.5rem;
+          min-width: 350px;
+          max-width: 450px;
+          box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 0 0 100px ${toastConfig.color}33;
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          backdrop-filter: blur(20px);
+          animation: slideInRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        ">
+          <div style="
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: ${toastConfig.bg};
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          ">
+            <i class="fas ${toastConfig.icon}" style="
+              font-size: 1.5rem;
+              color: ${toastConfig.color};
+            "></i>
+          </div>
+          <p style="
+            color: var(--text-light);
+            font-weight: 500;
+            font-size: 1rem;
+            flex: 1;
+          ">${message}</p>
+          <button onclick="this.parentElement.parentElement.remove()" style="
+            background: transparent;
+            border: none;
+            color: var(--text-gray);
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+          " onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.color='var(--text-light)'" onmouseout="this.style.background='transparent'; this.style.color='var(--text-gray)'">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      `;
+
+      toastContainer.appendChild(toast);
+
+      // Auto-remove après 4 secondes
+      setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+        setTimeout(() => toast.remove(), 400);
+      }, 4000);
+    }
+  </script>
+
+  <style>
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(100px) scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+      }
+    }
+
+    @keyframes slideOutRight {
+      from {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+      }
+      to {
+        opacity: 0;
+        transform: translateX(100px) scale(0.9);
+      }
+    }
+  </style>
+</body>
+</html>

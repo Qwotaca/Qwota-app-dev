@@ -1,0 +1,3287 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bienvenue sur Qwota</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- QRCode pour photo mobile -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <!-- 📱 Blocage Mobile DÉSACTIVÉ - App maintenant responsive -->
+  <!-- <script>
+  (function() {
+    function isMobileDevice() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    function isQwotaPage() {
+      const path = window.location.pathname;
+      return path.includes('/QWOTA/') || path.includes('/mobile-blocked');
+    }
+
+    if (isMobileDevice() && !isQwotaPage()) {
+      console.log('📱 Mobile détecté - Redirection vers page de développement');
+      window.location.replace('/mobile-blocked');
+    }
+  })();
+  </script> -->
+
+  <script src="/common.js"></script>
+
+  <!-- Vérification si onboarding déjà complété - rediriger vers dashboard -->
+  <script>
+    (async function() {
+      const username = localStorage.getItem("username");
+      if (!username) return;
+
+      try {
+        const response = await fetch(`/api/me/${username}`);
+        if (response.ok) {
+          const userData = await response.json();
+          const isComplete = userData.onboarding_completed && userData.prenom && userData.nom;
+
+          if (isComplete) {
+            console.log('[OK] Onboarding déjà complété, redirection vers apppc');
+            window.location.replace('/apppc');
+          }
+        }
+      } catch (error) {
+        console.error('Erreur vérification onboarding:', error);
+      }
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/base.css">
+
+<style>
+/* Reset et base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Conteneur principal - Full screen sans scroll */
+.onboarding-container {
+  height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Effet de particules en arrière-plan */
+.onboarding-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(37, 134, 253, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: drift 20s linear infinite;
+}
+
+@keyframes drift {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(50px, 50px); }
+}
+
+/* Logos flottants animés */
+.floating-logo {
+  position: absolute;
+  opacity: 0.08;
+  pointer-events: none;
+  filter: drop-shadow(0 0 20px rgba(37, 134, 253, 0.3));
+  z-index: 0;
+}
+
+/* Particules de traînée */
+.trail-particle {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 0;
+  filter: drop-shadow(0 0 15px rgba(37, 134, 253, 0.8));
+}
+
+@keyframes trailFade {
+  0% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.3) rotate(180deg);
+  }
+}
+
+@keyframes float1 {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    opacity: 0.08;
+  }
+  50% {
+    transform: translate(-30px, -50px) rotate(180deg) scale(1.2);
+    opacity: 0.15;
+  }
+}
+
+@keyframes float2 {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    opacity: 0.06;
+  }
+  50% {
+    transform: translate(40px, -60px) rotate(-180deg) scale(0.8);
+    opacity: 0.12;
+  }
+}
+
+@keyframes float3 {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    opacity: 0.1;
+  }
+  50% {
+    transform: translate(-50px, 40px) rotate(90deg) scale(1.1);
+    opacity: 0.18;
+  }
+}
+
+@keyframes float4 {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    opacity: 0.07;
+  }
+  50% {
+    transform: translate(60px, 50px) rotate(-90deg) scale(0.9);
+    opacity: 0.14;
+  }
+}
+
+@keyframes float5 {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    opacity: 0.09;
+  }
+  50% {
+    transform: translate(-40px, -40px) rotate(270deg) scale(1.3);
+    opacity: 0.16;
+  }
+}
+
+.onboarding-card {
+  background: rgba(30, 41, 59, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  max-width: 900px;
+  width: 100%;
+  max-height: 95vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  position: relative;
+  z-index: 1;
+}
+
+/* Header compact */
+.onboarding-header {
+  background: linear-gradient(135deg, rgb(37, 134, 253) 0%, rgba(59, 130, 246, 0.9) 100%);
+  padding: 1.25rem 2rem;
+  text-align: center;
+  flex-shrink: 0;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+}
+
+.onboarding-title {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  letter-spacing: -0.02em;
+}
+
+.onboarding-subtitle {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.875rem;
+}
+
+/* Barre de progression */
+.progress-bar-container {
+  background: rgba(255, 255, 255, 0.15);
+  height: 4px;
+  border-radius: 2px;
+  margin-top: 1rem;
+  overflow: hidden;
+}
+
+.progress-bar {
+  background: white;
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+/* Steps indicators - Plus compact */
+.steps-container {
+  display: flex;
+  justify-content: space-between;
+  padding: 1.25rem 2rem 0.75rem;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(51, 65, 85, 0.6);
+  border: 2px solid rgba(148, 163, 184, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: rgba(148, 163, 184, 0.7);
+  margin-bottom: 0.4rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 2;
+}
+
+.step.active .step-number {
+  background: linear-gradient(135deg, rgb(37, 134, 253), rgba(59, 130, 246, 0.9));
+  border-color: rgb(37, 134, 253);
+  color: white;
+  transform: scale(1.15);
+  box-shadow: 0 0 20px rgba(37, 134, 253, 0.4);
+}
+
+.step.completed .step-number {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-color: #10b981;
+  color: white;
+}
+
+.step-label {
+  font-size: 0.7rem;
+  color: rgba(148, 163, 184, 0.7);
+  text-align: center;
+  transition: color 0.3s ease;
+  font-weight: 500;
+}
+
+.step.active .step-label {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+}
+
+/* Ligne de connexion */
+.step::after {
+  content: '';
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: rgba(148, 163, 184, 0.15);
+  z-index: 1;
+}
+
+.step:last-child::after {
+  display: none;
+}
+
+.step.completed::after {
+  background: linear-gradient(90deg, #10b981, rgba(16, 185, 129, 0.3));
+}
+
+/* Contenu scrollable */
+.onboarding-content {
+  padding: 1rem 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.onboarding-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.onboarding-content::-webkit-scrollbar-track {
+  background: rgba(51, 65, 85, 0.3);
+  border-radius: 3px;
+}
+
+.onboarding-content::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 3px;
+}
+
+.onboarding-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+.step-content {
+  display: none;
+}
+
+.step-content.active {
+  display: block;
+  animation: fadeSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.step-content h2 {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 0.2rem;
+  letter-spacing: -0.01em;
+}
+
+.step-content > p {
+  color: rgba(148, 163, 184, 0.9);
+  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
+}
+
+/* Form inputs - Ultra compact pour éviter scroll */
+.form-group {
+  margin-bottom: 0.5rem;
+}
+
+.form-label {
+  display: block;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.form-input::placeholder {
+  color: rgba(148, 163, 184, 0.5);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: rgba(203, 213, 225, 0.6);
+  box-shadow: 0 0 0 2px rgba(203, 213, 225, 0.1);
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+/* Signature canvas - Plus compact */
+#signatureCanvas {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 6px;
+  display: block;
+  margin: 0 auto;
+  background: transparent;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+  cursor: crosshair;
+  width: 100%;
+  max-width: 400px;
+  height: 150px;
+}
+
+/* Conteneur du canvas avec fond sombre pour voir la signature blanche */
+.signature-canvas-container {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(15, 23, 42, 0.6);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+/* Boutons - Plus compact */
+.btn-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+  flex-shrink: 0;
+}
+
+.btn {
+  padding: 0.625rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, rgb(37, 134, 253), rgba(59, 130, 246, 0.9));
+  color: white;
+  box-shadow: 0 4px 12px rgba(37, 134, 253, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(37, 134, 253, 0.4);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: rgba(51, 65, 85, 0.6);
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(51, 65, 85, 0.8);
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Google button */
+.btn-google {
+  background: rgba(51, 65, 85, 0.5);
+  color: rgba(255, 255, 255, 0.9);
+  border: 1.5px solid rgba(239, 68, 68, 0.4);
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  justify-content: space-between;
+  font-size: 0.9375rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-google:hover {
+  background: rgba(51, 65, 85, 0.7);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+.btn-google img {
+  width: 24px;
+  height: 24px;
+}
+
+.btn-google-left {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.btn-google-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.btn-google-status.disconnected {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.btn-google-status.connected {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.btn-google.connected {
+  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(51, 65, 85, 0.6);
+}
+
+.btn-google.connected:hover {
+  border-color: rgba(34, 197, 94, 0.6);
+}
+
+/* File upload - Plus compact */
+.file-upload-container {
+  margin-bottom: 1rem;
+}
+
+.file-upload-label {
+  display: block;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
+  margin-bottom: 0.4rem;
+  font-size: 0.8125rem;
+}
+
+.file-upload-box {
+  border: 2px dashed rgba(148, 163, 184, 0.25);
+  border-radius: 6px;
+  padding: 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.file-upload-box:hover {
+  border-color: rgb(37, 134, 253);
+  background: rgba(37, 134, 253, 0.05);
+  box-shadow: 0 0 0 3px rgba(37, 134, 253, 0.1);
+}
+
+.file-upload-icon {
+  font-size: 1.5rem;
+  color: rgba(148, 163, 184, 0.6);
+  margin-bottom: 0.4rem;
+}
+
+.file-upload-text {
+  color: rgba(148, 163, 184, 0.8);
+  font-size: 0.8125rem;
+}
+
+.file-name {
+  color: rgb(37, 134, 253);
+  font-weight: 600;
+  margin-top: 0.4rem;
+  font-size: 0.8125rem;
+}
+
+/* Success */
+.success-container {
+  text-align: center;
+  padding: 2rem 1.5rem;
+}
+
+.success-icon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  animation: scaleIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+}
+
+.success-icon i {
+  color: white;
+  font-size: 2.5rem;
+}
+
+@keyframes scaleIn {
+  0% { transform: scale(0) rotate(-180deg); }
+  50% { transform: scale(1.1) rotate(0deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+.success-title {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.success-message {
+  color: rgba(148, 163, 184, 0.9);
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+}
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Connected badge */
+.connected-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.connected-badge i {
+  font-size: 0.875rem;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .onboarding-container {
+    padding: 1rem;
+  }
+
+  .onboarding-card {
+    max-height: 100vh;
+    border-radius: 12px;
+  }
+
+  .onboarding-header {
+    padding: 1rem 1.5rem;
+  }
+
+  .onboarding-title {
+    font-size: 1.25rem;
+  }
+
+  .onboarding-subtitle {
+    font-size: 0.8125rem;
+  }
+
+  .steps-container {
+    padding: 1rem 1.5rem 0.5rem;
+  }
+
+  .step-number {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+  }
+
+  .step-label {
+    font-size: 0.625rem;
+  }
+
+  .onboarding-content {
+    padding: 1.25rem 1.5rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .btn-container {
+    flex-direction: column-reverse;
+    gap: 0.625rem;
+  }
+
+  .btn {
+    justify-content: center;
+  }
+}
+
+/* Scroll smooth */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Dropdown utilise maintenant les classes custom-select de base.css */
+
+/* Photo profil circulaire */
+.profile-photo-container {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  margin: 0 auto;
+}
+
+.profile-photo-display {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid rgb(37, 134, 253);
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.photo-menu-btn {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgb(37, 134, 253);
+  color: white;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  z-index: 2;
+}
+
+.photo-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background: rgba(30, 41, 59, 0.98);
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  min-width: 200px;
+  z-index: 100;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.photo-menu-dropdown button {
+  width: 100%;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  color: rgba(255, 255, 255, 0.9);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: background 0.2s ease;
+  font-size: 0.875rem;
+}
+
+.photo-menu-dropdown button:hover {
+  background: rgba(51, 65, 85, 0.5);
+}
+
+.photo-menu-dropdown button:not(:last-child) {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.photo-menu-dropdown button i {
+  width: 20px;
+  text-align: center;
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: rgba(30, 41, 59, 0.98);
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 500px;
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.modal-title {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: rgba(148, 163, 184, 0.7);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background: rgba(51, 65, 85, 0.5);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Editor canvas */
+#photo-editor-canvas {
+  width: 100%;
+  max-width: 300px;
+  height: 300px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 8px;
+  cursor: move;
+  margin: 0 auto;
+  display: block;
+}
+
+.zoom-control {
+  margin: 1rem 0;
+}
+
+.zoom-control label {
+  display: block;
+  color: rgba(148, 163, 184, 0.9);
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.zoom-control input[type="range"] {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(148, 163, 184, 0.2);
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.zoom-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgb(37, 134, 253);
+  cursor: pointer;
+}
+
+.zoom-control input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgb(37, 134, 253);
+  cursor: pointer;
+  border: none;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.modal-actions .btn {
+  min-width: 120px;
+  width: auto;
+}
+
+/* Photo container centré */
+.photo-step-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+/* File upload styles - Style identique à connect_agenda */
+.file-upload-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.file-select-btn {
+  background: rgba(51, 65, 85, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.file-select-btn:hover {
+  background: rgba(51, 65, 85, 0.8);
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+/* Style identique à connect_agenda.html */
+.file-preview {
+  position: relative;
+  display: inline-block;
+}
+
+.file-preview.hidden {
+  display: none !important;
+}
+
+.file-preview-thumbnail {
+  height: 3rem;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  object-fit: cover;
+}
+
+.file-preview-thumbnail:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Canvas PDF miniature */
+canvas.file-preview-thumbnail {
+  height: 3rem;
+  width: auto;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: white;
+}
+
+canvas.file-preview-thumbnail:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.file-remove-btn {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 1.25rem;
+  height: 1.25rem;
+  font-size: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: background 0.2s ease;
+}
+
+.file-remove-btn:hover {
+  background: #b91c1c;
+}
+
+/* Modal prévisualisation fichier - Très large, fichier visible en entier */
+.file-preview-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.92);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+}
+
+.file-preview-modal.active {
+  display: flex;
+}
+
+.file-preview-modal-content {
+  background: rgba(30, 41, 59, 0.98);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 95vw;
+  height: 95vh;
+}
+
+.file-preview-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: rgba(15, 23, 42, 0.95);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  flex-shrink: 0;
+}
+
+.file-preview-modal-title {
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-preview-modal-close {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.file-preview-modal-close:hover {
+  background: rgba(239, 68, 68, 0.4);
+  color: white;
+}
+
+.file-preview-modal-body {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+/* Image: fit dans le conteneur sans scroll */
+.file-preview-modal-body img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+/* PDF: prend tout l'espace disponible */
+.file-preview-modal-body iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 4px;
+}
+</style>
+
+</head>
+
+<body>
+
+<!-- Modal prévisualisation fichier -->
+<div id="file-preview-modal" class="file-preview-modal" onclick="closeFilePreviewModal(event)">
+  <div class="file-preview-modal-content" onclick="event.stopPropagation()">
+    <div class="file-preview-modal-header">
+      <span id="file-preview-modal-title" class="file-preview-modal-title">Document</span>
+      <button class="file-preview-modal-close" onclick="closeFilePreviewModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div id="file-preview-modal-body" class="file-preview-modal-body">
+      <!-- Contenu dynamique: image ou iframe PDF -->
+    </div>
+  </div>
+</div>
+
+<div class="onboarding-container">
+  <div class="onboarding-card">
+
+    <!-- Header -->
+    <div class="onboarding-header">
+      <h1 class="onboarding-title">Bienvenue sur Qwota!</h1>
+      <p class="onboarding-subtitle">Configurons votre compte en quelques étapes</p>
+
+      <div class="progress-bar-container">
+        <div class="progress-bar" id="progressBar" style="width: 20%;"></div>
+      </div>
+    </div>
+
+    <!-- Steps indicators -->
+    <div class="steps-container">
+      <div class="step active" data-step="1">
+        <div class="step-number">1</div>
+        <div class="step-label">Informations</div>
+      </div>
+      <div class="step" data-step="2">
+        <div class="step-number">2</div>
+        <div class="step-label">Photo</div>
+      </div>
+      <div class="step" data-step="3">
+        <div class="step-number">3</div>
+        <div class="step-label">Signature</div>
+      </div>
+      <div class="step" data-step="4">
+        <div class="step-number">4</div>
+        <div class="step-label">Agenda</div>
+      </div>
+      <div class="step" data-step="5">
+        <div class="step-number">5</div>
+        <div class="step-label">Courriel</div>
+      </div>
+      <div class="step" data-step="6">
+        <div class="step-number">6</div>
+        <div class="step-label">Terminé</div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="onboarding-content">
+
+      <!-- Step 1: Informations personnelles -->
+      <div class="step-content active" data-step="1">
+        <h2 style="color: white; font-size: 1.1rem; font-weight: bold; margin-bottom: 0.25rem; text-align: center;">
+          Informations personnelles
+        </h2>
+        <p style="color: rgba(148, 163, 184, 0.9); margin-bottom: 0.75rem; text-align: center; font-size: 0.8rem;">
+          Ces informations apparaîtront sur vos soumissions et factures
+        </p>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Prénom *</label>
+            <input type="text" id="prenom" class="form-input" placeholder="Jean" required autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nom *</label>
+            <input type="text" id="nom" class="form-input" placeholder="Tremblay" required autocomplete="off" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Téléphone *</label>
+            <input type="tel" id="telephone" class="form-input" placeholder="514-555-0123" required autocomplete="off" maxlength="12" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Courriel *</label>
+            <input type="email" id="courriel" class="form-input" placeholder="jean@entreprise.com" required autocomplete="off" />
+          </div>
+        </div>
+
+        <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr;">
+          <div class="form-group">
+            <label class="form-label">NEQ</label>
+            <input type="text" id="neq" class="form-input" placeholder="1234567890" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">TPS</label>
+            <input type="text" id="tps" class="form-input" placeholder="123456789 RT0001" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">TVQ</label>
+            <input type="text" id="tvq" class="form-input" placeholder="1234567890 TQ0001" autocomplete="off" />
+          </div>
+        </div>
+
+        <!-- Sélection du grade -->
+        <div style="margin-top: 1rem; margin-bottom: 1rem;">
+          <label class="form-label" style="margin-bottom: 0.5rem;">Sélectionner votre grade *</label>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <button type="button" id="grade-recrue" class="grade-btn" onclick="selectGradeOnboarding('recrue')" style="padding: 0.75rem; border-radius: 0.5rem; border: 2px solid rgba(148, 163, 184, 0.3); background: rgba(30, 41, 59, 0.3); transition: all 0.2s; cursor: pointer;">
+              <div style="font-size: 0.875rem; font-weight: 500; color: rgba(255, 255, 255, 0.9);">Recrue</div>
+            </button>
+            <button type="button" id="grade-senior1" class="grade-btn" onclick="selectGradeOnboarding('senior1')" style="padding: 0.75rem; border-radius: 0.5rem; border: 2px solid rgba(148, 163, 184, 0.3); background: rgba(30, 41, 59, 0.3); transition: all 0.2s; cursor: pointer;">
+              <div style="font-size: 0.875rem; font-weight: 500; color: rgba(255, 255, 255, 0.9);">Senior | 1</div>
+            </button>
+            <button type="button" id="grade-senior2" class="grade-btn" onclick="selectGradeOnboarding('senior2')" style="padding: 0.75rem; border-radius: 0.5rem; border: 2px solid rgba(148, 163, 184, 0.3); background: rgba(30, 41, 59, 0.3); transition: all 0.2s; cursor: pointer;">
+              <div style="font-size: 0.875rem; font-weight: 500; color: rgba(255, 255, 255, 0.9);">Senior | 2</div>
+            </button>
+            <button type="button" id="grade-senior3" class="grade-btn" onclick="selectGradeOnboarding('senior3')" style="padding: 0.75rem; border-radius: 0.5rem; border: 2px solid rgba(148, 163, 184, 0.3); background: rgba(30, 41, 59, 0.3); transition: all 0.2s; cursor: pointer;">
+              <div style="font-size: 0.875rem; font-weight: 500; color: rgba(255, 255, 255, 0.9);">Senior | 3</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Documents optionnels -->
+        <p style="color: rgba(148, 163, 184, 0.7); font-size: 0.7rem; margin-top: 0.5rem; margin-bottom: 0.35rem; text-align: center;">
+          Documents optionnels
+        </p>
+        <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+          <!-- Specimen cheque -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 0.7rem;">Specimen cheque</label>
+            <div class="file-upload-wrapper">
+              <input type="file" id="specimen-onboarding" accept=".pdf,.jpg,.jpeg,.png" style="display: none;" onchange="handleFileSelect(this, 'specimen-onboarding')" />
+              <button type="button" id="specimen-onboarding-btn" class="file-select-btn" onclick="document.getElementById('specimen-onboarding').click()">
+                <i class="fas fa-upload"></i> Choisir
+              </button>
+              <div id="specimen-onboarding-preview" class="file-preview hidden">
+                <img id="specimen-onboarding-thumbnail" class="file-preview-thumbnail" onclick="openFilePreview('specimen-onboarding')" />
+                <canvas id="specimen-onboarding-pdf-canvas" class="file-preview-thumbnail hidden" onclick="openFilePreview('specimen-onboarding')"></canvas>
+                <button type="button" class="file-remove-btn" onclick="removeFile('specimen-onboarding')">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <!-- Formulaire Betonel -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 0.7rem;">Formulaire Betonel</label>
+            <div class="file-upload-wrapper">
+              <input type="file" id="betonel-onboarding" accept=".pdf,.jpg,.jpeg,.png" style="display: none;" onchange="handleFileSelect(this, 'betonel-onboarding')" />
+              <button type="button" id="betonel-onboarding-btn" class="file-select-btn" onclick="document.getElementById('betonel-onboarding').click()">
+                <i class="fas fa-upload"></i> Choisir
+              </button>
+              <div id="betonel-onboarding-preview" class="file-preview hidden">
+                <img id="betonel-onboarding-thumbnail" class="file-preview-thumbnail" onclick="openFilePreview('betonel-onboarding')" />
+                <canvas id="betonel-onboarding-pdf-canvas" class="file-preview-thumbnail hidden" onclick="openFilePreview('betonel-onboarding')"></canvas>
+                <button type="button" class="file-remove-btn" onclick="removeFile('betonel-onboarding')">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <!-- Integration -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 0.7rem;">Integration</label>
+            <div class="file-upload-wrapper">
+              <input type="file" id="integration-onboarding" accept=".pdf,.jpg,.jpeg,.png" style="display: none;" onchange="handleFileSelect(this, 'integration-onboarding')" />
+              <button type="button" id="integration-onboarding-btn" class="file-select-btn" onclick="document.getElementById('integration-onboarding').click()">
+                <i class="fas fa-upload"></i> Choisir
+              </button>
+              <div id="integration-onboarding-preview" class="file-preview hidden">
+                <img id="integration-onboarding-thumbnail" class="file-preview-thumbnail" onclick="openFilePreview('integration-onboarding')" />
+                <canvas id="integration-onboarding-pdf-canvas" class="file-preview-thumbnail hidden" onclick="openFilePreview('integration-onboarding')"></canvas>
+                <button type="button" class="file-remove-btn" onclick="removeFile('integration-onboarding')">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-container">
+          <div></div>
+          <button class="btn btn-primary" id="next-btn-step-1" onclick="nextStep()">
+            Suivant <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Photo de profil -->
+      <div class="step-content" data-step="2">
+        <h2 style="color: white; font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem; text-align: center;">
+          Photo de profil
+        </h2>
+        <p style="color: white; margin-bottom: 2rem; text-align: center;">
+          Ajoutez une photo de profil pour personnaliser votre compte
+        </p>
+
+        <div class="photo-step-content">
+          <!-- Photo de profil circulaire -->
+          <div class="profile-photo-container">
+            <div class="profile-photo-display">
+              <img id="profile-photo-image" src="" alt="Photo de profil" class="hidden" style="width: 100%; height: 100%; object-fit: cover;" />
+              <div id="profile-photo-placeholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <i class="fas fa-user" style="font-size: 4rem; color: rgba(148, 163, 184, 0.5);"></i>
+              </div>
+            </div>
+            <button id="photo-menu-btn" class="photo-menu-btn">
+              <i class="fas fa-camera"></i>
+            </button>
+
+            <!-- Menu dropdown pour la photo -->
+            <div id="photo-menu-dropdown" class="photo-menu-dropdown hidden">
+              <button id="camera-photo-option">
+                <i class="fas fa-camera" style="color: rgb(34, 197, 94);"></i>
+                <span>Prendre une photo</span>
+              </button>
+              <button id="upload-photo-option">
+                <i class="fas fa-images" style="color: rgb(37, 134, 253);"></i>
+                <span>Prendre dans galerie</span>
+              </button>
+            </div>
+          </div>
+
+          <input type="file" id="profile-photo-input" accept="image/*" class="hidden" />
+          <input type="file" id="camera-capture-input" accept="image/*" capture="environment" class="hidden" />
+
+          <p style="color: rgba(239, 68, 68, 0.8); font-size: 0.75rem; text-align: center; font-weight: 600;">
+            * La photo de profil est obligatoire
+          </p>
+        </div>
+
+        <div class="btn-container">
+          <button class="btn btn-secondary" onclick="prevStep()">
+            <i class="fas fa-arrow-left"></i> Retour
+          </button>
+          <button class="btn btn-primary" id="next-btn-step-2" onclick="nextStep()">
+            Suivant <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 3: Signature -->
+      <div class="step-content" data-step="3">
+        <h2 style="color: white; font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem; text-align: center;">
+          Votre signature
+        </h2>
+        <p style="color: white; margin-bottom: 2rem; text-align: center;">
+          Dessinez votre signature pour l'ajouter automatiquement sur vos contrats
+        </p>
+
+        <div class="signature-canvas-container">
+          <canvas id="signatureCanvas"></canvas>
+          <button class="btn btn-secondary" onclick="clearSignature()">
+            <i class="fas fa-eraser"></i> Effacer
+          </button>
+        </div>
+
+        <div class="btn-container">
+          <button class="btn btn-secondary" onclick="prevStep()">
+            <i class="fas fa-arrow-left"></i> Retour
+          </button>
+          <button class="btn btn-primary" id="next-btn-step-3" onclick="nextStep()">
+            Suivant <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 4: Connexion Agenda -->
+      <div class="step-content" data-step="4">
+        <h2 style="color: white; font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem; text-align: center;">
+          Connexion Agenda
+        </h2>
+        <p style="color: white; margin-bottom: 2rem; text-align: center;">
+          Connectez votre agenda pour synchroniser vos rendez-vous
+        </p>
+
+        <div style="max-width: 500px; margin: 0 auto;">
+          <!-- Zone de connexion -->
+          <div style="background: rgba(15, 23, 42, 0.6); border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem;">
+            <!-- Bouton de connexion (visible quand déconnecté) -->
+            <div id="agenda-disconnected">
+              <button onclick="connectGoogleAgenda()" class="btn-google" style="width: 100%;">
+                <div class="btn-google-left">
+                  <img src="https://www.gstatic.com/images/branding/product/1x/calendar_2020q4_48dp.png" alt="Agenda" />
+                  <span>Connexion Agenda</span>
+                </div>
+                <div class="btn-google-status disconnected" id="agendaStatus">
+                  <i class="fas fa-circle"></i>
+                  <span>Non connecté</span>
+                </div>
+              </button>
+            </div>
+
+            <!-- Zone connectée (visible après connexion) -->
+            <div id="agenda-connected" style="display: none;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <img src="https://www.gstatic.com/images/branding/product/1x/calendar_2020q4_48dp.png" alt="Agenda" style="width: 32px; height: 32px;" />
+                  <div>
+                    <p style="color: rgba(255, 255, 255, 0.9); font-weight: 600; font-size: 0.875rem;">Google Agenda</p>
+                    <p id="agenda-user-email" style="color: rgba(148, 163, 184, 0.8); font-size: 0.75rem;">Connecté</p>
+                  </div>
+                </div>
+                <div class="btn-google-status connected">
+                  <i class="fas fa-check-circle"></i>
+                  <span>Connecté</span>
+                </div>
+              </div>
+
+              <!-- Sélection d'agenda -->
+              <p style="color: rgba(255, 255, 255, 0.9); font-size: 0.875rem; margin-bottom: 0.75rem;">
+                Sélectionnez votre agenda principal :
+              </p>
+              <div class="custom-select" id="agenda-select">
+                <button type="button" class="custom-select-button" id="agenda-select-button">
+                  <span class="custom-select-text" id="agenda-selected-text" style="color: var(--text-gray);">Choisir un agenda...</span>
+                  <i class="fas fa-chevron-down custom-select-arrow"></i>
+                </button>
+                <div class="custom-select-dropdown" id="agenda-dropdown-menu">
+                  <!-- Options générées dynamiquement -->
+                </div>
+              </div>
+
+              <!-- Bouton déconnexion -->
+              <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+                <button onclick="disconnectAgenda()" class="btn btn-secondary">
+                  <i class="fas fa-sign-out-alt"></i> Déconnecter
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <p style="color: rgba(239, 68, 68, 0.8); font-size: 0.75rem; text-align: center; font-weight: 600;">
+            * La connexion à votre agenda Google est obligatoire
+          </p>
+        </div>
+
+        <div class="btn-container">
+          <button class="btn btn-secondary" onclick="prevStep()">
+            <i class="fas fa-arrow-left"></i> Retour
+          </button>
+          <button class="btn btn-primary" id="next-btn-step-4" onclick="nextStep()">
+            Suivant <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 5: Connexion Courriel -->
+      <div class="step-content" data-step="5">
+        <h2 style="color: white; font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem; text-align: center;">
+          Connexion Courriel
+        </h2>
+        <p style="color: white; margin-bottom: 2rem; text-align: center;">
+          Connectez votre courriel pour envoyer des soumissions et factures
+        </p>
+
+        <div style="max-width: 500px; margin: 0 auto;">
+          <!-- Zone de connexion -->
+          <div style="background: rgba(15, 23, 42, 0.6); border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem;">
+            <!-- Bouton de connexion (visible quand déconnecté) -->
+            <div id="gmail-disconnected">
+              <button onclick="connectGmail()" class="btn-google" style="width: 100%;">
+                <div class="btn-google-left">
+                  <img src="https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_48dp.png" alt="Gmail" />
+                  <span>Connexion Gmail</span>
+                </div>
+                <div class="btn-google-status disconnected" id="gmailStatus">
+                  <i class="fas fa-circle"></i>
+                  <span>Non connecté</span>
+                </div>
+              </button>
+            </div>
+
+            <!-- Zone connectée (visible après connexion) -->
+            <div id="gmail-connected" style="display: none;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <img src="https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_48dp.png" alt="Gmail" style="width: 32px; height: 32px;" />
+                  <div>
+                    <p style="color: rgba(255, 255, 255, 0.9); font-weight: 600; font-size: 0.875rem;">Gmail</p>
+                    <p id="gmail-user-email" style="color: rgba(148, 163, 184, 0.8); font-size: 0.75rem;">Connecté</p>
+                  </div>
+                </div>
+                <div class="btn-google-status connected">
+                  <i class="fas fa-check-circle"></i>
+                  <span>Connecté</span>
+                </div>
+              </div>
+
+              <!-- Bouton déconnexion -->
+              <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+                <button onclick="disconnectGmail()" class="btn btn-secondary">
+                  <i class="fas fa-sign-out-alt"></i> Déconnecter
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <p style="color: rgba(239, 68, 68, 0.8); font-size: 0.75rem; text-align: center; font-weight: 600;">
+            * La connexion à votre compte Gmail est obligatoire
+          </p>
+        </div>
+
+        <div class="btn-container">
+          <button class="btn btn-secondary" onclick="prevStep()">
+            <i class="fas fa-arrow-left"></i> Retour
+          </button>
+          <button class="btn btn-primary" id="next-btn-step-5" onclick="finishOnboarding()">
+            <span id="finishBtnText">Terminer</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 6: Success -->
+      <div class="step-content" data-step="6">
+        <div class="success-container">
+          <div class="success-icon">
+            <i class="fas fa-check"></i>
+          </div>
+          <h2 class="success-title">Configuration terminée!</h2>
+          <p class="success-message">Votre compte est prêt. Vous allez être redirigé vers votre tableau de bord...</p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Modal de choix caméra -->
+  <div id="camera-choice-modal" class="hidden modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Prendre une photo</h3>
+        <button id="close-choice-modal-btn" class="modal-close">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <p style="color: rgba(148, 163, 184, 0.9); margin-bottom: 1.5rem;">
+        Choisissez comment vous souhaitez prendre votre photo
+      </p>
+
+      <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+        <!-- Option Caméra PC -->
+        <button id="use-pc-camera-btn" style="padding: 1.5rem; border-radius: 0.5rem; border: 2px solid rgba(255, 255, 255, 0.1); background: rgba(31, 41, 55, 0.5); transition: all 0.3s;">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 3rem; height: 3rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.2);">
+              <i class="fas fa-desktop" style="font-size: 1.5rem; color: rgb(59, 130, 246);"></i>
+            </div>
+            <div style="text-align: left;">
+              <h4 style="font-weight: 600; margin-bottom: 0.25rem; color: white;">Caméra PC</h4>
+              <p style="font-size: 0.875rem; color: rgba(148, 163, 184, 0.9);">Utiliser la webcam de votre ordinateur</p>
+            </div>
+          </div>
+        </button>
+
+        <!-- Option Mobile avec QR -->
+        <button id="use-mobile-qr-btn" style="padding: 1.5rem; border-radius: 0.5rem; border: 2px solid rgba(255, 255, 255, 0.1); background: rgba(31, 41, 55, 0.5); transition: all 0.3s;">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 3rem; height: 3rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(34, 197, 94, 0.2);">
+              <i class="fas fa-mobile-alt" style="font-size: 1.5rem; color: rgb(34, 197, 94);"></i>
+            </div>
+            <div style="text-align: left;">
+              <h4 style="font-weight: 600; margin-bottom: 0.25rem; color: white;">Mobile (QR Code)</h4>
+              <p style="font-size: 0.875rem; color: rgba(148, 163, 184, 0.9);">Scanner un QR code avec votre téléphone</p>
+            </div>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de caméra PC -->
+  <div id="camera-modal" class="hidden modal-overlay">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Caméra PC</h3>
+        <button id="close-camera-btn" class="modal-close">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div style="position: relative; border-radius: 0.5rem; overflow: hidden; background: #000; margin-bottom: 1rem;">
+        <video id="camera-video" autoplay playsinline style="width: 100%; max-height: 400px;"></video>
+        <canvas id="camera-canvas" class="hidden"></canvas>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button id="cancel-camera-btn" class="btn btn-secondary" style="min-width: 120px; width: auto;">Annuler</button>
+        <button id="capture-photo-btn" class="btn btn-primary" style="min-width: 120px; width: auto;">
+          <i class="fas fa-camera" style="margin-right: 0.5rem;"></i>Capturer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal QR Code Mobile -->
+  <div id="qr-modal" class="hidden modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Scanner le QR Code</h3>
+        <button id="close-qr-modal-btn" class="modal-close">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div style="text-align: center;">
+        <p style="color: rgba(148, 163, 184, 0.9); margin-bottom: 1.5rem; font-size: 0.875rem;">
+          Scannez ce QR code avec votre téléphone pour prendre une photo
+        </p>
+
+        <div id="qrcode-container" style="display: flex; justify-content: center; margin-bottom: 1.5rem; padding: 1rem; border-radius: 0.5rem; background: white;">
+          <!-- Le QR code sera généré ici -->
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 1rem;">
+          <p style="color: rgba(148, 163, 184, 0.9); font-size: 0.875rem;" id="qr-status-text">
+            En attente de la photo...
+          </p>
+        </div>
+
+        <button id="cancel-qr-btn" class="btn btn-secondary">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal d'édition de photo de profil -->
+  <div id="photo-editor-modal" class="hidden modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Modifier la photo de profil</h3>
+        <button id="close-editor-btn" class="modal-close">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+        <!-- Canvas pour l'édition -->
+        <div style="position: relative;">
+          <canvas id="photo-editor-canvas" width="300" height="300"></canvas>
+        </div>
+
+        <!-- Contrôle de zoom -->
+        <div class="zoom-control" style="width: 100%;">
+          <label>
+            <i class="fas fa-search-plus" style="margin-right: 0.5rem;"></i>
+            Zoom
+          </label>
+          <input type="range" id="zoom-slider" min="1" max="3" step="0.1" value="1" />
+        </div>
+
+        <!-- Boutons d'action -->
+        <div class="modal-actions" style="width: 100%;">
+          <button id="cancel-editor-btn" class="btn btn-secondary">Annuler</button>
+          <button id="save-editor-btn" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de confirmation de suppression -->
+  <div id="delete-photo-modal" class="hidden modal-overlay">
+    <div class="modal-content" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Supprimer la photo</h3>
+        <button id="close-delete-modal-btn" class="modal-close" onclick="document.getElementById('delete-photo-modal').classList.add('hidden')">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <p style="color: rgba(148, 163, 184, 0.9); margin-bottom: 1.5rem;">
+        Êtes-vous sûr de vouloir supprimer votre photo de profil ?
+      </p>
+
+      <div class="modal-actions">
+        <button id="cancel-delete-photo-btn" class="btn btn-secondary">Annuler</button>
+        <button id="confirm-delete-photo-btn" class="btn btn-primary" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+          Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// IMPORTANT : Vérifier le username AVANT tout
+// Le username est déjà défini dans common.js via window.username
+if (!window.username || window.username === "demo") {
+  // Pas de username valide, rediriger vers login immédiatement
+  window.location.replace("/login");
+}
+
+let currentStep = 1;
+const totalSteps = 6;
+// Utiliser window.username qui est déjà défini par common.js
+
+// Variable pour stocker le grade sélectionné
+let selectedGrade = null;
+
+// Fonction pour sélectionner le grade
+function selectGradeOnboarding(grade) {
+  selectedGrade = grade;
+
+  // Retirer la sélection de tous les boutons
+  document.querySelectorAll('.grade-btn').forEach(btn => {
+    btn.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+    btn.style.background = 'rgba(30, 41, 59, 0.3)';
+  });
+
+  // Mettre en surbrillance le bouton sélectionné
+  const selectedBtn = document.getElementById(`grade-${grade}`);
+  if (selectedBtn) {
+    selectedBtn.style.borderColor = '#3b82f6';
+    selectedBtn.style.background = 'rgba(59, 130, 246, 0.1)';
+  }
+
+  // Mettre à jour le bouton "Suivant" de l'étape 1
+  updateNextButton(1);
+
+  console.log('[ONBOARDING] Grade sélectionné:', grade);
+}
+
+// ============ Gestion des fichiers optionnels ============
+// Stockage des URLs et infos de prévisualisation des fichiers
+const filePreviewUrls = {};
+const filePreviewInfo = {};
+
+// Configurer PDF.js worker
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
+}
+
+async function handleFileSelect(input, id) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const preview = document.getElementById(`${id}-preview`);
+  const thumbnail = document.getElementById(`${id}-thumbnail`);
+  const pdfCanvas = document.getElementById(`${id}-pdf-canvas`);
+  const btn = document.getElementById(`${id}-btn`);
+
+  // Créer une URL de prévisualisation pour le fichier
+  if (filePreviewUrls[id]) {
+    URL.revokeObjectURL(filePreviewUrls[id]);
+  }
+  filePreviewUrls[id] = URL.createObjectURL(file);
+  filePreviewInfo[id] = { name: file.name, type: file.type };
+
+  // Déterminer si c'est une image ou un PDF
+  const isImage = file.type.startsWith('image/');
+  const isPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
+  if (isImage) {
+    // Afficher la miniature de l'image
+    thumbnail.src = filePreviewUrls[id];
+    thumbnail.classList.remove('hidden');
+    thumbnail.style.display = 'block';
+    pdfCanvas.classList.add('hidden');
+    pdfCanvas.style.display = 'none';
+  } else if (isPDF) {
+    // Générer une miniature du PDF avec PDF.js
+    thumbnail.classList.add('hidden');
+    thumbnail.style.display = 'none';
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const page = await pdf.getPage(1);
+
+      // Calculer l'échelle pour une miniature de 48px de hauteur
+      const desiredHeight = 48;
+      const viewport = page.getViewport({ scale: 1 });
+      const scale = desiredHeight / viewport.height;
+      const scaledViewport = page.getViewport({ scale });
+
+      pdfCanvas.width = scaledViewport.width;
+      pdfCanvas.height = scaledViewport.height;
+
+      const ctx = pdfCanvas.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+
+      pdfCanvas.classList.remove('hidden');
+      pdfCanvas.style.display = 'block';
+    } catch (err) {
+      console.error('Erreur génération miniature PDF:', err);
+      // Fallback: afficher quand même le canvas vide
+      pdfCanvas.classList.remove('hidden');
+      pdfCanvas.style.display = 'block';
+    }
+  }
+
+  preview.classList.remove('hidden');
+  btn.style.display = 'none';
+}
+
+function removeFile(id) {
+  const input = document.getElementById(id);
+  const preview = document.getElementById(`${id}-preview`);
+  const btn = document.getElementById(`${id}-btn`);
+
+  // Libérer l'URL de prévisualisation
+  if (filePreviewUrls[id]) {
+    URL.revokeObjectURL(filePreviewUrls[id]);
+    delete filePreviewUrls[id];
+    delete filePreviewInfo[id];
+  }
+
+  input.value = '';
+  preview.classList.add('hidden');
+  btn.style.display = 'flex';
+}
+
+// ============ Modal prévisualisation fichier ============
+function openFilePreview(id) {
+  const url = filePreviewUrls[id];
+  const info = filePreviewInfo[id];
+  if (!url || !info) return;
+
+  const fullName = info.name;
+  const fileType = info.type;
+
+  const modal = document.getElementById('file-preview-modal');
+  const title = document.getElementById('file-preview-modal-title');
+  const body = document.getElementById('file-preview-modal-body');
+
+  title.textContent = fullName;
+
+  // Déterminer le type de contenu à afficher
+  if (fileType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(fullName)) {
+    body.innerHTML = `<img src="${url}" alt="${fullName}" />`;
+  } else if (fileType === 'application/pdf' || /\.pdf$/i.test(fullName)) {
+    body.innerHTML = `<iframe src="${url}" title="${fullName}"></iframe>`;
+  } else {
+    body.innerHTML = `<div style="color: white; text-align: center;">
+      <i class="fas fa-file" style="font-size: 3rem; margin-bottom: 1rem; color: rgba(148, 163, 184, 0.6);"></i>
+      <p>Prévisualisation non disponible</p>
+      <p style="font-size: 0.8rem; color: rgba(148, 163, 184, 0.7);">${fullName}</p>
+    </div>`;
+  }
+
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeFilePreviewModal(event) {
+  // Si appelé avec un event, vérifier qu'on a cliqué sur le fond
+  if (event && event.target !== event.currentTarget) return;
+
+  const modal = document.getElementById('file-preview-modal');
+  modal.classList.remove('active');
+  document.body.style.overflow = '';
+
+  // Nettoyer le contenu
+  const body = document.getElementById('file-preview-modal-body');
+  body.innerHTML = '';
+}
+
+// Fermer le modal avec Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeFilePreviewModal();
+  }
+});
+
+// Canvas signature
+const canvas = document.getElementById('signatureCanvas');
+const ctx = canvas.getContext('2d');
+let hasDrawn = false;
+
+// Configuration du canvas - optimisée pour mobile
+function setupCanvas() {
+  const ratio = Math.max(window.devicePixelRatio || 1, 1);
+  const rect = canvas.getBoundingClientRect();
+
+  // Ajuster pour mobile
+  const isMobile = window.innerWidth <= 768;
+  const maxWidth = isMobile ? Math.min(rect.width, window.innerWidth - 32) : 400;
+  const canvasWidth = Math.min(maxWidth, 400);
+  const canvasHeight = 150;
+
+  canvas.width = canvasWidth * ratio;
+  canvas.height = canvasHeight * ratio;
+  canvas.style.width = canvasWidth + "px";
+  canvas.style.height = canvasHeight + "px";
+
+  ctx.scale(ratio, ratio);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#ffffff';
+
+  // S'assurer que le fond reste transparent
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+setupCanvas();
+window.addEventListener('resize', setupCanvas);
+
+// Variables de dessin
+let drawing = false;
+let points = [];
+
+// Fonction pour obtenir les coordonnées (mobile/desktop)
+function getEventPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.touches ? e.touches[0] : e;
+  const clientX = touch.clientX || e.clientX;
+  const clientY = touch.clientY || e.clientY;
+  return {
+    x: clientX - rect.left,
+    y: clientY - rect.top
+  };
+}
+
+function startDrawing(e) {
+  e.preventDefault();
+  drawing = true;
+  hasDrawn = true;
+  updateNextButton(3); // Mettre à jour le bouton dès qu'on commence à dessiner
+  points = [];
+  const pos = getEventPos(e);
+  points.push(pos);
+  ctx.beginPath();
+  ctx.moveTo(pos.x, pos.y);
+}
+
+function draw(e) {
+  if (!drawing) return;
+  e.preventDefault();
+
+  const pos = getEventPos(e);
+  points.push(pos);
+
+  if (points.length >= 3) {
+    const [p0, p1, p2] = points.slice(-3);
+    const cpx = (p0.x + p1.x) / 2;
+    const cpy = (p0.y + p1.y) / 2;
+    ctx.quadraticCurveTo(p0.x, p0.y, cpx, cpy);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cpx, cpy);
+  } else {
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+  }
+}
+
+function stopDrawing(e) {
+  if (!drawing) return;
+  e.preventDefault();
+  drawing = false;
+
+  if (points.length >= 3) {
+    const lastTwoPoints = points.slice(-2);
+    ctx.lineTo(lastTwoPoints[1].x, lastTwoPoints[1].y);
+    ctx.stroke();
+  }
+  ctx.closePath();
+}
+
+// Événements tactiles (mobile)
+canvas.addEventListener("touchstart", startDrawing, { passive: false });
+canvas.addEventListener("touchmove", draw, { passive: false });
+canvas.addEventListener("touchend", stopDrawing, { passive: false });
+
+// Événements souris (desktop)
+canvas.addEventListener("mousedown", startDrawing);
+canvas.addEventListener("mousemove", draw);
+canvas.addEventListener("mouseup", stopDrawing);
+
+// Événements pointer (hybride)
+canvas.addEventListener("pointerdown", startDrawing);
+canvas.addEventListener("pointermove", draw);
+canvas.addEventListener("pointerup", stopDrawing);
+
+function clearSignature() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  hasDrawn = false;
+  updateNextButton(3); // Mettre à jour le bouton après effacement de la signature
+}
+
+// Navigation entre les étapes
+function updateProgress() {
+  const progress = (currentStep / totalSteps) * 100;
+  document.getElementById('progressBar').style.width = progress + '%';
+
+  // Mettre à jour les indicateurs
+  document.querySelectorAll('.step').forEach((step, index) => {
+    const stepNum = index + 1;
+    step.classList.remove('active', 'completed');
+
+    if (stepNum < currentStep) {
+      step.classList.add('completed');
+    } else if (stepNum === currentStep) {
+      step.classList.add('active');
+    }
+  });
+
+  // Afficher le bon contenu
+  document.querySelectorAll('.step-content').forEach(content => {
+    content.classList.remove('active');
+  });
+  document.querySelector(`.step-content[data-step="${currentStep}"]`).classList.add('active');
+
+  // Mettre à jour l'état du bouton pour l'étape actuelle
+  updateNextButton(currentStep);
+}
+
+// ========================================
+// VALIDATION EN TEMPS RÉEL
+// ========================================
+
+// Fonction pour valider une étape
+function validateStep(stepNumber) {
+  switch(stepNumber) {
+    case 1:
+      // Step 1 - Informations personnelles: Prenom, Nom, Telephone, Courriel et Grade sont obligatoires
+      const prenom = document.getElementById('prenom')?.value.trim();
+      const nom = document.getElementById('nom')?.value.trim();
+      const telephone = document.getElementById('telephone')?.value.trim();
+      const courriel = document.getElementById('courriel')?.value.trim();
+      return !!(prenom && nom && telephone && courriel && selectedGrade);
+
+    case 2:
+      // Step 2 - Photo de profil: Photo est obligatoire (vérifier que l'image n'a pas la classe hidden)
+      const photoImage = document.getElementById('profile-photo-image');
+      return photoImage && !photoImage.classList.contains('hidden');
+
+    case 3:
+      // Step 3 - Signature: hasDrawn doit être true
+      return hasDrawn === true;
+
+    case 4:
+      // Step 4 - Connexion Agenda: agenda-connected doit exister et son style.display !== 'none'
+      const agendaConnected = document.getElementById('agenda-connected');
+      return agendaConnected && agendaConnected.style.display !== 'none';
+
+    case 5:
+      // Step 5 - Connexion Gmail: gmail-connected doit exister et son style.display !== 'none'
+      const gmailConnected = document.getElementById('gmail-connected');
+      return gmailConnected && gmailConnected.style.display !== 'none';
+
+    default:
+      return true;
+  }
+}
+
+// Fonction pour mettre à jour l'état du bouton "Suivant"
+function updateNextButton(stepNumber) {
+  const nextBtn = document.getElementById(`next-btn-step-${stepNumber}`);
+  if (!nextBtn) return;
+
+  const isValid = validateStep(stepNumber);
+
+  if (isValid) {
+    // Étape valide: activer le bouton
+    nextBtn.disabled = false;
+    nextBtn.style.opacity = '1';
+    nextBtn.style.cursor = 'pointer';
+  } else {
+    // Étape invalide: désactiver le bouton
+    nextBtn.disabled = true;
+    nextBtn.style.opacity = '0.5';
+    nextBtn.style.cursor = 'not-allowed';
+  }
+}
+
+function nextStep() {
+  // Validation selon l'étape
+  if (currentStep === 1) {
+    const prenom = document.getElementById('prenom').value.trim();
+    const nom = document.getElementById('nom').value.trim();
+    const telephone = document.getElementById('telephone').value.trim();
+    const courriel = document.getElementById('courriel').value.trim();
+
+    if (!prenom || !nom || !telephone || !courriel) {
+      alert('Veuillez remplir tous les champs obligatoires (*)');
+      return;
+    }
+
+    if (!selectedGrade) {
+      alert('Veuillez sélectionner votre grade');
+      return;
+    }
+  }
+
+  // Étape 2: Photo OBLIGATOIRE
+  if (currentStep === 2) {
+    const photoImage = document.getElementById('profile-photo-image');
+    if (!photoImage || photoImage.classList.contains('hidden')) {
+      alert('Veuillez ajouter une photo de profil avant de continuer');
+      return;
+    }
+  }
+
+  // Étape 4: Connexion Agenda OBLIGATOIRE
+  if (currentStep === 4) {
+    const agendaConnected = document.getElementById('agenda-connected');
+    if (!agendaConnected || agendaConnected.style.display === 'none') {
+      alert('Veuillez connecter votre agenda Google avant de continuer');
+      return;
+    }
+  }
+
+  // Étape 5: Connexion Gmail OBLIGATOIRE
+  if (currentStep === 5) {
+    const gmailConnected = document.getElementById('gmail-connected');
+    if (!gmailConnected || gmailConnected.style.display === 'none') {
+      alert('Veuillez connecter votre compte Gmail avant de continuer');
+      return;
+    }
+  }
+
+  if (currentStep < totalSteps) {
+    currentStep++;
+    updateProgress();
+  }
+}
+
+function prevStep() {
+  if (currentStep > 1) {
+    currentStep--;
+    updateProgress();
+  }
+}
+
+// Connexion Google Agenda
+async function connectGoogleAgenda() {
+  try {
+    // 1. Récupérer l'URL OAuth depuis le backend
+    const response = await fetch(`/connect-google?username=${window.username}&return_url=true`);
+    const data = await response.json();
+    const oauthUrl = data.oauth_url;
+
+    console.log('🔐 URL OAuth Agenda récupérée');
+
+    // 2. Ouvrir popup web
+    const width = 600, height = 700;
+    const left = (screen.width - width) / 2;
+    const top = (screen.height - height) / 2;
+
+    const popup = window.open(
+      oauthUrl,
+      "agenda_oauth",
+      `width=${width},height=${height},top=${top},left=${left},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
+    );
+
+    // Écouter le message de succès
+    const messageHandler = (event) => {
+      if (event.data === 'agenda_connected') {
+        console.log('✅ Agenda connecté avec succès');
+        if (popup && !popup.closed) {
+          popup.close();
+        }
+
+        // Mettre à jour l'UI - afficher la zone connectée
+        document.getElementById('agenda-disconnected').style.display = 'none';
+        document.getElementById('agenda-connected').style.display = 'block';
+
+        // Charger les agendas
+        loadCalendars();
+
+        // Mettre à jour le bouton Suivant
+        updateNextButton(4);
+
+        window.removeEventListener('message', messageHandler);
+      }
+    };
+
+    window.addEventListener('message', messageHandler);
+  } catch (error) {
+    console.error('❌ Erreur lors de la connexion Agenda:', error);
+  }
+}
+
+// Déconnexion Agenda
+async function disconnectAgenda() {
+  try {
+    const response = await fetch(`/disconnect-agenda?username=${window.username}`, { method: 'POST' });
+    if (response.ok) {
+      // Masquer la zone connectée
+      document.getElementById('agenda-connected').style.display = 'none';
+      document.getElementById('agenda-disconnected').style.display = 'block';
+
+      // Mettre à jour le bouton Suivant
+      updateNextButton(4);
+
+      console.log('✅ Agenda déconnecté');
+    }
+  } catch (error) {
+    console.error('❌ Erreur lors de la déconnexion:', error);
+    alert('Erreur lors de la déconnexion');
+  }
+}
+
+// Connexion Gmail
+async function connectGmail() {
+  try {
+    // 1. Récupérer l'URL OAuth depuis le backend
+    const response = await fetch(`/connect-gmail?username=${window.username}&return_url=true`);
+    const data = await response.json();
+    const oauthUrl = data.oauth_url;
+
+    console.log('🔐 URL OAuth Gmail récupérée');
+
+    // 2. Ouvrir popup web
+    const width = 600, height = 700;
+    const left = (screen.width - width) / 2;
+    const top = (screen.height - height) / 2;
+
+    const popup = window.open(
+      oauthUrl,
+      "gmail_oauth",
+      `width=${width},height=${height},top=${top},left=${left},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
+    );
+
+    // Écouter le message de succès
+    const messageHandler = (event) => {
+      if (event.data === 'gmail_connected') {
+        console.log('✅ Gmail connecté avec succès');
+        if (popup && !popup.closed) {
+          popup.close();
+        }
+
+        // Mettre à jour l'UI - afficher la zone connectée
+        document.getElementById('gmail-disconnected').style.display = 'none';
+        document.getElementById('gmail-connected').style.display = 'block';
+
+        // Mettre à jour le bouton Terminer
+        updateNextButton(5);
+
+        window.removeEventListener('message', messageHandler);
+      }
+    };
+
+    window.addEventListener('message', messageHandler);
+  } catch (error) {
+    console.error('❌ Erreur lors de la connexion Gmail:', error);
+  }
+}
+
+// Déconnexion Gmail
+async function disconnectGmail() {
+  if (!confirm('Voulez-vous vraiment déconnecter votre compte Gmail ?')) return;
+
+  try {
+    const response = await fetch(`/disconnect-email?username=${window.username}`, { method: 'POST' });
+    if (response.ok) {
+      // Masquer la zone connectée
+      document.getElementById('gmail-connected').style.display = 'none';
+      document.getElementById('gmail-disconnected').style.display = 'block';
+
+      // Mettre à jour le bouton Terminer
+      updateNextButton(5);
+
+      console.log('✅ Gmail déconnecté');
+    }
+  } catch (error) {
+    console.error('❌ Erreur lors de la déconnexion:', error);
+    alert('Erreur lors de la déconnexion');
+  }
+}
+
+// Variable pour stocker l'agenda sélectionné
+let lastSelectedId = localStorage.getItem(`selected-agenda-${window.username}`) || null;
+
+// Récupérer l'agenda sélectionné depuis le backend
+function loadSelectedAgenda() {
+  return fetch(`/get-agenda-id?username=${window.username}`)
+    .then(res => res.ok ? res.json() : { agenda_id: null })
+    .then(data => {
+      if (data.agenda_id) {
+        lastSelectedId = data.agenda_id;
+        localStorage.setItem(`selected-agenda-${window.username}`, data.agenda_id);
+        console.log('[DATE] Agenda sélectionné récupéré depuis backend:', data.agenda_id);
+      }
+      return lastSelectedId;
+    })
+    .catch(err => {
+      console.log('[DATE] Erreur récupération agenda backend, utilisation localStorage');
+      return lastSelectedId;
+    });
+}
+
+// Charger la liste des agendas
+function loadCalendars() {
+  console.log('[DATE] Chargement agendas pour:', window.username);
+  const selectButton = document.getElementById("agenda-select-button");
+  const dropdownMenu = document.getElementById("agenda-dropdown-menu");
+  const selectedText = document.getElementById("agenda-selected-text");
+
+  // D'abord récupérer l'agenda sélectionné depuis le backend
+  loadSelectedAgenda().then(() => {
+    fetch(`/liste-agendas?username=${window.username}`)
+      .then(res => {
+        console.log('[DATE] Réponse agendas:', res.status);
+        return res.json();
+      })
+      .then(data => {
+        console.log('[DATE] Données agendas reçues:', data, 'Selected ID:', lastSelectedId);
+
+        // Vider le menu dropdown
+        dropdownMenu.innerHTML = "";
+
+        // Séparer les agendas personnels (owner) des partagés
+        const personalAgendas = data.filter(cal => cal.accessRole === 'owner');
+        const sharedAgendas = data.filter(cal => cal.accessRole !== 'owner');
+
+        console.log('[DATE] Agendas personnels:', personalAgendas.length, 'Partagés:', sharedAgendas.length);
+
+        // Si aucun agenda personnel, afficher un message informatif
+        if (personalAgendas.length === 0) {
+          const infoMessage = document.createElement("div");
+          infoMessage.style.cssText = "padding: 0.75rem; color: rgba(251, 191, 36, 0.9); background: rgba(251, 191, 36, 0.1); border-radius: 6px; font-size: 0.8rem; margin-bottom: 0.5rem; border: 1px solid rgba(251, 191, 36, 0.2);";
+          infoMessage.innerHTML = '<i class="fas fa-info-circle"></i> Aucun agenda personnel créé. Vous pouvez sélectionner un agenda partagé ou en créer un nouveau dans Google Agenda.';
+          dropdownMenu.appendChild(infoMessage);
+        }
+
+        // Fonction pour créer une option d'agenda
+        function createAgendaOption(cal, isPersonal) {
+          const option = document.createElement("div");
+          option.className = "custom-select-option";
+          if (cal.id === lastSelectedId) {
+            option.classList.add("selected");
+            selectedText.textContent = cal.nom;
+            selectedText.style.color = "var(--text-light)";
+          }
+
+          // Icône différente pour agenda personnel vs partagé
+          const icon = isPersonal
+            ? '<i class="fas fa-calendar" style="color: rgba(34, 197, 94, 0.8); margin-right: 0.5rem;"></i>'
+            : '<i class="fas fa-users" style="color: rgba(148, 163, 184, 0.6); margin-right: 0.5rem;"></i>';
+
+          option.innerHTML = icon + cal.nom;
+          option.dataset.agendaId = cal.id;
+          option.dataset.agendaName = cal.nom;
+
+          option.addEventListener("click", (e) => {
+            e.stopPropagation();
+
+            // Supprimer la sélection précédente
+            dropdownMenu.querySelectorAll(".custom-select-option").forEach(opt => {
+              opt.classList.remove("selected");
+            });
+
+            // Marquer comme sélectionné
+            option.classList.add("selected");
+            selectedText.textContent = cal.nom;
+            selectedText.style.color = "var(--text-light)";
+
+            // Sauvegarder la sélection
+            localStorage.setItem(`selected-agenda-${window.username}`, cal.id);
+            lastSelectedId = cal.id;
+
+            fetch("/sauver-agenda-id", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username: window.username, agenda_id: cal.id })
+            }).then(() => {
+              console.log('[OK] Agenda sauvegardé:', cal.nom);
+            });
+
+            // Fermer le dropdown
+            selectContainer.classList.remove("open");
+          });
+
+          return option;
+        }
+
+        // Ajouter d'abord les agendas personnels
+        personalAgendas.forEach(cal => {
+          dropdownMenu.appendChild(createAgendaOption(cal, true));
+        });
+
+        // Ajouter un séparateur si on a les deux types
+        if (personalAgendas.length > 0 && sharedAgendas.length > 0) {
+          const separator = document.createElement("div");
+          separator.style.cssText = "padding: 0.5rem 0.75rem; color: rgba(148, 163, 184, 0.6); font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-top: 1px solid rgba(148, 163, 184, 0.1); margin-top: 0.25rem;";
+          separator.textContent = "Agendas partagés";
+          dropdownMenu.appendChild(separator);
+        }
+
+        // Ajouter les agendas partagés
+        sharedAgendas.forEach(cal => {
+          dropdownMenu.appendChild(createAgendaOption(cal, false));
+        });
+
+        // Si aucun agenda sélectionné, afficher le placeholder
+        if (!lastSelectedId && data.length > 0) {
+          selectedText.textContent = "Choisir un agenda...";
+          selectedText.style.color = "var(--text-gray)";
+        }
+
+        // Gestion du clic sur le bouton
+        const selectContainer = document.getElementById("agenda-select");
+        selectButton.onclick = (e) => {
+          e.stopPropagation();
+          console.log('[DROPDOWN] Click sur bouton, toggle open');
+          const isOpen = selectContainer.classList.contains("open");
+
+          // Fermer tous les autres dropdowns
+          document.querySelectorAll('.custom-select').forEach(s => s.classList.remove("open"));
+
+          // Toggle celui-ci
+          if (!isOpen) {
+            selectContainer.classList.add("open");
+          }
+        };
+
+        // Fermer le dropdown en cliquant à l'extérieur
+        document.addEventListener("click", (e) => {
+          if (!selectContainer.contains(e.target)) {
+            selectContainer.classList.remove("open");
+          }
+        });
+    });
+  });
+}
+
+// Les listeners de messages sont maintenant gérés directement dans les fonctions connectGoogleAgenda() et connectGmail()
+
+// Afficher nom de fichier
+function showFileName(input, displayId) {
+  const display = document.getElementById(displayId);
+  if (input.files && input.files[0]) {
+    display.textContent = input.files[0].name;
+  }
+}
+
+// Terminer l'onboarding
+async function finishOnboarding() {
+  const finishBtn = document.getElementById('next-btn-step-5');
+  const finishBtnText = document.getElementById('finishBtnText');
+
+  if (finishBtn) finishBtn.disabled = true;
+  if (finishBtnText) finishBtnText.innerHTML = '<span class="spinner"></span> Sauvegarde...';
+
+  try {
+    // Préparer les données avec le flag onboarding_completed
+    const data = {
+      nom: document.getElementById('nom').value.trim(),
+      prenom: document.getElementById('prenom').value.trim(),
+      telephone: document.getElementById('telephone').value.trim(),
+      courriel: document.getElementById('courriel').value.trim(),
+      neq: document.getElementById('neq').value.trim(),
+      tps: document.getElementById('tps').value.trim(),
+      tvq: document.getElementById('tvq').value.trim(),
+      grade: selectedGrade || 'recrue', // Grade sélectionné (par défaut: recrue)
+      onboarding_completed: true,
+      onboarding_date: new Date().toISOString()
+    };
+
+    const formData = new FormData();
+    formData.append('username', window.username);
+    formData.append('data', JSON.stringify(data));
+
+    // Ajouter les fichiers optionnels s'ils existent
+    const specimenInput = document.getElementById('specimen-onboarding');
+    const betonelInput = document.getElementById('betonel-onboarding');
+    const integrationInput = document.getElementById('integration-onboarding');
+
+    if (specimenInput && specimenInput.files[0]) {
+      formData.append('specimen', specimenInput.files[0]);
+    }
+    if (betonelInput && betonelInput.files[0]) {
+      formData.append('betonel', betonelInput.files[0]);
+    }
+    if (integrationInput && integrationInput.files[0]) {
+      formData.append('integration', integrationInput.files[0]);
+    }
+
+    // Sauvegarder les infos
+    const response = await fetch('/api/save-info', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) throw new Error('Erreur sauvegarde');
+
+    // Sauvegarder la photo de profil si uploadée
+    const profilePhotoImage = document.getElementById('profile-photo-image');
+    if (profilePhotoImage && !profilePhotoImage.classList.contains('hidden')) {
+      const photoDataUrl = profilePhotoImage.src;
+      await fetch('/api/save-profile-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: window.username,
+          photoData: photoDataUrl
+        })
+      });
+    }
+
+    // Sauvegarder la signature si dessinée
+    if (hasDrawn) {
+      const signatureDataUrl = canvas.toDataURL('image/png');
+      await fetch('/api/save-signature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: window.username,
+          signatureData: signatureDataUrl
+        })
+      });
+    }
+
+    // Passer à l'étape succès
+    currentStep = 6;
+    updateProgress();
+
+    // Sauvegarder en cache que l'onboarding est complété
+    localStorage.setItem(`onboarding_${window.username}`, 'completed');
+
+    // Rediriger vers apppc avec le hash guide - apppc va charger normalement avec son spinner puis naviguer vers le guide
+    // IMPORTANT: Inclure le paramètre ?user= pour que apppc.html puisse le passer aux iframes
+    setTimeout(() => {
+      window.location.href = `/apppc?user=${encodeURIComponent(window.username)}#/guide`;
+    }, 2000);
+
+  } catch (error) {
+    console.error('Erreur:', error);
+    alert('Une erreur est survenue. Veuillez réessayer.');
+    if (finishBtn) finishBtn.disabled = false;
+    if (finishBtnText) finishBtnText.textContent = 'Terminer';
+  }
+}
+
+// Vérifier les connexions au chargement
+async function checkConnections() {
+  // Vérifier Agenda
+  try {
+    const agendaResponse = await fetch(`/is-agenda-linked?username=${window.username}`);
+    if (agendaResponse.ok) {
+      const agendaData = await agendaResponse.json();
+      if (agendaData.linked) {
+        // Afficher la zone connectée
+        document.getElementById('agenda-disconnected').style.display = 'none';
+        document.getElementById('agenda-connected').style.display = 'block';
+        loadCalendars();
+      }
+    }
+  } catch (error) {
+    console.log('Erreur vérification agenda:', error);
+  }
+
+  // Vérifier Gmail
+  // TODO: Créer une route backend /is-gmail-linked pour vérifier la connexion Gmail
+  // Pour l'instant, on ne fait pas cette vérification automatique au chargement
+  console.log('Vérification Gmail désactivée (route manquante)');
+}
+
+// Initialisation
+updateProgress();
+checkConnections();
+
+// Créer des logos flottants animés dans le background
+function createFloatingLogos() {
+  const container = document.querySelector('.onboarding-container');
+  if (!container) {
+    console.warn('Container .onboarding-container non trouvé');
+    return;
+  }
+
+  const logoUrl = 'https://i.ibb.co/1fzHGQWw/TES-MUTE-TH-O-6.png';
+
+  // Positions fixes pour chaque logo (x%, y%, taille, animation, durée)
+  const logoPositions = [
+    { x: 5, y: 10, size: 80, anim: 'float1', duration: 20 },
+    { x: 15, y: 70, size: 100, anim: 'float2', duration: 25 },
+    { x: 25, y: 35, size: 70, anim: 'float3', duration: 22 },
+    { x: 35, y: 85, size: 90, anim: 'float1', duration: 18 },
+    { x: 45, y: 15, size: 110, anim: 'float4', duration: 30 },
+    { x: 55, y: 60, size: 85, anim: 'float5', duration: 24 },
+    { x: 65, y: 25, size: 95, anim: 'float2', duration: 28 },
+    { x: 75, y: 75, size: 75, anim: 'float3', duration: 21 },
+    { x: 85, y: 40, size: 105, anim: 'float1', duration: 26 },
+    { x: 92, y: 12, size: 80, anim: 'float4', duration: 23 },
+    { x: 10, y: 50, size: 90, anim: 'float5', duration: 27 },
+    { x: 70, y: 5, size: 85, anim: 'float2', duration: 19 },
+    { x: 40, y: 55, size: 100, anim: 'float3', duration: 29 },
+    { x: 80, y: 90, size: 95, anim: 'float1', duration: 20 },
+    { x: 50, y: 88, size: 78, anim: 'float5', duration: 25 }
+  ];
+
+  logoPositions.forEach((pos, i) => {
+    const logo = document.createElement('img');
+    logo.src = logoUrl;
+    logo.className = 'floating-logo';
+
+    // Position fixe
+    logo.style.left = `${pos.x}%`;
+    logo.style.top = `${pos.y}%`;
+
+    // Taille fixe
+    logo.style.width = `${pos.size}px`;
+    logo.style.height = `${pos.size}px`;
+
+    // Animation fixe
+    logo.style.animation = `${pos.anim} ${pos.duration}s ease-in-out ${i * 0.5}s infinite`;
+
+    // Ajouter au conteneur
+    container.insertBefore(logo, container.firstChild);
+  });
+}
+
+// Effet de traînée de mini logos partout dans le background
+function setupMouseTrail() {
+  const container = document.querySelector('.onboarding-container');
+  const logoUrl = 'https://i.ibb.co/1fzHGQWw/TES-MUTE-TH-O-6.png';
+  let lastTime = 0;
+  const throttleDelay = 30; // Créer une particule toutes les 30ms
+
+  container.addEventListener('mousemove', function(e) {
+    const now = Date.now();
+    if (now - lastTime < throttleDelay) return;
+    lastTime = now;
+
+    createTrailParticle(e.clientX, e.clientY, logoUrl, container);
+  });
+}
+
+// Créer une mini particule de traînée
+function createTrailParticle(x, y, logoUrl, container) {
+  const particle = document.createElement('img');
+  particle.src = logoUrl;
+  particle.className = 'trail-particle';
+
+  const containerRect = container.getBoundingClientRect();
+
+  // Mini taille aléatoire entre 20px et 40px
+  const randomSize = 20 + Math.random() * 20;
+  particle.style.width = `${randomSize}px`;
+  particle.style.height = `${randomSize}px`;
+
+  // Position de la souris avec petit décalage aléatoire
+  const offsetX = (Math.random() - 0.5) * 10;
+  const offsetY = (Math.random() - 0.5) * 10;
+  particle.style.left = (x - containerRect.left + offsetX) + 'px';
+  particle.style.top = (y - containerRect.top + offsetY) + 'px';
+
+  // Animation de disparition avec rotation aléatoire
+  particle.style.animation = 'trailFade 1s ease-out forwards';
+
+  container.appendChild(particle);
+
+  // Supprimer après animation
+  setTimeout(() => {
+    particle.remove();
+  }, 1000);
+}
+
+// Créer les logos et activer la traînée quand le DOM est prêt
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function() {
+    createFloatingLogos();
+    setupMouseTrail();
+  });
+} else {
+  // DOM déjà chargé
+  createFloatingLogos();
+  setupMouseTrail();
+}
+
+// Formatage automatique du téléphone (000-000-0000)
+const telephoneInput = document.getElementById('telephone');
+
+if (telephoneInput) {
+  telephoneInput.addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, ''); // Garder seulement les chiffres
+    let formattedValue = '';
+
+    if (value.length > 0) {
+      formattedValue = value.substring(0, 3);
+    }
+    if (value.length >= 4) {
+      formattedValue += '-' + value.substring(3, 6);
+    }
+    if (value.length >= 7) {
+      formattedValue += '-' + value.substring(6, 10);
+    }
+
+    e.target.value = formattedValue;
+  });
+
+  telephoneInput.addEventListener('keydown', function(e) {
+    // Si l'utilisateur appuie sur Backspace ou Delete
+    if (e.key === 'Backspace' || e.key === 'Delete') {
+      const cursorPos = e.target.selectionStart;
+      const value = e.target.value;
+
+      // Si le curseur est juste après un tiret, effacer le tiret + le chiffre avant
+      if (e.key === 'Backspace' && cursorPos > 0 && value[cursorPos - 1] === '-') {
+        e.preventDefault();
+        const newValue = value.substring(0, cursorPos - 2) + value.substring(cursorPos);
+        e.target.value = newValue;
+
+        // Reformater
+        const cleanValue = newValue.replace(/\D/g, '');
+        let formattedValue = '';
+        if (cleanValue.length > 0) {
+          formattedValue = cleanValue.substring(0, 3);
+        }
+        if (cleanValue.length >= 4) {
+          formattedValue += '-' + cleanValue.substring(3, 6);
+        }
+        if (cleanValue.length >= 7) {
+          formattedValue += '-' + cleanValue.substring(6, 10);
+        }
+
+        e.target.value = formattedValue;
+
+        // Repositionner le curseur
+        const newCursorPos = cursorPos - 2;
+        e.target.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }
+  });
+}
+
+// ========================================
+// EVENT LISTENERS POUR VALIDATION STEP 1
+// ========================================
+
+// Ajouter des listeners sur tous les champs obligatoires du Step 1
+document.addEventListener('DOMContentLoaded', function() {
+  const step1Fields = ['prenom', 'nom', 'telephone', 'courriel'];
+
+  step1Fields.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (field) {
+      field.addEventListener('input', function() {
+        updateNextButton(1);
+      });
+    }
+  });
+});
+
+// ========================================
+// GESTION DE LA PHOTO DE PROFIL
+// ========================================
+
+// Variables globales pour l'éditeur de photo
+const photoInput = document.getElementById("profile-photo-input");
+const cameraInput = document.getElementById("camera-capture-input");
+const photoMenuBtn = document.getElementById("photo-menu-btn");
+const photoMenuDropdown = document.getElementById("photo-menu-dropdown");
+const uploadPhotoOption = document.getElementById("upload-photo-option");
+const cameraPhotoOption = document.getElementById("camera-photo-option");
+const profilePhotoImage = document.getElementById("profile-photo-image");
+const profilePhotoPlaceholder = document.getElementById("profile-photo-placeholder");
+
+// Modal et éditeur
+const editorModal = document.getElementById("photo-editor-modal");
+const closeEditorBtn = document.getElementById("close-editor-btn");
+const cancelEditorBtn = document.getElementById("cancel-editor-btn");
+const saveEditorBtn = document.getElementById("save-editor-btn");
+const photoCanvas = document.getElementById("photo-editor-canvas");
+const photoCtx = photoCanvas.getContext("2d");
+const zoomSlider = document.getElementById("zoom-slider");
+
+let currentImage = null;
+let imageScale = 1;
+let imageX = 0;
+let imageY = 0;
+let isDragging = false;
+let startX, startY;
+
+// Variable pour stocker le stream de la caméra
+let cameraStream = null;
+let qrCheckInterval = null;
+let currentSessionId = null;
+
+// Toggle menu dropdown
+photoMenuBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  photoMenuDropdown.classList.toggle("hidden");
+});
+
+// Fermer le menu en cliquant ailleurs
+document.addEventListener("click", () => {
+  photoMenuDropdown.classList.add("hidden");
+});
+
+// Option: Modifier photo
+uploadPhotoOption.addEventListener("click", () => {
+  photoMenuDropdown.classList.add("hidden");
+  photoInput.click();
+});
+
+// Option: Prendre photo - Ouvrir le modal de choix
+cameraPhotoOption.addEventListener("click", () => {
+  photoMenuDropdown.classList.add("hidden");
+  document.getElementById("camera-choice-modal").classList.remove("hidden");
+});
+
+// Fermer le modal de choix
+document.getElementById("close-choice-modal-btn").addEventListener("click", () => {
+  document.getElementById("camera-choice-modal").classList.add("hidden");
+});
+
+// Choix caméra PC
+document.getElementById("use-pc-camera-btn").addEventListener("click", async () => {
+  document.getElementById("camera-choice-modal").classList.add("hidden");
+  await openCamera();
+});
+
+// Choix QR Code Mobile
+document.getElementById("use-mobile-qr-btn").addEventListener("click", () => {
+  document.getElementById("camera-choice-modal").classList.add("hidden");
+  openQRModal();
+});
+
+// Fonction pour ouvrir la caméra
+async function openCamera() {
+  const cameraModal = document.getElementById("camera-modal");
+  const video = document.getElementById("camera-video");
+
+  try {
+    // Demander l'accès à la caméra (préférence pour la caméra frontale sur mobile)
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" },
+      audio: false
+    });
+
+    video.srcObject = cameraStream;
+    cameraModal.classList.remove("hidden");
+  } catch (error) {
+    console.error("Erreur d'accès à la caméra:", error);
+    alert("Impossible d'accéder à la caméra");
+  }
+}
+
+// Fonction pour arrêter la caméra
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+    cameraStream = null;
+  }
+  document.getElementById("camera-modal").classList.add("hidden");
+}
+
+// Bouton fermer caméra
+document.getElementById("close-camera-btn").addEventListener("click", stopCamera);
+document.getElementById("cancel-camera-btn").addEventListener("click", stopCamera);
+
+// Bouton capturer photo
+document.getElementById("capture-photo-btn").addEventListener("click", () => {
+  const video = document.getElementById("camera-video");
+  const canvas = document.getElementById("camera-canvas");
+  const ctx = canvas.getContext("2d");
+
+  // Définir la taille du canvas basée sur la vidéo
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  // Dessiner l'image de la vidéo sur le canvas
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  // Convertir en blob et traiter comme un fichier
+  canvas.toBlob((blob) => {
+    stopCamera();
+
+    // Créer un objet File depuis le blob
+    const file = new File([blob], "camera-photo.jpg", { type: "image/jpeg" });
+    handleImageFile(file);
+  }, "image/jpeg", 0.95);
+});
+
+// Fonction pour ouvrir le modal QR
+function openQRModal() {
+  const qrModal = document.getElementById("qr-modal");
+  const qrcodeContainer = document.getElementById("qrcode-container");
+
+  // Générer un ID de session unique
+  currentSessionId = 'photo_' + Date.now() + '_' + Math.random().toString(36).substring(7);
+
+  // Nettoyer le container QR
+  qrcodeContainer.innerHTML = '';
+
+  // Utiliser l'adresse IP locale pour que le mobile puisse se connecter
+  const hostname = window.location.hostname;
+  const port = window.location.port;
+  const protocol = window.location.protocol;
+
+  // Si on est sur localhost, utiliser l'IP locale
+  let baseUrl;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    baseUrl = `${protocol}//192.168.2.231:${port}`;
+  } else {
+    baseUrl = window.location.origin;
+  }
+
+  const mobileUrl = `${baseUrl}/mobile-camera?session=${currentSessionId}`;
+
+  // Générer le QR code
+  new QRCode(qrcodeContainer, {
+    text: mobileUrl,
+    width: 256,
+    height: 256,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  // Afficher le modal
+  qrModal.classList.remove("hidden");
+
+  // Commencer à vérifier si une photo a été uploadée
+  startPhotoPolling();
+}
+
+// Fonction pour démarrer le polling avec SSE
+function startPhotoPolling() {
+  // Arrêter tout polling existant
+  if (qrCheckInterval) {
+    qrCheckInterval.close();
+    qrCheckInterval = null;
+  }
+
+  // Utiliser Server-Sent Events pour recevoir la notification
+  const eventSource = new EventSource(`/api/wait-mobile-photo/${currentSessionId}`);
+
+  eventSource.onmessage = async (event) => {
+    try {
+      const data = JSON.parse(event.data);
+
+      if (data.photo) {
+        // Photo reçue!
+        eventSource.close();
+        stopPhotoPolling();
+
+        // Convertir la base64 en blob
+        const photoBlob = await fetch(data.photo).then(r => r.blob());
+        const file = new File([photoBlob], "mobile-photo.jpg", { type: "image/jpeg" });
+
+        // Traiter la photo
+        handleImageFile(file);
+      }
+    } catch (error) {
+      console.error("Erreur lors du traitement de la photo:", error);
+    }
+  };
+
+  eventSource.onerror = (error) => {
+    console.error("Erreur SSE:", error);
+    eventSource.close();
+  };
+
+  // Stocker la référence
+  qrCheckInterval = eventSource;
+}
+
+// Fonction pour arrêter le polling
+function stopPhotoPolling() {
+  if (qrCheckInterval) {
+    if (qrCheckInterval.close) {
+      qrCheckInterval.close();
+    }
+    qrCheckInterval = null;
+  }
+  document.getElementById("qr-modal").classList.add("hidden");
+  currentSessionId = null;
+}
+
+// Boutons fermer/annuler QR modal
+document.getElementById("close-qr-modal-btn").addEventListener("click", stopPhotoPolling);
+document.getElementById("cancel-qr-btn").addEventListener("click", stopPhotoPolling);
+
+// Fonction commune pour traiter une image
+function handleImageFile(file) {
+  if (file && file.type.startsWith("image/")) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      const img = new Image();
+      img.onload = function() {
+        currentImage = img;
+        imageScale = 1;
+
+        // Centrer l'image
+        const canvasSize = photoCanvas.width;
+        const minScale = canvasSize / Math.min(img.width, img.height);
+        imageScale = minScale;
+        imageX = (canvasSize - img.width * imageScale) / 2;
+        imageY = (canvasSize - img.height * imageScale) / 2;
+
+        zoomSlider.value = 1;
+
+        // Ouvrir le modal
+        editorModal.classList.remove("hidden");
+        drawPhotoImage();
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+// Quand une image est sélectionnée (upload)
+photoInput.addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  handleImageFile(file);
+});
+
+// Quand une photo est prise avec la caméra
+cameraInput.addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  handleImageFile(file);
+});
+
+// Fermer le modal
+function closePhotoModal() {
+  editorModal.classList.add("hidden");
+  photoInput.value = "";
+  currentImage = null;
+}
+
+closeEditorBtn.addEventListener("click", closePhotoModal);
+cancelEditorBtn.addEventListener("click", closePhotoModal);
+
+// Fonction pour contraindre la position de l'image (toujours couvrir le canvas)
+function constrainImagePosition() {
+  const canvasSize = photoCanvas.width;
+  const scaledWidth = currentImage.width * imageScale;
+  const scaledHeight = currentImage.height * imageScale;
+
+  // L'image doit toujours couvrir le canvas entièrement
+  const maxX = 0;
+  const maxY = 0;
+  const minX = canvasSize - scaledWidth;
+  const minY = canvasSize - scaledHeight;
+
+  // Contraindre X
+  if (imageX > maxX) imageX = maxX;
+  if (imageX < minX) imageX = minX;
+
+  // Contraindre Y
+  if (imageY > maxY) imageY = maxY;
+  if (imageY < minY) imageY = minY;
+}
+
+// Zoom avec le slider
+zoomSlider.addEventListener("input", function(e) {
+  if (!currentImage) return;
+
+  const canvasSize = photoCanvas.width;
+  const minScale = canvasSize / Math.min(currentImage.width, currentImage.height);
+  const newScale = minScale * parseFloat(e.target.value);
+
+  // Ajuster la position pour garder le centre
+  const centerX = canvasSize / 2;
+  const centerY = canvasSize / 2;
+  const imageCenterX = imageX + (currentImage.width * imageScale) / 2;
+  const imageCenterY = imageY + (currentImage.height * imageScale) / 2;
+
+  imageX = centerX - (imageCenterX - imageX) * (newScale / imageScale);
+  imageY = centerY - (imageCenterY - imageY) * (newScale / imageScale);
+  imageScale = newScale;
+
+  // Contraindre la position après le zoom
+  constrainImagePosition();
+
+  drawPhotoImage();
+});
+
+// Drag pour déplacer l'image
+photoCanvas.addEventListener("mousedown", function(e) {
+  isDragging = true;
+  startX = e.offsetX;
+  startY = e.offsetY;
+});
+
+photoCanvas.addEventListener("mousemove", function(e) {
+  if (!isDragging || !currentImage) return;
+
+  const dx = e.offsetX - startX;
+  const dy = e.offsetY - startY;
+
+  imageX += dx;
+  imageY += dy;
+
+  // Contraindre la position
+  constrainImagePosition();
+
+  startX = e.offsetX;
+  startY = e.offsetY;
+
+  drawPhotoImage();
+});
+
+photoCanvas.addEventListener("mouseup", () => {
+  isDragging = false;
+});
+
+photoCanvas.addEventListener("mouseleave", () => {
+  isDragging = false;
+});
+
+// Support tactile pour mobile
+photoCanvas.addEventListener("touchstart", function(e) {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = photoCanvas.getBoundingClientRect();
+  isDragging = true;
+  startX = touch.clientX - rect.left;
+  startY = touch.clientY - rect.top;
+});
+
+photoCanvas.addEventListener("touchmove", function(e) {
+  if (!isDragging || !currentImage) return;
+  e.preventDefault();
+
+  const touch = e.touches[0];
+  const rect = photoCanvas.getBoundingClientRect();
+  const currentX = touch.clientX - rect.left;
+  const currentY = touch.clientY - rect.top;
+
+  const dx = currentX - startX;
+  const dy = currentY - startY;
+
+  imageX += dx;
+  imageY += dy;
+
+  // Contraindre la position
+  constrainImagePosition();
+
+  startX = currentX;
+  startY = currentY;
+
+  drawPhotoImage();
+});
+
+photoCanvas.addEventListener("touchend", () => {
+  isDragging = false;
+});
+
+// Dessiner l'image avec masque circulaire
+function drawPhotoImage() {
+  if (!currentImage) return;
+
+  photoCtx.clearRect(0, 0, photoCanvas.width, photoCanvas.height);
+
+  // Dessiner l'image
+  photoCtx.save();
+  photoCtx.drawImage(currentImage, imageX, imageY, currentImage.width * imageScale, currentImage.height * imageScale);
+  photoCtx.restore();
+
+  // Appliquer un masque circulaire (overlay sombre avec cercle transparent)
+  photoCtx.save();
+  photoCtx.fillStyle = "rgba(0, 0, 0, 0.5)";
+  photoCtx.fillRect(0, 0, photoCanvas.width, photoCanvas.height);
+
+  const centerX = photoCanvas.width / 2;
+  const centerY = photoCanvas.height / 2;
+  const radius = photoCanvas.width / 2;
+
+  photoCtx.globalCompositeOperation = "destination-out";
+  photoCtx.beginPath();
+  photoCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  photoCtx.fill();
+  photoCtx.restore();
+
+  // Dessiner le contour du cercle
+  photoCtx.strokeStyle = "rgb(37, 134, 253)";
+  photoCtx.lineWidth = 3;
+  photoCtx.beginPath();
+  photoCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  photoCtx.stroke();
+}
+
+// Sauvegarder la photo croppée
+saveEditorBtn.addEventListener("click", async () => {
+  if (!currentImage) return;
+
+  const originalText = saveEditorBtn.innerHTML;
+
+  try {
+    saveEditorBtn.disabled = true;
+    saveEditorBtn.innerHTML = '<span class="spinner"></span> Sauvegarde...';
+
+    // Créer un canvas temporaire pour le crop circulaire
+    const tempCanvas = document.createElement("canvas");
+    const tempCtx = tempCanvas.getContext("2d");
+    const size = photoCanvas.width;
+    tempCanvas.width = size;
+    tempCanvas.height = size;
+
+    // Dessiner l'image croppée en cercle
+    tempCtx.save();
+    tempCtx.beginPath();
+    tempCtx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    tempCtx.clip();
+    tempCtx.drawImage(currentImage, imageX, imageY, currentImage.width * imageScale, currentImage.height * imageScale);
+    tempCtx.restore();
+
+    // Convertir en base64
+    const photoDataUrl = tempCanvas.toDataURL("image/png");
+
+    // Afficher la photo
+    profilePhotoImage.src = photoDataUrl;
+    profilePhotoImage.classList.remove("hidden");
+    profilePhotoPlaceholder.style.display = "none";
+
+    // Fermer le modal
+    closePhotoModal();
+
+    // Mettre à jour le bouton Suivant
+    updateNextButton(2);
+
+    console.log('Photo de profil mise à jour avec succès');
+
+  } catch (error) {
+    alert('Une erreur s\'est produite lors de la sauvegarde');
+    console.error(error);
+  } finally {
+    saveEditorBtn.disabled = false;
+    saveEditorBtn.innerHTML = originalText;
+  }
+});
+
+// ========================================
+// FIN GESTION PHOTO DE PROFIL
+// ========================================
+</script>
+
+</body>
+</html>

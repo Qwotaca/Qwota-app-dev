@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Outils Mobile - Qwota (Dark Theme)</title>
+
+  <!-- 📱 PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#1f2937">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icônes PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Feuille de style principale - Thème Dark Organisé -->
+  <link rel="stylesheet" href="/base.css">
+
+<style>
+
+/* Variables CSS thème sombre */
+:root {
+  --primary-blue: #60a5fa;
+  --primary-green: #34d399;
+  --primary-red: #f87171;
+  --primary-orange: #fb923c;
+  --bg-dark: #0f172a;
+  --bg-card: #1e293b;
+  --text-light: #f1f5f9;
+  --text-gray: #94a3b8;
+  --border-dark: #334155;
+  --shadow-dark: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-dark-medium: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  --shadow-dark-strong: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+/* Fond de page dark */
+body {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+  color: var(--text-light) !important;
+  min-height: 100vh;
+}
+
+.btn-secondary, .btn-primary {
+  font-size: 0.875rem !important;
+}
+
+/* Cacher éléments admin pour cette page entrepreneur */
+li[data-role*="admin"]:not([data-role*="entrepreneur"]),
+li[data-role="coach"] {
+  display: none !important;
+}
+
+/* Header mobile courbé */
+.curved-header {
+  position: relative;
+  filter: drop-shadow(0 -8px 18px rgba(59, 130, 246, 0.2));
+}
+
+/* Case sélectionnée plus large */
+.flex-2 {
+  flex: 1.5;
+}
+
+/* Animations avec transform */
+.icon-container {
+  transition: transform 1s ease-in-out,
+              box-shadow 0.7s ease-in-out;
+  transform-origin: center;
+}
+
+.icon-container:hover:not(.selected) {
+  transform: scale(1.05);
+  transition: transform 0.2s ease-out;
+}
+
+.case-container {
+  transition: flex 1s ease-in-out;
+}
+
+.icon-title {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.7s ease-in-out;
+}
+
+.icon-title.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Pas d'animation pour les icônes à l'intérieur */
+.icon-container i {
+  transition: none;
+}
+
+.curved-header::before {
+  content: '';
+  position: absolute;
+  top: -100px;
+  left: 0;
+  right: 0;
+  height: 100px;
+  background: #334155;
+  clip-path: ellipse(85% 100% at 50% 100%);
+}
+
+.mobile-profile-icon {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: rgba(59, 130, 246, 0.3) 0px 2px 6px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgb(37, 134, 253) 0%, rgba(178, 197, 251, 0.78) 100%);
+  overflow: hidden;
+  cursor: pointer;
+  aspect-ratio: 1;
+}
+
+.mobile-profile-icon i {
+  color: white;
+  font-size: 16px;
+}
+
+.mobile-settings-icon {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #475569;
+  cursor: pointer;
+  aspect-ratio: 1;
+}
+
+.mobile-settings-icon i {
+  color: white;
+  font-size: 16px;
+}
+
+.mobile-profile-container {
+  position: relative;
+}
+
+.mobile-profile-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  min-width: 200px;
+  z-index: 50;
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.mobile-profile-dropdown.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.mobile-profile-header {
+  padding: 12px 16px;
+}
+
+.mobile-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mobile-username {
+  color: #f1f5f9;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.mobile-role {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.mobile-profile-divider {
+  height: 1px;
+  background: #334155;
+  margin: 0 8px;
+}
+
+.mobile-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  color: #f87171;
+  font-size: 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.mobile-logout-btn:hover {
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.hidden {
+  display: none;
+}
+
+.mobile-logo-container {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.mobile-logo {
+  height: 50px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* ================================================================
+   OUTILS CONTAINERS STYLES
+   ================================================================ */
+
+.tool-container {
+  border-radius: 16px;
+  padding: 2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  height: 225px !important;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.tool-container:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.tool-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.1);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.tool-container:hover::before {
+  opacity: 1;
+}
+
+.tool-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  color: white;
+}
+
+.tool-icon-container {
+  width: 80px;
+  height: 80px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tool-icon-container i {
+  font-size: 2.5rem;
+  color: white;
+}
+
+.tool-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: white;
+}
+
+.tool-description {
+  font-size: 1rem;
+  opacity: 0.9;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+  color: white;
+}
+
+.tool-arrow {
+  position: absolute;
+  top: 2rem;
+  right: 2rem;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.tool-container:hover .tool-arrow {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateX(5px);
+}
+
+.tool-arrow i {
+  font-size: 1rem;
+  color: white;
+}
+
+/* Responsive pour mobile */
+@media (max-width: 768px) {
+  .tool-container {
+    padding: 1.5rem;
+    min-height: 180px;
+  }
+
+  .tool-icon-container {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 1rem;
+  }
+
+  .tool-icon-container i {
+    font-size: 2rem;
+  }
+
+  .tool-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .tool-description {
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+
+  .tool-arrow {
+    width: 35px;
+    height: 35px;
+    top: 1.5rem;
+    right: 1.5rem;
+  }
+
+  .tool-arrow i {
+    font-size: 0.9rem;
+  }
+
+  /* Ajuster l'espacement et padding sur mobile */
+  .main-content {
+    padding: 1rem !important;
+  }
+
+  /* Supprimer le spacer h-4 sur mobile pour matcher dashboard et travaux */
+  .md\:hidden.h-4 {
+    display: none !important;
+  }
+}
+
+</style>
+
+</head>
+
+<body class="min-h-screen" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: var(--text-light); overflow-x: hidden; margin: 0; padding: 0;">
+
+
+  <!-- Menu latéral - Dark Theme (VIDE) -->
+  <div id="sidebar" class="hidden md:block fixed top-0 left-0 h-screen w-[14vw] shadow-lg z-20">
+    <div class="border-b flex items-center justify-start space-x-2 py-4 pl-6">
+      <img src="https://i.ibb.co/1fzHGQWw/TES-MUTE-TH-O-6.png" alt="Logo" class="h-6 w-auto object-contain">
+      <span class="text-xl font-medium" style="color: var(--text-light);">Menu</span>
+    </div>
+    <ul class="p-4 space-y-3">
+      <!-- Menu vide - ajoutez vos éléments ici -->
+    </ul>
+  </div>
+
+  <!-- Header spécial thème dark -->
+  <div class="dark-header hidden md:block">
+    <div class="header-content">
+      <!-- Logo container simple -->
+      <div class="logo-container">
+        <img src="https://i.ibb.co/N6M9W7td/Design-sans-titre-46.png" alt="Logo" class="logo-image" />
+      </div>
+
+      <!-- Spacer pour pousser le menu account à droite -->
+      <div class="flex-1"></div>
+
+      <!-- Account menu stylé -->
+      <div class="account-container">
+        <button id="account-menu-button" class="account-btn">
+          <div class="account-avatar">
+            <img src="https://i.ibb.co/twJsgZrb/Design-sans-titre-39.png" alt="Compte" />
+          </div>
+          <div class="account-info" id="account-display">
+            Chargement...
+          </div>
+          <i class="fas fa-chevron-down account-chevron"></i>
+        </button>
+
+        <div id="account-dropdown" class="account-dropdown hidden">
+          <div class="dropdown-header">
+            <div class="user-avatar">
+              <img src="https://i.ibb.co/twJsgZrb/Design-sans-titre-39.png" alt="Compte" />
+            </div>
+            <div class="user-details">
+              <div class="user-name" id="account-username">Chargement...</div>
+            </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <button onclick="window.location.href='/connection'" class="dropdown-item">
+            <i class="fas fa-cog"></i>
+            <span>Paramètres</span>
+          </button>
+          <button onclick="logout()" class="dropdown-item logout">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Se déconnecter</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenu principal -->
+  <div class="main-content w-full" style="width: 100%; padding: 2rem;">
+    <div class="md:hidden h-4"></div>
+    <div class="w-full">
+
+      <!-- Header -->
+      <div id="outils-header" class="mb-10 mt-5 md:mt-0">
+        <div class="relative">
+          <div class="flex items-center justify-between mb-3">
+            <h1 class="text-4xl font-bold" style="color: var(--text-light);">
+              Choisir votre outil
+            </h1>
+            <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+          </div>
+          <div class="flex items-center justify-between">
+            <p class="text-xl font-medium" style="color: var(--text-gray);">Sélectionnez l'outil adapté à vos besoins</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grille des outils -->
+      <div id="outils-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Calculateur -->
+        <div class="tool-container" onclick="loadTool('calcul')" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">
+          <div class="tool-content">
+            <div class="tool-icon-container">
+              <i class="fas fa-calculator"></i>
+            </div>
+            <h3 class="tool-title">Calculateur</h3>
+            <p class="tool-description">Calculez vos devis et estimations avec précision</p>
+            <div class="tool-arrow">
+              <i class="fas fa-arrow-right"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Création de soumission -->
+        <div class="tool-container" onclick="loadTool('soumissions')" style="background: linear-gradient(135deg, #10b981 0%, #047857 100%);">
+          <div class="tool-content">
+            <div class="tool-icon-container">
+              <i class="fas fa-file-contract"></i>
+            </div>
+            <h3 class="tool-title">Création de soumission</h3>
+            <p class="tool-description">Créez des soumissions professionnelles rapidement</p>
+            <div class="tool-arrow">
+              <i class="fas fa-arrow-right"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Création de GQP -->
+        <div class="tool-container" onclick="loadTool('gqp')" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+          <div class="tool-content">
+            <div class="tool-icon-container">
+              <i class="fas fa-clipboard-check"></i>
+            </div>
+            <h3 class="tool-title">Création de GQP</h3>
+            <p class="tool-description">Générez vos documents de garantie qualité prix</p>
+            <div class="tool-arrow">
+              <i class="fas fa-arrow-right"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Envoi de facture client -->
+        <div class="tool-container" onclick="loadTool('facture')" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+          <div class="tool-content">
+            <div class="tool-icon-container">
+              <i class="fas fa-paper-plane"></i>
+            </div>
+            <h3 class="tool-title">Envoi de facture client</h3>
+            <p class="tool-description">Envoyez vos factures directement à vos clients</p>
+            <div class="tool-arrow">
+              <i class="fas fa-arrow-right"></i>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Iframes pour chaque outil (préchargées et cachées) -->
+      <iframe id="iframe-calcul" class="tool-iframe" src="" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; border: none; z-index: 9998; background: #0f172a;"></iframe>
+      <iframe id="iframe-soumissions" class="tool-iframe" src="" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; border: none; z-index: 9998; background: #0f172a;"></iframe>
+      <iframe id="iframe-gqp" class="tool-iframe" src="" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; border: none; z-index: 9998; background: #0f172a;"></iframe>
+      <iframe id="iframe-facture" class="tool-iframe" src="" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100vh; border: none; z-index: 9998; background: #0f172a;"></iframe>
+
+    </div>
+  </div>
+
+  <!-- Spinner de chargement pour navigation -->
+  <div id="navigation-spinner" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #0f172a; z-index: 40; align-items: center; justify-content: center;">
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+      <!-- Spinner SVG animé -->
+      <svg width="64" height="64" viewBox="0 0 64 64" style="animation: spin 0.8s linear infinite;">
+        <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="6"/>
+        <circle cx="32" cy="32" r="28" fill="none" stroke="#3b82f6" stroke-width="6" stroke-dasharray="140" stroke-dashoffset="40" stroke-linecap="round" style="transform-origin: center; transform: rotate(-90deg);"/>
+      </svg>
+      <p style="margin-top: 1rem; color: #94a3b8; font-size: 0.875rem;">Chargement...</p>
+    </div>
+  </div>
+
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+
+<script>
+// Map des routes vers les URLs
+const toolRoutes = {
+  'calcul': '/calcul',
+  'soumissions': '/soumissions',
+  'gqp': '/gqp',
+  'facture': '/facture'
+};
+
+// Variable pour tracker l'outil actuel
+let currentTool = null;
+
+// Fonction pour charger un outil (système iframe comme apppc.html)
+function loadTool(toolName) {
+  const url = toolRoutes[toolName];
+  if (!url) {
+    console.error('[OUTILS-MOBILE] Route non trouvée pour:', toolName);
+    return;
+  }
+
+  console.log('[OUTILS-MOBILE] Chargement de l\'outil:', toolName);
+  currentTool = toolName;
+
+  // Cacher le header et la grille des outils
+  const outilsHeader = document.getElementById('outils-header');
+  const outilsGrid = document.getElementById('outils-grid');
+  if (outilsHeader) {
+    outilsHeader.style.display = 'none';
+  }
+  if (outilsGrid) {
+    outilsGrid.style.display = 'none';
+  }
+
+  // Cacher toutes les iframes d'outils
+  document.querySelectorAll('.tool-iframe').forEach(iframe => {
+    iframe.style.display = 'none';
+  });
+
+  // Afficher l'iframe de l'outil
+  const targetIframe = document.getElementById(`iframe-${toolName}`);
+  if (targetIframe) {
+    // Vérifier si l'iframe a déjà été chargée (vérifier src ET si le contenu est chargé)
+    const srcAttr = targetIframe.getAttribute('src');
+    let isContentLoaded = false;
+    try {
+      // Vérifier si l'iframe a vraiment du contenu chargé
+      isContentLoaded = targetIframe.contentWindow && targetIframe.contentWindow.document && targetIframe.contentWindow.document.readyState === 'complete';
+    } catch (e) {
+      // Si on ne peut pas accéder au contenu (CORS), on suppose qu'il est chargé si src n'est pas vide
+      isContentLoaded = srcAttr && srcAttr !== '' && srcAttr !== 'about:blank';
+    }
+    const needsLoading = !srcAttr || srcAttr === '' || srcAttr === 'about:blank' || !isContentLoaded;
+
+    // FORCE RELOAD pour outils avec données (comme apppc.html)
+    const hasCalcData = sessionStorage.getItem('submissionData') || sessionStorage.getItem('soumissionData') || sessionStorage.getItem('calcClientData') || localStorage.getItem('recuperationClient');
+    const forceReloadSoumissions = toolName === 'soumissions' && hasCalcData && !needsLoading;
+    const forceReloadCalcul = toolName === 'calcul' && hasCalcData && !needsLoading;
+    const forceReload = forceReloadSoumissions || forceReloadCalcul;
+
+    if (needsLoading || forceReload) {
+      // Première fois OU reload forcé - charger l'iframe
+      if (forceReload) {
+        console.log('[OUTILS-MOBILE] 🔄 Rechargement forcé de', toolName, '(données détectées)');
+      } else {
+        console.log('[OUTILS-MOBILE] Chargement initial de:', toolName);
+      }
+
+      // Cacher l'iframe pendant le chargement
+      targetIframe.style.opacity = '0';
+
+      // Afficher le spinner
+      const spinner = document.getElementById('navigation-spinner');
+      if (spinner) {
+        spinner.style.display = 'flex';
+        console.log('[OUTILS-MOBILE] 🔄 Spinner affiché pour', toolName);
+      }
+
+      // Fonction pour cacher le spinner après chargement
+      const hideSpinnerOnLoad = function() {
+        // Attendre 500ms après le load pour s'assurer que le JS est chargé
+        setTimeout(() => {
+          if (spinner) {
+            spinner.style.display = 'none';
+            console.log('[OUTILS-MOBILE] ✅ Spinner caché -', toolName, 'chargé');
+          }
+          // Remettre l'iframe visible
+          targetIframe.style.opacity = '1';
+        }, 500);
+      };
+
+      // Ajouter le paramètre user si présent
+      const urlParams = new URLSearchParams(window.location.search);
+      const username = urlParams.get('user');
+      let finalUrl = url;
+      if (username) {
+        finalUrl = url.includes('?') ? `${url}&user=${encodeURIComponent(username)}` : `${url}?user=${encodeURIComponent(username)}`;
+        console.log('[OUTILS-MOBILE] Ajout du paramètre user:', finalUrl);
+      }
+
+      // Charger l'iframe
+      targetIframe.src = finalUrl;
+      targetIframe.addEventListener('load', hideSpinnerOnLoad, { once: true });
+      targetIframe.style.display = 'block';
+
+      // Retirer l'opacité une fois chargé si reload forcé
+      if (forceReload) {
+        targetIframe.addEventListener('load', function onLoad() {
+          targetIframe.style.opacity = '1';
+          targetIframe.removeEventListener('load', onLoad);
+        });
+      }
+    } else {
+      // Déjà chargée - afficher directement
+      console.log('[OUTILS-MOBILE] ⚡ Affichage instantané de:', toolName);
+      targetIframe.style.display = 'block';
+      targetIframe.style.opacity = '1';
+
+      // Recharger le JavaScript de l'iframe pour rafraîchir les données
+      console.log('[OUTILS-MOBILE] 🔄 Rechargement du JavaScript pour:', toolName);
+      try {
+        if (targetIframe.contentWindow) {
+          // Envoyer un message à l'iframe pour recharger son JS
+          targetIframe.contentWindow.postMessage({ type: 'reload-js' }, '*');
+        }
+      } catch (e) {
+        console.warn('[OUTILS-MOBILE] Impossible de recharger le JS:', e);
+      }
+    }
+  }
+}
+
+// Fonction pour retourner à la grille des outils (appelée depuis les iframes)
+function returnToToolsGrid() {
+  console.log('[OUTILS-MOBILE] Retour à la grille des outils');
+
+  // Cacher toutes les iframes
+  document.querySelectorAll('.tool-iframe').forEach(iframe => {
+    iframe.style.display = 'none';
+  });
+
+  // Réafficher le header et la grille
+  const outilsHeader = document.getElementById('outils-header');
+  const outilsGrid = document.getElementById('outils-grid');
+  if (outilsHeader) {
+    outilsHeader.style.display = 'block';
+  }
+  if (outilsGrid) {
+    outilsGrid.style.display = 'grid';
+  }
+
+  currentTool = null;
+}
+
+// Exposer la fonction globalement pour que les iframes puissent l'appeler
+window.returnToToolsGrid = returnToToolsGrid;
+
+// Scripts de base pour le fonctionnement du template
+document.addEventListener('DOMContentLoaded', function() {
+
+  // Account dropdown
+  const accountMenuButton = document.getElementById('account-menu-button');
+  const accountDropdown = document.getElementById('account-dropdown');
+
+  if (accountMenuButton && accountDropdown) {
+    accountMenuButton.addEventListener('click', function(e) {
+      e.preventDefault();
+      accountDropdown.classList.toggle('hidden');
+    });
+
+    // Fermer le dropdown en cliquant ailleurs
+    document.addEventListener('click', function(e) {
+      if (!accountMenuButton.contains(e.target) && !accountDropdown.contains(e.target)) {
+        accountDropdown.classList.add('hidden');
+      }
+    });
+  }
+
+});
+
+
+// Fonction logout (à personnaliser selon votre backend)
+function logout() {
+  // Ajoutez votre logique de déconnexion ici
+  console.log('Déconnexion...');
+  // window.location.href = '/logout';
+}
+
+// Variable pour tracker l'icône sélectionnée
+let selectedIcon = 3; // Dashboard par défaut
+
+// Fonction pour sélectionner une icône
+function selectIcon(iconNumber, title, iconClass) {
+  if (selectedIcon === iconNumber) return; // Éviter de re-sélectionner
+
+  const previousSelected = selectedIcon;
+  selectedIcon = iconNumber;
+
+  // Données des icônes
+  const icons = [
+    { id: 1, title: 'Ventes' },
+    { id: 2, title: 'Outils' },
+    { id: 3, title: 'Dashboard' },
+    { id: 4, title: 'Gestion' },
+    { id: 5, title: 'Avis' }
+  ];
+
+  // Trouver les conteneurs des icônes
+  const containers = document.querySelectorAll('.case-container');
+  const iconContainers = document.querySelectorAll('.icon-container');
+  const iconElements = document.querySelectorAll('.icon-container i');
+  const titleElements = document.querySelectorAll('.icon-title');
+
+  containers.forEach((container, index) => {
+    const iconId = index + 1;
+    const isSelected = iconId === selectedIcon;
+    const iconContainer = iconContainers[index];
+    const iconElement = iconElements[index];
+
+    // Animer le conteneur de la case
+    if (isSelected) {
+      container.className = 'flex-2 case-container flex flex-col justify-center items-center h-full';
+    } else {
+      container.className = 'flex-1 case-container flex justify-center items-center h-full';
+    }
+
+    // Animer l'icône avec transform
+    if (isSelected) {
+      iconContainer.classList.add('selected');
+      iconContainer.classList.remove('shadow-lg');
+      iconContainer.classList.add('shadow-xl');
+      iconElement.className = iconElement.className.replace(/text-\w+/, 'text-xl');
+    } else {
+      iconContainer.classList.remove('selected');
+      iconContainer.classList.remove('shadow-xl');
+      iconContainer.classList.add('shadow-lg');
+      iconElement.className = iconElement.className.replace(/text-\w+/, 'text-sm');
+    }
+  });
+
+  // Gérer les titres
+  titleElements.forEach(title => title.remove());
+
+  // Ajouter le nouveau titre pour l'icône sélectionnée
+  const selectedContainer = containers[selectedIcon - 1];
+  if (selectedContainer) {
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'text-xs font-medium mt-1 icon-title show';
+    titleSpan.style.color = 'var(--text-light)';
+    titleSpan.textContent = icons[selectedIcon - 1].title;
+    selectedContainer.appendChild(titleSpan);
+  }
+}
+
+// Fonction pour toggle le dropdown mobile
+function toggleMobileProfileMenu() {
+  const dropdown = document.getElementById('mobile-profile-dropdown');
+
+  if (dropdown.classList.contains('show')) {
+    // Fermer avec animation
+    dropdown.classList.remove('show');
+    setTimeout(() => {
+      dropdown.classList.add('hidden');
+    }, 300); // Délai correspondant à la durée de transition
+  } else {
+    // Ouvrir avec animation
+    dropdown.classList.remove('hidden');
+    setTimeout(() => {
+      dropdown.classList.add('show');
+    }, 10); // Petit délai pour permettre le rendu
+  }
+}
+
+// Fermer le dropdown si on clique ailleurs
+document.addEventListener('click', function(event) {
+  const container = document.querySelector('.mobile-profile-container');
+  const dropdown = document.getElementById('mobile-profile-dropdown');
+
+  if (container && !container.contains(event.target) && dropdown.classList.contains('show')) {
+    dropdown.classList.remove('show');
+    setTimeout(() => {
+      dropdown.classList.add('hidden');
+    }, 300);
+  }
+});
+
+// Charger les données utilisateur au démarrage
+window.addEventListener('load', function() {
+  // Vérifier si les fonctions de common.js sont disponibles
+  if (typeof getCurrentUser === 'function') {
+    const userData = getCurrentUser();
+    if (userData) {
+      document.getElementById('mobile-username').textContent = userData.username || 'Utilisateur';
+      document.getElementById('mobile-role').textContent = userData.role || 'Utilisateur';
+    }
+  } else if (typeof username !== 'undefined' && typeof role !== 'undefined') {
+    // Si les variables globales existent
+    document.getElementById('mobile-username').textContent = username || 'Utilisateur';
+    document.getElementById('mobile-role').textContent = role || 'Utilisateur';
+  }
+});
+</script>
+
+</body>
+</html>

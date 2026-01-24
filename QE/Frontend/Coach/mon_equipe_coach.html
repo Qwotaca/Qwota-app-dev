@@ -1,0 +1,2094 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mon Équipe - Coach Qwota</title>
+
+  <!-- PWA Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Qwota">
+  <meta name="msapplication-TileColor" content="#1f2937">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest">
+
+  <!-- Icones PWA -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+  <!-- Scripts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" href="/favicon" type="image/x-icon" />
+
+  <!-- Script commun -->
+  <script src="/common.js"></script>
+
+  <!-- Feuille de style principale - Theme Dark -->
+  <link rel="stylesheet" href="/base.css">
+
+<style>
+/* Main content */
+.main-content {
+  padding: 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+#main-content {
+  padding: 2rem;
+}
+
+/* Animations fade-in */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+/* Header de la page - Style Dashboard */
+.page-header {
+  margin-bottom: 2.5rem;
+}
+
+.page-header h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--text-light);
+  margin-bottom: 0.75rem;
+  position: relative;
+  display: inline-block;
+}
+
+.page-header .title-underline {
+  position: absolute;
+  bottom: -0.5rem;
+  left: 0;
+  width: 5rem;
+  height: 0.25rem;
+  background: linear-gradient(to right, #3b82f6, #60a5fa);
+  border-radius: 9999px;
+}
+
+.page-header .header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-right: 0 !important;
+  padding: 0 !important;
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+.page-header p {
+  color: var(--text-gray);
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+/* Stats globales - Layout principal */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  align-items: stretch;
+}
+
+/* CARTE CA - Principale et compacte */
+.ca-main-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+  border: 1px solid var(--border-dark);
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.ca-main-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #10b981, #34d399, #6ee7b7);
+  box-shadow: 0 2px 12px rgba(16, 185, 129, 0.5);
+}
+
+.ca-main-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(52, 211, 153, 0.2);
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+/* Header de la carte CA */
+.ca-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(52, 211, 153, 0.2);
+}
+
+.ca-title-section {
+  flex: 1;
+}
+
+.ca-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-light);
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ca-title i {
+  font-size: 1.5rem;
+  background: linear-gradient(135deg, #10b981, #34d399);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.ca-subtitle {
+  font-size: 0.8125rem;
+  color: var(--text-gray);
+  font-weight: 500;
+}
+
+/* Montant CA principal */
+.ca-amount-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding: 1.25rem;
+  background: rgba(16, 185, 129, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(16, 185, 129, 0.1);
+}
+
+.ca-label {
+  font-size: 0.75rem;
+  color: var(--text-gray);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.ca-main-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #10b981, #34d399, #6ee7b7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+}
+
+/* Stats rapides CA */
+.ca-quick-stats {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.ca-quick-stat {
+  flex: 1;
+  background: rgba(15, 23, 42, 0.5);
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-dark);
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.ca-quick-stat:hover {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.3);
+  transform: translateY(-2px);
+}
+
+.ca-quick-stat-label {
+  font-size: 0.6875rem;
+  color: var(--text-gray);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.375rem;
+  font-weight: 600;
+}
+
+.ca-quick-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-light);
+  line-height: 1;
+}
+
+/* Section graphique dans la carte CA */
+.ca-chart-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(52, 211, 153, 0.2);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.ca-chart-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-light);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ca-chart-title i {
+  color: var(--primary-green);
+  font-size: 1rem;
+}
+
+.ca-chart-container {
+  position: relative;
+  flex: 1;
+  min-height: 200px;
+  background: rgba(15, 23, 42, 0.3);
+  border-radius: 12px;
+  padding: 0.75rem;
+}
+
+/* Section droite - Stats 2x2 + Soumissions en bas */
+.stats-grid-right {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  height: 100%;
+}
+
+.stats-top-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.soumissions-chart-right {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.soumissions-chart-right .chart-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.soumissions-chart-right .chart-container {
+  flex: 1 !important;
+  height: auto !important;
+  min-height: 200px;
+}
+
+/* Responsive */
+@media (max-width: 1400px) {
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .stat-card.stat-ca {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+
+  .stat-card:not(.stat-ca) {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stat-card.stat-ca {
+    grid-column: span 2;
+    grid-row: span 1;
+  }
+
+  .stat-card:not(.stat-ca) {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card.stat-ca,
+  .stat-card:not(.stat-ca) {
+    grid-column: span 1;
+    grid-row: span 1;
+  }
+
+  .stat-card.stat-ca .stat-value {
+    font-size: 2rem;
+  }
+
+  .stat-card.stat-ca .stat-icon {
+    width: 56px;
+    height: 56px;
+    font-size: 1.5rem;
+  }
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-dark);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--card-color-start), var(--card-color-end));
+  opacity: 1;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.stat-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
+  background: rgba(96, 165, 250, 0.12);
+  color: var(--primary-blue);
+  flex-shrink: 0;
+}
+
+.stat-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-label {
+  font-size: 0.8125rem;
+  color: var(--text-gray);
+  font-weight: 500;
+  margin-bottom: 0.375rem;
+  line-height: 1.2;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-light);
+  line-height: 1;
+}
+
+/* Section graphiques */
+.charts-section {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.chart-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-dark);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.chart-card:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  transform: translateY(-3px);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.chart-header {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-dark);
+}
+
+.chart-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.chart-title i {
+  color: var(--primary-blue);
+  font-size: 1.125rem;
+}
+
+.chart-container {
+  position: relative;
+  height: 280px;
+}
+
+/* Section entrepreneurs */
+.entrepreneurs-section {
+  margin-top: 2rem;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-light);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--border-dark);
+}
+
+.section-title i {
+  color: var(--primary-blue);
+  font-size: 1.5rem;
+}
+
+.entrepreneurs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 1.5rem;
+}
+
+/* Classement grid - Ranking view */
+.classement-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.classement-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.9));
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.classement-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(96, 165, 250, 0.25);
+  border-color: rgba(96, 165, 250, 0.4);
+  background: linear-gradient(145deg, rgba(30, 41, 59, 1), rgba(15, 23, 42, 0.95));
+}
+
+.classement-card-rang {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(96, 165, 250, 0.1);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+}
+
+.classement-card-photo {
+  flex-shrink: 0;
+}
+
+.classement-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.classement-card-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Carte entrepreneur - Style Dashboard */
+.entrepreneur-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-dark);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.entrepreneur-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa, #818cf8);
+}
+
+.entrepreneur-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+  border-color: rgba(96, 165, 250, 0.4);
+}
+
+/* Carte emplacement vide */
+.empty-slot-card {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.3), rgba(51, 65, 85, 0.2));
+  border: 2px dashed var(--border-dark);
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.empty-slot-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.3), rgba(100, 116, 139, 0.3));
+}
+
+.empty-slot-card:hover {
+  border-color: rgba(96, 165, 250, 0.4);
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.4), rgba(51, 65, 85, 0.3));
+  transform: translateY(-3px);
+}
+
+.empty-slot-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.1);
+  border: 2px dashed rgba(148, 163, 184, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.empty-slot-icon i {
+  font-size: 2.5rem;
+  color: rgba(148, 163, 184, 0.4);
+}
+
+.empty-slot-text {
+  text-align: center;
+  color: var(--text-gray);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.entrepreneur-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-dark);
+}
+
+.entrepreneur-photo {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--primary-blue);
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.4);
+  flex-shrink: 0;
+}
+
+.entrepreneur-info {
+  flex: 1;
+}
+
+.entrepreneur-info h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-light);
+  margin-bottom: 0.375rem;
+}
+
+.grade {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(250, 204, 21, 0.15);
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.3);
+}
+
+/* Badge de classement */
+.rank-badge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.125rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+.rank-badge.rank-1 {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: white;
+  border: 3px solid #fef3c7;
+  box-shadow: 0 4px 20px rgba(251, 191, 36, 0.6);
+}
+
+.rank-badge.rank-2 {
+  background: linear-gradient(135deg, #94a3b8, #64748b);
+  color: white;
+  border: 3px solid #e2e8f0;
+  box-shadow: 0 4px 20px rgba(148, 163, 184, 0.6);
+}
+
+.rank-badge.rank-3 {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: white;
+  border: 3px solid #fed7aa;
+  box-shadow: 0 4px 20px rgba(249, 115, 22, 0.6);
+}
+
+.rank-badge i {
+  font-size: 1.25rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* Mini stats dans carte entrepreneur */
+.entrepreneur-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex: 1;
+}
+
+.stat-item {
+  flex: 1;
+  min-width: 90px;
+  text-align: center;
+  padding: 0.75rem 0.5rem;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 8px;
+  border: 1px solid var(--border-dark);
+  transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+  background: rgba(96, 165, 250, 0.12);
+  border-color: rgba(96, 165, 250, 0.4);
+  transform: translateY(-2px);
+}
+
+.stat-item .label {
+  font-size: 0.6875rem;
+  color: var(--text-gray);
+  margin-bottom: 0.375rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.stat-item .value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.value.green { color: var(--primary-green); }
+.value.blue { color: var(--primary-blue); }
+.value.orange { color: var(--primary-orange); }
+.value.red { color: var(--primary-red); }
+.value.purple { color: var(--primary-purple); }
+.value.yellow { color: var(--primary-yellow); }
+.value.teal { color: var(--primary-teal); }
+.value.indigo { color: var(--primary-indigo); }
+.value.pink { color: var(--primary-pink); }
+
+/* Boutons d'action - Style Dashboard */
+.entrepreneur-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-dark);
+}
+
+.action-btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.action-btn.primary {
+  background: linear-gradient(135deg, #3b82f6, #60a5fa);
+  color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.action-btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+.action-btn.secondary {
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--text-light);
+  border: 1px solid var(--border-dark);
+}
+
+.action-btn.secondary:hover {
+  background: rgba(148, 163, 184, 0.25);
+  transform: translateY(-2px);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+/* Loading spinner */
+.loading-spinner {
+  text-align: center;
+  padding: 3rem;
+  color: var(--primary-blue);
+  font-size: 2rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-spinner i {
+  animation: spin 1s linear infinite;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-gray);
+}
+
+.empty-state i {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.empty-state p {
+  font-size: 1.2rem;
+  margin-top: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 1400px) {
+  .ca-chart-container {
+    height: 260px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr 0.9fr;
+  }
+}
+
+@media (max-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-top-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .charts-section {
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 968px) {
+  .ca-main-value {
+    font-size: 2.75rem;
+  }
+
+  .ca-amount-section {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ca-quick-stats {
+    width: 100%;
+    margin-top: 1rem;
+  }
+
+  .ca-chart-container {
+    height: 220px;
+  }
+
+  .stats-top-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .charts-section {
+    grid-template-columns: 1fr;
+  }
+
+  .entrepreneurs-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .classement-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  #main-content {
+    padding: 1rem !important;
+  }
+
+  .ca-main-card {
+    padding: 1.25rem;
+  }
+
+  .ca-header {
+    margin-bottom: 1rem;
+  }
+
+  .ca-title {
+    font-size: 1.125rem;
+  }
+
+  .ca-main-value {
+    font-size: 2rem;
+  }
+
+  .ca-amount-section {
+    padding: 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ca-quick-stats {
+    width: 100%;
+    margin-top: 0.75rem;
+    flex-direction: column;
+  }
+
+  .ca-chart-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+  }
+
+  .ca-chart-container {
+    height: 180px;
+  }
+
+  .stats-top-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .charts-section {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .chart-container {
+    height: 240px;
+  }
+
+  .entrepreneurs-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .classement-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-header h1 {
+    font-size: 1.875rem;
+  }
+
+  .page-header p {
+    font-size: 1rem;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+  }
+
+  .entrepreneur-card {
+    padding: 1.25rem;
+  }
+}
+
+/* Barre de sélection coach */
+#coach-selector-bar {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%);
+  backdrop-filter: blur(10px);
+  border-bottom: 2px solid var(--border-dark);
+  padding: 0.75rem 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  z-index: 10001 !important;
+  display: block;
+}
+
+#coach-selector-bar .selector-container {
+  max-width: 1400px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+#coach-selector-bar .selector-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-light);
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+#coach-selector-bar .selector-label i {
+  color: var(--primary-blue);
+  font-size: 18px;
+}
+
+.coach-dropdown {
+  position: relative;
+  flex: 1;
+  max-width: 450px;
+}
+
+.coach-dropdown-toggle {
+  background: rgba(23, 32, 51, 0.8);
+  border: 2px solid var(--border-dark);
+  border-radius: 12px;
+  padding: 10px 16px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: var(--text-light);
+  font-size: 14px;
+  gap: 0.5rem;
+}
+
+.coach-dropdown-toggle:hover {
+  border-color: var(--primary-blue);
+  background: rgba(23, 32, 51, 1);
+}
+
+.coach-dropdown-toggle.active {
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+}
+
+.coach-dropdown-toggle .selected-text {
+  color: var(--text-light);
+  font-weight: 500;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.coach-dropdown-toggle .chevron {
+  color: var(--text-gray);
+  transition: transform 0.3s ease;
+  font-size: 12px;
+}
+
+.coach-dropdown-toggle.active .chevron {
+  transform: rotate(180deg);
+}
+
+.coach-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: rgba(23, 32, 51, 0.98);
+  border: 2px solid var(--border-dark);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.coach-dropdown-menu.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.coach-dropdown-option {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 14px;
+}
+
+.coach-dropdown-option i {
+  color: var(--primary-blue);
+  width: 20px;
+}
+
+.coach-dropdown-option:hover {
+  background: rgba(96, 165, 250, 0.15);
+  padding-left: 20px;
+}
+
+.coach-dropdown-menu::-webkit-scrollbar {
+  width: 8px;
+}
+
+.coach-dropdown-menu::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 10px;
+}
+
+.coach-dropdown-menu::-webkit-scrollbar-thumb {
+  background: var(--primary-blue);
+  border-radius: 10px;
+}
+
+.coach-dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: #60a5fa;
+}
+
+/* Ajuster le padding du main-content pour compenser la barre */
+body #main-content {
+  padding-top: 5rem !important;
+}
+</style>
+
+</head>
+<body>
+
+  <!-- Barre de sélection coach -->
+  <div id="coach-selector-bar">
+    <div class="selector-container">
+      <div class="selector-label">
+        <i class="fas fa-users-cog"></i>
+        <span>Mon Équipe:</span>
+      </div>
+      <div class="coach-dropdown">
+        <div class="coach-dropdown-toggle" id="coach-selector-toggle">
+          <span class="selected-text" id="selected-coach-name">
+            <i class="fas fa-chalkboard-teacher"></i>
+            <span id="coach-name-text">Chargement...</span>
+          </span>
+          <i class="fas fa-chevron-down chevron"></i>
+        </div>
+        <div class="coach-dropdown-menu" id="coach-selector-menu">
+          <!-- Options chargées dynamiquement -->
+        </div>
+      </div>
+      <div class="selector-label" style="margin-left: auto;">
+        <button onclick="window.location.href='/dashboard'" style="background: rgba(96, 165, 250, 0.15); border: 1px solid var(--primary-blue); padding: 8px 16px; border-radius: 8px; color: var(--text-light); cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fas fa-chart-line"></i>
+          <span>Retour Dashboard</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" data-role="coach" class="sidebar fixed top-0 left-0 z-40 md:translate-x-0 -translate-x-full transition-transform duration-300"></aside>
+
+  <!-- Contenu principal -->
+  <main id="main-content" class="pt-20 md:pt-6 w-full" style="width: 100%; padding: 2rem;">
+
+    <!-- Header de la page -->
+    <div class="page-header fade-in-up">
+      <h1 class="text-4xl font-bold mb-3">
+        Mon Équipe
+      </h1>
+
+      <div class="header-content mt-4">
+        <div class="relative">
+          <p class="text-xl font-medium">
+            <span>Statistiques complètes et visualisations en temps réel</span>
+          </p>
+          <span class="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats globales -->
+    <div class="stats-grid" id="statsGrid">
+      <!-- Stats will be generated dynamically -->
+    </div>
+
+    <!-- Section graphiques -->
+    <div class="charts-section">
+
+      <!-- Graphique performance -->
+      <div class="chart-card fade-in-up">
+        <div class="chart-header">
+          <h3 class="chart-title">
+            <i class="fas fa-chart-line"></i>
+            Performance de l'équipe
+          </h3>
+        </div>
+        <div class="chart-container">
+          <canvas id="performanceChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Graphique $ produit par mois -->
+      <div class="chart-card fade-in-up">
+        <div class="chart-header">
+          <h3 class="chart-title">
+            <i class="fas fa-chart-line"></i>
+            $ Produit par mois
+          </h3>
+        </div>
+        <div class="chart-container">
+          <canvas id="produitMensuelChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Liste des entrepreneurs -->
+    <div class="entrepreneurs-section fade-in-up">
+      <h2 class="section-title" style="cursor: pointer; display: flex; align-items: center; gap: 10px;" onclick="toggleView()" title="Cliquer pour alterner entre grille et classement">
+        <i class="fas fa-user-tie"></i>
+        <span id="viewTitle">Membres de l'équipe</span>
+        <i class="fas fa-exchange-alt" style="font-size: 0.8em; color: var(--primary-blue); margin-left: auto;"></i>
+      </h2>
+
+      <!-- Vue Grille -->
+      <div id="entrepreneursContainer" class="entrepreneurs-grid">
+        <div class="loading-spinner">
+          <i class="fas fa-spinner"></i>
+        </div>
+      </div>
+
+      <!-- Vue Classement (Tableau) -->
+      <div id="classementContainer" style="display: none;">
+        <div id="classementCards" class="classement-grid">
+          <div class="loading-spinner">
+            <i class="fas fa-spinner"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+<script>
+// Variables globales
+let entrepreneursData = [];
+let teamStats = {};
+let coachUsername = '';
+let charts = {};
+let currentView = 'grid'; // 'grid' or 'ranking'
+
+// Gestion de la barre de sélection des coachs
+async function initCoachSelector() {
+  // Charger la liste des coachs
+  try {
+    const response = await fetch('/api/users/coaches');
+    const data = await response.json();
+
+    const menu = document.getElementById('coach-selector-menu');
+    if (!menu) return;
+
+    menu.innerHTML = '';
+
+    if (data.coaches && data.coaches.length > 0) {
+      data.coaches.forEach(coach => {
+        const option = document.createElement('div');
+        option.className = 'coach-dropdown-option';
+        option.innerHTML = `
+          <i class="fas fa-chalkboard-teacher"></i>
+          <span>${coach.username}</span>
+        `;
+        option.onclick = () => selectCoach(coach.username);
+        menu.appendChild(option);
+      });
+    }
+
+    // Afficher le nom du coach actuel
+    const coachNameText = document.getElementById('coach-name-text');
+    if (coachNameText && coachUsername) {
+      coachNameText.textContent = coachUsername;
+    }
+  } catch (error) {
+    console.error('Erreur chargement coachs:', error);
+  }
+
+  // Gérer le dropdown
+  const toggle = document.getElementById('coach-selector-toggle');
+  const menu = document.getElementById('coach-selector-menu');
+
+  if (toggle && menu) {
+    toggle.addEventListener('click', function(e) {
+      e.stopPropagation();
+      this.classList.toggle('active');
+      menu.classList.toggle('show');
+    });
+
+    // Fermer le menu en cliquant ailleurs
+    document.addEventListener('click', function(e) {
+      if (!toggle.contains(e.target) && !menu.contains(e.target)) {
+        toggle.classList.remove('active');
+        menu.classList.remove('show');
+      }
+    });
+  }
+}
+
+function selectCoach(coachUsername) {
+  // Rediriger vers la page Mon équipe du coach sélectionné
+  window.location.href = `/coach_mon_equipe?user=${coachUsername}`;
+}
+
+// Initialisation au chargement
+document.addEventListener('DOMContentLoaded', async function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const userParam = urlParams.get('user');
+
+  let username = userParam;
+  let role = 'coach';
+
+  if (!username) {
+    username = getCookie('username');
+    role = getCookie('role');
+  }
+
+  if (!username) {
+    window.location.href = '/login';
+    return;
+  }
+
+  coachUsername = username;
+
+  if (typeof loadSidebar === 'function') {
+    await loadSidebar(username, role);
+  }
+
+  // Initialiser la barre de sélection des coachs
+  await initCoachSelector();
+
+  await chargerEntrepreneurs();
+});
+
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return null;
+}
+
+// Charger les entrepreneurs
+async function chargerEntrepreneurs() {
+  try {
+    const response = await fetch(`/api/coach/${coachUsername}/equipe/dashboard?period=all`);
+
+    if (!response.ok) {
+      throw new Error('Erreur lors du chargement');
+    }
+
+    const data = await response.json();
+    entrepreneursData = data.entrepreneurs || [];
+    teamStats = data.team_stats || {};
+
+    afficherStatsGlobales();
+    afficherGraphiques();
+    afficherEntrepreneurs();
+
+  } catch (error) {
+    console.error('Erreur:', error);
+
+    document.getElementById('entrepreneursContainer').innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-exclamation-triangle"></i>
+        <p>Erreur lors du chargement des données</p>
+      </div>
+    `;
+  }
+}
+
+// Afficher les stats globales
+function afficherStatsGlobales() {
+  const grid = document.getElementById('statsGrid');
+
+  // CARTE CA PRINCIPALE (gauche)
+  const caCard = `
+    <div class="ca-main-card fade-in-up" style="animation-delay: 0s;">
+      <!-- Header -->
+      <div class="ca-header">
+        <div class="ca-title-section">
+          <h2 class="ca-title">
+            <i class="fas fa-dollar-sign"></i>
+            Chiffre d'affaires de l'équipe
+          </h2>
+          <p class="ca-subtitle">Performance globale et répartition par entrepreneur</p>
+        </div>
+      </div>
+
+      <!-- Montant principal et stats rapides -->
+      <div class="ca-amount-section" style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; gap: 1.5rem;">
+          <div>
+            <div class="ca-label" style="font-size: 0.85rem; margin-bottom: 0.25rem;">Total de l'équipe</div>
+            <div style="font-size: 1.75rem; font-weight: 700; background: linear-gradient(135deg, #10b981, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">${formatMontant(teamStats.total_ca || 0)}</div>
+          </div>
+          <div>
+            <div class="ca-label" style="font-size: 0.85rem; margin-bottom: 0.25rem;">Montant Produit</div>
+            <div style="font-size: 1.75rem; font-weight: 700; background: linear-gradient(135deg, #a855f7, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">${formatMontant(teamStats.montant_produit || 0)}</div>
+          </div>
+          <div>
+            <div class="ca-label" style="font-size: 0.85rem; margin-bottom: 0.25rem;">Paiement Récolté</div>
+            <div style="font-size: 1.75rem; font-weight: 700; background: linear-gradient(135deg, #3b82f6, #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">${formatMontant(teamStats.paiements_recoltes || 0)}</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <div class="ca-quick-stat" style="padding: 0.75rem 1rem; max-width: fit-content;">
+            <div class="ca-quick-stat-label" style="font-size: 0.75rem;">CA Moyen</div>
+            <div class="ca-quick-stat-value" style="color: #60a5fa; font-size: 1.1rem;">${formatMontant(teamStats.ca_moyen || 0)}</div>
+          </div>
+          <div class="ca-quick-stat" style="padding: 0.75rem 1rem; max-width: fit-content;">
+            <div class="ca-quick-stat-label" style="font-size: 0.75rem;">% Objectif</div>
+            <div class="ca-quick-stat-value" style="color: ${(teamStats.pourcentage_objectif || 0) >= 100 ? '#10b981' : '#fb923c'}; font-size: 1.1rem;">${(teamStats.pourcentage_objectif || 0).toFixed(1)}%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Graphique intégré -->
+      <div class="ca-chart-section">
+        <h3 class="ca-chart-title">
+          <i class="fas fa-chart-bar"></i>
+          Répartition par entrepreneur
+        </h3>
+        <div class="ca-chart-container">
+          <canvas id="caChartMain"></canvas>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // AUTRES STATS (droite)
+  const otherStats = [
+    {
+      icon: 'fa-file-invoice-dollar',
+      label: 'Estimation moyenne',
+      value: formatMontant(teamStats.estimation_moyenne || 0),
+      colorStart: '#a855f7',
+      colorEnd: '#ec4899'
+    },
+    {
+      icon: 'fa-percentage',
+      label: 'Taux de vente moyen',
+      value: (teamStats.taux_vente_moyen || 0).toFixed(1) + '%',
+      colorStart: '#fb923c',
+      colorEnd: '#facc15'
+    },
+    {
+      icon: 'fa-chart-line',
+      label: 'Prod. horaire moyen',
+      value: formatMontant(teamStats.prod_horaire_moyen || 0) + '/h',
+      colorStart: '#14b8a6',
+      colorEnd: '#34d399'
+    },
+    {
+      icon: 'fa-clock',
+      label: 'Heures PAP/semaine',
+      value: (teamStats.heures_pap_semaine || 0).toFixed(1) + ' h',
+      colorStart: '#8b5cf6',
+      colorEnd: '#a855f7'
+    }
+  ];
+
+  const rightSection = `
+    <div class="stats-grid-right">
+      <!-- Stats 2x2 en haut -->
+      <div class="stats-top-grid">
+        ${otherStats.map((stat, index) => `
+          <div class="stat-card fade-in-up" style="
+            --card-color-start: ${stat.colorStart};
+            --card-color-end: ${stat.colorEnd};
+            animation-delay: ${(index + 1) * 0.1}s;
+          ">
+            <div class="stat-header">
+              <div class="stat-icon">
+                <i class="fas ${stat.icon}"></i>
+              </div>
+              <div class="stat-info">
+                <div class="stat-label">${stat.label}</div>
+                <div class="stat-value">${stat.value}</div>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- Graphique Soumissions en bas -->
+      <div class="soumissions-chart-right fade-in-up" style="animation-delay: 0.5s;">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3 class="chart-title">
+              <i class="fas fa-chart-pie"></i>
+              Répartition des soumissions
+            </h3>
+          </div>
+          <div class="chart-container">
+            <canvas id="soumissionsChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  grid.innerHTML = caCard + rightSection;
+
+  // Créer le graphique CA immédiatement après avoir inséré le HTML
+  setTimeout(() => {
+    creerGraphiqueCA();
+  }, 100);
+}
+
+// Créer le graphique CA dans la carte principale
+function creerGraphiqueCA() {
+  const caCtx = document.getElementById('caChartMain');
+  if (!caCtx) return;
+
+  // Détruire l'ancien graphique s'il existe
+  if (charts.caMain) {
+    charts.caMain.destroy();
+  }
+
+  charts.caMain = new Chart(caCtx, {
+    type: 'bar',
+    data: {
+      labels: entrepreneursData.map(e => (e.prenom || e.nom || e.username).split(' ')[0]), // Prénom seulement
+      datasets: [{
+        label: 'Dollars ($) vendu',
+        data: entrepreneursData.map(e => e.dollar_reel || 0),
+        backgroundColor: entrepreneursData.map((e, i) => {
+          const colors = ['rgba(16, 185, 129, 0.8)', 'rgba(52, 211, 153, 0.8)', 'rgba(110, 231, 183, 0.8)'];
+          return colors[i % colors.length];
+        }),
+        borderColor: entrepreneursData.map((e, i) => {
+          const colors = ['rgba(16, 185, 129, 1)', 'rgba(52, 211, 153, 1)', 'rgba(110, 231, 183, 1)'];
+          return colors[i % colors.length];
+        }),
+        borderWidth: 2,
+        borderRadius: 8,
+        hoverBackgroundColor: 'rgba(16, 185, 129, 0.95)'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          titleColor: '#f1f5f9',
+          bodyColor: '#94a3b8',
+          borderColor: 'rgba(16, 185, 129, 0.5)',
+          borderWidth: 2,
+          padding: 16,
+          displayColors: true,
+          callbacks: {
+            label: function(context) {
+              return ' CA: ' + formatMontant(context.parsed.y);
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: 'rgba(16, 185, 129, 0.1)',
+            drawBorder: false
+          },
+          ticks: {
+            color: '#94a3b8',
+            callback: function(value) {
+              return formatMontant(value);
+            }
+          }
+        },
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: '#94a3b8',
+            font: { weight: 500 }
+          }
+        }
+      }
+    }
+  });
+}
+
+// Afficher les graphiques avec Chart.js
+function afficherGraphiques() {
+  // Détruire les graphiques existants (sauf caMain qui est géré séparément)
+  Object.keys(charts).forEach(key => {
+    if (key !== 'caMain' && charts[key]) {
+      charts[key].destroy();
+    }
+  });
+
+  // Configuration commune des tooltips
+  const tooltipConfig = {
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+    titleColor: '#f1f5f9',
+    bodyColor: '#94a3b8',
+    borderColor: 'rgba(96, 165, 250, 0.5)',
+    borderWidth: 1,
+    padding: 12,
+    displayColors: true
+  };
+
+  // Graphique soumissions (donut)
+  const soumissionsCtx = document.getElementById('soumissionsChart');
+  if (soumissionsCtx) {
+    charts.soumissions = new Chart(soumissionsCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Signées', 'En attente', 'Perdues'],
+        datasets: [{
+          data: [
+            teamStats.total_signees || 0,
+            teamStats.total_en_attente || 0,
+            teamStats.total_perdus || 0
+          ],
+          backgroundColor: [
+            'rgba(168, 85, 247, 0.8)',
+            'rgba(251, 146, 60, 0.8)',
+            'rgba(248, 113, 113, 0.8)'
+          ],
+          borderColor: [
+            'rgba(168, 85, 247, 1)',
+            'rgba(251, 146, 60, 1)',
+            'rgba(248, 113, 113, 1)'
+          ],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color: '#94a3b8', padding: 15 }
+          },
+          tooltip: tooltipConfig
+        }
+      }
+    });
+  }
+
+  // Graphique performance (line)
+  const performanceCtx = document.getElementById('performanceChart');
+  if (performanceCtx) {
+    charts.performance = new Chart(performanceCtx, {
+      type: 'line',
+      data: {
+        labels: entrepreneursData.map(e => e.prenom || e.nom || e.username),
+        datasets: [{
+          label: 'Taux de vente (%)',
+          data: entrepreneursData.map(e => e.metriques?.taux_vente || 0),
+          borderColor: 'rgba(52, 211, 153, 1)',
+          backgroundColor: 'rgba(52, 211, 153, 0.1)',
+          tension: 0.4,
+          fill: true,
+          borderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: tooltipConfig
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#94a3b8' }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: '#94a3b8' }
+          }
+        }
+      }
+    });
+  }
+
+  // Graphique $ produit par mois (line chart)
+  const produitMensuelCtx = document.getElementById('produitMensuelChart');
+  if (produitMensuelCtx) {
+    // Générer les mois de janvier à décembre
+    const mois = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+    // Données simulées (à remplacer par les vraies données depuis le backend)
+    const dataMensuelle = teamStats.produit_mensuel || Array(12).fill(0);
+
+    charts.produitMensuel = new Chart(produitMensuelCtx, {
+      type: 'line',
+      data: {
+        labels: mois,
+        datasets: [{
+          label: '$ Produit',
+          data: dataMensuelle,
+          borderColor: 'rgba(16, 185, 129, 1)',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          tension: 0.4,
+          fill: true,
+          borderWidth: 3,
+          pointBackgroundColor: 'rgba(16, 185, 129, 1)',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            ...tooltipConfig,
+            callbacks: {
+              label: function(context) {
+                return ' $ Produit: ' + formatMontant(context.parsed.y);
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(16, 185, 129, 0.1)',
+              drawBorder: false
+            },
+            ticks: {
+              color: '#94a3b8',
+              callback: function(value) {
+                return formatMontant(value);
+              }
+            }
+          },
+          x: {
+            grid: { display: false },
+            ticks: {
+              color: '#94a3b8',
+              font: { weight: 500 }
+            }
+          }
+        }
+      }
+    });
+  }
+}
+
+// Afficher les entrepreneurs
+function afficherEntrepreneurs() {
+  const container = document.getElementById('entrepreneursContainer');
+  const maxSlots = 9; // 3x3 grid
+
+  // Trier les entrepreneurs par CA (du plus élevé au plus bas)
+  const sortedEntrepreneurs = [...entrepreneursData].sort((a, b) => {
+    const caA = a.dollar_reel || 0;
+    const caB = b.dollar_reel || 0;
+    return caB - caA;
+  });
+
+  const actualEntrepreneurs = sortedEntrepreneurs.length;
+  const emptySlots = Math.max(0, maxSlots - actualEntrepreneurs);
+
+  let html = '';
+
+  sortedEntrepreneurs.forEach((entrepreneur, index) => {
+    const rank = index + 1;
+    const photoUrl = entrepreneur.photo || `/api/get-file/${entrepreneur.username}/profile_photo_${entrepreneur.username}.png`;
+    const nomComplet = `${entrepreneur.prenom || ''} ${entrepreneur.nom || entrepreneur.username}`.trim();
+    const grade = formatGrade(entrepreneur.grade || 'rookie');
+
+    const ca = entrepreneur.chiffre_affaires || {};
+    const soumissions = entrepreneur.status_soumissions || {};
+    const satisfaction = entrepreneur.satisfaction || {};
+    const employes = entrepreneur.employes || {};
+    const metriques = entrepreneur.metriques || {};
+
+    // Badge pour le top 3
+    let rankBadge = '';
+    if (rank === 1) {
+      rankBadge = '<div class="rank-badge rank-1"><i class="fas fa-trophy"></i></div>';
+    } else if (rank === 2) {
+      rankBadge = '<div class="rank-badge rank-2"><i class="fas fa-medal"></i></div>';
+    } else if (rank === 3) {
+      rankBadge = '<div class="rank-badge rank-3"><i class="fas fa-award"></i></div>';
+    }
+
+    html += `
+      <div class="entrepreneur-card fade-in-up" style="animation-delay: ${index * 0.1}s;">
+        ${rankBadge}
+        <div class="entrepreneur-header">
+          <img src="${photoUrl}" alt="${nomComplet}" class="entrepreneur-photo" onerror="this.src='https://i.ibb.co/twJsgZrb/Design-sans-titre-39.png'">
+          <div class="entrepreneur-info">
+            <h3>${nomComplet}</h3>
+            <span class="grade"><i class="fas fa-star"></i> ${grade}</span>
+          </div>
+        </div>
+
+        <div class="entrepreneur-stats">
+          <div class="stat-item">
+            <div class="label">Dollars ($) vendu</div>
+            <div class="value green">${formatMontant(ca.dollar_reel || 0)}</div>
+          </div>
+          <div class="stat-item">
+            <div class="label">Objectif</div>
+            <div class="value blue">${formatMontant(ca.objectif || 0)}</div>
+          </div>
+          <div class="stat-item">
+            <div class="label">% Objectif</div>
+            <div class="value ${(ca.pourcentage || 0) >= 100 ? 'green' : 'orange'}">${(ca.pourcentage || 0).toFixed(1)}%</div>
+          </div>
+        </div>
+
+        <div class="entrepreneur-stats">
+          <div class="stat-item">
+            <div class="label">Signées</div>
+            <div class="value purple">${soumissions.signees || 0}</div>
+          </div>
+          <div class="stat-item">
+            <div class="label">En attente</div>
+            <div class="value orange">${soumissions.en_attente || 0}</div>
+          </div>
+          <div class="stat-item">
+            <div class="label">Perdus</div>
+            <div class="value red">${soumissions.perdus || 0}</div>
+          </div>
+        </div>
+
+        <div class="entrepreneur-stats">
+          <div class="stat-item">
+            <div class="label">★ Moy.</div>
+            <div class="value yellow">${(satisfaction.etoiles_moyennes || 0).toFixed(1)}</div>
+          </div>
+          <div class="stat-item">
+            <div class="label">Avis</div>
+            <div class="value blue">${satisfaction.nombre_avis || 0}</div>
+          </div>
+          <div class="stat-item">
+            <div class="label">Employés</div>
+            <div class="value teal">${employes.total || 0}</div>
+          </div>
+        </div>
+
+        <div class="entrepreneur-stats">
+          <div class="stat-item">
+            <div class="label">Contrat moy.</div>
+            <div class="value indigo">${formatMontant(metriques.contrat_moyen || 0)}</div>
+          </div>
+          <div class="stat-item">
+            <div class="label">Taux vente</div>
+            <div class="value pink">${(metriques.taux_vente || 0).toFixed(1)}%</div>
+          </div>
+          <div class="stat-item">
+            <div class="label">Prod./h</div>
+            <div class="value green">${formatMontant(metriques.prod_horaire || 0)}</div>
+          </div>
+        </div>
+
+        <div class="entrepreneur-stats">
+          <div class="stat-item">
+            <div class="label">$ produit</div>
+            <div class="value purple">${formatMontant(ca.montant_produit || 0)}</div>
+          </div>
+          <div class="stat-item">
+            <div class="label">H PAP/sem</div>
+            <div class="value orange">${(metriques.heures_pap_semaine || 0).toFixed(1)}h</div>
+          </div>
+          <div class="stat-item">
+            <div class="label">Taux MKTG</div>
+            <div class="value blue">${(metriques.taux_marketing || 0).toFixed(2)}</div>
+          </div>
+        </div>
+
+        <div class="entrepreneur-actions">
+          <button type="button" class="action-btn primary" onclick="event.stopPropagation(); voirDashboard('${entrepreneur.username}');">
+            <i class="fas fa-chart-line"></i> Dashboard
+          </button>
+          <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); contacterEntrepreneur('${entrepreneur.courriel || ''}');">
+            <i class="fas fa-envelope"></i> Contact
+          </button>
+        </div>
+      </div>
+    `;
+  });
+
+  // Ajouter les emplacements vides
+  for (let i = 0; i < emptySlots; i++) {
+    html += `
+      <div class="empty-slot-card fade-in-up" style="animation-delay: ${(actualEntrepreneurs + i) * 0.1}s;">
+        <div class="empty-slot-icon">
+          <i class="fas fa-user-plus"></i>
+        </div>
+        <div class="empty-slot-text">
+          Emplacement pour<br>futur membre de l'équipe
+        </div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = html;
+}
+
+// Toggle between grid and ranking views
+function toggleView() {
+  currentView = currentView === 'grid' ? 'ranking' : 'grid';
+
+  const gridContainer = document.getElementById('entrepreneursContainer');
+  const classementContainer = document.getElementById('classementContainer');
+  const viewTitle = document.getElementById('viewTitle');
+
+  if (currentView === 'ranking') {
+    gridContainer.style.display = 'none';
+    classementContainer.style.display = 'block';
+    viewTitle.textContent = 'Classement Entrepreneurs';
+    renderClassementCards();
+  } else {
+    gridContainer.style.display = 'grid';
+    classementContainer.style.display = 'none';
+    viewTitle.textContent = 'Membres de l\'équipe';
+  }
+}
+
+// Render ranking cards
+function renderClassementCards() {
+  const container = document.getElementById('classementCards');
+
+  // Trier les entrepreneurs par CA (du plus élevé au plus bas)
+  const sortedEntrepreneurs = [...entrepreneursData].sort((a, b) => {
+    const caA = a.dollar_reel || 0;
+    const caB = b.dollar_reel || 0;
+    return caB - caA;
+  });
+
+  let html = '';
+
+  sortedEntrepreneurs.forEach((entrepreneur, index) => {
+    const rank = index + 1;
+    const photoUrl = entrepreneur.photo || `/api/get-file/${entrepreneur.username}/profile_photo_${entrepreneur.username}.png`;
+    const nomComplet = `${entrepreneur.prenom || ''} ${entrepreneur.nom || entrepreneur.username}`.trim();
+
+    // Médailles pour les 3 premières positions
+    let rangDisplay = '';
+    if (rank === 1) {
+      rangDisplay = '<i class="fas fa-medal" style="color: #fbbf24; font-size: 20px;"></i>';
+    } else if (rank === 2) {
+      rangDisplay = '<i class="fas fa-medal" style="color: #94a3b8; font-size: 20px;"></i>';
+    } else if (rank === 3) {
+      rangDisplay = '<i class="fas fa-medal" style="color: #cd7f32; font-size: 20px;"></i>';
+    } else {
+      rangDisplay = `<span style="font-weight: 700; font-size: 18px; color: var(--text-light);">${rank}</span>`;
+    }
+
+    const profilePhotoHTML = photoUrl
+      ? `<img src="${photoUrl}" alt="Photo de profil" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border-dark);" onerror="this.src='https://i.ibb.co/twJsgZrb/Design-sans-titre-39.png'">`
+      : `<div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #2586fd 0%, #b2c5fbc7 100%); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-dark);"><i class="fas fa-user" style="color: white; font-size: 16px;"></i></div>`;
+
+    html += `
+      <div class="classement-card fade-in-up" style="animation-delay: ${index * 0.05}s;">
+        <div class="classement-card-rang">
+          ${rangDisplay}
+        </div>
+        <div class="classement-card-photo">
+          ${profilePhotoHTML}
+        </div>
+        <div class="classement-card-info">
+          <div class="classement-card-name">${nomComplet}</div>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+// Fonctions utilitaires
+function formatGrade(grade) {
+  const grades = {
+    'rookie': 'Rookie',
+    'junior1': 'Junior I',
+    'junior2': 'Junior II',
+    'senior1': 'Senior I',
+    'senior2': 'Senior II',
+    'expert1': 'Expert I',
+    'expert2': 'Expert II',
+    'master': 'Master'
+  };
+  return grades[grade] || grade;
+}
+
+function formatMontant(montant) {
+  return new Intl.NumberFormat('fr-CA', {
+    style: 'currency',
+    currency: 'CAD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(montant);
+}
+
+function voirDashboard(username) {
+  console.log('Redirection vers dashboard pour:', username);
+
+  // Stocker le username de l'entrepreneur à visualiser
+  sessionStorage.setItem('viewEntrepreneurUsername', username);
+
+  // Rediriger vers le dashboard via le routeur parent (même logique que completerSoumission dans calcul.html)
+  if (window.parent && window.parent !== window) {
+    // On est dans un iframe - utiliser le hash du parent pour déclencher le routeur
+    window.parent.location.hash = '#/dashboard';
+  } else {
+    // Fallback si pas dans un iframe - garder le user du coach actuel
+    const urlParams = new URLSearchParams(window.location.search);
+    const coachUser = urlParams.get('user') || coachUsername;
+    window.location.href = `/apppccoach?user=${coachUser}#/dashboard`;
+  }
+}
+
+function contacterEntrepreneur(email) {
+  if (email) {
+    window.location.href = `mailto:${email}`;
+  }
+}
+</script>
+
+</body>
+</html>

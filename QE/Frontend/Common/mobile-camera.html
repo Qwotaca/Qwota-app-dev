@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Photo de profil</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #0f172a;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      padding: 1rem;
+      background: #1e293b;
+      text-align: center;
+      border-bottom: 1px solid #334155;
+    }
+
+    .header h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .camera-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    video {
+      width: 100%;
+      max-width: 500px;
+      border-radius: 12px;
+      background: #000;
+    }
+
+    canvas {
+      display: none;
+    }
+
+    .controls {
+      padding: 2rem 1rem;
+      text-align: center;
+    }
+
+    .capture-btn {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      border: none;
+      color: #fff;
+      font-size: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    }
+
+    .capture-btn:active {
+      transform: scale(0.95);
+      box-shadow: 0 2px 10px rgba(59, 130, 246, 0.3);
+    }
+
+    .icon-wrapper {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+    }
+
+    .instruction-card {
+      background: rgba(30, 41, 59, 0.6);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(148, 163, 184, 0.1);
+      border-radius: 16px;
+      padding: 2rem;
+      margin: 0 1rem;
+    }
+
+    .title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+
+    .click-here {
+      display: inline-flex;
+      align-items: center;
+      gap: 1rem;
+      color: #fff;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .click-here i {
+      font-size: 2rem;
+    }
+
+    .message {
+      text-align: center;
+      padding: 2rem;
+      font-size: 1.1rem;
+    }
+
+    .success-icon {
+      font-size: 4rem;
+      color: #22c55e;
+      margin-bottom: 1rem;
+    }
+
+    .error-message {
+      color: #ef4444;
+      padding: 1rem;
+      background: rgba(239, 68, 68, 0.1);
+      border-radius: 8px;
+      margin: 1rem;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .spinner {
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1><i class="fas fa-camera"></i> Photo de profil</h1>
+  </div>
+
+  <div id="camera-view" class="camera-container">
+    <div class="instruction-card">
+      <div class="title">
+        <i class="fas fa-mobile-alt"></i> Prendre une photo
+      </div>
+
+      <p style="color: #cbd5e1; margin-bottom: 2rem; font-size: 1rem; line-height: 1.6;">
+        Appuyez sur le bouton ci-dessous pour ouvrir votre appareil photo
+      </p>
+
+      <input type="file" id="photo-input" accept="image/*" style="display: none;">
+
+      <div style="display: flex; align-items: center; justify-content: flex-start; gap: 1.5rem;">
+        <label for="photo-input" class="capture-btn" style="cursor: pointer; display: inline-flex;">
+          <div class="icon-wrapper">
+            <i class="fas fa-camera"></i>
+          </div>
+        </label>
+
+        <div class="click-here">
+          <i class="fas fa-arrow-left"></i>
+          <span>Cliquez ici</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 2rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border-radius: 12px; border-left: 3px solid #3b82f6;">
+        <div style="display: flex; align-items: start; gap: 0.75rem;">
+          <i class="fas fa-info-circle" style="color: #3b82f6; margin-top: 0.2rem;"></i>
+          <p style="color: #94a3b8; font-size: 0.9rem; line-height: 1.5; text-align: left;">
+            Vous pourrez choisir entre prendre une nouvelle photo ou sélectionner une image de votre galerie
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="success-view" class="message" style="display: none;">
+    <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);">
+      <i class="fas fa-check" style="font-size: 2.5rem; color: white;"></i>
+    </div>
+    <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Photo envoyée avec succès!</h2>
+    <p style="color: #94a3b8; margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+      <i class="fas fa-times-circle"></i>
+      Vous pouvez fermer cette fenêtre
+    </p>
+  </div>
+
+  <div id="loading-view" class="loading" style="display: none;">
+    <div class="spinner"></div>
+    <p style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-size: 1.1rem;">
+      <i class="fas fa-cloud-upload-alt"></i>
+      Envoi en cours...
+    </p>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <script>
+    console.log('Script démarré');
+
+    // Récupérer les paramètres URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session');
+    const username = urlParams.get('username');
+
+    console.log('Session:', sessionId);
+    console.log('Username:', username);
+
+    const photoInput = document.getElementById('photo-input');
+    const cameraView = document.getElementById('camera-view');
+    const successView = document.getElementById('success-view');
+    const loadingView = document.getElementById('loading-view');
+
+    // Quand l'utilisateur sélectionne une photo
+    photoInput.addEventListener('change', async (event) => {
+      const file = event.target.files[0];
+
+      if (!file) {
+        console.log('Aucun fichier sélectionné');
+        return;
+      }
+
+      console.log('Photo sélectionnée:', file.name, file.size);
+
+      // Afficher le chargement
+      cameraView.style.display = 'none';
+      loadingView.style.display = 'block';
+
+      try {
+        // Envoyer au serveur
+        const formData = new FormData();
+        formData.append('photo', file, 'mobile-photo.jpg');
+        formData.append('session', sessionId);
+        formData.append('username', username);
+
+        console.log('Envoi au serveur...');
+        const response = await fetch('/api/upload-mobile-photo', {
+          method: 'POST',
+          body: formData
+        });
+
+        console.log('Réponse:', response.status);
+
+        if (response.ok) {
+          // Succès!
+          loadingView.style.display = 'none';
+          successView.style.display = 'block';
+          console.log('Photo envoyée avec succès!');
+        } else {
+          const errorText = await response.text();
+          console.error('Erreur serveur:', errorText);
+          throw new Error('Erreur lors de l\'envoi: ' + response.status);
+        }
+      } catch (error) {
+        console.error('Erreur envoi:', error);
+        alert('Erreur lors de l\'envoi de la photo: ' + error.message);
+        window.location.reload();
+      }
+    });
+
+    console.log('Prêt à recevoir une photo');
+  </script>
+</body>
+</html>

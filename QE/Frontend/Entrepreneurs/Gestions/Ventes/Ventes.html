@@ -1190,6 +1190,10 @@
             </div>
             <h2 class="box-header-title" style="margin: 0;">En attente</h2>
           </div>
+          <div id="total-attente" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px;">
+            <span style="color: var(--text-gray); font-size: 0.85rem;">Total:</span>
+            <span style="color: #f59e0b; font-weight: 700; font-size: 1rem;">0 $</span>
+          </div>
         </div>
         <div class="box-body">
           <!-- Champ de recherche -->
@@ -1237,6 +1241,10 @@
             </div>
             <h2 class="box-header-title" style="margin: 0;">Acceptés</h2>
           </div>
+          <div id="total-accepte" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px;">
+            <span style="color: var(--text-gray); font-size: 0.85rem;">Total:</span>
+            <span style="color: #10b981; font-weight: 700; font-size: 1rem;">0 $</span>
+          </div>
         </div>
         <div class="box-body">
           <!-- Champ de recherche -->
@@ -1283,6 +1291,10 @@
               <i class="fas fa-box"></i>
             </div>
             <h2 class="box-header-title" style="margin: 0;">Produits</h2>
+          </div>
+          <div id="total-produit" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 8px;">
+            <span style="color: var(--text-gray); font-size: 0.85rem;">Total:</span>
+            <span style="color: #8b5cf6; font-weight: 700; font-size: 1rem;">0 $</span>
           </div>
         </div>
         <div class="box-body">
@@ -6362,6 +6374,9 @@
 
       log(`[VENTES] ${ventes.length} vente(s) ${category} chargée(s)`);
 
+      // Calculer et afficher le total $ pour cette catégorie
+      updateCategoryTotal(category, ventes);
+
       // Réinitialiser l'affichage mobile après chargement des données
       if (window.innerWidth <= 600) {
         resetMobileDisplay(tbodyId);
@@ -6370,7 +6385,50 @@
     } catch (err) {
       error(`[VENTES] Erreur chargement ${category}:`, err);
       showEmptyTable(tbody, category);
+      // Réinitialiser le total à 0 en cas d'erreur
+      updateCategoryTotal(category, []);
     }
+  }
+
+  // Fonction pour calculer et afficher le total $ d'une catégorie
+  function updateCategoryTotal(category, ventes) {
+    // Mapping des catégories vers les IDs des éléments total
+    const totalIds = {
+      'attente': 'total-attente',
+      'acceptees': 'total-accepte',
+      'produit': 'total-produit'
+    };
+
+    const totalId = totalIds[category];
+    if (!totalId) return; // Pas de total pour "potentiel"
+
+    const totalElement = document.getElementById(totalId);
+    if (!totalElement) return;
+
+    // Calculer le total
+    let total = 0;
+    if (ventes && ventes.length > 0) {
+      ventes.forEach(vente => {
+        let prix = vente.prix || '0';
+        // Nettoyer le prix (enlever $, espaces, remplacer , par .)
+        if (typeof prix === 'string') {
+          prix = prix.replace(/\s/g, '').replace('$', '').replace(',', '.').replace(/[^\d.]/g, '');
+        }
+        const prixNum = parseFloat(prix);
+        if (!isNaN(prixNum)) {
+          total += prixNum;
+        }
+      });
+    }
+
+    // Formater et afficher le total
+    const totalFormate = Math.round(total).toLocaleString('fr-CA');
+    const spanTotal = totalElement.querySelector('span:last-child');
+    if (spanTotal) {
+      spanTotal.textContent = `${totalFormate} $`;
+    }
+
+    log(`[VENTES] Total ${category}: ${totalFormate} $`);
   }
 
   function showEmptyTable(tbody, category) {

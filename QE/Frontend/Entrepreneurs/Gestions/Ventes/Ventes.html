@@ -872,6 +872,78 @@
     }
 
     /* ========================================
+       CHECKBOX STYLES - Sélection multiple
+       ======================================== */
+    .prospect-checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(148, 163, 184, 0.4);
+      border-radius: 4px;
+      background: transparent;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    .prospect-checkbox:hover {
+      border-color: rgba(96, 165, 250, 0.6);
+      background: rgba(96, 165, 250, 0.05);
+    }
+
+    .prospect-checkbox:checked {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      border-color: #3b82f6;
+    }
+
+    .prospect-checkbox:checked::after {
+      content: '\f00c';
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 10px;
+    }
+
+    .prospect-checkbox:indeterminate {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      border-color: #8b5cf6;
+    }
+
+    .prospect-checkbox:indeterminate::after {
+      content: '\f068';
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 10px;
+    }
+
+    /* Action bar pour sélection multiple */
+    #prospect-action-bar {
+      display: none;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    #prospect-action-bar.visible {
+      display: flex;
+    }
+
+    /* ========================================
        RESPONSIVE TABLET (iPad) - Cacher Notes + Totaux à droite
        ======================================== */
     @media (max-width: 1024px) {
@@ -927,6 +999,15 @@
       }
       #total-attente span, #total-accepte span, #total-produit span {
         font-size: 0.85rem !important;
+      }
+
+      /* Cacher les checkboxes et barre d'action sur mobile */
+      .prospect-checkbox,
+      #select-all-prospects,
+      #prospect-action-bar,
+      td[data-label="Select"],
+      th:first-child {
+        display: none !important;
       }
 
       /* Clients potentiels - bouton en bas sur mobile */
@@ -1213,6 +1294,21 @@
           </button>
         </div>
         <div class="box-body">
+          <!-- Barre d'actions sélection multiple (cachée par défaut) -->
+          <div id="prospect-action-bar">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span id="prospect-selected-count" style="color: #60a5fa; font-weight: 600; font-size: 0.9rem;">0 sélectionné(s)</span>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button onclick="marquerProspectsCommePerdus()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border: none; color: white; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 500;">
+                <i class="fas fa-times-circle"></i> Marquer comme perdu
+              </button>
+              <button onclick="deselectionnerTousProspects()" style="background: rgba(148, 163, 184, 0.2); border: 1px solid rgba(148, 163, 184, 0.3); color: var(--text-light); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                <i class="fas fa-times"></i> Annuler
+              </button>
+            </div>
+          </div>
+
           <!-- Champ de recherche -->
           <div class="mb-4">
             <div class="relative">
@@ -1224,21 +1320,24 @@
             <table class="modern-table" style="table-layout: fixed; width: 100%;">
               <thead>
                 <tr>
-                  <th style="width: 12%; padding: 1rem; text-align: left;">Nom</th>
-                  <th style="width: 9%; padding: 1rem; text-align: left;">REP</th>
-                  <th style="width: 9%; padding: 1rem; text-align: left;">Provenance</th>
-                  <th style="width: 9%; padding: 1rem; text-align: left;">Type travaux</th>
+                  <th style="width: 3%; padding: 1rem; text-align: center;">
+                    <input type="checkbox" id="select-all-prospects" onchange="toggleSelectAllProspects(this)" class="prospect-checkbox">
+                  </th>
+                  <th style="width: 11%; padding: 1rem; text-align: left;">Nom</th>
+                  <th style="width: 8%; padding: 1rem; text-align: left;">REP</th>
+                  <th style="width: 8%; padding: 1rem; text-align: left;">Provenance</th>
+                  <th style="width: 8%; padding: 1rem; text-align: left;">Type travaux</th>
                   <th style="width: 10%; padding: 1rem; text-align: left;">Téléphone</th>
                   <th style="width: 17%; padding: 1rem; text-align: left;">Adresse</th>
-                  <th style="width: 9%; padding: 1rem; text-align: left;">Prix</th>
+                  <th style="width: 8%; padding: 1rem; text-align: left;">Prix</th>
                   <th style="width: 8%; padding: 1rem; text-align: left;">Status</th>
                   <th style="width: 5%; padding: 1rem; text-align: left;">Notes</th>
-                  <th style="width: 12%; padding: 1rem; text-align: left;">Paiement</th>
+                  <th style="width: 11%; padding: 1rem; text-align: left;">Paiement</th>
                 </tr>
               </thead>
               <tbody id="potentiel-tbody">
                 <tr class="loading-row">
-                  <td colspan="10" class="empty-state">
+                  <td colspan="11" class="empty-state">
                     <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem; color: var(--primary-blue); display: block;"></i>
                     <p style="font-size: 1rem; color: var(--text-gray);">Chargement des clients potentiels...</p>
                   </td>
@@ -6230,6 +6329,136 @@
     log('[VENTES] Toutes les données chargées');
   }
 
+  // ============================================
+  // GESTION SÉLECTION MULTIPLE PROSPECTS
+  // ============================================
+
+  let lastCheckedProspectIndex = null;
+  let wasProspectIndeterminate = false;
+
+  // Toggle toutes les checkboxes prospects
+  function toggleSelectAllProspects(checkbox) {
+    const checkboxes = document.querySelectorAll('#potentiel-tbody .prospect-checkbox');
+
+    if (wasProspectIndeterminate) {
+      checkboxes.forEach(cb => cb.checked = false);
+      checkbox.checked = false;
+    } else {
+      checkboxes.forEach(cb => cb.checked = checkbox.checked);
+    }
+
+    wasProspectIndeterminate = false;
+    lastCheckedProspectIndex = null;
+    updateProspectActionBar();
+  }
+
+  // Capturer l'état indeterminate avant le click
+  document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('select-all-prospects');
+    if (selectAllCheckbox) {
+      selectAllCheckbox.addEventListener('mousedown', function() {
+        wasProspectIndeterminate = this.indeterminate;
+      });
+    }
+  });
+
+  // Gestion du clic sur checkbox prospect (avec Shift+Click)
+  function handleProspectCheckboxClick(event, checkbox) {
+    const checkboxes = Array.from(document.querySelectorAll('#potentiel-tbody .prospect-checkbox'));
+    const currentIndex = checkboxes.indexOf(checkbox);
+
+    if (event.shiftKey && lastCheckedProspectIndex !== null && lastCheckedProspectIndex !== currentIndex) {
+      const start = Math.min(lastCheckedProspectIndex, currentIndex);
+      const end = Math.max(lastCheckedProspectIndex, currentIndex);
+      const shouldCheck = checkbox.checked;
+
+      for (let i = start; i <= end; i++) {
+        checkboxes[i].checked = shouldCheck;
+      }
+    }
+
+    lastCheckedProspectIndex = currentIndex;
+    updateProspectActionBar();
+  }
+
+  // Mettre à jour la barre d'actions
+  function updateProspectActionBar() {
+    const checkboxes = document.querySelectorAll('#potentiel-tbody .prospect-checkbox');
+    const checked = Array.from(checkboxes).filter(cb => cb.checked);
+    const count = checked.length;
+
+    const actionBar = document.getElementById('prospect-action-bar');
+    const selectedCount = document.getElementById('prospect-selected-count');
+    const selectAll = document.getElementById('select-all-prospects');
+
+    selectedCount.textContent = count === 0 ? '0 sélectionné' : count === 1 ? '1 sélectionné' : `${count} sélectionnés`;
+
+    if (count > 0) {
+      actionBar.classList.add('visible');
+    } else {
+      actionBar.classList.remove('visible');
+    }
+
+    if (count === 0) {
+      selectAll.checked = false;
+      selectAll.indeterminate = false;
+    } else if (count === checkboxes.length) {
+      selectAll.checked = true;
+      selectAll.indeterminate = false;
+    } else {
+      selectAll.checked = false;
+      selectAll.indeterminate = true;
+    }
+  }
+
+  // Désélectionner tous les prospects
+  function deselectionnerTousProspects() {
+    const checkboxes = document.querySelectorAll('#potentiel-tbody .prospect-checkbox');
+    checkboxes.forEach(cb => cb.checked = false);
+    document.getElementById('select-all-prospects').checked = false;
+    updateProspectActionBar();
+  }
+
+  // Marquer les prospects sélectionnés comme perdus
+  async function marquerProspectsCommePerdus() {
+    const checkboxes = document.querySelectorAll('#potentiel-tbody .prospect-checkbox:checked');
+    if (checkboxes.length === 0) return;
+
+    const prospectIds = Array.from(checkboxes).map(cb => cb.dataset.prospectId);
+    const count = prospectIds.length;
+
+    if (!confirm(`Êtes-vous sûr de vouloir marquer ${count} client(s) potentiel(s) comme perdu(s) ?`)) {
+      return;
+    }
+
+    try {
+      // Marquer chaque prospect comme perdu
+      for (const prospectId of prospectIds) {
+        const response = await fetch(`/prospects/${window.username}/${prospectId}/perdu`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) {
+          console.error(`Erreur pour prospect ${prospectId}`);
+        }
+      }
+
+      // Rafraîchir la liste des prospects
+      await loadProspects('potentiel-tbody');
+
+      // Réinitialiser la sélection
+      deselectionnerTousProspects();
+
+      // Afficher un message de succès
+      alert(`${count} client(s) potentiel(s) marqué(s) comme perdu(s)`);
+
+    } catch (error) {
+      console.error('Erreur lors du marquage comme perdu:', error);
+      alert('Erreur lors du marquage comme perdu');
+    }
+  }
+
   async function loadProspects(tbodyId) {
     const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
@@ -6288,15 +6517,18 @@
 
         return `
         <tr style="cursor: pointer;" onclick='showClientDetails(${index}, "prospects")'>
-          <td data-label="Nom" style="width: 12%; text-align: left;">${nomComplet}</td>
-          <td data-label="REP" style="width: 9%; text-align: left;" onclick="event.stopPropagation()">${statutBadge}</td>
-          <td data-label="Provenance" style="width: 9%; text-align: left;" onclick="event.stopPropagation()">${provenanceBadge}</td>
-          <td data-label="Type travaux" style="width: 9%; text-align: left;" onclick="event.stopPropagation()">${typeTravauxBadge}</td>
+          <td data-label="Select" style="width: 3%; text-align: center;" onclick="event.stopPropagation()">
+            <input type="checkbox" class="prospect-checkbox" data-prospect-index="${index}" data-prospect-id="${prospectId}" onclick="handleProspectCheckboxClick(event, this)">
+          </td>
+          <td data-label="Nom" style="width: 11%; text-align: left;">${nomComplet}</td>
+          <td data-label="REP" style="width: 8%; text-align: left;" onclick="event.stopPropagation()">${statutBadge}</td>
+          <td data-label="Provenance" style="width: 8%; text-align: left;" onclick="event.stopPropagation()">${provenanceBadge}</td>
+          <td data-label="Type travaux" style="width: 8%; text-align: left;" onclick="event.stopPropagation()">${typeTravauxBadge}</td>
           <td data-label="Téléphone" style="width: 10%; text-align: left;">${prospect.telephone || '-'}</td>
           <td data-label="Adresse" style="width: 17%; text-align: left;" onmouseenter="window.customTooltip.show('${(prospect.adresse || '-').replace(/'/g, "\\'")}', this);" onmouseleave="window.customTooltip.hide();">
             <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${prospect.adresse || '-'}</div>
           </td>
-          <td data-label="Prix" style="width: 9%; text-align: left;">${prixFormate}</td>
+          <td data-label="Prix" style="width: 8%; text-align: left;">${prixFormate}</td>
           <td data-label="Étiquette" style="width: 8%; text-align: left;" onclick="event.stopPropagation()">${etiquetteBadge}</td>
           <td data-label="Notes" style="width: 5%; text-align: center;" onclick="event.stopPropagation()">
             <div style="position: relative; display: inline-block; cursor: pointer;"
@@ -6308,7 +6540,7 @@
               ${hasNotes ? '<span style="position: absolute; top: -5px; right: -8px; background: #ef4444; color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; pointer-events: none;">1</span>' : ''}
             </div>
           </td>
-          <td data-label="Paiement" style="width: 12%; text-align: left;">-</td>
+          <td data-label="Paiement" style="width: 11%; text-align: left;">-</td>
         </tr>
       `}).join('');
 

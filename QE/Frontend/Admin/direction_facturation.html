@@ -3875,7 +3875,7 @@
                 </td>
                 <td style="padding: 0.75rem; font-weight: 600; font-size: 0.85rem; color: var(--text-light);">${h.type === 'remboursement' ? '-' + (h.montant || '0,00 $') : (h.montant || '0,00 $')}</td>
                 <td style="padding: 0.75rem 1.5rem; text-align: center;">
-                  <input type="checkbox" class="payment-checkbox custom-checkbox" data-payment-index="${index}" onchange="updateActionBar()">
+                  <input type="checkbox" class="payment-checkbox custom-checkbox" data-payment-index="${index}" onclick="handleCheckboxClick(event, this)">
                 </td>
               </tr>
             `;
@@ -3945,7 +3945,7 @@
               </td>
               <td style="padding: 0.75rem; font-weight: 600; font-size: 0.85rem; color: var(--text-light);">${h.type === 'remboursement' ? '-' + (h.montant || '0,00 $') : (h.montant || '0,00 $')}</td>
               <td style="padding: 0.75rem 1.5rem; text-align: center;">
-                <input type="checkbox" class="payment-checkbox custom-checkbox" data-payment-index="${index}" onchange="updateActionBar()">
+                <input type="checkbox" class="payment-checkbox custom-checkbox" data-payment-index="${index}" onclick="handleCheckboxClick(event, this)">
               </td>
             </tr>
           `;
@@ -4017,6 +4017,30 @@
       checkboxes.forEach(cb => {
         cb.checked = checkbox.checked;
       });
+      lastCheckedIndex = null;
+      updateActionBar();
+    }
+
+    // Variable pour tracker le dernier checkbox cliqué (pour Shift+Click)
+    let lastCheckedIndex = null;
+
+    // Gestion du Shift+Click pour sélection multiple
+    function handleCheckboxClick(event, checkbox) {
+      const checkboxes = Array.from(document.querySelectorAll('.payment-checkbox'));
+      const currentIndex = checkboxes.indexOf(checkbox);
+
+      if (event.shiftKey && lastCheckedIndex !== null && lastCheckedIndex !== currentIndex) {
+        // Shift+Click: sélectionner tous entre lastCheckedIndex et currentIndex
+        const start = Math.min(lastCheckedIndex, currentIndex);
+        const end = Math.max(lastCheckedIndex, currentIndex);
+        const shouldCheck = checkbox.checked;
+
+        for (let i = start; i <= end; i++) {
+          checkboxes[i].checked = shouldCheck;
+        }
+      }
+
+      lastCheckedIndex = currentIndex;
       updateActionBar();
     }
 

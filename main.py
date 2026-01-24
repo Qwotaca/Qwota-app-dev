@@ -15606,6 +15606,64 @@ async def valider_facturation_comptable(username: str, numero_soumission: str, r
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/comptable/facturation/retourner-general")
+async def retourner_paiements_general(request: Request):
+    """Retourne des paiements du Rapprochement QBO vers Général (retire de l'historique)"""
+    try:
+        data = await request.json()
+        paiements = data.get("paiements", [])
+
+        if not paiements:
+            raise HTTPException(status_code=400, detail="Aucun paiement fourni")
+
+        # Charger l'historique
+        historique_file = os.path.join(base_cloud, "facturation_qe_historique", "historique.json")
+        if not os.path.exists(historique_file):
+            return {"success": True, "message": "Aucun historique trouvé", "removed": 0}
+
+        with open(historique_file, "r", encoding="utf-8") as f:
+            historique = json.load(f)
+
+        # Créer un set des paiements à retirer
+        paiements_a_retirer = set()
+        for p in paiements:
+            # Clé unique: (entrepreneurUsername, numeroSoumission, type, index)
+            key = (
+                p.get("entrepreneurUsername"),
+                p.get("numeroSoumission"),
+                p.get("type"),
+                p.get("index")
+            )
+            paiements_a_retirer.add(key)
+
+        # Filtrer l'historique pour retirer les paiements
+        historique_original_len = len(historique)
+        historique_filtre = []
+        for h in historique:
+            key = (
+                h.get("entrepreneurUsername"),
+                h.get("numeroSoumission"),
+                h.get("type"),
+                h.get("index")
+            )
+            if key not in paiements_a_retirer:
+                historique_filtre.append(h)
+
+        # Sauvegarder l'historique mis à jour
+        with open(historique_file, "w", encoding="utf-8") as f:
+            json.dump(historique_filtre, f, ensure_ascii=False, indent=2)
+
+        removed_count = historique_original_len - len(historique_filtre)
+        print(f"[RETOURNER GÉNÉRAL] {removed_count} paiement(s) retiré(s) de l'historique")
+
+        return {"success": True, "message": f"{removed_count} paiement(s) retourné(s) à Général", "removed": removed_count}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erreur lors du retour à général: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/notifications/modifications/{username}")
 async def get_notifications_modifications(username: str):
     """Récupère les notifications de modifications de montant non vues pour un entrepreneur"""

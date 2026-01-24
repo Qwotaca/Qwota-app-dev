@@ -2286,6 +2286,10 @@
               <span id="selected-count" style="color: #60a5fa; font-weight: 600; font-size: 0.9rem;">0 sélectionné(s)</span>
             </div>
             <div style="display: flex; gap: 0.5rem;">
+              <button onclick="retournerGeneral()" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); border: none; color: white; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s;">
+                <i class="fas fa-arrow-left"></i>
+                Retourner à Général
+              </button>
               <button onclick="exporterSelection()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: white; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s;">
                 <i class="fas fa-file-export"></i>
                 Exporter
@@ -4201,6 +4205,57 @@
       `;
 
       document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    // Retourner les paiements sélectionnés à Général (retirer du Rapprochement QBO)
+    async function retournerGeneral() {
+      const selected = getSelectedPayments();
+      if (selected.length === 0) {
+        alert('Aucun paiement sélectionné');
+        return;
+      }
+
+      // Confirmation
+      if (!confirm(`Retourner ${selected.length} paiement(s) à Général ?\n\nLes paiements seront retirés du Rapprochement QBO et reviendront dans la liste Général pour validation.`)) {
+        return;
+      }
+
+      try {
+        // Préparer les données pour l'API
+        const paiementsData = selected.map(p => ({
+          entrepreneurUsername: p.entrepreneurUsername,
+          numeroSoumission: p.numeroSoumission,
+          type: p.type,
+          index: p.index !== undefined ? p.index : null
+        }));
+
+        const response = await fetch('/api/comptable/facturation/retourner-general', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paiements: paiementsData })
+        });
+
+        if (!response.ok) {
+          throw new Error('Erreur lors du retour à Général');
+        }
+
+        const result = await response.json();
+
+        // Rafraîchir les tableaux
+        await chargerPaiementsEnTraitement();
+        await refreshRapprochementTable();
+
+        // Décocher toutes les checkboxes
+        document.querySelectorAll('.payment-checkbox').forEach(cb => cb.checked = false);
+        document.getElementById('select-all-rapprochement').checked = false;
+        updateActionBar();
+
+        showSuccessToast('Retour effectué', `${result.removed} paiement(s) retourné(s) à Général`);
+
+      } catch (error) {
+        console.error('[Direction Facturation] Erreur retour général:', error);
+        alert('Erreur lors du retour à Général');
+      }
     }
 
     // Sélectionner une période dans le modal

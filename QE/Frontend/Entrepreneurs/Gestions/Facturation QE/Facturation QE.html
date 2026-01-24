@@ -14956,10 +14956,25 @@
         const newRotation = (currentRotation + 90) % 360;
         img.dataset.rotation = newRotation;
 
-        // Quand l'image est à 90 ou 270 degrés, on la réduit pour qu'elle reste dans sa case
+        // Quand l'image est à 90 ou 270 degrés, calculer le scale optimal
         const isVertical = (newRotation === 90 || newRotation === 270);
-        const scale = isVertical ? 0.6 : 1;
-        img.style.transform = `rotate(${newRotation}deg) scale(${scale})`;
+        if (isVertical) {
+          // Obtenir les dimensions du conteneur et de l'image
+          const container = img.parentElement;
+          const containerWidth = container.clientWidth;
+          const containerHeight = container.clientHeight;
+          const imgWidth = img.naturalWidth || img.width;
+          const imgHeight = img.naturalHeight || img.height;
+
+          // Calculer le scale pour que l'image tournée remplisse au max le conteneur
+          const scaleX = containerWidth / imgHeight;
+          const scaleY = containerHeight / imgWidth;
+          const scale = Math.min(scaleX, scaleY, 1) * 0.95;
+
+          img.style.transform = `rotate(${newRotation}deg) scale(${scale})`;
+        } else {
+          img.style.transform = `rotate(${newRotation}deg)`;
+        }
       }
     };
 

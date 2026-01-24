@@ -4012,14 +4012,34 @@
     // ============================================
 
     // Toggle toutes les checkboxes
+    // Variable pour savoir si le checkbox était indeterminate avant le click
+    let wasIndeterminate = false;
+
     function toggleSelectAll(checkbox) {
       const checkboxes = document.querySelectorAll('.payment-checkbox');
-      checkboxes.forEach(cb => {
-        cb.checked = checkbox.checked;
-      });
+
+      // Si c'était indeterminate, on désélectionne tout
+      if (wasIndeterminate) {
+        checkboxes.forEach(cb => cb.checked = false);
+        checkbox.checked = false;
+      } else {
+        checkboxes.forEach(cb => cb.checked = checkbox.checked);
+      }
+
+      wasIndeterminate = false;
       lastCheckedIndex = null;
       updateActionBar();
     }
+
+    // Capturer l'état indeterminate AVANT que le click ne le change
+    document.addEventListener('DOMContentLoaded', function() {
+      const selectAllCheckbox = document.getElementById('select-all-rapprochement');
+      if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('mousedown', function() {
+          wasIndeterminate = this.indeterminate;
+        });
+      }
+    });
 
     // Variable pour tracker le dernier checkbox cliqué (pour Shift+Click)
     let lastCheckedIndex = null;

@@ -5083,10 +5083,14 @@
       let currentUserBeyond40 = null;
       let currentUserOriginalIndex = -1;
 
-      if (context === 'entrepreneur' && data.length > MAX_DISPLAY) {
+      // Seulement appliquer la limite de 40 pour le contexte entrepreneur avec un username défini
+      const currentUsername = window.username || '';
+      if (context === 'entrepreneur' && data.length > MAX_DISPLAY && currentUsername) {
         // Trouver la position de l'utilisateur actuel dans les données complètes
-        const currentUsername = window.username;
-        currentUserOriginalIndex = data.findIndex(e => e.username === currentUsername || e.login_username === currentUsername);
+        currentUserOriginalIndex = data.findIndex(e =>
+          (e.username && e.username === currentUsername) ||
+          (e.login_username && e.login_username === currentUsername)
+        );
 
         if (currentUserOriginalIndex >= MAX_DISPLAY) {
           // L'utilisateur est au-delà du top 40, le sauvegarder pour l'afficher en bas
@@ -5096,11 +5100,17 @@
 
         // Limiter à 40
         dataToDisplay = data.slice(0, MAX_DISPLAY);
+      } else if (context === 'entrepreneur' && data.length > MAX_DISPLAY) {
+        // Pas de username, juste limiter à 40
+        dataToDisplay = data.slice(0, MAX_DISPLAY);
       }
 
       tbody.innerHTML = dataToDisplay.map((entrepreneur, index) => {
-        // Vérifier si c'est l'utilisateur actuel
-        const isCurrentUser = entrepreneur.username === window.username || entrepreneur.login_username === window.username;
+        // Vérifier si c'est l'utilisateur actuel (avec protection contre undefined)
+        const isCurrentUser = currentUsername && (
+          (entrepreneur.username && entrepreneur.username === currentUsername) ||
+          (entrepreneur.login_username && entrepreneur.login_username === currentUsername)
+        );
 
         // Médailles pour les 3 premières positions
         let rangDisplay = '';
@@ -5297,8 +5307,11 @@
 
         const profilePhotoHTML = `<div class="classement-card-photo-container ${gradeClass}">${profilePhotoContent}</div>`;
 
-        // Badge "Moi" si c'est l'utilisateur actuel - style plus visible
-        const isCurrentUser = entrepreneur.username === window.username || entrepreneur.login_username === window.username;
+        // Badge "Moi" si c'est l'utilisateur actuel - style plus visible (avec protection contre undefined)
+        const isCurrentUser = currentUsername && (
+          (entrepreneur.username && entrepreneur.username === currentUsername) ||
+          (entrepreneur.login_username && entrepreneur.login_username === currentUsername)
+        );
         const meBadge = isCurrentUser
           ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.6rem; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; font-size: 0.7rem; font-weight: 700; border-radius: 12px; margin-left: 0.5rem; box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4); letter-spacing: 0.5px; text-transform: uppercase;"><i class="fas fa-user-circle" style="font-size: 0.75rem;"></i>MOI</span>`
           : '';

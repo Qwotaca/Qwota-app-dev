@@ -4565,14 +4565,29 @@
     }
 
     async function removePaymentFromPeriode(periodeId, paymentIndex) {
-      if (window.periodePaiements[periodeId]) {
+      if (window.periodePaiements[periodeId] && window.periodePaiements[periodeId][paymentIndex]) {
+        // Récupérer le paiement AVANT de le retirer
+        const paiement = window.periodePaiements[periodeId][paymentIndex];
+
+        // Remettre le paiement dans l'historique (Rapprochement QBO)
+        try {
+          await fetch('/api/comptable/facturation/remettre-rapprochement', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paiement: paiement })
+          });
+        } catch (error) {
+          console.error('[Direction Facturation] Erreur remettre rapprochement:', error);
+        }
+
+        // Retirer de la période
         window.periodePaiements[periodeId].splice(paymentIndex, 1);
         updatePeriodeDisplay(periodeId);
 
         // Sauvegarder les changements dans le backend
         await savePeriodesToBackend();
 
-        // Rafraîchir le tableau "Rapprochement QBO" pour remettre le paiement retiré
+        // Rafraîchir le tableau "Rapprochement QBO" pour afficher le paiement remis
         await refreshRapprochementTable();
       }
     }

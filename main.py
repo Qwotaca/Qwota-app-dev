@@ -15664,6 +15664,83 @@ async def retourner_paiements_general(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/comptable/facturation/remettre-rapprochement")
+async def remettre_paiement_rapprochement(request: Request):
+    """Remet un paiement dans l'historique (Rapprochement QBO) - utilisé quand on retire d'une période"""
+    try:
+        data = await request.json()
+        paiement = data.get("paiement")
+
+        if not paiement:
+            raise HTTPException(status_code=400, detail="Paiement non fourni")
+
+        # Charger l'historique
+        historique_file = os.path.join(base_cloud, "facturation_qe_historique", "historique.json")
+        historique = []
+        if os.path.exists(historique_file):
+            with open(historique_file, "r", encoding="utf-8") as f:
+                historique = json.load(f)
+
+        # Vérifier si le paiement n'est pas déjà dans l'historique
+        key = (
+            paiement.get("entrepreneurUsername"),
+            paiement.get("numeroSoumission"),
+            paiement.get("type"),
+            paiement.get("index")
+        )
+
+        already_exists = False
+        for h in historique:
+            h_key = (
+                h.get("entrepreneurUsername"),
+                h.get("numeroSoumission"),
+                h.get("type"),
+                h.get("index")
+            )
+            if h_key == key:
+                already_exists = True
+                break
+
+        if not already_exists:
+            # Créer l'entrée pour l'historique
+            entry = {
+                "entrepreneur": paiement.get("entrepreneur", ""),
+                "entrepreneurUsername": paiement.get("entrepreneurUsername", ""),
+                "entrepreneurPhoto": paiement.get("entrepreneurPhoto", ""),
+                "client": paiement.get("client", ""),
+                "numeroSoumission": paiement.get("numeroSoumission", ""),
+                "type": paiement.get("type", ""),
+                "montant": paiement.get("montant", "0,00 $"),
+                "lienVirement": paiement.get("lienVirement", ""),
+                "statut": "attente_comptable",
+                "date": paiement.get("date", datetime.now().strftime("%d/%m/%Y %H:%M"))
+            }
+
+            # Ajouter l'index pour les paiements partiels
+            if paiement.get("type") == "autres_paiements" and paiement.get("index") is not None:
+                entry["index"] = paiement.get("index")
+
+            # Ajouter au début de l'historique
+            historique.insert(0, entry)
+
+            # Sauvegarder (garder les 500 dernières entrées)
+            historique = historique[:500]
+            with open(historique_file, "w", encoding="utf-8") as f:
+                json.dump(historique, f, ensure_ascii=False, indent=2)
+
+            print(f"[REMETTRE RAPPROCHEMENT] Paiement ajouté à l'historique: {paiement.get('numeroSoumission')}")
+            return {"success": True, "message": "Paiement remis dans Rapprochement QBO"}
+        else:
+            print(f"[REMETTRE RAPPROCHEMENT] Paiement déjà dans l'historique: {paiement.get('numeroSoumission')}")
+            return {"success": True, "message": "Paiement déjà dans Rapprochement QBO"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erreur lors de la remise dans rapprochement: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/notifications/modifications/{username}")
 async def get_notifications_modifications(username: str):
     """Récupère les notifications de modifications de montant non vues pour un entrepreneur"""

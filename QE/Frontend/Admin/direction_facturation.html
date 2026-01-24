@@ -4208,17 +4208,87 @@
     }
 
     // Retourner les paiements sélectionnés à Général (retirer du Rapprochement QBO)
-    async function retournerGeneral() {
+    function retournerGeneral() {
       const selected = getSelectedPayments();
       if (selected.length === 0) {
-        alert('Aucun paiement sélectionné');
+        showSuccessToast('Attention', 'Aucun paiement sélectionné');
         return;
       }
 
-      // Confirmation
-      if (!confirm(`Retourner ${selected.length} paiement(s) à Général ?\n\nLes paiements seront retirés du Rapprochement QBO et reviendront dans la liste Général pour validation.`)) {
+      // Stocker les paiements sélectionnés pour la confirmation
+      window.paiementsRetourGeneral = selected;
+
+      // Désactiver le scroll du body
+      document.body.style.overflow = 'hidden';
+
+      // Créer le modal de confirmation
+      const modalHtml = `
+        <div id="retour-general-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+          <div class="box" style="max-width: 500px; width: 90%; margin: 0; max-height: none; overflow: visible;" onclick="event.stopPropagation()">
+            <!-- Header -->
+            <div class="box-header" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div class="box-header-icon" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
+                  <i class="fas fa-arrow-left" style="font-size: 0.9rem;"></i>
+                </div>
+                <div>
+                  <h3 class="box-header-title" style="font-size: 1rem; margin: 0;">Retourner à Général</h3>
+                  <p class="box-header-subtitle" style="font-size: 0.8rem; margin: 0;">${selected.length} paiement(s) sélectionné(s)</p>
+                </div>
+              </div>
+              <button onclick="fermerModalRetourGeneral()" style="background: none; border: none; color: var(--text-gray); cursor: pointer; font-size: 1.2rem; padding: 0.25rem; transition: color 0.2s;" onmouseover="this.style.color='var(--text-light)'" onmouseout="this.style.color='var(--text-gray)'">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+
+            <!-- Body -->
+            <div class="box-body" style="padding: 1.25rem;">
+              <div style="background: rgba(107, 114, 128, 0.1); border: 1px solid rgba(107, 114, 128, 0.3); border-radius: 8px; padding: 1rem;">
+                <p style="color: var(--text-light); font-size: 0.9rem; margin: 0; line-height: 1.5;">
+                  Les paiements seront retirés du <strong>Rapprochement QBO</strong> et reviendront dans la liste <strong>Général</strong> pour validation.
+                </p>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="box-footer" style="display: flex; gap: 0.65rem; justify-content: flex-end; padding: 1rem 1.25rem;">
+              <button onclick="fermerModalRetourGeneral()" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                <i class="fas fa-times"></i>
+                Annuler
+              </button>
+              <button onclick="confirmerRetourGeneral()" class="btn" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); border: none; color: white; padding: 0.5rem 1rem; font-size: 0.9rem; border-radius: 6px; cursor: pointer;">
+                <i class="fas fa-check"></i>
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    // Fermer le modal de retour à général
+    function fermerModalRetourGeneral() {
+      document.body.style.overflow = '';
+      const modal = document.getElementById('retour-general-modal');
+      if (modal) {
+        modal.remove();
+      }
+    }
+
+    // Confirmer le retour à général
+    async function confirmerRetourGeneral() {
+      // Éviter les clics multiples
+      if (window.isConfirmingRetour) {
         return;
       }
+      window.isConfirmingRetour = true;
+
+      const selected = window.paiementsRetourGeneral || [];
+
+      // Fermer le modal
+      fermerModalRetourGeneral();
 
       try {
         // Préparer les données pour l'API
@@ -4254,7 +4324,9 @@
 
       } catch (error) {
         console.error('[Direction Facturation] Erreur retour général:', error);
-        alert('Erreur lors du retour à Général');
+        showSuccessToast('Erreur', 'Erreur lors du retour à Général');
+      } finally {
+        window.isConfirmingRetour = false;
       }
     }
 

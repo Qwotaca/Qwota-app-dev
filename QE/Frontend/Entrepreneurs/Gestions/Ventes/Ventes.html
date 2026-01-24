@@ -3872,6 +3872,57 @@
     </div>
   </div>
 
+  <!-- Modal confirmation marquer comme perdu -->
+  <div id="perduConfirmModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 450px;">
+      <h3 class="modal-title">
+        <i class="fas fa-exclamation-triangle mr-2" style="color: #ef4444;"></i>
+        Confirmer
+      </h3>
+      <div class="modal-body">
+        <p id="perduConfirmMessage" style="color: var(--text-secondary); font-size: 1rem; line-height: 1.5;"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="perduConfirmCancel" class="btn-secondary">Annuler</button>
+        <button id="perduConfirmOk" class="btn-primary" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+          <i class="fas fa-times-circle mr-2"></i>Marquer comme perdu
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal succès -->
+  <div id="perduSuccessModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 400px;">
+      <h3 class="modal-title">
+        <i class="fas fa-check-circle mr-2" style="color: #10b981;"></i>
+        Succès
+      </h3>
+      <div class="modal-body">
+        <p id="perduSuccessMessage" style="color: var(--text-secondary); font-size: 1rem; line-height: 1.5;"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="perduSuccessOk" class="btn-primary" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal erreur -->
+  <div id="perduErrorModal" class="modal-overlay-opaque" style="display: none;">
+    <div class="modal-content" style="max-width: 400px;">
+      <h3 class="modal-title">
+        <i class="fas fa-times-circle mr-2" style="color: #ef4444;"></i>
+        Erreur
+      </h3>
+      <div class="modal-body">
+        <p id="perduErrorMessage" style="color: var(--text-secondary); font-size: 1rem; line-height: 1.5;"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="perduErrorOk" class="btn-primary" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">OK</button>
+      </div>
+    </div>
+  </div>
+
   <!-- JavaScript sections management -->
   <!-- <script src="/Ventes_sections.js"></script> -->
 
@@ -6578,6 +6629,36 @@
   }
 
   // Marquer toute la sélection comme perdue
+  // Fonction pour afficher le modal de confirmation perdu
+  function showPerduConfirmModal(count) {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('perduConfirmModal');
+      const message = document.getElementById('perduConfirmMessage');
+      const btnOk = document.getElementById('perduConfirmOk');
+      const btnCancel = document.getElementById('perduConfirmCancel');
+
+      message.textContent = `Êtes-vous sûr de vouloir marquer ${count} client(s) comme perdu(s) ?`;
+      modal.style.display = 'flex';
+
+      const handleConfirm = () => {
+        modal.style.display = 'none';
+        btnOk.removeEventListener('click', handleConfirm);
+        btnCancel.removeEventListener('click', handleCancel);
+        resolve(true);
+      };
+
+      const handleCancel = () => {
+        modal.style.display = 'none';
+        btnOk.removeEventListener('click', handleConfirm);
+        btnCancel.removeEventListener('click', handleCancel);
+        resolve(false);
+      };
+
+      btnOk.addEventListener('click', handleConfirm);
+      btnCancel.addEventListener('click', handleCancel);
+    });
+  }
+
   async function marquerSelectionCommePerdus() {
     // Collecter toutes les sélections
     const selections = {
@@ -6607,7 +6688,9 @@
 
     if (totalCount === 0) return;
 
-    if (!confirm(`Êtes-vous sûr de vouloir marquer ${totalCount} client(s) comme perdu(s) ?`)) {
+    // Afficher le modal de confirmation personnalisé
+    const confirmed = await showPerduConfirmModal(totalCount);
+    if (!confirmed) {
       return;
     }
 
@@ -6653,13 +6736,47 @@
       // Réinitialiser la sélection
       deselectionnerTout();
 
-      // Message de succès
-      alert(`${totalCount} client(s) marqué(s) comme perdu(s)`);
+      // Message de succès avec modal personnalisé
+      showSuccessModal(`${totalCount} client(s) marqué(s) comme perdu(s)`);
 
     } catch (error) {
       console.error('Erreur lors du marquage comme perdu:', error);
-      alert('Erreur lors du marquage comme perdu');
+      showErrorModal('Erreur lors du marquage comme perdu');
     }
+  }
+
+  // Fonction pour afficher un modal de succès
+  function showSuccessModal(message) {
+    const modal = document.getElementById('perduSuccessModal');
+    const msgEl = document.getElementById('perduSuccessMessage');
+    const btnOk = document.getElementById('perduSuccessOk');
+
+    msgEl.textContent = message;
+    modal.style.display = 'flex';
+
+    const handleClose = () => {
+      modal.style.display = 'none';
+      btnOk.removeEventListener('click', handleClose);
+    };
+
+    btnOk.addEventListener('click', handleClose);
+  }
+
+  // Fonction pour afficher un modal d'erreur
+  function showErrorModal(message) {
+    const modal = document.getElementById('perduErrorModal');
+    const msgEl = document.getElementById('perduErrorMessage');
+    const btnOk = document.getElementById('perduErrorOk');
+
+    msgEl.textContent = message;
+    modal.style.display = 'flex';
+
+    const handleClose = () => {
+      modal.style.display = 'none';
+      btnOk.removeEventListener('click', handleClose);
+    };
+
+    btnOk.addEventListener('click', handleClose);
   }
 
   // Backward compatibility

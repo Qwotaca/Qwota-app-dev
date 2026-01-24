@@ -5015,6 +5015,14 @@ def envoyer_soumission_signee(
         envoyer_email_soumission_signee(clientEmail, clientNom, clientPrenom, lien_pdf_signe, username, language)
         envoyer_email_soumission_signee_entrepreneur(username, lien_pdf_signe, clientPrenom, clientNom)
 
+        # Sync RPO après la signature (contrat signé)
+        try:
+            from QE.Backend.rpo import sync_soumissions_to_rpo
+            sync_soumissions_to_rpo(username)
+            print(f"[OK] RPO synchronisé après signature pour {username}")
+        except Exception as sync_error:
+            print(f"[WARNING] Erreur sync RPO après signature: {sync_error}")
+
         return JSONResponse({"message": "Soumission signée envoyée avec succès"})
 
     except Exception as e:
@@ -20585,6 +20593,15 @@ def record_soumission_sent(username: str):
             json.dump(stats, f, indent=2, ensure_ascii=False)
 
         print(f"[DATA] [Stats] Soumission enregistrée pour {username} le {today}")
+
+        # Sync RPO après l'envoi de la soumission
+        try:
+            from QE.Backend.rpo import sync_soumissions_to_rpo
+            sync_soumissions_to_rpo(username)
+            print(f"[DATA] [Stats] RPO synchronisé pour {username}")
+        except Exception as sync_error:
+            print(f"[WARNING] [Stats] Erreur sync RPO: {sync_error}")
+
         return {"success": True, "message": "Soumission enregistrée"}
 
     except Exception as e:
@@ -23328,15 +23345,39 @@ async def supprimer_client_perdu(data: dict = Body(...)):
     """
     try:
         username = data.get("username")
-        client_id = data.get("client_id")  # C'est le num de soumission
+        client_id = data.get("client_id")  # Peut être UUID ou num
 
         if not username or not client_id:
             raise HTTPException(status_code=400, detail="Username et client_id requis")
 
-        num_soumission = str(client_id)
+        client_id_str = str(client_id)
         supprime_de = []
 
-        # Helper pour supprimer d'un fichier JSON (liste)
+        # D'abord, récupérer le client perdu pour obtenir TOUTES ses identifiants (id ET num)
+        fichier_perdus = os.path.join(f"{base_cloud}/clients_perdus", username, "clients.json")
+        identifiants_a_matcher = {client_id_str}  # Set pour éviter les doublons
+
+        if os.path.exists(fichier_perdus):
+            try:
+                with open(fichier_perdus, "r", encoding="utf-8") as f:
+                    clients_perdus = json.load(f)
+
+                # Trouver le client perdu et récupérer tous ses identifiants
+                for client in clients_perdus:
+                    if str(client.get('id', '')) == client_id_str or str(client.get('num', '')) == client_id_str:
+                        # Ajouter tous les identifiants possibles
+                        if client.get('id'):
+                            identifiants_a_matcher.add(str(client.get('id')))
+                        if client.get('num'):
+                            identifiants_a_matcher.add(str(client.get('num')))
+                        print(f"[DELETE] Client trouvé - ID: {client.get('id')}, Num: {client.get('num')}")
+                        break
+            except Exception as e:
+                print(f"[WARN] Erreur lecture clients_perdus: {e}")
+
+        print(f"[DELETE] Identifiants à matcher: {identifiants_a_matcher}")
+
+        # Helper pour supprimer d'un fichier JSON (liste) - utilise TOUS les identifiants
         def supprimer_de_fichier_liste(fichier_path, match_keys=['id', 'num']):
             if not os.path.exists(fichier_path):
                 return False
@@ -23346,12 +23387,14 @@ async def supprimer_client_perdu(data: dict = Body(...)):
                     data_list = json.loads(content) if content else []
 
                 original_len = len(data_list)
-                # Filtrer pour retirer les entrées qui matchent
-                data_list = [item for item in data_list if not any(str(item.get(key, '')) == num_soumission for key in match_keys)]
+                # Filtrer pour retirer les entrées qui matchent N'IMPORTE QUEL identifiant
+                data_list = [item for item in data_list
+                            if not any(str(item.get(key, '')) in identifiants_a_matcher for key in match_keys)]
 
                 if len(data_list) < original_len:
                     with open(fichier_path, "w", encoding="utf-8") as f:
                         json.dump(data_list, f, indent=2, ensure_ascii=False)
+                    print(f"[DELETE] Supprimé de {fichier_path}: {original_len - len(data_list)} entrée(s)")
                     return True
                 return False
             except Exception as e:
@@ -23359,7 +23402,6 @@ async def supprimer_client_perdu(data: dict = Body(...)):
                 return False
 
         # 1. clients_perdus
-        fichier_perdus = os.path.join(f"{base_cloud}/clients_perdus", username, "clients.json")
         if supprimer_de_fichier_liste(fichier_perdus):
             supprime_de.append("clients_perdus")
 
@@ -23388,6 +23430,11 @@ async def supprimer_client_perdu(data: dict = Body(...)):
         if supprimer_de_fichier_liste(fichier_travaux):
             supprime_de.append("travaux_a_completer")
 
+        # 6b. ventes_attente
+        fichier_ventes_attente = os.path.join(f"{base_cloud}/ventes_attente", username, "ventes.json")
+        if supprimer_de_fichier_liste(fichier_ventes_attente):
+            supprime_de.append("ventes_attente")
+
         # 7. facturation_qe_historique (global, pas par user)
         fichier_historique = os.path.join(f"{base_cloud}/facturation_qe_historique", "historique.json")
         if os.path.exists(fichier_historique):
@@ -23395,11 +23442,14 @@ async def supprimer_client_perdu(data: dict = Body(...)):
                 with open(fichier_historique, "r", encoding="utf-8") as f:
                     historique = json.load(f)
                 original_len = len(historique)
-                historique = [h for h in historique if h.get('numeroSoumission') != num_soumission or h.get('entrepreneurUsername') != username]
+                # Utiliser tous les identifiants pour matcher
+                historique = [h for h in historique
+                             if not (h.get('numeroSoumission') in identifiants_a_matcher and h.get('entrepreneurUsername') == username)]
                 if len(historique) < original_len:
                     with open(fichier_historique, "w", encoding="utf-8") as f:
                         json.dump(historique, f, indent=2, ensure_ascii=False)
                     supprime_de.append("facturation_qe_historique")
+                    print(f"[DELETE] Supprimé de facturation_qe_historique: {original_len - len(historique)} entrée(s)")
             except Exception as e:
                 print(f"[WARN] Erreur suppression de historique: {e}")
 
@@ -23409,23 +23459,28 @@ async def supprimer_client_perdu(data: dict = Body(...)):
             try:
                 with open(fichier_statuts, "r", encoding="utf-8") as f:
                     statuts = json.load(f)
-                if num_soumission in statuts:
-                    del statuts[num_soumission]
+                # Supprimer toutes les entrées qui matchent n'importe quel identifiant
+                keys_to_delete = [key for key in statuts.keys() if key in identifiants_a_matcher]
+                if keys_to_delete:
+                    for key in keys_to_delete:
+                        del statuts[key]
                     with open(fichier_statuts, "w", encoding="utf-8") as f:
                         json.dump(statuts, f, indent=2, ensure_ascii=False)
                     supprime_de.append("facturation_qe_statuts")
+                    print(f"[DELETE] Supprimé de facturation_qe_statuts: {len(keys_to_delete)} entrée(s)")
             except Exception as e:
                 print(f"[WARN] Erreur suppression de statuts: {e}")
 
         # 9. Sync RPO pour mettre à jour les compteurs
         try:
-            from QE.Backend.rpo import sync_soumissions_to_rpo
+            from QE.Backend.rpo import sync_soumissions_to_rpo, sync_ventes_produit_to_rpo
             sync_soumissions_to_rpo(username)
-            print(f"[OK] RPO synchronisé pour {username}")
+            sync_ventes_produit_to_rpo(username)
+            print(f"[OK] RPO synchronisé (soumissions + produits) pour {username}")
         except Exception as e:
             print(f"[WARN] Erreur sync RPO: {e}")
 
-        print(f"[OK] Client perdu {num_soumission} supprimé de: {', '.join(supprime_de) if supprime_de else 'aucun fichier'} pour {username}")
+        print(f"[OK] Client perdu {identifiants_a_matcher} supprimé de: {', '.join(supprime_de) if supprime_de else 'aucun fichier'} pour {username}")
         return JSONResponse({
             "success": True,
             "message": f"Client supprimé de {len(supprime_de)} source(s)",

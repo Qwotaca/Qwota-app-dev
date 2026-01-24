@@ -5077,7 +5077,31 @@
       // Variable pour la colonne de tri active selon le contexte
       const sortColumn = context === 'coach' ? currentCoachSortColumn : currentSortColumn;
 
-      tbody.innerHTML = data.map((entrepreneur, index) => {
+      // Pour le contexte entrepreneur: limiter à 40 et afficher l'utilisateur actuel s'il est au-delà
+      const MAX_DISPLAY = 40;
+      let dataToDisplay = data;
+      let currentUserBeyond40 = null;
+      let currentUserOriginalIndex = -1;
+
+      if (context === 'entrepreneur' && data.length > MAX_DISPLAY) {
+        // Trouver la position de l'utilisateur actuel dans les données complètes
+        const currentUsername = window.username;
+        currentUserOriginalIndex = data.findIndex(e => e.username === currentUsername || e.login_username === currentUsername);
+
+        if (currentUserOriginalIndex >= MAX_DISPLAY) {
+          // L'utilisateur est au-delà du top 40, le sauvegarder pour l'afficher en bas
+          currentUserBeyond40 = { ...data[currentUserOriginalIndex], originalRank: currentUserOriginalIndex + 1 };
+          log(`[CLASSEMENT] Utilisateur ${currentUsername} au rang ${currentUserOriginalIndex + 1} (au-delà de ${MAX_DISPLAY})`);
+        }
+
+        // Limiter à 40
+        dataToDisplay = data.slice(0, MAX_DISPLAY);
+      }
+
+      tbody.innerHTML = dataToDisplay.map((entrepreneur, index) => {
+        // Vérifier si c'est l'utilisateur actuel
+        const isCurrentUser = entrepreneur.username === window.username || entrepreneur.login_username === window.username;
+
         // Médailles pour les 3 premières positions
         let rangDisplay = '';
         if (index === 0) {
@@ -5116,15 +5140,24 @@
           onclickHandler = `showEntrepreneurStats(${index})`;
         }
 
+        // Style spécial pour la ligne "MOI" (utilisateur actuel)
+        const moiRowStyle = isCurrentUser
+          ? 'background: linear-gradient(90deg, rgba(59, 130, 246, 0.25) 0%, rgba(59, 130, 246, 0.15) 100%); border-left: 4px solid #3b82f6; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);'
+          : '';
+        const moiBadge = isCurrentUser
+          ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.6rem; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; font-size: 0.7rem; font-weight: 700; border-radius: 12px; margin-left: 0.5rem; box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4); letter-spacing: 0.5px; text-transform: uppercase;"><i class="fas fa-user-circle" style="font-size: 0.75rem;"></i>MOI</span>`
+          : '';
+
         return `
-          <tr class="border-b hover:bg-opacity-5 hover:bg-blue-500 transition-colors" style="border-color: var(--border-dark); cursor: pointer;" onclick="${onclickHandler}">
+          <tr class="border-b hover:bg-opacity-5 hover:bg-blue-500 transition-colors ${isCurrentUser ? 'current-user-row' : ''}" style="border-color: var(--border-dark); cursor: pointer; ${moiRowStyle}" onclick="${onclickHandler}">
             <td class="py-2 px-3 text-center" style="border-right: 1px solid var(--border-dark);">
               ${rangDisplay}
             </td>
             <td class="py-2 px-3" style="border-right: 1px solid var(--border-dark); padding-left: 1.5rem !important; padding-right: 0.25rem !important;">
               <div style="display: flex; align-items: center; gap: 16px;">
                 ${profilePhotoHTML}
-                <span class="font-semibold" style="color: var(--text-light); font-size: 0.875rem;">${entrepreneur.username}</span>
+                <span class="font-semibold" style="color: ${isCurrentUser ? '#60a5fa' : 'var(--text-light)'}; font-size: ${isCurrentUser ? '0.95rem' : '0.875rem'}; font-weight: ${isCurrentUser ? '700' : '600'};">${entrepreneur.username}</span>
+                ${moiBadge}
               </div>
             </td>
             <td class="py-2 px-3 text-left font-bold text-green-600 ${sortColumn === 'ca' ? 'active-column' : ''}" data-column="ca" style="font-size: 0.8125rem; min-width: 100px;">${(entrepreneur.dollar_reel || 0).toLocaleString()}&nbsp;$</td>
@@ -5145,9 +5178,100 @@
         `;
       }).join('');
 
+      // Pour le contexte entrepreneur: ajouter séparateur et ligne "MOI" si l'utilisateur est au-delà du top 40
+      if (context === 'entrepreneur' && currentUserBeyond40) {
+        const e = currentUserBeyond40;
+        const userRank = e.originalRank;
+
+        // Photo de profil
+        const photoUrl = photoMap[e.username];
+        const gradeGamif = gradeGamificationMap[e.username] || 'Démarrage';
+        const gradeClass = 'grade-' + gradeGamif.toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/\s+/g, '-');
+        const profilePhotoHTML = photoUrl
+          ? `<div class="profile-photo-small ${gradeClass}"><img src="${photoUrl}" alt="Photo de profil"></div>`
+          : `<div class="profile-photo-small ${gradeClass}"><div style="width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #2586fd 0%, #b2c5fbc7 100%); display: flex; align-items: center; justify-content: center;"><i class="fas fa-user" style="color: white; font-size: 14px;"></i></div></div>`;
+
+        const dollarsProduit = Math.round(e.montant_produit || 0);
+
+        // Ligne de l'utilisateur actuel avec son vrai rang
+        tbody.innerHTML += `
+          <tr class="border-b current-user-row" style="border-color: var(--border-dark); cursor: pointer; background: linear-gradient(90deg, rgba(59, 130, 246, 0.25) 0%, rgba(59, 130, 246, 0.15) 100%); border-left: 4px solid #3b82f6; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);" onclick="showEntrepreneurStats(${currentUserOriginalIndex})">
+            <td class="py-2 px-3 text-center" style="border-right: 1px solid var(--border-dark);">
+              <span class="font-bold" style="color: #60a5fa; font-size: 1.1rem;">${userRank}</span>
+            </td>
+            <td class="py-2 px-3" style="border-right: 1px solid var(--border-dark); padding-left: 1.5rem !important; padding-right: 0.25rem !important;">
+              <div style="display: flex; align-items: center; gap: 16px;">
+                ${profilePhotoHTML}
+                <span class="font-semibold" style="color: #60a5fa; font-size: 0.95rem; font-weight: 700;">${e.username}</span>
+                <span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.6rem; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; font-size: 0.7rem; font-weight: 700; border-radius: 12px; margin-left: 0.5rem; box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4); letter-spacing: 0.5px; text-transform: uppercase;"><i class="fas fa-user-circle" style="font-size: 0.75rem;"></i>MOI</span>
+              </div>
+            </td>
+            <td class="py-2 px-3 text-left font-bold text-green-600" style="font-size: 0.8125rem; min-width: 100px;">${(e.dollar_reel || 0).toLocaleString()}&nbsp;$</td>
+            <td class="py-2 px-3 text-left" style="color: var(--text-light); font-size: 0.8125rem;">${(e.heures_pap || 0).toFixed(1)}&nbsp;h</td>
+            <td class="py-2 px-3 text-left" style="color: var(--text-light); font-size: 0.8125rem;">${(e.taux_marketing || 0).toFixed(2)}</td>
+            <td class="py-2 px-3 text-left font-bold" style="color: var(--text-light); font-size: 0.8125rem;">${e.contract_reel || 0}</td>
+            <td class="py-2 px-3 text-left" style="color: var(--text-light); font-size: 0.8125rem;">${e.nb_estimations || 0}</td>
+            <td class="py-2 px-3 text-left" style="color: var(--text-light); font-size: 0.8125rem;">${(e.contrat_moyen || 0).toLocaleString()}&nbsp;$</td>
+            <td class="py-2 px-3 text-left" style="color: var(--text-light); font-size: 0.8125rem;">${Math.round((e.taux_vente || 0) * 10) / 10}%</td>
+            <td class="py-2 px-3 text-left font-bold" style="color: #60a5fa; font-size: 0.8125rem;">${dollarsProduit.toLocaleString()}&nbsp;$</td>
+            <td class="py-2 px-3 text-left" style="color: var(--text-light); font-size: 0.8125rem;">${Math.round(e.prod_horaire || 0).toLocaleString()}&nbsp;$/h</td>
+            <td class="py-2 px-3 text-left">
+              <span class="text-yellow-500" style="font-size: 0.8125rem;">
+                <i class="fas fa-star"></i> ${(e.etoiles || 0).toFixed(1)}
+              </span>
+            </td>
+          </tr>
+        `;
+        log(`[CLASSEMENT] Ligne MOI ajoutée au rang ${userRank}`);
+      }
+
+      // Ajouter la ligne TOTAL seulement pour les contextes coach et direction (pas entrepreneur)
+      if (context === 'coach' || context === 'coach-ranking') {
+        const totals = data.reduce((acc, e) => {
+          acc.dollarReel += (e.dollar_reel || 0);
+          acc.heuresPap += (e.heures_pap || 0);
+          acc.contractReel += (e.contract_reel || 0);
+          acc.nbEstimations += (e.nb_estimations || 0);
+          acc.montantProduit += (e.montant_produit || 0);
+          acc.totalEtoiles += (e.etoiles || 0);
+          acc.countEtoiles += (e.etoiles && e.etoiles > 0) ? 1 : 0;
+          return acc;
+        }, { dollarReel: 0, heuresPap: 0, contractReel: 0, nbEstimations: 0, montantProduit: 0, totalEtoiles: 0, countEtoiles: 0 });
+
+        // Moyenne satisfaction (ou "-" si pas de données)
+        const avgSatisfaction = totals.countEtoiles > 0 ? (totals.totalEtoiles / totals.countEtoiles).toFixed(1) : '-';
+
+        tbody.innerHTML += `
+          <tr class="border-t-2" style="border-color: rgba(96, 165, 250, 0.5); background: rgba(30, 41, 59, 0.8);">
+            <td class="py-3 px-3 text-center font-bold" style="border-right: 1px solid var(--border-dark); color: var(--text-light);">
+              <i class="fas fa-calculator" style="color: #60a5fa;"></i>
+            </td>
+            <td class="py-3 px-3 font-bold" style="border-right: 1px solid var(--border-dark); color: var(--text-light); font-size: 0.9rem;">
+              TOTAL
+            </td>
+            <td class="py-3 px-3 text-left font-bold" style="color: #10b981; font-size: 0.875rem;">${totals.dollarReel.toLocaleString()}&nbsp;$</td>
+            <td class="py-3 px-3 text-left font-bold" style="color: var(--text-light); font-size: 0.875rem;">${totals.heuresPap.toFixed(1)}&nbsp;h</td>
+            <td class="py-3 px-3 text-left" style="color: var(--text-gray); font-size: 0.875rem;">-</td>
+            <td class="py-3 px-3 text-left font-bold" style="color: var(--text-light); font-size: 0.875rem;">${totals.contractReel}</td>
+            <td class="py-3 px-3 text-left font-bold" style="color: var(--text-light); font-size: 0.875rem;">${totals.nbEstimations}</td>
+            <td class="py-3 px-3 text-left" style="color: var(--text-gray); font-size: 0.875rem;">-</td>
+            <td class="py-3 px-3 text-left" style="color: var(--text-gray); font-size: 0.875rem;">-</td>
+            <td class="py-3 px-3 text-left font-bold" style="color: #60a5fa; font-size: 0.875rem;">${Math.round(totals.montantProduit).toLocaleString()}&nbsp;$</td>
+            <td class="py-3 px-3 text-left" style="color: var(--text-gray); font-size: 0.875rem;">-</td>
+            <td class="py-3 px-3 text-left" style="font-size: 0.875rem;">
+              <span class="text-yellow-500">
+                <i class="fas fa-star"></i> ${avgSatisfaction}
+              </span>
+            </td>
+          </tr>
+        `;
+      }
+
       // Générer les cartes mobiles (version simplifiée: rang + entrepreneur seulement)
-      log('[MOBILE] Génération des cartes mobiles pour', data.length, 'entrepreneurs');
-      mobileCards.innerHTML = data.map((entrepreneur, index) => {
+      log('[MOBILE] Génération des cartes mobiles pour', dataToDisplay.length, 'entrepreneurs');
+      mobileCards.innerHTML = dataToDisplay.map((entrepreneur, index) => {
         // Médailles pour les 3 premières positions
         let rangDisplay = '';
         if (index === 0) {
@@ -5173,10 +5297,15 @@
 
         const profilePhotoHTML = `<div class="classement-card-photo-container ${gradeClass}">${profilePhotoContent}</div>`;
 
-        // Badge "Moi" si c'est l'utilisateur actuel
-        const isCurrentUser = entrepreneur.username === window.username;
+        // Badge "Moi" si c'est l'utilisateur actuel - style plus visible
+        const isCurrentUser = entrepreneur.username === window.username || entrepreneur.login_username === window.username;
         const meBadge = isCurrentUser
-          ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.125rem 0.5rem; background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: white; font-size: 0.65rem; font-weight: 700; border-radius: 12px; margin-left: 0.5rem; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); letter-spacing: 0.5px;"><i class="fas fa-user-circle" style="font-size: 0.7rem;"></i>MOI</span>`
+          ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.6rem; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; font-size: 0.7rem; font-weight: 700; border-radius: 12px; margin-left: 0.5rem; box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4); letter-spacing: 0.5px; text-transform: uppercase;"><i class="fas fa-user-circle" style="font-size: 0.75rem;"></i>MOI</span>`
+          : '';
+
+        // Style spécial pour la carte "MOI" (plus visible)
+        const moiCardStyle = isCurrentUser
+          ? 'background: linear-gradient(90deg, rgba(59, 130, 246, 0.25) 0%, rgba(59, 130, 246, 0.15) 100%); border-left: 4px solid #3b82f6; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);'
           : '';
 
         // Handler onclick mobile selon le contexte (entrepreneur, coach, ou coach-ranking)
@@ -5192,7 +5321,7 @@
         }
 
         return `
-          <div class="classement-card" onclick="${mobileOnclickHandler}" style="${isCurrentUser ? 'background: rgba(96, 165, 250, 0.08); border-color: rgba(96, 165, 250, 0.3);' : ''}">
+          <div class="classement-card" onclick="${mobileOnclickHandler}" style="${moiCardStyle}">
             <div class="classement-card-rang">
               ${rangDisplay}
             </div>
@@ -5200,11 +5329,46 @@
               ${profilePhotoHTML}
             </div>
             <div class="classement-card-info">
-              <div class="classement-card-name">${entrepreneur.username}${meBadge}</div>
+              <div class="classement-card-name" style="${isCurrentUser ? 'color: #60a5fa; font-weight: 700; font-size: 1rem;' : ''}">${entrepreneur.username}${meBadge}</div>
             </div>
           </div>
         `;
       }).join('');
+
+      // Pour le contexte entrepreneur mobile: ajouter séparateur et carte "MOI" si au-delà du top 40
+      if (context === 'entrepreneur' && currentUserBeyond40) {
+        const e = currentUserBeyond40;
+        const userRank = e.originalRank;
+
+        // Photo de profil
+        const photoUrl = photoMap[e.username];
+        const gradeGamif = gradeGamificationMap[e.username] || 'Démarrage';
+        const gradeClass = 'grade-' + gradeGamif.toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/\s+/g, '-');
+        const profilePhotoContent = photoUrl
+          ? `<img src="${photoUrl}" alt="Photo de profil" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`
+          : `<div style="width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #2586fd 0%, #b2c5fbc7 100%); display: flex; align-items: center; justify-content: center;"><i class="fas fa-user" style="color: white; font-size: 14px;"></i></div>`;
+        const profilePhotoHTML = `<div class="classement-card-photo-container ${gradeClass}">${profilePhotoContent}</div>`;
+
+        // Carte de l'utilisateur actuel
+        mobileCards.innerHTML += `
+          <div class="classement-card" onclick="showEntrepreneurStats(${currentUserOriginalIndex})" style="background: linear-gradient(90deg, rgba(59, 130, 246, 0.25) 0%, rgba(59, 130, 246, 0.15) 100%); border-left: 4px solid #3b82f6; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);">
+            <div class="classement-card-rang">
+              <span class="font-bold text-base" style="color: #60a5fa; font-size: 1.1rem;">${userRank}</span>
+            </div>
+            <div class="classement-card-photo">
+              ${profilePhotoHTML}
+            </div>
+            <div class="classement-card-info">
+              <div class="classement-card-name" style="color: #60a5fa; font-weight: 700; font-size: 1rem;">
+                ${e.username}
+                <span style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.6rem; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; font-size: 0.7rem; font-weight: 700; border-radius: 12px; margin-left: 0.5rem; box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4); letter-spacing: 0.5px; text-transform: uppercase;"><i class="fas fa-user-circle" style="font-size: 0.75rem;"></i>MOI</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }
     }
     // Exposer la fonction globalement pour renderCoachClassementCards()
     window.renderClassement = renderClassement;

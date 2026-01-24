@@ -15,6 +15,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
    */
   openOAuthPopup: (url) => {
     return ipcRenderer.invoke('open-oauth-popup', url);
+  },
+
+  /**
+   * Relancer la connexion au serveur (depuis la page d'erreur)
+   */
+  retryConnection: () => {
+    ipcRenderer.send('retry-connection');
   }
 });
 

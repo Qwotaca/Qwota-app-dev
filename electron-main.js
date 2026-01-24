@@ -126,17 +126,31 @@ function createWindow() {
 async function loadApplication() {
   console.log(`[LAUNCH] Connexion à ${SERVER_URL}...`);
 
-  try {
-    // Vérifier si le serveur est accessible
-    isServerReachable = await checkServerConnection();
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 2000; // 2 secondes entre chaque tentative
 
-    if (isServerReachable) {
-      console.log('[OK] Serveur accessible, chargement de l\'application...');
-      mainWindow.loadURL(SERVER_URL);
-    } else {
-      console.error('[ERROR] Serveur non accessible');
-      showErrorPage('Impossible de se connecter au serveur');
+  try {
+    // Essayer plusieurs fois de se connecter au serveur
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      console.log(`[LAUNCH] Tentative de connexion ${attempt}/${MAX_RETRIES}...`);
+
+      isServerReachable = await checkServerConnection();
+
+      if (isServerReachable) {
+        console.log('[OK] Serveur accessible, chargement de l\'application...');
+        mainWindow.loadURL(SERVER_URL);
+        return; // Succès, sortir de la fonction
+      }
+
+      if (attempt < MAX_RETRIES) {
+        console.log(`[WARN] Serveur non accessible, nouvelle tentative dans ${RETRY_DELAY/1000}s...`);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+      }
     }
+
+    // Toutes les tentatives ont échoué
+    console.error('[ERROR] Serveur non accessible après plusieurs tentatives');
+    showErrorPage('Impossible de se connecter au serveur après plusieurs tentatives. Vérifiez votre connexion internet.');
   } catch (error) {
     console.error('[ERROR] Erreur lors du chargement:', error);
     showErrorPage(error.message);
@@ -155,21 +169,27 @@ async function checkServerConnection() {
       const request = net.request({
         method: 'GET',
         url: SERVER_URL,
-        timeout: 10000 // 10 secondes
+        timeout: 15000 // 15 secondes (augmenté pour connexions lentes)
       });
 
       request.on('response', (response) => {
         console.log('[OK] Serveur répond avec status:', response.statusCode);
-        resolve(response.statusCode === 200 || response.statusCode === 302);
+        // Accepter plus de codes de status valides (200, 301, 302, 303, 307, 308)
+        const validCodes = [200, 301, 302, 303, 307, 308];
+        resolve(validCodes.includes(response.statusCode));
       });
 
       request.on('error', (error) => {
         console.error('[ERROR] Erreur de connexion:', error.message);
+        // Ne pas échouer immédiatement sur certaines erreurs réseau temporaires
+        if (error.message.includes('ETIMEDOUT') || error.message.includes('ECONNRESET')) {
+          console.log('[WARN] Erreur réseau temporaire, sera réessayé...');
+        }
         resolve(false);
       });
 
       request.on('timeout', () => {
-        console.error('[ERROR] Timeout de connexion');
+        console.error('[ERROR] Timeout de connexion (15s)');
         request.abort();
         resolve(false);
       });
@@ -298,10 +318,24 @@ function showErrorPage(errorMessage) {
         <p>• Que le serveur Qwota est en ligne</p>
 
         <div style="margin-top: 32px;">
-          <button class="btn" onclick="location.reload()">🔄 Réessayer</button>
+          <button class="btn" id="retryBtn" onclick="retryConnection()">🔄 Réessayer</button>
           <button class="btn btn-secondary" onclick="window.close()">Quitter</button>
         </div>
       </div>
+      <script>
+        function retryConnection() {
+          const btn = document.getElementById('retryBtn');
+          btn.innerHTML = '⏳ Connexion en cours...';
+          btn.disabled = true;
+          // Envoyer message au processus principal pour relancer la connexion
+          if (window.electronAPI && window.electronAPI.retryConnection) {
+            window.electronAPI.retryConnection();
+          } else {
+            // Fallback: recharger la page après un délai
+            setTimeout(() => location.reload(), 500);
+          }
+        }
+      </script>
     </body>
     </html>
   `;
@@ -476,6 +510,14 @@ ipcMain.handle('open-oauth-popup', async (event, url) => {
   } catch (error) {
     console.error('[ERROR] Erreur popup OAuth:', error);
     return { success: false, error: error.message };
+  }
+});
+
+// Handler IPC pour relancer la connexion depuis la page d'erreur
+ipcMain.on('retry-connection', () => {
+  console.log('🔄 Relance de la connexion demandée...');
+  if (mainWindow) {
+    loadApplication();
   }
 });
 

@@ -931,19 +931,26 @@
       font-size: 10px;
     }
 
-    /* Action bar pour sélection multiple */
-    #prospect-action-bar {
+    /* Floating action bar pour sélection multiple */
+    #floating-action-bar {
       display: none;
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
       background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      border-radius: 8px;
-      padding: 0.75rem 1rem;
-      margin-bottom: 1rem;
+      border: 1px solid rgba(59, 130, 246, 0.5);
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
       align-items: center;
       justify-content: space-between;
+      gap: 1.5rem;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(59, 130, 246, 0.2);
+      z-index: 100;
+      min-width: 320px;
     }
 
-    #prospect-action-bar.visible {
+    #floating-action-bar.visible {
       display: flex;
     }
 
@@ -1007,10 +1014,12 @@
 
       /* Cacher les checkboxes et barre d'action sur mobile */
       .prospect-checkbox,
+      .vente-checkbox,
+      .select-all-ventes,
       #select-all-prospects,
-      #prospect-action-bar,
-      td[data-label="Select"],
-      th:first-child {
+      #floating-action-bar,
+      .checkbox-column,
+      td[data-label="Select"] {
         display: none !important;
       }
 
@@ -1298,21 +1307,6 @@
           </button>
         </div>
         <div class="box-body">
-          <!-- Barre d'actions sélection multiple (cachée par défaut) -->
-          <div id="prospect-action-bar">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <span id="prospect-selected-count" style="color: #60a5fa; font-weight: 600; font-size: 0.9rem;">0 sélectionné(s)</span>
-            </div>
-            <div style="display: flex; gap: 0.5rem;">
-              <button onclick="marquerProspectsCommePerdus()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border: none; color: white; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 500;">
-                <i class="fas fa-times-circle"></i> Marquer comme perdu
-              </button>
-              <button onclick="deselectionnerTousProspects()" style="background: rgba(148, 163, 184, 0.2); border: 1px solid rgba(148, 163, 184, 0.3); color: var(--text-light); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
-                <i class="fas fa-times"></i> Annuler
-              </button>
-            </div>
-          </div>
-
           <!-- Champ de recherche -->
           <div class="mb-4">
             <div class="relative">
@@ -1378,16 +1372,19 @@
             <table class="modern-table" style="table-layout: fixed; width: 100%;">
               <thead>
                 <tr>
-                  <th style="width: 12%; padding: 1rem; text-align: left;">Nom</th>
-                  <th style="width: 9%; padding: 1rem; text-align: left;">REP</th>
-                  <th style="width: 9%; padding: 1rem; text-align: left;">Provenance</th>
-                  <th style="width: 9%; padding: 1rem; text-align: left;">Type travaux</th>
+                  <th style="width: 3%; padding: 1rem; text-align: center;">
+                    <input type="checkbox" class="select-all-ventes prospect-checkbox" data-category="attente" onchange="toggleSelectAllVentes(this, 'attente')">
+                  </th>
+                  <th style="width: 11%; padding: 1rem; text-align: left;">Nom</th>
+                  <th style="width: 8%; padding: 1rem; text-align: left;">REP</th>
+                  <th style="width: 8%; padding: 1rem; text-align: left;">Provenance</th>
+                  <th style="width: 8%; padding: 1rem; text-align: left;">Type travaux</th>
                   <th style="width: 10%; padding: 1rem; text-align: left;">Téléphone</th>
                   <th style="width: 17%; padding: 1rem; text-align: left;">Adresse</th>
-                  <th style="width: 9%; padding: 1rem; text-align: left;">Prix</th>
+                  <th style="width: 8%; padding: 1rem; text-align: left;">Prix</th>
                   <th style="width: 8%; padding: 1rem; text-align: left;">Status</th>
                   <th style="width: 5%; padding: 1rem; text-align: left;">Notes</th>
-                  <th style="width: 12%; padding: 1rem; text-align: left;">Paiement</th>
+                  <th style="width: 11%; padding: 1rem; text-align: left;">Paiement</th>
                 </tr>
               </thead>
               <tbody id="attente-tbody">
@@ -1429,12 +1426,15 @@
             <table class="modern-table" style="table-layout: fixed; width: 100%;">
               <thead>
                 <tr>
-                  <th style="width: 12%; padding: 1rem; text-align: left;">Nom</th>
-                  <th style="width: 9%; padding: 1rem; text-align: left;">REP</th>
-                  <th style="width: 9%; padding: 1rem; text-align: left;">Provenance</th>
-                  <th style="width: 9%; padding: 1rem; text-align: left;">Type travaux</th>
+                  <th class="checkbox-column" style="width: 3%; padding: 1rem; text-align: center;">
+                    <input type="checkbox" class="select-all-ventes prospect-checkbox" data-category="accepte" onchange="toggleSelectAllVentes(this, 'accepte')">
+                  </th>
+                  <th style="width: 10%; padding: 1rem; text-align: left;">Nom</th>
+                  <th style="width: 8%; padding: 1rem; text-align: left;">REP</th>
+                  <th style="width: 8%; padding: 1rem; text-align: left;">Provenance</th>
+                  <th style="width: 8%; padding: 1rem; text-align: left;">Type travaux</th>
                   <th style="width: 10%; padding: 1rem; text-align: left;">Téléphone</th>
-                  <th style="width: 17%; padding: 1rem; text-align: left;">Adresse</th>
+                  <th style="width: 16%; padding: 1rem; text-align: left;">Adresse</th>
                   <th style="width: 9%; padding: 1rem; text-align: left;">Prix</th>
                   <th style="width: 8%; padding: 1rem; text-align: left;">Status</th>
                   <th style="width: 5%; padding: 1rem; text-align: left;">Notes</th>
@@ -1443,7 +1443,7 @@
               </thead>
               <tbody id="accepte-tbody">
                 <tr>
-                  <td colspan="10" class="empty-state">
+                  <td colspan="11" class="empty-state">
                     <i class="fas fa-check-circle" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
                     <p style="font-size: 1rem;">Aucun client accepté</p>
                   </td>
@@ -1480,12 +1480,15 @@
             <table class="modern-table" style="table-layout: fixed; width: 100%;">
               <thead>
                 <tr>
-                  <th style="width: 12%; padding: 1rem; text-align: left;">Nom</th>
-                  <th style="width: 9%; padding: 1rem; text-align: left;">REP</th>
-                  <th style="width: 9%; padding: 1rem; text-align: left;">Provenance</th>
-                  <th style="width: 9%; padding: 1rem; text-align: left;">Type travaux</th>
+                  <th class="checkbox-column" style="width: 3%; padding: 1rem; text-align: center;">
+                    <input type="checkbox" class="select-all-ventes prospect-checkbox" data-category="produit" onchange="toggleSelectAllVentes(this, 'produit')">
+                  </th>
+                  <th style="width: 10%; padding: 1rem; text-align: left;">Nom</th>
+                  <th style="width: 8%; padding: 1rem; text-align: left;">REP</th>
+                  <th style="width: 8%; padding: 1rem; text-align: left;">Provenance</th>
+                  <th style="width: 8%; padding: 1rem; text-align: left;">Type travaux</th>
                   <th style="width: 10%; padding: 1rem; text-align: left;">Téléphone</th>
-                  <th style="width: 17%; padding: 1rem; text-align: left;">Adresse</th>
+                  <th style="width: 16%; padding: 1rem; text-align: left;">Adresse</th>
                   <th style="width: 9%; padding: 1rem; text-align: left;">Prix</th>
                   <th style="width: 8%; padding: 1rem; text-align: left;">Status</th>
                   <th style="width: 5%; padding: 1rem; text-align: left;">Notes</th>
@@ -1494,7 +1497,7 @@
               </thead>
               <tbody id="produit-tbody">
                 <tr>
-                  <td colspan="10" class="empty-state">
+                  <td colspan="11" class="empty-state">
                     <i class="fas fa-box" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
                     <p style="font-size: 1rem;">Aucun client produit</p>
                   </td>
@@ -6334,46 +6337,123 @@
   }
 
   // ============================================
-  // GESTION SÉLECTION MULTIPLE PROSPECTS
+  // GESTION SÉLECTION MULTIPLE - TOUTES LES TABLES
   // ============================================
 
-  let lastCheckedProspectIndex = null;
-  let wasProspectIndeterminate = false;
+  // State pour chaque catégorie
+  const selectionState = {
+    potentiel: { lastCheckedIndex: null, wasIndeterminate: false },
+    attente: { lastCheckedIndex: null, wasIndeterminate: false },
+    accepte: { lastCheckedIndex: null, wasIndeterminate: false },
+    produit: { lastCheckedIndex: null, wasIndeterminate: false }
+  };
 
-  // Toggle toutes les checkboxes prospects
+  // Mapping tbody IDs
+  const tbodyIds = {
+    potentiel: 'potentiel-tbody',
+    attente: 'attente-tbody',
+    accepte: 'accepte-tbody',
+    produit: 'produit-tbody'
+  };
+
+  // Toggle toutes les checkboxes d'une catégorie (Prospects)
   function toggleSelectAllProspects(checkbox) {
-    const checkboxes = document.querySelectorAll('#potentiel-tbody .prospect-checkbox');
+    toggleSelectAllForCategory(checkbox, 'potentiel');
+  }
 
-    if (wasProspectIndeterminate) {
+  // Toggle toutes les checkboxes d'une catégorie (Ventes: attente, accepte, produit)
+  function toggleSelectAllVentes(checkbox, category) {
+    toggleSelectAllForCategory(checkbox, category);
+  }
+
+  // Fonction générique pour toggle select all
+  function toggleSelectAllForCategory(checkbox, category) {
+    const tbodyId = tbodyIds[category];
+    const checkboxes = document.querySelectorAll(`#${tbodyId} .prospect-checkbox, #${tbodyId} .vente-checkbox`);
+    const state = selectionState[category];
+
+    if (state.wasIndeterminate) {
       checkboxes.forEach(cb => cb.checked = false);
       checkbox.checked = false;
     } else {
       checkboxes.forEach(cb => cb.checked = checkbox.checked);
     }
 
-    wasProspectIndeterminate = false;
-    lastCheckedProspectIndex = null;
-    updateProspectActionBar();
+    state.wasIndeterminate = false;
+    state.lastCheckedIndex = null;
+    updateGlobalActionBar();
   }
 
-  // Capturer l'état indeterminate avant le click
+  // Capturer l'état indeterminate avant le click pour toutes les checkboxes "select all"
   document.addEventListener('DOMContentLoaded', function() {
-    const selectAllCheckbox = document.getElementById('select-all-prospects');
-    if (selectAllCheckbox) {
-      selectAllCheckbox.addEventListener('mousedown', function() {
-        wasProspectIndeterminate = this.indeterminate;
+    // Prospects
+    const selectAllProspects = document.getElementById('select-all-prospects');
+    if (selectAllProspects) {
+      selectAllProspects.addEventListener('mousedown', function() {
+        selectionState.potentiel.wasIndeterminate = this.indeterminate;
       });
     }
+
+    // Ventes (attente, accepte, produit)
+    document.querySelectorAll('.select-all-ventes').forEach(checkbox => {
+      checkbox.addEventListener('mousedown', function() {
+        const category = this.dataset.category;
+        if (category && selectionState[category]) {
+          selectionState[category].wasIndeterminate = this.indeterminate;
+        }
+      });
+    });
+
+    // Support Ctrl+A pour sélectionner tout
+    document.addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        // Vérifier si on est dans un champ de texte
+        const activeElement = document.activeElement;
+        if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+          return; // Laisser le comportement par défaut dans les champs de texte
+        }
+
+        e.preventDefault();
+
+        // Sélectionner toutes les checkboxes de toutes les tables
+        Object.keys(tbodyIds).forEach(category => {
+          const tbodyId = tbodyIds[category];
+          const checkboxes = document.querySelectorAll(`#${tbodyId} .prospect-checkbox, #${tbodyId} .vente-checkbox`);
+          checkboxes.forEach(cb => cb.checked = true);
+
+          // Mettre à jour le select all header
+          const selectAllHeader = document.querySelector(`#${tbodyId}`).closest('.table-container').querySelector('thead .prospect-checkbox, thead .select-all-ventes');
+          if (selectAllHeader) {
+            selectAllHeader.checked = true;
+            selectAllHeader.indeterminate = false;
+          }
+        });
+
+        updateGlobalActionBar();
+      }
+    });
   });
 
   // Gestion du clic sur checkbox prospect (avec Shift+Click)
   function handleProspectCheckboxClick(event, checkbox) {
-    const checkboxes = Array.from(document.querySelectorAll('#potentiel-tbody .prospect-checkbox'));
-    const currentIndex = checkboxes.indexOf(checkbox);
+    handleCheckboxClick(event, checkbox, 'potentiel');
+  }
 
-    if (event.shiftKey && lastCheckedProspectIndex !== null && lastCheckedProspectIndex !== currentIndex) {
-      const start = Math.min(lastCheckedProspectIndex, currentIndex);
-      const end = Math.max(lastCheckedProspectIndex, currentIndex);
+  // Gestion du clic sur checkbox vente (avec Shift+Click)
+  function handleVenteCheckboxClick(event, checkbox, category) {
+    handleCheckboxClick(event, checkbox, category);
+  }
+
+  // Fonction générique pour gérer les clics sur checkbox
+  function handleCheckboxClick(event, checkbox, category) {
+    const tbodyId = tbodyIds[category];
+    const checkboxes = Array.from(document.querySelectorAll(`#${tbodyId} .prospect-checkbox, #${tbodyId} .vente-checkbox`));
+    const currentIndex = checkboxes.indexOf(checkbox);
+    const state = selectionState[category];
+
+    if (event.shiftKey && state.lastCheckedIndex !== null && state.lastCheckedIndex !== currentIndex) {
+      const start = Math.min(state.lastCheckedIndex, currentIndex);
+      const end = Math.max(state.lastCheckedIndex, currentIndex);
       const shouldCheck = checkbox.checked;
 
       for (let i = start; i <= end; i++) {
@@ -6381,86 +6461,177 @@
       }
     }
 
-    lastCheckedProspectIndex = currentIndex;
-    updateProspectActionBar();
+    state.lastCheckedIndex = currentIndex;
+    updateGlobalActionBar();
   }
 
-  // Mettre à jour la barre d'actions
-  function updateProspectActionBar() {
-    const checkboxes = document.querySelectorAll('#potentiel-tbody .prospect-checkbox');
-    const checked = Array.from(checkboxes).filter(cb => cb.checked);
-    const count = checked.length;
+  // Mettre à jour la barre d'actions globale flottante
+  function updateGlobalActionBar() {
+    let totalSelected = 0;
 
-    const actionBar = document.getElementById('prospect-action-bar');
-    const selectedCount = document.getElementById('prospect-selected-count');
-    const selectAll = document.getElementById('select-all-prospects');
+    // Compter les sélections de toutes les catégories et mettre à jour les headers
+    Object.keys(tbodyIds).forEach(category => {
+      const tbodyId = tbodyIds[category];
+      const tbody = document.getElementById(tbodyId);
+      if (!tbody) return;
 
-    selectedCount.textContent = count === 0 ? '0 sélectionné' : count === 1 ? '1 sélectionné' : `${count} sélectionnés`;
+      const checkboxes = tbody.querySelectorAll('.prospect-checkbox, .vente-checkbox');
+      const checked = Array.from(checkboxes).filter(cb => cb.checked);
+      totalSelected += checked.length;
 
-    if (count > 0) {
-      actionBar.classList.add('visible');
-    } else {
-      actionBar.classList.remove('visible');
+      // Mettre à jour la checkbox "select all" du header
+      const table = tbody.closest('table');
+      if (table) {
+        const selectAll = table.querySelector('thead .prospect-checkbox, thead .select-all-ventes');
+        if (selectAll && checkboxes.length > 0) {
+          if (checked.length === 0) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+          } else if (checked.length === checkboxes.length) {
+            selectAll.checked = true;
+            selectAll.indeterminate = false;
+          } else {
+            selectAll.checked = false;
+            selectAll.indeterminate = true;
+          }
+        }
+      }
+    });
+
+    // Mettre à jour la barre flottante
+    const actionBar = document.getElementById('floating-action-bar');
+    const selectedCount = document.getElementById('global-selected-count');
+
+    if (selectedCount) {
+      selectedCount.textContent = totalSelected === 0 ? '0 sélectionné' : totalSelected === 1 ? '1 sélectionné' : `${totalSelected} sélectionnés`;
     }
 
-    if (count === 0) {
-      selectAll.checked = false;
-      selectAll.indeterminate = false;
-    } else if (count === checkboxes.length) {
-      selectAll.checked = true;
-      selectAll.indeterminate = false;
-    } else {
-      selectAll.checked = false;
-      selectAll.indeterminate = true;
+    if (actionBar) {
+      if (totalSelected > 0) {
+        actionBar.classList.add('visible');
+      } else {
+        actionBar.classList.remove('visible');
+      }
     }
   }
 
-  // Désélectionner tous les prospects
+  // Désélectionner tout
+  function deselectionnerTout() {
+    Object.keys(tbodyIds).forEach(category => {
+      const tbodyId = tbodyIds[category];
+      const checkboxes = document.querySelectorAll(`#${tbodyId} .prospect-checkbox, #${tbodyId} .vente-checkbox`);
+      checkboxes.forEach(cb => cb.checked = false);
+
+      // Reset header checkbox
+      const tbody = document.getElementById(tbodyId);
+      if (tbody) {
+        const table = tbody.closest('table');
+        if (table) {
+          const selectAll = table.querySelector('thead .prospect-checkbox, thead .select-all-ventes');
+          if (selectAll) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+          }
+        }
+      }
+    });
+
+    updateGlobalActionBar();
+  }
+
+  // Backward compatibility
   function deselectionnerTousProspects() {
-    const checkboxes = document.querySelectorAll('#potentiel-tbody .prospect-checkbox');
-    checkboxes.forEach(cb => cb.checked = false);
-    document.getElementById('select-all-prospects').checked = false;
-    updateProspectActionBar();
+    deselectionnerTout();
   }
 
-  // Marquer les prospects sélectionnés comme perdus
-  async function marquerProspectsCommePerdus() {
-    const checkboxes = document.querySelectorAll('#potentiel-tbody .prospect-checkbox:checked');
-    if (checkboxes.length === 0) return;
+  // Marquer toute la sélection comme perdue
+  async function marquerSelectionCommePerdus() {
+    // Collecter toutes les sélections
+    const selections = {
+      prospects: [],
+      attente: [],
+      accepte: [],
+      produit: []
+    };
 
-    const prospectIds = Array.from(checkboxes).map(cb => cb.dataset.prospectId);
-    const count = prospectIds.length;
+    // Prospects
+    document.querySelectorAll('#potentiel-tbody .prospect-checkbox:checked').forEach(cb => {
+      selections.prospects.push(cb.dataset.prospectId);
+    });
 
-    if (!confirm(`Êtes-vous sûr de vouloir marquer ${count} client(s) potentiel(s) comme perdu(s) ?`)) {
+    // Ventes (attente, accepte, produit)
+    ['attente', 'accepte', 'produit'].forEach(category => {
+      const tbodyId = tbodyIds[category];
+      document.querySelectorAll(`#${tbodyId} .vente-checkbox:checked`).forEach(cb => {
+        selections[category].push({
+          venteId: cb.dataset.venteId,
+          index: parseInt(cb.dataset.index)
+        });
+      });
+    });
+
+    const totalCount = selections.prospects.length + selections.attente.length + selections.accepte.length + selections.produit.length;
+
+    if (totalCount === 0) return;
+
+    if (!confirm(`Êtes-vous sûr de vouloir marquer ${totalCount} client(s) comme perdu(s) ?`)) {
       return;
     }
 
     try {
-      // Marquer chaque prospect comme perdu
-      for (const prospectId of prospectIds) {
-        const response = await fetch(`/prospects/${window.username}/${prospectId}/perdu`, {
+      // Marquer les prospects comme perdus
+      for (const prospectId of selections.prospects) {
+        await fetch(`/prospects/${window.username}/${prospectId}/perdu`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });
+      }
 
-        if (!response.ok) {
-          console.error(`Erreur pour prospect ${prospectId}`);
+      // Marquer les ventes comme perdues (attente, accepte, produit)
+      const categoryMapping = {
+        attente: 'attente',
+        accepte: 'acceptees',
+        produit: 'produit'
+      };
+
+      for (const category of ['attente', 'accepte', 'produit']) {
+        for (const item of selections[category]) {
+          const apiCategory = categoryMapping[category];
+          // Récupérer les données de la vente
+          const venteData = window.ventesData[apiCategory] ? window.ventesData[apiCategory][item.index] : null;
+          if (venteData) {
+            await fetch(`/ventes/${window.username}/${apiCategory}/${item.venteId}/perdu`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(venteData)
+            });
+          }
         }
       }
 
-      // Rafraîchir la liste des prospects
-      await loadProspects('potentiel-tbody');
+      // Rafraîchir toutes les listes
+      await Promise.all([
+        loadProspects('potentiel-tbody'),
+        loadVentesCategory('attente', 'attente-tbody'),
+        loadVentesCategory('acceptees', 'accepte-tbody'),
+        loadVentesCategory('produit', 'produit-tbody')
+      ]);
 
       // Réinitialiser la sélection
-      deselectionnerTousProspects();
+      deselectionnerTout();
 
-      // Afficher un message de succès
-      alert(`${count} client(s) potentiel(s) marqué(s) comme perdu(s)`);
+      // Message de succès
+      alert(`${totalCount} client(s) marqué(s) comme perdu(s)`);
 
     } catch (error) {
       console.error('Erreur lors du marquage comme perdu:', error);
       alert('Erreur lors du marquage comme perdu');
     }
+  }
+
+  // Backward compatibility
+  async function marquerProspectsCommePerdus() {
+    await marquerSelectionCommePerdus();
   }
 
   async function loadProspects(tbodyId) {
@@ -6650,14 +6821,25 @@
         const notesText = vente.notes || '';
         const hasNotes = notesText && notesText.trim() !== '';
 
+        // Mapper category pour l'identifiant du tbody
+        const tbodyMapping = {
+          'attente': 'attente',
+          'acceptees': 'accepte',
+          'produit': 'produit'
+        };
+        const categoryId = tbodyMapping[category] || category;
+
         return `
         <tr style="cursor: pointer;" onclick='showClientDetails(${index}, "${category}")'>
-          <td data-label="Nom" style="width: 12%; text-align: left;">${nomComplet}</td>
-          <td data-label="REP" style="width: 9%; text-align: left;" onclick="event.stopPropagation()">${statutBadge}</td>
-          <td data-label="Provenance" style="width: 9%; text-align: left;" onclick="event.stopPropagation()">${provenanceBadge}</td>
-          <td data-label="Type travaux" style="width: 9%; text-align: left;" onclick="event.stopPropagation()">${typeTravauxBadge}</td>
+          <td class="checkbox-column" style="width: 3%; text-align: center; padding: 0.5rem;" onclick="event.stopPropagation()">
+            <input type="checkbox" class="vente-checkbox prospect-checkbox" data-vente-id="${venteId}" data-category="${categoryId}" data-index="${index}" onclick="handleVenteCheckboxClick(event, this, '${categoryId}')">
+          </td>
+          <td data-label="Nom" style="width: 10%; text-align: left;">${nomComplet}</td>
+          <td data-label="REP" style="width: 8%; text-align: left;" onclick="event.stopPropagation()">${statutBadge}</td>
+          <td data-label="Provenance" style="width: 8%; text-align: left;" onclick="event.stopPropagation()">${provenanceBadge}</td>
+          <td data-label="Type travaux" style="width: 8%; text-align: left;" onclick="event.stopPropagation()">${typeTravauxBadge}</td>
           <td data-label="Téléphone" style="width: 10%; text-align: left;">${vente.telephone || '-'}</td>
-          <td data-label="Adresse" style="width: 17%; text-align: left;" onmouseenter="window.customTooltip.show('${(vente.adresse || '-').replace(/'/g, "\\'")}', this);" onmouseleave="window.customTooltip.hide();">
+          <td data-label="Adresse" style="width: 16%; text-align: left;" onmouseenter="window.customTooltip.show('${(vente.adresse || '-').replace(/'/g, "\\'")}', this);" onmouseleave="window.customTooltip.hide();">
             <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${vente.adresse || '-'}</div>
           </td>
           <td data-label="Prix" style="width: 9%; text-align: left;">${prixFormate}</td>
@@ -6748,10 +6930,12 @@
       'acceptees': 'accepté',
       'produit': 'produit'
     };
+    // Colspan 11 pour les tables avec checkbox (attente, acceptees, produit), 8 pour potentiel
+    const colspan = (category === 'potentiel') ? '8' : '11';
 
     tbody.innerHTML = `
       <tr>
-        <td colspan="10" class="empty-state">
+        <td colspan="${colspan}" class="empty-state">
           <i class="fas ${icons[category]}" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
           <p style="font-size: 1rem;">Aucun client ${labels[category]}</p>
         </td>
@@ -6793,5 +6977,20 @@
   defer
 ></script>
   <script src="/entrepreneur-selector.js"></script>
+
+  <!-- Floating action bar pour sélection multiple -->
+  <div id="floating-action-bar">
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <span id="global-selected-count" style="color: #60a5fa; font-weight: 600; font-size: 0.95rem;">0 sélectionné(s)</span>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+      <button onclick="marquerSelectionCommePerdus()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border: none; color: white; padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: 500; transition: all 0.2s ease;">
+        <i class="fas fa-times-circle"></i> Marquer comme perdu
+      </button>
+      <button onclick="deselectionnerTout()" style="background: rgba(148, 163, 184, 0.2); border: 1px solid rgba(148, 163, 184, 0.3); color: var(--text-light); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; transition: all 0.2s ease;">
+        <i class="fas fa-times"></i> Annuler
+      </button>
+    </div>
+  </div>
 </body>
 </html>

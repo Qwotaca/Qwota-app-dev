@@ -1957,6 +1957,28 @@
     </div>
   </div>
 
+  <!-- Modal confirmation renvoyer soumission -->
+  <div id="confirmRenvoyerSoumissionModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 60;">
+    <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
+      <div class="mb-6">
+        <h3 class="text-xl font-bold mb-2" style="color: var(--text-light);">
+          <i class="fas fa-paper-plane mr-2" style="color: #3b82f6;"></i>
+          Renvoyer la soumission
+        </h3>
+        <p id="confirmRenvoyerSoumissionText" style="color: var(--text-gray);"></p>
+      </div>
+
+      <div class="flex space-x-3">
+        <button onclick="confirmRenvoyerSoumission()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: #3b82f6; color: white;">
+          Oui
+        </button>
+        <button onclick="closeConfirmRenvoyerSoumissionModal()" class="flex-1 px-4 py-2.5 rounded-lg font-semibold transition-all" style="background: rgba(148, 163, 184, 0.2); color: var(--text-light);">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal confirmation suppression client perdu -->
   <div id="confirmDeletePerduModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 90;">
     <div class="p-6 max-w-md w-full mx-4 rounded-xl" style="background: #1e293b; border: 1px solid var(--border-dark); box-shadow: var(--shadow-dark-medium);">
@@ -2578,12 +2600,25 @@
 
     let html = ``;
 
-    // Ajouter le bouton "Marquer comme perdu" en haut pour attente/acceptees/produit
+    // Ajouter les boutons en haut pour attente/acceptees/produit
     if (category === 'attente' || category === 'acceptees' || category === 'produit') {
       html += `
         <div class="marquer-perdu-top" style="margin-bottom: 1rem;">
-          <div class="flex justify-end">
-            <button onclick="marquerCommePerdu()" class="px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'" title="Marquer comme perdu">
+          <div class="flex justify-between">`;
+
+      // Bouton "Renvoyer la soumission" uniquement pour "attente"
+      if (category === 'attente') {
+        html += `
+            <button onclick="renvoyerSoumission()" class="px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6;" onmouseover="this.style.background='rgba(59, 130, 246, 0.3)'" onmouseout="this.style.background='rgba(59, 130, 246, 0.2)'">
+              <i class="fas fa-paper-plane"></i>
+              <span>Renvoyer la soumission</span>
+            </button>`;
+      } else {
+        html += `<div></div>`; // Spacer pour les autres catégories
+      }
+
+      html += `
+            <button onclick="marquerCommePerdu()" class="px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
               <i class="fas fa-times-circle"></i>
               <span>Marquer comme perdu</span>
             </button>
@@ -2970,6 +3005,106 @@
     }
 
     venteToMarkPerdu = null;
+  };
+
+  // Variables globales pour renvoyer soumission
+  let soumissionToResend = null;
+
+  window.renvoyerSoumission = function() {
+    closeClientInfo();
+
+    // Use stored category and index from showClientDetails()
+    const category = window.currentClientCategory;
+    const venteIndex = window.currentClientIndex;
+
+    if (category !== 'attente') {
+      error('[VENTES] Cette fonction est uniquement pour la catégorie attente');
+      return;
+    }
+
+    if (venteIndex === undefined) {
+      error('[VENTES] Index non défini');
+      return;
+    }
+
+    const vente = window.ventesData[category][venteIndex];
+    if (!vente) {
+      error('[VENTES] Vente introuvable');
+      return;
+    }
+
+    // Stocker la vente à renvoyer
+    soumissionToResend = {
+      vente: vente,
+      category: category,
+      index: venteIndex
+    };
+
+    // Mettre à jour le message du modal
+    const modal = document.getElementById('confirmRenvoyerSoumissionModal');
+    const message = document.getElementById('confirmRenvoyerSoumissionText');
+    const nomComplet = `${vente.prenom || vente.clientPrenom || ''} ${vente.nom || vente.clientNom || ''}`.trim();
+    message.textContent = `Voulez-vous renvoyer la soumission par courriel à ${nomComplet} ?`;
+
+    // Afficher le modal
+    modal.style.display = 'flex';
+  };
+
+  window.closeConfirmRenvoyerSoumissionModal = function() {
+    const modal = document.getElementById('confirmRenvoyerSoumissionModal');
+    modal.style.display = 'none';
+    soumissionToResend = null;
+  };
+
+  window.confirmRenvoyerSoumission = async function() {
+    if (!soumissionToResend) return;
+
+    const modal = document.getElementById('confirmRenvoyerSoumissionModal');
+    modal.style.display = 'none';
+
+    const { vente, category, index } = soumissionToResend;
+
+    try {
+      log('[VENTES] Renvoyer soumission:', vente);
+
+      // Préparer les données pour l'API
+      const emailData = {
+        username: window.username,
+        destinataire: vente.courriel || vente.clientCourriel || vente.email || '',
+        nom_client: vente.nom || vente.clientNom || '',
+        prenom_client: vente.prenom || vente.clientPrenom || '',
+        lien_pdf: vente.pdf_url || '',
+        prix_str: String(vente.prix || vente.prixAvantTaxes || '0'),
+        depot_str: String(vente.depot || ''),
+        adresse: vente.adresse || '',
+        telephone: vente.telephone || '',
+        language: vente.language || 'fr'
+      };
+
+      log('[VENTES] Données email:', emailData);
+
+      // Appeler l'API d'envoi d'email
+      const response = await fetch('/envoyer-soumission-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(emailData)
+      });
+
+      if (response.ok) {
+        log('[VENTES] ✅ Soumission renvoyée avec succès');
+        // Afficher un message de succès
+        alert('✅ La soumission a été renvoyée par courriel avec succès!');
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        error('[VENTES] ❌ Erreur lors de l\'envoi:', errorData);
+        alert('❌ Erreur lors de l\'envoi de la soumission');
+      }
+    } catch (err) {
+      error('[VENTES] Erreur renvoyer soumission:', err);
+      alert('❌ Erreur lors de l\'envoi de la soumission');
+    }
+
+    soumissionToResend = null;
   };
 
   window.signerSoumission = function(venteId) {
@@ -4002,16 +4137,21 @@
   </div>
 
   <!-- Modal confirmation marquer comme perdu -->
-  <div id="perduConfirmModal" class="modal-overlay-opaque" style="display: none;">
-    <div class="modal-content" style="max-width: 450px;">
-      <h3 class="modal-title">
-        <i class="fas fa-exclamation-triangle mr-2" style="color: #ef4444;"></i>
-        Confirmer
-      </h3>
-      <div class="modal-body">
-        <p id="perduConfirmMessage" style="color: var(--text-secondary); font-size: 1rem; line-height: 1.5;"></p>
+  <div id="perduConfirmModal" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none;">
+    <div class="status-card p-6 max-w-md w-full" style="max-height: 90vh; overflow-y: auto;">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i class="fas fa-exclamation-triangle mr-2" style="color: #ef4444;"></i>
+          Confirmer
+        </h3>
+        <button onclick="document.getElementById('perduConfirmModal').style.display='none'" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
-      <div class="modal-footer">
+      <div class="mb-6">
+        <p id="perduConfirmMessage" style="color: var(--text-light); font-size: 1rem; line-height: 1.5;"></p>
+      </div>
+      <div class="flex justify-end gap-3">
         <button id="perduConfirmCancel" class="btn-secondary">Annuler</button>
         <button id="perduConfirmOk" class="btn-primary" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
           <i class="fas fa-times-circle mr-2"></i>Marquer comme perdu
@@ -4020,33 +4160,22 @@
     </div>
   </div>
 
-  <!-- Modal succès -->
-  <div id="perduSuccessModal" class="modal-overlay-opaque" style="display: none;">
-    <div class="modal-content" style="max-width: 400px;">
-      <h3 class="modal-title">
-        <i class="fas fa-check-circle mr-2" style="color: #10b981;"></i>
-        Succès
-      </h3>
-      <div class="modal-body">
-        <p id="perduSuccessMessage" style="color: var(--text-secondary); font-size: 1rem; line-height: 1.5;"></p>
-      </div>
-      <div class="modal-footer">
-        <button id="perduSuccessOk" class="btn-primary" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">OK</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Modal erreur -->
-  <div id="perduErrorModal" class="modal-overlay-opaque" style="display: none;">
-    <div class="modal-content" style="max-width: 400px;">
-      <h3 class="modal-title">
-        <i class="fas fa-times-circle mr-2" style="color: #ef4444;"></i>
-        Erreur
-      </h3>
-      <div class="modal-body">
-        <p id="perduErrorMessage" style="color: var(--text-secondary); font-size: 1rem; line-height: 1.5;"></p>
+  <div id="perduErrorModal" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none;">
+    <div class="status-card p-6 max-w-md w-full" style="max-height: 90vh; overflow-y: auto;">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i class="fas fa-times-circle mr-2" style="color: #ef4444;"></i>
+          Erreur
+        </h3>
+        <button onclick="document.getElementById('perduErrorModal').style.display='none'" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
-      <div class="modal-footer">
+      <div class="mb-6">
+        <p id="perduErrorMessage" style="color: var(--text-light); font-size: 1rem; line-height: 1.5;"></p>
+      </div>
+      <div class="flex justify-end">
         <button id="perduErrorOk" class="btn-primary" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">OK</button>
       </div>
     </div>
@@ -4426,7 +4555,6 @@
         "
         onmouseover="this.style.backgroundColor='#94a3b8'"
         onmouseout="this.style.backgroundColor='#cbd5e1'"
-        title="Cliquer pour modifier"
       ></span>`;
     }
 
@@ -4454,7 +4582,6 @@
       data-vente-id="${venteId}"
       data-current-statut="${statut}"
       data-category="${category}"
-      data-tooltip="${statut}"
       style="
         display: block;
         padding: 4px 12px;
@@ -4471,8 +4598,8 @@
         text-overflow: ellipsis;
         text-align: center;
       "
-      onmouseenter="this.style.opacity='0.8'; window.customTooltip.show(this.getAttribute('data-tooltip'), this);"
-      onmouseleave="this.style.opacity='1'; window.customTooltip.hide();"
+      onmouseenter="this.style.opacity='0.8';"
+      onmouseleave="this.style.opacity='1';"
     >${statut}</span>`;
   };
 
@@ -4497,7 +4624,6 @@
         "
         onmouseover="this.style.backgroundColor='#94a3b8'"
         onmouseout="this.style.backgroundColor='#cbd5e1'"
-        title="Cliquer pour modifier"
       ></span>`;
     }
 
@@ -4515,7 +4641,6 @@
       data-vente-id="${venteId}"
       data-current-provenance="${provenance}"
       data-category="${category}"
-      data-tooltip="${provenance}"
       style="
         display: block;
         padding: 4px 12px;
@@ -4532,8 +4657,8 @@
         text-overflow: ellipsis;
         text-align: center;
       "
-      onmouseenter="this.style.opacity='0.8'; window.customTooltip.show(this.getAttribute('data-tooltip'), this);"
-      onmouseleave="this.style.opacity='1'; window.customTooltip.hide();"
+      onmouseenter="this.style.opacity='0.8';"
+      onmouseleave="this.style.opacity='1';"
     >${provenance}</span>`;
   };
 
@@ -4558,7 +4683,6 @@
         "
         onmouseover="this.style.backgroundColor='#94a3b8'"
         onmouseout="this.style.backgroundColor='#cbd5e1'"
-        title="Cliquer pour modifier"
       ></span>`;
     }
 
@@ -4576,7 +4700,6 @@
       data-vente-id="${venteId}"
       data-current-type="${typeTravaux}"
       data-category="${category}"
-      data-tooltip="${typeTravaux}"
       style="
         display: block;
         padding: 4px 12px;
@@ -4593,8 +4716,8 @@
         text-overflow: ellipsis;
         text-align: center;
       "
-      onmouseenter="this.style.opacity='0.8'; window.customTooltip.show(this.getAttribute('data-tooltip'), this);"
-      onmouseleave="this.style.opacity='1'; window.customTooltip.hide();"
+      onmouseenter="this.style.opacity='0.8';"
+      onmouseleave="this.style.opacity='1';"
     >${typeTravaux}</span>`;
   };
 
@@ -4619,7 +4742,6 @@
       data-vente-id="${venteId}"
       data-current-paiement="${paiement}"
       data-category="${category}"
-      data-tooltip="${paiement}"
       style="
         display: block;
         padding: 4px 12px;
@@ -4636,8 +4758,8 @@
         text-overflow: ellipsis;
         text-align: center;
       "
-      onmouseenter="this.style.opacity='0.8'; window.customTooltip.show(this.getAttribute('data-tooltip'), this);"
-      onmouseleave="this.style.opacity='1'; window.customTooltip.hide();"
+      onmouseenter="this.style.opacity='0.8';"
+      onmouseleave="this.style.opacity='1';"
     >${paiement}</span>`;
   };
 
@@ -4775,7 +4897,6 @@
         "
         onmouseover="this.style.backgroundColor='#94a3b8'"
         onmouseout="this.style.backgroundColor='#cbd5e1'"
-        title="Cliquer pour modifier"
       ></span>`;
     }
 
@@ -4793,7 +4914,6 @@
       data-vente-id="${venteId}"
       data-current-etiquette="${etiquette}"
       data-category="${category}"
-      data-tooltip="${etiquette}"
       style="
         display: block;
         padding: 4px 12px;
@@ -4810,8 +4930,8 @@
         text-overflow: ellipsis;
         text-align: center;
       "
-      onmouseenter="this.style.opacity='0.8'; window.customTooltip.show(this.getAttribute('data-tooltip'), this);"
-      onmouseleave="this.style.opacity='1'; window.customTooltip.hide();"
+      onmouseenter="this.style.opacity='0.8';"
+      onmouseleave="this.style.opacity='1';"
     >${etiquette}</span>`;
   };
 
@@ -6845,10 +6965,14 @@
           // Récupérer les données de la vente
           const venteData = window.ventesData[apiCategory] ? window.ventesData[apiCategory][item.index] : null;
           if (venteData) {
-            await fetch(`/ventes/${window.username}/${apiCategory}/${item.venteId}/perdu`, {
+            await fetch(`/ventes/marquer-perdu`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(venteData)
+              body: JSON.stringify({
+                username: window.username,
+                vente_id: item.venteId,
+                category: apiCategory
+              })
             });
           }
         }
@@ -6865,9 +6989,6 @@
       // Réinitialiser la sélection
       deselectionnerTout();
 
-      // Message de succès avec modal personnalisé
-      showSuccessModal(`${totalCount} client(s) marqué(s) comme perdu(s)`);
-
     } catch (error) {
       console.error('Erreur lors du marquage comme perdu:', error);
       showErrorModal('Erreur lors du marquage comme perdu');
@@ -6875,22 +6996,6 @@
   }
 
   // Fonction pour afficher un modal de succès
-  function showSuccessModal(message) {
-    const modal = document.getElementById('perduSuccessModal');
-    const msgEl = document.getElementById('perduSuccessMessage');
-    const btnOk = document.getElementById('perduSuccessOk');
-
-    msgEl.textContent = message;
-    modal.style.display = 'flex';
-
-    const handleClose = () => {
-      modal.style.display = 'none';
-      btnOk.removeEventListener('click', handleClose);
-    };
-
-    btnOk.addEventListener('click', handleClose);
-  }
-
   // Fonction pour afficher un modal d'erreur
   function showErrorModal(message) {
     const modal = document.getElementById('perduErrorModal');
@@ -6979,7 +7084,7 @@
           <td data-label="Provenance" style="width: 8%; text-align: left;" onclick="event.stopPropagation()">${provenanceBadge}</td>
           <td data-label="Type travaux" style="width: 8%; text-align: left;" onclick="event.stopPropagation()">${typeTravauxBadge}</td>
           <td data-label="Téléphone" style="width: 10%; text-align: left;">${prospect.telephone || '-'}</td>
-          <td data-label="Adresse" style="width: 17%; text-align: left;" onmouseenter="window.customTooltip.show('${(prospect.adresse || '-').replace(/'/g, "\\'")}', this);" onmouseleave="window.customTooltip.hide();">
+          <td data-label="Adresse" style="width: 17%; text-align: left;">
             <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${prospect.adresse || '-'}</div>
           </td>
           <td data-label="Prix" style="width: 8%; text-align: left;">${prixFormate}</td>
@@ -7118,7 +7223,7 @@
           <td data-label="Provenance" style="width: 8%; text-align: left;" onclick="event.stopPropagation()">${provenanceBadge}</td>
           <td data-label="Type travaux" style="width: 8%; text-align: left;" onclick="event.stopPropagation()">${typeTravauxBadge}</td>
           <td data-label="Téléphone" style="width: 10%; text-align: left;">${vente.telephone || '-'}</td>
-          <td data-label="Adresse" style="width: 16%; text-align: left;" onmouseenter="window.customTooltip.show('${(vente.adresse || '-').replace(/'/g, "\\'")}', this);" onmouseleave="window.customTooltip.hide();">
+          <td data-label="Adresse" style="width: 16%; text-align: left;">
             <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${vente.adresse || '-'}</div>
           </td>
           <td data-label="Prix" style="width: 9%; text-align: left;">${prixFormate}</td>

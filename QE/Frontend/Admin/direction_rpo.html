@@ -6771,27 +6771,29 @@ function renderCoachWeeklyTable() {
   // Obtenir la semaine actuelle
   const currentWeekLabel = getCurrentWeekLabel();
 
-  // Rendu simplifié avec une seule colonne éditable
+  // Rendu simplifié avec une seule colonne cliquable pour ouvrir le popup
   filteredData.forEach(entry => {
     const tr = document.createElement('tr');
     tr.dataset.entryId = entry.week_label;
+    tr.style.cursor = 'pointer';
 
     const isCurrentWeek = entry.week_label === currentWeekLabel;
     const notesValue = entry.notes_hebdo || '';
+    const displayText = notesValue ? (notesValue.length > 50 ? notesValue.substring(0, 50) + '...' : notesValue) : '-';
 
     tr.innerHTML = `
       <td class="rpo-col-date">
         ${entry.week_label}
       </td>
-      <td class="rpo-col-wide">
-        <textarea
-          class="rpo-textarea"
-          data-field="notes_hebdo"
-          data-entry-id="${entry.week_label}"
-          placeholder="Ajouter des notes pour cette semaine..."
-        >${notesValue}</textarea>
+      <td class="rpo-col-wide" style="color: var(--text-light);">
+        ${displayText}
       </td>
     `;
+
+    // Click handler pour ouvrir le popup
+    tr.onclick = function() {
+      openCoachNotesPopup(entry.week_label, notesValue);
+    };
 
     // Appliquer le style jaune pour la semaine actuelle
     if (isCurrentWeek) {
@@ -6802,47 +6804,75 @@ function renderCoachWeeklyTable() {
     tbody.appendChild(tr);
   });
 
-  // Auto-sauvegarde des textareas coach avec debounce + blur
-  const allTextareas = tbody.querySelectorAll('.rpo-textarea');
-  const coachSaveTimers = new Map();
-
-  allTextareas.forEach(textarea => {
-    // Auto-sauvegarde avec debounce 1 seconde sur input
-    textarea.addEventListener('input', function() {
-      const field = this.getAttribute('data-field');
-      const entryId = this.getAttribute('data-entry-id');
-      const value = this.value;
-
-      if (coachSaveTimers.has(this)) {
-        clearTimeout(coachSaveTimers.get(this));
-      }
-
-      const timer = setTimeout(async () => {
-        console.log('[RPO COACH] Auto-sauvegarde:', field, 'pour', entryId);
-        await saveCoachRpoChange(entryId, field, value);
-        coachSaveTimers.delete(this);
-      }, 1000);
-
-      coachSaveTimers.set(this, timer);
-    });
-
-    // Sauvegarde immédiate sur blur
-    textarea.addEventListener('blur', async function() {
-      const field = this.getAttribute('data-field');
-      const entryId = this.getAttribute('data-entry-id');
-      const value = this.value;
-
-      if (coachSaveTimers.has(this)) {
-        clearTimeout(coachSaveTimers.get(this));
-        coachSaveTimers.delete(this);
-      }
-
-      console.log('[RPO COACH] Sauvegarde blur:', field, 'pour', entryId);
-      await saveCoachRpoChange(entryId, field, value);
-    });
-  });
-
   enableHeaderDragScroll();
+}
+
+// Ouvrir le popup pour les notes hebdomadaires du coach
+function openCoachNotesPopup(weekLabel, currentNotes) {
+  const existingPopup = document.getElementById('coach-notes-popup-overlay');
+  if (existingPopup) existingPopup.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'coach-notes-popup-overlay';
+  overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000000; display: flex; align-items: center; justify-content: center; padding: 20px;';
+  overlay.onclick = (e) => { if (e.target === overlay) closeCoachNotesPopup(); };
+
+  const popup = document.createElement('div');
+  popup.style.cssText = 'background: var(--bg-card, #1e293b); border-radius: 12px; padding: 24px; max-width: 700px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);';
+  popup.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(139, 92, 246, 0.3);">
+      <h3 style="color: var(--text-light, #e2e8f0); font-size: 1.2rem; font-weight: 600; margin: 0;">
+        <i class="fas fa-chalkboard-teacher" style="margin-right: 10px; color: #8b5cf6;"></i>
+        Notes hebdomadaires - ${weekLabel}
+      </h3>
+      <button onclick="closeCoachNotesPopup()" style="background: none; border: none; color: var(--text-gray, #94a3b8); cursor: pointer; font-size: 1.5rem; line-height: 1;">&times;</button>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+      <label style="display: block; color: var(--text-gray, #94a3b8); font-size: 0.85rem; margin-bottom: 6px;">Notes hebdomadaires</label>
+      <textarea id="popup-coach-notes" style="width: 100%; min-height: 200px; padding: 12px; border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3); background: rgba(51, 65, 85, 0.3); color: var(--text-light, #e2e8f0); font-size: 0.95rem; resize: vertical; font-family: inherit;" placeholder="Ajouter des notes pour cette semaine...">${currentNotes}</textarea>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 15px; border-top: 1px solid rgba(139, 92, 246, 0.3);">
+      <button onclick="closeCoachNotesPopup()" style="padding: 10px 20px; border-radius: 6px; border: 1px solid rgba(139, 92, 246, 0.3); background: transparent; color: var(--text-gray, #94a3b8); cursor: pointer; font-size: 0.95rem;">Annuler</button>
+      <button onclick="saveCoachNotesPopup('${weekLabel}')" style="padding: 10px 20px; border-radius: 6px; border: none; background: #8b5cf6; color: white; cursor: pointer; font-weight: 500; font-size: 0.95rem;">
+        <i class="fas fa-save" style="margin-right: 6px;"></i>Enregistrer
+      </button>
+    </div>
+  `;
+
+  overlay.appendChild(popup);
+  document.body.appendChild(overlay);
+
+  // Focus sur le textarea
+  setTimeout(() => document.getElementById('popup-coach-notes').focus(), 100);
+}
+
+function closeCoachNotesPopup() {
+  const popup = document.getElementById('coach-notes-popup-overlay');
+  if (popup) popup.remove();
+}
+
+async function saveCoachNotesPopup(weekLabel) {
+  const textarea = document.getElementById('popup-coach-notes');
+  if (!textarea) return;
+
+  const value = textarea.value.trim();
+
+  // Mettre à jour les données locales
+  const entry = coachWeeklyData.find(e => e.week_label === weekLabel);
+  if (entry) {
+    entry.notes_hebdo = value;
+  }
+
+  // Sauvegarder via l'API
+  await saveCoachRpoChange(weekLabel, 'notes_hebdo', value);
+
+  // Rafraîchir le tableau
+  renderCoachWeeklyTable();
+
+  // Fermer le popup
+  closeCoachNotesPopup();
 }
 
 // Fonction de sauvegarde auto pour les textareas coach

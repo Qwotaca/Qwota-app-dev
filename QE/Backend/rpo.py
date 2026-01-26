@@ -18,6 +18,17 @@ _coach_sync_locks = {}  # Dict[coach_username, Lock]
 _direction_sync_lock = threading.Lock()
 _locks_lock = threading.Lock()  # Lock pour accéder au dict des locks
 
+# Locks pour éviter les écritures simultanées aux fichiers RPO (par utilisateur)
+_user_file_locks = {}  # Dict[username, Lock]
+_user_file_locks_lock = threading.Lock()  # Lock pour accéder au dict des locks
+
+def get_user_file_lock(username: str) -> threading.Lock:
+    """Retourne un lock spécifique pour le fichier RPO d'un utilisateur"""
+    with _user_file_locks_lock:
+        if username not in _user_file_locks:
+            _user_file_locks[username] = threading.Lock()
+        return _user_file_locks[username]
+
 # Fuseau horaire de Toronto
 TORONTO_TZ = ZoneInfo("America/Toronto")
 
@@ -165,6 +176,19 @@ def load_user_rpo_data(username: str) -> Dict[str, Any]:
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             return json.load(f)
+    except json.JSONDecodeError as e:
+        # ALERTE: Fichier JSON corrompu - probablement une race condition
+        print(f"[CRITICAL] [LOAD RPO] Fichier JSON corrompu pour {username}: {e}", flush=True)
+        print(f"[CRITICAL] [LOAD RPO] Cela peut causer la perte des donnees annuelles!", flush=True)
+        # Essayer de lire le fichier .tmp si il existe (backup de l'écriture atomique)
+        temp_filepath = filepath + '.tmp'
+        if os.path.exists(temp_filepath):
+            try:
+                with open(temp_filepath, 'r', encoding='utf-8') as f:
+                    print(f"[RECOVERY] [LOAD RPO] Recuperation depuis fichier temporaire pour {username}", flush=True)
+                    return json.load(f)
+            except:
+                pass
     except Exception as e:
         print(f"Erreur lors du chargement RPO pour {username}: {e}")
         # Retourne structure par défaut en cas d'erreur
@@ -229,37 +253,91 @@ def load_user_rpo_data(username: str) -> Dict[str, Any]:
 def save_user_rpo_data(username: str, data: Dict[str, Any]) -> bool:
     """
     Sauvegarde les données RPO d'un utilisateur
+    Utilise un lock et une écriture atomique pour éviter la corruption
     """
     filepath = get_user_rpo_file(username)
-    print(f"[DEBUG] [SAVE RPO] Attempting to save for user: {username}", flush=True)
-    print(f"[DEBUG] [SAVE RPO] Target filepath: {filepath}", flush=True)
-    print(f"[DEBUG] [SAVE RPO] RPO_DATA_DIR: {RPO_DATA_DIR}", flush=True)
-    print(f"[DEBUG] [SAVE RPO] Directory exists? {os.path.exists(os.path.dirname(filepath))}", flush=True)
-    print(f"[DEBUG] [SAVE RPO] File exists before save? {os.path.exists(filepath)}", flush=True)
+    temp_filepath = filepath + '.tmp'
 
-    try:
-        # Ajouter timestamp de dernière modification (heure de Toronto)
-        data['last_updated'] = get_toronto_now().isoformat()
+    # Utiliser un lock pour éviter les écritures simultanées
+    lock = get_user_file_lock(username)
 
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+    with lock:
+        print(f"[DEBUG] [SAVE RPO] Attempting to save for user: {username}", flush=True)
+        print(f"[DEBUG] [SAVE RPO] Target filepath: {filepath}", flush=True)
+        print(f"[DEBUG] [SAVE RPO] RPO_DATA_DIR: {RPO_DATA_DIR}", flush=True)
+        print(f"[DEBUG] [SAVE RPO] Directory exists? {os.path.exists(os.path.dirname(filepath))}", flush=True)
+        print(f"[DEBUG] [SAVE RPO] File exists before save? {os.path.exists(filepath)}", flush=True)
 
-        print(f"[DEBUG] [SAVE RPO] File written successfully!", flush=True)
-        print(f"[DEBUG] [SAVE RPO] File exists after save? {os.path.exists(filepath)}", flush=True)
-        return True
-    except Exception as e:
-        print(f"[ERROR] [SAVE RPO] Failed to save RPO for {username}: {e}", flush=True)
-        import traceback
-        traceback.print_exc()
-        return False
+        try:
+            # Ajouter timestamp de dernière modification (heure de Toronto)
+            data['last_updated'] = get_toronto_now().isoformat()
+
+            # Écriture atomique: écrire dans un fichier temporaire puis renommer
+            # Cela évite la corruption si deux processus écrivent en même temps
+            with open(temp_filepath, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+
+            # Renommer atomiquement (remplace le fichier existant)
+            # Sur Windows avec OneDrive, os.replace peut échouer temporairement
+            # On ajoute un retry avec backoff
+            import time
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    os.replace(temp_filepath, filepath)
+                    break  # Succès
+                except PermissionError as pe:
+                    if attempt < max_retries - 1:
+                        time.sleep(0.1 * (attempt + 1))  # Backoff: 0.1s, 0.2s, 0.3s
+                    else:
+                        # Fallback: écrire directement si os.replace échoue
+                        print(f"[WARN] [SAVE RPO] os.replace failed, using fallback write", flush=True)
+                        with open(filepath, 'w', encoding='utf-8') as f:
+                            json.dump(data, f, indent=2, ensure_ascii=False)
+                        # Nettoyer le fichier temporaire
+                        if os.path.exists(temp_filepath):
+                            try:
+                                os.remove(temp_filepath)
+                            except:
+                                pass
+
+            print(f"[DEBUG] [SAVE RPO] File written successfully!", flush=True)
+            print(f"[DEBUG] [SAVE RPO] File exists after save? {os.path.exists(filepath)}", flush=True)
+            return True
+        except Exception as e:
+            print(f"[ERROR] [SAVE RPO] Failed to save RPO for {username}: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            # Nettoyer le fichier temporaire si il existe
+            if os.path.exists(temp_filepath):
+                try:
+                    os.remove(temp_filepath)
+                except:
+                    pass
+            return False
 
 
 def update_annual_data(username: str, annual_data: Dict[str, Any]) -> bool:
     """
-    Met à jour les données annuelles
+    Met à jour les données annuelles (MERGE au lieu d'écraser)
     """
     rpo_data = load_user_rpo_data(username)
-    rpo_data['annual'] = annual_data
+
+    # MERGE: préserver les données existantes et mettre à jour seulement les nouveaux champs
+    # Ceci évite d'écraser les données calculées automatiquement (estimation_reel, contract_reel, etc.)
+    if 'annual' not in rpo_data:
+        rpo_data['annual'] = {}
+
+    # Filtrer les champs qui sont calculés automatiquement par sync_soumissions_to_rpo()
+    # Ne pas les écraser même s'ils sont présents dans annual_data
+    protected_fields = ['hr_pap_reel', 'estimation_reel', 'contract_reel', 'dollar_reel',
+                       'hr_pap_reel_sans_week1', 'mktg_reel', 'vente_reel', 'moyen_reel', 'prod_horaire']
+
+    # Mettre à jour seulement les champs NON protégés
+    for key, value in annual_data.items():
+        if key not in protected_fields:
+            rpo_data['annual'][key] = value
+
     return save_user_rpo_data(username, rpo_data)
 
 

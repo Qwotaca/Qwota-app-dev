@@ -12059,35 +12059,25 @@ function calculateExpectedToDate() {
       weekFound = true;
       log(`   ✓ Semaine actuelle trouvée: ${i} (${weekStart.toDateString()} - ${weekEnd.toDateString()})`);
 
-      // Lire les valeurs "Cumul Obj." de cette semaine
-      const row = document.querySelector(`#plan-w${i}-mktg-reel`)?.closest('tr');
-      if (row && row.style.display !== 'none') {
-        const cells = row.querySelectorAll('td');
-        log(`   ✓ Ligne trouvée avec ${cells.length} cellules`);
+      // Lire les valeurs "Cumul Obj." directement depuis les spans avec IDs
+      const mktgCumulObjSpan = document.getElementById(`plan-w${i}-mktg-cumul-obj`);
+      const estimCumulObjSpan = document.getElementById(`plan-w${i}-estim-cumul-obj`);
+      const contratCumulObjSpan = document.getElementById(`plan-w${i}-contrat-cumul-obj`);
+      const dollarCumulObjSpan = document.getElementById(`plan-w${i}-dollar-cumul-obj`);
 
-        // Structure des colonnes (avec Cumul Obj):
-        // 0: Semaine
-        // 1: Mktg Obj, 2: Mktg Réel, 3: Mktg Cumul Obj, 4: Mktg Cumul, 5: Mktg Tendance
-        // 6: Estim Obj, 7: Estim Réel, 8: Estim Cumul Obj, 9: Estim Cumul, 10: Estim Tendance, 11: Ratio
-        // 12: Contrat Obj, 13: Contrat Réel, 14: Contrat Cumul Obj, 15: Contrat Cumul, 16: Contrat Tendance
-        // 17: Dollar Obj, 18: Dollar Réel, 19: Dollar Cumul Obj, 20: Dollar Cumul, 21: Dollar Tendance
+      const mktgCumulText = mktgCumulObjSpan?.textContent || '0';
+      const estimCumulText = estimCumulObjSpan?.textContent || '0';
+      const contratCumulText = contratCumulObjSpan?.textContent || '0';
+      const dollarCumulText = dollarCumulObjSpan?.textContent || '0';
 
-        const mktgCumulText = cells[3]?.textContent || '0';
-        const estimCumulText = cells[8]?.textContent || '0';
-        const contratCumulText = cells[14]?.textContent || '0';
-        const dollarCumulText = cells[19]?.textContent || '0';
+      log(`   📊 Valeurs lues - Mktg: "${mktgCumulText}", Estim: "${estimCumulText}", Contrat: "${contratCumulText}", Dollar: "${dollarCumulText}"`);
 
-        log(`   📊 Valeurs lues - Mktg: "${mktgCumulText}", Estim: "${estimCumulText}", Contrat: "${contratCumulText}", Dollar: "${dollarCumulText}"`);
+      expectedMktg = parseFloat(mktgCumulText.replace(/[^\d.]/g, '')) || 0;
+      expectedEstim = parseFloat(estimCumulText.replace(/[^\d.]/g, '')) || 0;
+      expectedContrat = parseFloat(contratCumulText.replace(/[^\d.]/g, '')) || 0;
+      expectedDollar = parseFloat(dollarCumulText.replace(/[^\d]/g, '')) || 0;
 
-        expectedMktg = parseFloat(mktgCumulText.replace(/[^\d.]/g, '')) || 0;
-        expectedEstim = parseFloat(estimCumulText.replace(/[^\d.]/g, '')) || 0;
-        expectedContrat = parseFloat(contratCumulText.replace(/[^\d.]/g, '')) || 0;
-        expectedDollar = parseFloat(dollarCumulText.replace(/[^\d]/g, '')) || 0;
-
-        log(`   ✅ Cumul Obj - Mktg: ${expectedMktg}h, Estim: ${expectedEstim}, Contrat: ${expectedContrat}, Dollar: ${expectedDollar}$`);
-      } else {
-        log(`   ⚠️ Ligne non trouvée ou cachée pour semaine ${i}`);
-      }
+      log(`   ✅ Cumul Obj - Mktg: ${expectedMktg}h, Estim: ${expectedEstim}, Contrat: ${expectedContrat}, Dollar: ${expectedDollar}$`);
       break; // Sortir de la boucle une fois la semaine actuelle trouvée
     }
   }

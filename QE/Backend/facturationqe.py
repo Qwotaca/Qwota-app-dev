@@ -10,6 +10,14 @@ import os
 import sys
 import uuid
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
+# Fuseau horaire de Toronto
+TORONTO_TZ = ZoneInfo("America/Toronto")
+
+def get_toronto_now():
+    """Retourne l'heure actuelle à Toronto"""
+    return datetime.now(TORONTO_TZ)
 
 # Import pour sync RPO automatique
 from QE.Backend.rpo import sync_soumissions_to_rpo
@@ -270,7 +278,7 @@ def update_statut_client_facturation_qe(username: str, numero_soumission: str, t
         if type_statut == "depot":
             tous_statuts[numero_soumission]["statutDepot"] = nouveau_statut
             if nouveau_statut == "envoye":
-                tous_statuts[numero_soumission]["dateDepot"] = datetime.now().isoformat()
+                tous_statuts[numero_soumission]["dateDepot"] = get_toronto_now().isoformat()
             
             # Sauvegarder les détails du dépôt
             if details_paiement:
@@ -302,7 +310,7 @@ def update_statut_client_facturation_qe(username: str, numero_soumission: str, t
         elif type_statut == "paiement_final":
             tous_statuts[numero_soumission]["statutPaiementFinal"] = nouveau_statut
             if nouveau_statut == "envoye":
-                tous_statuts[numero_soumission]["datePaiementFinal"] = datetime.now().isoformat()
+                tous_statuts[numero_soumission]["datePaiementFinal"] = get_toronto_now().isoformat()
             
             # Sauvegarder les détails du paiement final
             if details_paiement:
@@ -334,7 +342,7 @@ def update_statut_client_facturation_qe(username: str, numero_soumission: str, t
         elif type_statut == "autres_paiements":
             tous_statuts[numero_soumission]["statutAutresPaiements"] = nouveau_statut
             if nouveau_statut == "envoye":
-                tous_statuts[numero_soumission]["dateAutresPaiements"] = datetime.now().isoformat()
+                tous_statuts[numero_soumission]["dateAutresPaiements"] = get_toronto_now().isoformat()
 
             # Sauvegarder les détails des autres paiements (ARRAY pour permettre plusieurs paiements)
             if details_paiement:
@@ -355,7 +363,7 @@ def update_statut_client_facturation_qe(username: str, numero_soumission: str, t
                     "date": details_paiement.get("date", ""),
                     "methode": details_paiement.get("methode", ""),
                     "statut": nouveau_statut,
-                    "dateEnvoi": datetime.now().isoformat()
+                    "dateEnvoi": get_toronto_now().isoformat()
                 }
 
                 # Ajouter les détails spécifiques selon la méthode
@@ -393,17 +401,17 @@ def update_statut_client_facturation_qe(username: str, numero_soumission: str, t
 
                 print(f"[FIX] Nouveau paiement ajouté à autresPaiements (total: {len(tous_statuts[numero_soumission]['autresPaiements'])}): {nouveau_autre_paiement}")
         
-        # Mettre à jour la date de modification
-        tous_statuts[numero_soumission]["dateMiseAJour"] = datetime.now().isoformat()
+        # Mettre à jour la date de modification (heure Toronto)
+        tous_statuts[numero_soumission]["dateMiseAJour"] = get_toronto_now().isoformat()
 
         # === Ajouter datePremiereFacturation si c'est le premier paiement envoyé ===
         # Condition: datePremiereFacturation n'existe pas ET un paiement est envoyé (tout sauf non_envoye/refuse)
-        # Utilise la date d'aujourd'hui (moment où le paiement est envoyé au comptable)
+        # Utilise la date d'aujourd'hui à Toronto (moment où le paiement est envoyé au comptable)
         statuts_non_envoyes = ["non_envoye", "refuse", None, ""]
         should_sync_rpo = False
         if nouveau_statut not in statuts_non_envoyes and not tous_statuts[numero_soumission].get("datePremiereFacturation"):
-            # Utiliser la date d'aujourd'hui
-            date_paiement = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+            # Utiliser la date d'aujourd'hui à Toronto (minuit)
+            date_paiement = get_toronto_now().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
 
             tous_statuts[numero_soumission]["datePremiereFacturation"] = date_paiement
             print(f"[RPO TRIGGER] datePremiereFacturation définie pour {numero_soumission}: {date_paiement}")
@@ -722,7 +730,7 @@ def ajouter_historique_client_facturation_qe(username: str, numero_soumission: s
         # Ajouter la nouvelle entrée
         nouvelle_entree = {
             "id": str(uuid.uuid4()),
-            "date": datetime.now().isoformat(),
+            "date": get_toronto_now().isoformat(),
             "action": action,
             "details": details,
             "username": username

@@ -410,8 +410,8 @@ def update_statut_client_facturation_qe(username: str, numero_soumission: str, t
         statuts_non_envoyes = ["non_envoye", "refuse", None, ""]
         should_sync_rpo = False
         if nouveau_statut not in statuts_non_envoyes and not tous_statuts[numero_soumission].get("datePremiereFacturation"):
-            # Utiliser la date d'aujourd'hui à Toronto (minuit)
-            date_paiement = get_toronto_now().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+            # Utiliser la date et heure actuelle à Toronto
+            date_paiement = get_toronto_now().isoformat()
 
             tous_statuts[numero_soumission]["datePremiereFacturation"] = date_paiement
             print(f"[RPO TRIGGER] datePremiereFacturation définie pour {numero_soumission}: {date_paiement}")

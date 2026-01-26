@@ -1615,35 +1615,46 @@ def get_etats_resultats_budget(username: str) -> Dict[str, float]:
     return rpo_data.get('etats_resultats', {}).get('budget_percent', {})
 
 
-def update_etats_resultats_actuel(username: str, actuel_data: Dict[str, float], cible_data: Dict[str, float] = None, cible_percent: Dict[str, float] = None) -> bool:
+def update_etats_resultats_cible_percent(username: str, cible_percent: Dict[str, float]) -> bool:
     """
-    Met à jour les montants Actuel et les pourcentages CIBLÉ des États des Résultats
-    actuel_data: dictionnaire {category: montant}
-    cible_data: NON UTILISÉ - les $ sont calculés dynamiquement, pas sauvegardés
-    cible_percent: dictionnaire {category: pourcentage} - % CIBLÉ personnalisés (sauvegardés)
+    Sauvegarde uniquement les % ciblés des États des Résultats
+    Les $ ciblés sont calculés dynamiquement: CA × % cible
+    cible_percent: dictionnaire {category: pourcentage}
+
+    NOTE: Utilise 'cible_percent' séparé de 'budget_percent' pour éviter les conflits
     """
     rpo_data = load_user_rpo_data(username)
 
     if 'etats_resultats' not in rpo_data:
         rpo_data['etats_resultats'] = {}
 
-    rpo_data['etats_resultats']['actuel'] = actuel_data
-
-    # NOTE: On ne sauvegarde PAS cible (les $) - ils sont calculés dynamiquement
-    # Seulement les pourcentages CIBLÉ personnalisés sont sauvegardés
-    if cible_percent is not None:
-        rpo_data['etats_resultats']['budget_percent'] = cible_percent
-
-    return save_user_rpo_data(username, rpo_data)
+    # Sauvegarder dans 'cible_percent' (séparé de 'budget_percent')
+    if cible_percent is not None and len(cible_percent) > 0:
+        rpo_data['etats_resultats']['cible_percent'] = cible_percent
+        return save_user_rpo_data(username, rpo_data)
+    else:
+        # Ne pas écraser avec des données vides
+        return True
 
 
 def get_etats_resultats_actuel(username: str) -> Dict[str, Any]:
-    """Récupère les montants Actuel et les pourcentages CIBLÉ des États des Résultats"""
+    """Récupère les % ciblés des États des Résultats
+    Les $ ciblés sont calculés dynamiquement: CA × % cible
+
+    NOTE: Lit depuis 'cible_percent' (nouveau champ séparé de 'budget_percent')
+    """
     rpo_data = load_user_rpo_data(username)
     etats_resultats = rpo_data.get('etats_resultats', {})
+
+    # Lire depuis 'cible_percent' (nouveau) ou fallback vers 'budget_percent' (ancien)
+    cible_percent = etats_resultats.get('cible_percent', {})
+    if not cible_percent:
+        # Fallback pour données existantes qui utilisaient budget_percent
+        cible_percent = etats_resultats.get('budget_percent', {})
+
+    print(f"[DEBUG GET ÉTATS] cible_percent has {len(cible_percent)} categories", flush=True)
     return {
-        'actuel': etats_resultats.get('actuel', {}),
-        'budget_percent': etats_resultats.get('budget_percent', {})
+        'budget_percent': cible_percent  # Retourne sous le nom attendu par le frontend
     }
 
 

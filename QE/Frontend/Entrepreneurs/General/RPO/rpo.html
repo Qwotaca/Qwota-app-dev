@@ -13426,71 +13426,53 @@ function updateAllCalculations(saveData = false) {
   }
 }
 
-// Sauvegarder les données Actuel dans le backend
+// Sauvegarder uniquement les % ciblés dans le backend
+// Les $ ciblés sont calculés dynamiquement: CA × % cible
 async function saveEtatsResultatsData() {
   const username = getCurrentUsername();
-  const actuelData = {};
-  const cibleData = {};
-
-  // Sauvegarder toutes les valeurs Actuel (sauf Ventes, Total dépenses et Profit)
-  const allActuelCells = document.querySelectorAll('[data-field="actuel-montant"]');
-  log(`💾 Nombre total de cellules Actuel trouvées: ${allActuelCells.length}`);
-
-  allActuelCells.forEach(cell => {
-    const category = cell.getAttribute('data-category');
-    // Ne pas sauvegarder Ventes (vient du dashboard), Total dépenses et Profit (calculés)
-    if (category !== 'ventes' && category !== 'total-depenses' && category !== 'profit') {
-      const input = cell.querySelector('input');
-      const value = parseMoneyValue(input ? input.value : cell.textContent);
-      actuelData[category] = value;
-      log(`   ✓ Actuel ${category}: ${value}`);
-    }
-  });
-
-  // Sauvegarder toutes les valeurs CIBLÉ (sauf Total dépenses, Profit, et catégories non-éditables)
-  const allCibleInputs = document.querySelectorAll('.etats-resultats-cible-input');
-  const nonEditableCategories = ['ventes', 'profit', 'total-ecart', 'total-depenses', 'assurance-qe', 'frais-garanties', 'redevances'];
-  log(`💾 Nombre total d'inputs CIBLÉ trouvés: ${allCibleInputs.length}`);
-
-  allCibleInputs.forEach(input => {
-    const category = input.closest('td')?.getAttribute('data-category');
-    // Ne pas sauvegarder: total-depenses, profit, et les catégories non-éditables
-    if (category &&
-        category !== 'total-depenses' &&
-        category !== 'profit' &&
-        !nonEditableCategories.includes(category)) {
-      const value = parseMoneyValue(input.value);
-      cibleData[category] = value;
-      log(`   ✓ CIBLÉ ${category}: ${value}`);
-    } else if (category) {
-      log(`   ⚠️ CIBLÉ ${category}: ignoré (${nonEditableCategories.includes(category) ? 'non-éditable' : 'calculé'})`);
-    }
-  });
 
   try {
-    // DEBUG: Log what we're about to send
-    console.log('💾 [SAVE DEBUG] window.customBudgetPercent:', window.customBudgetPercent);
-    console.log('💾 [SAVE DEBUG] cible_percent to send:', window.customBudgetPercent || {});
+    console.log('💾 [SAVE] ============================================');
+    console.log('💾 [SAVE] saveEtatsResultatsData() called');
+    console.log('💾 [SAVE] username:', username);
+    console.log('💾 [SAVE] window.customBudgetPercent exists?', !!window.customBudgetPercent);
+    console.log('💾 [SAVE] window.customBudgetPercent type:', typeof window.customBudgetPercent);
+    console.log('💾 [SAVE] window.customBudgetPercent keys:', window.customBudgetPercent ? Object.keys(window.customBudgetPercent) : 'N/A');
+    console.log('💾 [SAVE] window.customBudgetPercent values:', window.customBudgetPercent);
+
+    // Créer le payload
+    const payload = {
+      cible_percent: window.customBudgetPercent || {}
+    };
+    console.log('💾 [SAVE] Payload to send:', JSON.stringify(payload, null, 2));
+    console.log('💾 [SAVE] Payload cible_percent keys count:', Object.keys(payload.cible_percent).length);
+
+    // Vérification avant envoi
+    if (Object.keys(payload.cible_percent).length === 0) {
+      console.warn('💾 [SAVE] ⚠️ WARNING: cible_percent is EMPTY!');
+    }
 
     const response = await fetch(`/api/etats-resultats/actuel/${username}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        actuel_data: actuelData,
-        cible_data: cibleData,
-        cible_percent: window.customBudgetPercent || {}
-      })
+      body: JSON.stringify(payload)
     });
+
+    console.log('💾 [SAVE] Response status:', response.status);
+    const responseData = await response.json();
+    console.log('💾 [SAVE] Response data:', responseData);
 
     if (!response.ok) {
       throw new Error('Erreur lors de la sauvegarde');
     }
 
-    log('💾 Données Actuel et CIBLÉ sauvegardées dans le backend:', { actuelData, cibleData, cible_percent: window.customBudgetPercent });
+    console.log('💾 [SAVE] ✅ Sauvegarde réussie!');
+    console.log('💾 [SAVE] ============================================');
   } catch (error) {
-    error('[ERROR] Erreur lors de la sauvegarde des données:', error);
+    console.error('❌ [SAVE ERROR]:', error);
+    console.error('❌ [SAVE ERROR] Stack:', error.stack);
   }
 }
 
@@ -13575,92 +13557,62 @@ async function updateRedevancePercent() {
   }
 }
 
-// Charger les données Actuel depuis le backend
+// Charger les % ciblés depuis le backend
+// Les $ ciblés sont calculés dynamiquement: CA × % cible
 async function loadEtatsResultatsData() {
   log('🔄 [LOAD] Début de loadEtatsResultatsData()');
 
   const username = getCurrentUsername();
-  log(`🔄 [LOAD] Username: ${username}`);
 
   try {
-    log(`🔄 [LOAD] Fetch de /api/etats-resultats/actuel/${username}`);
     const response = await fetch(`/api/etats-resultats/actuel/${username}`);
-    log(`🔄 [LOAD] Response reçue, status: ${response.status}`);
 
-    if (!response.ok) {
-      log('ℹ️ Aucune donnée Actuel/CIBLÉ sauvegardée (status not OK)');
-      return;
+    let budgetPercent = {};
+
+    if (response.ok) {
+      const result = await response.json();
+      budgetPercent = result.budget_percent || {};
     }
 
-    log('🔄 [LOAD] Parsing JSON...');
-    const result = await response.json();
-    log('🔄 [LOAD] JSON parsé:', result);
-    log('🔄 [LOAD] actuel_data brut:', JSON.stringify(result.actuel_data));
-    log('🔄 [LOAD] cible_data brut:', JSON.stringify(result.cible_data));
+    // Si aucune donnée sauvegardée, utiliser les valeurs par défaut
+    if (Object.keys(budgetPercent).length === 0) {
+      log('ℹ️ [LOAD] Aucune donnée % ciblé sauvegardée - utilisation des valeurs par défaut');
 
-    const actuelData = result.actuel_data || {};
-    const cibleData = result.cible_data || {};
-    const ciblePercent = result.cible_percent || {};
+      // Copier les valeurs par défaut (sauf redevances qui est calculé dynamiquement)
+      const defaultPercents = {
+        'assurance-qe': 1.50,
+        'concours': 0,
+        'essence': 1.67,
+        'entretien-voiture': 0.50,
+        'fourniture-bureau': 0.10,
+        'frais-bancaires': 0.10,
+        'frais-cellulaire': 0.17,
+        'frais-garanties': 3.00,
+        'leads': 0.13,
+        'peinture': 9.00,
+        'petits-outils': 4.00,
+        'repas': 0.33,
+        'salaire-peintres': 30.00,
+        'salaires-representant': 1.33
+      };
 
-    // Charger les % CIBLÉ personnalisés dans la variable globale
-    window.customBudgetPercent = ciblePercent;
-    log(`🔄 [LOAD] actuelData keys: ${Object.keys(actuelData).length}, cibleData keys: ${Object.keys(cibleData).length}, ciblePercent keys: ${Object.keys(ciblePercent).length}`);
-    log(`🔄 [LOAD] actuelData contenu:`, actuelData);
-    log(`🔄 [LOAD] ciblePercent contenu:`, ciblePercent);
+      budgetPercent = defaultPercents;
+      log('✅ [LOAD] Valeurs par défaut appliquées:', Object.keys(defaultPercents).length, 'catégories');
+    } else {
+      log(`✅ [LOAD] Données chargées: ${Object.keys(budgetPercent).length} catégories`);
+    }
 
-    // Restaurer toutes les valeurs Actuel
-    let actuelCount = 0;
-    Object.keys(actuelData).forEach(category => {
-      const cell = document.querySelector(`[data-category="${category}"][data-field="actuel-montant"]`);
-      log(`🔄 [LOAD] Restauration ${category}: cell trouvée? ${!!cell}, valeur à restaurer: ${actuelData[category]}`);
-      if (cell) {
-        const input = cell.querySelector('input');
-        if (input) {
-          const formattedValue = formatMoneyValue(actuelData[category]);
-          log(`🔄 [LOAD]   -> input trouvé, nouvelle valeur: ${formattedValue}`);
-          input.value = formattedValue;
-          actuelCount++;
-        } else {
-          const formattedValue = formatMoneyValue(actuelData[category]);
-          log(`🔄 [LOAD]   -> pas d'input, textContent: ${formattedValue}`);
-          cell.textContent = formattedValue;
-          actuelCount++;
-        }
-      } else {
-        log(`🔄 [LOAD]   -> CELL NON TROUVÉE pour ${category}`);
-      }
-    });
+    // Charger les % CIBLÉ dans la variable globale
+    window.customBudgetPercent = budgetPercent;
 
-    // Restaurer toutes les valeurs CIBLÉ
-    let cibleCount = 0;
-    Object.keys(cibleData).forEach(category => {
-      const input = document.querySelector(`td[data-category="${category}"][data-field="cible-montant"] .etats-resultats-cible-input`);
-      if (input) {
-        input.value = formatMoneyValue(cibleData[category]);
-        cibleCount++;
-        log(`   ✓ CIBLÉ ${category}: ${formatMoneyValue(cibleData[category])}`);
-      } else {
-        log(`   ⚠️ CIBLÉ ${category}: input non trouvé`);
-      }
-    });
+    // Calculer les $ ciblés à partir des % chargés: $ = CA × %
+    updateCibleCalculations();
 
-    log(`📂 Données chargées - ${actuelCount} Actuel, ${cibleCount} CIBLÉ`);
-    log('   Actuel:', actuelData);
-    log('   CIBLÉ:', cibleData);
-    log('   CIBLÉ %:', ciblePercent);
-
-    // Afficher les % CIBLÉ chargés dans les cellules (sans recalculer les montants)
-    log('🔄 [LOAD] Affichage des % CIBLÉ chargés...');
-    displayLoadedCiblePercents();
-
-    // Recalculer les totaux (sans écraser les montants Actuel chargés)
-    log('🔄 [LOAD] Appel de recalculateTotalsOnly()');
+    // Recalculer les totaux
     recalculateTotalsOnly();
-    log('✅ [LOAD] loadEtatsResultatsData() terminée avec succès');
+    log('✅ [LOAD] loadEtatsResultatsData() terminée');
   } catch (error) {
-    error('❌ [ERROR] Erreur lors du chargement des données:', error);
-    error('❌ [ERROR] Stack:', error.stack);
-    throw error;
+    console.error('❌ [ERROR] Erreur lors du chargement des données:', error);
   }
 }
 
@@ -14798,18 +14750,12 @@ async function saveEtatsResultatsEdits() {
       }
     });
 
-    // Recalculer les totaux et pourcentages CIBLÉ
-    console.log('🔍 [SAVE] Étape 1: updateCibleCalculations()...');
-    updateCibleCalculations();
-    console.log('✅ [SAVE] Étape 1 terminée');
-
-    // Calculer explicitement les % CIBLÉ depuis les montants actuels pour s'assurer qu'ils sont sauvegardés
-    console.log('🔍 [SAVE] Étape 1.5: Calcul explicite des % CIBLÉ...');
+    // ÉTAPE 1: Calculer les % CIBLÉ depuis les montants $ AVANT tout recalcul
+    // IMPORTANT: Faire ceci EN PREMIER avant que updateCibleCalculations() puisse écraser les valeurs
+    console.log('🔍 [SAVE] Étape 1: Calcul des % CIBLÉ depuis les $ saisis...');
     const objectifCAInput = document.getElementById('objectifCA');
-    // Essayer dataset.value d'abord, sinon parser la valeur affichée
     let objectifCA = parseFloat(objectifCAInput?.dataset?.value) || 0;
     if (objectifCA === 0 && objectifCAInput) {
-      // Fallback: parser la valeur affichée (ex: "400 000,00 $")
       objectifCA = parseMoneyValue(objectifCAInput.value);
       console.log(`📊 [SAVE] Objectif CA (fallback from displayed value) = ${objectifCA}`);
     }
@@ -14817,8 +14763,8 @@ async function saveEtatsResultatsEdits() {
 
     if (objectifCA > 0) {
       const categoriesToCalc = [
-        'concours', 'essence', 'entretien-voiture', 'fourniture-bureau',
-        'frais-bancaires', 'frais-cellulaire', 'leads', 'peinture',
+        'assurance-qe', 'concours', 'essence', 'entretien-voiture', 'fourniture-bureau',
+        'frais-bancaires', 'frais-cellulaire', 'frais-garanties', 'leads', 'peinture',
         'petits-outils', 'repas', 'salaire-peintres', 'salaires-representant'
       ];
 
@@ -14828,7 +14774,6 @@ async function saveEtatsResultatsEdits() {
       }
 
       categoriesToCalc.forEach(category => {
-        // Sélecteur simplifié - cherche directement le td avec les attributs
         const pcInput = document.querySelector(`td[data-category="${category}"][data-field="cible-montant"] input`);
         if (pcInput) {
           const montant = parseMoneyValue(pcInput.value);
@@ -14839,31 +14784,36 @@ async function saveEtatsResultatsEdits() {
           console.log(`   ⚠️ ${category}: INPUT NON TROUVÉ`);
         }
       });
-      console.log('✅ [SAVE] Étape 1.5 terminée - % CIBLÉ calculés:', window.customBudgetPercent);
+      console.log('✅ [SAVE] Étape 1 terminée - % CIBLÉ calculés:', window.customBudgetPercent);
     } else {
       console.log('⚠️ [SAVE] Objectif CA = 0, % non calculés');
     }
 
-    // Recalculer tous les totaux et écarts
-    console.log('🔍 [SAVE] Étape 2: updateAllCalculations()...');
-    updateAllCalculations();
+    // ÉTAPE 2: Recalculer les totaux (maintenant que window.customBudgetPercent a les bonnes valeurs)
+    console.log('🔍 [SAVE] Étape 2: updateCibleCalculations()...');
+    updateCibleCalculations();
     console.log('✅ [SAVE] Étape 2 terminée');
 
-    // Sauvegarder dans le backend
-    console.log('🔍 [SAVE] Étape 3: saveEtatsResultatsData()...');
-    await saveEtatsResultatsData();
+    // ÉTAPE 3: Recalculer tous les totaux et écarts
+    console.log('🔍 [SAVE] Étape 3: updateAllCalculations()...');
+    updateAllCalculations();
     console.log('✅ [SAVE] Étape 3 terminée');
 
-    // Quitter le mode édition
-    console.log('🔍 [SAVE] Étape 4: toggleEditEtatsResultats()...');
-    toggleEditEtatsResultats();
-    console.log('✅ [SAVE] Étape 4 terminée - mode édition désactivé');
+    // ÉTAPE 4: Sauvegarder dans le backend
+    console.log('🔍 [SAVE] Étape 4: saveEtatsResultatsData()...');
+    await saveEtatsResultatsData();
+    console.log('✅ [SAVE] Étape 4 terminée');
 
-    // Régénérer les cartes mobiles avec les nouvelles valeurs
+    // ÉTAPE 5: Quitter le mode édition
+    console.log('🔍 [SAVE] Étape 5: toggleEditEtatsResultats()...');
+    toggleEditEtatsResultats();
+    console.log('✅ [SAVE] Étape 5 terminée - mode édition désactivé');
+
+    // ÉTAPE 6: Régénérer les cartes mobiles avec les nouvelles valeurs
     if (typeof generateEtatsMobile === 'function') {
-      console.log('🔍 [SAVE] Étape 5: generateEtatsMobile()...');
+      console.log('🔍 [SAVE] Étape 6: generateEtatsMobile()...');
       generateEtatsMobile();
-      console.log('✅ [SAVE] Étape 5 terminée');
+      console.log('✅ [SAVE] Étape 6 terminée');
     }
 
     // Notification de succès

@@ -20662,7 +20662,7 @@ from QE.Backend.rpo import (
     get_weekly_data, get_all_weekly_data_for_month,
     sync_soumissions_to_rpo,
     update_etats_resultats_budget, get_etats_resultats_budget,
-    update_etats_resultats_actuel, get_etats_resultats_actuel
+    update_etats_resultats_cible_percent, get_etats_resultats_actuel
 )
 
 @app.get("/api/rpo/{username}")
@@ -21096,38 +21096,37 @@ async def get_budget_data(username: str):
 
 
 @app.post("/api/etats-resultats/actuel/{username}")
-async def save_actuel_data(username: str, data: dict):
-    """Sauvegarde les montants Actuel et CIBLÉ des États des Résultats"""
+async def save_actuel_data(username: str, request: Request):
+    """Sauvegarde uniquement les % ciblés des États des Résultats
+    Les $ ciblés sont calculés dynamiquement: CA × % cible
+    """
     try:
-        actuel_data = data.get('actuel_data', {})
-        cible_data = data.get('cible_data', {})
+        data = await request.json()
         cible_percent = data.get('cible_percent', {})
-        print(f"[DEBUG États Résultats] Received for {username}:")
-        print(f"  - actuel_data keys: {list(actuel_data.keys()) if actuel_data else 'empty'}")
-        print(f"  - cible_data keys: {list(cible_data.keys()) if cible_data else 'empty'}")
-        print(f"  - cible_percent: {cible_percent}")
-        success = update_etats_resultats_actuel(username, actuel_data, cible_data, cible_percent)
+
+        success = update_etats_resultats_cible_percent(username, cible_percent)
+
         if success:
-            return {"status": "success", "message": "Actuel, CIBLÉ et % sauvegardés"}
+            return {"status": "success", "message": "% ciblés sauvegardés"}
         else:
             raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde")
     except Exception as e:
-        print(f"[Erreur États Résultats] Sauvegarde actuel/cible {username}: {e}")
+        print(f"[Erreur États Résultats] Sauvegarde {username}: {e}", flush=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/etats-resultats/actuel/{username}")
 async def get_actuel_data(username: str):
-    """Récupère les montants Actuel et CIBLÉ des États des Résultats"""
+    """Récupère les % ciblés des États des Résultats
+    Les $ ciblés sont calculés dynamiquement: CA × % cible
+    """
     try:
         data = get_etats_resultats_actuel(username)
         return {
-            "actuel_data": data.get('actuel', {}),
-            "cible_data": data.get('cible', {}),
-            "cible_percent": data.get('cible_percent', {})
+            "budget_percent": data.get('budget_percent', {})
         }
     except Exception as e:
-        print(f"[Erreur États Résultats] Chargement actuel/cible {username}: {e}")
+        print(f"[Erreur États Résultats] Chargement cible_percent {username}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

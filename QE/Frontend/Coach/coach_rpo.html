@@ -1721,6 +1721,12 @@ select:disabled {
               <button onclick="openRpoModal(this)" style="position: absolute; top: -10px; left: -10px; background: linear-gradient(135deg, #3b82f6, #2563eb); border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); transition: all 0.3s ease; z-index: 10;" onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 6px 16px rgba(59, 130, 246, 0.6)'" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.4)'">
                 <i class="fas fa-comment-dots" style="color: white; font-size: 0.9rem;"></i>
               </button>
+
+              <!-- Flèche gauche (précédent) -->
+              <button onclick="navigateToPreviousEntrepreneur()" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; color: #3b82f6;" onmouseover="this.style.background='rgba(59, 130, 246, 0.2)'; this.style.borderColor='rgba(59, 130, 246, 0.5)'" onmouseout="this.style.background='rgba(59, 130, 246, 0.1)'; this.style.borderColor='rgba(59, 130, 246, 0.3)'" title="Entrepreneur précédent">
+                <i class="fas fa-chevron-left" style="font-size: 0.85rem;"></i>
+              </button>
+
               <!-- Entrepreneur Info -->
               <div style="display: flex; align-items: center; gap: 0.5rem; padding-right: 1rem; border-right: 1px solid rgba(59, 130, 246, 0.2);">
                 <i class="fas fa-user-circle" style="color: #3b82f6; font-size: 1.1rem;"></i>
@@ -1771,6 +1777,11 @@ select:disabled {
                   </div>
                 </div>
               </div>
+
+              <!-- Flèche droite (suivant) -->
+              <button onclick="navigateToNextEntrepreneur()" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; color: #3b82f6;" onmouseover="this.style.background='rgba(59, 130, 246, 0.2)'; this.style.borderColor='rgba(59, 130, 246, 0.5)'" onmouseout="this.style.background='rgba(59, 130, 246, 0.1)'; this.style.borderColor='rgba(59, 130, 246, 0.3)'" title="Entrepreneur suivant">
+                <i class="fas fa-chevron-right" style="font-size: 0.85rem;"></i>
+              </button>
 
               <!-- Bouton Clear -->
               <button onclick="clearEntrepreneurSelection()" style="background: transparent; border: none; color: var(--text-gray); cursor: pointer; padding: 0.35rem; font-size: 1rem; margin-left: 0.25rem;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-gray)'">
@@ -5565,6 +5576,9 @@ async function loadAvailableEntrepreneurs() {
       // Vérifier les deux formats possibles de réponse
       const entrepreneurs = data.entrepreneurs || data;
 
+      // Stocker la liste pour la navigation prev/next
+      availableEntrepreneursList = entrepreneurs || [];
+
       if (entrepreneurs && entrepreneurs.length > 0) {
         entrepreneurs.forEach(entrepreneur => {
           const card = document.createElement('div');
@@ -5611,6 +5625,7 @@ async function loadAvailableEntrepreneurs() {
 // Variables globales pour l'entrepreneur sélectionné
 let selectedEntrepreneurForView = null;
 let allWeeksData = [];
+let availableEntrepreneursList = []; // Liste des entrepreneurs pour navigation
 
 // Fonction pour initialiser allWeeksData (sans dépendre du DOM)
 // Génère les semaines EXACTEMENT comme dans le plan d'affaires entrepreneur
@@ -5758,6 +5773,44 @@ function clearEntrepreneurSelection() {
   if (monthLabel) {
     monthLabel.textContent = 'Janvier';
   }
+}
+
+// Navigation vers l'entrepreneur précédent
+function navigateToPreviousEntrepreneur() {
+  if (!availableEntrepreneursList || availableEntrepreneursList.length === 0) return;
+  if (!selectedEntrepreneurForView) return;
+
+  const currentIndex = availableEntrepreneursList.findIndex(e => e.username === selectedEntrepreneurForView);
+  if (currentIndex === -1) return;
+
+  // Aller au précédent (ou boucler à la fin)
+  const prevIndex = currentIndex === 0 ? availableEntrepreneursList.length - 1 : currentIndex - 1;
+  const prevEntrepreneur = availableEntrepreneursList[prevIndex];
+
+  const displayName = prevEntrepreneur.prenom && prevEntrepreneur.nom
+    ? `${prevEntrepreneur.prenom} ${prevEntrepreneur.nom}`
+    : prevEntrepreneur.username;
+
+  selectEntrepreneur(prevEntrepreneur.username, displayName);
+}
+
+// Navigation vers l'entrepreneur suivant
+function navigateToNextEntrepreneur() {
+  if (!availableEntrepreneursList || availableEntrepreneursList.length === 0) return;
+  if (!selectedEntrepreneurForView) return;
+
+  const currentIndex = availableEntrepreneursList.findIndex(e => e.username === selectedEntrepreneurForView);
+  if (currentIndex === -1) return;
+
+  // Aller au suivant (ou boucler au début)
+  const nextIndex = currentIndex === availableEntrepreneursList.length - 1 ? 0 : currentIndex + 1;
+  const nextEntrepreneur = availableEntrepreneursList[nextIndex];
+
+  const displayName = nextEntrepreneur.prenom && nextEntrepreneur.nom
+    ? `${nextEntrepreneur.prenom} ${nextEntrepreneur.nom}`
+    : nextEntrepreneur.username;
+
+  selectEntrepreneur(nextEntrepreneur.username, displayName);
 }
 
 // ================================================================

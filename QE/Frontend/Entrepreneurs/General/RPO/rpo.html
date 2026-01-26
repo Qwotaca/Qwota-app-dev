@@ -12031,60 +12031,74 @@ function syncPlanTotalsToAnnualObjectives(totalMktgPrev, totalEstimPrev, totalCo
   log('✅ Synchronisation terminée');
 }
 
-// Calculer "Devrait être à" basé sur le Cumul Obj. de la semaine actuelle
+// Calculer "Devrait être à" basé sur le cumul des objectifs jusqu'à la semaine actuelle
 function calculateExpectedToDate() {
-  log('📅 Calcul "Devrait être à" depuis Cumul Obj. de la semaine actuelle');
+  log('📅 Calcul "Devrait être à" - calcul direct depuis patterns');
 
-  const today = new Date(); // Date d'aujourd'hui
+  const today = new Date();
   const planStartDate = createTorontoDate(2026, 0, 5); // 5 janvier 2026
-  const weeks = 52;
 
-  // Valeurs Cumul Obj. de la semaine actuelle
+  // Pattern des pourcentages par semaine (même que dans generatePlanWeeks)
+  const percentagePattern = [
+    0,  // Index 0: 5-11 janv 2026 (semaine vide)
+    0.5, 2.0, 2.0,  // Index 1-3: 12 janv - 1 fév
+    3.0, 2.5, 3.0, 3.0,  // Index 4-7: 2 fév - 1 mars
+    3.5, 4.0, 4.5, 5.5,  // Index 8-11: 2 mars - 29 mars
+    4.5, 6.5, 5.5, 6.0, 6.0,  // Index 12-16: 30 mars - 4 mai
+    4.5, 4.5, 4.5, 4.5,  // Index 17-20: 5 mai - 1 juin
+    3.5, 4.0, 3.5, 3.0,  // Index 21-24: 2 juin - 29 juin
+    3.0, 3.0, 3.0, 2.0, 1.0,  // Index 25-29: 30 juin - 3 août
+    1.0, 1.0, 1.0, 1.0,  // Index 30-33: 4 août - 31 août
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  // Index 34-51: reste (0%)
+  ];
+
+  // Calculer le total d'intensité (pour distribuer l'objectif)
+  const totalIntensity = percentagePattern.reduce((sum, val, idx) => {
+    if (idx >= 1 && val > 0) return sum + val;
+    return sum;
+  }, 0);
+
+  // Récupérer les paramètres du plan
+  const objectif = parseFloat(document.getElementById('plan-objectif')?.dataset.value) || 0;
+  const ratioMktg = parseFloat(document.getElementById('plan-ratio-mktg')?.dataset.value) || 85;
+  const tauxVente = parseFloat(document.getElementById('plan-taux-vente')?.dataset.value) || 37;
+  const contratMoyen = parseFloat(document.getElementById('plan-cm-prev')?.dataset.value) || 2500;
+
+  log(`   📊 Paramètres: Objectif=${objectif}, Ratio=${ratioMktg}%, TV=${tauxVente}%, CM=${contratMoyen}`);
+
+  // Trouver le numéro de semaine actuelle (1-52)
+  const daysSinceStart = Math.floor((today - planStartDate) / (24 * 60 * 60 * 1000));
+  const currentWeekIndex = Math.max(0, Math.floor(daysSinceStart / 7)); // 0-based index
+  const currentWeekNum = currentWeekIndex + 1; // 1-based week number
+
+  log(`   ✓ Semaine actuelle: ${currentWeekNum} (index ${currentWeekIndex})`);
+
+  // Calculer le cumul des objectifs depuis la semaine 2 jusqu'à la semaine actuelle
   let expectedMktg = 0;
   let expectedEstim = 0;
   let expectedContrat = 0;
   let expectedDollar = 0;
 
-  // Trouver la semaine actuelle (celle qui contient aujourd'hui)
-  let weekFound = false;
-  for (let i = 1; i <= weeks; i++) {
-    // Calculer la date de début et fin de la semaine i
-    const weekStart = new Date(planStartDate);
-    weekStart.setDate(weekStart.getDate() + ((i - 1) * 7));
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 6); // Dimanche de la semaine
+  if (objectif > 0 && totalIntensity > 0) {
+    // Accumuler les objectifs de la semaine 2 jusqu'à la semaine actuelle
+    for (let i = 1; i <= currentWeekIndex && i < percentagePattern.length; i++) {
+      const intensity = percentagePattern[i];
+      if (intensity > 0) {
+        // Calculer les objectifs de cette semaine (même formule que generatePlanWeeks)
+        const dollarSemaine = (objectif * 1.10) * (intensity / totalIntensity);
+        const contratSemaine = dollarSemaine / contratMoyen;
+        const estimSemaine = contratSemaine / (tauxVente / 100);
+        const mktgSemaine = estimSemaine * (ratioMktg / 100);
 
-    // Si aujourd'hui est dans cette semaine
-    if (today >= weekStart && today <= weekEnd) {
-      weekFound = true;
-      log(`   ✓ Semaine actuelle trouvée: ${i} (${weekStart.toDateString()} - ${weekEnd.toDateString()})`);
-
-      // Lire les valeurs "Cumul Obj." directement depuis les spans avec IDs
-      const mktgCumulObjSpan = document.getElementById(`plan-w${i}-mktg-cumul-obj`);
-      const estimCumulObjSpan = document.getElementById(`plan-w${i}-estim-cumul-obj`);
-      const contratCumulObjSpan = document.getElementById(`plan-w${i}-contrat-cumul-obj`);
-      const dollarCumulObjSpan = document.getElementById(`plan-w${i}-dollar-cumul-obj`);
-
-      const mktgCumulText = mktgCumulObjSpan?.textContent || '0';
-      const estimCumulText = estimCumulObjSpan?.textContent || '0';
-      const contratCumulText = contratCumulObjSpan?.textContent || '0';
-      const dollarCumulText = dollarCumulObjSpan?.textContent || '0';
-
-      log(`   📊 Valeurs lues - Mktg: "${mktgCumulText}", Estim: "${estimCumulText}", Contrat: "${contratCumulText}", Dollar: "${dollarCumulText}"`);
-
-      expectedMktg = parseFloat(mktgCumulText.replace(/[^\d.]/g, '')) || 0;
-      expectedEstim = parseFloat(estimCumulText.replace(/[^\d.]/g, '')) || 0;
-      expectedContrat = parseFloat(contratCumulText.replace(/[^\d.]/g, '')) || 0;
-      expectedDollar = parseFloat(dollarCumulText.replace(/[^\d]/g, '')) || 0;
-
-      log(`   ✅ Cumul Obj - Mktg: ${expectedMktg}h, Estim: ${expectedEstim}, Contrat: ${expectedContrat}, Dollar: ${expectedDollar}$`);
-      break; // Sortir de la boucle une fois la semaine actuelle trouvée
+        expectedDollar += dollarSemaine;
+        expectedContrat += contratSemaine;
+        expectedEstim += estimSemaine;
+        expectedMktg += mktgSemaine;
+      }
     }
   }
 
-  if (!weekFound) {
-    log(`   ⚠️ Aucune semaine trouvée pour la date: ${today.toDateString()}`);
-  }
+  log(`   ✅ Cumul Obj calculé - Mktg: ${expectedMktg.toFixed(1)}h, Estim: ${expectedEstim.toFixed(1)}, Contrat: ${expectedContrat.toFixed(1)}, Dollar: ${Math.round(expectedDollar)}$`);
 
   // Mettre à jour les champs "Devrait être à" (tendance)
   const hrpapTendance = document.getElementById('hrpap-tendance');

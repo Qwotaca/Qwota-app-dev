@@ -1595,24 +1595,6 @@ def sync_soumissions_to_rpo(username: str) -> bool:
 # ÉTATS DES RÉSULTATS
 # ========================================
 
-# Pourcentages budget par défaut
-DEFAULT_BUDGET_PERCENT = {
-    'assurance-qe': 1.50,
-    'concours': 0,
-    'essence': 1.67,
-    'entretien-voiture': 0.50,
-    'fourniture-bureau': 0.10,
-    'frais-bancaires': 0.10,
-    'frais-cellulaire': 0.17,
-    'frais-garanties': 3.00,
-    'leads': 0.13,
-    'peinture': 9.00,
-    'petits-outils': 4.00,
-    'repas': 0.33,
-    'salaire-peintres': 30.00,
-    'salaires-representant': 1.33
-}
-
 def update_etats_resultats_budget(username: str, budget_percent_data: Dict[str, float]) -> bool:
     """
     Met à jour les pourcentages Budget des États des Résultats
@@ -1628,13 +1610,9 @@ def update_etats_resultats_budget(username: str, budget_percent_data: Dict[str, 
 
 
 def get_etats_resultats_budget(username: str) -> Dict[str, float]:
-    """Récupère les pourcentages Budget des États des Résultats (avec défauts si vide)"""
+    """Récupère les pourcentages Budget des États des Résultats"""
     rpo_data = load_user_rpo_data(username)
-    budget = rpo_data.get('etats_resultats', {}).get('budget_percent', {})
-    # Retourner les défauts si vide
-    if not budget:
-        return DEFAULT_BUDGET_PERCENT.copy()
-    return budget
+    return rpo_data.get('etats_resultats', {}).get('budget_percent', {})
 
 
 def update_etats_resultats_actuel(username: str, actuel_data: Dict[str, float], cible_data: Dict[str, float] = None, cible_percent: Dict[str, float] = None) -> bool:
@@ -1660,16 +1638,12 @@ def update_etats_resultats_actuel(username: str, actuel_data: Dict[str, float], 
 
 
 def get_etats_resultats_actuel(username: str) -> Dict[str, Any]:
-    """Récupère les montants Actuel et les pourcentages CIBLÉ des États des Résultats (avec défauts si vide)"""
+    """Récupère les montants Actuel et les pourcentages CIBLÉ des États des Résultats"""
     rpo_data = load_user_rpo_data(username)
     etats_resultats = rpo_data.get('etats_resultats', {})
-    budget = etats_resultats.get('budget_percent', {})
-    # Retourner les défauts si vide
-    if not budget:
-        budget = DEFAULT_BUDGET_PERCENT.copy()
     return {
         'actuel': etats_resultats.get('actuel', {}),
-        'budget_percent': budget
+        'budget_percent': etats_resultats.get('budget_percent', {})
     }
 
 

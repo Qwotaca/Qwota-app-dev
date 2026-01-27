@@ -6160,7 +6160,10 @@ window.showConfirmPopup = function(message, onConfirm, onCancel) {
       <div class="popup-right">
         <h3 style="color: var(--text-light); margin-bottom: 12px; font-weight: 600; display: flex; align-items: center; justify-content: space-between;">
           <span>Description par endroit</span>
-          <span id="productModalCounter" style="font-size: 12px; color: var(--text-gray);">0/0</span>
+          <div id="productModalCounter" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #ef4444;">
+            <i class="fas fa-exclamation-circle" style="font-size: 11px;"></i>
+            <span id="productModalCounterText">0 restant(s)</span>
+          </div>
         </h3>
         <div class="custom-select" id="productEndroitSelect" style="margin-bottom: 12px;">
           <button type="button" class="custom-select-button" onclick="toggleProductEndroitDropdown()">
@@ -7174,9 +7177,13 @@ window.showConfirmPopup = function(message, onConfirm, onCancel) {
           option.className = 'custom-select-option';
           option.dataset.value = endroit;
           const hasContent = productEndroitsData[endroit] && productEndroitsData[endroit].trim();
-          option.innerHTML = hasContent
-            ? `<span style="color: #10b981; margin-right: 6px;">●</span>${endroit}`
-            : endroit;
+          option.innerHTML = endroit;
+          option.style.background = hasContent
+            ? 'rgba(34, 197, 94, 0.2)'
+            : 'rgba(239, 68, 68, 0.2)';
+          option.style.borderLeft = hasContent
+            ? '3px solid #22c55e'
+            : '3px solid #ef4444';
           option.onclick = function() { selectProductEndroitOption(endroit); };
           dropdown.appendChild(option);
         });
@@ -7186,9 +7193,13 @@ window.showConfirmPopup = function(message, onConfirm, onCancel) {
           currentSelectedProductEndroit = endroitsList[0];
           if (selectText) {
             const hasContent = productEndroitsData[endroitsList[0]] && productEndroitsData[endroitsList[0]].trim();
-            selectText.innerHTML = hasContent
-              ? `<span style="color: #10b981; margin-right: 6px;">●</span>${endroitsList[0]}`
-              : endroitsList[0];
+            selectText.innerHTML = endroitsList[0];
+            selectText.parentElement.style.background = hasContent
+              ? 'rgba(34, 197, 94, 0.15)'
+              : 'rgba(239, 68, 68, 0.15)';
+            selectText.parentElement.style.borderLeft = hasContent
+              ? '3px solid #22c55e'
+              : '3px solid #ef4444';
           }
           const textarea = productModal.querySelector('#productEndroitTextarea');
           if (textarea) {
@@ -7219,8 +7230,7 @@ window.showConfirmPopup = function(message, onConfirm, onCancel) {
               completedCount++;
             }
           });
-          modalCounter.textContent = `${completedCount}/${endroitsList.length}`;
-          modalCounter.style.color = (completedCount === endroitsList.length) ? '#4caf50' : '#ef4444';
+          updateProductModalBadge(modalCounter, completedCount, endroitsList.length);
         }
       }
     }
@@ -7230,6 +7240,36 @@ window.showConfirmPopup = function(message, onConfirm, onCancel) {
 
     // Variable pour tracker l'endroit actuellement sélectionné
     let currentSelectedProductEndroit = null;
+
+    // Fonction pour mettre à jour le badge de notification dans le modal Produit
+    function updateProductModalBadge(badgeElement, completedCount, totalCount) {
+      const remaining = totalCount - completedCount;
+      const isComplete = totalCount > 0 && completedCount === totalCount;
+      const isEnglish = window.currentLanguage === 'en';
+
+      if (isComplete) {
+        // Tout est complété - badge vert avec coche
+        badgeElement.style.background = 'rgba(34, 197, 94, 0.15)';
+        badgeElement.style.border = '1px solid rgba(34, 197, 94, 0.4)';
+        badgeElement.style.color = '#22c55e';
+        badgeElement.innerHTML = `
+          <i class="fas fa-check-circle" style="font-size: 11px;"></i>
+          <span>${isEnglish ? 'Complete' : 'Complété'}</span>
+        `;
+      } else {
+        // Encore des endroits à compléter - badge rouge
+        badgeElement.style.background = 'rgba(239, 68, 68, 0.15)';
+        badgeElement.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+        badgeElement.style.color = '#ef4444';
+        const remainingText = isEnglish
+          ? `${remaining} remaining`
+          : `${remaining} restant${remaining > 1 ? 's' : ''}`;
+        badgeElement.innerHTML = `
+          <i class="fas fa-exclamation-circle" style="font-size: 11px;"></i>
+          <span>${remainingText}</span>
+        `;
+      }
+    }
 
     // Toggle le dropdown custom
     function toggleProductEndroitDropdown() {
@@ -7293,9 +7333,13 @@ window.showConfirmPopup = function(message, onConfirm, onCancel) {
       // Mettre à jour le texte du bouton
       if (selectText) {
         const hasContent = productEndroitsData[endroit] && productEndroitsData[endroit].trim();
-        selectText.innerHTML = hasContent
-          ? `<span style="color: #10b981; margin-right: 6px;">●</span>${endroit}`
-          : endroit;
+        selectText.innerHTML = endroit;
+        selectText.parentElement.style.background = hasContent
+          ? 'rgba(34, 197, 94, 0.15)'
+          : 'rgba(239, 68, 68, 0.15)';
+        selectText.parentElement.style.borderLeft = hasContent
+          ? '3px solid #22c55e'
+          : '3px solid #ef4444';
       }
 
       // Fermer le dropdown
@@ -7335,17 +7379,25 @@ window.showConfirmPopup = function(message, onConfirm, onCancel) {
       dropdown.querySelectorAll('.custom-select-option').forEach(option => {
         const endroit = option.dataset.value;
         const hasContent = productEndroitsData[endroit] && productEndroitsData[endroit].trim();
-        option.innerHTML = hasContent
-          ? `<span style="color: #10b981; margin-right: 6px;">●</span>${endroit}`
-          : endroit;
+        option.innerHTML = endroit;
+        option.style.background = hasContent
+          ? 'rgba(34, 197, 94, 0.2)'
+          : 'rgba(239, 68, 68, 0.2)';
+        option.style.borderLeft = hasContent
+          ? '3px solid #22c55e'
+          : '3px solid #ef4444';
       });
 
       // Mettre à jour le texte du bouton avec l'endroit actuel
       if (selectText && currentSelectedProductEndroit) {
         const hasContent = productEndroitsData[currentSelectedProductEndroit] && productEndroitsData[currentSelectedProductEndroit].trim();
-        selectText.innerHTML = hasContent
-          ? `<span style="color: #10b981; margin-right: 6px;">●</span>${currentSelectedProductEndroit}`
-          : currentSelectedProductEndroit;
+        selectText.innerHTML = currentSelectedProductEndroit;
+        selectText.parentElement.style.background = hasContent
+          ? 'rgba(34, 197, 94, 0.15)'
+          : 'rgba(239, 68, 68, 0.15)';
+        selectText.parentElement.style.borderLeft = hasContent
+          ? '3px solid #22c55e'
+          : '3px solid #ef4444';
       }
     }
 
@@ -7643,8 +7695,7 @@ window.showConfirmPopup = function(message, onConfirm, onCancel) {
         }
       }
       if (productModalCounter) {
-        productModalCounter.textContent = counterText;
-        productModalCounter.style.color = counterColor;
+        updateProductModalBadge(productModalCounter, completedCount, totalEndroits);
       }
 
       // Mettre à jour la bordure du trigger
@@ -8111,8 +8162,7 @@ window.showConfirmPopup = function(message, onConfirm, onCancel) {
 
       const modalCounter = productModal.querySelector('#productModalCounter');
       if (modalCounter) {
-        modalCounter.textContent = `${completedCount}/${allEndroits.length}`;
-        modalCounter.style.color = (allEndroits.length > 0 && completedCount === allEndroits.length) ? '#4caf50' : '#ef4444';
+        updateProductModalBadge(modalCounter, completedCount, allEndroits.length);
       }
     }
 

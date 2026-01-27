@@ -6121,28 +6121,10 @@
             }
           }
 
-          // Taux marketing = heures_pap / nb_estimations (calculé directement dans l'API)
-          // La valeur vient de l'API, pas besoin de FIX
+          // Taux marketing et H de PÀP viennent directement de l'API (annual.hr_pap_reel_sans_week1)
+          // Pas de override - utiliser les valeurs de l'API directement
 
-          // H de PÀP depuis window.heuresPAPReel (déjà calculé dans loadDashboardData)
-          if (window.heuresPAPReel !== undefined) {
-            log(`[FIX] H de PÀP: ${classementData[userIndex].heures_pap}h → ${window.heuresPAPReel}h (depuis window.heuresPAPReel)`);
-            classementData[userIndex].heures_pap = window.heuresPAPReel;
-          } else {
-            log(`[WARNING] window.heuresPAPReel non défini, essai de lecture depuis #total-mktg-reel`);
-            // Fallback: essayer de lire depuis l'élément HTML
-            const heuresPAPElement = document.getElementById('total-mktg-reel');
-            if (heuresPAPElement && heuresPAPElement.textContent) {
-              const heuresPAPText = heuresPAPElement.textContent.trim();
-              const heuresPAPValue = parseFloat(heuresPAPText.replace(/[^0-9.-]/g, ''));
-              if (!isNaN(heuresPAPValue) && heuresPAPValue > 0) {
-                log(`[FIX] H de PÀP: ${classementData[userIndex].heures_pap}h → ${heuresPAPValue}h (depuis #total-mktg-reel: "${heuresPAPText}")`);
-                classementData[userIndex].heures_pap = heuresPAPValue;
-              }
-            }
-          }
-
-          log(`[OK] Après corrections:`, classementData[userIndex]);
+          log(`[OK] Données API utilisées:`, classementData[userIndex]);
         } else if (!currentUsername) {
           log(`[WARNING] currentUsername non défini`);
         } else if (userIndex === -1) {

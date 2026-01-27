@@ -1376,7 +1376,8 @@ def get_entrepreneurs_list_api(
                                     dollar_reel = annual.get("dollar_reel", 0) or 0
                                     contract_reel = annual.get("contract_reel", 0) or 0
                                     estimation_reel = annual.get("estimation_reel", 0) or 0
-                                    hr_pap_reel = annual.get("hr_pap_reel", 0) or 0
+                                    # Utiliser hr_pap_reel_sans_week1 (week 1 ne compte pas)
+                                    hr_pap_reel = annual.get("hr_pap_reel_sans_week1", 0) or 0
 
                                     # Produit depuis weekly (pas dans annual)
                                     for month_key, weeks in weekly_data.items():

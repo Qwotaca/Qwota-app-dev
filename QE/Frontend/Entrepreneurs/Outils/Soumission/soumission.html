@@ -1483,25 +1483,16 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
     // Réinitialiser l'état de la signature
     hasPresentationSignature = false;
 
-    // Configurer le bouton selon mobile/desktop
+    // Configurer le bouton (même comportement sur mobile et desktop)
     const isMobilePresentation = window.innerWidth <= 1200;
     const acceptBtn = document.getElementById('acceptPresentationBtn');
     const acceptBtnSpan = acceptBtn.querySelector('span');
 
-    if (isMobilePresentation) {
-      // Sur mobile: bouton actif "Signer la soumission"
-      acceptBtn.disabled = false;
-      acceptBtn.classList.remove('btn-success');
-      acceptBtn.removeAttribute('style');
-      acceptBtn.style.cssText = 'background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important; color: white !important;';
-      acceptBtnSpan.textContent = 'Signer la soumission';
-    } else {
-      // Sur desktop: bouton gris désactivé "Accepter la soumission"
-      acceptBtn.disabled = true;
-      acceptBtn.classList.remove('btn-success');
-      acceptBtn.setAttribute('style', 'background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;');
-      acceptBtnSpan.textContent = 'Accepter la soumission';
-    }
+    // Bouton gris désactivé "Accepter la soumission" - la signature se fait en cliquant sur le PDF
+    acceptBtn.disabled = true;
+    acceptBtn.classList.remove('btn-success');
+    acceptBtn.setAttribute('style', 'background-color: rgba(148, 163, 184, 0.3) !important; color: rgba(203, 213, 225, 0.5) !important; pointer-events: none !important;');
+    acceptBtnSpan.textContent = 'Accepter la soumission';
 
     // MODE PRÉSENTATION: Déplacer modal et overlay vers parent, puis cacher AppPC
     const pdfModal = document.getElementById("pdfModal");
@@ -1556,10 +1547,9 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
     }
 
     log('[DEBUG] signatureOverlay trouvé:', signatureOverlay);
-    // isMobilePresentation already declared at line 1150
 
-    if (signatureOverlay && !isMobilePresentation) {
-      // Sur desktop uniquement: cliquer sur l'overlay pour signer
+    if (signatureOverlay) {
+      // Cliquer sur l'overlay pour signer (mobile et desktop identique)
       signatureOverlay.onclick = () => {
         log('[DEBUG] Click sur signature overlay détecté!');
 
@@ -1589,11 +1579,7 @@ document.getElementById("voirPDFBtn").addEventListener("click", async () => {
           window.openSignatureZoomPopup();
         }, 1000);
       };
-      log('[DEBUG] Événement onclick attaché à signatureOverlay (desktop uniquement)');
-    } else if (signatureOverlay && isMobilePresentation) {
-      // Sur mobile: masquer complètement l'overlay (on utilise le bouton)
-      signatureOverlay.style.display = 'none';
-      log('[DEBUG] Overlay signature masqué sur mobile');
+      log('[DEBUG] Événement onclick attaché à signatureOverlay (mobile et desktop)');
 
       // Mettre à jour la position de la signature après un petit délai (attendre le rendu)
       setTimeout(() => {

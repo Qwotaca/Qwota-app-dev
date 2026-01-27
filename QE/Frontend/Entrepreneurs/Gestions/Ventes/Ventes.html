@@ -1742,7 +1742,7 @@
 
   <!-- Modal informations client -->
   <div id="clientInfoModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; z-index: 80;">
-    <div id="clientInfoCard" class="status-card p-6 w-full" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+    <div id="clientInfoCard" class="status-card p-6 w-full" style="max-width: 600px;">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-xl font-bold" style="color: var(--text-light);">
           <i id="clientInfoIcon" class="fas fa-user mr-2" style="color: var(--primary-blue);"></i>
@@ -2665,42 +2665,36 @@
 
     let html = ``;
 
-    // Ajouter les boutons en haut pour attente/acceptees/produit
-    if (category === 'attente' || category === 'acceptees' || category === 'produit') {
+    // Bouton "Renvoyer la soumission" uniquement pour "attente" - en haut séparé
+    if (category === 'attente') {
       html += `
-        <div class="marquer-perdu-top" style="margin-bottom: 1rem;">
-          <div class="flex justify-between">`;
-
-      // Bouton "Renvoyer la soumission" uniquement pour "attente"
-      if (category === 'attente') {
-        html += `
-            <button onclick="renvoyerSoumission()" class="px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6;" onmouseover="this.style.background='rgba(59, 130, 246, 0.3)'" onmouseout="this.style.background='rgba(59, 130, 246, 0.2)'">
-              <i class="fas fa-paper-plane"></i>
-              <span>Renvoyer la soumission</span>
-            </button>`;
-      } else {
-        html += `<div></div>`; // Spacer pour les autres catégories
-      }
-
-      html += `
-            <button onclick="marquerCommePerdu()" class="px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
-              <i class="fas fa-times-circle"></i>
-              <span>Marquer comme perdu</span>
-            </button>
-          </div>
+        <div class="renvoyer-soumission-top" style="margin-bottom: 0.75rem;">
+          <button onclick="renvoyerSoumission()" class="px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6;" onmouseover="this.style.background='rgba(59, 130, 246, 0.3)'" onmouseout="this.style.background='rgba(59, 130, 246, 0.2)'">
+            <i class="fas fa-paper-plane"></i>
+            <span>Renvoyer la soumission</span>
+          </button>
         </div>
       `;
     }
 
+    // Bouton Marquer comme perdu - sera intégré dans la ligne du nom
+    const showMarquerPerdu = (category === 'attente' || category === 'acceptees' || category === 'produit');
+
     html += `
       <div style="background: rgba(30, 41, 59, 0.5); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
-        <!-- Nom complet -->
+        <!-- Nom complet avec bouton Marquer comme perdu -->
         <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid rgba(71, 85, 105, 0.3);">
           <i class="fas fa-user" style="color: var(--primary-blue); width: 20px; text-align: center;"></i>
           <div style="flex: 1;">
             <div style="font-size: 0.75rem; color: var(--text-gray); margin-bottom: 0.25rem;">Nom complet</div>
             <div style="color: var(--text-light); font-weight: 500;">${prenom} ${nom}</div>
           </div>
+          ${showMarquerPerdu ? `
+          <button onclick="marquerCommePerdu()" class="btn-marquer-perdu px-2 py-1 rounded-lg flex items-center gap-1 transition-colors text-xs font-medium" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; white-space: nowrap;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
+            <i class="fas fa-times-circle" style="font-size: 0.7rem;"></i>
+            <span>Marquer comme perdu</span>
+          </button>
+          ` : ''}
         </div>
 
         <!-- Téléphone cliquable -->
@@ -3870,6 +3864,85 @@
       activateCurrentPageMenu();
       setTimeout(activateCurrentPageMenu, 150);
       setTimeout(activateCurrentPageMenu, 300);
+
+      // Drag to scroll pour les tables (PC avec souris)
+      document.querySelectorAll('.table-container').forEach(container => {
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+        let hasDragged = false;
+
+        // Mouse events (PC)
+        container.addEventListener('mousedown', (e) => {
+          if (e.target.closest('input, button, a, .modern-dropdown')) return;
+          isDown = true;
+          hasDragged = false;
+          container.style.cursor = 'grabbing';
+          startX = e.pageX - container.offsetLeft;
+          scrollLeft = container.scrollLeft;
+        });
+
+        container.addEventListener('mouseleave', () => {
+          isDown = false;
+          container.style.cursor = 'grab';
+        });
+
+        container.addEventListener('mouseup', () => {
+          isDown = false;
+          container.style.cursor = 'grab';
+        });
+
+        container.addEventListener('mousemove', (e) => {
+          if (!isDown) return;
+          e.preventDefault();
+          const x = e.pageX - container.offsetLeft;
+          const walk = (x - startX) * 1.5;
+          // Si on a bougé de plus de 5px, c'est un drag pas un clic
+          if (Math.abs(x - startX) > 5) {
+            hasDragged = true;
+          }
+          container.scrollLeft = scrollLeft - walk;
+        });
+
+        // Bloquer le clic si on vient de scroller
+        container.addEventListener('click', (e) => {
+          if (hasDragged) {
+            e.preventDefault();
+            e.stopPropagation();
+            hasDragged = false;
+          }
+        }, true);
+
+        // Touch events (Tablette/Mobile)
+        let touchStartX;
+        let touchHasDragged = false;
+
+        container.addEventListener('touchstart', (e) => {
+          if (e.target.closest('input, button, a, .modern-dropdown')) return;
+          touchStartX = e.touches[0].pageX;
+          startX = e.touches[0].pageX - container.offsetLeft;
+          scrollLeft = container.scrollLeft;
+          touchHasDragged = false;
+        }, { passive: true });
+
+        container.addEventListener('touchmove', (e) => {
+          if (e.target.closest('input, button, a, .modern-dropdown')) return;
+          const x = e.touches[0].pageX - container.offsetLeft;
+          const walk = (x - startX) * 1.5;
+          // Si on a bougé de plus de 10px, c'est un drag
+          if (Math.abs(e.touches[0].pageX - touchStartX) > 10) {
+            touchHasDragged = true;
+          }
+          container.scrollLeft = scrollLeft - walk;
+        }, { passive: true });
+
+        container.addEventListener('touchend', (e) => {
+          if (touchHasDragged) {
+            e.preventDefault();
+            touchHasDragged = false;
+          }
+        });
+      });
     });
 
     // Fonctions utilitaires pour le loading des badges

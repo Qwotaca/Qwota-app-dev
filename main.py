@@ -7627,6 +7627,8 @@ def api_get_coach_equipe_dashboard(
         taux_vente = 0
         dollar_reel = 0
         contract_reel = 0
+        estimation_reel = 0
+        nb_estimations = 0
 
         # 8. OBJECTIF et POURCENTAGE depuis RPO
         objectif = 0
@@ -7644,6 +7646,7 @@ def api_get_coach_equipe_dashboard(
             dollar_reel = annual.get("dollar_reel", 0)
             contract_reel = annual.get("contract_reel", 0)
             estimation_reel = annual.get("estimation_reel", 0)
+            print(f"[DEBUG RPO EQUIPE] {username} -> estimation_reel={estimation_reel}, dollar_reel={dollar_reel}, contract_reel={contract_reel}", flush=True)
 
             # Si annual est 0, calculer depuis weekly (fallback)
             if dollar_reel == 0:
@@ -7721,6 +7724,7 @@ def api_get_coach_equipe_dashboard(
             # Nb estimations depuis RPO (source unique de vérité)
             # Fallback sur signees + perdus si RPO non disponible
             nb_estimations = estimation_reel if estimation_reel > 0 else (signees_count + perdus_count)
+            print(f"[DEBUG NB_ESTIM EQUIPE] {username} -> nb_estimations={nb_estimations} (estimation_reel={estimation_reel}, fallback={signees_count + perdus_count})", flush=True)
 
             # Taux marketing = Nb Estimations ÷ Heures PAP (estimations par heure)
             if total_heures_pap > 0:
@@ -7755,10 +7759,11 @@ def api_get_coach_equipe_dashboard(
             prod_horaire = round(total_prod_horaire / nombre_semaines_prod_horaire, 2) if nombre_semaines_prod_horaire > 0 else 0
         except Exception as e:
             print(f"[DEBUG OBJECTIF ERROR] {username} -> Erreur chargement RPO: {e}")
-            pass
+            # Fallback: utiliser signees + perdus si RPO non disponible
+            nb_estimations = signees_count + perdus_count
 
         # 9. ESTIMATIONS - Utiliser estimation_reel du RPO (source unique de vérité)
-        # nb_estimations est déjà calculé à partir du RPO plus haut
+        # nb_estimations est déjà calculé à partir du RPO (ou fallback si erreur)
         estimation_count = nb_estimations
 
         # Accumuler estimations par grade (recrue vs senior)

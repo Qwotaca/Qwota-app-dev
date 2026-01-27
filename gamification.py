@@ -1509,6 +1509,7 @@ BADGES_CONFIG = {
         "xp_bonus": -25,
         "icon": "🥀",
         "automatic": True,
+        "tooltip_position": "top",
         "trigger": {"type": "rpo_late", "deadline": "sunday_20h", "start_date": "2026-01-26", "end_date": "2026-08-23"}
     },
     "peur_argent": {
@@ -1519,6 +1520,7 @@ BADGES_CONFIG = {
         "xp_bonus": -25,
         "icon": "🥀",
         "automatic": True,
+        "tooltip_position": "top",
         "trigger": {"type": "billing_late", "deadline": "sunday_20h", "start_date": "2026-01-12", "end_date": "2026-08-23"}
     },
     "perdu_bottes": {
@@ -1529,6 +1531,7 @@ BADGES_CONFIG = {
         "xp_bonus": -25,
         "icon": "🥀",
         "automatic": True,
+        "tooltip_position": "top",
         "trigger": {"type": "pap_insufficient", "min_hours": 9, "start_date": "2026-01-12", "end_date": "2026-06-28"}
     },
 

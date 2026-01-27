@@ -161,7 +161,7 @@
     }
 
     /* Empêcher le zoom avec les gestes */
-    @media (max-width: 768px) {
+    @media (max-width: 600px) {
       html {
         -webkit-text-size-adjust: none !important;
         -moz-text-size-adjust: none !important;
@@ -643,7 +643,7 @@
       width: auto;
     }
 
-    /* Sidebar overlay (mobile) */
+    /* Sidebar overlay (mobile/tablette) */
     .sidebar-overlay {
       display: none;
       position: fixed;
@@ -651,7 +651,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0, 0, 0, 0.4);
       z-index: 9998;
       opacity: 0;
       transition: opacity 0.3s ease;
@@ -660,6 +660,15 @@
     .sidebar-overlay.show {
       display: block;
       opacity: 1;
+    }
+
+    /* Sur tablette: overlay sous le header */
+    @media (min-width: 601px) and (max-width: 1366px) {
+      .sidebar-overlay {
+        top: 90px;
+        height: calc(100% - 90px);
+        background: rgba(15, 23, 42, 0.85);
+      }
     }
 
     /* ================================================================
@@ -1078,7 +1087,7 @@
       transform: translateX(4px);
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 600px) {
       .google-reconnect-content {
         flex-direction: column;
         text-align: center;
@@ -2571,7 +2580,7 @@
     }
 
     /* Responsive */
-    @media (max-width: 768px) {
+    @media (max-width: 600px) {
       .stats-modal-content {
         max-width: 95%;
       }
@@ -2786,7 +2795,7 @@
     }
 
     /* Sur mobile, les iframes sont positionnées en absolu pour le swipe */
-    @media (max-width: 768px) {
+    @media (max-width: 600px) {
       .page-iframe {
         position: absolute;
         top: 0;
@@ -2822,7 +2831,7 @@
       right: 0;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 600px) {
       .swipe-zone {
         display: none !important;
       }
@@ -2844,7 +2853,7 @@
       pointer-events: auto;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 600px) {
       #swipe-overlay {
         display: block;
       }
@@ -3176,7 +3185,7 @@
        RESPONSIVE - MOBILE
        ================================================================ */
 
-    @media (max-width: 768px) {
+    @media (max-width: 600px) {
       /* Cacher le sidebar sur mobile */
       .sidebar {
         display: none;
@@ -3541,8 +3550,8 @@
       </div>
     </aside>
 
-    <!-- Overlay pour sidebar mobile -->
-    <div class="sidebar-overlay" onclick="toggleMobileSidebar()"></div>
+    <!-- Overlay pour sidebar mobile/tablette -->
+    <div class="sidebar-overlay" onclick="closeSidebarOverlay()"></div>
 
     <!-- Header desktop fixe -->
     <header id="app-header">
@@ -4130,7 +4139,7 @@
             // ⚡ Ajuster la position du spinner selon la sidebar (desktop vs mobile)
             if (pageSpinner && (!isInitialLoad || isGuide)) {
               const sidebar = document.querySelector('.sidebar');
-              const isMobile = window.innerWidth <= 768;
+              const isMobile = window.innerWidth <= 600;
 
               if (isMobile) {
                 pageSpinner.style.left = '0';
@@ -4196,7 +4205,7 @@
             }
 
             // Sur mobile, injecter CSS pour cacher les scrollbars quand l'iframe est chargée
-            if (window.innerWidth <= 768) {
+            if (window.innerWidth <= 600) {
               targetIframe.addEventListener('load', function() {
                 hideScrollbarsInIframe(targetIframe);
               });
@@ -4251,7 +4260,7 @@
               // ⚡ Ajuster la position du spinner selon la sidebar (desktop vs mobile)
               if (spinner && !isInitialLoad) {
                 const sidebar = document.querySelector('.sidebar');
-                const isMobile = window.innerWidth <= 768;
+                const isMobile = window.innerWidth <= 600;
 
                 if (isMobile) {
                   // Mobile: pas de sidebar, spinner couvre seulement la zone de contenu (entre header et bottom nav)
@@ -4555,11 +4564,34 @@
       overlay.classList.toggle('show');
     }
 
+    // Fermer le sidebar quand on clique sur l'overlay (mobile et tablette)
+    function closeSidebarOverlay() {
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.querySelector('.sidebar-overlay');
+      const isMobile = window.innerWidth <= 600;
+      const isTablet = window.innerWidth > 600 && window.innerWidth <= 1366;
+
+      if (isMobile) {
+        sidebar.classList.remove('mobile-open');
+      } else if (isTablet) {
+        sidebar.classList.remove('expanded');
+        document.body.classList.remove('sidebar-expanded');
+      }
+      overlay.classList.remove('show');
+    }
+
     // Toggle sidebar (ouvrir/fermer)
     function toggleSidebar() {
       const sidebar = document.querySelector('.sidebar');
+      const overlay = document.querySelector('.sidebar-overlay');
       sidebar.classList.toggle('expanded');
       document.body.classList.toggle('sidebar-expanded');
+
+      // Sur tablette, afficher/masquer l'overlay avec flou
+      const isTablet = window.innerWidth > 600 && window.innerWidth <= 1366;
+      if (isTablet && overlay) {
+        overlay.classList.toggle('show', sidebar.classList.contains('expanded'));
+      }
     }
 
     // Ajouter les cadenas aux éléments du menu - UNIQUEMENT DANS LE SIDEBAR
@@ -4579,9 +4611,9 @@
       // Ajouter les cadenas au chargement
       addLockIconsToDisabledItems();
 
-      // Sur tablette (769px - 1366px), fermer le sidebar par défaut
-      // iPad Mini: 768x1024, iPad Air: 820x1180, iPad Pro: 1024x1366
-      const isTablet = window.innerWidth > 768 && window.innerWidth <= 1366;
+      // Sur tablette (601px - 1366px), fermer le sidebar par défaut
+      // iPad 6th gen: 768x1024, iPad Mini: 768x1024, iPad Air: 820x1180, iPad Pro: 1024x1366
+      const isTablet = window.innerWidth > 600 && window.innerWidth <= 1366;
       if (isTablet) {
         const sidebar = document.querySelector('.sidebar');
         if (sidebar) {
@@ -4599,13 +4631,15 @@
             document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
             this.classList.add('active');
 
-            // Sur tablette, fermer le sidebar après sélection
-            const isTabletNow = window.innerWidth > 768 && window.innerWidth <= 1366;
+            // Sur tablette, fermer le sidebar et l'overlay après sélection
+            const isTabletNow = window.innerWidth > 600 && window.innerWidth <= 1366;
             if (isTabletNow) {
               const sidebar = document.querySelector('.sidebar');
+              const overlay = document.querySelector('.sidebar-overlay');
               if (sidebar && sidebar.classList.contains('expanded')) {
                 sidebar.classList.remove('expanded');
                 document.body.classList.remove('sidebar-expanded');
+                if (overlay) overlay.classList.remove('show');
               }
             }
           }
@@ -5347,7 +5381,7 @@
           // Activer le drag-to-scroll sur tous les containers horizontaux (desktop uniquement)
           document.querySelectorAll('.badges-horizontal-scroll').forEach(container => {
             // Ne pas activer le drag-to-scroll sur mobile
-            if (window.innerWidth <= 768) {
+            if (window.innerWidth <= 600) {
               container.style.cursor = 'default';
               container.style.scrollBehavior = 'auto';
               return;
@@ -5874,7 +5908,7 @@
       startPreloading();
 
       // ===== SWIPE NAVIGATION SUR MOBILE AVEC ANIMATION FLUIDE =====
-      if (window.innerWidth <= 768) {
+      if (window.innerWidth <= 600) {
         console.log('[SWIPE] Initialisation de la navigation par swipe avec animation fluide');
 
         const swipeOverlay = document.getElementById('swipe-overlay');

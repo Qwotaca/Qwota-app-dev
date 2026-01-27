@@ -1935,11 +1935,12 @@ def calculate_dashboard_stats(username: str, start_date=None, end_date=None) -> 
             rpo_data = load_user_rpo_data(username)
             annual = rpo_data.get("annual", {})
 
-            # Calculer heures PAP et contract_reel depuis RPO weekly
+            # Calculer heures PAP, contract_reel et estimation_reel depuis RPO weekly
             total_heures_pap = 0
             nombre_semaines_avec_data = 0
             contract_reel = 0
             dollar_reel = 0
+            estimation_reel = 0
             weekly_data = rpo_data.get("weekly", {})
 
             # Filtrer par période si définie
@@ -1978,9 +1979,17 @@ def calculate_dashboard_stats(username: str, start_date=None, end_date=None) -> 
                             dollar_reel += float(d)
                         except:
                             pass
+                    # Estimation
+                    e = week_data.get("estimation", 0)
+                    if e and e != "-":
+                        try:
+                            estimation_reel += int(float(e))
+                        except:
+                            pass
 
-            # nb_estimations = signees + perdues (total des décisions)
-            nb_estimations = stats["status_soumissions"]["signees"] + stats["status_soumissions"]["perdus"]
+            # nb_estimations depuis RPO (source unique de vérité)
+            # Fallback sur signees + perdues si pas dans RPO
+            nb_estimations = estimation_reel if estimation_reel > 0 else (stats["status_soumissions"]["signees"] + stats["status_soumissions"]["perdus"])
 
             # Contrat moyen = dollar_reel / contract_reel
             if contract_reel > 0:
@@ -2700,6 +2709,159 @@ async def supprimer_prospect_by_id(data: dict = Body(...)):
     except Exception as e:
         print(f"[ERROR] Erreur lors de la suppression du prospect: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/prospects/{username}/{prospect_id}/perdu")
+async def marquer_prospect_perdu(username: str, prospect_id: str):
+    """
+    Marque un prospect (client potentiel) comme perdu.
+
+    Actions:
+    1. Si le prospect a un numéro de soumission (num), l'ajoute dans soumissions_completes
+    2. Ajoute le prospect dans clients_perdus
+    3. Si c'est un événement Google Calendar, l'ajoute à la blacklist
+    4. Supprime le prospect de la liste des prospects
+    5. Déclenche le sync RPO pour mettre à jour estimation_reel
+    """
+    try:
+        print(f"[PERDU] Marquage prospect comme perdu: {prospect_id} pour {username}")
+
+        fichier_prospects = os.path.join(f"{base_cloud}/prospects", username, "prospects.json")
+
+        if not os.path.exists(fichier_prospects):
+            raise HTTPException(status_code=404, detail="Aucun fichier prospects trouvé")
+
+        with open(fichier_prospects, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            prospects = json.loads(content) if content else []
+
+        # Trouver le prospect
+        prospect_trouve = None
+        nouveaux_prospects = []
+        for p in prospects:
+            if p.get('id') == prospect_id:
+                prospect_trouve = p
+            else:
+                nouveaux_prospects.append(p)
+
+        if not prospect_trouve:
+            raise HTTPException(status_code=404, detail=f"Prospect non trouvé: {prospect_id}")
+
+        # 1. TOUJOURS AJOUTER DANS SOUMISSIONS_COMPLETES (même sans numéro de soumission)
+        # Car l'estimation a été faite (montrée au client), même si pas de PDF envoyé
+        num_soumission = prospect_trouve.get("num")
+        prospect_id_value = prospect_trouve.get("id")
+
+        soumissions_dir = os.path.join(base_cloud, "soumissions_completes", username)
+        os.makedirs(soumissions_dir, exist_ok=True)
+        soumissions_file = os.path.join(soumissions_dir, "soumissions.json")
+
+        soumissions = []
+        if os.path.exists(soumissions_file):
+            with open(soumissions_file, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                soumissions = json.loads(content) if content else []
+
+        # Vérifier si la soumission n'existe pas déjà (par num OU par id)
+        existe_deja = any(
+            (num_soumission and s.get("num") == num_soumission) or
+            s.get("id") == prospect_id_value
+            for s in soumissions
+        )
+
+        if not existe_deja:
+            # Créer l'entrée soumission à partir du prospect
+            soumission_entry = {
+                "id": prospect_id_value,
+                "num": num_soumission if num_soumission else f"POT-{prospect_id_value[:8]}",  # Générer un num si absent
+                "nom": prospect_trouve.get("nom", ""),
+                "prenom": prospect_trouve.get("prenom", ""),
+                "courriel": prospect_trouve.get("courriel", prospect_trouve.get("email", "")),
+                "telephone": prospect_trouve.get("telephone", ""),
+                "adresse": prospect_trouve.get("adresse", ""),
+                "date": prospect_trouve.get("date", datetime.now().strftime("%d/%m/%Y")),
+                "prix": prospect_trouve.get("prix", "0"),
+                "endroit": prospect_trouve.get("type_travaux", prospect_trouve.get("endroit", "")),
+                "produit": prospect_trouve.get("produit", ""),
+                "statut": "perdu",
+                "source": "potentiel"  # Marquer la source
+            }
+            soumissions.append(soumission_entry)
+
+            with open(soumissions_file, "w", encoding="utf-8") as f:
+                json.dump(soumissions, f, ensure_ascii=False, indent=2)
+            print(f"[PERDU] Estimation {soumission_entry['num']} ajoutée dans soumissions_completes")
+
+        # 2. AJOUTER DANS CLIENTS_PERDUS
+        perdus_dir = os.path.join(base_cloud, "clients_perdus", username)
+        os.makedirs(perdus_dir, exist_ok=True)
+        perdus_file = os.path.join(perdus_dir, "clients.json")
+
+        clients_perdus = []
+        if os.path.exists(perdus_file):
+            with open(perdus_file, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                clients_perdus = json.loads(content) if content else []
+
+        # Ajouter le prospect comme client perdu
+        prospect_trouve["date_perdu"] = datetime.now().isoformat()
+        prospect_trouve["statut"] = "perdu"
+        prospect_trouve["category_origine"] = "potentiel"
+        clients_perdus.append(prospect_trouve)
+
+        with open(perdus_file, "w", encoding="utf-8") as f:
+            json.dump(clients_perdus, f, ensure_ascii=False, indent=2)
+        print(f"[PERDU] Client ajouté dans clients_perdus")
+
+        # 3. BLACKLISTER SI C'EST UN ÉVÉNEMENT GOOGLE CALENDAR
+        # Les IDs Google Calendar ne sont pas des UUIDs standards (pas 5 segments séparés par des tirets)
+        is_calendar_event = prospect_trouve.get("source") == "google_calendar" or prospect_id.count("-") != 4
+        if is_calendar_event:
+            blacklist_dir = f"{base_cloud}/blacklist"
+            os.makedirs(blacklist_dir, exist_ok=True)
+            blacklist_file = os.path.join(blacklist_dir, f"{username}.json")
+
+            ids = []
+            if os.path.exists(blacklist_file):
+                with open(blacklist_file, "r", encoding="utf-8") as f:
+                    ids = json.load(f)
+
+            if prospect_id not in ids:
+                ids.append(prospect_id)
+                with open(blacklist_file, "w", encoding="utf-8") as f:
+                    json.dump(ids, f, indent=2)
+                print(f"[PERDU] Event ID {prospect_id} ajouté à la blacklist")
+
+        # 4. SUPPRIMER DES PROSPECTS
+        with open(fichier_prospects, "w", encoding="utf-8") as f:
+            json.dump(nouveaux_prospects, f, indent=2, ensure_ascii=False)
+
+        # 5. SYNC RPO pour mettre à jour estimation_reel
+        try:
+            from QE.Backend.rpo import sync_soumissions_to_rpo
+            sync_soumissions_to_rpo(username)
+            print(f"[PERDU] RPO synchronisé pour {username}")
+        except Exception as e:
+            print(f"[WARNING] Erreur sync RPO: {e}")
+
+        client_nom = f"{prospect_trouve.get('prenom', '')} {prospect_trouve.get('nom', '')}".strip()
+        print(f"[OK] Prospect {client_nom} marqué comme perdu")
+
+        return JSONResponse({
+            "success": True,
+            "message": f"Client {client_nom} marqué comme perdu",
+            "added_to_soumissions": True,  # Toujours ajouté maintenant
+            "blacklisted": is_calendar_event
+        })
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Erreur marquage prospect perdu: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.delete("/supprimer-prospect/{username}")
 async def supprimer_prospect(username: str, prospect_data: dict):
@@ -7478,9 +7640,10 @@ def api_get_coach_equipe_dashboard(
             rpo_data = load_user_rpo_data(username)
             annual = rpo_data.get("annual", {})
 
-            # Dollar réel et Contract réel depuis RPO (contrats avec premier paiement)
+            # Dollar réel, Contract réel et Estimation réel depuis RPO
             dollar_reel = annual.get("dollar_reel", 0)
             contract_reel = annual.get("contract_reel", 0)
+            estimation_reel = annual.get("estimation_reel", 0)
 
             # Si annual est 0, calculer depuis weekly (fallback)
             if dollar_reel == 0:
@@ -7555,8 +7718,9 @@ def api_get_coach_equipe_dashboard(
             # Accumuler le total absolu des heures marketing pour le calcul du taux marketing global
             team_total_heures_marketing_absolue += total_heures_pap
 
-            # Nb estimations = signees + perdus (pas en_attente)
-            nb_estimations = signees_count + perdus_count
+            # Nb estimations depuis RPO (source unique de vérité)
+            # Fallback sur signees + perdus si RPO non disponible
+            nb_estimations = estimation_reel if estimation_reel > 0 else (signees_count + perdus_count)
 
             # Taux marketing = Nb Estimations ÷ Heures PAP (estimations par heure)
             if total_heures_pap > 0:
@@ -7593,8 +7757,9 @@ def api_get_coach_equipe_dashboard(
             print(f"[DEBUG OBJECTIF ERROR] {username} -> Erreur chargement RPO: {e}")
             pass
 
-        # 9. ESTIMATIONS - Total de toutes les estimations (signées + en_attente + perdues)
-        estimation_count = signees_count + attente_count + perdus_count
+        # 9. ESTIMATIONS - Utiliser estimation_reel du RPO (source unique de vérité)
+        # nb_estimations est déjà calculé à partir du RPO plus haut
+        estimation_count = nb_estimations
 
         # Accumuler estimations par grade (recrue vs senior)
         grade = user_info.get("grade", "").lower()
@@ -7659,7 +7824,7 @@ def api_get_coach_equipe_dashboard(
         team_total_perdus += perdus_count
         team_total_dollar_reel += dollar_reel
         team_total_contract_reel += contract_reel
-        team_total_nb_estimations += signees_count + perdus_count
+        team_total_nb_estimations += nb_estimations  # Utilise estimation_reel du RPO
         team_total_employes_actifs += employes_actifs
         team_total_employes_candidats += employes_candidats
         team_total_employes_inactifs += employes_inactifs
@@ -7717,7 +7882,7 @@ def api_get_coach_equipe_dashboard(
                 "taux_vente": taux_vente,  # contract_reel / nb_estimations * 100
                 "prod_horaire": prod_horaire,
                 "taux_marketing": taux_marketing,  # nb_estimations / heures_pap (estimations par heure)
-                "estimations": signees_count + perdus_count,  # Nb estimations = signees + perdus
+                "estimations": nb_estimations,  # Nb estimations depuis RPO (estimation_reel)
                 "heures_pap_semaine": heures_pap_semaine,
                 "heures_pap": round(total_heures_pap, 2)  # Total absolu des heures PAP
             },
@@ -11702,6 +11867,39 @@ async def supprimer_client_perdu(data: dict = Body(...)):
             json.dump(clients_perdus_updated, f, ensure_ascii=False, indent=2)
 
         if client_supprime:
+            # AUSSI SUPPRIMER DE SOUMISSIONS_COMPLETES si le client y était
+            num_soumission = client_supprime.get("num")
+            client_id = client_supprime.get("id")
+
+            if num_soumission or client_id:
+                soumissions_file = os.path.join(base_cloud, "soumissions_completes", username, "soumissions.json")
+                if os.path.exists(soumissions_file):
+                    try:
+                        with open(soumissions_file, "r", encoding="utf-8") as f:
+                            content = f.read().strip()
+                            soumissions = json.loads(content) if content else []
+
+                        # Filtrer pour retirer la soumission correspondante
+                        soumissions_updated = [
+                            s for s in soumissions
+                            if not (s.get("num") == num_soumission or s.get("id") == client_id)
+                        ]
+
+                        if len(soumissions_updated) < len(soumissions):
+                            with open(soumissions_file, "w", encoding="utf-8") as f:
+                                json.dump(soumissions_updated, f, ensure_ascii=False, indent=2)
+                            print(f"[OK] Soumission {num_soumission or client_id} aussi supprimée de soumissions_completes")
+
+                            # Sync RPO pour mettre à jour estimation_reel
+                            try:
+                                from QE.Backend.rpo import sync_soumissions_to_rpo
+                                sync_soumissions_to_rpo(username)
+                                print(f"[OK] RPO synchronisé après suppression")
+                            except Exception as e:
+                                print(f"[WARNING] Erreur sync RPO: {e}")
+                    except Exception as e:
+                        print(f"[WARNING] Erreur suppression soumission: {e}")
+
             print(f"[OK] Client {prenom} {nom} supprimé définitivement de la liste des perdus")
             return {"success": True, "message": "Client supprimé définitivement"}
         else:

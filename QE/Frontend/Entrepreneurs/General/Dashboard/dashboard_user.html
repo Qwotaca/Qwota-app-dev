@@ -7995,7 +7995,7 @@ async function chargerCoaches() {
               taux_vente: stats.taux_vente_moyen || 0,
               prod_horaire: stats.prod_horaire_moyen || 0,
               taux_marketing: stats.taux_marketing_moyen || 0,
-              estimations: (stats.total_signees || 0) + (stats.total_perdus || 0),  // signés + perdus (en_attente = signés sans paiement, déjà dans signees)
+              estimations: stats.total_nb_estimations || 0,  // Depuis RPO (estimation_reel) - source unique de vérité
               heures_pap_semaine: stats.heures_pap_semaine || 0,
               heures_pap: stats.total_heures_marketing_absolue || 0  // Total absolu
             }
@@ -10017,8 +10017,8 @@ async function renderCoachClassementCards() {
           soumissions_signees: e.status_soumissions?.signees || 0,
           soumissions_en_attente: e.status_soumissions?.en_attente || 0,
           soumissions_perdues: e.status_soumissions?.perdus || 0,
-          // nb_estimations = signées + perdus
-          nb_estimations: e.metriques?.estimations || ((e.status_soumissions?.signees || 0) + (e.status_soumissions?.perdus || 0)),
+          // nb_estimations depuis RPO (estimation_reel) - source unique de vérité
+          nb_estimations: e.metriques?.estimations || e.nb_estimations || e.estimation_reel || 0,
           etoiles: e.satisfaction?.etoiles_moyennes || 0,
           nombre_avis: e.satisfaction?.nombre_avis || 0,
           contrat_moyen: e.metriques?.contrat_moyen || 0,
@@ -10061,8 +10061,8 @@ async function renderCoachClassementCards() {
           soumissions_signees: e.status_soumissions?.signees || 0,  // Original (36)
           soumissions_en_attente: e.status_soumissions?.en_attente || 0,
           soumissions_perdues: e.status_soumissions?.perdus || 0,
-          // Nb estimations = signées originales + perdus
-          nb_estimations: e.metriques?.estimations || ((e.status_soumissions?.signees || 0) + (e.status_soumissions?.perdus || 0)),
+          // nb_estimations depuis RPO (estimation_reel) - source unique de vérité
+          nb_estimations: e.metriques?.estimations || e.nb_estimations || e.estimation_reel || 0,
           etoiles: e.satisfaction?.etoiles_moyennes || 0,
           nombre_avis: e.satisfaction?.nombre_avis || 0,
           contrat_moyen: e.metriques?.contrat_moyen || 0,
@@ -10661,8 +10661,8 @@ function getStatData(statId, ca, soumissions, metriques, satisfaction, employes)
       label: 'Estimations',
       icon: 'fa-file-alt',
       color: 'purple',
-      // Nb estimations = signées originales + perdus (pas en_attente)
-      value: metriques.estimations || ((soumissions.signees || 0) + (soumissions.perdus || 0))
+      // Nb estimations depuis RPO (estimation_reel) - source unique de vérité
+      value: metriques.estimations || 0
     },
     'taux_vente': {
       label: 'Taux vente',

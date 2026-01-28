@@ -7417,6 +7417,7 @@ def api_get_coach_equipe_dashboard(
     team_total_taux_marketing = 0
     team_taux_marketing_count = 0
     team_total_heures_marketing_absolue = 0  # Total absolu des heures marketing (pas moyenne)
+    team_total_heures_pap_sans_week1 = 0  # Total heures PAP sans semaine 1 (pour H PAP/sem équipe)
     team_total_dollar_reel = 0  # Total dollars réels (contrats avec premier paiement)
     team_total_contract_reel = 0  # Total contrats réels (avec premier paiement)
     team_total_nb_estimations = 0  # Total nb estimations (signees + perdus)
@@ -7691,6 +7692,8 @@ def api_get_coach_equipe_dashboard(
 
             # Accumuler le total absolu des heures marketing pour le calcul du taux marketing global
             team_total_heures_marketing_absolue += total_heures_pap
+            # Accumuler heures PAP sans semaine 1 pour le calcul H PAP/sem équipe
+            team_total_heures_pap_sans_week1 += total_heures_pap_sans_w1_actuelle
 
             # Nb estimations depuis RPO (source unique de vérité)
             # Fallback sur signees + perdus si RPO non disponible
@@ -7905,13 +7908,14 @@ def api_get_coach_equipe_dashboard(
     # Estimation moyenne = Total nb estimations (signees + perdus) / Nombre d'entrepreneurs
     estimation_moyenne_equipe = round(team_total_nb_estimations / nb_entrepreneurs, 2) if nb_entrepreneurs > 0 else 0
 
-    # Heures PAP/semaine = Total heures marketing / Nombre de semaines écoulées depuis le 5 janvier 2026
+    # Heures PAP/semaine = Total heures PAP (sans semaine 1) / Nombre de semaines finies (exclut semaine actuelle)
     from datetime import datetime, timedelta
     start_date = datetime(2026, 1, 5)
     current_date = datetime.now()
     days_since_start = max(0, (current_date - start_date).days)
     nombre_semaines_ecoulees = max(1, days_since_start // 7)  # Semaines complétées, minimum 1
-    heures_pap_moyenne_equipe = round(team_total_heures_marketing_absolue / nombre_semaines_ecoulees, 2) if nombre_semaines_ecoulees > 0 else 0
+    nombre_semaines_finies = max(1, nombre_semaines_ecoulees - 1)  # Exclure la semaine actuelle (non finie)
+    heures_pap_moyenne_equipe = round(team_total_heures_pap_sans_week1 / nombre_semaines_finies, 2) if nombre_semaines_finies > 0 else 0
 
     prod_horaire_moyen_equipe = round(team_total_prod_horaire / team_prod_horaire_count, 2) if team_prod_horaire_count > 0 else 0
     # CORRECTION: Calculer le pourcentage global basé sur les totaux (team_total_ca / team_total_objectif)

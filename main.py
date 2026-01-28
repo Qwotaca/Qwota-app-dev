@@ -7659,55 +7659,25 @@ def api_get_coach_equipe_dashboard(
             if objectif > 0:
                 pourcentage_objectif = round((ca_actuel / objectif) * 100, 2)
 
-            # Calculer heures_pap_semaine: moyenne réelle par semaine (pas total cumulé)
-            # Compter SEULEMENT à partir de janvier 2026 (exclure décembre 2025)
-            total_heures_pap = 0
-            total_heures_pap_sans_w1_actuelle = 0  # Exclut semaine 1 janvier et semaine actuelle
-            nombre_semaines_avec_data = 0
-            nombre_semaines_sans_w1_actuelle = 0
-            weekly_data = rpo_data.get("weekly", {})
+            # Calculer heures_pap_semaine: hr_pap_reel de annual / nombre de semaines finies
+            # Nombre de semaines finies = semaines écoulées - 1 (exclure semaine 5 janv) - 1 (exclure semaine actuelle)
+            from datetime import datetime as dt, timedelta
+            start_year_date = dt(2026, 1, 5)
+            current_date_calc = dt.now()
+            days_since_start = max(0, (current_date_calc - start_year_date).days)
+            nombre_semaines_ecoulees_calc = max(1, days_since_start // 7)
+            # Exclure semaine 5 janv (-1) et semaine actuelle (-1) = -2
+            nombre_semaines_finies = max(1, nombre_semaines_ecoulees_calc - 2)
 
-            # Filtrer par période si définie
-            if start_date:
-                weekly_data = filter_rpo_weekly_by_period(weekly_data, start_date, end_date)
+            # Prendre hr_pap_reel de annual
+            hr_pap_annual = float(annual.get("hr_pap_reel", 0) or 0)
+            total_heures_pap = hr_pap_annual
 
-            # Déterminer la semaine actuelle (mois, semaine)
-            from QE.Backend.rpo import get_week_number_from_date
-            current_month_idx, current_week_num = get_week_number_from_date(datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+            # H PAP/sem = hr_pap_reel / nombre de semaines finies
+            heures_pap_semaine = round(hr_pap_annual / nombre_semaines_finies, 2) if nombre_semaines_finies > 0 else 0
 
-            for month_key, weeks in weekly_data.items():
-                # Filtrer: exclure mois négatifs (décembre 2025 et avant), garder mois >= 0 (janvier 2026+)
-                try:
-                    month_num = int(month_key)
-                    if month_num < 0:
-                        continue  # Ignorer décembre 2025 et avant
-                except:
-                    continue
-
-                for week_key, week_data in weeks.items():
-                    h_mktg = week_data.get("h_marketing", "-")
-                    # Compter toutes les valeurs sauf "-" (même 0 compte comme une semaine faite)
-                    if h_mktg is not None and h_mktg != "-":
-                        try:
-                            heures_val = float(h_mktg)
-                            total_heures_pap += heures_val
-                            nombre_semaines_avec_data += 1
-
-                            # Pour le calcul recrue/senior: exclure semaine 1 janvier (mois 0, semaine 1), semaine actuelle, et semaines futures
-                            is_week1_january = (month_num == 0 and week_key == "1")
-                            is_current_week = (month_num == current_month_idx and int(week_key) == current_week_num)
-                            # Exclure les semaines futures (mois > actuel, ou même mois mais semaine > actuelle)
-                            is_future_week = (month_num > current_month_idx) or \
-                                           (month_num == current_month_idx and int(week_key) > current_week_num)
-                            # Inclure seulement les semaines passées complétées (pas week1, pas actuelle, pas future)
-                            if not is_week1_january and not is_current_week and not is_future_week:
-                                total_heures_pap_sans_w1_actuelle += heures_val
-                                nombre_semaines_sans_w1_actuelle += 1
-                        except:
-                            pass
-
-            # Moyenne des heures PAP par semaine (toutes semaines de l'année)
-            heures_pap_semaine = round(total_heures_pap / nombre_semaines_avec_data, 2) if nombre_semaines_avec_data > 0 else 0
+            # Pour le calcul recrue/senior, utiliser aussi hr_pap_annual
+            total_heures_pap_sans_w1_actuelle = hr_pap_annual
 
             # Accumuler pour calcul recrue/senior (exclut semaine 1 et actuelle)
             grade = user_info.get("grade", "").lower()

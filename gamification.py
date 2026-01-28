@@ -2950,8 +2950,8 @@ def check_and_award_automatic_badges(username: str) -> Dict:
                 continue
             trigger = badge_config.get('trigger', {})
             trigger_type = trigger.get('type')
-            if trigger_type in ['weekly_sales', 'weekly_production', 'weekly_pap', 'weekly_estimates']:
-                threshold = trigger.get('amount', 0) or trigger.get('hours', 0) or trigger.get('count', 0)
+            if trigger_type in ['weekly_sales', 'weekly_production', 'weekly_pap', 'weekly_estimates', 'hourly_prod']:
+                threshold = trigger.get('amount', 0) or trigger.get('hours', 0) or trigger.get('count', 0) or trigger.get('rate', 0)
                 if trigger_type not in badges_by_type:
                     badges_by_type[trigger_type] = []
                 badges_by_type[trigger_type].append((badge_id, threshold))
@@ -2981,12 +2981,14 @@ def check_and_award_automatic_badges(username: str) -> Dict:
                 h_marketing_val = week_data.get('h_marketing', 0)
                 estimation_val = week_data.get('estimation', 0)
                 contract_val = week_data.get('contract', 0)
+                prod_horaire_val = week_data.get('prod_horaire', 0)
 
                 weekly_sales = float(dollar_val) if dollar_val and dollar_val != "-" else 0
                 weekly_production = float(produit_val) if produit_val and produit_val != "-" else 0
                 weekly_pap = float(h_marketing_val) if h_marketing_val and h_marketing_val != "-" else 0
                 weekly_estimates = float(estimation_val) if estimation_val and estimation_val != "-" else 0
                 weekly_contracts = float(contract_val) if contract_val and contract_val != "-" else 0
+                hourly_prod = float(prod_horaire_val) if prod_horaire_val and prod_horaire_val != "-" else 0
 
                 # Calculer le taux de closing (si assez d'estimations)
                 weekly_closing_rate = (weekly_contracts / weekly_estimates * 100) if weekly_estimates > 0 else 0
@@ -2996,7 +2998,8 @@ def check_and_award_automatic_badges(username: str) -> Dict:
                     'weekly_sales': weekly_sales,
                     'weekly_production': weekly_production,
                     'weekly_pap': weekly_pap,
-                    'weekly_estimates': weekly_estimates
+                    'weekly_estimates': weekly_estimates,
+                    'hourly_prod': hourly_prod
                 }
 
                 for trigger_type, badges_list in badges_by_type.items():
@@ -3014,6 +3017,35 @@ def check_and_award_automatic_badges(username: str) -> Dict:
                     if weekly_estimates >= min_estimates and min_rate <= weekly_closing_rate <= max_rate:
                         weekly_badge_counts[badge_id] = weekly_badge_counts.get(badge_id, 0) + 1
                         break  # Un seul badge closing par semaine
+
+                # Trophées et autres (PAS type="badge"): logique originale - compter TOUS ceux qui matchent
+                for badge_id, badge_config in BADGES_CONFIG.items():
+                    if not badge_config.get('automatic', False):
+                        continue
+                    if badge_config.get('type') == 'badge':
+                        continue  # Déjà traités ci-dessus
+                    trigger = badge_config.get('trigger', {})
+                    trigger_type = trigger.get('type')
+                    if trigger_type == 'weekly_sales':
+                        threshold = trigger.get('amount', 0)
+                        if weekly_sales >= threshold:
+                            weekly_badge_counts[badge_id] = weekly_badge_counts.get(badge_id, 0) + 1
+                    elif trigger_type == 'weekly_production':
+                        threshold = trigger.get('amount', 0)
+                        if weekly_production >= threshold:
+                            weekly_badge_counts[badge_id] = weekly_badge_counts.get(badge_id, 0) + 1
+                    elif trigger_type == 'weekly_pap':
+                        threshold = trigger.get('hours', 0)
+                        if weekly_pap >= threshold:
+                            weekly_badge_counts[badge_id] = weekly_badge_counts.get(badge_id, 0) + 1
+                    elif trigger_type == 'weekly_estimates':
+                        threshold = trigger.get('count', 0)
+                        if weekly_estimates >= threshold:
+                            weekly_badge_counts[badge_id] = weekly_badge_counts.get(badge_id, 0) + 1
+                    elif trigger_type == 'hourly_prod':
+                        threshold = trigger.get('rate', 0)
+                        if hourly_prod >= threshold:
+                            weekly_badge_counts[badge_id] = weekly_badge_counts.get(badge_id, 0) + 1
 
         # Debug: afficher les counts trouvés
         if weekly_badge_counts:

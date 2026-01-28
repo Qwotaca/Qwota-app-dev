@@ -218,12 +218,29 @@ app.mount("/uploads", StaticFiles(directory=os.path.join(base_cloud, "uploads"))
 # INITIALISATION GAMIFICATION
 # ============================================
 
-def run_gdrive_backup():
-    """Exécute le backup vers Google Drive"""
+def run_gdrive_backup(part: int = 0):
+    """Exécute le backup vers Google Drive
+    part=0: backup complet (ancien comportement)
+    part=1: données légères (JSON, configs, etc.)
+    part=2: fichiers lourds (PDFs, signatures, attachments)
+    """
     import subprocess
     from datetime import datetime
 
-    print(f"[BACKUP] Démarrage du backup - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    # Dossiers pour chaque partie
+    PART1_FOLDERS = [
+        "accounts", "blacklist", "clients_perdus", "emails", "employes", "equipe",
+        "ficheremployer", "ficherformations", "ficherlegal", "fichermarketing",
+        "ficherprocessus", "gqp", "projets", "prospects", "reviews", "rpo", "rpo_why",
+        "stats", "templates", "total_signees", "travaux_a_completer",
+        "ventes_acceptees", "ventes_attente", "ventes_produit"
+    ]
+    PART2_FOLDERS = [
+        "soumissions_completes", "soumissions_signees", "signatures", "support_attachments"
+    ]
+
+    part_name = f"part{part}" if part > 0 else "full"
+    print(f"[BACKUP] Démarrage du backup {part_name} - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     try:
         # Configuration rclone
@@ -267,11 +284,26 @@ team_drive =
 
         # Créer le backup
         date_str = datetime.now().strftime("%Y-%m-%d_%H%M")
-        backup_file = f"/tmp/backup_{date_str}.tar.gz"
+        backup_file = f"/tmp/backup_{date_str}_{part_name}.tar.gz"
 
         print(f"[BACKUP] Création de {backup_file}...")
+
+        if part == 0:
+            # Backup complet (ancien comportement)
+            result = subprocess.run(["tar", "-czf", backup_file, "-C", "/mnt/cloud", "."])
+        elif part == 1:
+            # Backup part 1: données légères
+            folders_to_backup = [f for f in PART1_FOLDERS if os.path.exists(f"/mnt/cloud/{f}")]
+            result = subprocess.run(["tar", "-czf", backup_file, "-C", "/mnt/cloud"] + folders_to_backup)
+        elif part == 2:
+            # Backup part 2: fichiers lourds
+            folders_to_backup = [f for f in PART2_FOLDERS if os.path.exists(f"/mnt/cloud/{f}")]
+            result = subprocess.run(["tar", "-czf", backup_file, "-C", "/mnt/cloud"] + folders_to_backup)
+        else:
+            print(f"[BACKUP] Part {part} invalide")
+            return
+
         # Ignorer l'erreur "file changed as we read it" (exit code 1) - le backup est quand même créé
-        result = subprocess.run(["tar", "-czf", backup_file, "-C", "/mnt/cloud", "."])
         if result.returncode not in [0, 1]:  # 0 = OK, 1 = fichiers modifiés pendant backup (OK)
             raise Exception(f"tar failed with exit code {result.returncode}")
 
@@ -282,10 +314,11 @@ team_drive =
         # Nettoyer
         os.remove(backup_file)
 
-        # Supprimer les vieux backups (> 7 jours)
-        subprocess.run([rclone_bin, "delete", "gdrive:Backups_Render/", "--min-age", "7d"], check=True)
+        # Supprimer les vieux backups (> 7 jours) - seulement pour backup complet
+        if part == 0:
+            subprocess.run([rclone_bin, "delete", "gdrive:Backups_Render/", "--min-age", "7d"], check=True)
 
-        print(f"[BACKUP] Backup terminé avec succès - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"[BACKUP] Backup {part_name} terminé avec succès - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     except Exception as e:
         print(f"[BACKUP] Erreur: {e}")
@@ -355,8 +388,12 @@ async def startup_event():
 
 
 @app.post("/api/admin/backup-gdrive")
-async def trigger_gdrive_backup(request: Request):
-    """Déclenche manuellement un backup vers Google Drive (admin uniquement)"""
+async def trigger_gdrive_backup(request: Request, part: int = 0):
+    """Déclenche manuellement un backup vers Google Drive (admin uniquement)
+    part=0: backup complet (défaut)
+    part=1: données légères (JSON, configs) - ~petite taille
+    part=2: fichiers lourds (PDFs, signatures) - ~grande taille
+    """
     # Vérifier que c'est un admin/direction
     auth_header = request.headers.get("Authorization", "")
     if "direction" not in auth_header.lower() and "admin" not in auth_header.lower():
@@ -366,12 +403,16 @@ async def trigger_gdrive_backup(request: Request):
     if not os.path.exists("/mnt/cloud"):
         return {"status": "error", "message": "Pas en production"}
 
+    if part not in [0, 1, 2]:
+        return {"status": "error", "message": "Part invalide (0, 1 ou 2)"}
+
     import threading
     # Lancer le backup dans un thread pour ne pas bloquer
-    thread = threading.Thread(target=run_gdrive_backup)
+    thread = threading.Thread(target=run_gdrive_backup, args=(part,))
     thread.start()
 
-    return {"status": "started", "message": "Backup démarré en arrière-plan"}
+    part_desc = {0: "complet", 1: "données légères", 2: "fichiers lourds"}
+    return {"status": "started", "message": f"Backup {part_desc[part]} démarré en arrière-plan"}
 
 
 # ==========================================

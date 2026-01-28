@@ -3130,6 +3130,108 @@ def check_and_award_automatic_badges(username: str) -> Dict:
 
                 print(f"[AUTO BADGES] OK {badges_to_add}x {badge_config.get('name', badge_id)} attribue(s)")
 
+        # ===== STREAKS =====
+        # Calculer les streaks (semaines consécutives atteignant un seuil)
+        # Collecter toutes les semaines en ordre chronologique
+        all_weeks = []
+        for month_key, month_weeks in weekly_data.items():
+            if not isinstance(month_weeks, dict):
+                continue
+            for week_key, week_data in month_weeks.items():
+                if not isinstance(week_data, dict):
+                    continue
+                # Créer une clé de tri (mois, semaine)
+                try:
+                    month_idx = int(month_key)
+                    week_idx = int(week_key)
+                    all_weeks.append((month_idx, week_idx, week_data))
+                except:
+                    continue
+
+        # Trier par mois puis semaine
+        all_weeks.sort(key=lambda x: (x[0], x[1]))
+
+        # Calculer les streaks pour chaque type
+        def calculate_max_streak(weeks_data, value_getter, threshold):
+            """Calcule le streak max de semaines consécutives >= threshold"""
+            current_streak = 0
+            max_streak = 0
+            for _, _, week_data in weeks_data:
+                value = value_getter(week_data)
+                if value >= threshold:
+                    current_streak += 1
+                    max_streak = max(max_streak, current_streak)
+                else:
+                    current_streak = 0
+            return max_streak
+
+        # Getters pour chaque type de valeur
+        def get_estimates(wd):
+            val = wd.get('estimation', 0)
+            return float(val) if val and val != "-" else 0
+
+        def get_sales(wd):
+            val = wd.get('dollar', 0)
+            return float(val) if val and val != "-" else 0
+
+        def get_production(wd):
+            val = wd.get('produit', 0)
+            return float(val) if val and val != "-" else 0
+
+        def get_pap(wd):
+            val = wd.get('h_marketing', 0)
+            return float(val) if val and val != "-" else 0
+
+        # Calculer les streaks
+        streak_estimates = calculate_max_streak(all_weeks, get_estimates, 10)
+        streak_sales = calculate_max_streak(all_weeks, get_sales, 10000)
+        streak_production = calculate_max_streak(all_weeks, get_production, 10000)
+        streak_pap = calculate_max_streak(all_weeks, get_pap, 10)
+
+        # Vérifier les badges de streak
+        streak_values = {
+            'streak_estimates': streak_estimates,
+            'streak_sales': streak_sales,
+            'streak_production': streak_production,
+            'streak_pap': streak_pap
+        }
+
+        for badge_id, badge_config in BADGES_CONFIG.items():
+            if not badge_config.get('automatic', False):
+                continue
+            if badge_config.get('type') != 'badge':
+                continue
+
+            trigger = badge_config.get('trigger', {})
+            trigger_type = trigger.get('type')
+
+            if trigger_type in streak_values:
+                required_weeks = trigger.get('weeks', 0)
+                current_streak = streak_values[trigger_type]
+
+                if current_streak >= required_weeks:
+                    # Vérifier si badge déjà attribué
+                    conn = sqlite3.connect(DB_PATH)
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT count FROM user_badges
+                        WHERE username = ? AND badge_id = ?
+                    """, (username, badge_id))
+                    result = cursor.fetchone()
+                    conn.close()
+
+                    if not result:
+                        unlock_result = unlock_badge(username, badge_id, f"Streak de {current_streak} semaines")
+                        if unlock_result.get('success'):
+                            xp = unlock_result.get('xp_awarded', 0)
+                            awarded_badges.append({
+                                'badge_id': badge_id,
+                                'badge_name': badge_config.get('name', badge_id),
+                                'xp': xp
+                            })
+                            total_xp += xp
+                            print(f"[AUTO BADGES] OK {badge_config.get('name', badge_id)} (streak {current_streak} sem)")
+
         print(f"[AUTO BADGES] Terminé: {len(awarded_badges)} badges attribués, +{total_xp} XP total")
 
         return {

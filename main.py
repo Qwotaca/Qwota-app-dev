@@ -7694,6 +7694,7 @@ def api_get_coach_equipe_dashboard(
             from QE.Backend.rpo import load_user_rpo_data
             rpo_data = load_user_rpo_data(username)
             annual = rpo_data.get("annual", {})
+            weekly_data = rpo_data.get("weekly", {})
 
             # Dollar réel, Contract réel et Estimation réel depuis RPO
             dollar_reel = annual.get("dollar_reel", 0)

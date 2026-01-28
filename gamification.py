@@ -2948,9 +2948,11 @@ def check_and_award_automatic_badges(username: str) -> Dict:
                 # Lire les valeurs (gérer les "-" et None)
                 dollar_val = week_data.get('dollar', 0)
                 produit_val = week_data.get('produit', 0)
+                h_marketing_val = week_data.get('h_marketing', 0)
 
                 weekly_sales = float(dollar_val) if dollar_val and dollar_val != "-" else 0
                 weekly_production = float(produit_val) if produit_val and produit_val != "-" else 0
+                weekly_pap = float(h_marketing_val) if h_marketing_val and h_marketing_val != "-" else 0
 
                 # Compter les badges de ventes hebdomadaires
                 for badge_id, badge_config in BADGES_CONFIG.items():
@@ -2968,6 +2970,11 @@ def check_and_award_automatic_badges(username: str) -> Dict:
                     elif trigger_type == 'weekly_production':
                         threshold = trigger.get('amount', 0)
                         if weekly_production >= threshold:
+                            weekly_badge_counts[badge_id] = weekly_badge_counts.get(badge_id, 0) + 1
+
+                    elif trigger_type == 'weekly_pap':
+                        threshold = trigger.get('hours', 0)
+                        if weekly_pap >= threshold:
                             weekly_badge_counts[badge_id] = weekly_badge_counts.get(badge_id, 0) + 1
 
         # Debug: afficher les counts trouvés

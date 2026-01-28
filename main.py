@@ -1617,41 +1617,24 @@ def get_coaches_list_api(
                         with open(rpo_file, 'r', encoding='utf-8') as f:
                             rpo_data = json.load(f)
 
-                        weekly_data = rpo_data.get("weekly", {})
+                        # Utiliser annual pour les totaux (hr_pap_reel_sans_week1 exclut semaine 1)
+                        annual = rpo_data.get("annual", {})
+                        dollar_reel = annual.get("dollar_reel", 0) or 0
+                        contract_reel = annual.get("contract_reel", 0) or 0
+                        estimation_reel = annual.get("estimation_reel", 0) or 0
+                        hr_pap_reel = annual.get("hr_pap_reel_sans_week1", 0) or 0
 
-                        # Filtrer par période si définie
+                        # Produit depuis weekly (pas dans annual)
+                        weekly_data = rpo_data.get("weekly", {})
                         if start_date:
                             weekly_data = filter_rpo_weekly_by_period(weekly_data, start_date, end_date)
-
-                        # Agréger depuis weekly
                         for month_key, weeks in weekly_data.items():
                             try:
                                 if int(month_key) < 0:
                                     continue
                             except:
                                 continue
-
                             for week_key, week_data in weeks.items():
-                                # Dollar
-                                d = week_data.get("dollar", 0)
-                                if d and d != "-":
-                                    dollar_reel += float(d)
-                                # Contract
-                                c = week_data.get("contract", 0)
-                                if c and c != "-":
-                                    contract_reel += int(float(c))
-                                # Estimation
-                                e = week_data.get("estimation", 0)
-                                if e and e != "-":
-                                    estimation_reel += int(float(e))
-                                # Heures PAP
-                                h = week_data.get("h_marketing", 0)
-                                if h and h != "-":
-                                    try:
-                                        hr_pap_reel += float(h)
-                                    except:
-                                        pass
-                                # Produit
                                 p = week_data.get("produit", 0)
                                 if p and p != "-":
                                     produit_reel += float(p)

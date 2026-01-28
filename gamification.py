@@ -2940,16 +2940,23 @@ def check_and_award_automatic_badges(username: str) -> Dict:
 
         # Regrouper les badges par type et trier par seuil décroissant
         badges_by_type = {}  # {type: [(badge_id, threshold), ...] triés par threshold desc}
+        closing_rate_badges = []  # Special: [(badge_id, min_rate, max_rate, min_estimates), ...]
+
         for badge_id, badge_config in BADGES_CONFIG.items():
             if not badge_config.get('automatic', False):
                 continue
             trigger = badge_config.get('trigger', {})
             trigger_type = trigger.get('type')
-            if trigger_type in ['weekly_sales', 'weekly_production', 'weekly_pap']:
-                threshold = trigger.get('amount', 0) or trigger.get('hours', 0)
+            if trigger_type in ['weekly_sales', 'weekly_production', 'weekly_pap', 'weekly_estimates']:
+                threshold = trigger.get('amount', 0) or trigger.get('hours', 0) or trigger.get('count', 0)
                 if trigger_type not in badges_by_type:
                     badges_by_type[trigger_type] = []
                 badges_by_type[trigger_type].append((badge_id, threshold))
+            elif trigger_type == 'closing_rate':
+                min_rate = trigger.get('min_rate', 0)
+                max_rate = trigger.get('max_rate', 100)
+                min_estimates = trigger.get('min_estimates', 0)
+                closing_rate_badges.append((badge_id, min_rate, max_rate, min_estimates))
 
         # Trier chaque type par seuil décroissant (plus haut d'abord)
         for trigger_type in badges_by_type:
@@ -2969,16 +2976,24 @@ def check_and_award_automatic_badges(username: str) -> Dict:
                 dollar_val = week_data.get('dollar', 0)
                 produit_val = week_data.get('produit', 0)
                 h_marketing_val = week_data.get('h_marketing', 0)
+                estimation_val = week_data.get('estimation', 0)
+                contract_val = week_data.get('contract', 0)
 
                 weekly_sales = float(dollar_val) if dollar_val and dollar_val != "-" else 0
                 weekly_production = float(produit_val) if produit_val and produit_val != "-" else 0
                 weekly_pap = float(h_marketing_val) if h_marketing_val and h_marketing_val != "-" else 0
+                weekly_estimates = float(estimation_val) if estimation_val and estimation_val != "-" else 0
+                weekly_contracts = float(contract_val) if contract_val and contract_val != "-" else 0
+
+                # Calculer le taux de closing (si assez d'estimations)
+                weekly_closing_rate = (weekly_contracts / weekly_estimates * 100) if weekly_estimates > 0 else 0
 
                 # Pour chaque type, trouver le badge du palier le plus élevé atteint (1 seul par type par semaine)
                 values_by_type = {
                     'weekly_sales': weekly_sales,
                     'weekly_production': weekly_production,
-                    'weekly_pap': weekly_pap
+                    'weekly_pap': weekly_pap,
+                    'weekly_estimates': weekly_estimates
                 }
 
                 for trigger_type, badges_list in badges_by_type.items():
@@ -2988,6 +3003,14 @@ def check_and_award_automatic_badges(username: str) -> Dict:
                         if value >= threshold:
                             weekly_badge_counts[badge_id] = weekly_badge_counts.get(badge_id, 0) + 1
                             break  # Un seul badge par type par semaine
+
+                # Closing rate badges (plages de taux, un seul badge par semaine)
+                # Trier par min_rate décroissant pour prendre le plus haut palier
+                sorted_closing = sorted(closing_rate_badges, key=lambda x: x[1], reverse=True)
+                for badge_id, min_rate, max_rate, min_estimates in sorted_closing:
+                    if weekly_estimates >= min_estimates and min_rate <= weekly_closing_rate <= max_rate:
+                        weekly_badge_counts[badge_id] = weekly_badge_counts.get(badge_id, 0) + 1
+                        break  # Un seul badge closing par semaine
 
         # Debug: afficher les counts trouvés
         if weekly_badge_counts:

@@ -3324,6 +3324,66 @@ def check_and_award_automatic_badges(username: str) -> Dict:
                         total_xp += xp
                 print(f"[AUTO BADGES] OK {badges_to_add}x Anti-badge RPO attribue(s)")
 
+        # ===== ANTI-BADGE PAP INSUFFISANT =====
+        # "perdu_bottes" - moins de 9h de PAP par semaine
+        # Période: 12 janv - 28 juin 2026
+        pap_insufficient_count = 0
+        pap_start_date = datetime(2026, 1, 12)
+        pap_end_date = datetime(2026, 6, 28)
+
+        for month_idx, week_idx, week_data in all_weeks:
+            week_label = week_data.get('week_label', '')
+            if not week_label:
+                continue
+
+            # Parser la date de fin (dimanche) du week_label
+            try:
+                parts = week_label.split(' - ')
+                if len(parts) == 2:
+                    end_part = parts[1].strip()
+                    end_parts = end_part.split()
+                    if len(end_parts) >= 2:
+                        end_day = int(end_parts[0])
+                        end_month_str = end_parts[1].replace('.', '')
+                        end_month = mois_fr.get(end_month_str, 0)
+                        if end_month > 0:
+                            end_date = datetime(today.year, end_month, end_day, 20, 0)
+
+                            # Vérifier si dans la période et si dimanche 20h passé
+                            if end_date < pap_start_date or end_date > pap_end_date:
+                                continue
+                            if end_date > today:
+                                continue
+
+                            # Vérifier les heures PAP
+                            h_marketing = week_data.get('h_marketing', 0)
+                            pap_hours = float(h_marketing) if h_marketing and h_marketing != '-' else 0
+
+                            if pap_hours < 9:
+                                pap_insufficient_count += 1
+            except:
+                continue
+
+        # Attribuer les anti-badges PAP insuffisant
+        if pap_insufficient_count > 0:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("SELECT count FROM user_badges WHERE username = ? AND badge_id = ?", (username, 'perdu_bottes'))
+            result = cursor.fetchone()
+            conn.close()
+
+            current_count = result[0] if result else 0
+            badges_to_add = pap_insufficient_count - current_count
+
+            if badges_to_add > 0:
+                for i in range(badges_to_add):
+                    unlock_result = unlock_badge(username, 'perdu_bottes', f"Moins de 9h PAP semaine {current_count + i + 1}")
+                    if unlock_result.get('success'):
+                        xp = unlock_result.get('xp_awarded', 0)
+                        awarded_badges.append({'badge_id': 'perdu_bottes', 'badge_name': "T'as perdu tes bottes ?", 'xp': xp})
+                        total_xp += xp
+                print(f"[AUTO BADGES] OK {badges_to_add}x Anti-badge PAP attribue(s)")
+
         print(f"[AUTO BADGES] Terminé: {len(awarded_badges)} badges attribués, +{total_xp} XP total")
 
         return {

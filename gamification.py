@@ -2945,6 +2945,9 @@ def check_and_award_automatic_badges(username: str) -> Dict:
         for badge_id, badge_config in BADGES_CONFIG.items():
             if not badge_config.get('automatic', False):
                 continue
+            # SEULEMENT les badges (type="badge"), PAS les trophées, fleurs, étoiles, etc.
+            if badge_config.get('type') != 'badge':
+                continue
             trigger = badge_config.get('trigger', {})
             trigger_type = trigger.get('type')
             if trigger_type in ['weekly_sales', 'weekly_production', 'weekly_pap', 'weekly_estimates']:

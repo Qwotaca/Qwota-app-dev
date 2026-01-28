@@ -2881,6 +2881,24 @@ def check_and_award_automatic_badges(username: str) -> Dict:
 
         print(f"[AUTO BADGES] dollar_reel: {dollar_reel}$")
 
+        # Compter les employés actifs
+        active_employees_count = 0
+        try:
+            import os
+            actifs_path = os.path.join("data", "employes", username, "actifs.json")
+            if os.path.exists(actifs_path):
+                with open(actifs_path, 'r', encoding='utf-8') as f:
+                    import json
+                    actifs_data = json.load(f)
+                    # Compter seulement les employés vraiment actifs (pas en attente d'inactivation)
+                    for emp in actifs_data:
+                        statut = emp.get('statut', '')
+                        if 'inactivation' not in statut.lower():
+                            active_employees_count += 1
+                print(f"[AUTO BADGES] Employés actifs: {active_employees_count}")
+        except Exception as e:
+            print(f"[AUTO BADGES] Erreur lecture employés: {e}")
+
         # Parcourir tous les badges automatiques de type total_sales
         for badge_id, badge_config in BADGES_CONFIG.items():
             if not badge_config.get('automatic', False):
@@ -2930,6 +2948,33 @@ def check_and_award_automatic_badges(username: str) -> Dict:
                                 total_xp += xp
 
                         print(f"[AUTO BADGES] OK {badges_to_add}x {badge_config['name']} attribue(s)")
+
+            # Vérifier les badges d'employés actifs (plus haut palier seulement)
+            elif trigger_type == 'active_employees' and badge_config.get('type') == 'badge':
+                threshold = trigger.get('count', 0)
+                if active_employees_count >= threshold:
+                    # Vérifier si le badge existe déjà
+                    conn = sqlite3.connect(DB_PATH)
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT count FROM user_badges
+                        WHERE username = ? AND badge_id = ?
+                    """, (username, badge_id))
+                    result = cursor.fetchone()
+                    conn.close()
+
+                    if not result:
+                        # Attribuer le badge
+                        unlock_result = unlock_badge(username, badge_id, f"{active_employees_count} employés actifs")
+                        if unlock_result.get('success'):
+                            xp = unlock_result.get('xp_awarded', 0)
+                            awarded_badges.append({
+                                'badge_id': badge_id,
+                                'badge_name': badge_config['name'],
+                                'xp': xp
+                            })
+                            total_xp += xp
+                            print(f"[AUTO BADGES] OK {badge_config['name']} attribue")
 
         # Vérifier les badges hebdomadaires (ventes, production, PAP)
         # IMPORTANT: Chaque semaine ne donne QUE le badge du palier le plus élevé atteint

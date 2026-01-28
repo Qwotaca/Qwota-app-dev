@@ -1443,6 +1443,7 @@ def get_entrepreneurs_list_api(
                                                 produit_reel += float(p)
 
                                     # Fallback: si annual est 0, calculer depuis weekly
+                                    # Note: hr_pap_reel vient déjà de annual.hr_pap_reel_sans_week1, ne pas le recalculer
                                     if dollar_reel == 0 and contract_reel == 0:
                                         for m_key, weeks in weekly_data.items():
                                             try:
@@ -1460,12 +1461,6 @@ def get_entrepreneurs_list_api(
                                                 e = w_data.get("estimation", 0)
                                                 if e and e != "-":
                                                     estimation_reel += int(e)
-                                                h = w_data.get("h_marketing", "-")
-                                                if h and h != "-":
-                                                    try:
-                                                        hr_pap_reel += float(h)
-                                                    except:
-                                                        pass
 
                                 # Prod horaire: moyenne des valeurs saisies (mai-septembre)
                                 total_prod_horaire = 0

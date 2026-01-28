@@ -2929,7 +2929,7 @@ def check_and_award_automatic_badges(username: str) -> Dict:
                                 })
                                 total_xp += xp
 
-                        print(f"[AUTO BADGES] ✅ {badges_to_add}x {badge_config['name']} attribué(s) (+{total_xp} XP)")
+                        print(f"[AUTO BADGES] OK {badges_to_add}x {badge_config['name']} attribue(s)")
 
         # Vérifier les badges hebdomadaires (ventes et production)
         # Compter combien de semaines remplissent chaque critère
@@ -3010,7 +3010,7 @@ def check_and_award_automatic_badges(username: str) -> Dict:
                     else:
                         break  # Erreur, arrêter
 
-                print(f"[AUTO BADGES] ✅ {badges_to_add}x {badge_config.get('name', badge_id)} attribué(s)")
+                print(f"[AUTO BADGES] OK {badges_to_add}x {badge_config.get('name', badge_id)} attribue(s)")
 
         print(f"[AUTO BADGES] Terminé: {len(awarded_badges)} badges attribués, +{total_xp} XP total")
 

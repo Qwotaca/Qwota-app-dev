@@ -401,6 +401,15 @@ def update_weekly_data(username: str, month_index: int, week_number: int, weekly
                 sync_coach_rpo(coach_username)
         except Exception as coach_sync_error:
             print(f"[WARN] [BACKEND-SAVE] Erreur synchronisation RPO coach: {coach_sync_error}", flush=True)
+
+        # Vérifier et attribuer les badges automatiques
+        try:
+            from gamification import check_and_award_automatic_badges
+            badge_result = check_and_award_automatic_badges(username)
+            if badge_result.get('awarded_badges'):
+                print(f"[BACKEND-SAVE] Badges attribues: {len(badge_result['awarded_badges'])} (+{badge_result['total_xp']} XP)", flush=True)
+        except Exception as badge_error:
+            print(f"[WARN] [BACKEND-SAVE] Erreur verification badges: {badge_error}", flush=True)
     else:
         print(f"[BACKEND-SAVE] ❌ Échec de la sauvegarde")
 

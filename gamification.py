@@ -2931,9 +2931,29 @@ def check_and_award_automatic_badges(username: str) -> Dict:
 
                         print(f"[AUTO BADGES] OK {badges_to_add}x {badge_config['name']} attribue(s)")
 
-        # Vérifier les badges hebdomadaires (ventes et production)
-        # Compter combien de semaines remplissent chaque critère
+        # Vérifier les badges hebdomadaires (ventes, production, PAP)
+        # IMPORTANT: Chaque semaine ne donne QUE le badge du palier le plus élevé atteint
+        # Ex: 40h = seulement badge 40h, PAS 10h+20h+30h+40h
+        # Mais 2 semaines à 13h = 2x badge 10h
+
         weekly_badge_counts = {}  # {badge_id: nombre de semaines qui remplissent le critère}
+
+        # Regrouper les badges par type et trier par seuil décroissant
+        badges_by_type = {}  # {type: [(badge_id, threshold), ...] triés par threshold desc}
+        for badge_id, badge_config in BADGES_CONFIG.items():
+            if not badge_config.get('automatic', False):
+                continue
+            trigger = badge_config.get('trigger', {})
+            trigger_type = trigger.get('type')
+            if trigger_type in ['weekly_sales', 'weekly_production', 'weekly_pap']:
+                threshold = trigger.get('amount', 0) or trigger.get('hours', 0)
+                if trigger_type not in badges_by_type:
+                    badges_by_type[trigger_type] = []
+                badges_by_type[trigger_type].append((badge_id, threshold))
+
+        # Trier chaque type par seuil décroissant (plus haut d'abord)
+        for trigger_type in badges_by_type:
+            badges_by_type[trigger_type].sort(key=lambda x: x[1], reverse=True)
 
         weekly_data = rpo_data.get('weekly', {})
 
@@ -2954,28 +2974,20 @@ def check_and_award_automatic_badges(username: str) -> Dict:
                 weekly_production = float(produit_val) if produit_val and produit_val != "-" else 0
                 weekly_pap = float(h_marketing_val) if h_marketing_val and h_marketing_val != "-" else 0
 
-                # Compter les badges de ventes hebdomadaires
-                for badge_id, badge_config in BADGES_CONFIG.items():
-                    if not badge_config.get('automatic', False):
-                        continue
+                # Pour chaque type, trouver le badge du palier le plus élevé atteint (1 seul par type par semaine)
+                values_by_type = {
+                    'weekly_sales': weekly_sales,
+                    'weekly_production': weekly_production,
+                    'weekly_pap': weekly_pap
+                }
 
-                    trigger = badge_config.get('trigger', {})
-                    trigger_type = trigger.get('type')
-
-                    if trigger_type == 'weekly_sales':
-                        threshold = trigger.get('amount', 0)
-                        if weekly_sales >= threshold:
+                for trigger_type, badges_list in badges_by_type.items():
+                    value = values_by_type.get(trigger_type, 0)
+                    # Parcourir du plus haut au plus bas, prendre le premier qui match
+                    for badge_id, threshold in badges_list:
+                        if value >= threshold:
                             weekly_badge_counts[badge_id] = weekly_badge_counts.get(badge_id, 0) + 1
-
-                    elif trigger_type == 'weekly_production':
-                        threshold = trigger.get('amount', 0)
-                        if weekly_production >= threshold:
-                            weekly_badge_counts[badge_id] = weekly_badge_counts.get(badge_id, 0) + 1
-
-                    elif trigger_type == 'weekly_pap':
-                        threshold = trigger.get('hours', 0)
-                        if weekly_pap >= threshold:
-                            weekly_badge_counts[badge_id] = weekly_badge_counts.get(badge_id, 0) + 1
+                            break  # Un seul badge par type par semaine
 
         # Debug: afficher les counts trouvés
         if weekly_badge_counts:

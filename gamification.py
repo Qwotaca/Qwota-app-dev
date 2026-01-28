@@ -2937,10 +2937,20 @@ def check_and_award_automatic_badges(username: str) -> Dict:
 
         weekly_data = rpo_data.get('weekly', {})
 
-        for year_key, year_weeks in weekly_data.items():
-            for week_key, week_data in year_weeks.items():
-                weekly_sales = float(week_data.get('dollar', 0))
-                weekly_production = float(week_data.get('produit', 0))
+        # Structure: {month_index: {week_number: week_data}}
+        for month_key, month_weeks in weekly_data.items():
+            if not isinstance(month_weeks, dict):
+                continue
+            for week_key, week_data in month_weeks.items():
+                if not isinstance(week_data, dict):
+                    continue
+
+                # Lire les valeurs (gérer les "-" et None)
+                dollar_val = week_data.get('dollar', 0)
+                produit_val = week_data.get('produit', 0)
+
+                weekly_sales = float(dollar_val) if dollar_val and dollar_val != "-" else 0
+                weekly_production = float(produit_val) if produit_val and produit_val != "-" else 0
 
                 # Compter les badges de ventes hebdomadaires
                 for badge_id, badge_config in BADGES_CONFIG.items():
@@ -2960,8 +2970,14 @@ def check_and_award_automatic_badges(username: str) -> Dict:
                         if weekly_production >= threshold:
                             weekly_badge_counts[badge_id] = weekly_badge_counts.get(badge_id, 0) + 1
 
+        # Debug: afficher les counts trouvés
+        if weekly_badge_counts:
+            print(f"[AUTO BADGES] Badges hebdomadaires trouvés: {weekly_badge_counts}")
+
         # Maintenant, comparer le count attendu avec le count actuel et ajuster
         for badge_id, expected_count in weekly_badge_counts.items():
+            badge_config = BADGES_CONFIG.get(badge_id, {})
+
             # Obtenir le count actuel du badge
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
@@ -2974,21 +2990,27 @@ def check_and_award_automatic_badges(username: str) -> Dict:
 
             current_count = result[0] if result else 0
 
-            # Incrémenter jusqu'au count attendu
-            while current_count < expected_count:
-                unlock_result = unlock_badge(username, badge_id, f"Automatique: badge hebdomadaire")
-                if unlock_result.get('success'):
-                    current_count += 1
-                    xp = unlock_result.get('xp_awarded', 0)
-                    awarded_badges.append({
-                        'badge_id': badge_id,
-                        'badge_name': BADGES_CONFIG[badge_id]['name'],
-                        'xp': xp
-                    })
-                    total_xp += xp
-                    print(f"[AUTO BADGES] ✅ Badge attribué: {BADGES_CONFIG[badge_id]['name']} (count: {current_count}/{expected_count}, +{xp} XP)")
-                else:
-                    break  # Erreur, arrêter l'incrémentation
+            # Ajouter la différence si nécessaire (JAMAIS retirer)
+            badges_to_add = expected_count - current_count
+
+            if badges_to_add > 0:
+                print(f"[AUTO BADGES] {badge_config.get('name', badge_id)}: {current_count} -> {expected_count} (+{badges_to_add})")
+
+                for i in range(badges_to_add):
+                    unlock_result = unlock_badge(username, badge_id, f"Semaine avec objectif atteint ({current_count + i + 1}x)")
+                    if unlock_result.get('success'):
+                        xp = unlock_result.get('xp_awarded', 0)
+                        awarded_badges.append({
+                            'badge_id': badge_id,
+                            'badge_name': badge_config.get('name', badge_id),
+                            'xp': xp,
+                            'count': current_count + i + 1
+                        })
+                        total_xp += xp
+                    else:
+                        break  # Erreur, arrêter
+
+                print(f"[AUTO BADGES] ✅ {badges_to_add}x {badge_config.get('name', badge_id)} attribué(s)")
 
         print(f"[AUTO BADGES] Terminé: {len(awarded_badges)} badges attribués, +{total_xp} XP total")
 

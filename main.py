@@ -375,14 +375,24 @@ async def startup_event():
         print("[STARTUP] Configuration du backup automatique Google Drive...")
         try:
             scheduler = BackgroundScheduler(timezone="America/Montreal")
+            # Part 1: données légères à 3h30
             scheduler.add_job(
                 run_gdrive_backup,
-                CronTrigger(hour=3, minute=30),  # Tous les jours à 3h30
-                id="gdrive_backup",
+                CronTrigger(hour=3, minute=30),
+                args=(1,),  # part=1
+                id="gdrive_backup_part1",
+                replace_existing=True
+            )
+            # Part 2: fichiers lourds à 4h00
+            scheduler.add_job(
+                run_gdrive_backup,
+                CronTrigger(hour=4, minute=0),
+                args=(2,),  # part=2
+                id="gdrive_backup_part2",
                 replace_existing=True
             )
             scheduler.start()
-            print("[STARTUP] Backup automatique programmé pour 3h30 chaque jour")
+            print("[STARTUP] Backup automatique programmé: part1 à 3h30, part2 à 4h00")
         except Exception as e:
             print(f"[STARTUP] Erreur configuration backup: {e}")
 

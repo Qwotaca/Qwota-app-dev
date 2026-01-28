@@ -7948,8 +7948,8 @@ def api_get_coach_equipe_dashboard(
     # CORRECTION: Calculer le pourcentage global basé sur les totaux (team_total_ca / team_total_objectif)
     # au lieu de faire la moyenne des pourcentages individuels
     pourcentage_objectif_equipe = round((team_total_ca / team_total_objectif) * 100, 2) if team_total_objectif > 0 else 0
-    # Taux marketing équipe = Total nb estimations / Total heures PAP (estimations par heure)
-    taux_marketing_moyen_equipe = round(team_total_nb_estimations / team_total_heures_marketing_absolue, 2) if team_total_heures_marketing_absolue > 0 else 0
+    # Taux marketing équipe = Total nb estimations / Total heures PAP sans semaine 1 (estimations par heure)
+    taux_marketing_moyen_equipe = round(team_total_nb_estimations / team_total_heures_pap_sans_week1, 2) if team_total_heures_pap_sans_week1 > 0 else 0
 
     # Calcul H PAP/semaine par grade (Recrue et Senior)
     # Formule: Total heures (sans semaine 1 et actuelle) / (Semaines complétées - 1) / Nombre entrepreneurs

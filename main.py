@@ -7659,25 +7659,26 @@ def api_get_coach_equipe_dashboard(
             if objectif > 0:
                 pourcentage_objectif = round((ca_actuel / objectif) * 100, 2)
 
-            # Calculer heures_pap_semaine: hr_pap_reel de annual / nombre de semaines finies
-            # Nombre de semaines finies = semaines écoulées - 1 (exclure semaine 5 janv) - 1 (exclure semaine actuelle)
+            # Calculer heures_pap_semaine: hr_pap_reel_sans_week1 / nombre de semaines finies
+            # Nombre de semaines finies = semaines écoulées - 1 (exclure semaine actuelle seulement)
             from datetime import datetime as dt, timedelta
             start_year_date = dt(2026, 1, 5)
             current_date_calc = dt.now()
             days_since_start = max(0, (current_date_calc - start_year_date).days)
             nombre_semaines_ecoulees_calc = max(1, days_since_start // 7)
-            # Exclure semaine 5 janv (-1) et semaine actuelle (-1) = -2
-            nombre_semaines_finies = max(1, nombre_semaines_ecoulees_calc - 2)
+            # Exclure seulement la semaine actuelle (-1)
+            nombre_semaines_finies = max(1, nombre_semaines_ecoulees_calc - 1)
 
-            # Prendre hr_pap_reel de annual
+            # Prendre hr_pap_reel_sans_week1 de annual (exclut déjà les heures de la semaine du 5 janv)
+            hr_pap_sans_week1 = float(annual.get("hr_pap_reel_sans_week1", 0) or annual.get("hr_pap_reel", 0) or 0)
             hr_pap_annual = float(annual.get("hr_pap_reel", 0) or 0)
             total_heures_pap = hr_pap_annual
 
-            # H PAP/sem = hr_pap_reel / nombre de semaines finies
-            heures_pap_semaine = round(hr_pap_annual / nombre_semaines_finies, 2) if nombre_semaines_finies > 0 else 0
+            # H PAP/sem = hr_pap_reel_sans_week1 / nombre de semaines finies
+            heures_pap_semaine = round(hr_pap_sans_week1 / nombre_semaines_finies, 2) if nombre_semaines_finies > 0 else 0
 
-            # Pour le calcul recrue/senior, utiliser aussi hr_pap_annual
-            total_heures_pap_sans_w1_actuelle = hr_pap_annual
+            # Pour le calcul recrue/senior, utiliser hr_pap_sans_week1
+            total_heures_pap_sans_w1_actuelle = hr_pap_sans_week1
 
             # Accumuler pour calcul recrue/senior (exclut semaine 1 et actuelle)
             grade = user_info.get("grade", "").lower()

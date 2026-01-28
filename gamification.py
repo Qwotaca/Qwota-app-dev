@@ -1479,6 +1479,13 @@ BADGES_CONFIG = {
         "automatic": True,
         "trigger": {"type": "rpo_on_time", "deadline": "sunday_20h"}
     },
+
+    # ==========================================================================
+    # TODO: 3 BADGES FACTURATION A IMPLEMENTER PLUS TARD
+    # - facturation_jour (billing_on_time): Facturation a jour dimanche 20h
+    # - rpo_facturation (both_on_time): RPO + Facturation a jour
+    # - peur_argent (billing_late): Anti-badge facturation pas remplie
+    # ==========================================================================
     "facturation_jour": {
         "name": "Facturation",
         "description": "Facturation à jour dimanche 20h",

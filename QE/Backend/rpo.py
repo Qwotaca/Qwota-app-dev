@@ -752,9 +752,9 @@ def sync_direction_rpo() -> bool:
 
             print(f"[DIRECTION RPO] Par grade: recrue={total_nb_recrue} (est={total_estimation_recrue}), senior={total_nb_senior} (est={total_estimation_senior})", flush=True)
 
-            # Calculer le taux marketing réel (estimation / hr_pap)
-            if total_hr_pap > 0:
-                direction_rpo['annual']['mktg_reel'] = round(total_estimation / total_hr_pap, 2)
+            # Calculer le taux marketing réel (estimation / hr_pap sans semaine 1)
+            if total_hr_pap_sans_week1 > 0:
+                direction_rpo['annual']['mktg_reel'] = round(total_estimation / total_hr_pap_sans_week1, 2)
             else:
                 direction_rpo['annual']['mktg_reel'] = 0
 

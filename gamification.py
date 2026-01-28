@@ -3235,18 +3235,45 @@ def check_and_award_automatic_badges(username: str) -> Dict:
         # ===== RPO REMPLI =====
         # Compter les semaines où RPO est rempli (probleme et focus != "-")
         # Semaine 1 (5-11 janv) ne compte pas
+        # Seulement les semaines passées (dimanche passé)
+        from datetime import datetime
+
         rpo_filled_count = 0
         rpo_not_filled_count = 0
+        today = datetime.now()
+
+        # Mapping des mois français
+        mois_fr = {'janv': 1, 'févr': 2, 'mars': 3, 'avr': 4, 'mai': 5, 'juin': 6,
+                   'juil': 7, 'août': 8, 'sept': 9, 'oct': 10, 'nov': 11, 'déc': 12}
 
         for month_idx, week_idx, week_data in all_weeks:
             # Ignorer la semaine 1 de janvier (mois 0, semaine 1)
             if month_idx == 0 and week_idx == 1:
                 continue
 
-            # Ignorer les semaines futures ou sans données
+            # Ignorer les semaines sans données
             week_label = week_data.get('week_label', '')
             if not week_label:
                 continue
+
+            # Parser la date de fin (dimanche) du week_label
+            # Format: "12 - 18 janv" ou "26 janv - 1 févr"
+            try:
+                parts = week_label.split(' - ')
+                if len(parts) == 2:
+                    end_part = parts[1].strip()  # "18 janv" ou "1 févr"
+                    end_parts = end_part.split()
+                    if len(end_parts) >= 2:
+                        end_day = int(end_parts[0])
+                        end_month_str = end_parts[1].replace('.', '')
+                        end_month = mois_fr.get(end_month_str, 0)
+                        if end_month > 0:
+                            end_date = datetime(today.year, end_month, end_day, 20, 0)  # Dimanche 20h
+                            # Si le dimanche 20h n'est pas encore passé, ignorer cette semaine
+                            if end_date > today:
+                                continue
+            except:
+                continue  # Si parsing échoue, ignorer
 
             probleme = week_data.get('probleme', '-')
             focus = week_data.get('focus', '-')

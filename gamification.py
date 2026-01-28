@@ -3232,6 +3232,71 @@ def check_and_award_automatic_badges(username: str) -> Dict:
                             total_xp += xp
                             print(f"[AUTO BADGES] OK {badge_config.get('name', badge_id)} (streak {current_streak} sem)")
 
+        # ===== RPO REMPLI =====
+        # Compter les semaines où RPO est rempli (probleme et focus != "-")
+        # Semaine 1 (5-11 janv) ne compte pas
+        rpo_filled_count = 0
+        rpo_not_filled_count = 0
+
+        for month_idx, week_idx, week_data in all_weeks:
+            # Ignorer la semaine 1 de janvier (mois 0, semaine 1)
+            if month_idx == 0 and week_idx == 1:
+                continue
+
+            # Ignorer les semaines futures ou sans données
+            week_label = week_data.get('week_label', '')
+            if not week_label:
+                continue
+
+            probleme = week_data.get('probleme', '-')
+            focus = week_data.get('focus', '-')
+
+            # RPO rempli si probleme ET focus ne sont pas "-"
+            if probleme and probleme != '-' and focus and focus != '-':
+                rpo_filled_count += 1
+            else:
+                rpo_not_filled_count += 1
+
+        # Attribuer les badges RPO rempli
+        if rpo_filled_count > 0:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("SELECT count FROM user_badges WHERE username = ? AND badge_id = ?", (username, 'rpo_rempli'))
+            result = cursor.fetchone()
+            conn.close()
+
+            current_count = result[0] if result else 0
+            badges_to_add = rpo_filled_count - current_count
+
+            if badges_to_add > 0:
+                for i in range(badges_to_add):
+                    unlock_result = unlock_badge(username, 'rpo_rempli', f"RPO rempli semaine {current_count + i + 1}")
+                    if unlock_result.get('success'):
+                        xp = unlock_result.get('xp_awarded', 0)
+                        awarded_badges.append({'badge_id': 'rpo_rempli', 'badge_name': 'RPO rempli', 'xp': xp})
+                        total_xp += xp
+                print(f"[AUTO BADGES] OK {badges_to_add}x RPO rempli attribue(s)")
+
+        # Attribuer les anti-badges RPO pas rempli
+        if rpo_not_filled_count > 0:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("SELECT count FROM user_badges WHERE username = ? AND badge_id = ?", (username, 'oublie_quelque_chose'))
+            result = cursor.fetchone()
+            conn.close()
+
+            current_count = result[0] if result else 0
+            badges_to_add = rpo_not_filled_count - current_count
+
+            if badges_to_add > 0:
+                for i in range(badges_to_add):
+                    unlock_result = unlock_badge(username, 'oublie_quelque_chose', f"RPO non rempli semaine {current_count + i + 1}")
+                    if unlock_result.get('success'):
+                        xp = unlock_result.get('xp_awarded', 0)
+                        awarded_badges.append({'badge_id': 'oublie_quelque_chose', 'badge_name': "T'as oublié quelque chose ?", 'xp': xp})
+                        total_xp += xp
+                print(f"[AUTO BADGES] OK {badges_to_add}x Anti-badge RPO attribue(s)")
+
         print(f"[AUTO BADGES] Terminé: {len(awarded_badges)} badges attribués, +{total_xp} XP total")
 
         return {

@@ -2854,6 +2854,8 @@ def check_and_award_automatic_badges(username: str) -> Dict:
 
     Badges vérifiés:
     - Ventes totales (total_sales): Cap des Six Chiffres, Ascension, Palier des Titans, etc.
+      Logique CAP: floor(dollar_reel / threshold) = nombre de badges à avoir
+      Ex: 300k$ = 3x badge 100k, 2x badge 125k, 1x badge 300k
     - Ventes hebdomadaires (weekly_sales): Sprint de Vente, Semaine de Feu, etc.
     - Production hebdomadaire (weekly_production): Opération 10K, Roue de production, etc.
 
@@ -2873,24 +2875,13 @@ def check_and_award_automatic_badges(username: str) -> Dict:
         awarded_badges = []
         total_xp = 0
 
-        # Calculer les ventes de l'année en cours (2026)
-        # Parcourir uniquement les mois de 2026 (index 0 à 11)
-        current_year = datetime.now().year
+        # Lire dollar_reel depuis annual (source unique de vérité)
+        annual = rpo_data.get('annual', {})
+        dollar_reel = float(annual.get('dollar_reel', 0) or 0)
 
-        yearly_sales = 0.0
-        weekly_data = rpo_data.get('weekly', {})
+        print(f"[AUTO BADGES] dollar_reel: {dollar_reel}$")
 
-        # Mois de 2026: index 0 à 11 (janvier à décembre)
-        for month_idx in range(12):
-            month_key = str(month_idx)
-            if month_key in weekly_data:
-                for week_key, week_data in weekly_data[month_key].items():
-                    weekly_sales = float(week_data.get('dollar', 0))
-                    yearly_sales += weekly_sales
-
-        print(f"[AUTO BADGES] Ventes de l'année {current_year}: {yearly_sales}$")
-
-        # Parcourir tous les badges automatiques
+        # Parcourir tous les badges automatiques de type total_sales
         for badge_id, badge_config in BADGES_CONFIG.items():
             if not badge_config.get('automatic', False):
                 continue
@@ -2898,12 +2889,17 @@ def check_and_award_automatic_badges(username: str) -> Dict:
             trigger = badge_config.get('trigger', {})
             trigger_type = trigger.get('type')
 
-            # Vérifier les badges de ventes totales (ANNUELLES)
+            # Vérifier les badges de ventes totales (système CAP)
             if trigger_type == 'total_sales':
                 threshold = trigger.get('amount', 0)
+                if threshold <= 0:
+                    continue
 
-                if yearly_sales >= threshold:
-                    # Vérifier si l'utilisateur a déjà ce badge
+                # Calculer combien de fois ce cap a été atteint
+                expected_count = int(dollar_reel // threshold)
+
+                if expected_count > 0:
+                    # Vérifier le count actuel en DB
                     conn = sqlite3.connect(DB_PATH)
                     cursor = conn.cursor()
                     cursor.execute("""
@@ -2911,20 +2907,29 @@ def check_and_award_automatic_badges(username: str) -> Dict:
                         WHERE username = ? AND badge_id = ?
                     """, (username, badge_id))
                     result = cursor.fetchone()
+                    current_count = result[0] if result else 0
                     conn.close()
 
-                    if not result:
-                        # Attribuer le badge
-                        unlock_result = unlock_badge(username, badge_id, f"Automatique: {yearly_sales}$ de ventes en {current_year}")
-                        if unlock_result.get('success'):
-                            xp = unlock_result.get('xp_awarded', 0)
-                            awarded_badges.append({
-                                'badge_id': badge_id,
-                                'badge_name': badge_config['name'],
-                                'xp': xp
-                            })
-                            total_xp += xp
-                            print(f"[AUTO BADGES] ✅ Badge attribué: {badge_config['name']} (+{xp} XP)")
+                    # Ajouter la différence si nécessaire (JAMAIS retirer)
+                    badges_to_add = expected_count - current_count
+
+                    if badges_to_add > 0:
+                        print(f"[AUTO BADGES] {badge_config['name']}: {current_count} -> {expected_count} (+{badges_to_add})")
+
+                        # Attribuer les badges manquants
+                        for i in range(badges_to_add):
+                            unlock_result = unlock_badge(username, badge_id, f"CAP {threshold}$ atteint ({(current_count + i + 1)}x)")
+                            if unlock_result.get('success'):
+                                xp = unlock_result.get('xp_awarded', 0)
+                                awarded_badges.append({
+                                    'badge_id': badge_id,
+                                    'badge_name': badge_config['name'],
+                                    'xp': xp,
+                                    'count': current_count + i + 1
+                                })
+                                total_xp += xp
+
+                        print(f"[AUTO BADGES] ✅ {badges_to_add}x {badge_config['name']} attribué(s) (+{total_xp} XP)")
 
         # Vérifier les badges hebdomadaires (ventes et production)
         # Compter combien de semaines remplissent chaque critère

@@ -2881,7 +2881,7 @@ def check_and_award_automatic_badges(username: str) -> Dict:
 
         print(f"[AUTO BADGES] dollar_reel: {dollar_reel}$")
 
-        # Compter les employés actifs
+        # Compter les employés actifs (tous ceux dans actifs.json)
         active_employees_count = 0
         try:
             import os
@@ -2890,11 +2890,7 @@ def check_and_award_automatic_badges(username: str) -> Dict:
                 with open(actifs_path, 'r', encoding='utf-8') as f:
                     import json
                     actifs_data = json.load(f)
-                    # Compter seulement les employés vraiment actifs (pas en attente d'inactivation)
-                    for emp in actifs_data:
-                        statut = emp.get('statut', '')
-                        if 'inactivation' not in statut.lower():
-                            active_employees_count += 1
+                    active_employees_count = len(actifs_data)
                 print(f"[AUTO BADGES] Employés actifs: {active_employees_count}")
         except Exception as e:
             print(f"[AUTO BADGES] Erreur lecture employés: {e}")

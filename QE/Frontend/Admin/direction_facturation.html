@@ -4658,9 +4658,14 @@
                       </td>
                       <td style="padding: 0.65rem; font-weight: 600; color: var(--text-light); font-size: 0.85rem;">${p.type === 'remboursement' ? '-' + (p.montant || '0,00 $') : (p.montant || '0,00 $')}</td>
                       <td style="padding: 0.65rem; text-align: center;">
-                        <button onclick="removePaymentFromPeriode('${periodeId}', ${index})" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 5px; padding: 0.3rem 0.45rem; color: #ef4444; cursor: pointer; transition: all 0.2s;">
-                          <i class="fas fa-times" style="font-size: 0.75rem;"></i>
-                        </button>
+                        <div style="display: flex; gap: 0.35rem; justify-content: center;">
+                          <button onclick="deplacerPaymentFromPeriode('${periodeId}', ${index})" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 5px; padding: 0.3rem 0.45rem; color: #3b82f6; cursor: pointer; transition: all 0.2s;" title="Déplacer vers une autre période">
+                            <i class="fas fa-arrow-right" style="font-size: 0.75rem;"></i>
+                          </button>
+                          <button onclick="removePaymentFromPeriode('${periodeId}', ${index})" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 5px; padding: 0.3rem 0.45rem; color: #ef4444; cursor: pointer; transition: all 0.2s;" title="Retirer de la période">
+                            <i class="fas fa-times" style="font-size: 0.75rem;"></i>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   `;
@@ -4703,6 +4708,139 @@
         // Rafraîchir le tableau "Rapprochement QBO" pour afficher le paiement remis
         await refreshRapprochementTable();
       }
+    }
+
+    // Déplacer un paiement d'une période vers une autre
+    function deplacerPaymentFromPeriode(sourcePeriodeId, paymentIndex) {
+      if (!window.periodePaiements[sourcePeriodeId] || !window.periodePaiements[sourcePeriodeId][paymentIndex]) {
+        return;
+      }
+
+      const paiement = window.periodePaiements[sourcePeriodeId][paymentIndex];
+      const periodesData = window.periodesData || [];
+
+      if (periodesData.length === 0) {
+        alert('Aucune période disponible');
+        return;
+      }
+
+      // Stocker les infos pour la confirmation
+      window.deplacerSinglePayment = {
+        sourcePeriodeId: sourcePeriodeId,
+        paymentIndex: paymentIndex,
+        paiement: paiement
+      };
+      window.selectedPeriodeIdSingle = null;
+
+      // Désactiver le scroll du body
+      document.body.style.overflow = 'hidden';
+
+      const modalHtml = `
+        <div id="deplacer-single-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+          <div class="box" style="max-width: 1200px; width: 90%; margin: 0; max-height: none; overflow: visible;" onclick="event.stopPropagation()">
+            <!-- Header -->
+            <div class="box-header" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div class="box-header-icon" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
+                  <i class="fas fa-arrow-right" style="font-size: 0.9rem;"></i>
+                </div>
+                <div>
+                  <h3 class="box-header-title" style="font-size: 1rem; margin: 0;">Déplacer vers une autre période</h3>
+                  <p class="box-header-subtitle" style="font-size: 0.8rem; margin: 0;">${paiement.client || 'N/A'} - ${paiement.montant || '0,00 $'}</p>
+                </div>
+              </div>
+              <button onclick="fermerModalDeplacerSingle()" style="background: none; border: none; color: var(--text-gray); cursor: pointer; font-size: 1.2rem; padding: 0.25rem; transition: color 0.2s;" onmouseover="this.style.color='var(--text-light)'" onmouseout="this.style.color='var(--text-gray)'">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+
+            <!-- Body -->
+            <div class="box-body" style="padding: 1rem;">
+              <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.65rem;">
+                ${periodesData.filter(p => p.id !== sourcePeriodeId).map(p => `
+                  <div class="periode-option-single" data-periode-id="${p.id}" onclick="selectPeriodeOptionSingle('${p.id}')" style="background: var(--bg-sidebar); border: 2px solid var(--border-dark); border-radius: 8px; padding: 0.65rem; cursor: pointer; transition: all 0.2s;">
+                    <div style="font-weight: 600; color: var(--text-light); margin-bottom: 0.15rem; font-size: 0.85rem;">${p.label}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-gray);">${p.dates}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="box-footer" style="display: flex; gap: 0.65rem; justify-content: flex-end; padding: 1rem 1.25rem;">
+              <button onclick="fermerModalDeplacerSingle()" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                <i class="fas fa-times"></i>
+                Annuler
+              </button>
+              <button onclick="confirmerDeplacementSingle()" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                <i class="fas fa-check"></i>
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    function selectPeriodeOptionSingle(periodeId) {
+      // Retirer la sélection de toutes les options
+      document.querySelectorAll('.periode-option-single').forEach(el => {
+        el.style.borderColor = 'var(--border-dark)';
+        el.style.background = 'var(--bg-sidebar)';
+      });
+
+      // Sélectionner la nouvelle option
+      const selected = document.querySelector(`.periode-option-single[data-periode-id="${periodeId}"]`);
+      if (selected) {
+        selected.style.borderColor = '#3b82f6';
+        selected.style.background = 'rgba(59, 130, 246, 0.1)';
+      }
+
+      window.selectedPeriodeIdSingle = periodeId;
+    }
+
+    function fermerModalDeplacerSingle() {
+      document.body.style.overflow = '';
+      const modal = document.getElementById('deplacer-single-modal');
+      if (modal) {
+        modal.remove();
+      }
+      window.deplacerSinglePayment = null;
+      window.selectedPeriodeIdSingle = null;
+    }
+
+    async function confirmerDeplacementSingle() {
+      if (!window.selectedPeriodeIdSingle) {
+        alert('Veuillez sélectionner une période');
+        return;
+      }
+
+      const { sourcePeriodeId, paymentIndex, paiement } = window.deplacerSinglePayment;
+      const targetPeriodeId = window.selectedPeriodeIdSingle;
+
+      // Retirer de la période source
+      window.periodePaiements[sourcePeriodeId].splice(paymentIndex, 1);
+
+      // Ajouter à la période cible
+      if (!window.periodePaiements[targetPeriodeId]) {
+        window.periodePaiements[targetPeriodeId] = [];
+      }
+      window.periodePaiements[targetPeriodeId].push(paiement);
+
+      // Mettre à jour l'affichage
+      updatePeriodeDisplay(sourcePeriodeId);
+      updatePeriodeDisplay(targetPeriodeId);
+
+      // Sauvegarder
+      await savePeriodesToBackend();
+
+      // Fermer le modal
+      fermerModalDeplacerSingle();
+
+      // Notification
+      showSuccessToast('Succès', 'Paiement déplacé avec succès');
     }
 
     // Variable pour stocker le paiement à supprimer
@@ -5166,9 +5304,14 @@
                       </td>
                       <td style="padding: 0.65rem; font-weight: 600; color: var(--text-light); font-size: 0.85rem;">${p.type === 'remboursement' ? '-' + (p.montant || '0,00 $') : (p.montant || '0,00 $')}</td>
                       <td style="padding: 0.65rem; text-align: center;">
-                        <button onclick="removePaymentFromPeriode('${periodeId}', ${realIndex})" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 5px; padding: 0.3rem 0.45rem; color: #ef4444; cursor: pointer; transition: all 0.2s;">
-                          <i class="fas fa-times" style="font-size: 0.75rem;"></i>
-                        </button>
+                        <div style="display: flex; gap: 0.35rem; justify-content: center;">
+                          <button onclick="deplacerPaymentFromPeriode('${periodeId}', ${realIndex})" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 5px; padding: 0.3rem 0.45rem; color: #3b82f6; cursor: pointer; transition: all 0.2s;" title="Déplacer vers une autre période">
+                            <i class="fas fa-arrow-right" style="font-size: 0.75rem;"></i>
+                          </button>
+                          <button onclick="removePaymentFromPeriode('${periodeId}', ${realIndex})" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 5px; padding: 0.3rem 0.45rem; color: #ef4444; cursor: pointer; transition: all 0.2s;" title="Retirer de la période">
+                            <i class="fas fa-times" style="font-size: 0.75rem;"></i>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   `;

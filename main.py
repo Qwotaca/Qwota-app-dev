@@ -3522,12 +3522,22 @@ def filter_calendar_events(events: list, blacklisted_ids: list) -> list:
         description = event.get("description", "")
         telephone = extract_phone_number(description)
 
+        # Extraire les notes (description sans le téléphone)
+        notes = description
+        if telephone and notes:
+            # Enlever le téléphone de la description pour garder le reste comme notes
+            # Formats possibles: 000-000-0000 ou 0000000000
+            notes = re.sub(r'\b\d{3}-\d{3}-\d{4}\b', '', notes)  # Format 000-000-0000
+            notes = re.sub(r'\b\d{10}\b', '', notes)  # Format 0000000000
+            notes = notes.strip()
+
         result.append({
             "id": event_id,
             "prenom": prenom,
             "nom": nom,
             "adresse": adresse,
-            "telephone": telephone
+            "telephone": telephone,
+            "notes": notes
         })
 
     return result
@@ -3565,6 +3575,7 @@ def sync_events_to_prospects(username: str, events: list):
                 "nom": event["nom"],
                 "telephone": event["telephone"],
                 "adresse": event["adresse"],
+                "notes": event.get("notes", ""),
                 "date_ajout": datetime.now().isoformat(),
                 "statut": "client_potentiel",
                 "source": "google_calendar"

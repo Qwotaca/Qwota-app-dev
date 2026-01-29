@@ -1452,13 +1452,7 @@
 
     /* Header de colonne avec filtre */
     .th-filterable {
-      position: relative;
-      cursor: pointer;
       user-select: none;
-    }
-
-    .th-filterable:hover {
-      background: rgba(96, 165, 250, 0.1);
     }
 
     .th-content {
@@ -1472,19 +1466,25 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 20px;
-      height: 20px;
+      width: 22px;
+      height: 22px;
       border-radius: 4px;
       background: transparent;
       border: none;
       color: var(--text-gray);
       cursor: pointer;
-      opacity: 0.5;
+      opacity: 0.4;
       transition: all 0.2s ease;
       flex-shrink: 0;
+      font-size: 0.7rem;
     }
 
-    .th-filterable:hover .column-filter-btn,
+    .column-filter-btn:hover {
+      opacity: 1;
+      background: rgba(96, 165, 250, 0.2);
+      color: var(--primary-blue);
+    }
+
     .column-filter-btn.active {
       opacity: 1;
       background: rgba(96, 165, 250, 0.2);
@@ -1497,22 +1497,20 @@
       color: var(--primary-blue);
     }
 
-    /* Dropdown du filtre */
-    .filter-dropdown {
-      position: absolute;
-      top: 100%;
-      left: 0;
+    /* Dropdown du filtre - position fixed pour éviter le clip par overflow */
+    .filter-dropdown-global {
+      position: fixed;
       min-width: 220px;
-      background: var(--bg-card);
-      border: 1px solid var(--border-dark);
+      background: var(--bg-card, #1e293b);
+      border: 1px solid var(--border-dark, #334155);
       border-radius: 8px;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-      z-index: 1000;
+      z-index: 9999;
       display: none;
       overflow: hidden;
     }
 
-    .filter-dropdown.show {
+    .filter-dropdown-global.show {
       display: block;
     }
 
@@ -7898,6 +7896,9 @@
     </div>
   </div>
 
+  <!-- Dropdown global pour les filtres (en dehors de tout overflow:hidden) -->
+  <div class="filter-dropdown-global" id="filter-dropdown-global"></div>
+
   <!-- Script pour les filtres style Google Sheets (PC uniquement) -->
   <script>
   (function() {
@@ -7912,10 +7913,17 @@
     // Données originales (backup pour reset)
     window.originalData = {};
 
-    // Fermer tous les dropdowns quand on clique ailleurs
+    // Le dropdown global
+    const globalDropdown = document.getElementById('filter-dropdown-global');
+    let currentDropdownTable = null;
+    let currentDropdownColumn = null;
+
+    // Fermer le dropdown quand on clique ailleurs
     document.addEventListener('click', function(e) {
-      if (!e.target.closest('.filter-dropdown') && !e.target.closest('.column-filter-btn')) {
-        document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.remove('show'));
+      if (!e.target.closest('.filter-dropdown-global') && !e.target.closest('.column-filter-btn')) {
+        globalDropdown.classList.remove('show');
+        // Retirer la classe active de tous les boutons
+        document.querySelectorAll('.column-filter-btn.active').forEach(b => b.classList.remove('active'));
       }
     });
 
@@ -7923,24 +7931,40 @@
     window.toggleFilterDropdown = function(event, tableName, columnName) {
       event.stopPropagation();
 
-      // Fermer les autres dropdowns
-      document.querySelectorAll('.filter-dropdown').forEach(d => {
-        if (d.id !== `filter-${tableName}-${columnName}`) {
-          d.classList.remove('show');
-        }
-      });
+      const btn = event.currentTarget;
+      const isOpen = globalDropdown.classList.contains('show') &&
+                     currentDropdownTable === tableName &&
+                     currentDropdownColumn === columnName;
 
-      const dropdown = document.getElementById(`filter-${tableName}-${columnName}`);
-      if (!dropdown) return;
+      // Retirer active de tous les boutons
+      document.querySelectorAll('.column-filter-btn.active').forEach(b => b.classList.remove('active'));
 
-      const isOpen = dropdown.classList.contains('show');
-
-      if (!isOpen) {
-        // Générer le contenu du dropdown
-        generateFilterDropdown(dropdown, tableName, columnName);
+      if (isOpen) {
+        globalDropdown.classList.remove('show');
+        currentDropdownTable = null;
+        currentDropdownColumn = null;
+        return;
       }
 
-      dropdown.classList.toggle('show');
+      // Positionner le dropdown sous le bouton
+      const rect = btn.getBoundingClientRect();
+      globalDropdown.style.top = (rect.bottom + 4) + 'px';
+      globalDropdown.style.left = rect.left + 'px';
+
+      // Vérifier que le dropdown ne dépasse pas à droite
+      const dropdownWidth = 220;
+      if (rect.left + dropdownWidth > window.innerWidth) {
+        globalDropdown.style.left = (window.innerWidth - dropdownWidth - 10) + 'px';
+      }
+
+      currentDropdownTable = tableName;
+      currentDropdownColumn = columnName;
+
+      // Générer le contenu du dropdown
+      generateFilterDropdown(globalDropdown, tableName, columnName);
+
+      globalDropdown.classList.add('show');
+      btn.classList.add('active');
     };
 
     // Générer le contenu du dropdown
@@ -8067,7 +8091,8 @@
       applyFiltersAndSort(tableName);
 
       // Fermer le dropdown
-      document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.remove('show'));
+      globalDropdown.classList.remove('show');
+      document.querySelectorAll('.column-filter-btn.active').forEach(b => b.classList.remove('active'));
     };
 
     // Mettre à jour les indicateurs de tri
@@ -8137,7 +8162,8 @@
       applyFiltersAndSort(tableName);
 
       // Fermer le dropdown
-      document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.remove('show'));
+      globalDropdown.classList.remove('show');
+      document.querySelectorAll('.column-filter-btn.active').forEach(b => b.classList.remove('active'));
     };
 
     // Appliquer filtres et tri sur une table

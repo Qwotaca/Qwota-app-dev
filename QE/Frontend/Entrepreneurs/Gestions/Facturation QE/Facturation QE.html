@@ -7811,6 +7811,109 @@
             });
           }
           
+          // === VÉRIFICATION DOUBLON CHÈQUE ===
+          if (facturationData.numeroCheque && facturationData.numeroCheque.trim() !== '') {
+            log('[CHEQUE-DOUBLON] Vérification doublon pour chèque #' + facturationData.numeroCheque);
+            try {
+              const checkUsername = getFacturationUsername();
+              const checkResponse = await fetch(`/api/facturationqe/check-cheque/${checkUsername}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  numeroCheque: facturationData.numeroCheque,
+                  montant: facturationData.montantPaiement,
+                  numeroSoumission: facturationData.numeroSoumission
+                })
+              });
+
+              if (checkResponse.ok) {
+                const checkResult = await checkResponse.json();
+                log('[CHEQUE-DOUBLON] Résultat:', checkResult);
+
+                if (checkResult.status === 'blocked') {
+                  // Doublon exact — popup bloquant
+                  await new Promise((resolve) => {
+                    const overlay = document.createElement('div');
+                    overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]';
+                    overlay.style.cssText = 'backdrop-filter: blur(5px);';
+                    overlay.innerHTML = `
+                      <div class="p-6 w-[450px] mx-4 relative" style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);">
+                        <div class="flex items-start gap-4 mb-6">
+                          <div class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center" style="background: rgba(220, 38, 38, 0.2);">
+                            <i class="fas fa-ban text-2xl" style="color: #DC2626;"></i>
+                          </div>
+                          <div class="flex-1">
+                            <h3 class="text-lg font-bold mb-2" style="color: var(--text-light);">Doublon détecté</h3>
+                            <p style="color: var(--text-gray);">${checkResult.message}</p>
+                          </div>
+                        </div>
+                        <div class="flex justify-end">
+                          <button id="chequeDoublonComprisBtn" class="btn-primary px-4 py-2" style="background: #DC2626 !important;">
+                            <i class="fas fa-check mr-2"></i>Compris
+                          </button>
+                        </div>
+                      </div>
+                    `;
+                    document.body.appendChild(overlay);
+                    document.getElementById('chequeDoublonComprisBtn').addEventListener('click', () => {
+                      document.body.removeChild(overlay);
+                      resolve();
+                    });
+                  });
+                  log('[CHEQUE-DOUBLON] Envoi bloqué — doublon exact');
+                  return;
+                }
+
+                if (checkResult.status === 'warning') {
+                  // Même numéro mais paiement différent — popup de confirmation
+                  const userConfirmed = await new Promise((resolve) => {
+                    const overlay = document.createElement('div');
+                    overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]';
+                    overlay.style.cssText = 'backdrop-filter: blur(5px);';
+                    overlay.innerHTML = `
+                      <div class="p-6 w-[450px] mx-4 relative" style="background: var(--bg-card); border: 1px solid var(--border-dark); border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);">
+                        <div class="flex items-start gap-4 mb-6">
+                          <div class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center" style="background: rgba(234, 179, 8, 0.2);">
+                            <i class="fas fa-exclamation-triangle text-2xl text-yellow-500"></i>
+                          </div>
+                          <div class="flex-1">
+                            <h3 class="text-lg font-bold mb-2" style="color: var(--text-light);">Numéro de chèque déjà utilisé</h3>
+                            <p style="color: var(--text-gray);">${checkResult.message}</p>
+                          </div>
+                        </div>
+                        <div class="flex justify-end gap-3">
+                          <button id="chequeDoublonAnnulerBtn" class="btn-secondary px-4 py-2">
+                            <i class="fas fa-times mr-2"></i>Annuler
+                          </button>
+                          <button id="chequeDoublonOuiBtn" class="btn-primary px-4 py-2" style="background: #10b981 !important;">
+                            <i class="fas fa-check mr-2"></i>Oui, continuer
+                          </button>
+                        </div>
+                      </div>
+                    `;
+                    document.body.appendChild(overlay);
+                    document.getElementById('chequeDoublonOuiBtn').addEventListener('click', () => {
+                      document.body.removeChild(overlay);
+                      resolve(true);
+                    });
+                    document.getElementById('chequeDoublonAnnulerBtn').addEventListener('click', () => {
+                      document.body.removeChild(overlay);
+                      resolve(false);
+                    });
+                  });
+
+                  if (!userConfirmed) {
+                    log('[CHEQUE-DOUBLON] Envoi annulé par l\'utilisateur');
+                    return;
+                  }
+                  log('[CHEQUE-DOUBLON] Utilisateur a confirmé — on continue');
+                }
+              }
+            } catch (checkErr) {
+              log('[CHEQUE-DOUBLON] Erreur vérification (on continue):', checkErr);
+            }
+          }
+
           // Désactiver le bouton pendant l'envoi
           envoyerBtn.disabled = true;
           envoyerBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Envoi en cours...';

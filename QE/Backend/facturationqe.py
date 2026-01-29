@@ -846,3 +846,117 @@ def get_facturations_a_traiter_count_direction():
     except Exception as e:
         print(f"[ERREUR get_facturations_a_traiter_count_direction] {e}")
         return {"count": 0}
+
+
+def check_cheque_doublon(username: str, numero_cheque: str, montant: str, numero_soumission: str):
+    """
+    Vérifie si un numéro de chèque a déjà été utilisé par cet entrepreneur.
+    Retourne:
+      - {"status": "ok"} si aucun doublon
+      - {"status": "warning", ...} si même numéro mais paiement différent
+      - {"status": "blocked", ...} si doublon exact (même numéro + même montant + même client)
+    """
+    try:
+        fichier_statuts = os.path.join(base_cloud, "facturation_qe_statuts", username, "statuts_clients.json")
+
+        if not os.path.exists(fichier_statuts):
+            return {"status": "ok"}
+
+        with open(fichier_statuts, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            if not content:
+                return {"status": "ok"}
+            tous_statuts = json.loads(content)
+
+        # Charger les soumissions signées pour récupérer les noms des clients
+        noms_clients = {}
+        fichier_soumissions = os.path.join(base_cloud, "soumissions_signees", username, "soumissions.json")
+        if os.path.exists(fichier_soumissions):
+            try:
+                with open(fichier_soumissions, "r", encoding="utf-8") as f:
+                    soum_content = f.read().strip()
+                    if soum_content:
+                        soumissions = json.loads(soum_content)
+                        for s in soumissions:
+                            num = s.get("numSoumission", "") or s.get("num", "")
+                            if num:
+                                prenom = s.get("clientPrenom", "")
+                                nom = s.get("clientNom", "")
+                                noms_clients[num] = f"{prenom} {nom}".strip()
+            except Exception:
+                pass
+
+        # Normaliser le montant pour comparaison (enlever espaces, $, remplacer virgule par point)
+        def normalize_montant(m):
+            if not m:
+                return ""
+            return str(m).replace(" ", "").replace("$", "").replace(",", ".").strip()
+
+        montant_normalise = normalize_montant(montant)
+
+        def get_client_display(num_soum):
+            nom = noms_clients.get(num_soum, "")
+            if nom:
+                return f"{nom} ({num_soum})"
+            return num_soum
+
+        # Parcourir tous les clients
+        for num_soum, client_data in tous_statuts.items():
+            client_display = get_client_display(num_soum)
+
+            # Vérifier dans depot
+            depot = client_data.get("depot", {})
+            if depot and depot.get("numeroCheque") == numero_cheque:
+                if num_soum == numero_soumission and normalize_montant(depot.get("montant")) == montant_normalise:
+                    return {
+                        "status": "blocked",
+                        "message": f"Le chèque #{numero_cheque} a déjà été utilisé pour le même client avec le même montant. Veuillez changer le numéro de chèque.",
+                        "existingClient": client_display
+                    }
+                else:
+                    return {
+                        "status": "warning",
+                        "message": f"Le chèque #{numero_cheque} correspond à un ancien paiement pour {client_display}. Est-ce bien un paiement différent ?",
+                        "existingClient": client_display
+                    }
+
+            # Vérifier dans paiementFinal
+            pf = client_data.get("paiementFinal", {})
+            if pf and pf.get("numeroCheque") == numero_cheque:
+                if num_soum == numero_soumission and normalize_montant(pf.get("montant")) == montant_normalise:
+                    return {
+                        "status": "blocked",
+                        "message": f"Le chèque #{numero_cheque} a déjà été utilisé pour le même client avec le même montant. Veuillez changer le numéro de chèque.",
+                        "existingClient": client_display
+                    }
+                else:
+                    return {
+                        "status": "warning",
+                        "message": f"Le chèque #{numero_cheque} correspond à un ancien paiement pour {client_display}. Est-ce bien un paiement différent ?",
+                        "existingClient": client_display
+                    }
+
+            # Vérifier dans autresPaiements
+            autres = client_data.get("autresPaiements", [])
+            if isinstance(autres, list):
+                for ap in autres:
+                    if ap and ap.get("numeroCheque") == numero_cheque:
+                        if num_soum == numero_soumission and normalize_montant(ap.get("montant")) == montant_normalise:
+                            return {
+                                "status": "blocked",
+                                "message": f"Le chèque #{numero_cheque} a déjà été utilisé pour le même client avec le même montant. Veuillez changer le numéro de chèque.",
+                                "existingClient": client_display
+                            }
+                        else:
+                            return {
+                                "status": "warning",
+                                "message": f"Le chèque #{numero_cheque} correspond à un ancien paiement pour {client_display}. Est-ce bien un paiement différent ?",
+                                "existingClient": client_display
+                            }
+
+        return {"status": "ok"}
+
+    except Exception as e:
+        print(f"[ERREUR check_cheque_doublon] {e}")
+        # En cas d'erreur, laisser passer pour ne pas bloquer l'utilisateur
+        return {"status": "ok"}

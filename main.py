@@ -73,7 +73,8 @@ from QE.Backend.facturationqe import (
     update_statut_client_facturation_qe, get_status_columns_facturation_qe,
     get_description_statut_client_facturation_qe, marquer_depot_traite_facturation_qe,
     envoyer_au_comptable_facturation_qe, get_historique_client_facturation_qe,
-    ajouter_historique_client_facturation_qe, get_clients_count_facturation_qe
+    ajouter_historique_client_facturation_qe, get_clients_count_facturation_qe,
+    check_cheque_doublon
 )
 
 # PDF QE imports
@@ -1043,7 +1044,19 @@ def enregistrer_soumission(utilisateur: str, soumission: dict, lien_pdf: str):
         else:
             data = []
 
-        data.append(soumission)
+        # Si une soumission avec le même numéro existe déjà, la remplacer
+        num_soumission = soumission.get("num", "")
+        replaced = False
+        if num_soumission:
+            for i, existing in enumerate(data):
+                if existing.get("num") == num_soumission:
+                    data[i] = soumission
+                    replaced = True
+                    print(f"[enregistrer_soumission] Soumission {num_soumission} remplacée (modification)")
+                    break
+
+        if not replaced:
+            data.append(soumission)
 
         with open(fichier, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
@@ -2476,14 +2489,59 @@ async def creer_pdf(data: SoumissionData, request: Request):
         else:
             print(f"[NOTE] Création nouveau fichier: {fichier_ventes}")
 
-        ventes.append(vente)
-        print(f"[ADD] Ajout de la vente (total: {len(ventes)} ventes)")
+        # Si une vente avec le même numéro existe déjà, la remplacer
+        replaced_vente = False
+        for i, existing_vente in enumerate(ventes):
+            if existing_vente.get("num") == num_soumission:
+                ventes[i] = vente
+                replaced_vente = True
+                print(f"[REPLACE] Vente {num_soumission} remplacée dans ventes_attente (modification)")
+                break
+
+        if not replaced_vente:
+            ventes.append(vente)
+            print(f"[ADD] Ajout de la vente (total: {len(ventes)} ventes)")
 
         with open(fichier_ventes, "w", encoding="utf-8") as f:
             json.dump(ventes, f, ensure_ascii=False, indent=2)
         print(f"[SAVE] Fichier sauvegardé: {fichier_ventes}")
 
-        print(f"[OK] Soumission ajoutée dans ventes_attente pour {utilisateur}")
+        print(f"[OK] Soumission {'remplacée' if replaced_vente else 'ajoutée'} dans ventes_attente pour {utilisateur}")
+
+        # Nettoyer l'ancienne version de cette soumission dans les fichiers en aval
+        # (si elle avait déjà été signée/acceptée avant d'être modifiée)
+        fichiers_a_nettoyer = [
+            (f"{base_cloud}/soumissions_signees/{utilisateur}/soumissions.json", "soumissions_signees"),
+            (f"{base_cloud}/ventes_acceptees/{utilisateur}/ventes.json", "ventes_acceptees"),
+            (f"{base_cloud}/travaux_a_completer/{utilisateur}/soumissions.json", "travaux_a_completer"),
+        ]
+        for fichier_path, nom_fichier_log in fichiers_a_nettoyer:
+            if os.path.exists(fichier_path):
+                try:
+                    with open(fichier_path, "r", encoding="utf-8") as f:
+                        contenu = json.load(f)
+                    ancien_count = len(contenu)
+                    contenu = [e for e in contenu if e.get("num") != num_soumission]
+                    if len(contenu) < ancien_count:
+                        with open(fichier_path, "w", encoding="utf-8") as f:
+                            json.dump(contenu, f, ensure_ascii=False, indent=2)
+                        print(f"[CLEANUP] Ancienne soumission {num_soumission} retirée de {nom_fichier_log}")
+                except Exception as e:
+                    print(f"[WARNING] Erreur nettoyage {nom_fichier_log}: {e}")
+
+        # Nettoyer aussi les statuts de facturation QE pour cette soumission
+        statuts_file = f"{base_cloud}/facturation_qe_statuts/{utilisateur}/statuts_clients.json"
+        if os.path.exists(statuts_file):
+            try:
+                with open(statuts_file, "r", encoding="utf-8") as f:
+                    statuts = json.load(f)
+                if num_soumission in statuts:
+                    del statuts[num_soumission]
+                    with open(statuts_file, "w", encoding="utf-8") as f:
+                        json.dump(statuts, f, ensure_ascii=False, indent=2)
+                    print(f"[CLEANUP] Statuts facturation QE pour {num_soumission} supprimés")
+            except Exception as e:
+                print(f"[WARNING] Erreur nettoyage statuts facturation: {e}")
 
         # Retirer le client des prospects s'il y était ET ajouter à la blacklist du calendrier
         try:
@@ -5191,7 +5249,19 @@ def envoyer_soumission_signee(
             else:
                 ventes_acceptees = []
 
-            ventes_acceptees.append(soumission_data)
+            # Si une vente avec le même numéro existe déjà, la remplacer
+            num_soumission = soumission_data.get("num", "")
+            replaced = False
+            if num_soumission:
+                for i, existing in enumerate(ventes_acceptees):
+                    if existing.get("num") == num_soumission:
+                        ventes_acceptees[i] = soumission_data
+                        replaced = True
+                        print(f"[OK] Vente acceptée {num_soumission} remplacée (modification)")
+                        break
+
+            if not replaced:
+                ventes_acceptees.append(soumission_data)
 
             with open(ventes_acceptees_file, "w", encoding="utf-8") as f:
                 json.dump(ventes_acceptees, f, ensure_ascii=False, indent=2)
@@ -5827,7 +5897,19 @@ def enregistrer_travaux_a_completer(utilisateur: str, soumission: dict):
         else:
             data = []
 
-        data.append(soumission)
+        # Si une soumission avec le même numéro existe déjà, la remplacer
+        num_soumission = soumission.get("num", "")
+        replaced = False
+        if num_soumission:
+            for i, existing in enumerate(data):
+                if existing.get("num") == num_soumission:
+                    data[i] = soumission
+                    replaced = True
+                    print(f"[enregistrer_travaux_a_completer] Soumission {num_soumission} remplacée (modification)")
+                    break
+
+        if not replaced:
+            data.append(soumission)
 
         with open(fichier, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
@@ -6176,7 +6258,19 @@ def enregistrer_soumission_signee(utilisateur: str, soumission: dict):
         else:
             data = []
 
-        data.append(soumission)
+        # Si une soumission signée avec le même numéro existe déjà, la remplacer
+        num_soumission = soumission.get("num", "")
+        replaced = False
+        if num_soumission:
+            for i, existing in enumerate(data):
+                if existing.get("num") == num_soumission:
+                    data[i] = soumission
+                    replaced = True
+                    print(f"[enregistrer_soumission_signee] Soumission signée {num_soumission} remplacée (modification)")
+                    break
+
+        if not replaced:
+            data.append(soumission)
 
         with open(fichier, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
@@ -12914,6 +13008,24 @@ def api_get_urgent_count_facturation_qe(username: str):
     except Exception as e:
         print(f"[ERREUR api_get_urgent_count_facturation_qe] {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/facturationqe/check-cheque/{username}")
+def api_check_cheque_doublon(username: str, body: dict = Body(...)):
+    """
+    Vérifie si un numéro de chèque est un doublon pour cet entrepreneur
+    """
+    try:
+        numero_cheque = body.get("numeroCheque", "")
+        montant = body.get("montant", "")
+        numero_soumission = body.get("numeroSoumission", "")
+
+        if not numero_cheque:
+            return {"status": "ok"}
+
+        return check_cheque_doublon(username, numero_cheque, montant, numero_soumission)
+    except Exception as e:
+        print(f"[ERREUR api_check_cheque_doublon] {e}")
+        return {"status": "ok"}
 
 @app.post("/api/facturationqe/envoyer-comptable/{username}/{numeroSoumission}")
 def api_envoyer_comptable_facturation_qe(username: str, numeroSoumission: str, body: dict = Body(...)):
@@ -21894,12 +22006,23 @@ async def signer_soumission_vente(data: dict = Body(...)):
                 if content:
                     ventes_acceptees = json.loads(content)
 
-        ventes_acceptees.append(soumission)
+        # Si une vente avec le même numéro existe déjà, la remplacer
+        num_soumission = soumission.get("num", "")
+        replaced_acc = False
+        if num_soumission:
+            for i, existing in enumerate(ventes_acceptees):
+                if existing.get("num") == num_soumission:
+                    ventes_acceptees[i] = soumission
+                    replaced_acc = True
+                    print(f"[OK] Vente acceptée {num_soumission} remplacée (modification)")
+                    break
+        if not replaced_acc:
+            ventes_acceptees.append(soumission)
 
         with open(fichier_acceptees, "w", encoding="utf-8") as f:
             json.dump(ventes_acceptees, f, ensure_ascii=False, indent=2)
 
-        # 2. AJOUTER (ne jamais supprimer) dans soumissions_signees/ (historique permanent)
+        # 2. AJOUTER dans soumissions_signees/ (historique permanent) - remplacer si même num
         dir_signees = os.path.join(f"{base_cloud}/soumissions_signees", username)
         os.makedirs(dir_signees, exist_ok=True)
 
@@ -21911,7 +22034,16 @@ async def signer_soumission_vente(data: dict = Body(...)):
                 if content:
                     soumissions_signees = json.loads(content)
 
-        soumissions_signees.append(soumission)
+        replaced_sig = False
+        if num_soumission:
+            for i, existing in enumerate(soumissions_signees):
+                if existing.get("num") == num_soumission:
+                    soumissions_signees[i] = soumission
+                    replaced_sig = True
+                    print(f"[OK] Soumission signée {num_soumission} remplacée (modification)")
+                    break
+        if not replaced_sig:
+            soumissions_signees.append(soumission)
 
         with open(fichier_signees, "w", encoding="utf-8") as f:
             json.dump(soumissions_signees, f, ensure_ascii=False, indent=2)

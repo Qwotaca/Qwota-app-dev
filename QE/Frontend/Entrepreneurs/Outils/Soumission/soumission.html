@@ -4372,6 +4372,20 @@ function showSoumissionTab(tab) {
   }
 }
 
+// Formater un prix en format français (ex: "2000.00" -> "2 000,00 $")
+function formatPrixDisplay(prix) {
+  if (!prix || prix === '-') return '-';
+  // Si déjà formaté avec $, retourner tel quel
+  if (typeof prix === 'string' && prix.includes('$')) return prix;
+  // Nettoyer et convertir en nombre
+  let num = parseFloat(String(prix).replace(/[^0-9.,\-]/g, '').replace(',', '.'));
+  if (isNaN(num)) return prix;
+  // Formater en français
+  let parts = num.toFixed(2).split('.');
+  let entier = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0');
+  return entier + ',' + parts[1] + ' $';
+}
+
 // Charger et afficher les soumissions envoyées
 async function loadSentSoumissions() {
   const tbody = document.getElementById('sent-soumissions-body');
@@ -4442,7 +4456,7 @@ async function loadSentSoumissions() {
           <td style="width: 12%;">${s.num || '-'}</td>
           <td style="width: 10%;">${s.date || '-'}</td>
           <td style="width: 30%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><a href="javascript:void(0)" onclick="ouvrirSoumissionMapsModal('${adresseEscaped}')" style="color: var(--primary-blue); text-decoration: none; cursor: pointer;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${s.adresse || '-'}</a></td>
-          <td style="width: 12%; color: #22c55e; font-weight: 600;">${s.prix || '-'}</td>
+          <td style="width: 12%; color: #22c55e; font-weight: 600;">${formatPrixDisplay(s.prix)}</td>
           <td class="text-center" style="width: 12%;">
             <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
               <button onclick="editSentSoumission('${s.id}')"
@@ -4472,7 +4486,7 @@ async function loadSentSoumissions() {
                 <span>${s.adresse || '-'}</span>
               </div>
             </div>
-            <div class="soumission-card-montant">${s.prix || '-'}</div>
+            <div class="soumission-card-montant">${formatPrixDisplay(s.prix)}</div>
           </div>
           <div class="soumission-card-actions">
             <button onclick="editSentSoumission('${s.id}')" class="soumission-action-btn edit-btn">

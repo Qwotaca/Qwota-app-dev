@@ -4268,16 +4268,18 @@ async function loadPendingSoumissions() {
           <td style="width: 30%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><a href="javascript:void(0)" onclick="ouvrirSoumissionMapsModal('${adresseEscaped}')" style="color: var(--primary-blue); text-decoration: none; cursor: pointer;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${soumission.adresse || '-'}</a></td>
           <td style="width: 12%; color: #22c55e; font-weight: 600;">${soumission.prix}</td>
           <td class="text-center" style="width: 12%;">
-            <button onclick="editPendingSoumission('${soumission.id}')"
-                    class="btn-primary action-btn-send"
-                    title="Modifier">
-              <i class="fas fa-edit"></i>
-            </button>
-            <button onclick="deletePendingSoumission('${soumission.id}')"
-                    class="btn-secondary action-btn-delete"
-                    title="Supprimer">
-              <i class="fas fa-trash"></i>
-            </button>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <button onclick="editPendingSoumission('${soumission.id}')"
+                      class="btn-primary action-btn-send"
+                      title="Modifier">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button onclick="deletePendingSoumission('${soumission.id}')"
+                      class="btn-secondary action-btn-delete"
+                      title="Supprimer">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
           </td>
         </tr>
       `;
@@ -4442,12 +4444,14 @@ async function loadSentSoumissions() {
           <td style="width: 30%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><a href="javascript:void(0)" onclick="ouvrirSoumissionMapsModal('${adresseEscaped}')" style="color: var(--primary-blue); text-decoration: none; cursor: pointer;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${s.adresse || '-'}</a></td>
           <td style="width: 12%; color: #22c55e; font-weight: 600;">${s.prix || '-'}</td>
           <td class="text-center" style="width: 12%;">
-            <button onclick="editSentSoumission('${s.id}')"
-                    class="btn-primary action-btn-send"
-                    title="Modifier">
-              <i class="fas fa-edit"></i>
-            </button>
-            ${pdfBtn}
+            <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <button onclick="editSentSoumission('${s.id}')"
+                      class="btn-primary action-btn-send"
+                      title="Modifier">
+                <i class="fas fa-edit"></i>
+              </button>
+              ${pdfBtn}
+            </div>
           </td>
         </tr>
       `;
@@ -5121,16 +5125,29 @@ window.deletePendingSoumission = deletePendingSoumission;
 function filterSoumissionTable(type) {
   const searchInput = document.getElementById(type === 'pending' ? 'search-pending-soumissions' : 'search-sent-soumissions');
   const tbody = document.getElementById(type === 'pending' ? 'pending-soumissions-body' : 'sent-soumissions-body');
-  if (!searchInput || !tbody) return;
+  const mobileList = document.getElementById(type === 'pending' ? 'pending-soumissions-mobile-list' : 'sent-soumissions-mobile-list');
+  if (!searchInput) return;
 
   const query = searchInput.value.toLowerCase().trim();
-  const rows = tbody.querySelectorAll('tr');
 
-  rows.forEach(row => {
-    if (row.querySelector('.empty-state')) return;
-    const text = row.textContent.toLowerCase();
-    row.style.display = query === '' || text.includes(query) ? '' : 'none';
-  });
+  // Filtrer les lignes desktop
+  if (tbody) {
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach(row => {
+      if (row.querySelector('.empty-state')) return;
+      const text = row.textContent.toLowerCase();
+      row.style.display = query === '' || text.includes(query) ? '' : 'none';
+    });
+  }
+
+  // Filtrer les cards mobile
+  if (mobileList) {
+    const cards = mobileList.querySelectorAll('.soumission-mobile-card');
+    cards.forEach(card => {
+      const text = card.textContent.toLowerCase();
+      card.style.display = query === '' || text.includes(query) ? '' : 'none';
+    });
+  }
 }
 
 // ========== MODAL GOOGLE MAPS ==========

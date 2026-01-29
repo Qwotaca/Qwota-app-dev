@@ -437,6 +437,7 @@
   </style>
 
   <link rel="stylesheet" href="/entrepreneur-selector.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 </head>
 <body class="min-h-screen" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: var(--text-light); margin: 0; padding: 0; touch-action: pan-y pinch-zoom;">
 
@@ -508,15 +509,21 @@
 
     <!-- Navigation Pages -->
     <div class="mb-8" style="position: relative; z-index: 10000; pointer-events: auto; touch-action: manipulation;">
-      <div class="tab-spacing">
-        <button id="rpo-tab" class="btn-primary" onclick="showPage('rpo')" style="display: flex; align-items: center; gap: 0.5rem;">
-          <i class="fas fa-chart-line"></i>RPO
-        </button>
-        <button id="plan-affaire-tab" class="btn-secondary" onclick="showPage('plan-affaire')" style="display: flex; align-items: center; gap: 0.5rem;">
-          <i class="fas fa-briefcase"></i>Plan d'affaire
-        </button>
-        <button id="etat-resultats-tab" class="btn-secondary" onclick="showPage('etat-resultats')" style="display: flex; align-items: center; gap: 0.5rem;">
-          <i class="fas fa-file-invoice-dollar"></i>État des résultats
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+        <div class="tab-spacing">
+          <button id="rpo-tab" class="btn-primary" onclick="showPage('rpo')" style="display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-chart-line"></i>RPO
+          </button>
+          <button id="plan-affaire-tab" class="btn-secondary" onclick="showPage('plan-affaire')" style="display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-briefcase"></i>Plan d'affaire
+          </button>
+          <button id="etat-resultats-tab" class="btn-secondary" onclick="showPage('etat-resultats')" style="display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-file-invoice-dollar"></i>État des résultats
+          </button>
+        </div>
+        <button id="exportRpoBtn" onclick="showExportRpoPopup()" style="display: none; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: white; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+          <i class="fas fa-file-export"></i>
+          Exporter
         </button>
       </div>
     </div>
@@ -16753,6 +16760,316 @@ function updateMenuBadge(count) {
     console.log('[RPO SCRIPT LOAD] Script ajouté au body');
   } else {
     console.log('[RPO SCRIPT LOAD] entrepreneur-selector.js NON chargé (rôle:', userRole, ')');
+  }
+})();
+
+// === EXPORT EXCEL - Direction & Coach ===
+(function() {
+  // Afficher le bouton Exporter pour direction et coach
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+      const role = localStorage.getItem('userRole') || '';
+      if (role === 'direction' || role === 'coach') {
+        const btn = document.getElementById('exportRpoBtn');
+        if (btn) btn.style.display = 'flex';
+      }
+    }, 500);
+  });
+
+  // Popup de sélection d'export
+  window.showExportRpoPopup = function() {
+    const modal = document.createElement('div');
+    modal.id = 'exportRpoModal';
+    modal.className = 'fixed inset-0 flex items-center justify-center';
+    modal.style.cssText = 'background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); z-index: 999999; display: flex;';
+    modal.onclick = function(e) { if (e.target === modal) closeExportRpoPopup(); };
+
+    modal.innerHTML = `
+      <div style="width: 90%; max-width: 480px; background: var(--bg-card, #1e293b); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 16px; padding: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+          <h3 style="color: var(--text-light, #f1f5f9); font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-file-export" style="color: #10b981;"></i>
+            Exporter en Excel
+          </h3>
+          <button onclick="closeExportRpoPopup()" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(96, 165, 250, 0.2); color: #60a5fa; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='rgba(96, 165, 250, 0.3)'" onmouseout="this.style.background='rgba(96, 165, 250, 0.2)'">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <p style="color: var(--text-gray, #94a3b8); font-size: 13px; margin-bottom: 16px;">Sélectionnez les données à exporter :</p>
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+          <label style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(51, 65, 85, 0.5); cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#10b981'" onmouseout="this.style.borderColor='rgba(51, 65, 85, 0.5)'">
+            <input type="checkbox" id="export-annual" checked style="accent-color: #10b981; width: 18px; height: 18px;">
+            <div>
+              <div style="color: var(--text-light, #f1f5f9); font-weight: 600; font-size: 14px;">Dashboard annuel</div>
+              <div style="color: var(--text-gray, #94a3b8); font-size: 12px;">Objectifs, tendances, réel, progression</div>
+            </div>
+          </label>
+          <label style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(51, 65, 85, 0.5); cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#10b981'" onmouseout="this.style.borderColor='rgba(51, 65, 85, 0.5)'">
+            <input type="checkbox" id="export-weekly" checked style="accent-color: #10b981; width: 18px; height: 18px;">
+            <div>
+              <div style="color: var(--text-light, #f1f5f9); font-weight: 600; font-size: 14px;">Données hebdomadaires</div>
+              <div style="color: var(--text-gray, #94a3b8); font-size: 12px;">H marketing, estimations, contrats, $ par semaine</div>
+            </div>
+          </label>
+          <label style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(51, 65, 85, 0.5); cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#10b981'" onmouseout="this.style.borderColor='rgba(51, 65, 85, 0.5)'">
+            <input type="checkbox" id="export-qualite" checked style="accent-color: #10b981; width: 18px; height: 18px;">
+            <div>
+              <div style="color: var(--text-light, #f1f5f9); font-weight: 600; font-size: 14px;">Qualité étudiants</div>
+              <div style="color: var(--text-gray, #94a3b8); font-size: 12px;">Recrues vs Seniors, taux marketing, taux vente</div>
+            </div>
+          </label>
+        </div>
+        <button onclick="executeExportRpo()" style="width: 100%; padding: 12px; border-radius: 10px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: white; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+          <i class="fas fa-download"></i>
+          Télécharger Excel
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+  };
+
+  window.closeExportRpoPopup = function() {
+    const modal = document.getElementById('exportRpoModal');
+    if (modal) modal.remove();
+    document.body.style.overflow = '';
+  };
+
+  window.executeExportRpo = function() {
+    const exportAnnual = document.getElementById('export-annual')?.checked;
+    const exportWeekly = document.getElementById('export-weekly')?.checked;
+    const exportQualite = document.getElementById('export-qualite')?.checked;
+
+    if (!exportAnnual && !exportWeekly && !exportQualite) {
+      alert('Sélectionnez au moins une option');
+      return;
+    }
+
+    const data = window.rpoData;
+    if (!data) {
+      alert('Aucune donnée RPO chargée');
+      return;
+    }
+
+    const wb = XLSX.utils.book_new();
+    const headerStyle = {
+      fill: { fgColor: { rgb: "10B981" } },
+      font: { bold: true, color: { rgb: "FFFFFF" }, sz: 12 },
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+    const subHeaderStyle = {
+      fill: { fgColor: { rgb: "1E293B" } },
+      font: { bold: true, color: { rgb: "60A5FA" }, sz: 11 },
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+    const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+    // === FEUILLE 1: Dashboard Annuel ===
+    if (exportAnnual && data.annual) {
+      const annual = data.annual;
+      const rows = [
+        ['DASHBOARD ANNUEL RPO'],
+        [],
+        ['Métrique', 'Objectif', 'Tendance', 'Réel', '% Réalisé'],
+        ['Heures PÀP', annual.hrpap_vise || 0, getElementValue('hrpap-tendance'), annual.hr_pap_reel || 0, getElementText('hrpap-percent')],
+        ['# Estimations', annual.estimation_vise || 0, getElementValue('estimation-tendance'), annual.estimation_reel || 0, getElementText('estimation-percent')],
+        ['# Contrats signés', annual.contract_vise || 0, getElementValue('contract-tendance'), annual.contract_reel || 0, getElementText('contract-percent')],
+        ['$ Signé', annual.dollar_vise || 0, getElementValue('dollar-tendance'), annual.dollar_reel || 0, getElementText('dollar-percent')],
+        ['Taux Marketing', annual.mktg_vise || 0, '-', annual.mktg_reel || 0, getElementText('mktg-percent')],
+        ['Taux de Vente', annual.vente_vise || 0, '-', annual.vente_reel || 0, getElementText('vente-percent')],
+        ['Contrat Moyen', annual.moyen_vise || 0, '-', annual.moyen_reel || 0, getElementText('moyen-percent')],
+        ['Tendance CA', annual.tendance_vise || 0, '-', getElementValue('tendance-reel'), getElementText('tendance-percent')],
+        [],
+        ['Informations générales'],
+        ['Nb Entrepreneurs', annual.nb_entrepreneurs || 0],
+        ['Nb Coaches', annual.nb_coaches || 0],
+        ['Produit réel', annual.produit_reel || 0],
+        ['Prod. horaire', annual.prod_horaire || 0],
+      ];
+
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{ wch: 22 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 14 }];
+
+      // Style titre
+      if (ws['A1']) ws['A1'].s = { font: { bold: true, color: { rgb: "FFFFFF" }, sz: 14 }, fill: { fgColor: { rgb: "0F172A" } } };
+      // Style en-têtes
+      ['A3', 'B3', 'C3', 'D3', 'E3'].forEach(c => { if (ws[c]) ws[c].s = headerStyle; });
+      if (ws['A13']) ws['A13'].s = subHeaderStyle;
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Dashboard Annuel');
+    }
+
+    // === FEUILLE 2: Données Hebdomadaires ===
+    if (exportWeekly && data.weekly) {
+      const rows = [['DONNÉES HEBDOMADAIRES RPO'], []];
+
+      // Pour chaque mois
+      for (let m = 0; m <= 11; m++) {
+        const monthData = data.weekly[String(m)];
+        if (!monthData) continue;
+
+        const weeks = Object.keys(monthData).sort((a, b) => parseInt(a) - parseInt(b));
+        if (weeks.length === 0) continue;
+
+        // Vérifier s'il y a des données non-vides
+        const hasData = weeks.some(w => {
+          const wd = monthData[w];
+          return wd && (wd.h_marketing > 0 || wd.estimation > 0 || wd.contract > 0 || wd.dollar > 0 || wd.produit > 0);
+        });
+        if (!hasData) continue;
+
+        rows.push([monthNames[m] + ' 2026']);
+        rows.push(['Semaine', 'Période', 'H Marketing', '# Estimation', '# Contrat', '$ Signé', 'Produit']);
+
+        let totalH = 0, totalEst = 0, totalCont = 0, totalDol = 0, totalProd = 0;
+
+        weeks.forEach(w => {
+          const wd = monthData[w];
+          if (!wd) return;
+          const hm = wd.h_marketing || 0;
+          const est = wd.estimation || 0;
+          const cont = wd.contract || 0;
+          const dol = wd.dollar || 0;
+          const prod = wd.produit || 0;
+
+          totalH += (typeof hm === 'number' ? hm : 0);
+          totalEst += est;
+          totalCont += cont;
+          totalDol += dol;
+          totalProd += prod;
+
+          rows.push([
+            'Semaine ' + w,
+            wd.week_label || '-',
+            hm,
+            est,
+            cont,
+            dol,
+            prod
+          ]);
+        });
+
+        rows.push(['TOTAL', '', totalH, totalEst, totalCont, totalDol, totalProd]);
+        rows.push([]);
+      }
+
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{ wch: 14 }, { wch: 20 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 14 }];
+
+      // Style titre
+      if (ws['A1']) ws['A1'].s = { font: { bold: true, color: { rgb: "FFFFFF" }, sz: 14 }, fill: { fgColor: { rgb: "0F172A" } } };
+
+      // Appliquer styles aux en-têtes de mois et colonnes
+      let rowIdx = 0;
+      rows.forEach((row, i) => {
+        if (row.length === 1 && row[0] && row[0].includes('2026')) {
+          const cell = XLSX.utils.encode_cell({ r: i, c: 0 });
+          if (ws[cell]) ws[cell].s = subHeaderStyle;
+        }
+        if (row.length === 7 && row[0] === 'Semaine') {
+          for (let c = 0; c < 7; c++) {
+            const cell = XLSX.utils.encode_cell({ r: i, c: c });
+            if (ws[cell]) ws[cell].s = headerStyle;
+          }
+        }
+        if (row.length >= 2 && row[0] === 'TOTAL') {
+          for (let c = 0; c < row.length; c++) {
+            const cell = XLSX.utils.encode_cell({ r: i, c: c });
+            if (ws[cell]) ws[cell].s = { font: { bold: true, color: { rgb: "10B981" } }, fill: { fgColor: { rgb: "0F172A" } } };
+          }
+        }
+      });
+
+      // Format devise pour colonne $ Signé (colonne F = index 5)
+      rows.forEach((row, i) => {
+        if (i < 2) return;
+        const cell = XLSX.utils.encode_cell({ r: i, c: 5 });
+        if (ws[cell] && typeof ws[cell].v === 'number' && ws[cell].v > 0) {
+          ws[cell].z = '#,##0.00 $';
+        }
+      });
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Hebdomadaire');
+    }
+
+    // === FEUILLE 3: Qualité Étudiants ===
+    if (exportQualite && data.annual) {
+      const annual = data.annual;
+      const rows = [
+        ['QUALITÉ ÉTUDIANTS'],
+        [],
+        ['Catégorie', 'Valeur'],
+        ['Nb Total Entrepreneurs', annual.nb_entrepreneurs || 0],
+        ['Nb Recrues', annual.nb_recrue || 0],
+        ['Nb Seniors', annual.nb_senior || 0],
+        [],
+        ['Métrique', 'Recrues', 'Seniors', 'Total'],
+        ['Heures PÀP', annual.hr_pap_reel_recrue || 0, annual.hr_pap_reel_senior || 0, annual.hr_pap_reel || 0],
+        ['# Estimations', annual.estimation_reel_recrue || 0, annual.estimation_reel_senior || 0, annual.estimation_reel || 0],
+        [],
+        ['Taux & Ratios'],
+        ['Taux Marketing (réel)', annual.mktg_reel || 0],
+        ['Taux de Vente (réel)', (annual.vente_reel || 0) + '%'],
+        ['Contrat Moyen (réel)', annual.moyen_reel || 0],
+        ['Prod. Horaire', annual.prod_horaire || 0],
+        [],
+        ['Prévisions'],
+        ['CM Prévision', annual.cm_prevision || (data.coach_previsions?.cm || 0)],
+        ['Ratio MKTG Prévision', annual.ratio_mktg || (data.coach_previsions?.ratioMktg || 0)],
+        ['Taux Vente Prévision', annual.taux_vente || (data.coach_previsions?.tauxVente || 0)],
+        ['Objectif Total', data.coach_previsions?.totalObjectif || 0],
+      ];
+
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{ wch: 26 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
+
+      // Style titre
+      if (ws['A1']) ws['A1'].s = { font: { bold: true, color: { rgb: "FFFFFF" }, sz: 14 }, fill: { fgColor: { rgb: "0F172A" } } };
+      // Headers
+      ['A3', 'B3'].forEach(c => { if (ws[c]) ws[c].s = headerStyle; });
+      ['A8', 'B8', 'C8', 'D8'].forEach(c => { if (ws[c]) ws[c].s = headerStyle; });
+      if (ws['A12']) ws['A12'].s = subHeaderStyle;
+      if (ws['A18']) ws['A18'].s = subHeaderStyle;
+
+      // Format devise pour contrat moyen et objectif
+      const cmCell = XLSX.utils.encode_cell({ r: 14, c: 1 }); // Contrat Moyen
+      if (ws[cmCell] && typeof ws[cmCell].v === 'number') ws[cmCell].z = '#,##0.00 $';
+      const objCell = XLSX.utils.encode_cell({ r: 21, c: 1 }); // Objectif Total
+      if (ws[objCell] && typeof ws[objCell].v === 'number') ws[objCell].z = '#,##0.00 $';
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Qualité Étudiants');
+    }
+
+    // Télécharger
+    const dateStr = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `RPO_Export_${dateStr}.xlsx`);
+
+    closeExportRpoPopup();
+
+    // Toast de succès
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 1rem 1.5rem; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: 600;';
+    toast.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Export Excel téléchargé';
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity 0.3s';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  };
+
+  // Helpers pour lire les valeurs affichées dans le DOM
+  function getElementValue(id) {
+    const el = document.getElementById(id);
+    if (!el) return 0;
+    const val = parseFloat(el.getAttribute('data-value'));
+    return isNaN(val) ? el.textContent.trim() : val;
+  }
+
+  function getElementText(id) {
+    const el = document.getElementById(id);
+    return el ? el.textContent.trim() : '-';
   }
 })();
 </script>

@@ -140,7 +140,6 @@
     }
 
     #coach-entrepreneur-selector .selector-container {
-      max-width: 1400px;
       display: flex;
       align-items: center;
       gap: 1rem;
@@ -1985,6 +1984,7 @@
       }
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 </head>
 <body class="min-h-screen" style="margin: 0; padding: 0;">
 
@@ -2063,6 +2063,14 @@
           </div>
         </div>
       </div>
+
+      <!-- Spacer pour pousser le bouton à droite -->
+      <div style="flex: 1;"></div>
+      <!-- Bouton Exporter (direction & coach) -->
+      <button id="exportDashboardBtn" onclick="showExportDashboardPopup()" style="display: none; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: white; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        <i class="fas fa-file-export"></i>
+        Exporter
+      </button>
     </div>
   </div>
 
@@ -6147,6 +6155,9 @@
         }
         log('[CLASSEMENT] Grades configurés pour', classementData.length, 'utilisateurs');
 
+        // Exposer les données de classement pour l'export Excel
+        window.classementData = classementData;
+
         await sortClassement('ca'); // Trier par CA par défaut
       } catch (error) {
         error('[ERROR] Erreur chargement classement:', error);
@@ -7038,6 +7049,7 @@
 // ===== VARIABLES GLOBALES DASHBOARD COACH (Mon Équipe) =====
 let entrepreneursData = [];
 let teamStats = {};
+let globalCoachesWithStats = [];
 let coachUsername = '';
 let charts = {};
 let coachCurrentView = 'grid'; // 'grid' or 'ranking'
@@ -7407,6 +7419,16 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
     `;
 
     window.dashboardType = type;
+
+    // Afficher/cacher le bouton Exporter selon le type de dashboard
+    const exportBtn = document.getElementById('exportDashboardBtn');
+    if (exportBtn) {
+      if (type === 'qualite-etudiants' || type === 'mon-equipe') {
+        exportBtn.style.display = 'flex';
+      } else {
+        exportBtn.style.display = 'none';
+      }
+    }
 
     // Gérer l'affichage du sélecteur de coach
     if (coachSelectorWrapper) {
@@ -8130,6 +8152,9 @@ async function chargerCoaches() {
     };
 
     log('[DEBUG chargerCoaches] teamStats calculé:', teamStats);
+
+    // Stocker les données coaches globalement pour l'export Excel
+    globalCoachesWithStats = coachesWithStats;
 
     // Appeler les fonctions d'affichage
     afficherStatsGlobales();
@@ -11656,8 +11681,496 @@ async function populateDashboardQuestModal() {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     closeDashboardQuestModal();
+    closeExportDashboardPopup();
   }
 });
+
+// ===== EXPORT EXCEL DASHBOARD =====
+
+function showExportDashboardPopup() {
+  const checkboxesHtml = `
+      <label style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px; cursor: pointer; border: 1px solid rgba(16, 185, 129, 0.2);">
+        <input type="checkbox" id="exportQualiteEtudiants" checked style="width: 18px; height: 18px; accent-color: #10b981;">
+        <div>
+          <div style="font-weight: 600; color: var(--text-light);">Dashboard Qualité Étudiants</div>
+          <div style="font-size: 0.75rem; opacity: 0.7;">Stats globales + données par coach</div>
+        </div>
+      </label>
+      <label style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px; cursor: pointer; border: 1px solid rgba(59, 130, 246, 0.2);">
+        <input type="checkbox" id="exportDashboardCoaches" checked style="width: 18px; height: 18px; accent-color: #3b82f6;">
+        <div>
+          <div style="font-weight: 600; color: var(--text-light);">Dashboard Coaches</div>
+          <div style="font-size: 0.75rem; opacity: 0.7;">Une feuille par coach avec ses stats d'équipe</div>
+        </div>
+      </label>
+      <label style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: rgba(245, 158, 11, 0.1); border-radius: 8px; cursor: pointer; border: 1px solid rgba(245, 158, 11, 0.2);">
+        <input type="checkbox" id="exportClassementEntrepreneurs" checked style="width: 18px; height: 18px; accent-color: #f59e0b;">
+        <div>
+          <div style="font-weight: 600; color: var(--text-light);">Classement Entrepreneurs</div>
+          <div style="font-size: 0.75rem; opacity: 0.7;">Tous les entrepreneurs triés par CA</div>
+        </div>
+      </label>
+    `;
+
+  const popup = document.createElement('div');
+  popup.id = 'exportDashboardPopup';
+  popup.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 999999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);';
+  popup.innerHTML = `
+    <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 2rem; max-width: 480px; width: 90%; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h3 style="margin: 0; color: white; font-size: 1.2rem;">
+          <i class="fas fa-file-export" style="color: #10b981; margin-right: 0.5rem;"></i>
+          Exporter en Excel
+        </h3>
+        <button onclick="closeExportDashboardPopup()" style="background: none; border: none; color: rgba(255,255,255,0.5); font-size: 1.5rem; cursor: pointer; padding: 0; line-height: 1;">&times;</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
+        ${checkboxesHtml}
+      </div>
+      <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+        <button onclick="closeExportDashboardPopup()" style="padding: 0.6rem 1.2rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 0.85rem;">Annuler</button>
+        <button onclick="executeExportDashboard()" style="padding: 0.6rem 1.2rem; border-radius: 8px; border: none; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; cursor: pointer; font-size: 0.85rem; font-weight: 600;">
+          <i class="fas fa-download" style="margin-right: 0.4rem;"></i>Exporter
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(popup);
+  popup.addEventListener('click', function(e) {
+    if (e.target === popup) closeExportDashboardPopup();
+  });
+}
+
+function closeExportDashboardPopup() {
+  const popup = document.getElementById('exportDashboardPopup');
+  if (popup) popup.remove();
+}
+
+async function executeExportDashboard() {
+  if (typeof XLSX === 'undefined') {
+    alert('Erreur: la librairie XLSX n\'est pas chargée.');
+    return;
+  }
+
+  const wb = XLSX.utils.book_new();
+  const exportQualite = document.getElementById('exportQualiteEtudiants')?.checked;
+  const exportCoaches = document.getElementById('exportDashboardCoaches')?.checked;
+  const exportClassement = document.getElementById('exportClassementEntrepreneurs')?.checked;
+
+  if (!exportQualite && !exportCoaches && !exportClassement) {
+    alert('Veuillez sélectionner au moins une option.');
+    return;
+  }
+
+  const colWidth = 30;
+
+  const headerStyle = {
+    font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 12 },
+    fill: { fgColor: { rgb: '0F172A' } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: {
+      top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+      bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+      left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+      right: { style: 'thin', color: { rgb: 'CCCCCC' } }
+    }
+  };
+
+  const cellBorder = {
+    top: { style: 'thin', color: { rgb: 'E2E8F0' } },
+    bottom: { style: 'thin', color: { rgb: 'E2E8F0' } },
+    left: { style: 'thin', color: { rgb: 'E2E8F0' } },
+    right: { style: 'thin', color: { rgb: 'E2E8F0' } }
+  };
+
+  const valRightStyle = { alignment: { horizontal: 'right' }, border: cellBorder };
+  const valCurrencyStyle = { alignment: { horizontal: 'right' }, border: cellBorder, numFmt: '#,##0.00 $' };
+
+  // Fonction utilitaire pour styliser une feuille stats (2 colonnes égales, valeurs à droite)
+  function styleStatsSheet(ws, data) {
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r; R <= range.e.r; R++) {
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const addr = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[addr]) continue;
+
+        if (R === 0) {
+          ws[addr].s = { font: { bold: true, sz: 14, color: { rgb: '10B981' } }, alignment: { horizontal: 'left' } };
+        }
+        else if (data[R] && data[R].length === 1 && typeof data[R][0] === 'string' && data[R][0] === data[R][0].toUpperCase() && data[R][0].length > 3) {
+          ws[addr].s = { font: { bold: true, sz: 11, color: { rgb: '3B82F6' } }, fill: { fgColor: { rgb: 'EFF6FF' } }, border: cellBorder };
+        }
+        else if (data[R] && (data[R][0] === 'Métrique' || data[R][0] === 'Mois')) {
+          ws[addr].s = headerStyle;
+        }
+        else if (C === 0) {
+          ws[addr].s = { alignment: { horizontal: 'left' }, border: cellBorder };
+        }
+        else if (C === 1 && typeof ws[addr].v === 'number' && ws[addr].v > 100) {
+          ws[addr].s = valCurrencyStyle;
+        }
+        else if (C === 1) {
+          ws[addr].s = valRightStyle;
+        }
+        else {
+          ws[addr].s = { border: cellBorder };
+        }
+      }
+    }
+    ws['!cols'] = [{ wch: colWidth }, { wch: colWidth }];
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
+  }
+
+  // ===== QUALITÉ ÉTUDIANTS =====
+  if (exportQualite) {
+    const stats = teamStats;
+    const totalCA = stats.total_dollar_reel || stats.total_ca || 0;
+    const objectif = stats.objectif_total || 0;
+    const montantProduit = stats.montant_produit || 0;
+    const pctSigneSurObjectif = objectif > 0 ? (totalCA / objectif * 100) : 0;
+    const pctProduitSurObjectif = objectif > 0 ? (montantProduit / objectif * 100) : 0;
+
+    const data = [
+      ['STATISTIQUES GLOBALES - Dashboard Qualité Étudiants'],
+      ['Date d\'export', new Date().toLocaleDateString('fr-CA')],
+      [],
+      ['OBJECTIFS ET PRODUCTION'],
+      ['Métrique', 'Valeur'],
+      ['Objectif total', objectif],
+      ['CA signé (Dollar réel)', totalCA],
+      ['% Signé / Objectif', pctSigneSurObjectif.toFixed(1) + ' %'],
+      ['Montant produit', montantProduit],
+      ['% Produit / Objectif', pctProduitSurObjectif.toFixed(1) + ' %'],
+      ['Paiements récoltés', stats.paiements_recoltes || 0],
+      [],
+      ['SOUMISSIONS'],
+      ['Métrique', 'Valeur'],
+      ['Soumissions signées', stats.total_signees || 0],
+      ['Contrats réels (1er paiement)', stats.total_contract_reel || 0],
+      ['En attente', stats.total_en_attente || 0],
+      ['Perdues', stats.total_perdus || 0],
+      [],
+      ['MÉTRIQUES MOYENNES'],
+      ['Métrique', 'Valeur'],
+      ['Taux de vente', (stats.taux_vente_moyen || 0).toFixed(1) + ' %'],
+      ['Contrat moyen', stats.ca_moyen || 0],
+      ['Productivité horaire', (stats.prod_horaire_moyen || 0).toFixed(2) + ' $/h'],
+      ['Taux marketing', (stats.taux_marketing_moyen || 0).toFixed(2)],
+      [],
+      ['HEURES PAP / SEMAINE'],
+      ['Métrique', 'Valeur'],
+      ['Moyenne globale', (stats.heures_pap_semaine || 0).toFixed(1) + ' h'],
+      ['Moyenne recrues', (stats.heures_pap_semaine_recrue || 0).toFixed(1) + ' h'],
+      ['Moyenne séniors', (stats.heures_pap_semaine_senior || 0).toFixed(1) + ' h'],
+      [],
+      ['ESTIMATIONS MOYENNES'],
+      ['Métrique', 'Valeur'],
+      ['Moyenne globale', (stats.estimation_moyenne || 0).toFixed(1)],
+      ['Moyenne recrues', (stats.estimation_moyenne_recrue || 0).toFixed(1)],
+      ['Moyenne séniors', (stats.estimation_moyenne_senior || 0).toFixed(1)],
+    ];
+
+    if (stats.produit_mensuel && stats.produit_mensuel.length > 0) {
+      const moisNoms = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+      data.push([]);
+      data.push(['PRODUIT MENSUEL']);
+      data.push(['Mois', 'Montant']);
+      for (let i = 1; i < stats.produit_mensuel.length; i++) {
+        if (stats.produit_mensuel[i] > 0) {
+          data.push([moisNoms[i] || `Mois ${i}`, stats.produit_mensuel[i]]);
+        }
+      }
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    styleStatsSheet(ws, data);
+    XLSX.utils.book_append_sheet(wb, ws, 'Qualité Étudiants');
+
+    // Feuille résumé par coach
+    if (globalCoachesWithStats.length > 0) {
+      const headers = [
+        'Coach', 'Objectif', 'CA Signé', '% Objectif', 'Montant Produit',
+        'Signées', 'Contrats réels', 'En attente', 'Perdues',
+        'Taux vente (%)', 'Contrat moyen', 'Prod. horaire',
+        'Taux mktg', 'Estimations', 'H PAP/sem'
+      ];
+      const rows = globalCoachesWithStats.map(c => {
+        const ca = c.chiffre_affaires?.ca_actuel || 0;
+        const obj = c.chiffre_affaires?.objectif || 0;
+        const pct = obj > 0 ? (ca / obj * 100) : 0;
+        return [
+          `${c.prenom} ${c.nom}`,
+          obj, ca, pct.toFixed(1) + ' %', c.chiffre_affaires?.montant_produit || 0,
+          c.status_soumissions?.signees || 0, c.status_soumissions?.contract_reel || 0,
+          c.status_soumissions?.en_attente || 0, c.status_soumissions?.perdus || 0,
+          (c.metriques?.taux_vente || 0).toFixed(1), c.metriques?.contrat_moyen || 0,
+          (c.metriques?.prod_horaire || 0).toFixed(2), (c.metriques?.taux_marketing || 0).toFixed(2),
+          c.metriques?.estimations || 0, (c.metriques?.heures_pap_semaine || 0).toFixed(1)
+        ];
+      });
+
+      const tableData = [['RÉSUMÉ PAR COACH'], ['Date d\'export', new Date().toLocaleDateString('fr-CA')], [], headers, ...rows];
+      const ws2 = XLSX.utils.aoa_to_sheet(tableData);
+      const range2 = XLSX.utils.decode_range(ws2['!ref']);
+      for (let R = range2.s.r; R <= range2.e.r; R++) {
+        for (let C = range2.s.c; C <= range2.e.c; C++) {
+          const addr = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!ws2[addr]) continue;
+          if (R === 0) {
+            ws2[addr].s = { font: { bold: true, sz: 14, color: { rgb: '3B82F6' } } };
+          } else if (R === 3) {
+            ws2[addr].s = headerStyle;
+          } else if (R >= 4) {
+            if ([1, 2, 4, 10].includes(C) && typeof ws2[addr].v === 'number') {
+              ws2[addr].s = valCurrencyStyle;
+            } else if (C >= 1) {
+              ws2[addr].s = valRightStyle;
+            } else {
+              ws2[addr].s = { border: cellBorder };
+            }
+          }
+        }
+      }
+      ws2['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }];
+      ws2['!cols'] = [
+        { wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 16 },
+        { wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 10 },
+        { wch: 13 }, { wch: 14 }, { wch: 13 }, { wch: 12 }, { wch: 12 }, { wch: 12 }
+      ];
+      XLSX.utils.book_append_sheet(wb, ws2, 'Résumé par Coach');
+    }
+  }
+
+  // ===== DASHBOARD COACHES (une feuille par coach) =====
+  if (exportCoaches && globalCoachesWithStats.length > 0) {
+    for (const coach of globalCoachesWithStats) {
+      try {
+        const response = await fetch(`/api/coach/${coach.username}/equipe/dashboard?period=all`);
+        if (!response.ok) continue;
+        const coachData = await response.json();
+        const coachEntrepreneurs = coachData.entrepreneurs || [];
+        const coachStats = coachData.team_stats || {};
+
+        const coachName = `${coach.prenom} ${coach.nom}`;
+        const totalCA = coachStats.total_dollar_reel || coachStats.total_ca || 0;
+        const objectif = coachStats.objectif_total || 0;
+        const pctObj = objectif > 0 ? (totalCA / objectif * 100) : 0;
+        const montantProduit = coachStats.montant_produit || 0;
+        const pctProduit = objectif > 0 ? (montantProduit / objectif * 100) : 0;
+
+        const data = [
+          [`DASHBOARD - ${coachName}`],
+          ['Date d\'export', new Date().toLocaleDateString('fr-CA')],
+          [],
+          ['STATISTIQUES D\'ÉQUIPE'],
+          ['Métrique', 'Valeur'],
+          ['Objectif total', objectif],
+          ['CA signé', totalCA],
+          ['% Signé / Objectif', pctObj.toFixed(1) + ' %'],
+          ['Montant produit', montantProduit],
+          ['% Produit / Objectif', pctProduit.toFixed(1) + ' %'],
+          ['Soumissions signées', coachStats.total_signees || 0],
+          ['Contrats réels', coachStats.total_contract_reel || 0],
+          ['En attente', coachStats.total_en_attente || 0],
+          ['Perdues', coachStats.total_perdus || 0],
+          ['Taux de vente', (coachStats.taux_vente_moyen || 0).toFixed(1) + ' %'],
+          ['Contrat moyen', coachStats.contrat_moyen || 0],
+          ['Prod. horaire', (coachStats.prod_horaire_moyen || 0).toFixed(2) + ' $/h'],
+          ['Taux marketing', (coachStats.taux_marketing_moyen || 0).toFixed(2)],
+          ['H PAP / semaine', (coachStats.heures_pap_semaine || 0).toFixed(1) + ' h'],
+        ];
+
+        // Ajouter les entrepreneurs de ce coach
+        if (coachEntrepreneurs.length > 0) {
+          data.push([]);
+          data.push(['ENTREPRENEURS DE L\'ÉQUIPE']);
+          data.push(['Entrepreneur', 'Grade', 'Objectif', 'CA Signé', '% Obj', 'Produit', 'Signées', 'Contrats', 'En attente', 'Perdues']);
+
+          for (const e of coachEntrepreneurs) {
+            const eCa = e.chiffre_affaires || {};
+            const eSoum = e.status_soumissions || {};
+            const eCA = eCa.dollar_reel || eCa.ca_actuel || 0;
+            const eObj = eCa.objectif || 0;
+            const ePct = eObj > 0 ? (eCA / eObj * 100) : 0;
+            data.push([
+              e.username || '',
+              e.grade || 'recrue',
+              eObj,
+              eCA,
+              ePct.toFixed(1) + ' %',
+              eCa.montant_produit || 0,
+              eSoum.signees || 0,
+              eSoum.contract_reel || 0,
+              eSoum.en_attente || 0,
+              eSoum.perdus || 0
+            ]);
+          }
+        }
+
+        const ws = XLSX.utils.aoa_to_sheet(data);
+
+        // Styliser
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        const entStartRow = data.findIndex(r => r[0] === 'ENTREPRENEURS DE L\'ÉQUIPE');
+        const entHeaderRow = entStartRow >= 0 ? entStartRow + 1 : -1;
+
+        for (let R = range.s.r; R <= range.e.r; R++) {
+          for (let C = range.s.c; C <= range.e.c; C++) {
+            const addr = XLSX.utils.encode_cell({ r: R, c: C });
+            if (!ws[addr]) continue;
+
+            if (R === 0) {
+              ws[addr].s = { font: { bold: true, sz: 14, color: { rgb: '3B82F6' } } };
+            } else if (data[R] && data[R].length === 1 && typeof data[R][0] === 'string' && data[R][0] === data[R][0].toUpperCase() && data[R][0].length > 3) {
+              ws[addr].s = { font: { bold: true, sz: 11, color: { rgb: '3B82F6' } }, fill: { fgColor: { rgb: 'EFF6FF' } }, border: cellBorder };
+            } else if (data[R] && (data[R][0] === 'Métrique' || data[R][0] === 'Entrepreneur')) {
+              ws[addr].s = headerStyle;
+            } else if (R > entHeaderRow && entHeaderRow >= 0 && C >= 2) {
+              // Données entrepreneurs - valeurs à droite
+              if ([2, 3, 5].includes(C) && typeof ws[addr].v === 'number') {
+                ws[addr].s = valCurrencyStyle;
+              } else {
+                ws[addr].s = valRightStyle;
+              }
+            } else if (C === 0) {
+              ws[addr].s = { alignment: { horizontal: 'left' }, border: cellBorder };
+            } else if (C === 1 && typeof ws[addr].v === 'number' && ws[addr].v > 100) {
+              ws[addr].s = valCurrencyStyle;
+            } else if (C === 1) {
+              ws[addr].s = valRightStyle;
+            } else {
+              ws[addr].s = { border: cellBorder };
+            }
+          }
+        }
+
+        // Colonnes - adapter selon qu'il y a des entrepreneurs ou pas
+        if (coachEntrepreneurs.length > 0) {
+          ws['!cols'] = [
+            { wch: 20 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 10 },
+            { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 10 }
+          ];
+        } else {
+          ws['!cols'] = [{ wch: colWidth }, { wch: colWidth }];
+        }
+
+        ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
+
+        // Nom de feuille max 31 chars
+        const sheetName = `${coach.prenom} ${coach.nom}`.substring(0, 31);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      } catch (err) {
+        console.error(`[EXPORT] Erreur chargement coach ${coach.username}:`, err);
+      }
+    }
+  }
+
+  // ===== CLASSEMENT ENTREPRENEURS =====
+  if (exportClassement) {
+    try {
+      // Charger tous les entrepreneurs via l'API
+      const response = await fetch('/api/entrepreneurs?period=all');
+      if (response.ok) {
+        let entrepreneursClassement = await response.json();
+
+        // Filtrer: seulement les entrepreneurs avec nom complet (espace)
+        entrepreneursClassement = entrepreneursClassement.filter(e => {
+          const username = e.username || '';
+          return username.trim().includes(' ');
+        });
+
+        // Trier par CA (dollar_reel) décroissant
+        entrepreneursClassement.sort((a, b) => (b.dollar_reel || 0) - (a.dollar_reel || 0));
+
+        const headers = [
+          '#', 'Entrepreneur', 'Grade', 'CA Signé', 'Contrats', 'Estimations',
+          'Contrat moyen', 'Montant produit', 'Taux vente (%)', 'Prod. horaire',
+          'Taux mktg', 'H PAP/sem'
+        ];
+
+        const rows = entrepreneursClassement.map((e, i) => [
+          i + 1,
+          e.username || '',
+          e.grade || 'recrue',
+          e.dollar_reel || 0,
+          e.contract_reel || 0,
+          e.nb_estimations || 0,
+          e.contrat_moyen || 0,
+          e.montant_produit || 0,
+          (e.taux_vente || 0).toFixed(1),
+          (e.prod_horaire || 0).toFixed(2),
+          (e.taux_marketing || 0).toFixed(2),
+          (e.heures_pap || 0).toFixed(1)
+        ]);
+
+        const data = [
+          ['CLASSEMENT ENTREPRENEURS'],
+          ['Date d\'export', new Date().toLocaleDateString('fr-CA')],
+          ['Nombre d\'entrepreneurs', entrepreneursClassement.length],
+          [],
+          headers,
+          ...rows
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        const headerRow = 4;
+
+        for (let R = range.s.r; R <= range.e.r; R++) {
+          for (let C = range.s.c; C <= range.e.c; C++) {
+            const addr = XLSX.utils.encode_cell({ r: R, c: C });
+            if (!ws[addr]) continue;
+
+            if (R === 0) {
+              ws[addr].s = { font: { bold: true, sz: 14, color: { rgb: 'F59E0B' } } };
+            } else if (R === headerRow) {
+              ws[addr].s = headerStyle;
+            } else if (R > headerRow) {
+              // Rang (#)
+              if (C === 0) {
+                ws[addr].s = { alignment: { horizontal: 'center' }, border: cellBorder };
+              }
+              // Currency: CA(3), Contrat moyen(6), Produit(7)
+              else if ([3, 6, 7].includes(C) && typeof ws[addr].v === 'number') {
+                ws[addr].s = valCurrencyStyle;
+              }
+              // Valeurs numériques à droite
+              else if (C >= 3) {
+                ws[addr].s = valRightStyle;
+              }
+              else {
+                ws[addr].s = { border: cellBorder };
+              }
+            } else {
+              ws[addr].s = { border: cellBorder };
+            }
+          }
+        }
+
+        ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }];
+        ws['!cols'] = [
+          { wch: 5 }, { wch: 22 }, { wch: 10 }, { wch: 14 }, { wch: 10 },
+          { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 13 }, { wch: 13 },
+          { wch: 12 }, { wch: 12 }
+        ];
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Classement Entrepreneurs');
+      }
+    } catch (err) {
+      console.error('[EXPORT] Erreur chargement classement:', err);
+    }
+  }
+
+  if (wb.SheetNames.length === 0) {
+    alert('Aucune donnée à exporter.');
+    return;
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+  XLSX.writeFile(wb, `Dashboard_Export_${today}.xlsx`);
+
+  closeExportDashboardPopup();
+}
 </script>
 
 </body>

@@ -15638,7 +15638,8 @@ async def liste_facturation_en_traitement_comptable():
                                     for remb in remboursements:
                                         if remb.get("statut") == "en_attente_comptable":
                                             # Vérifier si ce remboursement n'est pas déjà dans l'historique
-                                            if (username, remb.get("num"), "remboursement") not in historique_set:
+                                            # Utiliser 4 éléments pour matcher le format de historique_set
+                                            if (username, remb.get("num"), "remboursement", None) not in historique_set:
                                                 paiements_en_traitement.append({
                                                     "entrepreneur": entrepreneur_nom,
                                                     "entrepreneurUsername": username,
@@ -15648,6 +15649,7 @@ async def liste_facturation_en_traitement_comptable():
                                                     "type": "remboursement",
                                                     "montant": remb.get("montant", "0,00 $"),
                                                     "date": remb.get("date", ""),
+                                                    "methode": "virement",  # Les remboursements sont toujours par virement Interac
                                                     "courriel": remb.get("courriel", ""),
                                                     "paiement_source": remb.get("paiement_source", ""),
                                                     "date_demande": remb.get("date_demande", ""),
@@ -15694,6 +15696,14 @@ async def valider_facturation_comptable(username: str, numero_soumission: str, r
 
             if not remb_found:
                 raise HTTPException(status_code=404, detail="Remboursement non trouvé")
+
+            # Mettre à jour le statut du remboursement à "valide_comptable"
+            remb_found["statut"] = "valide_comptable"
+            remb_found["date_validation_comptable"] = datetime.now().isoformat()
+
+            # Sauvegarder les remboursements mis à jour
+            with open(remb_file, "w", encoding="utf-8") as f:
+                json.dump(remboursements, f, ensure_ascii=False, indent=2)
 
             # Ajouter à l'historique (passer un dict vide pour client_statuts car pas applicable)
             await ajouter_historique_facturation(username, numero_soumission, type_paiement, "attente_comptable", {})

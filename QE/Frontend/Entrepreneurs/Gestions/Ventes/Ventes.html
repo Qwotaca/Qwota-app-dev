@@ -1438,6 +1438,176 @@
       animation: badge-spin 0.6s linear infinite;
       z-index: 10; /* Spinner au-dessus */
     }
+
+    /* ============================================
+       FILTRES STYLE GOOGLE SHEETS (PC UNIQUEMENT)
+       ============================================ */
+
+    /* Cacher les filtres sur mobile/tablette */
+    @media (max-width: 1024px) {
+      .column-filter-btn {
+        display: none !important;
+      }
+    }
+
+    /* Header de colonne avec filtre */
+    .th-filterable {
+      position: relative;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .th-filterable:hover {
+      background: rgba(96, 165, 250, 0.1);
+    }
+
+    .th-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .column-filter-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      background: transparent;
+      border: none;
+      color: var(--text-gray);
+      cursor: pointer;
+      opacity: 0.5;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .th-filterable:hover .column-filter-btn,
+    .column-filter-btn.active {
+      opacity: 1;
+      background: rgba(96, 165, 250, 0.2);
+      color: var(--primary-blue);
+    }
+
+    .column-filter-btn.has-filter {
+      opacity: 1;
+      background: rgba(96, 165, 250, 0.3);
+      color: var(--primary-blue);
+    }
+
+    /* Dropdown du filtre */
+    .filter-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      min-width: 220px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-dark);
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      display: none;
+      overflow: hidden;
+    }
+
+    .filter-dropdown.show {
+      display: block;
+    }
+
+    .filter-dropdown-header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border-dark);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-gray);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .filter-option {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 1rem;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      color: var(--text-light);
+      font-size: 0.875rem;
+    }
+
+    .filter-option:hover {
+      background: rgba(96, 165, 250, 0.1);
+    }
+
+    .filter-option i {
+      width: 16px;
+      color: var(--text-gray);
+    }
+
+    .filter-option.active {
+      background: rgba(96, 165, 250, 0.15);
+      color: var(--primary-blue);
+    }
+
+    .filter-option.active i {
+      color: var(--primary-blue);
+    }
+
+    .filter-separator {
+      height: 1px;
+      background: var(--border-dark);
+      margin: 0.25rem 0;
+    }
+
+    .filter-values-list {
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 0.5rem 0;
+    }
+
+    .filter-value-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      font-size: 0.85rem;
+      color: var(--text-light);
+    }
+
+    .filter-value-item:hover {
+      background: rgba(96, 165, 250, 0.1);
+    }
+
+    .filter-value-item input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+    }
+
+    .filter-clear {
+      padding: 0.65rem 1rem;
+      border-top: 1px solid var(--border-dark);
+      text-align: center;
+      color: #ef4444;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .filter-clear:hover {
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    /* Indicateur de tri actif */
+    .sort-indicator {
+      font-size: 0.7rem;
+      margin-left: 0.25rem;
+      color: var(--primary-blue);
+    }
   </style>
   <link rel="stylesheet" href="/entrepreneur-selector.css">
 </head>
@@ -1567,14 +1737,62 @@
                   <th style="width: 3%; padding: 1rem; text-align: center;">
                     <input type="checkbox" id="select-all-prospects" onchange="toggleSelectAllProspects(this)" class="prospect-checkbox">
                   </th>
-                  <th style="width: 11%; padding: 1rem; text-align: left;">Nom</th>
-                  <th class="col-hide-tablet" style="width: 8%; padding: 1rem; text-align: left;">REP</th>
-                  <th class="col-hide-tablet" style="width: 8%; padding: 1rem; text-align: left;">Provenance</th>
-                  <th class="col-hide-tablet" style="width: 8%; padding: 1rem; text-align: left;">Type travaux</th>
-                  <th style="width: 10%; padding: 1rem; text-align: left;">Téléphone</th>
-                  <th class="col-adresse" style="width: 17%; padding: 1rem; text-align: left;">Adresse</th>
-                  <th style="width: 8%; padding: 1rem; text-align: left;">Prix</th>
-                  <th class="col-hide-tablet" style="width: 8%; padding: 1rem; text-align: left;">Status</th>
+                  <th class="th-filterable" style="width: 11%; padding: 1rem; text-align: left;" data-table="potentiel" data-column="nom">
+                    <div class="th-content">
+                      <span>Nom<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'potentiel', 'nom')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-potentiel-nom"></div>
+                  </th>
+                  <th class="col-hide-tablet th-filterable" style="width: 8%; padding: 1rem; text-align: left;" data-table="potentiel" data-column="rep">
+                    <div class="th-content">
+                      <span>REP<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'potentiel', 'rep')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-potentiel-rep"></div>
+                  </th>
+                  <th class="col-hide-tablet th-filterable" style="width: 8%; padding: 1rem; text-align: left;" data-table="potentiel" data-column="provenance">
+                    <div class="th-content">
+                      <span>Provenance<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'potentiel', 'provenance')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-potentiel-provenance"></div>
+                  </th>
+                  <th class="col-hide-tablet th-filterable" style="width: 8%; padding: 1rem; text-align: left;" data-table="potentiel" data-column="type_travaux">
+                    <div class="th-content">
+                      <span>Type travaux<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'potentiel', 'type_travaux')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-potentiel-type_travaux"></div>
+                  </th>
+                  <th class="th-filterable" style="width: 10%; padding: 1rem; text-align: left;" data-table="potentiel" data-column="telephone">
+                    <div class="th-content">
+                      <span>Téléphone<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'potentiel', 'telephone')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-potentiel-telephone"></div>
+                  </th>
+                  <th class="col-adresse th-filterable" style="width: 17%; padding: 1rem; text-align: left;" data-table="potentiel" data-column="adresse">
+                    <div class="th-content">
+                      <span>Adresse<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'potentiel', 'adresse')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-potentiel-adresse"></div>
+                  </th>
+                  <th class="th-filterable" style="width: 8%; padding: 1rem; text-align: left;" data-table="potentiel" data-column="prix">
+                    <div class="th-content">
+                      <span>Prix<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'potentiel', 'prix')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-potentiel-prix"></div>
+                  </th>
+                  <th class="col-hide-tablet th-filterable" style="width: 8%; padding: 1rem; text-align: left;" data-table="potentiel" data-column="statut_vente">
+                    <div class="th-content">
+                      <span>Status<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'potentiel', 'statut_vente')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-potentiel-statut_vente"></div>
+                  </th>
                   <th class="col-hide-tablet" style="width: 5%; padding: 1rem; text-align: left;">Notes</th>
                   <th style="width: 11%; padding: 1rem; text-align: left;">Paiement</th>
                 </tr>
@@ -1621,14 +1839,62 @@
                   <th class="checkbox-column" style="width: 3%; padding: 1rem; text-align: center;">
                     <input type="checkbox" class="select-all-ventes prospect-checkbox" data-category="attente" onchange="toggleSelectAllVentes(this, 'attente')">
                   </th>
-                  <th style="width: 10%; padding: 1rem; text-align: left;">Nom</th>
-                  <th class="col-hide-tablet" style="width: 8%; padding: 1rem; text-align: left;">REP</th>
-                  <th class="col-hide-tablet" style="width: 8%; padding: 1rem; text-align: left;">Provenance</th>
-                  <th class="col-hide-tablet" style="width: 8%; padding: 1rem; text-align: left;">Type travaux</th>
-                  <th style="width: 10%; padding: 1rem; text-align: left;">Téléphone</th>
-                  <th class="col-adresse" style="width: 16%; padding: 1rem; text-align: left;">Adresse</th>
-                  <th style="width: 9%; padding: 1rem; text-align: left;">Prix</th>
-                  <th class="col-hide-tablet" style="width: 8%; padding: 1rem; text-align: left;">Status</th>
+                  <th class="th-filterable" style="width: 10%; padding: 1rem; text-align: left;" data-table="attente" data-column="nom">
+                    <div class="th-content">
+                      <span>Nom<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'attente', 'nom')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-attente-nom"></div>
+                  </th>
+                  <th class="col-hide-tablet th-filterable" style="width: 8%; padding: 1rem; text-align: left;" data-table="attente" data-column="rep">
+                    <div class="th-content">
+                      <span>REP<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'attente', 'rep')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-attente-rep"></div>
+                  </th>
+                  <th class="col-hide-tablet th-filterable" style="width: 8%; padding: 1rem; text-align: left;" data-table="attente" data-column="provenance">
+                    <div class="th-content">
+                      <span>Provenance<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'attente', 'provenance')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-attente-provenance"></div>
+                  </th>
+                  <th class="col-hide-tablet th-filterable" style="width: 8%; padding: 1rem; text-align: left;" data-table="attente" data-column="type_travaux">
+                    <div class="th-content">
+                      <span>Type travaux<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'attente', 'type_travaux')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-attente-type_travaux"></div>
+                  </th>
+                  <th class="th-filterable" style="width: 10%; padding: 1rem; text-align: left;" data-table="attente" data-column="telephone">
+                    <div class="th-content">
+                      <span>Téléphone<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'attente', 'telephone')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-attente-telephone"></div>
+                  </th>
+                  <th class="col-adresse th-filterable" style="width: 16%; padding: 1rem; text-align: left;" data-table="attente" data-column="adresse">
+                    <div class="th-content">
+                      <span>Adresse<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'attente', 'adresse')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-attente-adresse"></div>
+                  </th>
+                  <th class="th-filterable" style="width: 9%; padding: 1rem; text-align: left;" data-table="attente" data-column="prix">
+                    <div class="th-content">
+                      <span>Prix<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'attente', 'prix')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-attente-prix"></div>
+                  </th>
+                  <th class="col-hide-tablet th-filterable" style="width: 8%; padding: 1rem; text-align: left;" data-table="attente" data-column="statut_vente">
+                    <div class="th-content">
+                      <span>Status<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'attente', 'statut_vente')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-attente-statut_vente"></div>
+                  </th>
                   <th class="col-hide-tablet" style="width: 5%; padding: 1rem; text-align: left;">Notes</th>
                   <th style="width: 12%; padding: 1rem; text-align: left;">Paiement</th>
                 </tr>
@@ -1675,14 +1941,62 @@
                   <th class="checkbox-column" style="width: 3%; padding: 1rem; text-align: center;">
                     <input type="checkbox" class="select-all-ventes prospect-checkbox" data-category="accepte" onchange="toggleSelectAllVentes(this, 'accepte')">
                   </th>
-                  <th style="width: 10%; padding: 1rem; text-align: left;">Nom</th>
-                  <th class="col-hide-tablet" style="width: 8%; padding: 1rem; text-align: left;">REP</th>
-                  <th class="col-hide-tablet" style="width: 8%; padding: 1rem; text-align: left;">Provenance</th>
-                  <th class="col-hide-tablet" style="width: 8%; padding: 1rem; text-align: left;">Type travaux</th>
-                  <th style="width: 10%; padding: 1rem; text-align: left;">Téléphone</th>
-                  <th class="col-adresse" style="width: 16%; padding: 1rem; text-align: left;">Adresse</th>
-                  <th style="width: 9%; padding: 1rem; text-align: left;">Prix</th>
-                  <th class="col-hide-tablet" style="width: 8%; padding: 1rem; text-align: left;">Status</th>
+                  <th class="th-filterable" style="width: 10%; padding: 1rem; text-align: left;" data-table="acceptees" data-column="nom">
+                    <div class="th-content">
+                      <span>Nom<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'acceptees', 'nom')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-acceptees-nom"></div>
+                  </th>
+                  <th class="col-hide-tablet th-filterable" style="width: 8%; padding: 1rem; text-align: left;" data-table="acceptees" data-column="rep">
+                    <div class="th-content">
+                      <span>REP<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'acceptees', 'rep')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-acceptees-rep"></div>
+                  </th>
+                  <th class="col-hide-tablet th-filterable" style="width: 8%; padding: 1rem; text-align: left;" data-table="acceptees" data-column="provenance">
+                    <div class="th-content">
+                      <span>Provenance<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'acceptees', 'provenance')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-acceptees-provenance"></div>
+                  </th>
+                  <th class="col-hide-tablet th-filterable" style="width: 8%; padding: 1rem; text-align: left;" data-table="acceptees" data-column="type_travaux">
+                    <div class="th-content">
+                      <span>Type travaux<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'acceptees', 'type_travaux')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-acceptees-type_travaux"></div>
+                  </th>
+                  <th class="th-filterable" style="width: 10%; padding: 1rem; text-align: left;" data-table="acceptees" data-column="telephone">
+                    <div class="th-content">
+                      <span>Téléphone<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'acceptees', 'telephone')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-acceptees-telephone"></div>
+                  </th>
+                  <th class="col-adresse th-filterable" style="width: 16%; padding: 1rem; text-align: left;" data-table="acceptees" data-column="adresse">
+                    <div class="th-content">
+                      <span>Adresse<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'acceptees', 'adresse')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-acceptees-adresse"></div>
+                  </th>
+                  <th class="th-filterable" style="width: 9%; padding: 1rem; text-align: left;" data-table="acceptees" data-column="prix">
+                    <div class="th-content">
+                      <span>Prix<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'acceptees', 'prix')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-acceptees-prix"></div>
+                  </th>
+                  <th class="col-hide-tablet th-filterable" style="width: 8%; padding: 1rem; text-align: left;" data-table="acceptees" data-column="statut_vente">
+                    <div class="th-content">
+                      <span>Status<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'acceptees', 'statut_vente')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-acceptees-statut_vente"></div>
+                  </th>
                   <th class="col-hide-tablet" style="width: 5%; padding: 1rem; text-align: left;">Notes</th>
                   <th style="width: 12%; padding: 1rem; text-align: left;">Paiement</th>
                 </tr>
@@ -1729,14 +2043,62 @@
                   <th class="checkbox-column" style="width: 3%; padding: 1rem; text-align: center;">
                     <input type="checkbox" class="select-all-ventes prospect-checkbox" data-category="produit" onchange="toggleSelectAllVentes(this, 'produit')">
                   </th>
-                  <th style="width: 10%; padding: 1rem; text-align: left;">Nom</th>
-                  <th class="col-hide-tablet" style="width: 8%; padding: 1rem; text-align: left;">REP</th>
-                  <th class="col-hide-tablet" style="width: 8%; padding: 1rem; text-align: left;">Provenance</th>
-                  <th class="col-hide-tablet" style="width: 8%; padding: 1rem; text-align: left;">Type travaux</th>
-                  <th style="width: 10%; padding: 1rem; text-align: left;">Téléphone</th>
-                  <th class="col-adresse" style="width: 16%; padding: 1rem; text-align: left;">Adresse</th>
-                  <th style="width: 9%; padding: 1rem; text-align: left;">Prix</th>
-                  <th class="col-hide-tablet" style="width: 8%; padding: 1rem; text-align: left;">Status</th>
+                  <th class="th-filterable" style="width: 10%; padding: 1rem; text-align: left;" data-table="produit" data-column="nom">
+                    <div class="th-content">
+                      <span>Nom<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'produit', 'nom')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-produit-nom"></div>
+                  </th>
+                  <th class="col-hide-tablet th-filterable" style="width: 8%; padding: 1rem; text-align: left;" data-table="produit" data-column="rep">
+                    <div class="th-content">
+                      <span>REP<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'produit', 'rep')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-produit-rep"></div>
+                  </th>
+                  <th class="col-hide-tablet th-filterable" style="width: 8%; padding: 1rem; text-align: left;" data-table="produit" data-column="provenance">
+                    <div class="th-content">
+                      <span>Provenance<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'produit', 'provenance')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-produit-provenance"></div>
+                  </th>
+                  <th class="col-hide-tablet th-filterable" style="width: 8%; padding: 1rem; text-align: left;" data-table="produit" data-column="type_travaux">
+                    <div class="th-content">
+                      <span>Type travaux<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'produit', 'type_travaux')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-produit-type_travaux"></div>
+                  </th>
+                  <th class="th-filterable" style="width: 10%; padding: 1rem; text-align: left;" data-table="produit" data-column="telephone">
+                    <div class="th-content">
+                      <span>Téléphone<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'produit', 'telephone')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-produit-telephone"></div>
+                  </th>
+                  <th class="col-adresse th-filterable" style="width: 16%; padding: 1rem; text-align: left;" data-table="produit" data-column="adresse">
+                    <div class="th-content">
+                      <span>Adresse<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'produit', 'adresse')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-produit-adresse"></div>
+                  </th>
+                  <th class="th-filterable" style="width: 9%; padding: 1rem; text-align: left;" data-table="produit" data-column="prix">
+                    <div class="th-content">
+                      <span>Prix<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'produit', 'prix')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-produit-prix"></div>
+                  </th>
+                  <th class="col-hide-tablet th-filterable" style="width: 8%; padding: 1rem; text-align: left;" data-table="produit" data-column="statut_vente">
+                    <div class="th-content">
+                      <span>Status<span class="sort-indicator"></span></span>
+                      <button class="column-filter-btn" onclick="toggleFilterDropdown(event, 'produit', 'statut_vente')"><i class="fas fa-filter"></i></button>
+                    </div>
+                    <div class="filter-dropdown" id="filter-produit-statut_vente"></div>
+                  </th>
                   <th class="col-hide-tablet" style="width: 5%; padding: 1rem; text-align: left;">Notes</th>
                   <th style="width: 12%; padding: 1rem; text-align: left;">Paiement</th>
                 </tr>
@@ -7535,5 +7897,404 @@
       </button>
     </div>
   </div>
+
+  <!-- Script pour les filtres style Google Sheets (PC uniquement) -->
+  <script>
+  (function() {
+    // État des filtres et tris pour chaque table
+    window.tableFilters = {
+      potentiel: { sort: null, sortDir: null, filters: {} },
+      attente: { sort: null, sortDir: null, filters: {} },
+      acceptees: { sort: null, sortDir: null, filters: {} },
+      produit: { sort: null, sortDir: null, filters: {} }
+    };
+
+    // Données originales (backup pour reset)
+    window.originalData = {};
+
+    // Fermer tous les dropdowns quand on clique ailleurs
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.filter-dropdown') && !e.target.closest('.column-filter-btn')) {
+        document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.remove('show'));
+      }
+    });
+
+    // Toggle le dropdown de filtre
+    window.toggleFilterDropdown = function(event, tableName, columnName) {
+      event.stopPropagation();
+
+      // Fermer les autres dropdowns
+      document.querySelectorAll('.filter-dropdown').forEach(d => {
+        if (d.id !== `filter-${tableName}-${columnName}`) {
+          d.classList.remove('show');
+        }
+      });
+
+      const dropdown = document.getElementById(`filter-${tableName}-${columnName}`);
+      if (!dropdown) return;
+
+      const isOpen = dropdown.classList.contains('show');
+
+      if (!isOpen) {
+        // Générer le contenu du dropdown
+        generateFilterDropdown(dropdown, tableName, columnName);
+      }
+
+      dropdown.classList.toggle('show');
+    };
+
+    // Générer le contenu du dropdown
+    function generateFilterDropdown(dropdown, tableName, columnName) {
+      const currentState = window.tableFilters[tableName];
+      const isSortedAsc = currentState.sort === columnName && currentState.sortDir === 'asc';
+      const isSortedDesc = currentState.sort === columnName && currentState.sortDir === 'desc';
+
+      // Obtenir les valeurs uniques de la colonne
+      const uniqueValues = getUniqueColumnValues(tableName, columnName);
+      const activeFilters = currentState.filters[columnName] || [];
+
+      let html = `
+        <div class="filter-dropdown-header">Trier</div>
+        <div class="filter-option ${isSortedAsc ? 'active' : ''}" onclick="applySort('${tableName}', '${columnName}', 'asc')">
+          <i class="fas fa-sort-alpha-down"></i>
+          <span>A → Z</span>
+        </div>
+        <div class="filter-option ${isSortedDesc ? 'active' : ''}" onclick="applySort('${tableName}', '${columnName}', 'desc')">
+          <i class="fas fa-sort-alpha-up"></i>
+          <span>Z → A</span>
+        </div>
+      `;
+
+      // Ajouter options de tri numérique pour prix
+      if (columnName === 'prix') {
+        html = `
+          <div class="filter-dropdown-header">Trier</div>
+          <div class="filter-option ${isSortedAsc ? 'active' : ''}" onclick="applySort('${tableName}', '${columnName}', 'asc')">
+            <i class="fas fa-sort-amount-down-alt"></i>
+            <span>Croissant</span>
+          </div>
+          <div class="filter-option ${isSortedDesc ? 'active' : ''}" onclick="applySort('${tableName}', '${columnName}', 'desc')">
+            <i class="fas fa-sort-amount-up"></i>
+            <span>Décroissant</span>
+          </div>
+        `;
+      }
+
+      // Ajouter les valeurs filtrables si on en a
+      if (uniqueValues.length > 0 && uniqueValues.length <= 50) {
+        html += `
+          <div class="filter-separator"></div>
+          <div class="filter-dropdown-header">Filtrer par valeur</div>
+          <div class="filter-values-list">
+        `;
+
+        uniqueValues.forEach(val => {
+          const displayVal = val || '(Vide)';
+          const isChecked = activeFilters.length === 0 || activeFilters.includes(val);
+          html += `
+            <div class="filter-value-item">
+              <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleFilterValue('${tableName}', '${columnName}', '${escapeHtml(val)}', this.checked)">
+              <span>${escapeHtml(displayVal)}</span>
+            </div>
+          `;
+        });
+
+        html += '</div>';
+      }
+
+      // Bouton pour effacer les filtres
+      if (currentState.sort === columnName || (currentState.filters[columnName] && currentState.filters[columnName].length > 0)) {
+        html += `
+          <div class="filter-clear" onclick="clearColumnFilter('${tableName}', '${columnName}')">
+            <i class="fas fa-times"></i> Effacer le filtre
+          </div>
+        `;
+      }
+
+      dropdown.innerHTML = html;
+    }
+
+    // Obtenir les valeurs uniques d'une colonne
+    function getUniqueColumnValues(tableName, columnName) {
+      let data = [];
+
+      if (tableName === 'potentiel') {
+        data = window.ventesData?.prospects || [];
+      } else if (tableName === 'attente') {
+        data = window.ventesData?.attente || [];
+      } else if (tableName === 'acceptees') {
+        data = window.ventesData?.acceptees || [];
+      } else if (tableName === 'produit') {
+        data = window.ventesData?.produit || [];
+      }
+
+      const values = new Set();
+      data.forEach(item => {
+        let val = getColumnValue(item, columnName);
+        if (val !== undefined && val !== null) {
+          values.add(String(val).trim());
+        }
+      });
+
+      return Array.from(values).sort((a, b) => a.localeCompare(b, 'fr'));
+    }
+
+    // Obtenir la valeur d'une colonne
+    function getColumnValue(item, columnName) {
+      const mapping = {
+        'nom': () => `${item.prenom || ''} ${item.nom || ''}`.trim(),
+        'rep': () => item.rep || '',
+        'provenance': () => item.provenance || '',
+        'type_travaux': () => item.type_travaux || '',
+        'telephone': () => item.telephone || '',
+        'adresse': () => item.adresse || '',
+        'prix': () => item.prix || '0',
+        'statut_vente': () => item.statut_vente || ''
+      };
+
+      return mapping[columnName] ? mapping[columnName]() : '';
+    }
+
+    // Appliquer un tri
+    window.applySort = function(tableName, columnName, direction) {
+      window.tableFilters[tableName].sort = columnName;
+      window.tableFilters[tableName].sortDir = direction;
+
+      // Mettre à jour l'indicateur de tri
+      updateSortIndicators(tableName, columnName, direction);
+
+      // Ré-afficher les données triées
+      applyFiltersAndSort(tableName);
+
+      // Fermer le dropdown
+      document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.remove('show'));
+    };
+
+    // Mettre à jour les indicateurs de tri
+    function updateSortIndicators(tableName, columnName, direction) {
+      // Reset tous les indicateurs de cette table
+      document.querySelectorAll(`th[data-table="${tableName}"] .sort-indicator`).forEach(ind => {
+        ind.textContent = '';
+      });
+
+      // Ajouter l'indicateur sur la colonne triée
+      const th = document.querySelector(`th[data-table="${tableName}"][data-column="${columnName}"]`);
+      if (th) {
+        const indicator = th.querySelector('.sort-indicator');
+        if (indicator) {
+          indicator.textContent = direction === 'asc' ? ' ▲' : ' ▼';
+        }
+
+        // Marquer le bouton comme actif
+        const btn = th.querySelector('.column-filter-btn');
+        if (btn) {
+          btn.classList.add('has-filter');
+        }
+      }
+    }
+
+    // Toggle une valeur de filtre
+    window.toggleFilterValue = function(tableName, columnName, value, isChecked) {
+      if (!window.tableFilters[tableName].filters[columnName]) {
+        // Premier filtre: prendre toutes les valeurs sauf celle décochée
+        const allValues = getUniqueColumnValues(tableName, columnName);
+        window.tableFilters[tableName].filters[columnName] = isChecked
+          ? allValues
+          : allValues.filter(v => v !== value);
+      } else {
+        if (isChecked) {
+          if (!window.tableFilters[tableName].filters[columnName].includes(value)) {
+            window.tableFilters[tableName].filters[columnName].push(value);
+          }
+        } else {
+          window.tableFilters[tableName].filters[columnName] =
+            window.tableFilters[tableName].filters[columnName].filter(v => v !== value);
+        }
+      }
+
+      // Appliquer les filtres
+      applyFiltersAndSort(tableName);
+    };
+
+    // Effacer le filtre d'une colonne
+    window.clearColumnFilter = function(tableName, columnName) {
+      if (window.tableFilters[tableName].sort === columnName) {
+        window.tableFilters[tableName].sort = null;
+        window.tableFilters[tableName].sortDir = null;
+      }
+      delete window.tableFilters[tableName].filters[columnName];
+
+      // Reset les indicateurs visuels
+      const th = document.querySelector(`th[data-table="${tableName}"][data-column="${columnName}"]`);
+      if (th) {
+        const indicator = th.querySelector('.sort-indicator');
+        if (indicator) indicator.textContent = '';
+        const btn = th.querySelector('.column-filter-btn');
+        if (btn) btn.classList.remove('has-filter');
+      }
+
+      // Ré-appliquer
+      applyFiltersAndSort(tableName);
+
+      // Fermer le dropdown
+      document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.remove('show'));
+    };
+
+    // Appliquer filtres et tri sur une table
+    function applyFiltersAndSort(tableName) {
+      let data = [];
+      let renderFunction = null;
+
+      if (tableName === 'potentiel') {
+        data = [...(window.ventesData?.prospects || [])];
+        renderFunction = () => afficherProspects(data);
+      } else if (tableName === 'attente') {
+        data = [...(window.ventesData?.attente || [])];
+        renderFunction = () => afficherVentes(data, 'attente');
+      } else if (tableName === 'acceptees') {
+        data = [...(window.ventesData?.acceptees || [])];
+        renderFunction = () => afficherVentes(data, 'accepte');
+      } else if (tableName === 'produit') {
+        data = [...(window.ventesData?.produit || [])];
+        renderFunction = () => afficherVentes(data, 'produit');
+      }
+
+      const state = window.tableFilters[tableName];
+
+      // Appliquer les filtres
+      Object.keys(state.filters).forEach(columnName => {
+        const allowedValues = state.filters[columnName];
+        if (allowedValues && allowedValues.length > 0) {
+          data = data.filter(item => {
+            const val = String(getColumnValue(item, columnName)).trim();
+            return allowedValues.includes(val);
+          });
+        }
+      });
+
+      // Appliquer le tri
+      if (state.sort) {
+        const col = state.sort;
+        const dir = state.sortDir === 'asc' ? 1 : -1;
+
+        data.sort((a, b) => {
+          let valA = getColumnValue(a, col);
+          let valB = getColumnValue(b, col);
+
+          // Tri numérique pour prix
+          if (col === 'prix') {
+            const numA = parseFloat(String(valA).replace(/[^0-9.-]/g, '')) || 0;
+            const numB = parseFloat(String(valB).replace(/[^0-9.-]/g, '')) || 0;
+            return (numA - numB) * dir;
+          }
+
+          // Tri alphabétique
+          return String(valA).localeCompare(String(valB), 'fr') * dir;
+        });
+      }
+
+      // Stocker les données filtrées/triées temporairement
+      window.filteredData = window.filteredData || {};
+      window.filteredData[tableName] = data;
+
+      // Appeler la fonction de rendu avec les données filtrées
+      if (renderFunction) {
+        // Créer une version modifiée pour afficher les données filtrées
+        renderFilteredTable(tableName, data);
+      }
+    }
+
+    // Appliquer filtres et tri sur les lignes existantes du DOM
+    function renderFilteredTable(tableName, filteredData) {
+      const tbodyId = tableName === 'potentiel' ? 'potentiel-tbody' :
+                      tableName === 'attente' ? 'attente-tbody' :
+                      tableName === 'acceptees' ? 'accepte-tbody' :
+                      'produit-tbody';
+
+      const tbody = document.getElementById(tbodyId);
+      if (!tbody) return;
+
+      const rows = tbody.querySelectorAll('tr');
+      if (rows.length === 0) return;
+
+      // Obtenir les données originales
+      let originalData = [];
+      if (tableName === 'potentiel') {
+        originalData = window.ventesData?.prospects || [];
+      } else if (tableName === 'attente') {
+        originalData = window.ventesData?.attente || [];
+      } else if (tableName === 'acceptees') {
+        originalData = window.ventesData?.acceptees || [];
+      } else if (tableName === 'produit') {
+        originalData = window.ventesData?.produit || [];
+      }
+
+      // Créer un set des IDs filtrés
+      const filteredIds = new Set(filteredData.map(item => item.id || item.num));
+
+      // Cacher/afficher les lignes et réordonner
+      let visibleCount = 0;
+      const rowsArray = Array.from(rows);
+
+      // Réordonner les lignes selon les données filtrées
+      filteredData.forEach((item, newIndex) => {
+        const itemId = item.id || item.num;
+        // Trouver la ligne correspondante
+        const row = rowsArray.find(r => {
+          const checkbox = r.querySelector('input[type="checkbox"]');
+          if (checkbox) {
+            const rowId = checkbox.dataset.prospectId || checkbox.dataset.venteId;
+            return rowId === itemId;
+          }
+          return false;
+        });
+
+        if (row) {
+          row.style.display = '';
+          row.style.order = newIndex;
+          visibleCount++;
+        }
+      });
+
+      // Cacher les lignes qui ne sont pas dans les données filtrées
+      rowsArray.forEach(row => {
+        const checkbox = row.querySelector('input[type="checkbox"]');
+        if (checkbox) {
+          const rowId = checkbox.dataset.prospectId || checkbox.dataset.venteId;
+          if (!filteredIds.has(rowId)) {
+            row.style.display = 'none';
+          }
+        }
+      });
+
+      // Afficher un message si aucun résultat
+      let emptyRow = tbody.querySelector('.filter-empty-row');
+      if (visibleCount === 0) {
+        if (!emptyRow) {
+          emptyRow = document.createElement('tr');
+          emptyRow.className = 'filter-empty-row';
+          emptyRow.innerHTML = `
+            <td colspan="11" class="empty-state">
+              <i class="fas fa-filter" style="font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; display: block;"></i>
+              <p style="font-size: 1rem;">Aucun résultat avec ces filtres</p>
+            </td>
+          `;
+          tbody.appendChild(emptyRow);
+        }
+        emptyRow.style.display = '';
+      } else if (emptyRow) {
+        emptyRow.style.display = 'none';
+      }
+    }
+
+    // Utilitaire pour échapper le HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+  })();
+  </script>
 </body>
 </html>

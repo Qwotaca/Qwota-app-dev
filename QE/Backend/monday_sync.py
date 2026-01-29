@@ -631,14 +631,28 @@ def create_monday_item(api_key: str, board_id: str, item_data: Dict, username: s
                 else:
                     print(f"[MONDAY WARN] Erreur mise a jour Provenance: {resp_prov.text}")
 
+                # Ajouter les notes dans la colonne "Infos sup" (ID: "text")
+                notes = item_data.get('notes', '')
+                if notes:
+                    # Échapper les caractères spéciaux pour GraphQL
+                    notes_escaped = notes.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+                    query_notes = f'mutation {{ change_simple_column_value(board_id: {board_id}, item_id: {item_id}, column_id: "text", value: "{notes_escaped}") {{ id }} }}'
+                    resp_notes = requests.post(url, headers=headers, json={"query": query_notes})
+                    if resp_notes.status_code == 200 and "errors" not in resp_notes.json():
+                        print(f"[MONDAY] Notes ajoutées")
+                    else:
+                        print(f"[MONDAY WARN] Erreur ajout notes: {resp_notes.text}")
+
                 # Ajouter le PDF de la soumission signée dans la colonne Contrats
                 pdf_url = item_data.get('pdfUrl') or item_data.get('pdf_url')
                 if pdf_url:
-                    # Convertir localhost en chemin de fichier local si nécessaire
-                    if 'localhost:8080' in pdf_url or '127.0.0.1:8080' in pdf_url:
+                    # Convertir l'URL en chemin de fichier local (localhost ou production)
+                    # Toutes les URLs internes contiennent /cloud/ dans le chemin
+                    if '/cloud/' in pdf_url:
                         # Extraire le chemin du fichier depuis l'URL
                         pdf_path = pdf_url.split('/cloud/')[-1]
                         pdf_full_path = os.path.join(base_cloud, pdf_path.replace('/', os.sep))
+                        print(f"[MONDAY] Chemin PDF: {pdf_full_path}")
 
                         if os.path.exists(pdf_full_path):
                             try:
@@ -668,8 +682,8 @@ def create_monday_item(api_key: str, board_id: str, item_data: Dict, username: s
                         else:
                             print(f"[MONDAY WARN] PDF introuvable: {pdf_full_path}")
                     else:
-                        # URL publique - essayer de l'ajouter directement
-                        print(f"[MONDAY INFO] URL PDF publique: {pdf_url}")
+                        # URL publique externe - essayer de l'ajouter directement
+                        print(f"[MONDAY INFO] URL PDF externe (non supportée): {pdf_url}")
                 else:
                     print(f"[MONDAY INFO] Aucun PDF dans les donnees de vente")
 
@@ -809,7 +823,7 @@ def find_monday_item_by_soumission(username: str, soumission_num: str) -> Option
     # Charger les données du client pour avoir prenom et nom
     prenom = None
     nom = None
-    base_cloud = "cloud" if os.path.exists("cloud") else "data"
+    # Utilise la variable globale base_cloud définie en haut du fichier
 
     for category in ["acceptees", "produit"]:
         fichier = os.path.join(f"{base_cloud}/ventes_{category}", username, "ventes.json")

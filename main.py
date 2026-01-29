@@ -20641,6 +20641,39 @@ async def save_soumission_to_queue(data: dict = Body(...)):
                     break
 
         if not is_update:
+            # Vérifier si une soumission avec le même numéro existe déjà (anti-doublon)
+            num_soumission = data.get("num")
+            if num_soumission:
+                for i, soum in enumerate(queue):
+                    if soum.get("num") == num_soumission:
+                        # Mettre à jour l'existante au lieu de créer un doublon
+                        existing_id = soum.get("id")
+                        queue[i] = {
+                            "id": existing_id,
+                            "num": data.get("num"),
+                            "nom": data.get("nom"),
+                            "prenom": data.get("prenom"),
+                            "telephone": data.get("telephone"),
+                            "courriel": data.get("courriel"),
+                            "date": data.get("date"),
+                            "temps": data.get("temps"),
+                            "date2": data.get("date2"),
+                            "prix": data.get("prix"),
+                            "adresse": data.get("adresse"),
+                            "endroit": data.get("endroit"),
+                            "item": data.get("item"),
+                            "produit": data.get("produit"),
+                            "part": data.get("part"),
+                            "payer_par": data.get("payer_par"),
+                            "date_creation": soum.get("date_creation", datetime.now().isoformat()),
+                            "date_modification": datetime.now().isoformat(),
+                            "status": "pending"
+                        }
+                        is_update = True
+                        print(f"[ANTI-DOUBLON] Soumission avec num {num_soumission} déjà existante, mise à jour ID: {existing_id}")
+                        break
+
+        if not is_update:
             # Créer un ID unique pour cette nouvelle soumission
             soumission_id = str(uuid.uuid4())
 

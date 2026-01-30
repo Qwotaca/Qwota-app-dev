@@ -16279,6 +16279,34 @@ async def renvoyer_paiement_en_traitement(username: str, numero_soumission: str,
 
         print(f"[RENVOYER] {numero_soumission} - Type: {type_paiement}, Modifications: {list(modifications.keys())}")
 
+        # Cas spécial: remboursement (stocké dans remboursements.json, pas statuts_clients)
+        if type_paiement == "remboursement":
+            remb_file = os.path.join(base_cloud, "remboursements", username, "remboursements.json")
+            if not os.path.exists(remb_file):
+                raise HTTPException(status_code=404, detail="Fichier de remboursements non trouvé")
+            with open(remb_file, "r", encoding="utf-8") as f:
+                remboursements = json.load(f)
+            found = False
+            for remb in remboursements:
+                if (remb.get("num") == numero_soumission or remb.get("numeroSoumission") == numero_soumission) and remb.get("statut") == "refuse":
+                    remb["statut"] = "en_attente_comptable"
+                    if reponse and "refus" in remb and "conversation" in remb["refus"]:
+                        remb["refus"]["conversation"].append({
+                            "de": "entrepreneur",
+                            "message": reponse,
+                            "date": datetime.now().isoformat()
+                        })
+                    if modifications and "montant" in modifications:
+                        remb["montant"] = modifications["montant"]
+                    found = True
+                    print(f"[RENVOYER REMBOURSEMENT] {numero_soumission} renvoyé en attente comptable")
+                    break
+            if not found:
+                raise HTTPException(status_code=404, detail="Remboursement refusé non trouvé")
+            with open(remb_file, "w", encoding="utf-8") as f:
+                json.dump(remboursements, f, ensure_ascii=False, indent=2)
+            return {"success": True, "message": "Remboursement renvoyé en traitement"}
+
         statuts_file = os.path.join(base_cloud, "facturation_qe_statuts", username, "statuts_clients.json")
         if not os.path.exists(statuts_file):
             raise HTTPException(status_code=404, detail="Fichier de statuts non trouvé")

@@ -3054,7 +3054,10 @@
         const numero = typePaiement.replace('autre_paiement_', '');
         const typePaiementAutres = payment.typePaiementAutres || 'paiement_partiel';
 
-        if (typePaiementAutres === 'un_seul_paiement') {
+        if (typePaiementAutres === 'remboursement') {
+          label = 'Remboursement';
+          icon = 'fa-undo';
+        } else if (typePaiementAutres === 'un_seul_paiement') {
           label = 'Paiement complet';
           icon = 'fa-dollar-sign';
         } else {
@@ -3089,6 +3092,7 @@
         montantPaiement: montant,
         totalTravaux: payment.total_travaux || payment.prix || '0,00 $',
         typePaiement: typePaiement,
+        typePaiementAutres: payment.typePaiementAutres || null,
         typePaiementLabel: label,
         typePaiementIcon: icon,
         methodePaiement: payment.methode || '',
@@ -3097,7 +3101,7 @@
         statutPaiement: statutPaiement,
 
         // Nouveau format simplifié: une seule ligne de description
-        description: `${label} ${statusText} (${montant})`,
+        description: `${label} ${statusText} (${typePaiementAutres === 'remboursement' ? '- ' : ''}${montant})`,
 
         // Les anciens champs ne sont plus utilisés mais gardés pour compatibilité
         statusDepot: null,
@@ -15490,13 +15494,26 @@
       log('[MODAL REFUS ENTREPRENEUR] Ouverture pour:', numeroSoumission, facturation);
       currentRefusData = { numeroSoumission, facturation };
 
+      // Détecter si c'est un remboursement
+      const isRemboursement = facturation.typePaiementAutres === 'remboursement';
+
+      // Mettre à jour le titre du modal
+      const modalTitle = document.querySelector('#modalRefusEntrepreneur .modal-header-title h2');
+      if (modalTitle) {
+        modalTitle.textContent = isRemboursement ? 'Remboursement refusé' : 'Paiement refusé';
+      }
+
       // Remplir les infos client
       const clientInfoDiv = document.getElementById('refusClientInfo');
       const client = `${facturation.clientPrenom || ''} ${facturation.clientNom || ''}`.trim() || 'Client inconnu';
+      const montantAffiche = isRemboursement
+        ? `- ${facturation.montantPaiement || '0,00 $'}`
+        : (facturation.montantPaiement || '0,00 $');
       clientInfoDiv.innerHTML = `
         <p><strong>Client:</strong> ${client}</p>
         <p><strong>N° Soumission:</strong> ${numeroSoumission}</p>
-        <p><strong>Montant:</strong> ${facturation.montantPaiement || '0,00 $'}</p>
+        <p><strong>Montant:</strong> <span style="${isRemboursement ? 'color: #ef4444;' : ''}">${montantAffiche}</span></p>
+        ${isRemboursement ? '<p><span style="color: #f59e0b; font-weight: 600;"><i class="fas fa-undo mr-1"></i>Remboursement</span></p>' : ''}
       `;
 
       // Récupérer tous les états de paiements via l'API
@@ -15556,17 +15573,20 @@
                 const statutDepot = statuts.statutDepot || 'non_envoye';
                 typeAutres = (statutDepot === 'non_envoye') ? 'un_seul_paiement' : 'paiement_partiel';
               }
-              const typePaiement = typeAutres === 'un_seul_paiement' ? 'Paiement complet' : `Paiement partiel ${index + 1}`;
+              const isRemb = typeAutres === 'remboursement';
+              const typePaiement = isRemb ? 'Remboursement' : (typeAutres === 'un_seul_paiement' ? 'Paiement complet' : `Paiement partiel ${index + 1}`);
+              const iconAutre = isRemb ? 'fa-undo' : 'fa-money-check-alt';
+              const colorAutre = isRemb ? '#ef4444' : '#60a5fa';
 
               paiementsHTML += `
                 <div class="refus-paiement-section">
                   <div class="refus-paiement-header">
-                    <i class="fas fa-money-check-alt" style="color: #60a5fa;"></i>
+                    <i class="fas ${iconAutre}" style="color: ${colorAutre};"></i>
                     <span style="color: var(--text-light);">${typePaiement}</span>
                   </div>
                   <div class="refus-paiement-row">
                     <span class="refus-paiement-label">Montant</span>
-                    <span class="refus-paiement-value highlight">${ap.montant || 'N/A'}</span>
+                    <span class="refus-paiement-value highlight" ${isRemb ? 'style="color: #ef4444;"' : ''}>${isRemb ? '- ' : ''}${ap.montant || 'N/A'}</span>
                   </div>
                   <div class="refus-paiement-row">
                     <span class="refus-paiement-label">Statut</span>
@@ -15638,7 +15658,16 @@
           let typePaiement = 'depot';
           let indexPaiement = 0;
 
-          if (statuts.depot && statuts.depot.statut === 'refuse') {
+          // Si c'est un remboursement, on gère différemment
+          if (isRemboursement) {
+            typePaiement = 'remboursement';
+            // Les données du remboursement sont dans la facturation elle-même
+            paiementRefuse = {
+              montant: facturation.montantPaiement,
+              methode: facturation.methodePaiement || '',
+              refus: facturation.refus
+            };
+          } else if (statuts.depot && statuts.depot.statut === 'refuse') {
             paiementRefuse = statuts.depot;
             typePaiement = 'depot';
           } else if (statuts.autresPaiements) {

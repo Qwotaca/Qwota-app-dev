@@ -3234,7 +3234,7 @@
             </div>
             <div class="modal-info-row">
               <span class="modal-info-label">Montant à rembourser</span>
-              <span class="modal-info-value highlight">
+              <span class="modal-info-value highlight" style="color: #ef4444;">
                 <span>-${paiement.montant || 'N/A'}</span>
                 <button class="btn-copy" onclick="copierTexte('-${paiement.montant || 'N/A'}', this)">
                   <i class="fas fa-copy"></i> Copier
@@ -5626,6 +5626,11 @@
           ? `<img src="${msg.entrepreneurPhoto}" class="avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">`
           : `<div class="avatar">${nomComplet.charAt(0).toUpperCase()}</div>`;
 
+        const isRemboursement = msg.typePaiement === 'remboursement';
+        const typeBadgeHtml = isRemboursement
+          ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem; background: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600;"><i class="fas fa-undo"></i> Remboursement</span>`
+          : '';
+
         return `
           <div class="message-card" onclick="afficherConversationAvecInfos(${originalIndex})">
             <div class="message-card-header">
@@ -5635,8 +5640,9 @@
               </div>
               <span class="message-card-date">${new Date(msg.date).toLocaleString('fr-CA')}</span>
             </div>
-            <div class="message-card-soumission">
-              <i class="fas fa-hashtag" style="margin-right: 0.25rem;"></i>${msg.numeroSoumission}
+            <div class="message-card-soumission" style="display: flex; align-items: center; gap: 0.5rem;">
+              <span><i class="fas fa-hashtag" style="margin-right: 0.25rem;"></i>${msg.numeroSoumission}</span>
+              ${typeBadgeHtml}
             </div>
             <div class="message-card-preview">
               <i class="fas fa-comment"></i>
@@ -5700,6 +5706,11 @@
           ? `<img src="${photo}" class="avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">`
           : `<div class="avatar">${nomComplet.charAt(0).toUpperCase()}</div>`;
 
+        const isConvRemboursement = currentConversation.typePaiement === 'remboursement';
+        const convTypeBadge = isConvRemboursement
+          ? `<span style="display: inline-flex; align-items: center; gap: 0.25rem; background: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600; margin-left: 0.5rem;"><i class="fas fa-undo"></i> Remboursement</span>`
+          : '';
+
         conversationEl.innerHTML = `
           <div class="conversation-container">
             <div class="conversation-header">
@@ -5711,7 +5722,7 @@
                 ${avatarHtml}
                 <div class="details">
                   <h3>${nomComplet}</h3>
-                  <span><i class="fas fa-hashtag"></i> ${numeroSoumission}</span>
+                  <span><i class="fas fa-hashtag"></i> ${numeroSoumission}${convTypeBadge}</span>
                 </div>
               </div>
               <button class="btn-info-paiement" onclick="ouvrirDetailsDepuisConversation()" title="Voir les détails">
@@ -5850,6 +5861,7 @@
       const photo = currentConversation.photo;
 
       // Construire un objet paiement compatible avec ouvrirDetails
+      const paiementInfo = currentConversation.paiementInfo || {};
       const paiementObj = {
         entrepreneur: nomComplet,
         entrepreneurUsername: entrepreneur,
@@ -5859,7 +5871,9 @@
         telephone: clientInfo.telephone || '',
         adresse: clientInfo.adresse || '',
         totalTravaux: clientInfo.prix || '',
-        type: currentConversation.typePaiement || 'depot'
+        type: currentConversation.typePaiement || 'depot',
+        montant: paiementInfo.montant || '',
+        courriel: paiementInfo.courriel || clientInfo.courriel || ''
       };
 
       // Utiliser ouvrirDetails existant
@@ -5871,11 +5885,12 @@
       if (modalFooter) modalFooter.style.display = 'none';
       // Cacher tous les boutons Copier
       modal.querySelectorAll('.btn-copy').forEach(btn => btn.style.display = 'none');
-      // Rendre les champs montant non-éditables
+      // Remplacer les inputs montant-editable par du texte simple (non modifiable)
       modal.querySelectorAll('.montant-editable').forEach(input => {
-        input.readOnly = true;
-        input.style.border = 'none';
-        input.style.background = 'transparent';
+        const span = document.createElement('span');
+        span.textContent = input.value;
+        span.style.fontWeight = '600';
+        input.parentNode.replaceChild(span, input);
       });
     }
 

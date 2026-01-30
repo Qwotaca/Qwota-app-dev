@@ -13365,6 +13365,14 @@
                 </div>
               </div>
 
+              <!-- Section Remboursement -->
+              <div id="refusModifRemboursement" class="refus-modif-section" style="display: none;">
+                <div class="refus-modif-field">
+                  <label><i class="fas fa-dollar-sign"></i> Montant du remboursement</label>
+                  <input type="text" id="refusModifMontantRemboursement" class="modern-input" placeholder="Montant..." onblur="this.value = formaterMontantInput(this.value)">
+                </div>
+              </div>
+
               <!-- Section Chèque -->
               <div id="refusModifCheque" class="refus-modif-section" style="display: none;">
                 <div class="refus-modif-field">
@@ -15635,6 +15643,7 @@
       const modificationContainer = document.getElementById('refusModificationContainer');
       const modifVirement = document.getElementById('refusModifVirement');
       const modifCheque = document.getElementById('refusModifCheque');
+      const modifRemboursement = document.getElementById('refusModifRemboursement');
 
       // Reset les champs
       document.getElementById('refusModifMontantVirement').value = '';
@@ -15642,6 +15651,7 @@
       document.getElementById('refusModifMotDePasse').value = '';
       document.getElementById('refusModifMontantCheque').value = '';
       document.getElementById('refusModifNumeroCheque').value = '';
+      document.getElementById('refusModifMontantRemboursement').value = '';
       document.getElementById('refusPhotoRectoPreview').style.display = 'none';
       document.getElementById('refusPhotoVersoPreview').style.display = 'none';
       document.getElementById('refusPhotoRectoPlaceholder').style.display = 'flex';
@@ -15664,7 +15674,7 @@
             // Les données du remboursement sont dans la facturation elle-même
             paiementRefuse = {
               montant: facturation.montantPaiement,
-              methode: facturation.methodePaiement || '',
+              methode: 'remboursement',
               refus: facturation.refus
             };
           } else if (statuts.depot && statuts.depot.statut === 'refuse') {
@@ -15709,10 +15719,21 @@
             currentRefusData.methode = methode;
             log('[MODAL REFUS] Paiement refusé trouvé:', paiementRefuse, 'Méthode:', methode);
 
-            if (methode === 'virement') {
+            if (methode === 'remboursement') {
+              modificationContainer.style.display = 'block';
+              modifVirement.style.display = 'none';
+              modifCheque.style.display = 'none';
+              modifRemboursement.style.display = 'block';
+
+              // Pré-remplir le montant du remboursement
+              if (paiementRefuse.montant) {
+                document.getElementById('refusModifMontantRemboursement').value = paiementRefuse.montant;
+              }
+            } else if (methode === 'virement') {
               modificationContainer.style.display = 'block';
               modifVirement.style.display = 'block';
               modifCheque.style.display = 'none';
+              modifRemboursement.style.display = 'none';
 
               // Pré-remplir le montant, lien et mot de passe actuels
               if (paiementRefuse.montant) {
@@ -15728,6 +15749,7 @@
               modificationContainer.style.display = 'block';
               modifVirement.style.display = 'none';
               modifCheque.style.display = 'block';
+              modifRemboursement.style.display = 'none';
 
               // Pré-remplir le montant et numéro de chèque
               if (paiementRefuse.montant) {
@@ -16111,7 +16133,14 @@
       const methode = currentRefusData.methode || '';
       let modificationsPayload = {};
 
-      if (methode === 'virement') {
+      if (methode === 'remboursement') {
+        const montantInput = document.getElementById('refusModifMontantRemboursement');
+        if (montantInput.value.trim()) montantInput.value = formaterMontantInput(montantInput.value);
+        const nouveauMontant = montantInput.value.trim();
+        if (nouveauMontant) {
+          modificationsPayload.montant = nouveauMontant;
+        }
+      } else if (methode === 'virement') {
         const montantInput = document.getElementById('refusModifMontantVirement');
         if (montantInput.value.trim()) montantInput.value = formaterMontantInput(montantInput.value);
         const nouveauMontant = montantInput.value.trim();

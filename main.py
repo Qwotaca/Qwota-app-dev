@@ -16310,6 +16310,12 @@ async def renvoyer_paiement_en_traitement(username: str, numero_soumission: str,
                         })
                     if modifications and "montant" in modifications:
                         remb["montant"] = modifications["montant"]
+                        # Mettre à jour montantNum aussi
+                        try:
+                            montant_str = modifications["montant"].replace(" $", "").replace("$", "").replace(" ", "").replace(",", ".")
+                            remb["montantNum"] = float(montant_str)
+                        except (ValueError, AttributeError):
+                            pass
                     found = True
                     print(f"[RENVOYER REMBOURSEMENT] {numero_soumission} renvoyé en attente comptable")
                     break
@@ -17167,6 +17173,25 @@ async def get_messages_en_attente():
                                             paiement_info = ap
                                             type_paiement_refus = f"autre_paiement_{idx_ap + 1}"
                                             break
+                                    if not paiement_info:
+                                        # Vérifier si c'est un remboursement (refusé ou avec conversation active)
+                                        remb_file_check = os.path.join(base_cloud, "remboursements", username, "remboursements.json")
+                                        if os.path.exists(remb_file_check):
+                                            try:
+                                                with open(remb_file_check, "r", encoding="utf-8") as rf:
+                                                    remb_list = json.load(rf)
+                                                for remb in remb_list:
+                                                    if remb.get("num") == numero or remb.get("numeroSoumission") == numero:
+                                                        paiement_info = {
+                                                            "montant": remb.get("montant", ""),
+                                                            "courriel": remb.get("courriel", ""),
+                                                            "paiement_source": remb.get("paiement_source", ""),
+                                                        }
+                                                        type_paiement_refus = "remboursement"
+                                                        methode_refus = "remboursement"
+                                                        break
+                                            except:
+                                                pass
                                     if not paiement_info:
                                         paiement_info = data.get("depot", {})
 

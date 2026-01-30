@@ -15840,6 +15840,20 @@ async def valider_facturation_comptable(username: str, numero_soumission: str, r
             with open(remb_file, "w", encoding="utf-8") as f:
                 json.dump(remboursements, f, ensure_ascii=False, indent=2)
 
+            # Nettoyer le refus dans statuts_clients.json pour que le message disparaisse
+            statuts_file = os.path.join(base_cloud, "facturation_qe_statuts", username, "statuts_clients.json")
+            if os.path.exists(statuts_file):
+                try:
+                    with open(statuts_file, "r", encoding="utf-8") as f:
+                        statuts = json.load(f)
+                    if numero_soumission in statuts and "refus" in statuts[numero_soumission]:
+                        del statuts[numero_soumission]["refus"]
+                        statuts[numero_soumission]["dateMiseAJour"] = datetime.now().isoformat()
+                        with open(statuts_file, "w", encoding="utf-8") as f:
+                            json.dump(statuts, f, ensure_ascii=False, indent=2)
+                except Exception as e:
+                    print(f"[VALIDER REMBOURSEMENT] Erreur nettoyage refus statuts: {e}")
+
             # Ajouter à l'historique (passer un dict vide pour client_statuts car pas applicable)
             await ajouter_historique_facturation(username, numero_soumission, type_paiement, "attente_comptable", {})
 

@@ -13004,6 +13004,18 @@ def api_get_urgent_count_facturation_qe(username: str):
                         if ap.get("statut") == "refuse" and not ap.get("modificationsApportees"):
                             urgent_count += 1
 
+        # Compter aussi les remboursements refusés
+        remb_file = os.path.join(base_cloud, "remboursements", username, "remboursements.json")
+        if os.path.exists(remb_file):
+            try:
+                with open(remb_file, "r", encoding="utf-8") as f:
+                    remboursements = json.load(f)
+                for remb in remboursements:
+                    if remb.get("statut") == "refuse":
+                        urgent_count += 1
+            except Exception:
+                pass
+
         return {"success": True, "urgent_count": urgent_count}
     except Exception as e:
         print(f"[ERREUR api_get_urgent_count_facturation_qe] {e}")

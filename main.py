@@ -16180,13 +16180,13 @@ async def refuser_facturation_comptable(username: str, numero_soumission: str, r
         raison = data.get("raison", "")
 
         statuts_file = os.path.join(base_cloud, "facturation_qe_statuts", username, "statuts_clients.json")
-        if not os.path.exists(statuts_file):
-            raise HTTPException(status_code=404, detail="Fichier de statuts non trouvé")
+        statuts = {}
+        if os.path.exists(statuts_file):
+            with open(statuts_file, "r", encoding="utf-8") as f:
+                statuts = json.load(f)
 
-        with open(statuts_file, "r", encoding="utf-8") as f:
-            statuts = json.load(f)
-
-        if numero_soumission not in statuts:
+        # Pour les remboursements, la soumission peut ne pas être dans statuts_clients
+        if numero_soumission not in statuts and type_paiement != "remboursement":
             raise HTTPException(status_code=404, detail="Soumission non trouvée")
 
         # Récupérer le nom de celui qui refuse
@@ -16232,8 +16232,24 @@ async def refuser_facturation_comptable(username: str, numero_soumission: str, r
             # Mettre le statut global à refuse si au moins un est refusé
             statuts[numero_soumission]["statutAutresPaiements"] = "refuse"
             statuts[numero_soumission]["dateAutresPaiements"] = datetime.now().isoformat()
+        elif type_paiement == "remboursement":
+            # Refuser le remboursement dans remboursements.json
+            remb_file = os.path.join(base_cloud, "remboursements", username, "remboursements.json")
+            if os.path.exists(remb_file):
+                with open(remb_file, "r", encoding="utf-8") as f:
+                    remboursements = json.load(f)
+                for remb in remboursements:
+                    if (remb.get("num") == numero_soumission or remb.get("numeroSoumission") == numero_soumission) and remb.get("statut") == "en_attente_comptable":
+                        remb["statut"] = "refuse"
+                        remb["refus"] = refus_info
+                        remb["dateRefus"] = datetime.now().isoformat()
+                        print(f"[REFUS REMBOURSEMENT] {numero_soumission} refusé pour {username}")
+                        break
+                with open(remb_file, "w", encoding="utf-8") as f:
+                    json.dump(remboursements, f, ensure_ascii=False, indent=2)
 
-        statuts[numero_soumission]["dateMiseAJour"] = datetime.now().isoformat()
+        if numero_soumission in statuts:
+            statuts[numero_soumission]["dateMiseAJour"] = datetime.now().isoformat()
 
         # Sauvegarder
         with open(statuts_file, "w", encoding="utf-8") as f:
@@ -16242,7 +16258,7 @@ async def refuser_facturation_comptable(username: str, numero_soumission: str, r
         # Ajouter à l'historique
         # Pour les paiements partiels, passer l'index
         paiement_index = data.get("index") if type_paiement == "autres_paiements" else None
-        await ajouter_historique_facturation(username, numero_soumission, type_paiement, "refuse", statuts[numero_soumission], paiement_index)
+        await ajouter_historique_facturation(username, numero_soumission, type_paiement, "refuse", statuts.get(numero_soumission, {}), paiement_index)
 
         return {"success": True, "message": "Paiement refusé"}
     except HTTPException:

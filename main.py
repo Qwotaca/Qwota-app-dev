@@ -16273,22 +16273,28 @@ async def renvoyer_paiement_en_traitement(username: str, numero_soumission: str,
         if numero_soumission not in statuts:
             raise HTTPException(status_code=404, detail="Soumission non trouvée")
 
-        # Message de l'entrepreneur à ajouter à la conversation
-        nouveau_message = {
-            "de": "entrepreneur",
-            "message": reponse,
-            "date": datetime.now().isoformat()
-        }
-
-        # Ajouter le message à la conversation au niveau racine si elle existe
-        if "refus" in statuts[numero_soumission] and "conversation" in statuts[numero_soumission]["refus"]:
-            statuts[numero_soumission]["refus"]["conversation"].append(nouveau_message)
+        # Message de l'entrepreneur à ajouter à la conversation (seulement si non vide)
+        nouveau_message = None
+        if reponse:
+            nouveau_message = {
+                "de": "entrepreneur",
+                "message": reponse,
+                "date": datetime.now().isoformat()
+            }
+            # Ajouter le message à la conversation au niveau racine si elle existe
+            if "refus" in statuts[numero_soumission] and "conversation" in statuts[numero_soumission]["refus"]:
+                statuts[numero_soumission]["refus"]["conversation"].append(nouveau_message)
 
         # Fonction helper pour appliquer les modifications à un paiement
         def appliquer_modifications(paiement_data, modifs):
             """Applique les modifications au paiement"""
             if not modifs:
                 return
+
+            # Montant
+            if "montant" in modifs:
+                paiement_data["montant"] = modifs["montant"]
+                print(f"[RENVOYER] Montant mis à jour: {modifs['montant']}")
 
             # Lien virement
             if "lienVirement" in modifs:
@@ -16329,7 +16335,7 @@ async def renvoyer_paiement_en_traitement(username: str, numero_soumission: str,
                 # Appliquer les modifications
                 appliquer_modifications(statuts[numero_soumission]["depot"], modifications)
                 # Ajouter la réponse à la conversation du dépôt
-                if "refus" in statuts[numero_soumission]["depot"] and "conversation" in statuts[numero_soumission]["depot"]["refus"]:
+                if nouveau_message and "refus" in statuts[numero_soumission]["depot"] and "conversation" in statuts[numero_soumission]["depot"]["refus"]:
                     statuts[numero_soumission]["depot"]["refus"]["conversation"].append(nouveau_message)
         elif type_paiement == "paiement_final":
             statuts[numero_soumission]["statutPaiementFinal"] = "traitement"
@@ -16339,7 +16345,7 @@ async def renvoyer_paiement_en_traitement(username: str, numero_soumission: str,
                 # Appliquer les modifications
                 appliquer_modifications(statuts[numero_soumission]["paiementFinal"], modifications)
                 # Ajouter la réponse à la conversation du paiement final
-                if "refus" in statuts[numero_soumission]["paiementFinal"] and "conversation" in statuts[numero_soumission]["paiementFinal"]["refus"]:
+                if nouveau_message and "refus" in statuts[numero_soumission]["paiementFinal"] and "conversation" in statuts[numero_soumission]["paiementFinal"]["refus"]:
                     statuts[numero_soumission]["paiementFinal"]["refus"]["conversation"].append(nouveau_message)
         elif type_paiement == "autres_paiements":
             if "autresPaiements" in statuts[numero_soumission] and len(statuts[numero_soumission]["autresPaiements"]) > index:
@@ -16347,7 +16353,7 @@ async def renvoyer_paiement_en_traitement(username: str, numero_soumission: str,
                 # Appliquer les modifications
                 appliquer_modifications(statuts[numero_soumission]["autresPaiements"][index], modifications)
                 # Ajouter la réponse à la conversation
-                if "refus" in statuts[numero_soumission]["autresPaiements"][index] and "conversation" in statuts[numero_soumission]["autresPaiements"][index]["refus"]:
+                if nouveau_message and "refus" in statuts[numero_soumission]["autresPaiements"][index] and "conversation" in statuts[numero_soumission]["autresPaiements"][index]["refus"]:
                     statuts[numero_soumission]["autresPaiements"][index]["refus"]["conversation"].append(nouveau_message)
             statuts[numero_soumission]["statutAutresPaiements"] = "traitement"
             statuts[numero_soumission]["dateAutresPaiements"] = datetime.now().isoformat()
@@ -17002,15 +17008,51 @@ async def get_messages_en_attente():
 
                     for numero, data in statuts.items():
                         # Vérifier s'il y a un refus avec conversation
-                        refus = data.get("refus") or (data.get("depot", {}).get("refus"))
+                        # Chercher dans tous les emplacements possibles
+                        refus = data.get("refus")
+                        methode_refus = ""
+                        if not refus or not refus.get("conversation"):
+                            # Chercher dans depot
+                            depot_refus = data.get("depot", {}).get("refus")
+                            if depot_refus and depot_refus.get("conversation"):
+                                refus = depot_refus
+                                methode_refus = data.get("depot", {}).get("methode", "")
+                        else:
+                            # Le refus racine existe, déterminer de quel paiement il vient
+                            if data.get("depot", {}).get("statut") == "refuse":
+                                methode_refus = data.get("depot", {}).get("methode", "")
+                            elif data.get("paiementFinal", {}).get("statut") == "refuse":
+                                methode_refus = data.get("paiementFinal", {}).get("methode", "")
+                            else:
+                                for ap in data.get("autresPaiements", []):
+                                    if ap.get("statut") == "refuse":
+                                        methode_refus = ap.get("methode", "")
+                                        break
+
+                        if not refus or not refus.get("conversation"):
+                            # Chercher dans paiementFinal
+                            pf_refus = data.get("paiementFinal", {}).get("refus")
+                            if pf_refus and pf_refus.get("conversation"):
+                                refus = pf_refus
+                                methode_refus = data.get("paiementFinal", {}).get("methode", "")
+
+                        if not refus or not refus.get("conversation"):
+                            # Chercher dans autresPaiements
+                            for ap in data.get("autresPaiements", []):
+                                ap_refus = ap.get("refus")
+                                if ap_refus and ap_refus.get("conversation"):
+                                    refus = ap_refus
+                                    methode_refus = ap.get("methode", "")
+                                    break
+
                         if refus and refus.get("conversation"):
                             conversation = refus["conversation"]
-                            # Vérifier si le dernier message est de l'entrepreneur
-                            if conversation and conversation[-1].get("de") == "entrepreneur":
-                                # Compter les messages non lus de l'entrepreneur
+                            if conversation:
+                                # Compter les messages non lus (de l'autre partie)
+                                dernier_de = conversation[-1].get("de", "")
                                 messages_non_lus = 0
                                 for msg in reversed(conversation):
-                                    if msg.get("de") == "entrepreneur":
+                                    if msg.get("de") == dernier_de:
                                         messages_non_lus += 1
                                     else:
                                         break
@@ -17054,8 +17096,26 @@ async def get_messages_en_attente():
                                 except Exception as ce:
                                     print(f"[WARN] Erreur récup infos client {numero}: {ce}")
 
-                                # Récupérer les infos de paiement (depot)
-                                paiement_info = data.get("depot", {})
+                                # Récupérer les infos du paiement refusé (pas toujours le depot)
+                                paiement_info = {}
+                                type_paiement_refus = "depot"
+                                if data.get("depot", {}).get("statut") == "refuse":
+                                    paiement_info = data.get("depot", {})
+                                    type_paiement_refus = "depot"
+                                elif data.get("paiementFinal", {}).get("statut") == "refuse":
+                                    paiement_info = data.get("paiementFinal", {})
+                                    type_paiement_refus = "paiement_final"
+                                else:
+                                    for idx_ap, ap in enumerate(data.get("autresPaiements", [])):
+                                        if ap.get("statut") == "refuse":
+                                            paiement_info = ap
+                                            type_paiement_refus = f"autre_paiement_{idx_ap + 1}"
+                                            break
+                                    if not paiement_info:
+                                        paiement_info = data.get("depot", {})
+
+                                # Utiliser la méthode du paiement refusé
+                                methode = methode_refus
 
                                 messages.append({
                                     "entrepreneur": username,
@@ -17066,7 +17126,9 @@ async def get_messages_en_attente():
                                     "date": conversation[-1].get("date"),
                                     "nombreMessages": messages_non_lus,
                                     "clientInfo": client_info,
-                                    "paiementInfo": paiement_info
+                                    "paiementInfo": paiement_info,
+                                    "typePaiement": type_paiement_refus,
+                                    "methode": methode
                                 })
 
         # Trier par date (plus récent en premier)

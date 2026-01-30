@@ -840,20 +840,13 @@
           return parseFloat(cleanValue) || 0;
         };
 
-        // CALCULER AUTOMATIQUEMENT 25% DU MONTANT TOTAL + TAXES PAR DÉFAUT
+        // PRÉ-REMPLIR LE MONTANT DU DÉPÔT depuis la soumission ou les statuts
         if (!clientData.depot || !clientData.depot.montant || clientData.depot.montant === '0,00' || clientData.depot.montant === '0,00 $') {
-          // Seulement si le montant n'est pas déjà défini
-          const totalTravauxInput = document.getElementById('totalTravauxClient');
-
-          if (totalTravauxInput && totalTravauxInput.value && paiementInput) {
-            const totalTravaux = cleanAndParseAmount(totalTravauxInput.value);
-            const totalAvecTaxes = calculerTotalAvecTaxes(totalTravaux);
-            const depotDefaut = totalAvecTaxes * 0.25; // 25% du total avec taxes
-
-            if (depotDefaut > 0) {
-              paiementInput.value = formatMontant(depotDefaut);
-              log('[INFO] DÉPÔT calculé automatiquement (25%):', depotDefaut, '= 25% de', totalAvecTaxes);
-            }
+          // Utiliser le montant du dépôt de la soumission si disponible
+          const depotSoumission = clientData.depotSoumission || clientData.depot_soumission;
+          if (depotSoumission && paiementInput) {
+            paiementInput.value = depotSoumission;
+            log('[INFO] DÉPÔT pré-rempli depuis la soumission:', depotSoumission);
           }
         } else if (clientData.depot) {
           // Pré-remplir le montant existant - gère les formats texte comme "250,00 $"
@@ -7543,7 +7536,33 @@
           // Récupérer les données client sélectionné depuis le sessionStorage
           const clientData = JSON.parse(sessionStorage.getItem('selectedClientDataFacturation') || '{}');
           log('👤 Données client récupérées:', clientData);
-          
+
+          // Vérifier si le montant du dépôt correspond à celui de la soumission
+          if (sectionActive === 'depot' && clientData.depotSoumission) {
+            const montantSaisi = paiement.replace(/\s/g, '').replace(',', '.').replace(/[^0-9.]/g, '');
+            const montantSoumission = clientData.depotSoumission.replace(/\s/g, '').replace(',', '.').replace(/[^0-9.]/g, '');
+            if (parseFloat(montantSaisi) !== parseFloat(montantSoumission)) {
+              const confirmer = await new Promise(resolve => {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;';
+                overlay.innerHTML = `
+                  <div style="background:var(--bg-card);border:1px solid var(--border-dark);border-radius:12px;padding:24px;max-width:420px;width:90%;text-align:center;">
+                    <i class="fas fa-exclamation-triangle" style="font-size:2rem;color:#f59e0b;margin-bottom:12px;"></i>
+                    <h3 style="color:var(--text-light);margin-bottom:8px;">Montant différent</h3>
+                    <p style="color:var(--text-gray);margin-bottom:16px;">Le montant du dépôt (<b style="color:var(--text-light);">${paiement}</b>) ne correspond pas au montant de la soumission (<b style="color:var(--text-light);">${clientData.depotSoumission}</b>). Envoyer quand même ?</p>
+                    <div style="display:flex;gap:10px;justify-content:center;">
+                      <button id="popupNon" style="padding:8px 20px;border-radius:8px;border:1px solid var(--border-dark);background:transparent;color:var(--text-light);cursor:pointer;">Non</button>
+                      <button id="popupOui" style="padding:8px 20px;border-radius:8px;border:none;background:#3b82f6;color:white;cursor:pointer;">Oui, envoyer</button>
+                    </div>
+                  </div>`;
+                document.body.appendChild(overlay);
+                overlay.querySelector('#popupOui').onclick = () => { document.body.removeChild(overlay); resolve(true); };
+                overlay.querySelector('#popupNon').onclick = () => { document.body.removeChild(overlay); resolve(false); };
+              });
+              if (!confirmer) return;
+            }
+          }
+
           // Mapper le type de paiement vers les valeurs attendues par le backend
           let typePaiementBackend = 'depot'; // par défaut
           if (typePaiementText === 'Dépôt') {
@@ -11616,6 +11635,7 @@
             telephone: client.telephone || '',
             adresse: client.adresse || '',
             total_travaux: client.prix || '0',
+            depotSoumission: client.depot || '',
             num: client.num || '',
             id: client.id || client.num,
             pdfUrl: client.pdfUrl || '#'
@@ -11688,6 +11708,7 @@
           telephone: client.telephone || '',
           adresse: client.adresse || '',
           total_travaux: client.prix || client.total_travaux || '0',
+          depotSoumission: client.depot || '',
           num: client.num || '',
           id: client.id || client.num,
           pdfUrl: client.pdfUrl || '#',
@@ -12011,6 +12032,32 @@
 
       // Formater manuellement pour éviter les problèmes de locale
       return nombre.toFixed(2).replace('.', ',') + ' $';
+    }
+
+    // Fonction pour formater un montant en temps réel dans un input (ex: 1 000,00 $)
+    function formaterMontantInput(valeur) {
+      // Retirer le $ et les espaces
+      let clean = valeur.replace(/\$/g, '').replace(/\s/g, '');
+      // Remplacer virgule par point pour parser
+      clean = clean.replace(',', '.');
+      // Garder seulement chiffres, point, signe moins
+      clean = clean.replace(/[^0-9.-]/g, '');
+      if (!clean) return '';
+
+      // Parser en nombre
+      let nombre = parseFloat(clean);
+      if (isNaN(nombre)) return '';
+
+      // Formater avec 2 décimales
+      let formatted = nombre.toFixed(2);
+      let parts = formatted.split('.');
+      let partieEntiere = parts[0];
+      let partieDecimale = parts[1];
+
+      // Ajouter espaces pour les milliers
+      partieEntiere = partieEntiere.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
+      return partieEntiere + ',' + partieDecimale + ' $';
     }
 
     // Fonction pour formater les montants avec espace pour les milliers
@@ -13301,6 +13348,10 @@
               <!-- Section Virement -->
               <div id="refusModifVirement" class="refus-modif-section" style="display: none;">
                 <div class="refus-modif-field">
+                  <label><i class="fas fa-dollar-sign"></i> Montant du paiement</label>
+                  <input type="text" id="refusModifMontantVirement" class="modern-input" placeholder="Montant..." onblur="this.value = formaterMontantInput(this.value)">
+                </div>
+                <div class="refus-modif-field">
                   <label><i class="fas fa-link"></i> Lien du virement</label>
                   <input type="text" id="refusModifLienVirement" class="modern-input" placeholder="Nouveau lien...">
                 </div>
@@ -13312,6 +13363,10 @@
 
               <!-- Section Chèque -->
               <div id="refusModifCheque" class="refus-modif-section" style="display: none;">
+                <div class="refus-modif-field">
+                  <label><i class="fas fa-dollar-sign"></i> Montant du paiement</label>
+                  <input type="text" id="refusModifMontantCheque" class="modern-input" placeholder="Montant..." onblur="this.value = formaterMontantInput(this.value)">
+                </div>
                 <div class="refus-modif-field">
                   <label><i class="fas fa-hashtag"></i> Numéro du chèque</label>
                   <input type="text" id="refusModifNumeroCheque" class="modern-input" placeholder="Numéro du chèque...">
@@ -15459,10 +15514,11 @@
             const statutsMap = {
               'non_envoye': { text: 'Non envoyé', class: '' },
               'traitement': { text: 'En traitement', class: 'warning' },
-              'attente_comptable': { text: 'Chez comptable', class: 'warning' },
+              'attente_comptable': { text: 'En traitement', class: 'warning' },
+              'valide_comptable': { text: 'En traitement', class: 'warning' },
               'traite_attente_final': { text: 'Traité', class: 'success' },
               'refuse': { text: 'Refusé', class: 'danger' },
-              'valide': { text: 'Validé', class: 'success' }
+              'valide': { text: 'Traité', class: 'success' }
             };
             return statutsMap[statut] || { text: statut || 'N/A', class: '' };
           };
@@ -15561,8 +15617,10 @@
       const modifCheque = document.getElementById('refusModifCheque');
 
       // Reset les champs
+      document.getElementById('refusModifMontantVirement').value = '';
       document.getElementById('refusModifLienVirement').value = '';
       document.getElementById('refusModifMotDePasse').value = '';
+      document.getElementById('refusModifMontantCheque').value = '';
       document.getElementById('refusModifNumeroCheque').value = '';
       document.getElementById('refusPhotoRectoPreview').style.display = 'none';
       document.getElementById('refusPhotoVersoPreview').style.display = 'none';
@@ -15627,7 +15685,10 @@
               modifVirement.style.display = 'block';
               modifCheque.style.display = 'none';
 
-              // Pré-remplir le lien et mot de passe actuels
+              // Pré-remplir le montant, lien et mot de passe actuels
+              if (paiementRefuse.montant) {
+                document.getElementById('refusModifMontantVirement').value = paiementRefuse.montant;
+              }
               if (paiementRefuse.lienVirement) {
                 document.getElementById('refusModifLienVirement').value = paiementRefuse.lienVirement;
               }
@@ -15639,7 +15700,10 @@
               modifVirement.style.display = 'none';
               modifCheque.style.display = 'block';
 
-              // Pré-remplir le numéro de chèque
+              // Pré-remplir le montant et numéro de chèque
+              if (paiementRefuse.montant) {
+                document.getElementById('refusModifMontantCheque').value = paiementRefuse.montant;
+              }
               if (paiementRefuse.numeroCheque) {
                 document.getElementById('refusModifNumeroCheque').value = paiementRefuse.numeroCheque;
               }
@@ -16019,8 +16083,14 @@
       let modificationsPayload = {};
 
       if (methode === 'virement') {
+        const montantInput = document.getElementById('refusModifMontantVirement');
+        if (montantInput.value.trim()) montantInput.value = formaterMontantInput(montantInput.value);
+        const nouveauMontant = montantInput.value.trim();
         const nouveauLien = document.getElementById('refusModifLienVirement').value.trim();
         const nouveauMotDePasse = document.getElementById('refusModifMotDePasse').value.trim();
+        if (nouveauMontant) {
+          modificationsPayload.montant = nouveauMontant;
+        }
         if (nouveauLien) {
           modificationsPayload.lienVirement = nouveauLien;
         }
@@ -16028,7 +16098,13 @@
           modificationsPayload.motDePasseVirement = nouveauMotDePasse;
         }
       } else if (methode === 'cheque' || methode === 'chèque') {
+        const montantInputCheque = document.getElementById('refusModifMontantCheque');
+        if (montantInputCheque.value.trim()) montantInputCheque.value = formaterMontantInput(montantInputCheque.value);
+        const nouveauMontant = montantInputCheque.value.trim();
         const nouveauNumeroCheque = document.getElementById('refusModifNumeroCheque').value.trim();
+        if (nouveauMontant) {
+          modificationsPayload.montant = nouveauMontant;
+        }
         if (nouveauNumeroCheque) {
           modificationsPayload.numeroCheque = nouveauNumeroCheque;
         }

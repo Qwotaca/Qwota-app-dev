@@ -2112,6 +2112,19 @@
 
         <!-- Vue Messages -->
         <div id="messages-view" class="subtab-content" style="flex: 1; min-height: 0; overflow-y: auto; display: none;">
+          <!-- Sous-onglets Virement / Chèque -->
+          <div id="messages-methode-tabs" style="display: flex; gap: 0; border-bottom: 1px solid rgba(148, 163, 184, 0.1); background: rgba(15, 23, 42, 0.6); padding: 0 1rem;">
+            <button id="msg-tab-virement" class="subtab active" onclick="switchMessageMethode('virement')" style="font-size: 0.8rem; padding: 0.6rem 1rem;">
+              <i class="fas fa-exchange-alt"></i>
+              <span>Virement</span>
+              <span id="msg-virement-count" class="subtab-count" style="display: none;">0</span>
+            </button>
+            <button id="msg-tab-cheque" class="subtab" onclick="switchMessageMethode('cheque')" style="font-size: 0.8rem; padding: 0.6rem 1rem;">
+              <i class="fas fa-money-check"></i>
+              <span>Chèque</span>
+              <span id="msg-cheque-count" class="subtab-count" style="display: none;">0</span>
+            </button>
+          </div>
           <div class="table-body" style="height: 100%;">
             <div id="messages-loading" class="empty-state loading-shimmer" style="height: 100%;">
               <i class="fas fa-spinner fa-spin"></i>
@@ -3558,6 +3571,9 @@
           window.parent.document.documentElement.style.overflow = '';
         } catch(e) {}
       }
+      // Restaurer le footer (caché quand ouvert depuis conversation)
+      const modalFooter = document.querySelector('#modalDetailsTraitement .modal-details-footer');
+      if (modalFooter) modalFooter.style.display = '';
       currentPayment = null;
     }
 
@@ -3735,6 +3751,7 @@
         // Rafraîchir la liste
         await chargerPaiementsEnTraitement();
         await chargerDerniersTraites();
+        await chargerMessagesEnAttente();
 
         // Recharger le tableau de rapprochement QBO
         await chargerTableauPeriodes();
@@ -5476,6 +5493,7 @@
     // ============================================
 
     let currentSubTab = 'paiements';
+    let currentMessageMethode = 'virement';
     let currentConversation = null; // Pour stocker entrepreneur/numeroSoumission actuel
 
     // Basculer entre sous-tabs
@@ -5500,6 +5518,15 @@
       if (tab === 'messages') {
         afficherListeMessages();
       }
+    }
+
+    // Changer le filtre méthode dans la vue Messages
+    function switchMessageMethode(methode) {
+      currentMessageMethode = methode;
+      document.getElementById('msg-tab-virement').classList.toggle('active', methode === 'virement');
+      document.getElementById('msg-tab-cheque').classList.toggle('active', methode === 'cheque');
+      // Cacher les sous-onglets méthode quand on est dans une conversation
+      afficherListeMessages();
     }
 
     // Charger les messages en attente (nouveaux messages de entrepreneurs)
@@ -5527,6 +5554,11 @@
         // Mettre à jour le badge Paiements aussi
         document.getElementById('paiements-count-badge').textContent = allPayments.length;
 
+        // Rafraîchir la liste si on est sur l'onglet Messages
+        if (currentSubTab === 'messages') {
+          afficherListeMessages();
+        }
+
       } catch (error) {
         console.error('[Direction Facturation] Erreur chargement messages:', error);
       }
@@ -5538,11 +5570,44 @@
       const emptyEl = document.getElementById('messages-empty');
       const listEl = document.getElementById('messages-list');
       const conversationEl = document.getElementById('conversation-view');
+      const methodeTabsEl = document.getElementById('messages-methode-tabs');
 
-      // Cacher la conversation si ouverte
+      // Cacher la conversation si ouverte, réafficher les onglets méthode
       conversationEl.style.display = 'none';
+      if (methodeTabsEl) methodeTabsEl.style.display = 'flex';
 
-      if (messagesEnAttente.length === 0) {
+      // Mettre à jour les compteurs par méthode
+      const virementCount = messagesEnAttente.filter(m => {
+        const meth = (m.methode || m.paiementInfo?.methode || '').toLowerCase();
+        return meth !== 'cheque' && meth !== 'chèque';
+      }).length;
+      const chequeCount = messagesEnAttente.filter(m => {
+        const meth = (m.methode || m.paiementInfo?.methode || '').toLowerCase();
+        return meth === 'cheque' || meth === 'chèque';
+      }).length;
+
+      const virementBadge = document.getElementById('msg-virement-count');
+      const chequeBadge = document.getElementById('msg-cheque-count');
+      if (virementBadge) {
+        virementBadge.textContent = virementCount;
+        virementBadge.style.display = virementCount > 0 ? 'inline-flex' : 'none';
+      }
+      if (chequeBadge) {
+        chequeBadge.textContent = chequeCount;
+        chequeBadge.style.display = chequeCount > 0 ? 'inline-flex' : 'none';
+      }
+
+      // Filtrer les messages par méthode sélectionnée
+      const filteredMessages = messagesEnAttente.filter(m => {
+        const meth = (m.methode || m.paiementInfo?.methode || '').toLowerCase();
+        if (currentMessageMethode === 'cheque') {
+          return meth === 'cheque' || meth === 'chèque';
+        } else {
+          return meth !== 'cheque' && meth !== 'chèque';
+        }
+      });
+
+      if (filteredMessages.length === 0) {
         loadingEl.style.display = 'none';
         emptyEl.style.display = 'flex';
         listEl.style.display = 'none';
@@ -5553,14 +5618,16 @@
       emptyEl.style.display = 'none';
       listEl.style.display = 'block';
 
-      listEl.innerHTML = messagesEnAttente.map((msg, index) => {
+      listEl.innerHTML = filteredMessages.map((msg) => {
+        // Retrouver l'index original dans messagesEnAttente pour afficherConversationAvecInfos
+        const originalIndex = messagesEnAttente.indexOf(msg);
         const nomComplet = msg.entrepreneurNomComplet || msg.entrepreneur;
         const avatarHtml = msg.entrepreneurPhoto
           ? `<img src="${msg.entrepreneurPhoto}" class="avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">`
           : `<div class="avatar">${nomComplet.charAt(0).toUpperCase()}</div>`;
 
         return `
-          <div class="message-card" onclick="afficherConversationAvecInfos(${index})">
+          <div class="message-card" onclick="afficherConversationAvecInfos(${originalIndex})">
             <div class="message-card-header">
               <div class="message-card-entrepreneur">
                 ${avatarHtml}
@@ -5602,15 +5669,18 @@
         nomComplet,
         photo,
         clientInfo,
-        paiementInfo
+        paiementInfo,
+        typePaiement: msgData.typePaiement || 'depot'
       };
 
       const listEl = document.getElementById('messages-list');
       const conversationEl = document.getElementById('conversation-view');
       const loadingEl = document.getElementById('messages-loading');
+      const methodeTabsEl = document.getElementById('messages-methode-tabs');
 
       try {
         listEl.style.display = 'none';
+        if (methodeTabsEl) methodeTabsEl.style.display = 'none';
         loadingEl.style.display = 'flex';
 
         const response = await fetch(`/api/facturationqe/client/${entrepreneur}/${numeroSoumission}/conversation`);
@@ -5644,13 +5714,9 @@
                   <span><i class="fas fa-hashtag"></i> ${numeroSoumission}</span>
                 </div>
               </div>
-              <button class="btn-info-paiement" onclick="afficherInfoPaiement()" title="Information paiement">
-                <i class="fas fa-credit-card"></i>
+              <button class="btn-info-paiement" onclick="ouvrirDetailsDepuisConversation()" title="Voir les détails">
+                <i class="fas fa-search"></i>
                 <span>Info paiement</span>
-              </button>
-              <button class="btn-info-client" onclick="afficherInfoClient()" title="Information client">
-                <i class="fas fa-user-circle"></i>
-                <span>Info client</span>
               </button>
             </div>
 
@@ -5773,6 +5839,46 @@
     }
 
     // Afficher le modal d'info paiement
+    // Ouvrir le modal "Vérifier" depuis la conversation (sans boutons Accepter/Refuser)
+    async function ouvrirDetailsDepuisConversation() {
+      if (!currentConversation) return;
+
+      const entrepreneur = currentConversation.entrepreneur;
+      const numeroSoumission = currentConversation.numeroSoumission;
+      const clientInfo = currentConversation.clientInfo || {};
+      const nomComplet = currentConversation.nomComplet;
+      const photo = currentConversation.photo;
+
+      // Construire un objet paiement compatible avec ouvrirDetails
+      const paiementObj = {
+        entrepreneur: nomComplet,
+        entrepreneurUsername: entrepreneur,
+        entrepreneurPhoto: photo,
+        numeroSoumission: numeroSoumission,
+        client: `${clientInfo.clientPrenom || ''} ${clientInfo.clientNom || ''}`.trim() || 'Client inconnu',
+        telephone: clientInfo.telephone || '',
+        adresse: clientInfo.adresse || '',
+        totalTravaux: clientInfo.prix || '',
+        type: currentConversation.typePaiement || 'depot'
+      };
+
+      // Utiliser ouvrirDetails existant
+      await ouvrirDetails(paiementObj);
+
+      // Cacher le footer (boutons Refuser/Valider) et les boutons Copier
+      const modal = document.getElementById('modalDetailsTraitement');
+      const modalFooter = modal.querySelector('.modal-details-footer');
+      if (modalFooter) modalFooter.style.display = 'none';
+      // Cacher tous les boutons Copier
+      modal.querySelectorAll('.btn-copy').forEach(btn => btn.style.display = 'none');
+      // Rendre les champs montant non-éditables
+      modal.querySelectorAll('.montant-editable').forEach(input => {
+        input.readOnly = true;
+        input.style.border = 'none';
+        input.style.background = 'transparent';
+      });
+    }
+
     function afficherInfoPaiement() {
       if (!currentConversation || !currentConversation.paiementInfo) {
         alert('Aucune information de paiement disponible');
@@ -5792,8 +5898,15 @@
         return labels[methode] || methode || 'N/A';
       };
 
-      // Déterminer le type de paiement (Dépôt par défaut car c'est un paiement depot)
-      const typePaiement = 'Dépôt';
+      // Déterminer le type de paiement depuis les données
+      const typeLabels = {
+        'depot': 'Dépôt',
+        'paiement_final': 'Paiement final',
+        'un_seul_paiement': 'Paiement complet',
+        'paiement_partiel': 'Paiement partiel'
+      };
+      const rawType = currentConversation.paiementInfo?.typePaiement || currentConversation.typePaiement || 'depot';
+      const typePaiement = typeLabels[rawType] || (rawType.startsWith('autre_paiement_') ? 'Paiement partiel' : rawType);
 
       const modal = document.createElement('div');
       modal.className = 'modal-overlay';
@@ -5834,6 +5947,21 @@
               <div class="client-info-item">
                 <label><i class="fas fa-key"></i> Mot de passe</label>
                 <span style="font-family: monospace; background: rgba(15, 23, 42, 0.5); padding: 0.25rem 0.5rem; border-radius: 4px;">${paiement.motDePasse}</span>
+              </div>
+              ` : ''}
+              ${paiement.numeroCheque ? `
+              <div class="client-info-item">
+                <label><i class="fas fa-money-check"></i> N° Chèque</label>
+                <span style="font-weight: 600; color: #10b981;">${paiement.numeroCheque}</span>
+              </div>
+              ` : ''}
+              ${paiement.photoRecto ? `
+              <div class="client-info-item">
+                <label><i class="fas fa-images"></i> Photos du chèque</label>
+                <div style="display: flex; gap: 0.5rem;">
+                  <a href="${paiement.photoRecto}" target="_blank" style="color: #3b82f6;">Recto</a>
+                  ${paiement.photoVerso ? `<a href="${paiement.photoVerso}" target="_blank" style="color: #3b82f6;">Verso</a>` : ''}
+                </div>
               </div>
               ` : ''}
             </div>
@@ -5978,13 +6106,9 @@
                   <span><i class="fas fa-hashtag"></i> ${numeroSoumission}</span>
                 </div>
               </div>
-              <button class="btn-info-paiement" onclick="afficherInfoPaiement()" title="Information paiement">
-                <i class="fas fa-credit-card"></i>
+              <button class="btn-info-paiement" onclick="ouvrirDetailsDepuisConversation()" title="Voir les détails">
+                <i class="fas fa-search"></i>
                 <span>Info paiement</span>
-              </button>
-              <button class="btn-info-client" onclick="afficherInfoClient()" title="Information client">
-                <i class="fas fa-user-circle"></i>
-                <span>Info client</span>
               </button>
             </div>
 

@@ -225,7 +225,8 @@ def get_statuts_client_facturation_qe(username: str, numero_soumission: str):
                             "statut": remb.get("statut"),
                             "typePaiementAutres": "remboursement",
                             "paiement_source": remb.get("paiement_source"),
-                            "courriel": remb.get("courriel")
+                            "courriel": remb.get("courriel"),
+                            "refus": remb.get("refus"),
                         }
                         statuts_client["autresPaiements"].append(remb_payment)
 
@@ -531,6 +532,9 @@ def get_status_columns_facturation_qe(username: str):
                             "lienVirement": autre_paiement.get("lienVirement", ""),
                             "typePaiementAutres": autre_paiement.get("typePaiementAutres", ""),
                         }
+                        # Pour les remboursements, ajouter les infos de refus
+                        if autre_paiement.get("refus"):
+                            paiement_autre["refus"] = autre_paiement["refus"]
 
                         # Placer dans la bonne colonne selon le statut
                         if statut_autre == "refuse":
@@ -539,36 +543,6 @@ def get_status_columns_facturation_qe(username: str):
                             traitees.append(paiement_autre)
                         elif statut_autre == "traitement" or statut_autre == "attente_comptable":
                             en_traitement.append(paiement_autre)
-
-        # 4. AJOUTER LES REMBOURSEMENTS REFUSÉS dans la colonne urgente
-        remb_file = os.path.join(base_cloud, "remboursements", username, "remboursements.json")
-        if os.path.exists(remb_file):
-            try:
-                with open(remb_file, "r", encoding="utf-8") as f:
-                    remboursements = json.load(f)
-                for remb in remboursements:
-                    if remb.get("statut") == "refuse":
-                        num_soum = remb.get("num") or remb.get("numeroSoumission", "")
-                        paiement_remb = {
-                            "num": num_soum,
-                            "numeroSoumission": num_soum,
-                            "clientPrenom": remb.get("clientPrenom", remb.get("prenom", "")),
-                            "clientNom": remb.get("clientNom", remb.get("nom", "")),
-                            "prenom": remb.get("clientPrenom", remb.get("prenom", "")),
-                            "nom": remb.get("clientNom", remb.get("nom", "")),
-                            "telephone": remb.get("telephone", ""),
-                            "adresse": remb.get("adresse", ""),
-                            "total_travaux": remb.get("total_travaux", "0,00 $"),
-                            "typePaiement": "autre_paiement_remb",
-                            "typePaiementAutres": "remboursement",
-                            "montant": remb.get("montant", "0,00 $"),
-                            "statutPaiement": "refuse",
-                            "refus": remb.get("refus", None),
-                        }
-                        urgentes.append(paiement_remb)
-                        print(f"[get_status_columns] Remboursement refusé ajouté en urgente: {num_soum}")
-            except Exception as e:
-                print(f"[WARN] Erreur lecture remboursements pour status-columns: {e}")
 
         print(f"[get_status_columns] Paiements répartis - Urgentes: {len(urgentes)}, En traitement: {len(en_traitement)}, Traitées: {len(traitees)}")
 

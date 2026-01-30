@@ -16277,8 +16277,8 @@
 
         // Trier les périodes: 0 en premier, puis 1, 2, 3...
         const periodesTriees = Object.entries(periodesFiltrees).sort((a, b) => {
-          const pA = parseInt(a[0]);
-          const pB = parseInt(b[0]);
+          const pA = parseInt(a[0].replace('periode-', ''));
+          const pB = parseInt(b[0].replace('periode-', ''));
           if (pA === 0) return -1;
           if (pB === 0) return 1;
           return pA - pB;
@@ -16317,12 +16317,31 @@
       }
     }
 
+    // Calculer les dates d'une période à partir de son numéro
+    function getDatesPeriode(periodeNumero) {
+      const num = parseInt(periodeNumero);
+      const mois = ['Janv', 'Févr', 'Mars', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sept', 'Oct', 'Nov', 'Déc'];
+      if (num === 0) return '2025';
+      const dateDebut = new Date(2026, 0, 12); // 12 janvier 2026
+      const debut = new Date(dateDebut);
+      debut.setDate(debut.getDate() + (num - 1) * 14);
+      const fin = new Date(debut);
+      fin.setDate(fin.getDate() + 13);
+      return `${debut.getDate()} ${mois[debut.getMonth()]} - ${fin.getDate()} ${mois[fin.getMonth()]} ${fin.getFullYear()}`;
+    }
+
     function creerPeriodeHTML(periodeId, paiements) {
       // paiements est maintenant directement un tableau
       const paiementsCount = paiements.length;
 
       // Extraire le numéro de la période (ex: "periode-1" → "1")
       const periodeNumero = periodeId.replace('periode-', '');
+      const datesPeriode = getDatesPeriode(periodeNumero);
+
+      // Calculer le total de la période
+      let totalPeriode = 0;
+      paiements.forEach(p => { totalPeriode += parseMontant(p.montant); });
+      const totalFormate = formatCurrency(totalPeriode);
 
       return `
         <div style="background: rgba(23, 32, 51, 0.6); border: 1px solid var(--border-dark); border-radius: 8px; margin-bottom: 0.75rem; overflow: hidden;">
@@ -16331,10 +16350,13 @@
               <i class="fas fa-chevron-right" id="icon-${periodeId}" style="color: rgb(96, 165, 250); transition: transform 0.3s ease; font-size: 0.7rem;"></i>
               <div style="flex: 1;">
                 <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-light);">Période ${periodeNumero}</div>
-                <div style="font-size: 0.7rem; color: var(--text-gray); margin-top: 0.1rem;">${paiementsCount} paiement${paiementsCount > 1 ? 's' : ''}</div>
+                <div style="font-size: 0.7rem; color: var(--text-gray); margin-top: 0.1rem;">${datesPeriode}</div>
               </div>
             </div>
-            <div style="background: rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 0.2rem 0.5rem; font-size: 0.7rem; font-weight: 600; color: rgb(16, 185, 129);">${paiementsCount}</div>
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem;">
+              <div style="font-size: 0.75rem; font-weight: 600; color: #10b981;">${totalFormate}</div>
+              <div style="font-size: 0.65rem; color: var(--text-gray);">${paiementsCount} paiement${paiementsCount > 1 ? 's' : ''}</div>
+            </div>
           </div>
           <div class="periode-content" id="content-${periodeId}" style="display: none; border-top: 1px solid var(--border-dark); padding: 0.5rem;">
             ${paiements.map(paiement => {

@@ -4187,24 +4187,9 @@ async function handleDuplicateChoice(choice, existingId, numValue) {
   const numField = form ? (form.num || document.querySelector('input[name="num"]')) : null;
 
   if (choice === 'modifier') {
-    // Charger le projet existant
-    window.editingSoumissionId = existingId;
-    if (numField) numField.value = numValue;
-
-    lockSoumissionClientFields();
-    await loadPendingSoumissions();
+    // Charger le projet existant avec tous ses champs via editPendingSoumission
     window.soumissionSavingInProgress = false;
-
-    // Notification
-    const notification = document.createElement('div');
-    notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #f59e0b; color: #1a1a2e; padding: 1rem 1.5rem; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: 600;';
-    notification.innerHTML = '<i class="fas fa-folder-open mr-2"></i>Projet existant chargé';
-    document.body.appendChild(notification);
-    setTimeout(() => {
-      notification.style.opacity = '0';
-      notification.style.transition = 'opacity 0.3s';
-      setTimeout(() => notification.remove(), 300);
-    }, 3000);
+    await editPendingSoumission(existingId);
 
   } else {
     // Créer une nouvelle soumission

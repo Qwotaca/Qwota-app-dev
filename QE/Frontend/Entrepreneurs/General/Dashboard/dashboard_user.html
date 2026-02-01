@@ -7320,6 +7320,21 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
         }, 1000);
       }, 500);
     }
+
+    // Vérifier si on vient avec un coach pré-sélectionné
+    const viewCoachUsername = sessionStorage.getItem('viewCoachUsername');
+    if (viewCoachUsername) {
+      log('🎯 Coach pré-sélectionné:', viewCoachUsername);
+
+      setTimeout(() => {
+        selectDashboardType('par-coach');
+
+        setTimeout(() => {
+          selectCoach(viewCoachUsername);
+          sessionStorage.removeItem('viewCoachUsername');
+        }, 1000);
+      }, 500);
+    }
   }
 
   function selectDashboardType(type) {
@@ -7813,6 +7828,9 @@ let coachCurrentView = 'grid'; // 'grid' or 'ranking'
       renderCoachClassementCards();
     }
   }
+
+  // Rendre la fonction accessible globalement pour voirDashboard()
+  window.selectCoach = selectCoach;
 
   async function loadEntrepreneursForCoach() {
     try {
@@ -10546,9 +10564,10 @@ function afficherEntrepreneurs() {
     }
 
     // Toujours afficher les 2 boutons
+    const gradeRaw = (entrepreneur.grade || '').toLowerCase();
     const actionsHTML = `
       <div class="entrepreneur-actions">
-        <button type="button" class="action-btn primary" onclick="event.stopPropagation(); voirDashboard('${entrepreneur.username}');">
+        <button type="button" class="action-btn primary" onclick="event.stopPropagation(); voirDashboard('${entrepreneur.username}', '${gradeRaw}');">
           <i class="fas fa-chart-line"></i> Dashboard
         </button>
         <button type="button" class="action-btn secondary" onclick="event.stopPropagation(); contacterEntrepreneur('${entrepreneur.courriel || ''}');">
@@ -10766,8 +10785,9 @@ function getStatData(statId, ca, soumissions, metriques, satisfaction, employes)
   return statMap[statId] || null;
 }
 
-async function voirDashboard(usernameParam) {
-  log('Redirection vers dashboard pour:', usernameParam);
+async function voirDashboard(usernameParam, grade) {
+  const isCoach = grade === 'coach';
+  log('Redirection vers dashboard pour:', usernameParam, 'grade:', grade, 'isCoach:', isCoach);
 
   // Vérifier si on est déjà sur la page dashboard
   const currentHash = window.parent ? window.parent.location.hash : window.location.hash;
@@ -10804,14 +10824,17 @@ async function voirDashboard(usernameParam) {
     // Attendre un instant pour que le loader s'affiche
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    // Changer le type de dashboard vers "entrepreneur"
-    selectDashboardType('entrepreneur');
-
-    // Attendre que les entrepreneurs soient chargés
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    // Sélectionner l'entrepreneur
-    selectEntrepreneur(usernameParam);
+    if (isCoach) {
+      // Changer le type de dashboard vers "par-coach"
+      selectDashboardType('par-coach');
+      await new Promise(resolve => setTimeout(resolve, 300));
+      selectCoach(usernameParam);
+    } else {
+      // Changer le type de dashboard vers "entrepreneur"
+      selectDashboardType('entrepreneur');
+      await new Promise(resolve => setTimeout(resolve, 300));
+      selectEntrepreneur(usernameParam);
+    }
 
     // Attendre que le dashboard se charge
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -10822,8 +10845,11 @@ async function voirDashboard(usernameParam) {
     // On n'est pas sur le dashboard - rediriger normalement
     log('🔄 Navigation vers dashboard');
 
-    // Stocker le username de l'entrepreneur à visualiser
-    sessionStorage.setItem('viewEntrepreneurUsername', usernameParam);
+    if (isCoach) {
+      sessionStorage.setItem('viewCoachUsername', usernameParam);
+    } else {
+      sessionStorage.setItem('viewEntrepreneurUsername', usernameParam);
+    }
 
     // Rediriger vers le dashboard via le routeur parent
     if (window.parent && window.parent !== window) {

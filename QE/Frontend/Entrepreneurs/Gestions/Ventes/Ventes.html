@@ -1340,17 +1340,80 @@
         display: block !important;
       }
 
-      /* Clients perdus container - bg et border sur mobile */
-      .perdus-table-container {
-        background: #0f172a;
-        border: 2px solid var(--border-dark);
+      /* Perdus table mobile - masquer thead */
+      .perdus-table thead {
+        display: none !important;
       }
 
-      /* Clients perdus - cacher sur mobile */
+      /* Perdus table mobile - retirer contraintes table */
+      .perdus-table {
+        display: block !important;
+        width: 100% !important;
+        table-layout: auto !important;
+      }
+
+      .perdus-table tbody {
+        display: block !important;
+        width: 100% !important;
+      }
+
+      /* Perdus table mobile - cacher tout sauf Nom et Prix */
       .perdus-table td[data-label="Téléphone"],
       .perdus-table td[data-label="Adresse"],
       .perdus-table td[data-label="Actions"] {
         display: none !important;
+        width: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+      }
+
+      /* Perdus table mobile - lignes en carte */
+      .perdus-table tbody tr {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        padding: 1rem !important;
+        margin-bottom: 0.5rem !important;
+        background: rgba(30, 41, 59, 0.5) !important;
+        border-radius: 8px !important;
+        border: 1px solid var(--border-dark) !important;
+        overflow: hidden !important;
+      }
+
+      /* Perdus table mobile - retirer border-bottom des td */
+      .perdus-table td {
+        border-bottom: none !important;
+      }
+
+      /* Perdus table mobile - Nom à gauche */
+      .perdus-table tbody tr td[data-label="Nom"] {
+        display: inline-block !important;
+        flex: 1 1 auto !important;
+        width: auto !important;
+        max-width: calc(100% - 100px) !important;
+        font-weight: 600 !important;
+        font-size: 1rem !important;
+        padding: 0 !important;
+        padding-right: 10px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        line-height: 1.4 !important;
+      }
+
+      /* Perdus table mobile - Prix à droite */
+      .perdus-table tbody tr td[data-label="Prix"] {
+        display: block !important;
+        flex: 0 0 auto !important;
+        width: auto !important;
+        margin-left: auto !important;
+        text-align: right !important;
+        font-weight: 600 !important;
+        color: #ffffff !important;
+        padding: 0 !important;
+        white-space: nowrap !important;
       }
 
       /* Cacher TOUT sauf Nom et Prix sur mobile - aucune place */
@@ -2872,14 +2935,14 @@
       const prix = formatPrix(client.prix || '0');
 
       return `
-        <tr style="cursor: pointer;" onclick="showClientPerduDetails(${index})">
-          <td data-label="Nom" style="width: 20%; text-align: left;">${nomComplet}</td>
-          <td data-label="Téléphone" style="width: 16%; text-align: left;">${telephone}</td>
-          <td data-label="Adresse" style="width: 35%; text-align: left;">
+        <tr class="perdus-row" style="cursor: pointer;" onclick="showClientPerduDetails(${index})">
+          <td data-label="Nom">${nomComplet}</td>
+          <td data-label="Téléphone">${telephone}</td>
+          <td data-label="Adresse">
             <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${adresse}</div>
           </td>
-          <td data-label="Prix" style="width: 11%; text-align: left;">${prix}</td>
-          <td data-label="Actions" style="width: 18%; text-align: center;" onclick="event.stopPropagation()">
+          <td data-label="Prix">${prix}</td>
+          <td data-label="Actions" onclick="event.stopPropagation()">
             <div class="flex items-center justify-center gap-2">
               <button onclick="recupererClientPerdu(${index})" class="px-3 py-1.5 rounded-lg transition-all text-sm font-medium" style="background: rgba(16, 185, 129, 0.2); color: #10b981;" onmouseover="this.style.background='rgba(16, 185, 129, 0.3)'" onmouseout="this.style.background='rgba(16, 185, 129, 0.2)'">
                 <i class="fas fa-undo mr-1"></i> Récupérer
@@ -2892,11 +2955,6 @@
         </tr>
       `;
     }).join('');
-
-    // Réinitialiser l'affichage mobile après chargement
-    if (window.innerWidth <= 600) {
-      resetMobileDisplay('clientsPerdusTableBody');
-    }
   }
 
   // Variable globale pour récupération client perdu

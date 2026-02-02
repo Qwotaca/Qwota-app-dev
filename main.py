@@ -1007,6 +1007,10 @@ class ProspectData(BaseModel):
     nom: str
     telephone: str
     adresse: Optional[str] = ""
+    code_postal: Optional[str] = ""
+    courriel: Optional[str] = ""
+    type_service: Optional[str] = ""
+    provenance: Optional[str] = ""
 
 class CalculateurData(BaseModel):
     username: str
@@ -2632,6 +2636,14 @@ async def ajouter_prospect(data: ProspectData):
             "date_ajout": datetime.now().isoformat(),
             "statut": "client_potentiel"
         }
+        if data.code_postal:
+            nouveau_prospect["code_postal"] = data.code_postal
+        if data.courriel:
+            nouveau_prospect["courriel"] = data.courriel
+        if data.type_service:
+            nouveau_prospect["type_service"] = data.type_service
+        if data.provenance:
+            nouveau_prospect["provenance"] = data.provenance
         
         # Ajouter le nouveau prospect
         prospects_existants.append(nouveau_prospect)
@@ -25406,6 +25418,242 @@ async def get_language_preference(username: str = Query(...)):
 
 # ============================================================================
 # FIN ROUTES PRÉFÉRENCES DE LANGUE
+# ============================================================================
+
+
+# ============================================================================
+# ROUTE MISE À JOUR INFOS CLIENT
+# ============================================================================
+
+@app.post("/api/update-client-info")
+async def update_client_info(data: dict = Body(...)):
+    """Met à jour les infos client (nom, prénom, téléphone, adresse, courriel) dans tous les JSON concernés"""
+    try:
+        username = data.get("username")
+        num_soumission = data.get("num_soumission")
+        prenom = data.get("prenom", "")
+        nom = data.get("nom", "")
+        telephone = data.get("telephone", "")
+        adresse = data.get("adresse", "")
+        courriel = data.get("courriel", "")
+
+        if not username or not num_soumission:
+            raise HTTPException(status_code=400, detail="username et num_soumission requis")
+
+        print(f"[UPDATE-CLIENT] Mise à jour infos client pour {username}, soumission {num_soumission}")
+
+        updated_files = []
+
+        # Liste des fichiers JSON à vérifier
+        json_paths = [
+            (f"{base_cloud}/soumissions/{username}/soumissions_a_envoyer.json", "soumissions_a_envoyer"),
+            (f"{base_cloud}/soumissions_completes/{username}/soumissions.json", "soumissions_completes"),
+            (f"{base_cloud}/soumissions_signees/{username}/soumissions.json", "soumissions_signees"),
+            (f"{base_cloud}/ventes_attente/{username}/ventes.json", "ventes_attente"),
+            (f"{base_cloud}/ventes_acceptees/{username}/ventes.json", "ventes_acceptees"),
+            (f"{base_cloud}/pdfcalcul/{username}/pdfs_calculateur.json", "pdfcalcul"),
+        ]
+
+        for file_path, label in json_paths:
+            if not os.path.exists(file_path):
+                continue
+
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    items = json.load(f)
+
+                if not isinstance(items, list):
+                    continue
+
+                modified = False
+                for item in items:
+                    if item.get("num") == num_soumission:
+                        item["prenom"] = prenom
+                        item["nom"] = nom
+                        item["telephone"] = telephone
+                        item["adresse"] = adresse
+                        item["courriel"] = courriel
+                        modified = True
+
+                if modified:
+                    with open(file_path, "w", encoding="utf-8") as f:
+                        json.dump(items, f, ensure_ascii=False, indent=2)
+                    updated_files.append(label)
+                    print(f"[UPDATE-CLIENT] ✓ Mis à jour dans {label}")
+
+            except Exception as e:
+                print(f"[UPDATE-CLIENT] Erreur lecture/écriture {label}: {e}")
+
+        # === Mise à jour dans projets/{username}_projets.json (calculateur) ===
+        old_prenom = data.get("old_prenom", "")
+        old_nom = data.get("old_nom", "")
+        old_telephone = data.get("old_telephone", "")
+        old_adresse = data.get("old_adresse", "")
+        old_client = f"{old_prenom} {old_nom}".strip()
+        new_client = f"{prenom} {nom}".strip()
+
+        projets_path = f"{base_cloud}/projets/{username}_projets.json"
+        if os.path.exists(projets_path):
+            try:
+                with open(projets_path, "r", encoding="utf-8") as f:
+                    projets = json.load(f)
+
+                if isinstance(projets, list):
+                    modified = False
+                    for projet in projets:
+                        # Matcher par ancien nom client + adresse ou téléphone
+                        projet_client = projet.get("client", "")
+                        projet_adresse = projet.get("adresse", "")
+                        projet_telephone = projet.get("telephone", "")
+
+                        match = (projet_client == old_client and
+                                 (projet_adresse == old_adresse or projet_telephone == old_telephone))
+
+                        if match:
+                            projet["client"] = new_client
+                            projet["adresse"] = adresse
+                            projet["telephone"] = telephone
+                            # Mettre à jour formData aussi
+                            form_data = projet.get("formData", {})
+                            if form_data:
+                                form_data["clientPrenom"] = prenom
+                                form_data["clientNom"] = nom
+                                form_data["clientAddress"] = adresse
+                                form_data["clientPhone"] = telephone
+                            modified = True
+
+                    if modified:
+                        with open(projets_path, "w", encoding="utf-8") as f:
+                            json.dump(projets, f, ensure_ascii=False, indent=2)
+                        updated_files.append("projets_calculateur")
+                        print(f"[UPDATE-CLIENT] ✓ Mis à jour dans projets_calculateur")
+
+            except Exception as e:
+                print(f"[UPDATE-CLIENT] Erreur lecture/écriture projets_calculateur: {e}")
+
+        print(f"[UPDATE-CLIENT] Terminé - Fichiers mis à jour: {updated_files}")
+        return {"status": "success", "updated_files": updated_files}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] update_client_info: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/update-client-info-calcul")
+async def update_client_info_calcul(data: dict = Body(...)):
+    """Met à jour les infos client depuis le calculateur (par project_id) dans projets et soumissions liées"""
+    try:
+        username = data.get("username")
+        project_id = data.get("project_id")
+        prenom = data.get("prenom", "")
+        nom = data.get("nom", "")
+        telephone = data.get("telephone", "")
+        adresse = data.get("adresse", "")
+        old_prenom = data.get("old_prenom", "")
+        old_nom = data.get("old_nom", "")
+        old_telephone = data.get("old_telephone", "")
+        old_adresse = data.get("old_adresse", "")
+
+        if not username or not project_id:
+            raise HTTPException(status_code=400, detail="username et project_id requis")
+
+        print(f"[UPDATE-CLIENT-CALCUL] Mise à jour infos client pour {username}, projet {project_id}")
+
+        updated_files = []
+        new_client = f"{prenom} {nom}".strip()
+        old_client = f"{old_prenom} {old_nom}".strip()
+
+        # 1. Mettre à jour dans projets/{username}_projets.json
+        projets_path = f"{base_cloud}/projets/{username}_projets.json"
+        num_soumission = None
+        if os.path.exists(projets_path):
+            try:
+                with open(projets_path, "r", encoding="utf-8") as f:
+                    projets = json.load(f)
+
+                if isinstance(projets, list):
+                    modified = False
+                    for projet in projets:
+                        if str(projet.get("id")) == str(project_id):
+                            projet["client"] = new_client
+                            projet["adresse"] = adresse
+                            projet["telephone"] = telephone
+                            form_data = projet.get("formData", {})
+                            if form_data:
+                                form_data["clientPrenom"] = prenom
+                                form_data["clientNom"] = nom
+                                form_data["clientAddress"] = adresse
+                                form_data["clientPhone"] = telephone
+                            modified = True
+
+                    if modified:
+                        with open(projets_path, "w", encoding="utf-8") as f:
+                            json.dump(projets, f, ensure_ascii=False, indent=2)
+                        updated_files.append("projets_calculateur")
+                        print(f"[UPDATE-CLIENT-CALCUL] ✓ Mis à jour dans projets_calculateur")
+
+            except Exception as e:
+                print(f"[UPDATE-CLIENT-CALCUL] Erreur projets: {e}")
+
+        # 2. Propager dans les soumissions liées (match par ancien nom/adresse/telephone)
+        json_paths = [
+            (f"{base_cloud}/soumissions/{username}/soumissions_a_envoyer.json", "soumissions_a_envoyer"),
+            (f"{base_cloud}/soumissions_completes/{username}/soumissions.json", "soumissions_completes"),
+            (f"{base_cloud}/soumissions_signees/{username}/soumissions.json", "soumissions_signees"),
+            (f"{base_cloud}/ventes_attente/{username}/ventes.json", "ventes_attente"),
+            (f"{base_cloud}/ventes_acceptees/{username}/ventes.json", "ventes_acceptees"),
+            (f"{base_cloud}/pdfcalcul/{username}/pdfs_calculateur.json", "pdfcalcul"),
+        ]
+
+        for file_path, label in json_paths:
+            if not os.path.exists(file_path):
+                continue
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    items = json.load(f)
+
+                if not isinstance(items, list):
+                    continue
+
+                modified = False
+                for item in items:
+                    item_prenom = item.get("prenom", "")
+                    item_nom = item.get("nom", "")
+                    item_client = f"{item_prenom} {item_nom}".strip()
+                    item_adresse = item.get("adresse", "")
+                    item_telephone = item.get("telephone", "")
+
+                    match = (item_client == old_client and
+                             (item_adresse == old_adresse or item_telephone == old_telephone))
+
+                    if match:
+                        item["prenom"] = prenom
+                        item["nom"] = nom
+                        item["telephone"] = telephone
+                        item["adresse"] = adresse
+                        modified = True
+
+                if modified:
+                    with open(file_path, "w", encoding="utf-8") as f:
+                        json.dump(items, f, ensure_ascii=False, indent=2)
+                    updated_files.append(label)
+                    print(f"[UPDATE-CLIENT-CALCUL] ✓ Mis à jour dans {label}")
+
+            except Exception as e:
+                print(f"[UPDATE-CLIENT-CALCUL] Erreur {label}: {e}")
+
+        print(f"[UPDATE-CLIENT-CALCUL] Terminé - Fichiers mis à jour: {updated_files}")
+        return {"status": "success", "updated_files": updated_files}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] update_client_info_calcul: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# FIN ROUTE MISE À JOUR INFOS CLIENT
 # ============================================================================
 
 

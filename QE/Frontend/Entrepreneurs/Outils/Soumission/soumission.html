@@ -517,11 +517,18 @@
           <i class="fas fa-info-circle mr-1"></i>
           Pour créer un projet, remplissez les informations client ci-dessous
         </p>
-        <button type="button" id="createSoumissionProjectBtn" onclick="createSoumissionProject()" disabled
-                style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 14px; border: none; cursor: not-allowed; opacity: 0.5; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; margin-left: auto;">
-          <i class="fas fa-plus-circle"></i>
-          Créer le projet
-        </button>
+        <div style="display: flex; align-items: center; gap: 10px; margin-left: auto;">
+          <button type="button" id="editClientInfoBtn" onclick="toggleEditClientInfo()"
+                  style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 14px; border: none; cursor: pointer; transition: all 0.3s ease; display: none; align-items: center; gap: 8px;">
+            <i class="fas fa-user-edit"></i>
+            Modifier les infos
+          </button>
+          <button type="button" id="createSoumissionProjectBtn" onclick="createSoumissionProject()" disabled
+                  style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 14px; border: none; cursor: not-allowed; opacity: 0.5; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-plus-circle"></i>
+            Créer le projet
+          </button>
+        </div>
       </div>
 
       <!-- Ligne 1: Prénom, Nom, Adresse, Téléphone -->
@@ -3884,6 +3891,17 @@ function lockSoumissionClientFields() {
     createBtn.style.cursor = 'pointer';
   }
 
+  // Afficher le bouton "Modifier les infos" (bleu)
+  const editClientBtn = document.getElementById('editClientInfoBtn');
+  if (editClientBtn) {
+    editClientBtn.style.display = 'flex';
+    editClientBtn.innerHTML = '<i class="fas fa-user-edit"></i> Modifier les infos';
+    editClientBtn.style.background = 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)';
+    editClientBtn.dataset.editing = 'false';
+    editClientBtn.disabled = false;
+    editClientBtn.style.opacity = '1';
+  }
+
   // Cacher le message de validation
   const validationMsg = document.getElementById('soumissionClientValidationMsg');
   if (validationMsg) validationMsg.style.display = 'none';
@@ -3981,6 +3999,13 @@ function quitSoumissionProject() {
   const partHidden = document.getElementById('partTravauxHidden');
   if (partHidden) partHidden.value = '';
 
+  // Cacher le bouton "Modifier les infos"
+  const editClientBtn = document.getElementById('editClientInfoBtn');
+  if (editClientBtn) {
+    editClientBtn.style.display = 'none';
+    editClientBtn.dataset.editing = 'false';
+  }
+
   // Reset flags
   window.editingSoumissionId = null;
   window.editingSentSoumissionId = null;
@@ -4012,6 +4037,115 @@ function quitSoumissionProject() {
 
   // Revalider
   if (typeof validateRequiredFields === 'function') validateRequiredFields();
+}
+
+// Modifier / Enregistrer les infos client
+async function toggleEditClientInfo() {
+  const btn = document.getElementById('editClientInfoBtn');
+  if (!btn) return;
+
+  const isEditing = btn.dataset.editing === 'true';
+
+  if (!isEditing) {
+    // === Mode édition : déverrouiller les champs client ===
+    const fields = [
+      document.querySelector('input[name="prenom"]'),
+      document.querySelector('input[name="nom"]'),
+      document.getElementById('adresseAutocomplete'),
+      document.getElementById('telephoneInput'),
+      document.querySelector('input[name="courriel"]')
+    ];
+    fields.forEach(field => {
+      if (field) {
+        field.disabled = false;
+        field.style.opacity = '1';
+        field.style.cursor = 'text';
+        field.style.background = '';
+      }
+    });
+    // Sauvegarder les valeurs actuelles avant modification pour matcher dans projets calcul
+    const form = document.getElementById('soumissionForm');
+    window._editClientOriginal = {
+      prenom: (form.prenom || document.querySelector('input[name="prenom"]'))?.value || '',
+      nom: (form.nom || document.querySelector('input[name="nom"]'))?.value || '',
+      telephone: (document.getElementById('telephoneInput') || form.telephone)?.value || '',
+      adresse: (document.getElementById('adresseAutocomplete') || form.adresse)?.value || ''
+    };
+
+    btn.innerHTML = '<i class="fas fa-save"></i> Enregistrer les modifications';
+    btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+    btn.dataset.editing = 'true';
+  } else {
+    // === Mode sauvegarde : enregistrer et re-verrouiller ===
+    const form = document.getElementById('soumissionForm');
+    const numSoumission = (form.num || document.querySelector('input[name="num"]'))?.value || '';
+    const prenom = (form.prenom || document.querySelector('input[name="prenom"]'))?.value || '';
+    const nom = (form.nom || document.querySelector('input[name="nom"]'))?.value || '';
+    const telephone = (document.getElementById('telephoneInput') || form.telephone)?.value || '';
+    const adresse = (document.getElementById('adresseAutocomplete') || form.adresse)?.value || '';
+    const courriel = (form.courriel || document.querySelector('input[name="courriel"]'))?.value || '';
+
+    if (!numSoumission) {
+      showNotification('Erreur: numéro de soumission manquant', 'error');
+      return;
+    }
+
+    try {
+      btn.disabled = true;
+      btn.style.opacity = '0.6';
+      const response = await fetch(`${window.location.origin}/api/update-client-info`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: window.username,
+          num_soumission: numSoumission,
+          prenom,
+          nom,
+          telephone,
+          adresse,
+          courriel,
+          old_prenom: window._editClientOriginal?.prenom || '',
+          old_nom: window._editClientOriginal?.nom || '',
+          old_telephone: window._editClientOriginal?.telephone || '',
+          old_adresse: window._editClientOriginal?.adresse || ''
+        })
+      });
+      const result = await response.json();
+      if (result.status === 'success') {
+        showNotification('Infos client mises à jour avec succès', 'success');
+      } else {
+        showNotification('Erreur lors de la mise à jour: ' + (result.detail || 'Erreur inconnue'), 'error');
+      }
+    } catch (err) {
+      console.error('[EDIT-CLIENT] Erreur:', err);
+      showNotification('Erreur réseau lors de la mise à jour', 'error');
+    }
+
+    // Re-verrouiller les champs
+    const fields = [
+      document.querySelector('input[name="prenom"]'),
+      document.querySelector('input[name="nom"]'),
+      document.getElementById('adresseAutocomplete'),
+      document.getElementById('telephoneInput')
+    ];
+    fields.forEach(field => {
+      if (field) {
+        field.disabled = true;
+        field.style.opacity = '0.6';
+        field.style.cursor = 'not-allowed';
+        field.style.background = 'rgba(30, 41, 59, 0.5)';
+      }
+    });
+
+    btn.innerHTML = '<i class="fas fa-user-edit"></i> Modifier les infos';
+    btn.style.background = 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)';
+    btn.dataset.editing = 'false';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+
+    // Déclencher une auto-sauvegarde pour synchroniser le projet local aussi
+    if (typeof debouncedAutoSave === 'function') debouncedAutoSave();
+  }
 }
 
 // Auto-sauvegarder le projet soumission quand on arrive du calculateur

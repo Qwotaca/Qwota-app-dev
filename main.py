@@ -1634,27 +1634,58 @@ def get_coaches_list_api(
                         with open(rpo_file, 'r', encoding='utf-8') as f:
                             rpo_data = json.load(f)
 
-                        # Utiliser annual pour les totaux (hr_pap_reel_sans_week1 exclut semaine 1)
                         annual = rpo_data.get("annual", {})
-                        dollar_reel = annual.get("dollar_reel", 0) or 0
-                        contract_reel = annual.get("contract_reel", 0) or 0
-                        estimation_reel = annual.get("estimation_reel", 0) or 0
-                        hr_pap_reel = annual.get("hr_pap_reel_sans_week1", 0) or 0
-
-                        # Produit depuis weekly (pas dans annual)
                         weekly_data = rpo_data.get("weekly", {})
+
                         if start_date:
-                            weekly_data = filter_rpo_weekly_by_period(weekly_data, start_date, end_date)
-                        for month_key, weeks in weekly_data.items():
-                            try:
-                                if int(month_key) < 0:
+                            # Filtrer weekly par période
+                            filtered_weekly = filter_rpo_weekly_by_period(weekly_data, start_date, end_date)
+
+                            # Agréger depuis weekly filtrées
+                            for month_key, weeks in filtered_weekly.items():
+                                try:
+                                    if int(month_key) < 0:
+                                        continue
+                                except:
                                     continue
-                            except:
-                                continue
-                            for week_key, week_data in weeks.items():
-                                p = week_data.get("produit", 0)
-                                if p and p != "-":
-                                    produit_reel += float(p)
+
+                                for week_key, week_data in weeks.items():
+                                    d = week_data.get("dollar", 0)
+                                    if d and d != "-":
+                                        dollar_reel += float(d)
+                                    c = week_data.get("contract", 0)
+                                    if c and c != "-":
+                                        contract_reel += int(c)
+                                    e = week_data.get("estimation", 0)
+                                    if e and e != "-":
+                                        estimation_reel += int(e)
+                                    h = week_data.get("h_marketing", "-")
+                                    if h and h != "-":
+                                        try:
+                                            hr_pap_reel += float(h)
+                                        except:
+                                            pass
+                                    p = week_data.get("produit", 0)
+                                    if p and p != "-":
+                                        produit_reel += float(p)
+                        else:
+                            # Utiliser annual pour les totaux (hr_pap_reel_sans_week1 exclut semaine 1)
+                            dollar_reel = annual.get("dollar_reel", 0) or 0
+                            contract_reel = annual.get("contract_reel", 0) or 0
+                            estimation_reel = annual.get("estimation_reel", 0) or 0
+                            hr_pap_reel = annual.get("hr_pap_reel_sans_week1", 0) or 0
+
+                            # Produit depuis weekly (pas dans annual)
+                            for month_key, weeks in weekly_data.items():
+                                try:
+                                    if int(month_key) < 0:
+                                        continue
+                                except:
+                                    continue
+                                for week_key, week_data in weeks.items():
+                                    p = week_data.get("produit", 0)
+                                    if p and p != "-":
+                                        produit_reel += float(p)
 
                     # prod_horaire vient directement du JSON RPO (pas calculé ici)
                     prod_horaire = 0
@@ -7774,6 +7805,8 @@ def api_get_coach_equipe_dashboard(
         contract_reel = 0
         estimation_reel = 0
         nb_estimations = 0
+        hr_pap_reel = 0
+        produit_reel = 0
 
         # 8. OBJECTIF et POURCENTAGE depuis RPO
         objectif = 0
@@ -7788,42 +7821,87 @@ def api_get_coach_equipe_dashboard(
             annual = rpo_data.get("annual", {})
             weekly_data = rpo_data.get("weekly", {})
 
-            # Dollar réel, Contract réel et Estimation réel depuis RPO
-            dollar_reel = annual.get("dollar_reel", 0)
-            contract_reel = annual.get("contract_reel", 0)
-            estimation_reel = annual.get("estimation_reel", 0)
+            if start_date:
+                # Filtrer weekly par période
+                filtered_weekly = filter_rpo_weekly_by_period(weekly_data, start_date, end_date)
 
-            # Si annual est 0, calculer depuis weekly (fallback)
-            if dollar_reel == 0:
-                for m_key, weeks in rpo_data.get("weekly", {}).items():
-                    for w_key, w_data in weeks.items():
-                        dollar_reel += w_data.get("dollar", 0)
-                        contract_reel += w_data.get("contract", 0)
+                # Agréger depuis weekly filtrées
+                for month_key, weeks in filtered_weekly.items():
+                    try:
+                        if int(month_key) < 0:
+                            continue
+                    except:
+                        continue
+
+                    for week_key, week_data_item in weeks.items():
+                        # Dollar et contract
+                        d = week_data_item.get("dollar", 0)
+                        if d and d != "-":
+                            dollar_reel += float(d)
+                        c = week_data_item.get("contract", 0)
+                        if c and c != "-":
+                            contract_reel += int(c)
+                        # Estimation
+                        e = week_data_item.get("estimation", 0)
+                        if e and e != "-":
+                            estimation_reel += int(e)
+                        # Heures PAP
+                        h = week_data_item.get("h_marketing", "-")
+                        if h and h != "-":
+                            try:
+                                hr_pap_reel += float(h)
+                            except:
+                                pass
+                        # Produit
+                        p = week_data_item.get("produit", 0)
+                        if p and p != "-":
+                            produit_reel += float(p)
+
+                total_heures_pap = hr_pap_reel
+            else:
+                # Utiliser annual (totaux de l'année)
+                dollar_reel = annual.get("dollar_reel", 0)
+                contract_reel = annual.get("contract_reel", 0)
+                estimation_reel = annual.get("estimation_reel", 0)
+
+                # Si annual est 0, calculer depuis weekly (fallback)
+                if dollar_reel == 0:
+                    for m_key, weeks in rpo_data.get("weekly", {}).items():
+                        for w_key, w_data in weeks.items():
+                            dollar_reel += w_data.get("dollar", 0)
+                            contract_reel += w_data.get("contract", 0)
+
+                # Prendre hr_pap_reel_sans_week1 de annual (exclut déjà les heures de la semaine du 5 janv)
+                hr_pap_annual = float(annual.get("hr_pap_reel", 0) or 0)
+                total_heures_pap = hr_pap_annual
+
             objectif = round(float(annual.get("objectif_ca", 0)), 2)
             print(f"[DEBUG OBJECTIF] {username} -> objectif_ca depuis RPO: {objectif}")
             if objectif > 0:
                 pourcentage_objectif = round((ca_actuel / objectif) * 100, 2)
 
-            # Calculer heures_pap_semaine: hr_pap_reel_sans_week1 / nombre de semaines finies
-            # Nombre de semaines finies = semaines écoulées - 1 (exclure semaine actuelle seulement)
+            # Calculer heures_pap_semaine
             from datetime import datetime as dt, timedelta
-            start_year_date = dt(2026, 1, 5)
-            current_date_calc = dt.now()
-            days_since_start = max(0, (current_date_calc - start_year_date).days)
-            nombre_semaines_ecoulees_calc = max(1, days_since_start // 7)
-            # Exclure seulement la semaine actuelle (-1)
-            nombre_semaines_finies = max(1, nombre_semaines_ecoulees_calc - 1)
+            if start_date:
+                # Quand filtré par période, heures_pap_semaine = total filtré / nombre de semaines dans la période
+                period_days = max(1, (end_date - start_date).days)
+                period_weeks = max(1, period_days // 7)
+                heures_pap_semaine = round(hr_pap_reel / period_weeks, 2) if period_weeks > 0 else 0
+            else:
+                # Nombre de semaines finies = semaines écoulées - 1 (exclure semaine actuelle seulement)
+                start_year_date = dt(2026, 1, 5)
+                current_date_calc = dt.now()
+                days_since_start = max(0, (current_date_calc - start_year_date).days)
+                nombre_semaines_ecoulees_calc = max(1, days_since_start // 7)
+                # Exclure seulement la semaine actuelle (-1)
+                nombre_semaines_finies = max(1, nombre_semaines_ecoulees_calc - 1)
 
-            # Prendre hr_pap_reel_sans_week1 de annual (exclut déjà les heures de la semaine du 5 janv)
-            hr_pap_sans_week1 = float(annual.get("hr_pap_reel_sans_week1", 0) or annual.get("hr_pap_reel", 0) or 0)
-            hr_pap_annual = float(annual.get("hr_pap_reel", 0) or 0)
-            total_heures_pap = hr_pap_annual
+                hr_pap_sans_week1 = float(annual.get("hr_pap_reel_sans_week1", 0) or annual.get("hr_pap_reel", 0) or 0)
+                # H PAP/sem = hr_pap_reel_sans_week1 / nombre de semaines finies
+                heures_pap_semaine = round(hr_pap_sans_week1 / nombre_semaines_finies, 2) if nombre_semaines_finies > 0 else 0
 
-            # H PAP/sem = hr_pap_reel_sans_week1 / nombre de semaines finies
-            heures_pap_semaine = round(hr_pap_sans_week1 / nombre_semaines_finies, 2) if nombre_semaines_finies > 0 else 0
-
-            # Pour le calcul recrue/senior, utiliser hr_pap_sans_week1
-            total_heures_pap_sans_w1_actuelle = hr_pap_sans_week1
+            # Pour le calcul recrue/senior, utiliser total_heures_pap
+            total_heures_pap_sans_w1_actuelle = total_heures_pap if start_date else float(annual.get("hr_pap_reel_sans_week1", 0) or annual.get("hr_pap_reel", 0) or 0)
 
             # Accumuler pour calcul recrue/senior (exclut semaine 1 et actuelle)
             grade = user_info.get("grade", "").lower()

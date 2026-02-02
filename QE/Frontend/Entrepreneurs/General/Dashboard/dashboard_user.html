@@ -9606,11 +9606,45 @@ function openWeekSelectionModal(context = 'entrepreneur') {
     return;
   }
 
-  selectedWeeks = []; // Réinitialiser la sélection
-  modal.classList.remove('hidden');
-  document.body.style.overflow = 'hidden'; // Bloquer le scroll arrière-plan
-  console.log('[WEEK MODAL] Modal ouvert, chargement des semaines...');
-  loadAvailableWeeks();
+  // Restaurer la sélection précédente selon le contexte
+  const isCoach = context === 'coach';
+  const currentPeriode = isCoach ? currentCoachClassementCoachPeriode : currentCoachPeriode;
+  const currentDates = isCoach ? currentCoachClassementCoachCustomDates : currentCoachCustomDates;
+
+  if (currentPeriode === 'custom' && currentDates) {
+    // On restaure après le chargement des semaines pour pouvoir matcher les labels
+    selectedWeeks = [];
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    loadAvailableWeeks().then(() => {
+      // Trouver les semaines correspondantes dans availableWeeks
+      const matchingWeeks = availableWeeks.filter(w =>
+        (w.start === currentDates.start && w.end === currentDates.end) ||
+        (w.start === currentDates.start) ||
+        (w.end === currentDates.end)
+      );
+      if (matchingWeeks.length > 0) {
+        // Si c'est une plage (2 semaines), trouver début et fin
+        const startWeek = availableWeeks.find(w => w.start === currentDates.start);
+        const endWeek = availableWeeks.find(w => w.end === currentDates.end);
+        if (startWeek && endWeek && startWeek.start !== endWeek.start) {
+          selectedWeeks = [
+            { start: startWeek.start, end: startWeek.end, label: startWeek.week_label },
+            { start: endWeek.start, end: endWeek.end, label: endWeek.week_label }
+          ];
+        } else if (startWeek) {
+          selectedWeeks = [{ start: startWeek.start, end: startWeek.end, label: startWeek.week_label }];
+        }
+      }
+      renderWeeksGrid();
+    });
+  } else {
+    selectedWeeks = [];
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    console.log('[WEEK MODAL] Modal ouvert, chargement des semaines...');
+    loadAvailableWeeks();
+  }
 }
 
 function closeWeekSelectionModal() {

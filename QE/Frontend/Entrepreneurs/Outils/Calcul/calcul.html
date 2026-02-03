@@ -7376,6 +7376,56 @@
                 </div>
               </div>
             </div>
+
+            <!-- Bouton Ajouter produit custom -->
+            <div class="surface-card p-2 cursor-pointer transition-all duration-200"
+                 onclick="openCustomProductForm('${sectionId}')"
+                 style="border: 2px dashed var(--border-dark) !important;"
+                 onmouseover="this.style.setProperty('border', '2px dashed #10b981', 'important');"
+                 onmouseout="this.style.setProperty('border', '2px dashed var(--border-dark)', 'important');">
+              <div class="flex items-center justify-center h-full">
+                <div class="text-center">
+                  <i class="fas fa-plus text-emerald-400"></i>
+                  <div class="text-xs text-gray-400 mt-1">Produit custom</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Popup produit custom -->
+          <div id="customProductForm_${sectionId}" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;">
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);" onclick="closeCustomProductForm('${sectionId}')"></div>
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 460px; max-width: 90vw;" class="p-6 rounded-xl bg-slate-800 border border-gray-600 shadow-2xl">
+              <div class="flex items-center justify-between mb-4">
+                <div style="font-size: 16px;" class="font-semibold text-white">Nouveau produit custom</div>
+                <span class="text-gray-500 hover:text-white cursor-pointer leading-none" style="font-size: 22px;" onclick="closeCustomProductForm('${sectionId}')">&times;</span>
+              </div>
+              <div class="space-y-3 mb-5">
+                <div>
+                  <label style="font-size: 13px;" class="text-gray-400 mb-1 block">Nom du produit</label>
+                  <input type="text" id="customName_${sectionId}" placeholder="Ex: Behr Premium"
+                         class="w-full input-field rounded" style="font-size: 14px !important; padding: 8px 12px !important;">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label style="font-size: 13px;" class="text-gray-400 mb-1 block">Prix/gallon ($)</label>
+                    <input type="number" id="customPrice_${sectionId}" placeholder="65" min="0" step="0.01"
+                           class="w-full input-field rounded" style="font-size: 14px !important; padding: 8px 12px !important;">
+                  </div>
+                  <div>
+                    <label style="font-size: 13px;" class="text-gray-400 mb-1 block">Couverture (ft²/gal)</label>
+                    <input type="number" id="customCoverage_${sectionId}" placeholder="300" min="1"
+                           class="w-full input-field rounded" style="font-size: 14px !important; padding: 8px 12px !important;">
+                  </div>
+                </div>
+              </div>
+              <div class="flex justify-end space-x-3">
+                <button onclick="closeCustomProductForm('${sectionId}')"
+                        class="btn-secondary" style="font-size: 14px !important; padding: 8px 20px !important;">Annuler</button>
+                <button onclick="addCustomProduct('${sectionId}')"
+                        class="btn-primary" style="font-size: 14px !important; padding: 8px 20px !important;">Ajouter</button>
+              </div>
+            </div>
           </div>
 
           <!-- Option troisième couche -->
@@ -8468,10 +8518,153 @@ function updateCalculation() {
 
 // Stockage des produits sélectionnés
 let selectedProducts = {};
+let customProductCounter = 0;
 
 // Tracker le projet actuellement chargé
 let currentLoadedProjectId = null;
 let isLoadingProject = false; // Flag pour désactiver les notifications et le scroll pendant le chargement
+
+function openCustomProductForm(sectionId) {
+  const form = document.getElementById(`customProductForm_${sectionId}`);
+  if (form) {
+    form.style.display = 'block';
+    const nameInput = document.getElementById(`customName_${sectionId}`);
+    if (nameInput) nameInput.focus();
+  }
+}
+
+function closeCustomProductForm(sectionId) {
+  const form = document.getElementById(`customProductForm_${sectionId}`);
+  if (form) {
+    form.style.display = 'none';
+    // Reset fields
+    const nameInput = document.getElementById(`customName_${sectionId}`);
+    const priceInput = document.getElementById(`customPrice_${sectionId}`);
+    const coverageInput = document.getElementById(`customCoverage_${sectionId}`);
+    if (nameInput) nameInput.value = '';
+    if (priceInput) priceInput.value = '';
+    if (coverageInput) coverageInput.value = '';
+  }
+}
+
+function addCustomProduct(sectionId) {
+  const nameInput = document.getElementById(`customName_${sectionId}`);
+  const priceInput = document.getElementById(`customPrice_${sectionId}`);
+  const coverageInput = document.getElementById(`customCoverage_${sectionId}`);
+
+  const name = nameInput ? nameInput.value.trim() : '';
+  const price = priceInput ? parseFloat(priceInput.value) : 0;
+  const coverage = coverageInput ? parseFloat(coverageInput.value) : 300;
+
+  if (!name) {
+    showNotification('Veuillez entrer un nom pour le produit', 'warning');
+    return;
+  }
+  if (!price || price <= 0) {
+    showNotification('Veuillez entrer un prix valide', 'warning');
+    return;
+  }
+  if (!coverage || coverage <= 0) {
+    showNotification('Veuillez entrer une couverture valide', 'warning');
+    return;
+  }
+
+  customProductCounter++;
+  const productType = `produit_custom_${customProductCounter}`;
+
+  // Ajouter la carte dans la grille
+  addCustomProductCard(sectionId, productType, name, coverage, price);
+
+  // Auto-sélectionner le produit
+  const card = document.getElementById(`card_${productType}_${sectionId}`);
+  if (card) {
+    const fakeEvent = {
+      target: card,
+      currentTarget: card,
+      stopPropagation: () => {},
+      preventDefault: () => {}
+    };
+    selectProduct(sectionId, productType, name, coverage, price, fakeEvent);
+  }
+
+  // Fermer le formulaire
+  closeCustomProductForm(sectionId);
+}
+
+function addCustomProductCard(sectionId, productType, name, coverage, price) {
+  const grid = document.getElementById(`produitsExt_${sectionId}`);
+  if (!grid) return;
+
+  // Insérer avant le bouton "+ Produit custom" (dernier enfant de la grille)
+  const card = document.createElement('div');
+  card.className = 'surface-card product-card p-2 cursor-pointer transition-all duration-200 hover:scale-105';
+  card.id = `card_${productType}_${sectionId}`;
+  card.style.cssText = 'border: 2px solid var(--border-dark) !important; position: relative;';
+  card.setAttribute('onclick', `selectProduct('${sectionId}', '${productType}', '${name.replace(/'/g, "\\'")}', ${coverage}, ${price}, event)`);
+  card.setAttribute('onmouseover', "this.style.backgroundColor='#065f46'; this.style.setProperty('border', '2px solid #10b981', 'important');");
+  card.setAttribute('onmouseout', "if(!this.classList.contains('selected')) { this.style.backgroundColor=''; this.style.setProperty('border', '2px solid var(--border-dark)', 'important'); }");
+  card.setAttribute('data-custom-product', 'true');
+
+  card.innerHTML = `
+    <div class="flex items-center space-x-2">
+      <div class="flex-1">
+        <div class="text-sm font-medium text-white flex items-center justify-between">
+          <span>${name}</span>
+          <span onclick="event.stopPropagation(); removeCustomProduct('${sectionId}', '${productType}')" title="Supprimer" style="cursor: pointer; font-size: 14px; font-weight: bold; color: #ffffff; background: #ef4444; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; line-height: 1;">&times;</span>
+        </div>
+        <div class="flex items-center justify-between text-xs mt-1">
+          <span class="product-badge px-1.5 py-0.5 rounded text-xs">${coverage} ft²/gal</span>
+          <span class="font-semibold text-white">$${price}/gal</span>
+        </div>
+        <div id="customGallonsContainer_${productType}_${sectionId}" style="display: none;" class="mt-1">
+          <div class="flex items-center space-x-1">
+            <span style="font-size: 11px; color: #d1d5db;">Nombre de gallons:</span>
+            <input type="number" min="1" id="customGallons_${productType}_${sectionId}"
+                   style="width: 40px !important; font-size: 11px !important; text-align: center !important; padding: 1px 3px !important; height: 20px !important; background: transparent !important; border: 1px solid #4b5563 !important; border-radius: 3px !important; color: #d1d5db !important; outline: none !important; -moz-appearance: textfield !important;"
+                   onclick="event.stopPropagation()"
+                   onchange="updateCustomProductGallons('${productType}_${sectionId}', this.value)">
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Insérer avant le dernier élément (le bouton "+ Produit custom")
+  const lastChild = grid.lastElementChild;
+  grid.insertBefore(card, lastChild);
+}
+
+function removeCustomProduct(sectionId, productType) {
+  const productKey = `${productType}_${sectionId}`;
+
+  // Supprimer du selectedProducts
+  delete selectedProducts[productKey];
+
+  // Supprimer la carte du DOM
+  const card = document.getElementById(`card_${productType}_${sectionId}`);
+  if (card) card.remove();
+
+  // Mettre à jour l'affichage
+  updateProductDetails();
+  updateCalculation();
+
+  showNotification('Produit custom supprimé', 'info');
+}
+
+function updateCustomProductGallons(productKey, newGallons) {
+  const gallons = parseInt(newGallons);
+  if (!gallons || gallons < 1) return;
+
+  if (selectedProducts[productKey]) {
+    selectedProducts[productKey].quantity = gallons;
+    selectedProducts[productKey].gallonsExact = gallons;
+    selectedProducts[productKey].total = gallons * selectedProducts[productKey].price;
+    selectedProducts[productKey].manualGallons = true;
+
+    updateProductDetails();
+    updateCalculation();
+  }
+}
 
 function selectProduct(sectionId, productType, productName, coverage, price, event) {
   const productKey = `${productType}_${sectionId}`;
@@ -8506,6 +8699,12 @@ function selectProduct(sectionId, productType, productName, coverage, price, eve
     productCard.style.backgroundColor = '';
     productCard.style.setProperty('border', '2px solid var(--border-dark)', 'important');
     productCard.classList.remove('selected');
+
+    // Cacher l'input de gallons pour les produits custom
+    if (productType.startsWith('produit_custom_')) {
+      const gallonsContainer = document.getElementById(`customGallonsContainer_${productKey}`);
+      if (gallonsContainer) gallonsContainer.style.display = 'none';
+    }
 
     showNotification(`${productName} désélectionné`, 'info');
   } else {
@@ -8662,18 +8861,32 @@ function selectProduct(sectionId, productType, productName, coverage, price, eve
       const totalCost = gallons * price;
 
       // Stocker le produit sélectionné avec valeur exacte
+      const isCustom = productType.startsWith('produit_custom_');
       selectedProducts[productKey] = {
         name: productName,
         quantity: gallons, // Arrondi pour affichage individuel
         gallonsExact: gallonsNeeded, // Valeur exacte pour calcul total
         price: price,
-        total: totalCost
+        total: totalCost,
+        coverage: isCustom ? coverage : undefined,
+        isCustom: isCustom,
+        manualGallons: false
       };
 
       // Feedback visuel - marquer comme sélectionné
       productCard.style.backgroundColor = '#065f46';
       productCard.style.setProperty('border', '2px solid #10b981', 'important');
       productCard.classList.add('selected');
+
+      // Pour les produits custom, afficher l'input de gallons
+      if (isCustom) {
+        const gallonsContainer = document.getElementById(`customGallonsContainer_${productKey}`);
+        if (gallonsContainer) {
+          gallonsContainer.style.display = 'block';
+          const gallonsInput = document.getElementById(`customGallons_${productKey}`);
+          if (gallonsInput) gallonsInput.value = gallons;
+        }
+      }
 
       showNotification(`${productName} sélectionné - ${gallons} gal`, 'success');
     } else {
@@ -8714,6 +8927,12 @@ function recalculateSelectedProducts() {
     } else if (productKey.includes('produit_client')) {
       productType = 'produit_client';
       sectionId = productKey.substring(productType.length + 1);
+    } else if (productKey.startsWith('produit_custom_')) {
+      const match = productKey.match(/^(produit_custom_\d+)_(.+)$/);
+      if (match) {
+        productType = match[1];
+        sectionId = match[2];
+      }
     }
 
     if(productKey.includes('fenetre_3_6_carreaux') || productKey.includes('fenetre_carreaux_6plus')) {
@@ -8723,6 +8942,9 @@ function recalculateSelectedProducts() {
     }
 
     const product = selectedProducts[productKey];
+
+    // Ne pas recalculer les produits custom avec gallons manuels
+    if (product.manualGallons) return;
     const surfaceTotal = calculerSurfaceSection(sectionId);
 
     if(productKey.includes('fenetre_3_6_carreaux') || productKey.includes('fenetre_carreaux_6plus')) {
@@ -8755,6 +8977,11 @@ function recalculateSelectedProducts() {
       else if (product.name.includes('Dulux émail planchers') || product.name.includes('Diamant')) coverage = 350;
       else if (product.name.includes('Sikkens ST')) coverage = 200;
       else if (product.name.includes('Produit client')) coverage = 300;
+
+      // Pour les produits custom, utiliser la couverture stockée
+      if (productType.startsWith('produit_custom_')) {
+        coverage = product.coverage || 300;
+      }
 
       // NOUVELLE LOGIQUE: Vérifier si c'est un élément en quantité (même que selectProduct)
       let gallonsNeeded;
@@ -8893,6 +9120,12 @@ function recalculateSelectedProducts() {
         gallonsExact: gallonsNeeded, // Valeur exacte pour calcul total
         total: totalCost
       };
+
+      // Mettre à jour l'input de gallons pour les produits custom
+      if (productType.startsWith('produit_custom_')) {
+        const gallonsInput = document.getElementById(`customGallons_${productKey}`);
+        if (gallonsInput) gallonsInput.value = gallons;
+      }
 
     } else {
     }
@@ -17389,10 +17622,17 @@ function initializeApp() {
                 if (productKey.includes(sectionId)) {
                   const product = selectedProducts[productKey];
                   log(`[OK] Produit trouvé:`, product);
-                  produitsSelectionnes.push({
+                  const produitData = {
                     nom: product.name || '',
                     gallons: product.quantity || '0'
-                  });
+                  };
+                  if (product.isCustom) {
+                    produitData.prix = product.price || 0;
+                    produitData.coverage = product.coverage || 0;
+                    produitData.isCustom = true;
+                    produitData.manualGallons = product.manualGallons || false;
+                  }
+                  produitsSelectionnes.push(produitData);
                 }
               });
               log(`[PACKAGE] produitsSelectionnes final:`, produitsSelectionnes);
@@ -18180,11 +18420,45 @@ function initializeApp() {
                                               productName = 'Produit client';
                                               coverage = 300;
                                               price = 0;
+                                            } else if (produit.isCustom) {
+                                              // Produit custom : recréer la carte et sélectionner
+                                              customProductCounter++;
+                                              productType = 'produit_custom_' + customProductCounter;
+                                              productName = produit.nom;
+                                              coverage = produit.coverage || 300;
+                                              price = produit.prix || 0;
                                             }
 
                                             log(`[PACKAGE] Mapping: ${produit.nom} -> ${productType}`);
 
                                             if (productType && typeof selectProduct === 'function') {
+                                              // Pour les produits custom, créer la carte d'abord
+                                              if (productType.startsWith('produit_custom_')) {
+                                                addCustomProductCard(sousSectionId, productType, productName, coverage, price);
+                                                const card = document.getElementById(`card_${productType}_${sousSectionId}`);
+                                                if (card) {
+                                                  const fakeEvent = {
+                                                    target: card,
+                                                    currentTarget: card,
+                                                    stopPropagation: () => {},
+                                                    preventDefault: () => {}
+                                                  };
+                                                  selectProduct(sousSectionId, productType, productName, coverage, price, fakeEvent);
+                                                  // Restaurer les gallons manuels si applicable
+                                                  if (produit.manualGallons && produit.gallons) {
+                                                    const pKey = `${productType}_${sousSectionId}`;
+                                                    if (selectedProducts[pKey]) {
+                                                      selectedProducts[pKey].quantity = parseInt(produit.gallons);
+                                                      selectedProducts[pKey].gallonsExact = parseInt(produit.gallons);
+                                                      selectedProducts[pKey].total = parseInt(produit.gallons) * price;
+                                                      selectedProducts[pKey].manualGallons = true;
+                                                      const gallonsInput = document.getElementById(`customGallons_${pKey}`);
+                                                      if (gallonsInput) gallonsInput.value = parseInt(produit.gallons);
+                                                    }
+                                                  }
+                                                  log(`[OK] Produit custom recréé: ${produit.nom}`);
+                                                }
+                                              } else {
                                               const container = document.getElementById(`produitsExt_${sousSectionId}`);
                                               log(`📍 Container produitsExt_${sousSectionId}:`, container);
 
@@ -18215,6 +18489,7 @@ function initializeApp() {
                                                 log(`[OK] Produit auto-sélectionné: ${produit.nom}`);
                                               } else {
                                                 warn(`[WARN] Carte non trouvée pour ${productType} dans ${sousSectionId}`);
+                                              }
                                               }
                                             }
                                           });

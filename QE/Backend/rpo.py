@@ -7,6 +7,8 @@ import json
 import os
 import logging
 import threading
+import sys
+from contextlib import contextmanager
 from datetime import datetime
 from typing import Dict, Any, Optional
 from zoneinfo import ZoneInfo
@@ -19,6 +21,7 @@ _direction_sync_lock = threading.Lock()
 _locks_lock = threading.Lock()  # Lock pour accéder au dict des locks
 
 # Locks pour éviter les écritures simultanées aux fichiers RPO (par utilisateur)
+# threading.Lock protège au sein d'un même processus
 _user_file_locks = {}  # Dict[username, Lock]
 _user_file_locks_lock = threading.Lock()  # Lock pour accéder au dict des locks
 
@@ -28,6 +31,79 @@ def get_user_file_lock(username: str) -> threading.Lock:
         if username not in _user_file_locks:
             _user_file_locks[username] = threading.Lock()
         return _user_file_locks[username]
+
+
+def _acquire_file_lock(lock_path: str, timeout: float = 30.0):
+    """
+    Acquiert un file lock inter-processus.
+    Sur Linux/Render: utilise fcntl.flock (bloquant)
+    Sur Windows: utilise msvcrt.locking (polling)
+    Retourne le file descriptor ouvert (à fermer pour libérer le lock).
+    """
+    import time
+
+    # Créer le fichier lock s'il n'existe pas
+    os.makedirs(os.path.dirname(lock_path), exist_ok=True)
+    fd = open(lock_path, 'w')
+
+    if sys.platform == 'win32':
+        # Windows: utiliser msvcrt.locking
+        import msvcrt
+        start = time.monotonic()
+        while True:
+            try:
+                msvcrt.locking(fd.fileno(), msvcrt.LK_NBLCK, 1)
+                return fd
+            except (IOError, OSError):
+                if time.monotonic() - start > timeout:
+                    fd.close()
+                    raise TimeoutError(f"Timeout acquiring file lock: {lock_path}")
+                time.sleep(0.05)
+    else:
+        # Linux/Render: utiliser fcntl.flock (bloquant)
+        import fcntl
+        fcntl.flock(fd.fileno(), fcntl.LOCK_EX)
+        return fd
+
+
+def _release_file_lock(fd):
+    """Libère un file lock inter-processus."""
+    try:
+        if sys.platform == 'win32':
+            import msvcrt
+            try:
+                msvcrt.locking(fd.fileno(), msvcrt.LK_UNLCK, 1)
+            except:
+                pass
+        else:
+            import fcntl
+            fcntl.flock(fd.fileno(), fcntl.LOCK_UN)
+    finally:
+        fd.close()
+
+
+@contextmanager
+def rpo_file_lock(username: str):
+    """
+    Context manager qui verrouille le fichier RPO d'un utilisateur.
+    Protège le cycle complet load -> modify -> save contre les race conditions.
+    Combine un threading.Lock (intra-processus) et un file lock (inter-processus).
+    """
+    # 1. Lock intra-processus (threads dans le même worker uvicorn)
+    thread_lock = get_user_file_lock(username)
+    thread_lock.acquire()
+
+    # 2. Lock inter-processus (entre workers uvicorn différents)
+    filepath = get_user_rpo_file(username)
+    lock_path = filepath + '.lock'
+    fd = None
+    try:
+        fd = _acquire_file_lock(lock_path)
+        yield
+    finally:
+        if fd:
+            _release_file_lock(fd)
+        thread_lock.release()
 
 # Fuseau horaire de Toronto
 TORONTO_TZ = ZoneInfo("America/Toronto")
@@ -252,93 +328,85 @@ def load_user_rpo_data(username: str) -> Dict[str, Any]:
 
 def save_user_rpo_data(username: str, data: Dict[str, Any]) -> bool:
     """
-    Sauvegarde les données RPO d'un utilisateur
-    Utilise un lock et une écriture atomique pour éviter la corruption
+    Sauvegarde les données RPO d'un utilisateur.
+    IMPORTANT: L'appelant DOIT utiliser rpo_file_lock(username) pour protéger
+    le cycle complet load -> modify -> save. Cette fonction ne fait que l'écriture.
     """
     filepath = get_user_rpo_file(username)
     temp_filepath = filepath + '.tmp'
 
-    # Utiliser un lock pour éviter les écritures simultanées
-    lock = get_user_file_lock(username)
+    print(f"[DEBUG] [SAVE RPO] Attempting to save for user: {username}", flush=True)
+    print(f"[DEBUG] [SAVE RPO] Target filepath: {filepath}", flush=True)
+    print(f"[DEBUG] [SAVE RPO] RPO_DATA_DIR: {RPO_DATA_DIR}", flush=True)
+    print(f"[DEBUG] [SAVE RPO] Directory exists? {os.path.exists(os.path.dirname(filepath))}", flush=True)
+    print(f"[DEBUG] [SAVE RPO] File exists before save? {os.path.exists(filepath)}", flush=True)
 
-    with lock:
-        print(f"[DEBUG] [SAVE RPO] Attempting to save for user: {username}", flush=True)
-        print(f"[DEBUG] [SAVE RPO] Target filepath: {filepath}", flush=True)
-        print(f"[DEBUG] [SAVE RPO] RPO_DATA_DIR: {RPO_DATA_DIR}", flush=True)
-        print(f"[DEBUG] [SAVE RPO] Directory exists? {os.path.exists(os.path.dirname(filepath))}", flush=True)
-        print(f"[DEBUG] [SAVE RPO] File exists before save? {os.path.exists(filepath)}", flush=True)
+    try:
+        # Ajouter timestamp de dernière modification (heure de Toronto)
+        data['last_updated'] = get_toronto_now().isoformat()
 
-        try:
-            # Ajouter timestamp de dernière modification (heure de Toronto)
-            data['last_updated'] = get_toronto_now().isoformat()
+        # Écriture atomique: écrire dans un fichier temporaire puis renommer
+        with open(temp_filepath, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
 
-            # Écriture atomique: écrire dans un fichier temporaire puis renommer
-            # Cela évite la corruption si deux processus écrivent en même temps
-            with open(temp_filepath, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
+        # Renommer atomiquement (remplace le fichier existant)
+        # Sur Windows avec OneDrive, os.replace peut échouer temporairement
+        import time
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                os.replace(temp_filepath, filepath)
+                break  # Succès
+            except PermissionError as pe:
+                if attempt < max_retries - 1:
+                    time.sleep(0.1 * (attempt + 1))
+                else:
+                    # Fallback: écrire directement si os.replace échoue
+                    print(f"[WARN] [SAVE RPO] os.replace failed, using fallback write", flush=True)
+                    with open(filepath, 'w', encoding='utf-8') as f:
+                        json.dump(data, f, indent=2, ensure_ascii=False)
+                    if os.path.exists(temp_filepath):
+                        try:
+                            os.remove(temp_filepath)
+                        except:
+                            pass
 
-            # Renommer atomiquement (remplace le fichier existant)
-            # Sur Windows avec OneDrive, os.replace peut échouer temporairement
-            # On ajoute un retry avec backoff
-            import time
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    os.replace(temp_filepath, filepath)
-                    break  # Succès
-                except PermissionError as pe:
-                    if attempt < max_retries - 1:
-                        time.sleep(0.1 * (attempt + 1))  # Backoff: 0.1s, 0.2s, 0.3s
-                    else:
-                        # Fallback: écrire directement si os.replace échoue
-                        print(f"[WARN] [SAVE RPO] os.replace failed, using fallback write", flush=True)
-                        with open(filepath, 'w', encoding='utf-8') as f:
-                            json.dump(data, f, indent=2, ensure_ascii=False)
-                        # Nettoyer le fichier temporaire
-                        if os.path.exists(temp_filepath):
-                            try:
-                                os.remove(temp_filepath)
-                            except:
-                                pass
-
-            print(f"[DEBUG] [SAVE RPO] File written successfully!", flush=True)
-            print(f"[DEBUG] [SAVE RPO] File exists after save? {os.path.exists(filepath)}", flush=True)
-            return True
-        except Exception as e:
-            print(f"[ERROR] [SAVE RPO] Failed to save RPO for {username}: {e}", flush=True)
-            import traceback
-            traceback.print_exc()
-            # Nettoyer le fichier temporaire si il existe
-            if os.path.exists(temp_filepath):
-                try:
-                    os.remove(temp_filepath)
-                except:
-                    pass
-            return False
+        print(f"[DEBUG] [SAVE RPO] File written successfully!", flush=True)
+        print(f"[DEBUG] [SAVE RPO] File exists after save? {os.path.exists(filepath)}", flush=True)
+        return True
+    except Exception as e:
+        print(f"[ERROR] [SAVE RPO] Failed to save RPO for {username}: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        if os.path.exists(temp_filepath):
+            try:
+                os.remove(temp_filepath)
+            except:
+                pass
+        return False
 
 
 def update_annual_data(username: str, annual_data: Dict[str, Any]) -> bool:
     """
     Met à jour les données annuelles (MERGE au lieu d'écraser)
     """
-    rpo_data = load_user_rpo_data(username)
+    with rpo_file_lock(username):
+        rpo_data = load_user_rpo_data(username)
 
-    # MERGE: préserver les données existantes et mettre à jour seulement les nouveaux champs
-    # Ceci évite d'écraser les données calculées automatiquement (estimation_reel, contract_reel, etc.)
-    if 'annual' not in rpo_data:
-        rpo_data['annual'] = {}
+        # MERGE: préserver les données existantes et mettre à jour seulement les nouveaux champs
+        if 'annual' not in rpo_data:
+            rpo_data['annual'] = {}
 
-    # Filtrer les champs qui sont calculés automatiquement par sync_soumissions_to_rpo()
-    # Ne pas les écraser même s'ils sont présents dans annual_data
-    protected_fields = ['hr_pap_reel', 'estimation_reel', 'contract_reel', 'dollar_reel',
-                       'hr_pap_reel_sans_week1', 'mktg_reel', 'vente_reel', 'moyen_reel', 'prod_horaire']
+        # Filtrer les champs qui sont calculés automatiquement par sync_soumissions_to_rpo()
+        protected_fields = ['hr_pap_reel', 'estimation_reel', 'contract_reel', 'dollar_reel',
+                           'hr_pap_reel_sans_week1', 'mktg_reel', 'vente_reel', 'moyen_reel', 'prod_horaire']
 
-    # Mettre à jour seulement les champs NON protégés
-    for key, value in annual_data.items():
-        if key not in protected_fields:
-            rpo_data['annual'][key] = value
+        # Mettre à jour seulement les champs NON protégés
+        for key, value in annual_data.items():
+            if key not in protected_fields:
+                rpo_data['annual'][key] = value
 
-    return save_user_rpo_data(username, rpo_data)
+        return save_user_rpo_data(username, rpo_data)
 
 
 def update_monthly_data(username: str, month: str, monthly_data: Dict[str, Any]) -> bool:
@@ -346,13 +414,14 @@ def update_monthly_data(username: str, month: str, monthly_data: Dict[str, Any])
     Met à jour les données d'un mois spécifique
     month: 'jan', 'feb', 'mar', etc.
     """
-    rpo_data = load_user_rpo_data(username)
+    with rpo_file_lock(username):
+        rpo_data = load_user_rpo_data(username)
 
-    if 'monthly' not in rpo_data:
-        rpo_data['monthly'] = {}
+        if 'monthly' not in rpo_data:
+            rpo_data['monthly'] = {}
 
-    rpo_data['monthly'][month] = monthly_data
-    return save_user_rpo_data(username, rpo_data)
+        rpo_data['monthly'][month] = monthly_data
+        return save_user_rpo_data(username, rpo_data)
 
 
 def update_weekly_data(username: str, month_index: int, week_number: int, weekly_data: Dict[str, Any]) -> bool:
@@ -361,36 +430,39 @@ def update_weekly_data(username: str, month_index: int, week_number: int, weekly
     month_index: 0-11 (janvier=0, décembre=11)
     week_number: numéro de la semaine dans le mois
     """
-    print(f"[BACKEND-SAVE] 📥 Réception des données pour {username}, mois {month_index}, semaine {week_number}", flush=True)
-    print(f"[BACKEND-SAVE] 📊 Données reçues: {weekly_data}", flush=True)
+    print(f"[BACKEND-SAVE] Reception des donnees pour {username}, mois {month_index}, semaine {week_number}", flush=True)
+    print(f"[BACKEND-SAVE] Donnees recues: {weekly_data}", flush=True)
     if 'prod_horaire' in weekly_data:
-        print(f"[BACKEND-SAVE] 💰 Prod Horaire: {weekly_data['prod_horaire']}$/h", flush=True)
+        print(f"[BACKEND-SAVE] Prod Horaire: {weekly_data['prod_horaire']}$/h", flush=True)
 
-    rpo_data = load_user_rpo_data(username)
+    # Lock couvre le cycle complet load -> modify -> save
+    with rpo_file_lock(username):
+        rpo_data = load_user_rpo_data(username)
 
-    if 'weekly' not in rpo_data:
-        rpo_data['weekly'] = {}
+        if 'weekly' not in rpo_data:
+            rpo_data['weekly'] = {}
 
-    month_key = str(month_index)
-    if month_key not in rpo_data['weekly']:
-        rpo_data['weekly'][month_key] = {}
+        month_key = str(month_index)
+        if month_key not in rpo_data['weekly']:
+            rpo_data['weekly'][month_key] = {}
 
-    week_key = str(week_number)
+        week_key = str(week_number)
 
-    # MERGE au lieu d'écraser: si des données existent déjà, on les garde et on update seulement les nouveaux champs
-    if week_key in rpo_data['weekly'][month_key]:
-        print(f"[BACKEND-SAVE] 🔄 Merge avec données existantes pour semaine {week_number}", flush=True)
-        existing_data = rpo_data['weekly'][month_key][week_key]
-        # Merger les nouvelles données avec les anciennes (les nouvelles ont priorité)
-        existing_data.update(weekly_data)
-        rpo_data['weekly'][month_key][week_key] = existing_data
-    else:
-        print(f"[BACKEND-SAVE] 🆕 Création nouvelle semaine {week_number}", flush=True)
-        rpo_data['weekly'][month_key][week_key] = weekly_data
+        # MERGE au lieu d'écraser
+        if week_key in rpo_data['weekly'][month_key]:
+            print(f"[BACKEND-SAVE] Merge avec donnees existantes pour semaine {week_number}", flush=True)
+            existing_data = rpo_data['weekly'][month_key][week_key]
+            existing_data.update(weekly_data)
+            rpo_data['weekly'][month_key][week_key] = existing_data
+        else:
+            print(f"[BACKEND-SAVE] Creation nouvelle semaine {week_number}", flush=True)
+            rpo_data['weekly'][month_key][week_key] = weekly_data
 
-    result = save_user_rpo_data(username, rpo_data)
+        result = save_user_rpo_data(username, rpo_data)
+
+    # Ces opérations secondaires sont HORS du lock pour ne pas bloquer
     if result:
-        print(f"[BACKEND-SAVE] ✅ Données sauvegardées avec succès")
+        print(f"[BACKEND-SAVE] Donnees sauvegardees avec succes", flush=True)
 
         # Synchroniser le RPO du coach si cet entrepreneur est assigné à un coach
         try:
@@ -411,7 +483,7 @@ def update_weekly_data(username: str, month_index: int, week_number: int, weekly
         except Exception as badge_error:
             print(f"[WARN] [BACKEND-SAVE] Erreur verification badges: {badge_error}", flush=True)
     else:
-        print(f"[BACKEND-SAVE] ❌ Échec de la sauvegarde")
+        print(f"[BACKEND-SAVE] Echec de la sauvegarde", flush=True)
 
     return result
 
@@ -1104,8 +1176,15 @@ def sync_soumissions_to_rpo(username: str) -> bool:
 
     print(f"[SYNC] [RPO SYNC] Debut synchronisation pour {username}", flush=True)
 
+    _lock_held = False
+    _sync_lock_ctx = None
     try:
         # Charger les données RPO existantes
+        # Le lock est acquis manuellement pour couvrir load -> recalcul -> save
+        _sync_lock_ctx = rpo_file_lock(username)
+        _sync_lock_ctx.__enter__()
+        _lock_held = True
+
         rpo_data = load_user_rpo_data(username)
 
         # Réinitialiser les données hebdomadaires estimation/contract/dollar
@@ -1572,6 +1651,10 @@ def sync_soumissions_to_rpo(username: str) -> bool:
 
         print(f"[OK] [RPO SYNC] Synchronisation soumissions -> RPO reussie pour {username}", flush=True)
 
+        # Libérer le lock AVANT les opérations secondaires (badges, coach sync)
+        _sync_lock_ctx.__exit__(None, None, None)
+        _lock_held = False
+
         # Vérifier et attribuer automatiquement les badges basés sur les données RPO
         try:
             from gamification import check_and_award_automatic_badges
@@ -1598,6 +1681,13 @@ def sync_soumissions_to_rpo(username: str) -> bool:
         import traceback
         traceback.print_exc()
         return False
+    finally:
+        # S'assurer que le lock est libéré même en cas d'exception
+        if _lock_held:
+            try:
+                _sync_lock_ctx.__exit__(None, None, None)
+            except:
+                pass
 
 
 # ========================================
@@ -1609,13 +1699,14 @@ def update_etats_resultats_budget(username: str, budget_percent_data: Dict[str, 
     Met à jour les pourcentages Budget des États des Résultats
     budget_percent_data: dictionnaire {category: percent}
     """
-    rpo_data = load_user_rpo_data(username)
+    with rpo_file_lock(username):
+        rpo_data = load_user_rpo_data(username)
 
-    if 'etats_resultats' not in rpo_data:
-        rpo_data['etats_resultats'] = {}
+        if 'etats_resultats' not in rpo_data:
+            rpo_data['etats_resultats'] = {}
 
-    rpo_data['etats_resultats']['budget_percent'] = budget_percent_data
-    return save_user_rpo_data(username, rpo_data)
+        rpo_data['etats_resultats']['budget_percent'] = budget_percent_data
+        return save_user_rpo_data(username, rpo_data)
 
 
 def get_etats_resultats_budget(username: str) -> Dict[str, float]:
@@ -1632,18 +1723,18 @@ def update_etats_resultats_cible_percent(username: str, cible_percent: Dict[str,
 
     NOTE: Utilise 'cible_percent' séparé de 'budget_percent' pour éviter les conflits
     """
-    rpo_data = load_user_rpo_data(username)
-
-    if 'etats_resultats' not in rpo_data:
-        rpo_data['etats_resultats'] = {}
-
-    # Sauvegarder dans 'cible_percent' (séparé de 'budget_percent')
-    if cible_percent is not None and len(cible_percent) > 0:
-        rpo_data['etats_resultats']['cible_percent'] = cible_percent
-        return save_user_rpo_data(username, rpo_data)
-    else:
+    if cible_percent is None or len(cible_percent) == 0:
         # Ne pas écraser avec des données vides
         return True
+
+    with rpo_file_lock(username):
+        rpo_data = load_user_rpo_data(username)
+
+        if 'etats_resultats' not in rpo_data:
+            rpo_data['etats_resultats'] = {}
+
+        rpo_data['etats_resultats']['cible_percent'] = cible_percent
+        return save_user_rpo_data(username, rpo_data)
 
 
 def get_etats_resultats_actuel(username: str) -> Dict[str, Any]:
@@ -1696,86 +1787,89 @@ def sync_ventes_produit_to_rpo(username: str) -> Dict[str, Any]:
     except Exception as e:
         return {"status": "error", "message": f"Erreur lecture ventes: {e}"}
 
-    # Charger le RPO
-    rpo_data = load_user_rpo_data(username)
+    # Lock couvre le cycle complet load -> modify -> save
+    with rpo_file_lock(username):
 
-    # Définir les semaines (même structure que le frontend)
-    # Semaine 0 = 4 novembre 2025
-    start_date = datetime(2025, 11, 4, tzinfo=TORONTO_TZ)
+        # Charger le RPO
+        rpo_data = load_user_rpo_data(username)
 
-    # Initialiser les montants par semaine - RESET complet à 0
-    week_dollars = {}
-    for i in range(56):
-        week_dollars[i] = 0
+        # Définir les semaines (même structure que le frontend)
+        # Semaine 0 = 4 novembre 2025
+        start_date = datetime(2025, 11, 4, tzinfo=TORONTO_TZ)
 
-    ventes_synced = 0
+        # Initialiser les montants par semaine - RESET complet à 0
+        week_dollars = {}
+        for i in range(56):
+            week_dollars[i] = 0
 
-    for vente in ventes:
-        try:
-            # Récupérer la date de complétion
-            date_str = vente.get('date_completion')
-            if not date_str:
+        ventes_synced = 0
+
+        for vente in ventes:
+            try:
+                # Récupérer la date de complétion
+                date_str = vente.get('date_completion')
+                if not date_str:
+                    continue
+
+                # Parser la date
+                vente_date = parse_date_toronto(date_str)
+
+                # Calculer le nombre de jours depuis le début
+                delta = (vente_date - start_date).days
+
+                # Calculer l'index de la semaine (0-55)
+                week_index = delta // 7
+
+                # Vérifier que la semaine est dans la plage valide
+                if week_index < 0 or week_index >= 56:
+                    continue
+
+                # Récupérer le prix
+                prix_str = vente.get('prix', '0')
+                prix_str = str(prix_str).replace('\xa0', '').replace(' ', '').replace('$', '').replace(',', '.')
+                prix_num = float(prix_str)
+
+                # Ajouter au montant de cette semaine
+                week_dollars[week_index] += prix_num
+                ventes_synced += 1
+
+            except Exception as e:
+                print(f"[SYNC RPO] Erreur traitement vente {vente.get('id', '?')}: {e}")
                 continue
 
-            # Parser la date
-            vente_date = parse_date_toronto(date_str)
+        # Mettre à jour le RPO avec les montants calculés
+        # Mapper week_index (0-55) vers month_key et week_key
+        week_counter = 0
+        for month_index in range(-2, 11):  # Nov 2025 (-2) à Oct 2026 (10)
+            month_key = str(month_index)
 
-            # Calculer le nombre de jours depuis le début
-            delta = (vente_date - start_date).days
+            if month_key not in rpo_data['weekly']:
+                rpo_data['weekly'][month_key] = {}
 
-            # Calculer l'index de la semaine (0-55)
-            week_index = delta // 7
+            # 4-5 semaines par mois
+            weeks_in_month = 5 if month_index in [-2, 0, 3, 5, 8, 10] else 4
 
-            # Vérifier que la semaine est dans la plage valide
-            if week_index < 0 or week_index >= 56:
-                continue
+            for week_num in range(1, weeks_in_month + 1):
+                if week_counter >= 56:
+                    break
 
-            # Récupérer le prix
-            prix_str = vente.get('prix', '0')
-            prix_str = str(prix_str).replace('\xa0', '').replace(' ', '').replace('$', '').replace(',', '.')
-            prix_num = float(prix_str)
+                week_key = str(week_num)
 
-            # Ajouter au montant de cette semaine
-            week_dollars[week_index] += prix_num
-            ventes_synced += 1
+                # Créer la semaine si elle n'existe pas
+                if week_key not in rpo_data['weekly'][month_key]:
+                    rpo_data['weekly'][month_key][week_key] = {}
 
-        except Exception as e:
-            print(f"[SYNC RPO] Erreur traitement vente {vente.get('id', '?')}: {e}")
-            continue
+                # Mettre à jour le montant dollar (même si c'est 0, pour reset les ventes perdues)
+                rpo_data['weekly'][month_key][week_key]['dollar'] = week_dollars[week_counter]
 
-    # Mettre à jour le RPO avec les montants calculés
-    # Mapper week_index (0-55) vers month_key et week_key
-    week_counter = 0
-    for month_index in range(-2, 11):  # Nov 2025 (-2) à Oct 2026 (10)
-        month_key = str(month_index)
+                week_counter += 1
 
-        if month_key not in rpo_data['weekly']:
-            rpo_data['weekly'][month_key] = {}
+        # Sauvegarder le RPO mis à jour
+        save_success = save_user_rpo_data(username, rpo_data)
 
-        # 4-5 semaines par mois
-        weeks_in_month = 5 if month_index in [-2, 0, 3, 5, 8, 10] else 4
-
-        for week_num in range(1, weeks_in_month + 1):
-            if week_counter >= 56:
-                break
-
-            week_key = str(week_num)
-
-            # Créer la semaine si elle n'existe pas
-            if week_key not in rpo_data['weekly'][month_key]:
-                rpo_data['weekly'][month_key][week_key] = {}
-
-            # Mettre à jour le montant dollar (même si c'est 0, pour reset les ventes perdues)
-            rpo_data['weekly'][month_key][week_key]['dollar'] = week_dollars[week_counter]
-
-            week_counter += 1
-
-    # Sauvegarder le RPO mis à jour
-    save_success = save_user_rpo_data(username, rpo_data)
-
-    return {
-        "status": "success" if save_success else "error",
-        "ventes_synced": ventes_synced,
-        "weeks_updated": len([d for d in week_dollars.values() if d > 0]),
-        "total_montant": sum(week_dollars.values())
-    }
+        return {
+            "status": "success" if save_success else "error",
+            "ventes_synced": ventes_synced,
+            "weeks_updated": len([d for d in week_dollars.values() if d > 0]),
+            "total_montant": sum(week_dollars.values())
+        }

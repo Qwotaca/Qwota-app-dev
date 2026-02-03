@@ -21499,19 +21499,16 @@ async def get_rpo_why(username: str):
 async def save_rpo_why(username: str, request: Request):
     """Sauvegarde le WHY (motivation) dans le JSON RPO de l'entrepreneur"""
     try:
-        from QE.Backend.rpo import load_user_rpo_data, save_user_rpo_data
+        from QE.Backend.rpo import load_user_rpo_data, save_user_rpo_data, rpo_file_lock
 
         data = await request.json()
         why_text = data.get("why", "")
 
-        # Charger les données RPO existantes
-        rpo_data = load_user_rpo_data(username)
-
-        # Mettre à jour le WHY
-        rpo_data["why"] = why_text
-
-        # Sauvegarder
-        save_user_rpo_data(username, rpo_data)
+        # Lock couvre le cycle complet load -> modify -> save
+        with rpo_file_lock(username):
+            rpo_data = load_user_rpo_data(username)
+            rpo_data["why"] = why_text
+            save_user_rpo_data(username, rpo_data)
 
         print(f"[WHY] ✅ Sauvegardé pour {username} dans RPO JSON: {len(why_text)} caractères")
         return {
@@ -21539,57 +21536,59 @@ async def save_weekly_targets(data: dict):
         print(f"[SAVE TARGETS] Sauvegarde des objectifs hebdomadaires pour {username}")
 
         # Charger les données RPO en utilisant le module qui gère les chemins
-        from QE.Backend.rpo import load_user_rpo_data, save_user_rpo_data, get_week_number_from_date
+        from QE.Backend.rpo import load_user_rpo_data, save_user_rpo_data, get_week_number_from_date, rpo_file_lock
         from datetime import datetime
 
-        rpo_data = load_user_rpo_data(username)
+        # Lock couvre le cycle complet load -> modify -> save
+        with rpo_file_lock(username):
+            rpo_data = load_user_rpo_data(username)
 
-        # Déterminer la semaine actuelle pour ne réinitialiser que les semaines futures
-        today = datetime.now().strftime('%Y-%m-%d')
-        current_month_index, current_week_num = get_week_number_from_date(today)
-        print(f"[SAVE TARGETS] Semaine actuelle: mois {current_month_index}, semaine {current_week_num}")
+            # Déterminer la semaine actuelle pour ne réinitialiser que les semaines futures
+            today = datetime.now().strftime('%Y-%m-%d')
+            current_month_index, current_week_num = get_week_number_from_date(today)
+            print(f"[SAVE TARGETS] Semaine actuelle: mois {current_month_index}, semaine {current_week_num}")
 
-        # Mettre à jour les données hebdomadaires avec les valeurs "Visé"
-        if "weekly" not in rpo_data:
-            rpo_data["weekly"] = {}
+            # Mettre à jour les données hebdomadaires avec les valeurs "Visé"
+            if "weekly" not in rpo_data:
+                rpo_data["weekly"] = {}
 
-        for month_index, weeks in weekly_targets.items():
-            month_key = str(month_index)
+            for month_index, weeks in weekly_targets.items():
+                month_key = str(month_index)
 
-            if month_key not in rpo_data["weekly"]:
-                rpo_data["weekly"][month_key] = {}
+                if month_key not in rpo_data["weekly"]:
+                    rpo_data["weekly"][month_key] = {}
 
-            for week_num, week_data in weeks.items():
-                week_key = str(week_num)
+                for week_num, week_data in weeks.items():
+                    week_key = str(week_num)
 
-                # Si la semaine n'existe pas, la créer
-                if week_key not in rpo_data["weekly"][month_key]:
-                    rpo_data["weekly"][month_key][week_key] = {}
+                    # Si la semaine n'existe pas, la créer
+                    if week_key not in rpo_data["weekly"][month_key]:
+                        rpo_data["weekly"][month_key][week_key] = {}
 
-                # Mettre à jour les champs "Visé" du plan d'affaires
-                rpo_data["weekly"][month_key][week_key]["week_label"] = week_data.get("week_label", "")
-                rpo_data["weekly"][month_key][week_key]["h_marketing_vise"] = week_data.get("h_marketing_vise", 0)
-                rpo_data["weekly"][month_key][week_key]["estimation_vise"] = week_data.get("estimation_vise", 0)
-                rpo_data["weekly"][month_key][week_key]["contract_vise"] = week_data.get("contract_vise", 0)
-                rpo_data["weekly"][month_key][week_key]["dollar_vise"] = week_data.get("dollar_vise", 0)
+                    # Mettre à jour les champs "Visé" du plan d'affaires
+                    rpo_data["weekly"][month_key][week_key]["week_label"] = week_data.get("week_label", "")
+                    rpo_data["weekly"][month_key][week_key]["h_marketing_vise"] = week_data.get("h_marketing_vise", 0)
+                    rpo_data["weekly"][month_key][week_key]["estimation_vise"] = week_data.get("estimation_vise", 0)
+                    rpo_data["weekly"][month_key][week_key]["contract_vise"] = week_data.get("contract_vise", 0)
+                    rpo_data["weekly"][month_key][week_key]["dollar_vise"] = week_data.get("dollar_vise", 0)
 
-                # IMPORTANT: NE PAS réinitialiser les *_obj_modifier!
-                # On met à jour seulement les *_vise (valeurs du plan) et on garde les modifications manuelles
-                # Si les champs *_obj_modifier n'existent pas encore, les créer à 0 (utiliser valeur du plan)
-                # Note: modifier = 0 signifie "utiliser la valeur du plan", modifier > 0 = override manuel
-                if "h_marketing_obj_modifier" not in rpo_data["weekly"][month_key][week_key]:
-                    rpo_data["weekly"][month_key][week_key]["h_marketing_obj_modifier"] = 0
-                if "estimation_obj_modifier" not in rpo_data["weekly"][month_key][week_key]:
-                    rpo_data["weekly"][month_key][week_key]["estimation_obj_modifier"] = 0
-                if "contract_obj_modifier" not in rpo_data["weekly"][month_key][week_key]:
-                    rpo_data["weekly"][month_key][week_key]["contract_obj_modifier"] = 0
-                if "dollar_obj_modifier" not in rpo_data["weekly"][month_key][week_key]:
-                    rpo_data["weekly"][month_key][week_key]["dollar_obj_modifier"] = 0
+                    # IMPORTANT: NE PAS réinitialiser les *_obj_modifier!
+                    # On met à jour seulement les *_vise (valeurs du plan) et on garde les modifications manuelles
+                    # Si les champs *_obj_modifier n'existent pas encore, les créer à 0 (utiliser valeur du plan)
+                    # Note: modifier = 0 signifie "utiliser la valeur du plan", modifier > 0 = override manuel
+                    if "h_marketing_obj_modifier" not in rpo_data["weekly"][month_key][week_key]:
+                        rpo_data["weekly"][month_key][week_key]["h_marketing_obj_modifier"] = 0
+                    if "estimation_obj_modifier" not in rpo_data["weekly"][month_key][week_key]:
+                        rpo_data["weekly"][month_key][week_key]["estimation_obj_modifier"] = 0
+                    if "contract_obj_modifier" not in rpo_data["weekly"][month_key][week_key]:
+                        rpo_data["weekly"][month_key][week_key]["contract_obj_modifier"] = 0
+                    if "dollar_obj_modifier" not in rpo_data["weekly"][month_key][week_key]:
+                        rpo_data["weekly"][month_key][week_key]["dollar_obj_modifier"] = 0
 
-                print(f"[SAVE TARGETS] Mise à jour *_vise pour mois {month_key} semaine {week_key} (garde overrides existants)")
+                    print(f"[SAVE TARGETS] Mise à jour *_vise pour mois {month_key} semaine {week_key} (garde overrides existants)")
 
-        # Sauvegarder les données RPO en utilisant le module qui gère les chemins
-        save_user_rpo_data(username, rpo_data)
+            # Sauvegarder les données RPO en utilisant le module qui gère les chemins
+            save_user_rpo_data(username, rpo_data)
 
         # Synchroniser le RPO du coach si l'utilisateur est un entrepreneur
         try:

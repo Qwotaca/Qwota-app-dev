@@ -5944,6 +5944,12 @@ window.openSignatureZoomPopup = async function() {
     log('[SIGNATURE] ATTENTION: pdfModal non trouvé!');
   }
 
+  // Bloquer le scroll sur tous les niveaux (empêche le scroll sur vieux iPad)
+  parentBody.style.overflow = 'hidden';
+  parentBody.style.touchAction = 'none';
+  document.body.style.overflow = 'hidden';
+  document.body.style.touchAction = 'none';
+
   if (popup) {
     popup.style.display = 'flex';
     log('[SIGNATURE] Popup display set to flex');
@@ -6149,6 +6155,13 @@ window.closeSignatureZoomPopup = function() {
   log('[SIGNATURE] Popup display AVANT fermeture:', popup ? popup.style.display : 'null');
   log('[SIGNATURE] PDF Modal display AVANT réaffichage:', pdfModal ? pdfModal.style.display : 'null');
 
+  // Restaurer le scroll sur tous les niveaux
+  const parentBody = rootWindow.document.body;
+  parentBody.style.overflow = '';
+  parentBody.style.touchAction = '';
+  document.body.style.overflow = '';
+  document.body.style.touchAction = '';
+
   if (popup) {
     popup.style.display = 'none';
     log('[SIGNATURE] Popup fermé - display:', popup.style.display);
@@ -6287,6 +6300,13 @@ window.validateSignature = function() {
   // NE PAS remettre hasPresentationSignature à false - on a besoin que ce soit true pour accepter la soumission
   // hasPresentationSignature = false;
   presentationPoints = [];
+
+  // Restaurer le scroll sur tous les niveaux
+  const parentBody = rootWindow.document.body;
+  parentBody.style.overflow = '';
+  parentBody.style.touchAction = '';
+  document.body.style.overflow = '';
+  document.body.style.touchAction = '';
 
   // Fermer le popup
   let popup = document.getElementById('signatureZoomPopup');
@@ -6458,11 +6478,15 @@ function initPresentationSignatureCanvas() {
 
   log('[SIGNATURE] Événements retirés, ajout de nouveaux événements...');
 
-  // Événements tactiles et souris
-  presentationSignatureCanvas.addEventListener('pointerdown', startPresentationDrawing);
-  presentationSignatureCanvas.addEventListener('pointermove', drawPresentation);
-  presentationSignatureCanvas.addEventListener('pointerup', stopPresentationDrawing);
-  presentationSignatureCanvas.addEventListener('pointercancel', stopPresentationDrawing);
+  // Événements tactiles et souris (passive: false requis pour preventDefault sur vieux iPad/Safari)
+  presentationSignatureCanvas.addEventListener('pointerdown', startPresentationDrawing, { passive: false });
+  presentationSignatureCanvas.addEventListener('pointermove', drawPresentation, { passive: false });
+  presentationSignatureCanvas.addEventListener('pointerup', stopPresentationDrawing, { passive: false });
+  presentationSignatureCanvas.addEventListener('pointercancel', stopPresentationDrawing, { passive: false });
+
+  // Fallback touch events pour vieux WebKit qui ne supporte pas pointer events
+  presentationSignatureCanvas.addEventListener('touchstart', function(e) { e.preventDefault(); }, { passive: false });
+  presentationSignatureCanvas.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
 
   log('[SIGNATURE] Événements attachés avec succès au canvas');
   log('[SIGNATURE] Canvas final dimensions:', {
@@ -6477,6 +6501,8 @@ function initPresentationSignatureCanvas() {
 }
 
 function startPresentationDrawing(e) {
+  e.preventDefault();
+  e.stopPropagation();
   log('[SIGNATURE] startPresentationDrawing appelé - event:', e.type, 'canvas:', !!presentationSignatureCanvas);
 
   if (!presentationSignatureCanvas) {
@@ -6513,6 +6539,7 @@ function startPresentationDrawing(e) {
 function drawPresentation(e) {
   if (!isPresentationDrawing) return;
   e.preventDefault();
+  e.stopPropagation();
 
   const rect = presentationSignatureCanvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
@@ -6559,7 +6586,8 @@ function drawPresentation(e) {
   if (clearBtn) clearBtn.style.display = 'block';
 }
 
-function stopPresentationDrawing() {
+function stopPresentationDrawing(e) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
   if (!isPresentationDrawing) return;
   isPresentationDrawing = false;
 

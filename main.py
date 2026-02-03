@@ -5324,9 +5324,15 @@ def envoyer_soumission_signee(
         except Exception as e:
             print(f"[WARNING] Erreur lors du déplacement ventes_attente -> ventes_acceptees: {e}")
 
-        # Envoi des emails au client et à l'entrepreneur
-        envoyer_email_soumission_signee(clientEmail, clientNom, clientPrenom, lien_pdf_signe, username, language)
-        envoyer_email_soumission_signee_entrepreneur(username, lien_pdf_signe, clientPrenom, clientNom)
+        # Envoi des emails au client et à l'entrepreneur (non bloquant)
+        email_ok = True
+        try:
+            envoyer_email_soumission_signee(clientEmail, clientNom, clientPrenom, lien_pdf_signe, username, language)
+            envoyer_email_soumission_signee_entrepreneur(username, lien_pdf_signe, clientPrenom, clientNom)
+            print(f"[OK] Emails envoyés pour {username}")
+        except Exception as email_error:
+            email_ok = False
+            print(f"[WARNING] Erreur envoi email pour {username}: {email_error}")
 
         # Sync RPO après la signature (contrat signé)
         try:
@@ -5336,10 +5342,15 @@ def envoyer_soumission_signee(
         except Exception as sync_error:
             print(f"[WARNING] Erreur sync RPO après signature: {sync_error}")
 
-        return JSONResponse({"message": "Soumission signée envoyée avec succès"})
+        if email_ok:
+            return JSONResponse({"message": "Soumission signée envoyée avec succès"})
+        else:
+            return JSONResponse({"message": "Soumission signée enregistrée avec succès (email non envoyé)"})
 
     except Exception as e:
-        print("Erreur envoyer_soumission_signee:", e)
+        print(f"Erreur envoyer_soumission_signee: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Erreur serveur interne lors de l'envoi")
 
 

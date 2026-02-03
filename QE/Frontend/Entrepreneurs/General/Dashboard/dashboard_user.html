@@ -2012,40 +2012,26 @@
         display: none !important;
       }
 
-      /* Classement section - dropdowns sous le titre */
-      #coachClassementContainer .flex.justify-between {
-        flex-direction: column !important;
-        align-items: flex-start !important;
+      /* Classement section - dropdowns déplacés sous le sous-titre via JS */
+      #coachClassementDropdowns,
+      #coachClassementCoachDropdowns {
+        width: 100% !important;
+        display: flex !important;
+        flex-wrap: nowrap !important;
         gap: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
       }
 
-      #coachClassementContainer .flex.justify-between > div {
-        width: 100% !important;
-        flex-wrap: wrap !important;
-        gap: 0.5rem !important;
-      }
-
-      #coachClassementContainer .flex.justify-between .custom-select {
-        width: 100% !important;
+      #coachClassementDropdowns .custom-select,
+      #coachClassementCoachDropdowns .custom-select {
+        flex: 1 1 0% !important;
+        width: auto !important;
         min-width: 0 !important;
       }
 
-      /* Même chose pour classement coach */
-      #coachClassementCoachContainer .flex.justify-between {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 0.5rem !important;
-      }
-
-      #coachClassementCoachContainer .flex.justify-between > div {
-        width: 100% !important;
-        flex-wrap: wrap !important;
-        gap: 0.5rem !important;
-      }
-
-      #coachClassementCoachContainer .flex.justify-between .custom-select {
-        width: 100% !important;
-        min-width: 0 !important;
+      /* Objectif de production - compact padding */
+      #objectifProgressContainer .fade-in-up > div {
+        padding: 0.625rem !important;
       }
 
     }
@@ -3300,7 +3286,7 @@
             <!-- Titre avec boutons Classement et Période -->
             <div class="flex justify-between items-center mb-2">
               <h2 class="text-2xl font-bold">Classement</h2>
-              <div style="display: flex; gap: 12px;">
+              <div id="coachClassementDropdowns" style="display: flex; gap: 12px;">
                 <!-- Dropdown Classement par -->
                 <div class="custom-select" id="coachScopeSelect" style="width: 280px;">
                   <button class="custom-select-button" id="coachScopeBtn" style="min-height: 40px; padding: 8px 14px;">
@@ -3373,7 +3359,7 @@
             </div>
 
             <!-- Sous-titre -->
-            <div class="flex justify-between items-center mb-4">
+            <div id="coachClassementSubtitle" class="flex justify-between items-center mb-4">
               <p style="color: var(--text-gray);">Classement de tous les entrepreneurs</p>
             </div>
 
@@ -3430,7 +3416,7 @@
             <!-- Titre avec boutons Classement et Période -->
             <div class="flex justify-between items-center mb-2">
               <h2 class="text-2xl font-bold">Classement Coach</h2>
-              <div style="display: flex; gap: 12px;">
+              <div id="coachClassementCoachDropdowns" style="display: flex; gap: 12px;">
                 <!-- Bouton Sélection de Période (même modal que classement entrepreneur) -->
                 <div class="custom-select" id="coachClassementCoachPeriodeSelect" style="width: auto; min-width: 200px;">
                   <button class="custom-select-button" id="coachClassementCoachPeriodeBtn" style="min-height: 40px; padding: 8px 14px;">
@@ -3447,7 +3433,7 @@
             </div>
 
             <!-- Sous-titre -->
-            <div class="flex justify-between items-center mb-4">
+            <div id="coachClassementCoachSubtitle" class="flex justify-between items-center mb-4">
               <p style="color: var(--text-gray);">Classement de tous les coachs</p>
             </div>
 
@@ -9057,6 +9043,38 @@ document.addEventListener('click', function(e) {
     menu.style.display = 'none';
   }
 });
+
+// Mobile: déplacer les dropdowns classement sous le sous-titre
+(function() {
+  const dropdowns = document.getElementById('coachClassementDropdowns');
+  const dropdownsCoach = document.getElementById('coachClassementCoachDropdowns');
+  const originalParent = dropdowns ? dropdowns.parentElement : null;
+  const originalParentCoach = dropdownsCoach ? dropdownsCoach.parentElement : null;
+
+  function moveClassementDropdownsMobile() {
+    const isMobile = window.innerWidth <= 768;
+    // Classement Entrepreneurs
+    const subtitle = document.getElementById('coachClassementSubtitle');
+    if (dropdowns && subtitle && originalParent) {
+      if (isMobile) {
+        subtitle.after(dropdowns);
+      } else {
+        originalParent.appendChild(dropdowns);
+      }
+    }
+    // Classement Coach
+    const subtitleCoach = document.getElementById('coachClassementCoachSubtitle');
+    if (dropdownsCoach && subtitleCoach && originalParentCoach) {
+      if (isMobile) {
+        subtitleCoach.after(dropdownsCoach);
+      } else {
+        originalParentCoach.appendChild(dropdownsCoach);
+      }
+    }
+  }
+  moveClassementDropdownsMobile();
+  window.addEventListener('resize', moveClassementDropdownsMobile);
+})();
 
 // Toggle between grid and ranking views for coach dashboard
 // Afficher la vue grille

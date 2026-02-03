@@ -11141,7 +11141,9 @@ async def save_cheque_photos(
     numeroSoumission: str = Body(...),
     typePaiement: str = Body(...),
     photoRecto: str = Body(None),
-    photoVerso: str = Body(None)
+    photoVerso: str = Body(None),
+    rectoOriginalName: str = Body(None),
+    versoOriginalName: str = Body(None)
 ):
     """Sauvegarde les photos recto/verso d'un chèque dans le cloud"""
     try:
@@ -11161,8 +11163,14 @@ async def save_cheque_photos(
                 photo_bytes = base64.b64decode(encoded)
                 print(f"[DEBUG] [SAVE-CHEQUE] Photo recto décodée, taille: {len(photo_bytes)} bytes", flush=True)
 
-                # Format: cheque_<numeroSoumission>_<typePaiement>_recto.png
-                photo_filename = f"cheque_{numeroSoumission}_{typePaiement}_recto.png"
+                # Utiliser le nom original du fichier
+                if rectoOriginalName:
+                    # Sécuriser le nom de fichier (retirer les caractères dangereux)
+                    safe_name = os.path.basename(rectoOriginalName)
+                    photo_filename = safe_name
+                else:
+                    photo_filename = f"cheque_{numeroSoumission}_{typePaiement}_recto.png"
+
                 photo_path = os.path.join(user_cheques_dir, photo_filename)
 
                 # Supprimer l'ancienne photo si elle existe
@@ -11190,8 +11198,13 @@ async def save_cheque_photos(
                 photo_bytes = base64.b64decode(encoded)
                 print(f"[DEBUG] [SAVE-CHEQUE] Photo verso décodée, taille: {len(photo_bytes)} bytes", flush=True)
 
-                # Format: cheque_<numeroSoumission>_<typePaiement>_verso.png
-                photo_filename = f"cheque_{numeroSoumission}_{typePaiement}_verso.png"
+                # Utiliser le nom original du fichier
+                if versoOriginalName:
+                    safe_name = os.path.basename(versoOriginalName)
+                    photo_filename = safe_name
+                else:
+                    photo_filename = f"cheque_{numeroSoumission}_{typePaiement}_verso.png"
+
                 photo_path = os.path.join(user_cheques_dir, photo_filename)
 
                 # Supprimer l'ancienne photo si elle existe
@@ -11225,6 +11238,35 @@ async def save_cheque_photos(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/facturationqe/check-cheque-photo/{username}")
+async def check_cheque_photo_doublon(username: str, body: dict = Body(...)):
+    """Vérifie si un fichier de chèque avec le même nom existe déjà pour cet entrepreneur"""
+    try:
+        filename = body.get("filename", "")
+        if not filename:
+            return {"status": "ok"}
+
+        safe_filename = os.path.basename(filename)
+        user_cheques_dir = os.path.join(base_cloud, "cheques", username)
+
+        if not os.path.exists(user_cheques_dir):
+            return {"status": "ok"}
+
+        # Vérifier si le fichier existe déjà dans le dossier de l'utilisateur
+        photo_path = os.path.join(user_cheques_dir, safe_filename)
+        if os.path.exists(photo_path):
+            return {
+                "status": "blocked",
+                "message": f"Le chèque \"{safe_filename}\" a déjà été déposé. Vous ne pouvez pas déposer le même chèque deux fois."
+            }
+
+        return {"status": "ok"}
+
+    except Exception as e:
+        print(f"[ERREUR] check-cheque-photo: {e}", flush=True)
+        return {"status": "ok"}
 
 
 @app.post("/api/user/update-profile")

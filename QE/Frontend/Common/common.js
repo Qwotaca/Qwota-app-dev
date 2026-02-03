@@ -12,8 +12,8 @@
 
   var userRole = localStorage.getItem('userRole');
 
-  // Vérifier si c'est un coach ou direction
-  if (userRole === 'coach' || userRole === 'direction') {
+  // Vérifier si c'est direction (coach a accès mobile)
+  if (userRole === 'direction') {
     // Détecter téléphone (pas tablette)
     var isSmallScreen = window.innerWidth <= 768;
     var mobileUA = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);

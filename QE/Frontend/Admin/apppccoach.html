@@ -4145,8 +4145,20 @@
               }
             }
 
-            if (needsUserUpdate) {
-              // Forcer le rechargement avec le bon username
+            // Vérifier si l'iframe a navigué vers une sous-page (ex: gestionsmobile -> gestionemployes)
+            let iframeNavigatedAway = false;
+            try {
+              const currentIframeUrl = targetIframe.contentWindow.location.pathname;
+              if (currentIframeUrl !== url && !currentIframeUrl.endsWith(url)) {
+                console.log(`[APPPC-COACH] ⚠️ Iframe a navigué vers ${currentIframeUrl}, devrait être ${url} - Reset`);
+                iframeNavigatedAway = true;
+              }
+            } catch(e) {
+              // Cross-origin, ignore
+            }
+
+            if (needsUserUpdate || iframeNavigatedAway) {
+              // Forcer le rechargement avec la bonne URL
               let finalUrl = url;
               if (currentUsername) {
                 finalUrl = url.includes('?') ? `${url}&user=${encodeURIComponent(currentUsername)}` : `${url}?user=${encodeURIComponent(currentUsername)}`;

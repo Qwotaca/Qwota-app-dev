@@ -968,6 +968,17 @@
       }
     }
 
+    @keyframes slideInRight {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
     @keyframes drawCheck {
       to {
         stroke-dashoffset: 0;
@@ -4954,6 +4965,60 @@
     </div>
   </div>
 
+  <!-- Modal confirmation transfert -->
+  <div id="transfertConfirmModal" class="fixed inset-0 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px); display: none; z-index: 60;">
+    <div class="status-card p-6 max-w-md w-full" style="max-height: 90vh; overflow-y: auto;">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i class="fas fa-exchange-alt mr-2" style="color: #8b5cf6;"></i>
+          Confirmer le transfert
+        </h3>
+        <button onclick="document.getElementById('transfertConfirmModal').style.display='none'" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(139, 92, 246, 0.2); color: #8b5cf6;" onmouseover="this.style.background='rgba(139, 92, 246, 0.3)'" onmouseout="this.style.background='rgba(139, 92, 246, 0.2)'">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="mb-6">
+        <p id="transfertConfirmMessage" style="color: var(--text-light); font-size: 1rem; line-height: 1.5;"></p>
+      </div>
+      <div class="flex justify-end gap-3">
+        <button id="transfertConfirmCancel" class="btn-secondary">Annuler</button>
+        <button id="transfertConfirmOk" class="btn-primary" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+          <i class="fas fa-exchange-alt mr-2"></i>Transférer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal transfert entrepreneur -->
+  <div id="transfertEntrepreneurModal" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none;">
+    <div class="status-card p-6" style="max-height: 55vh; width: 420px; max-width: 95vw; overflow: hidden; display: flex; flex-direction: column;">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold" style="color: var(--text-light);">
+          <i class="fas fa-exchange-alt mr-2" style="color: #8b5cf6;"></i>
+          Transférer vers un entrepreneur
+        </h3>
+        <button onclick="fermerModalTransfert()" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style="background: rgba(139, 92, 246, 0.2); color: #8b5cf6;" onmouseover="this.style.background='rgba(139, 92, 246, 0.3)'" onmouseout="this.style.background='rgba(139, 92, 246, 0.2)'">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="mb-3">
+        <div style="position: relative;">
+          <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-gray) !important;"></i>
+          <input type="text" id="transfert-search" placeholder="Rechercher un entrepreneur..." oninput="filtrerEntrepreneursTransfert()" style="width: 100% !important; padding: 0.6rem 0.6rem 0.6rem 2.2rem !important; border-radius: 8px !important; border: 1px solid rgba(148, 163, 184, 0.3) !important; background: var(--bg-tertiary) !important; color: var(--text-light) !important; font-size: 0.9rem !important; outline: none !important;" onfocus="this.style.borderColor='#8b5cf6'" onblur="this.style.borderColor='rgba(148, 163, 184, 0.3)'">
+        </div>
+      </div>
+      <div id="transfert-entrepreneurs-list" style="overflow-y: auto; flex: 1; min-height: 0; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.15);">
+        <div style="padding: 2rem; text-align: center; color: var(--text-gray);">
+          <i class="fas fa-spinner fa-spin" style="font-size: 1.5rem;"></i>
+          <p style="margin-top: 0.5rem;">Chargement...</p>
+        </div>
+      </div>
+      <div class="flex justify-end mt-4">
+        <button onclick="fermerModalTransfert()" style="background: rgba(148, 163, 184, 0.2); border: 1px solid rgba(148, 163, 184, 0.3); color: var(--text-light); padding: 0.6rem 1.5rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem;">Annuler</button>
+      </div>
+    </div>
+  </div>
+
   <!-- JavaScript sections management -->
   <!-- <script src="/Ventes_sections.js"></script> -->
 
@@ -7845,6 +7910,258 @@
     await marquerSelectionCommePerdus();
   }
 
+  // ========================================
+  // TRANSFERT DE CLIENTS (Direction uniquement)
+  // ========================================
+
+  // Afficher le bouton Transférer pour direction (appelé après DOM ready)
+  function initTransfertButton() {
+    const role = localStorage.getItem('userRole');
+    if (role === 'direction') {
+      const btn = document.getElementById('btn-transferer-clients');
+      if (btn) btn.style.display = 'flex';
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTransfertButton);
+  } else {
+    // DOM already loaded, try now and also schedule for next tick in case element not yet parsed
+    initTransfertButton();
+    setTimeout(initTransfertButton, 0);
+  }
+
+  // Collecter les clients sélectionnés avec leur numSoumission
+  function collecterClientsSelectionnes() {
+    const clients = [];
+
+    // Prospects
+    document.querySelectorAll('#potentiel-tbody .prospect-checkbox:checked').forEach(cb => {
+      const idx = parseInt(cb.dataset.prospectIndex);
+      const prospect = window.ventesData.prospects[idx];
+      if (prospect) {
+        clients.push({
+          type: 'prospect',
+          id: prospect.id || prospect.num,
+          numSoumission: prospect.num || null,
+          nom: `${prospect.prenom || ''} ${prospect.nom || ''}`.trim()
+        });
+      }
+    });
+
+    // Ventes (attente, accepte, produit)
+    const categoryMapping = { attente: 'attente', accepte: 'acceptees', produit: 'produit' };
+    ['attente', 'accepte', 'produit'].forEach(cat => {
+      const tbodyId = tbodyIds[cat];
+      const apiCat = categoryMapping[cat];
+      document.querySelectorAll(`#${tbodyId} .vente-checkbox:checked`).forEach(cb => {
+        const idx = parseInt(cb.dataset.index);
+        const vente = window.ventesData[apiCat] ? window.ventesData[apiCat][idx] : null;
+        if (vente) {
+          const numS = vente.numeroSoumission || vente.num || vente.id;
+          clients.push({
+            type: cat,
+            id: vente.id || vente.num,
+            numSoumission: numS,
+            nom: `${vente.prenom || ''} ${vente.nom || ''}`.trim()
+          });
+        }
+      });
+    });
+
+    return clients;
+  }
+
+  // Variable pour stocker les entrepreneurs chargés
+  let entrepreneursTransfertData = [];
+
+  // Ouvrir le modal de transfert
+  async function transfererSelectionVersEntrepreneur() {
+    const clients = collecterClientsSelectionnes();
+    if (clients.length === 0) return;
+
+    const modal = document.getElementById('transfertEntrepreneurModal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    // Charger la liste des entrepreneurs
+    const listContainer = document.getElementById('transfert-entrepreneurs-list');
+    listContainer.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-gray);"><i class="fas fa-spinner fa-spin" style="font-size: 1.5rem;"></i><p style="margin-top: 0.5rem;">Chargement...</p></div>';
+
+    try {
+      const response = await fetch('/api/users/entrepreneurs');
+      if (!response.ok) throw new Error('Erreur chargement entrepreneurs');
+      const data = await response.json();
+      const entrepreneurs = data.entrepreneurs || [];
+
+      // Exclure l'entrepreneur source
+      const sourceUsername = window.selectedEntrepreneurUsername || window.username;
+      entrepreneursTransfertData = entrepreneurs.filter(e => e.username !== sourceUsername);
+
+      renderEntrepreneursTransfert(entrepreneursTransfertData, clients);
+    } catch (err) {
+      listContainer.innerHTML = '<div style="padding: 2rem; text-align: center; color: #ef4444;"><i class="fas fa-exclamation-triangle" style="font-size: 1.5rem;"></i><p style="margin-top: 0.5rem;">Erreur lors du chargement</p></div>';
+    }
+  }
+
+  async function renderEntrepreneursTransfert(entrepreneurs, clients) {
+    const listContainer = document.getElementById('transfert-entrepreneurs-list');
+
+    if (entrepreneurs.length === 0) {
+      listContainer.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-gray);"><p>Aucun entrepreneur disponible</p></div>';
+      return;
+    }
+
+    // Charger les photos de profil en parallèle
+    const photoPromises = entrepreneurs.map(async (e) => {
+      try {
+        const resp = await fetch(`/api/get-profile-photo/${e.username}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.success && data.photoUrl) return data.photoUrl;
+        }
+      } catch (_) {}
+      return null;
+    });
+    const photoUrls = await Promise.all(photoPromises);
+
+    listContainer.innerHTML = entrepreneurs.map((e, i) => {
+      const nomComplet = `${e.prenom || ''} ${e.nom || ''}`.trim() || e.username;
+      const initial = nomComplet.charAt(0).toUpperCase();
+      const fallbackSvg = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><rect fill=%22%236366f1%22 width=%2240%22 height=%2240%22 rx=%2220%22/><text x=%2250%%22 y=%2255%%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2218%22>${initial}</text></svg>`;
+      const photoSrc = photoUrls[i] || fallbackSvg;
+      return `
+        <div class="transfert-entrepreneur-item" onclick="confirmerTransfert('${e.username}', '${nomComplet.replace(/'/g, "\\'")}')"
+             style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; cursor: pointer; border-bottom: 1px solid rgba(148, 163, 184, 0.1); transition: background 0.15s;"
+             onmouseover="this.style.background='rgba(139, 92, 246, 0.1)'" onmouseout="this.style.background='transparent'"
+             data-nom="${nomComplet.toLowerCase()}" data-username="${e.username.toLowerCase()}">
+          <img src="${photoSrc}" alt="${nomComplet}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(139, 92, 246, 0.3); flex-shrink: 0;"
+               onerror="this.src='${fallbackSvg}'">
+          <div style="flex: 1; min-width: 0;">
+            <div style="color: var(--text-light); font-weight: 500; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${nomComplet}</div>
+            <div style="color: var(--text-gray); font-size: 0.8rem;">@${e.username}</div>
+          </div>
+          <i class="fas fa-chevron-right" style="color: var(--text-gray); font-size: 0.8rem;"></i>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function filtrerEntrepreneursTransfert() {
+    const search = document.getElementById('transfert-search').value.toLowerCase().trim();
+    const items = document.querySelectorAll('.transfert-entrepreneur-item');
+    items.forEach(item => {
+      const nom = item.dataset.nom || '';
+      const username = item.dataset.username || '';
+      item.style.display = (nom.includes(search) || username.includes(search)) ? 'flex' : 'none';
+    });
+  }
+
+  function fermerModalTransfert() {
+    document.getElementById('transfertEntrepreneurModal').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  async function confirmerTransfert(destinationUsername, destinationNom) {
+    const clients = collecterClientsSelectionnes();
+    if (clients.length === 0) return;
+
+    const confirmed = await showTransfertConfirmModal(clients.length, destinationNom);
+    if (!confirmed) return;
+
+    fermerModalTransfert();
+
+    try {
+      const fromUsername = window.selectedEntrepreneurUsername || window.username;
+      const response = await fetch('/api/direction/transferer-clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromUsername: fromUsername,
+          toUsername: destinationUsername,
+          clients: clients
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.detail || 'Erreur lors du transfert');
+      }
+
+      const result = await response.json();
+
+      // Rafraîchir les données
+      await Promise.all([
+        loadProspects('potentiel-tbody'),
+        loadVentesCategory('attente', 'attente-tbody'),
+        loadVentesCategory('acceptees', 'accepte-tbody'),
+        loadVentesCategory('produit', 'produit-tbody')
+      ]);
+
+      deselectionnerTout();
+
+      // Notification succès
+      showTransfertSuccessNotification(clients.length, destinationNom, result.summary || []);
+
+    } catch (error) {
+      console.error('Erreur transfert:', error);
+      showErrorModal('Erreur lors du transfert: ' + error.message);
+    }
+  }
+
+  function showTransfertConfirmModal(count, destinationNom) {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('transfertConfirmModal');
+      const message = document.getElementById('transfertConfirmMessage');
+      const btnOk = document.getElementById('transfertConfirmOk');
+      const btnCancel = document.getElementById('transfertConfirmCancel');
+
+      message.textContent = `Transférer ${count} client(s) vers ${destinationNom} ? Toutes les données associées seront déplacées.`;
+      modal.style.display = 'flex';
+
+      const handleConfirm = () => {
+        modal.style.display = 'none';
+        btnOk.removeEventListener('click', handleConfirm);
+        btnCancel.removeEventListener('click', handleCancel);
+        resolve(true);
+      };
+
+      const handleCancel = () => {
+        modal.style.display = 'none';
+        btnOk.removeEventListener('click', handleConfirm);
+        btnCancel.removeEventListener('click', handleCancel);
+        resolve(false);
+      };
+
+      btnOk.addEventListener('click', handleConfirm);
+      btnCancel.addEventListener('click', handleCancel);
+    });
+  }
+
+  function showTransfertSuccessNotification(count, destinationNom, summary) {
+    const notification = document.createElement('div');
+    // Positionner sous le sélecteur entrepreneur
+    const selector = document.getElementById('coach-entrepreneur-selector');
+    const selectorBottom = selector ? selector.getBoundingClientRect().bottom + 8 : 80;
+    notification.style.cssText = `position: fixed; top: ${selectorBottom}px; left: 50%; transform: translateX(-50%); z-index: 10000; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; padding: 1rem 1.5rem; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); font-size: 0.95rem; max-width: 500px; width: max-content; animation: slideInRight 0.3s ease;`;
+    notification.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+        <i class="fas fa-check-circle"></i>
+        <strong>${count} client(s) transféré(s) vers ${destinationNom}</strong>
+      </div>
+      ${summary.length > 0 ? `<div style="font-size: 0.8rem; opacity: 0.9; margin-top: 0.25rem;">${summary.join(', ')}</div>` : ''}
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      notification.style.transition = 'opacity 0.3s ease';
+      setTimeout(() => notification.remove(), 300);
+    }, 5000);
+  }
+
+  // ========================================
+  // FIN TRANSFERT DE CLIENTS
+  // ========================================
+
   async function loadProspects(tbodyId) {
     const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
@@ -8210,6 +8527,9 @@
     <div style="display: flex; gap: 0.5rem;">
       <button onclick="marquerSelectionCommePerdus()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border: none; color: white; padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: 500; transition: all 0.2s ease;">
         <i class="fas fa-times-circle"></i> Marquer comme perdu
+      </button>
+      <button id="btn-transferer-clients" onclick="transfererSelectionVersEntrepreneur()" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border: none; color: white; padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; display: none; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: 500; transition: all 0.2s ease;">
+        <i class="fas fa-exchange-alt"></i> Transférer
       </button>
       <button onclick="deselectionnerTout()" style="background: rgba(148, 163, 184, 0.2); border: 1px solid rgba(148, 163, 184, 0.3); color: var(--text-light); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; transition: all 0.2s ease;">
         <i class="fas fa-times"></i> Annuler

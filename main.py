@@ -25787,6 +25787,244 @@ async def update_client_info_calcul(data: dict = Body(...)):
 # ============================================================================
 
 
+# ============================================================================
+# TRANSFERT DE CLIENTS ENTRE ENTREPRENEURS (Direction uniquement)
+# ============================================================================
+
+@app.post("/api/direction/transferer-clients")
+async def transferer_clients(request: Request):
+    """
+    Transfère des clients sélectionnés d'un entrepreneur vers un autre.
+    Déplace toutes les données liées par numéro de soumission.
+    Réservé à la direction.
+    """
+    try:
+        body = await request.json()
+        from_username = body.get("fromUsername")
+        to_username = body.get("toUsername")
+        clients = body.get("clients", [])
+
+        if not from_username or not to_username or not clients:
+            raise HTTPException(status_code=400, detail="fromUsername, toUsername et clients sont requis")
+
+        if from_username == to_username:
+            raise HTTPException(status_code=400, detail="L'entrepreneur source et destination doivent être différents")
+
+        print(f"[TRANSFERT] Début transfert de {len(clients)} client(s) de {from_username} vers {to_username}")
+
+        # Collecter tous les numSoumission et prospectIds à transférer
+        num_soumissions = set()
+        prospect_ids = set()
+        for client in clients:
+            client_type = client.get("type")
+            if client_type == "prospect":
+                prospect_id = client.get("id")
+                if prospect_id:
+                    prospect_ids.add(prospect_id)
+            else:
+                num_s = client.get("numSoumission")
+                if num_s:
+                    num_soumissions.add(num_s)
+
+        summary = []
+
+        # --- 1. Transférer les prospects ---
+        if prospect_ids:
+            prospects_src_file = os.path.join(base_cloud, "prospects", from_username, "prospects.json")
+            prospects_dst_dir = os.path.join(base_cloud, "prospects", to_username)
+            os.makedirs(prospects_dst_dir, exist_ok=True)
+            prospects_dst_file = os.path.join(prospects_dst_dir, "prospects.json")
+
+            if os.path.exists(prospects_src_file):
+                with open(prospects_src_file, "r", encoding="utf-8") as f:
+                    src_prospects = json.loads(f.read().strip() or "[]")
+
+                to_move = [p for p in src_prospects if p.get("id") in prospect_ids]
+                remaining = [p for p in src_prospects if p.get("id") not in prospect_ids]
+
+                if to_move:
+                    # Lire destination
+                    dst_prospects = []
+                    if os.path.exists(prospects_dst_file):
+                        with open(prospects_dst_file, "r", encoding="utf-8") as f:
+                            dst_prospects = json.loads(f.read().strip() or "[]")
+
+                    dst_prospects.extend(to_move)
+
+                    with open(prospects_dst_file, "w", encoding="utf-8") as f:
+                        json.dump(dst_prospects, f, ensure_ascii=False, indent=2)
+                    with open(prospects_src_file, "w", encoding="utf-8") as f:
+                        json.dump(remaining, f, ensure_ascii=False, indent=2)
+
+                    # Collecter les numSoumission des prospects transférés
+                    for p in to_move:
+                        if p.get("num"):
+                            num_soumissions.add(p["num"])
+
+                    summary.append(f"{len(to_move)} prospect(s) transféré(s)")
+                    print(f"[TRANSFERT] {len(to_move)} prospect(s) transféré(s)")
+
+        # --- 2. Transférer les données par numSoumission ---
+        if num_soumissions:
+            # Définir les dossiers et fichiers à traiter
+            # Format: (dossier, fichier, clé_match, is_dict)
+            json_transfers = [
+                ("soumissions_completes", "soumissions.json", "num", False),
+                ("soumissions_signees", "soumissions.json", "num", False),
+                ("ventes_attente", "ventes.json", "id", False),
+                ("ventes_acceptees", "ventes.json", "id", False),
+                ("ventes_produit", "ventes.json", "id", False),
+                ("travaux_a_completer", "soumissions.json", "num", False),
+                ("travaux_completes", "soumissions.json", "num", False),
+                ("clients_perdus", "clients.json", "num", False),
+                ("remboursements", "remboursements.json", "num", False),
+            ]
+
+            for dossier, fichier, match_key, is_dict in json_transfers:
+                try:
+                    src_path = os.path.join(base_cloud, dossier, from_username, fichier)
+                    dst_dir = os.path.join(base_cloud, dossier, to_username)
+                    os.makedirs(dst_dir, exist_ok=True)
+                    dst_path = os.path.join(dst_dir, fichier)
+
+                    if not os.path.exists(src_path):
+                        continue
+
+                    with open(src_path, "r", encoding="utf-8") as f:
+                        content = f.read().strip()
+                        src_data = json.loads(content) if content else []
+
+                    # Identifier les entrées à transférer
+                    # Pour ventes, le match_key est "id" mais on match aussi sur "num" / "numeroSoumission"
+                    to_move_items = []
+                    remaining_items = []
+
+                    for item in src_data:
+                        item_num = item.get("num") or item.get("numeroSoumission") or item.get("id")
+                        if item_num and item_num in num_soumissions:
+                            to_move_items.append(item)
+                        else:
+                            remaining_items.append(item)
+
+                    if not to_move_items:
+                        continue
+
+                    # Lire les données destination
+                    dst_data = []
+                    if os.path.exists(dst_path):
+                        with open(dst_path, "r", encoding="utf-8") as f:
+                            content = f.read().strip()
+                            dst_data = json.loads(content) if content else []
+
+                    dst_data.extend(to_move_items)
+
+                    with open(dst_path, "w", encoding="utf-8") as f:
+                        json.dump(dst_data, f, ensure_ascii=False, indent=2)
+                    with open(src_path, "w", encoding="utf-8") as f:
+                        json.dump(remaining_items, f, ensure_ascii=False, indent=2)
+
+                    summary.append(f"{dossier}: {len(to_move_items)} entrée(s)")
+                    print(f"[TRANSFERT] {dossier}: {len(to_move_items)} entrée(s) transférée(s)")
+
+                except Exception as e:
+                    print(f"[TRANSFERT] Erreur {dossier}: {e}")
+
+            # --- 3. Transférer facturation_qe_statuts (format dict avec clés = numSoumission) ---
+            try:
+                statuts_src_path = os.path.join(base_cloud, "facturation_qe_statuts", from_username, "statuts_clients.json")
+                statuts_dst_dir = os.path.join(base_cloud, "facturation_qe_statuts", to_username)
+                os.makedirs(statuts_dst_dir, exist_ok=True)
+                statuts_dst_path = os.path.join(statuts_dst_dir, "statuts_clients.json")
+
+                if os.path.exists(statuts_src_path):
+                    with open(statuts_src_path, "r", encoding="utf-8") as f:
+                        src_statuts = json.loads(f.read().strip() or "{}")
+
+                    moved_keys = {}
+                    remaining_statuts = {}
+                    for key, value in src_statuts.items():
+                        if key in num_soumissions:
+                            moved_keys[key] = value
+                        else:
+                            remaining_statuts[key] = value
+
+                    if moved_keys:
+                        dst_statuts = {}
+                        if os.path.exists(statuts_dst_path):
+                            with open(statuts_dst_path, "r", encoding="utf-8") as f:
+                                dst_statuts = json.loads(f.read().strip() or "{}")
+
+                        dst_statuts.update(moved_keys)
+
+                        with open(statuts_dst_path, "w", encoding="utf-8") as f:
+                            json.dump(dst_statuts, f, ensure_ascii=False, indent=2)
+                        with open(statuts_src_path, "w", encoding="utf-8") as f:
+                            json.dump(remaining_statuts, f, ensure_ascii=False, indent=2)
+
+                        summary.append(f"facturation_qe_statuts: {len(moved_keys)} clé(s)")
+                        print(f"[TRANSFERT] facturation_qe_statuts: {len(moved_keys)} clé(s) transférée(s)")
+
+            except Exception as e:
+                print(f"[TRANSFERT] Erreur facturation_qe_statuts: {e}")
+
+            # --- 4. Transférer les chèques (fichiers PNG) ---
+            try:
+                cheques_src_dir = os.path.join(base_cloud, "cheques", from_username)
+                cheques_dst_dir = os.path.join(base_cloud, "cheques", to_username)
+
+                if os.path.exists(cheques_src_dir):
+                    os.makedirs(cheques_dst_dir, exist_ok=True)
+                    moved_cheques = 0
+
+                    for filename in os.listdir(cheques_src_dir):
+                        for num in num_soumissions:
+                            if num in filename:
+                                src_file = os.path.join(cheques_src_dir, filename)
+                                dst_file = os.path.join(cheques_dst_dir, filename)
+                                shutil.move(src_file, dst_file)
+                                moved_cheques += 1
+                                break
+
+                    if moved_cheques:
+                        summary.append(f"cheques: {moved_cheques} fichier(s)")
+                        print(f"[TRANSFERT] cheques: {moved_cheques} fichier(s) déplacé(s)")
+
+            except Exception as e:
+                print(f"[TRANSFERT] Erreur cheques: {e}")
+
+        # --- 5. Sync RPO pour les deux entrepreneurs ---
+        try:
+            from QE.Backend.rpo import sync_soumissions_to_rpo, sync_ventes_produit_to_rpo
+            print(f"[TRANSFERT] Sync RPO pour {from_username}...")
+            sync_soumissions_to_rpo(from_username)
+            sync_ventes_produit_to_rpo(from_username)
+            print(f"[TRANSFERT] Sync RPO pour {to_username}...")
+            sync_soumissions_to_rpo(to_username)
+            sync_ventes_produit_to_rpo(to_username)
+            print(f"[TRANSFERT] Sync RPO terminé pour les deux entrepreneurs")
+        except Exception as e:
+            print(f"[TRANSFERT] Erreur sync RPO: {e}")
+
+        print(f"[TRANSFERT] Terminé: {summary}")
+        return {
+            "status": "success",
+            "summary": summary,
+            "message": f"Transfert terminé: {', '.join(summary) if summary else 'aucune donnée trouvée'}"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] transferer_clients: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# FIN TRANSFERT DE CLIENTS
+# ============================================================================
+
+
 # [START] Démarrage de l'application
 if __name__ == "__main__":
     import uvicorn

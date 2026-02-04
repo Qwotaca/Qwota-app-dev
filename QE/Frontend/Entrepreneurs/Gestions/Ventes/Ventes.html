@@ -3934,7 +3934,21 @@
 
   window.modifierSoumissionDepuisVentes = function(soumissionId) {
     sessionStorage.setItem('editSoumissionId', soumissionId);
-    window.location.href = '/soumissions';
+
+    if (window.parent && window.parent !== window) {
+      // Naviguer via le router parent pour changer d'iframe
+      const currentHash = window.parent.location.hash;
+      if (currentHash === '#/soumissions') {
+        window.parent.location.hash = '#/temp';
+        setTimeout(() => {
+          window.parent.location.hash = '#/soumissions';
+        }, 50);
+      } else {
+        window.parent.location.hash = '#/soumissions';
+      }
+    } else {
+      window.location.href = '/soumissions';
+    }
   };
 
   // Ancienne fonction closePDFViewer supprimée - on utilise maintenant closePDFViewerSimple()

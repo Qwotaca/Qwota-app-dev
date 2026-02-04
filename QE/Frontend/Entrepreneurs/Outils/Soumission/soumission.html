@@ -7480,9 +7480,18 @@ window.showConfirmPopup = function(message, onConfirm, onCancel) {
       setTimeout(activateCurrentPageMenu, 300);
 
       // Vérifier si on arrive depuis Ventes avec un ID de soumission à modifier
-      const editId = sessionStorage.getItem('editSoumissionId');
+      let editId = null;
+      try {
+        if (window.parent && window.parent !== window && window.parent.pendingEditSoumissionId) {
+          editId = window.parent.pendingEditSoumissionId;
+          window.parent.pendingEditSoumissionId = null;
+        }
+      } catch (e) { /* cross-origin */ }
+      if (!editId) {
+        editId = sessionStorage.getItem('editSoumissionId');
+        if (editId) sessionStorage.removeItem('editSoumissionId');
+      }
       if (editId) {
-        sessionStorage.removeItem('editSoumissionId');
         // Attendre que tout soit initialisé avant de charger la soumission
         setTimeout(() => {
           if (typeof editSentSoumission === 'function') {

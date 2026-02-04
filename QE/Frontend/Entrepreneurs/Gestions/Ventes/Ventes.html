@@ -3933,9 +3933,10 @@
   };
 
   window.modifierSoumissionDepuisVentes = function(soumissionId) {
-    sessionStorage.setItem('editSoumissionId', soumissionId);
-
     if (window.parent && window.parent !== window) {
+      // Passer l'ID via le parent (fiable en ligne, pas de sessionStorage)
+      window.parent.pendingEditSoumissionId = soumissionId;
+
       // Naviguer via le router parent pour changer d'iframe
       const currentHash = window.parent.location.hash;
       if (currentHash === '#/soumissions') {
@@ -3947,6 +3948,7 @@
         window.parent.location.hash = '#/soumissions';
       }
     } else {
+      sessionStorage.setItem('editSoumissionId', soumissionId);
       window.location.href = '/soumissions';
     }
   };

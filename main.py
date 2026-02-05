@@ -14565,42 +14565,61 @@ async def delete_coach_task(request: Request):
             raise HTTPException(status_code=400, detail="coach_username et task_id requis")
 
         tasks_dir = os.path.join(base_cloud, "coach_tasks")
-        tasks_file = os.path.join(tasks_dir, f"{coach_username}_tasks.json")
 
-        if not os.path.exists(tasks_file):
-            return {"success": True, "message": "Aucune tâche à supprimer"}
-
-        # Charger les tâches du créateur pour récupérer les utilisateurs assignés
-        with open(tasks_file, "r", encoding="utf-8") as f:
-            tasks = json.load(f)
-
-        # Trouver la tâche à supprimer pour récupérer les utilisateurs assignés
+        # Chercher la tâche d'abord dans le fichier de l'utilisateur courant
         task_to_delete = None
-        for t in tasks:
-            if t.get("id") == task_id:
-                task_to_delete = t
-                break
+        tasks_file = os.path.join(tasks_dir, f"{coach_username}_tasks.json")
+        if os.path.exists(tasks_file):
+            with open(tasks_file, "r", encoding="utf-8") as f:
+                tasks = json.load(f)
+            for t in tasks:
+                if t.get("id") == task_id:
+                    task_to_delete = t
+                    break
+
+        # Si pas trouvée (ex: direction non assignée), chercher dans tous les fichiers
+        if not task_to_delete and os.path.exists(tasks_dir):
+            for filename in os.listdir(tasks_dir):
+                if filename.endswith('_tasks.json'):
+                    filepath = os.path.join(tasks_dir, filename)
+                    try:
+                        with open(filepath, "r", encoding="utf-8") as f:
+                            file_tasks = json.load(f)
+                        for t in file_tasks:
+                            if t.get("id") == task_id:
+                                task_to_delete = t
+                                break
+                        if task_to_delete:
+                            break
+                    except Exception:
+                        continue
+
+        if not task_to_delete:
+            return {"success": True, "message": "Tâche non trouvée"}
 
         # Supprimer la tâche pour tous les utilisateurs assignés
-        if task_to_delete:
-            assigned_users = task_to_delete.get("assignedUsers", [])
-            for user in assigned_users:
-                username = user.get("username")
-                if not username:
-                    continue
+        assigned_users = task_to_delete.get("assignedUsers", [])
+        deleted_from = []
+        for user in assigned_users:
+            username = user.get("username")
+            if not username:
+                continue
 
-                user_tasks_file = os.path.join(tasks_dir, f"{username}_tasks.json")
-                if os.path.exists(user_tasks_file):
-                    with open(user_tasks_file, "r", encoding="utf-8") as f:
-                        user_tasks = json.load(f)
+            user_tasks_file = os.path.join(tasks_dir, f"{username}_tasks.json")
+            if os.path.exists(user_tasks_file):
+                with open(user_tasks_file, "r", encoding="utf-8") as f:
+                    user_tasks = json.load(f)
 
-                    # Filtrer pour supprimer la tâche
-                    user_tasks = [t for t in user_tasks if t.get("id") != task_id]
+                original_count = len(user_tasks)
+                user_tasks = [t for t in user_tasks if t.get("id") != task_id]
 
-                    # Sauvegarder
-                    with open(user_tasks_file, "w", encoding="utf-8") as f:
-                        json.dump(user_tasks, f, ensure_ascii=False, indent=2)
+                if len(user_tasks) < original_count:
+                    deleted_from.append(username)
 
+                with open(user_tasks_file, "w", encoding="utf-8") as f:
+                    json.dump(user_tasks, f, ensure_ascii=False, indent=2)
+
+        print(f"[TASKS] Tâche {task_id} supprimée de: {deleted_from}")
         return {"success": True, "message": "Tâche supprimée pour tous les utilisateurs assignés"}
     except HTTPException:
         raise
@@ -14622,24 +14641,38 @@ async def complete_coach_task(request: Request):
         tasks_dir = os.path.join(base_cloud, "coach_tasks")
         os.makedirs(tasks_dir, exist_ok=True)
 
+        # Chercher la tâche d'abord dans le fichier de l'utilisateur courant
+        task_to_complete = None
         tasks_file = os.path.join(tasks_dir, f"{coach_username}_tasks.json")
-
-        # Charger les tâches actuelles
-        tasks = []
         if os.path.exists(tasks_file):
             with open(tasks_file, "r", encoding="utf-8") as f:
                 tasks = json.load(f)
+            for task in tasks:
+                if task.get("id") == task_id:
+                    task_to_complete = task
+                    break
 
-        # Trouver la tâche à compléter
-        task_to_complete = None
-        for task in tasks:
-            if task.get("id") == task_id:
-                task_to_complete = task
-                task_to_complete["completed_at"] = datetime.now().isoformat()
-                break
+        # Si pas trouvée, chercher dans tous les fichiers
+        if not task_to_complete and os.path.exists(tasks_dir):
+            for filename in os.listdir(tasks_dir):
+                if filename.endswith('_tasks.json'):
+                    filepath = os.path.join(tasks_dir, filename)
+                    try:
+                        with open(filepath, "r", encoding="utf-8") as f:
+                            file_tasks = json.load(f)
+                        for task in file_tasks:
+                            if task.get("id") == task_id:
+                                task_to_complete = task
+                                break
+                        if task_to_complete:
+                            break
+                    except Exception:
+                        continue
 
         if not task_to_complete:
             raise HTTPException(status_code=404, detail="Tâche non trouvée")
+
+        task_to_complete["completed_at"] = datetime.now().isoformat()
 
         # Récupérer les utilisateurs assignés
         assigned_users = task_to_complete.get("assignedUsers", [])

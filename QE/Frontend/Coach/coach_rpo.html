@@ -4015,6 +4015,31 @@ async function loadTasks() {
 }
 
 // Afficher les tâches dans l'interface
+// Détermine la colonne dynamiquement selon la date de la tâche
+function getTaskColumn(task) {
+  if (!task.date) return task.priority || 'upcoming';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const taskDate = new Date(task.date + 'T00:00:00');
+  // Calculer le lundi de cette semaine
+  const dayOfWeek = today.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + mondayOffset);
+  // Dimanche de cette semaine
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  // Semaine prochaine
+  const nextMonday = new Date(sunday);
+  nextMonday.setDate(sunday.getDate() + 1);
+  const nextSunday = new Date(nextMonday);
+  nextSunday.setDate(nextMonday.getDate() + 6);
+
+  if (taskDate <= sunday) return 'urgent';        // Cette semaine (ou passé/en retard)
+  if (taskDate <= nextSunday) return 'important';  // Semaine prochaine
+  return 'upcoming';                               // Plus tard
+}
+
 function renderTasks() {
   // Vider les colonnes
   document.getElementById('urgent-tasks').innerHTML = '';
@@ -4024,13 +4049,14 @@ function renderTasks() {
   // Compter les tâches par priorité
   const counts = { urgent: 0, important: 0, upcoming: 0 };
 
-  // Afficher les tâches dans les colonnes
+  // Afficher les tâches dans les colonnes selon la date
   tasks.forEach(task => {
-    const taskEl = createTaskElement(task);
-    const container = document.getElementById(`${task.priority}-tasks`);
+    const column = getTaskColumn(task);
+    const taskEl = createTaskElement(task, column);
+    const container = document.getElementById(`${column}-tasks`);
     if (container) {
       container.appendChild(taskEl);
-      counts[task.priority]++;
+      counts[column]++;
     }
   });
 
@@ -4058,7 +4084,8 @@ function renderTasks() {
 }
 
 // Créer un élément de tâche pour les colonnes
-function createTaskElement(task) {
+function createTaskElement(task, column) {
+  column = column || task.priority;
   const div = document.createElement('div');
   div.className = 'todo-item';
   div.dataset.taskId = task.id;
@@ -4077,7 +4104,7 @@ function createTaskElement(task) {
   // Show Edit and Delete buttons for both Direction and Coach users
   if (isDirectionUser || isCoachUser) {
     actionButtons += `
-      <button onclick="openTaskModal('${task.priority}', '${task.id}')" style="padding: 0.5rem; background: rgba(96, 165, 250, 0.2); border: 1px solid rgba(96, 165, 250, 0.3); border-radius: 0.5rem; color: #60a5fa; cursor: pointer; font-size: 0.875rem;">
+      <button onclick="openTaskModal('${column}', '${task.id}')" style="padding: 0.5rem; background: rgba(96, 165, 250, 0.2); border: 1px solid rgba(96, 165, 250, 0.3); border-radius: 0.5rem; color: #60a5fa; cursor: pointer; font-size: 0.875rem;">
         <i class="fas fa-edit" style=""></i>
       </button>
       <button onclick="deleteTask('${task.id}')" style="padding: 0.5rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 0.5rem; color: #ef4444; cursor: pointer; font-size: 0.875rem;">

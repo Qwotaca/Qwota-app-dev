@@ -3295,7 +3295,7 @@
                     </span>
                     <i class="fas fa-chevron-down custom-select-arrow"></i>
                   </button>
-                  <div class="custom-select-dropdown" id="coachScopeDropdown">
+                  <div class="custom-select-dropdown" id="coachScopeDropdown" style="max-height: 400px;">
                     <!-- Options pour Dashboard Qualité Étudiants (grades) -->
                     <div class="custom-select-option coach-scope-grade-option" data-scope="tous" style="display: none;">
                       <i class="fas fa-users mr-2"></i>Tous les entrepreneurs
@@ -3312,12 +3312,20 @@
                     <div class="custom-select-option coach-scope-grade-option" data-scope="grade" data-grade="senior3" style="padding-left: 2.5rem; display: none;">
                       <i class="fas fa-star mr-2"></i>Sénior 3
                     </div>
+                    <div class="coach-scope-grade-option" style="border-top: 1px solid var(--border-dark); margin: 0.5rem 0; display: none;"></div>
+                    <div class="custom-select-option coach-scope-grade-option" data-scope="personnaliser" style="display: none;">
+                      <i class="fas fa-sliders-h mr-2"></i>Personnaliser...
+                    </div>
                     <!-- Options pour Mon Équipe / Par Coach (coaches) -->
                     <div class="custom-select-option coach-scope-team-option" data-scope="equipe">
                       <i class="fas fa-user-friends mr-2"></i>Mon équipe
                     </div>
                     <div class="custom-select-option coach-scope-team-option" data-scope="tous">
                       <i class="fas fa-users mr-2"></i>Tous les entrepreneurs
+                    </div>
+                    <div class="coach-scope-team-option" style="border-top: 1px solid var(--border-dark); margin: 0.5rem 0;"></div>
+                    <div class="custom-select-option coach-scope-team-option" data-scope="personnaliser">
+                      <i class="fas fa-sliders-h mr-2"></i>Personnaliser...
                     </div>
                   </div>
                 </div>
@@ -7263,6 +7271,152 @@
   </div>
 </div>
 
+<!-- Modal de sélection personnalisée d'entrepreneurs -->
+<div id="entrepreneurSelectionModal" class="entrepreneur-selection-modal hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center;">
+  <div class="es-modal-content" style="background: #1e293b; border-radius: 12px; width: 95%; max-width: 700px; max-height: 85vh; display: flex; flex-direction: column; border: 1px solid var(--border-dark); box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+    <!-- Header -->
+    <div style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-dark); display: flex; align-items: center; justify-content: space-between;">
+      <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-light);"><i class="fas fa-sliders-h mr-2"></i>Sélectionner les entrepreneurs</h3>
+      <button onclick="closeEntrepreneurSelectionModal()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem; padding: 0.25rem;"><i class="fas fa-times"></i></button>
+    </div>
+    <!-- Barre de recherche -->
+    <div style="padding: 0.75rem 1.5rem;">
+      <input type="text" id="entrepreneurSearchInput" placeholder="Rechercher un entrepreneur..." oninput="filterEntrepreneurSelectionModal()" style="width: 100% !important; padding: 0.5rem 0.75rem !important; background: #0f172a !important; border: 1px solid var(--border-dark) !important; border-radius: 6px !important; color: var(--text-light) !important; font-size: 0.85rem !important; outline: none !important; box-sizing: border-box !important;">
+    </div>
+    <!-- Boutons rapides -->
+    <div id="esQuickButtons" style="padding: 0 1.5rem 0.75rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
+      <button data-esfilter="equipe" onclick="setActiveQuickBtn(this); toggleTeamEntrepreneurs()" class="es-quick-btn"><i class="fas fa-user-friends mr-1"></i>Mon équipe</button>
+      <button data-esfilter="recrue" onclick="setActiveQuickBtn(this); toggleGradeEntrepreneurs('recrue')" class="es-quick-btn"><i class="fas fa-seedling mr-1"></i>Recrue</button>
+      <button data-esfilter="senior1" onclick="setActiveQuickBtn(this); toggleGradeEntrepreneurs('senior1')" class="es-quick-btn"><i class="fas fa-star mr-1"></i>Sénior 1</button>
+      <button data-esfilter="senior2" onclick="setActiveQuickBtn(this); toggleGradeEntrepreneurs('senior2')" class="es-quick-btn"><i class="fas fa-star mr-1"></i>Sénior 2</button>
+      <button data-esfilter="senior3" onclick="setActiveQuickBtn(this); toggleGradeEntrepreneurs('senior3')" class="es-quick-btn"><i class="fas fa-star mr-1"></i>Sénior 3</button>
+      <button onclick="toggleAllEntrepreneurs(false); clearActiveQuickBtns()" class="es-quick-btn" style="margin-left: auto;"><i class="fas fa-undo mr-1"></i>Réinitialiser</button>
+    </div>
+    <!-- Liste scrollable -->
+    <div id="entrepreneurSelectionList" style="flex: 1; overflow-y: auto; padding: 0 1.5rem; min-height: 200px; max-height: 50vh;">
+      <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+        <i class="fas fa-spinner fa-spin fa-2x"></i>
+        <p style="margin-top: 0.5rem;">Chargement...</p>
+      </div>
+    </div>
+    <!-- Footer -->
+    <div style="padding: 0.75rem 1.5rem; border-top: 1px solid var(--border-dark); display: flex; gap: 0.75rem; justify-content: flex-end; align-items: center;">
+      <button onclick="closeEntrepreneurSelectionModal()" class="btn-secondary">
+        <i class="fas fa-times mr-1"></i>Annuler
+      </button>
+      <button id="applyEntrepreneurSelectionBtn" onclick="applyEntrepreneurSelection()" class="btn-primary">
+        <i class="fas fa-check mr-1"></i>Appliquer (<span id="entrepreneurSelectionCount">0</span> sélectionnés)
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+.entrepreneur-selection-modal.hidden {
+  display: none !important;
+}
+.entrepreneur-selection-modal:not(.hidden) {
+  display: flex !important;
+}
+.entrepreneur-selection-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  gap: 0.6rem;
+}
+.entrepreneur-selection-item:hover {
+  background: #334155;
+}
+.entrepreneur-selection-item input[type="checkbox"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #4b5563;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  transition: all 0.15s ease;
+}
+.entrepreneur-selection-item input[type="checkbox"]:checked {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+.entrepreneur-selection-item input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.entrepreneur-selection-item .es-photo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #374151;
+}
+.entrepreneur-selection-item .es-name {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--text-light);
+  font-weight: 500;
+}
+.entrepreneur-selection-item .es-grade {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.es-grade-recrue { background: #14532d; color: #4ade80; }
+.es-grade-senior1 { background: #422006; color: #facc15; }
+.es-grade-senior2 { background: #431407; color: #fb923c; }
+.es-grade-senior3 { background: #3b0764; color: #c084fc; }
+.es-section-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.6rem 0 0.3rem;
+  border-bottom: 1px solid var(--border-dark);
+  margin-bottom: 0.25rem;
+}
+.es-quick-btn {
+  padding: 0.3rem 0.6rem;
+  background: #374151;
+  color: var(--text-light);
+  border: 1px solid var(--border-dark);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+.es-quick-btn.active {
+  background: #1e3a5f;
+  color: #60a5fa;
+  border-color: #2563eb66;
+}
+@media (max-width: 768px) {
+  .es-modal-content {
+    max-height: 65vh !important;
+  }
+}
+</style>
+
 <style>
 .week-selection-modal.hidden {
   display: none !important;
@@ -9235,6 +9389,7 @@ let currentCoachFilter = null; // Pour stocker le filtre actuel (coach username 
 let currentCoachPeriode = 'annee'; // Période actuelle
 let currentCoachCustomDates = null; // {start: 'YYYY-MM-DD', end: 'YYYY-MM-DD'} pour période personnalisée
 let coachDropdownsInitialized = false; // Flag pour éviter d'initialiser les dropdowns plusieurs fois
+let currentCustomSelection = []; // Pour stocker la sélection personnalisée d'entrepreneurs
 
 // Fonction pour obtenir le paramètre de période pour les API calls
 function getCoachPeriodParam() {
@@ -9413,6 +9568,10 @@ async function loadCoachScopeOptions() {
       <div class="custom-select-option coach-scope-grade-option" data-scope="grade" data-grade="senior3" style="padding-left: 2.5rem; display: flex;">
         <i class="fas fa-star mr-2"></i>Sénior 3
       </div>
+      <div style="border-top: 1px solid var(--border-dark); margin: 0.5rem 0;"></div>
+      <div class="custom-select-option" data-scope="personnaliser" style="display: flex;">
+        <i class="fas fa-sliders-h mr-2"></i>Personnaliser...
+      </div>
     `;
     dropdown.innerHTML = optionsHTML;
     return;
@@ -9460,6 +9619,10 @@ async function loadCoachScopeOptions() {
       <div class="custom-select-option" data-scope="grade" data-grade="senior3" style="padding-left: 2.5rem;">
         <i class="fas fa-star mr-2"></i>Sénior 3
       </div>
+      <div style="border-top: 1px solid var(--border-dark); margin: 0.5rem 0;"></div>
+      <div class="custom-select-option" data-scope="personnaliser">
+        <i class="fas fa-sliders-h mr-2"></i>Personnaliser...
+      </div>
     `;
   } else if (userRole === 'coach') {
     console.log('[LOAD COACH SCOPE OPTIONS] Branche COACH');
@@ -9471,6 +9634,22 @@ async function loadCoachScopeOptions() {
       <div class="custom-select-option" data-scope="tous">
         <i class="fas fa-users mr-2"></i>Tous les entrepreneurs
       </div>
+      <div class="custom-select-option" data-scope="grade" data-grade="recrue" style="padding-left: 2.5rem;">
+        <i class="fas fa-seedling mr-2"></i>Recrue
+      </div>
+      <div class="custom-select-option" data-scope="grade" data-grade="senior1" style="padding-left: 2.5rem;">
+        <i class="fas fa-star mr-2"></i>Sénior 1
+      </div>
+      <div class="custom-select-option" data-scope="grade" data-grade="senior2" style="padding-left: 2.5rem;">
+        <i class="fas fa-star mr-2"></i>Sénior 2
+      </div>
+      <div class="custom-select-option" data-scope="grade" data-grade="senior3" style="padding-left: 2.5rem;">
+        <i class="fas fa-star mr-2"></i>Sénior 3
+      </div>
+      <div style="border-top: 1px solid var(--border-dark); margin: 0.5rem 0;"></div>
+      <div class="custom-select-option" data-scope="personnaliser">
+        <i class="fas fa-sliders-h mr-2"></i>Personnaliser...
+      </div>
     `;
   } else {
     console.log('[LOAD COACH SCOPE OPTIONS] Branche AUTRE (userRole inconnu)');
@@ -9479,6 +9658,265 @@ async function loadCoachScopeOptions() {
   console.log('[LOAD COACH SCOPE OPTIONS] HTML généré, longueur:', optionsHTML.length);
   dropdown.innerHTML = optionsHTML;
 }
+
+// ===== MODAL SÉLECTION PERSONNALISÉE D'ENTREPRENEURS =====
+
+// Variable interne pour stocker les données d'entrepreneurs dans le modal
+let _entrepreneurModalData = [];
+let _entrepreneurTeamUsernames = [];
+
+async function openEntrepreneurSelectionModal() {
+  const modal = document.getElementById('entrepreneurSelectionModal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+
+  const listContainer = document.getElementById('entrepreneurSelectionList');
+  listContainer.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);"><i class="fas fa-spinner fa-spin fa-2x"></i><p style="margin-top: 0.5rem;">Chargement...</p></div>';
+
+  try {
+    // Charger tous les entrepreneurs
+    const response = await fetch('/api/entrepreneurs');
+    if (!response.ok) throw new Error('Erreur API entrepreneurs');
+    let allEntrepreneurs = await response.json();
+
+    // Filtrer pour garder seulement les vrais entrepreneurs
+    allEntrepreneurs = allEntrepreneurs.filter(e => {
+      const name = e.username || '';
+      return name.includes(' ') && e.role !== 'coach' && e.role !== 'direction';
+    });
+
+    // Charger l'équipe du coach courant
+    const urlParams = new URLSearchParams(window.location.search);
+    const coachUsername = urlParams.get('user');
+    _entrepreneurTeamUsernames = [];
+
+    if (coachUsername) {
+      try {
+        const teamResponse = await fetch(`/api/coach/${coachUsername}/equipe`);
+        if (teamResponse.ok) {
+          const teamData = await teamResponse.json();
+          const teamList = teamData.entrepreneurs || teamData || [];
+          _entrepreneurTeamUsernames = teamList.map(e => e.login_username || e.username);
+        }
+      } catch (err) {
+        console.log('Pas d\'équipe trouvée, continuer sans séparation');
+      }
+    }
+
+    _entrepreneurModalData = allEntrepreneurs;
+
+    // Cacher/afficher le bouton "Mon équipe" selon le rôle
+    const userRole = localStorage.getItem('userRole');
+    const teamBtn = document.querySelector('#esQuickButtons [data-esfilter="equipe"]');
+    if (teamBtn) teamBtn.style.display = (userRole === 'direction') ? 'none' : '';
+
+    renderEntrepreneurSelectionList();
+
+    // Charger les photos en parallèle
+    loadEntrepreneurPhotos();
+  } catch (error) {
+    console.error('Erreur chargement entrepreneurs pour modal:', error);
+    listContainer.innerHTML = '<div style="text-align: center; padding: 2rem; color: #ef4444;"><i class="fas fa-exclamation-triangle fa-2x"></i><p style="margin-top: 0.5rem;">Erreur de chargement</p></div>';
+  }
+}
+
+function renderEntrepreneurSelectionList() {
+  const listContainer = document.getElementById('entrepreneurSelectionList');
+  const searchTerm = (document.getElementById('entrepreneurSearchInput')?.value || '').toLowerCase().trim();
+
+  const userRole = localStorage.getItem('userRole');
+  const isDirection = userRole === 'direction';
+
+  // Séparer en 2 groupes (sauf direction → liste unique)
+  const teamEntrepreneurs = [];
+  const otherEntrepreneurs = [];
+
+  _entrepreneurModalData.forEach(e => {
+    const loginUser = e.login_username || e.username;
+    const displayName = e.username || `${e.prenom || ''} ${e.nom || ''}`.trim();
+
+    // Filtre de recherche
+    if (searchTerm && !displayName.toLowerCase().includes(searchTerm)) return;
+
+    const item = { ...e, loginUser, displayName };
+    if (!isDirection && _entrepreneurTeamUsernames.includes(loginUser)) {
+      teamEntrepreneurs.push(item);
+    } else {
+      otherEntrepreneurs.push(item);
+    }
+  });
+
+  // Trier par nom
+  const sortByName = (a, b) => a.displayName.localeCompare(b.displayName);
+  teamEntrepreneurs.sort(sortByName);
+  otherEntrepreneurs.sort(sortByName);
+
+  let html = '';
+
+  // Section Mon équipe (pas pour direction)
+  if (teamEntrepreneurs.length > 0) {
+    html += '<div class="es-section-header"><i class="fas fa-user-friends mr-1"></i>Mon équipe (' + teamEntrepreneurs.length + ')</div>';
+    teamEntrepreneurs.forEach(e => { html += buildEntrepreneurItem(e); });
+  }
+
+  // Section Autres (ou tous pour direction)
+  if (otherEntrepreneurs.length > 0) {
+    if (!isDirection && teamEntrepreneurs.length > 0) {
+      html += '<div class="es-section-header" style="margin-top: 0.5rem;"><i class="fas fa-users mr-1"></i>Autres entrepreneurs (' + otherEntrepreneurs.length + ')</div>';
+    }
+    otherEntrepreneurs.forEach(e => { html += buildEntrepreneurItem(e); });
+  }
+
+  if (!html) {
+    html = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">Aucun entrepreneur trouvé</div>';
+  }
+
+  listContainer.innerHTML = html;
+  updateSelectionCount();
+}
+
+function buildEntrepreneurItem(e) {
+  const checked = currentCustomSelection.includes(e.loginUser) ? 'checked' : '';
+  const grade = e.grade || '';
+  let gradeLabel = '';
+  let gradeClass = '';
+
+  if (grade === 'recrue' || grade === 'rookie') {
+    gradeLabel = 'Recrue';
+    gradeClass = 'es-grade-recrue';
+  } else if (grade === 'senior1') {
+    gradeLabel = 'Sénior 1';
+    gradeClass = 'es-grade-senior1';
+  } else if (grade === 'senior2') {
+    gradeLabel = 'Sénior 2';
+    gradeClass = 'es-grade-senior2';
+  } else if (grade === 'senior3') {
+    gradeLabel = 'Sénior 3';
+    gradeClass = 'es-grade-senior3';
+  }
+
+  return `
+    <label class="entrepreneur-selection-item" data-login="${e.loginUser}" data-grade="${grade}">
+      <input type="checkbox" ${checked} onchange="updateSelectionCount()" value="${e.loginUser}">
+      <img class="es-photo" id="es-photo-${e.loginUser}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%23374151'/%3E%3Ctext x='16' y='21' text-anchor='middle' fill='%239ca3af' font-size='14'%3E%3F%3C/text%3E%3C/svg%3E" alt="">
+      <span class="es-name">${e.displayName}</span>
+      ${gradeLabel ? `<span class="es-grade ${gradeClass}">${gradeLabel}</span>` : ''}
+    </label>
+  `;
+}
+
+async function loadEntrepreneurPhotos() {
+  // Charger les photos en parallèle (par lots de 5) - même méthode que le header de l'app
+  const loadPhoto = async (e) => {
+    const loginUser = e.login_username || e.username;
+    try {
+      const response = await fetch(`/api/get-profile-photo/${loginUser}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result && result.photoUrl) {
+          const img = document.getElementById(`es-photo-${loginUser}`);
+          if (img) img.src = result.photoUrl;
+        }
+      }
+    } catch (err) {
+      // Ignorer les erreurs de photo
+    }
+  };
+
+  // Limiter la concurrence à 5 à la fois
+  for (let i = 0; i < _entrepreneurModalData.length; i += 5) {
+    const batch = _entrepreneurModalData.slice(i, i + 5);
+    await Promise.all(batch.map(loadPhoto));
+  }
+}
+
+function filterEntrepreneurSelectionModal() {
+  renderEntrepreneurSelectionList();
+}
+
+function setActiveQuickBtn(btn) {
+  // Toggle : ajouter/retirer la classe active sur le bouton cliqué
+  btn.classList.toggle('active');
+}
+
+function clearActiveQuickBtns() {
+  document.querySelectorAll('#esQuickButtons .es-quick-btn').forEach(b => b.classList.remove('active'));
+}
+
+function toggleAllEntrepreneurs(checked) {
+  const checkboxes = document.querySelectorAll('#entrepreneurSelectionList input[type="checkbox"]');
+  checkboxes.forEach(cb => { cb.checked = checked; });
+  updateSelectionCount();
+}
+
+function toggleTeamEntrepreneurs() {
+  // Vérifier si le bouton est actif (vient d'être activé par setActiveQuickBtn)
+  const btn = document.querySelector('#esQuickButtons [data-esfilter="equipe"]');
+  const adding = btn && btn.classList.contains('active');
+
+  _entrepreneurTeamUsernames.forEach(username => {
+    const item = document.querySelector(`#entrepreneurSelectionList .entrepreneur-selection-item[data-login="${username}"] input[type="checkbox"]`);
+    if (item) item.checked = adding;
+  });
+  updateSelectionCount();
+}
+
+function toggleGradeEntrepreneurs(grade) {
+  // Vérifier si le bouton est actif (vient d'être activé par setActiveQuickBtn)
+  const btn = document.querySelector(`#esQuickButtons [data-esfilter="${grade}"]`);
+  const adding = btn && btn.classList.contains('active');
+
+  _entrepreneurModalData.forEach(e => {
+    const eGrade = e.grade || '';
+    let matches = false;
+    if (grade === 'recrue') matches = (eGrade === 'recrue' || eGrade === 'rookie');
+    else matches = (eGrade === grade);
+
+    if (matches) {
+      const loginUser = e.login_username || e.username;
+      const item = document.querySelector(`#entrepreneurSelectionList .entrepreneur-selection-item[data-login="${loginUser}"] input[type="checkbox"]`);
+      if (item) item.checked = adding;
+    }
+  });
+  updateSelectionCount();
+}
+
+function updateSelectionCount() {
+  const checkboxes = document.querySelectorAll('#entrepreneurSelectionList input[type="checkbox"]:checked');
+  const countEl = document.getElementById('entrepreneurSelectionCount');
+  if (countEl) countEl.textContent = checkboxes.length;
+}
+
+function applyEntrepreneurSelection() {
+  const checkboxes = document.querySelectorAll('#entrepreneurSelectionList input[type="checkbox"]:checked');
+  currentCustomSelection = Array.from(checkboxes).map(cb => cb.value);
+
+  if (currentCustomSelection.length === 0) {
+    // Si rien sélectionné, revenir à "tous"
+    currentCoachScope = 'tous';
+    currentCoachFilter = null;
+    const scopeBtnText = document.getElementById('coachScopeBtnText');
+    if (scopeBtnText) scopeBtnText.innerHTML = '<i class="fas fa-users mr-2"></i>Tous les entrepreneurs';
+  } else {
+    currentCoachScope = 'custom';
+    currentCoachFilter = null;
+    const scopeBtnText = document.getElementById('coachScopeBtnText');
+    if (scopeBtnText) scopeBtnText.innerHTML = `<i class="fas fa-sliders-h mr-2"></i>Personnalisé (${currentCustomSelection.length})`;
+  }
+
+  closeEntrepreneurSelectionModal();
+  renderCoachClassementCards();
+}
+
+function closeEntrepreneurSelectionModal() {
+  const modal = document.getElementById('entrepreneurSelectionModal');
+  if (modal) modal.classList.add('hidden');
+  // Reset la recherche
+  const searchInput = document.getElementById('entrepreneurSearchInput');
+  if (searchInput) searchInput.value = '';
+}
+
+// ===== FIN MODAL SÉLECTION PERSONNALISÉE =====
 
 // Setup du dropdown de scope (Mon équipe / Tous les entrepreneurs) pour le classement coach
 async function setupCoachScopeDropdown() {
@@ -9518,6 +9956,13 @@ async function setupCoachScopeDropdown() {
     const scope = option.getAttribute('data-scope');
     const coach = option.getAttribute('data-coach');
     const grade = option.getAttribute('data-grade');
+
+    // Si "Personnaliser" → ouvrir le modal au lieu de filtrer
+    if (scope === 'personnaliser') {
+      scopeSelect.classList.remove('open');
+      openEntrepreneurSelectionModal();
+      return;
+    }
 
     // Mettre à jour le texte du bouton
     scopeBtnText.innerHTML = option.innerHTML;
@@ -10472,6 +10917,21 @@ async function renderCoachClassementCards() {
         };
       });
       log(`📊 ${allEntrepreneurs.length} entrepreneurs de l'équipe ${currentCoachFilter} chargés`);
+    } else if (currentCoachScope === 'custom' && currentCustomSelection.length > 0) {
+      // Charger tous les entrepreneurs et filtrer par sélection personnalisée
+      const periodParam = getCoachPeriodParam();
+      log(`📅 [PERIODE] Chargement personnalisé avec paramètre: ${periodParam}`);
+      const response = await fetch(`/api/entrepreneurs?${periodParam}`);
+      if (!response.ok) {
+        throw new Error(`Erreur API: ${response.status}`);
+      }
+      allEntrepreneurs = await response.json();
+      // Filtrer par la sélection personnalisée
+      allEntrepreneurs = allEntrepreneurs.filter(e => {
+        const loginUser = e.login_username || e.username;
+        return currentCustomSelection.includes(loginUser);
+      });
+      log(`📊 ${allEntrepreneurs.length} entrepreneurs de la sélection personnalisée chargés`);
     } else {
       // Charger TOUS les entrepreneurs
       const periodParam = getCoachPeriodParam();

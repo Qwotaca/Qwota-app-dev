@@ -178,9 +178,9 @@ def generate_pdf(data: dict, language: str = 'fr') -> BytesIO:
 
     # Affichage selon la langue
     if language == 'fr':
-        # Français: TVQ, TPS, Total à leurs positions normales
-        c.drawRightString(443, 124.5 + y_offset, tvq)
-        c.drawRightString(443, 99.5 + y_offset, tps)
+        # Français: TPS, TVQ, Total à leurs positions normales
+        c.drawRightString(443, 124.5 + y_offset, tps)
+        c.drawRightString(443, 99.5 + y_offset, tvq)
         c.drawRightString(443, 74.5 + y_offset, total)
     else:
         # Anglais: TVH en haut, Total en bas

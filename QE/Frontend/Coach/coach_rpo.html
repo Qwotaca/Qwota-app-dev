@@ -1908,12 +1908,17 @@ select:disabled {
 
               <!-- Objectif de la semaine -->
               <div style="background: rgba(51, 65, 85, 0.2); border: 1px solid rgba(51, 65, 85, 0.4); border-radius: 0.5rem; padding: 1rem;">
-                <label style="display: block; color: var(--text-light); font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">
-                  <i class="fas fa-flag" style="color: #f59e0b;"></i> Objectif de la semaine
-                </label>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                  <label style="color: var(--text-light); font-size: 0.9rem; font-weight: 600;">
+                    <i class="fas fa-flag" style="color: #f59e0b;"></i> Objectif de la semaine
+                  </label>
+                  <button id="save-objectif-semaine-btn" onclick="saveCurrentWeekObjectif()" style="display: none; align-items: center; gap: 0.5rem; padding: 0.4rem 0.75rem; background: transparent; border: 2px solid #3b82f6; border-radius: 0.5rem; color: #3b82f6; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                    <i class="fas fa-save"></i>
+                  </button>
+                </div>
                 <div style="display: flex; align-items: center; gap: 1rem;">
-                  <textarea id="current-objectif-semaine" oninput="autoSaveObjectifSemaine()" placeholder="Mon objectif principal cette semaine..." style="flex: 1; height: 80px; padding: 0.75rem; background: rgba(51, 65, 85, 0.3); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 0.5rem; color: var(--text-light); font-size: 0.9rem; resize: none;"></textarea>
-                  <div id="current-objectif-check" onclick="toggleObjectiveCheck(this); saveCurrentWeekObjectif();" style="width: 50px; height: 50px; border-radius: 50%; border: 3px solid #ef4444; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; flex-shrink: 0;">
+                  <textarea id="current-objectif-semaine" oninput="onObjectifSemaineInput()" placeholder="Mon objectif principal cette semaine..." style="flex: 1; height: 80px; padding: 0.75rem; background: rgba(51, 65, 85, 0.3); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 0.5rem; color: var(--text-light); font-size: 0.9rem; resize: none;"></textarea>
+                  <div id="current-objectif-check" onclick="toggleObjectiveCheck(this);" style="width: 50px; height: 50px; border-radius: 50%; border: 3px solid #ef4444; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; flex-shrink: 0;">
                     <i class="fas fa-times" style="color: #ef4444; font-size: 1.5rem;"></i>
                   </div>
                 </div>
@@ -5943,50 +5948,117 @@ async function loadCoachWeeklyObjectivesSection() {
     updateObjectiveCheckAuto('current-contrats-check', currContratObj, currContratReel);
     updateObjectiveCheckAuto('current-vendu-check', currDollarObj, currDollarReel);
 
+    // Charger l'objectif de la semaine (focus) dans les textareas
+    const pastFocus = pastData.focus || pastData.objectif_semaine || '';
+    const currentFocus = currentData.focus || currentData.objectif_semaine || '';
+
+    const pastTextarea = document.getElementById('past-objectif-semaine');
+    const currentTextarea = document.getElementById('current-objectif-semaine');
+
+    if (pastTextarea) {
+      pastTextarea.value = pastFocus !== '-' ? pastFocus : '';
+    }
+    if (currentTextarea) {
+      currentTextarea.value = currentFocus !== '-' ? currentFocus : '';
+      // Stocker la valeur initiale pour détecter les modifications
+      currentTextarea.dataset.initialValue = currentFocus !== '-' ? currentFocus : '';
+    }
+
+    // Cacher le bouton d'enregistrement au chargement
+    const saveBtn = document.getElementById('save-objectif-semaine-btn');
+    if (saveBtn) saveBtn.style.display = 'none';
+
     console.log('[COACH OBJ] Données chargées avec succès depuis RPO JSON');
   } catch (error) {
     console.error('[COACH OBJ] Erreur:', error);
   }
 }
 
-// Debounce pour auto-save des objectifs de la semaine
-let objectifSemaineSaveTimeout = null;
-function autoSaveObjectifSemaine() {
-  if (objectifSemaineSaveTimeout) clearTimeout(objectifSemaineSaveTimeout);
-  objectifSemaineSaveTimeout = setTimeout(() => {
-    saveCurrentWeekObjectif();
-  }, 500);
+// Fonction appelée quand le textarea est modifié
+function onObjectifSemaineInput() {
+  const textarea = document.getElementById('current-objectif-semaine');
+  const saveBtn = document.getElementById('save-objectif-semaine-btn');
+  if (!textarea || !saveBtn) return;
+
+  // Afficher le bouton si la valeur a changé
+  const initialValue = textarea.dataset.initialValue || '';
+  const currentValue = textarea.value || '';
+
+  if (currentValue !== initialValue) {
+    saveBtn.style.display = 'flex';
+  } else {
+    saveBtn.style.display = 'none';
+  }
 }
 
 // Sauvegarder l'objectif de la semaine actuelle
 async function saveCurrentWeekObjectif() {
   const username = coachUsername || localStorage.getItem('username');
-  if (!username || !currentWeekKey) return;
+  if (!username) {
+    console.error('[COACH OBJ] Pas de username');
+    return;
+  }
+
+  const textarea = document.getElementById('current-objectif-semaine');
+  const saveBtn = document.getElementById('save-objectif-semaine-btn');
+  const focusValue = textarea?.value || '';
+
+  // Utiliser les index de mois et semaine calculés lors du chargement
+  const monthIndex = currentMonthIdx;
+  const weekNumber = currentWeekIdx;
+
+  console.log(`[COACH OBJ] Sauvegarde focus pour ${username}, mois ${monthIndex}, semaine ${weekNumber}`);
 
   const data = {
-    week_key: currentWeekKey,
-    objectif_semaine: document.getElementById('current-objectif-semaine')?.value || '',
-    objectif_check: document.getElementById('current-objectif-check')?.querySelector('i')?.classList.contains('fa-check') || false,
-    // Garder les autres valeurs existantes
-    hpap_obj: parseInt(document.getElementById('current-hpap-obj')?.textContent) || 0,
-    hpap_reel: parseInt(document.getElementById('current-hpap-reel')?.textContent) || 0,
-    est_obj: parseInt(document.getElementById('current-est-obj')?.textContent) || 0,
-    est_reel: parseInt(document.getElementById('current-est-reel')?.textContent) || 0,
-    contrats_obj: parseInt(document.getElementById('current-contrats-obj')?.textContent) || 0,
-    contrats_reel: parseInt(document.getElementById('current-contrats-reel')?.textContent) || 0,
-    vendu_obj: parseInt(document.getElementById('current-vendu-obj')?.textContent?.replace(/[^0-9]/g, '')) || 0,
-    vendu_reel: parseInt(document.getElementById('current-vendu-reel')?.textContent?.replace(/[^0-9]/g, '')) || 0
+    focus: focusValue
   };
 
   try {
-    await fetch(`/api/coach/weekly-objectives/${username}`, {
+    // Feedback visuel
+    if (saveBtn) {
+      saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      saveBtn.disabled = true;
+    }
+
+    const response = await fetch(`/api/rpo/${username}/weekly/${monthIndex}/${weekNumber}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    console.log('[COACH OBJ] Objectif semaine sauvegardé');
+
+    if (response.ok) {
+      console.log('[COACH OBJ] Focus sauvegardé avec succès');
+      // Mettre à jour la valeur initiale
+      if (textarea) textarea.dataset.initialValue = focusValue;
+      // Feedback succès
+      if (saveBtn) {
+        saveBtn.innerHTML = '<i class="fas fa-check"></i>';
+        saveBtn.style.borderColor = '#10b981';
+        saveBtn.style.color = '#10b981';
+        setTimeout(() => {
+          saveBtn.style.display = 'none';
+          saveBtn.innerHTML = '<i class="fas fa-save"></i>';
+          saveBtn.style.borderColor = '#3b82f6';
+          saveBtn.style.color = '#3b82f6';
+          saveBtn.disabled = false;
+        }, 1500);
+      }
+    } else {
+      throw new Error('Erreur serveur');
+    }
   } catch (error) {
     console.error('[COACH OBJ] Erreur sauvegarde:', error);
+    if (saveBtn) {
+      saveBtn.innerHTML = '<i class="fas fa-times"></i>';
+      saveBtn.style.borderColor = '#ef4444';
+      saveBtn.style.color = '#ef4444';
+      setTimeout(() => {
+        saveBtn.innerHTML = '<i class="fas fa-save"></i>';
+        saveBtn.style.borderColor = '#3b82f6';
+        saveBtn.style.color = '#3b82f6';
+        saveBtn.disabled = false;
+      }, 1500);
+    }
   }
 }
 

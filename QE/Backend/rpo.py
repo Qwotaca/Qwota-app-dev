@@ -935,12 +935,17 @@ def sync_coach_rpo(coach_username: str) -> bool:
                     if week_key not in coach_rpo['weekly'][month_key]:
                         coach_rpo['weekly'][month_key][week_key] = {}
 
-                    # Réinitialiser TOUS les champs agrégés à 0
+                    # Réinitialiser TOUS les champs agrégés à 0 (réels ET objectifs)
                     coach_rpo['weekly'][month_key][week_key]['h_marketing'] = 0
                     coach_rpo['weekly'][month_key][week_key]['estimation'] = 0
                     coach_rpo['weekly'][month_key][week_key]['contract'] = 0
                     coach_rpo['weekly'][month_key][week_key]['dollar'] = 0
                     coach_rpo['weekly'][month_key][week_key]['produit'] = 0
+                    # Objectifs (*_vise) - somme des objectifs des entrepreneurs
+                    coach_rpo['weekly'][month_key][week_key]['h_marketing_vise'] = 0
+                    coach_rpo['weekly'][month_key][week_key]['estimation_vise'] = 0
+                    coach_rpo['weekly'][month_key][week_key]['contract_vise'] = 0
+                    coach_rpo['weekly'][month_key][week_key]['dollar_vise'] = 0
 
             # Agréger les h_marketing de tous les entrepreneurs
             for entrepreneur_username in entrepreneur_usernames:
@@ -984,6 +989,23 @@ def sync_coach_rpo(coach_username: str) -> bool:
                                     coach_rpo['weekly'][month_key][week_key][field] = float(current) + numeric_value
                                 except (ValueError, TypeError):
                                     pass
+
+                        # Agréger les objectifs (*_vise) des entrepreneurs
+                        for vise_field in ['h_marketing_vise', 'estimation_vise', 'contract_vise', 'dollar_vise']:
+                            vise_value = week_data.get(vise_field, 0)
+                            if vise_value and vise_value != 0:
+                                try:
+                                    numeric_value = float(vise_value)
+                                    current = coach_rpo['weekly'][month_key][week_key].get(vise_field, 0)
+                                    coach_rpo['weekly'][month_key][week_key][vise_field] = float(current) + numeric_value
+                                except (ValueError, TypeError):
+                                    pass
+
+                        # Copier week_label si pas encore défini
+                        if 'week_label' not in coach_rpo['weekly'][month_key][week_key]:
+                            week_label = week_data.get('week_label')
+                            if week_label:
+                                coach_rpo['weekly'][month_key][week_key]['week_label'] = week_label
 
             # Charger et ajouter les prévisions coach dans le JSON
             try:

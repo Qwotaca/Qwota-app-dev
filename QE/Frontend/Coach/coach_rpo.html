@@ -5951,6 +5951,8 @@ async function loadCoachWeeklyObjectivesSection() {
     // Charger l'objectif de la semaine (focus) dans les textareas
     const pastFocus = pastData.focus || pastData.objectif_semaine || '';
     const currentFocus = currentData.focus || currentData.objectif_semaine || '';
+    const pastFocusValide = pastData.focus_valide || false;
+    const currentFocusValide = currentData.focus_valide || false;
 
     const pastTextarea = document.getElementById('past-objectif-semaine');
     const currentTextarea = document.getElementById('current-objectif-semaine');
@@ -5962,6 +5964,40 @@ async function loadCoachWeeklyObjectivesSection() {
       currentTextarea.value = currentFocus !== '-' ? currentFocus : '';
       // Stocker la valeur initiale pour détecter les modifications
       currentTextarea.dataset.initialValue = currentFocus !== '-' ? currentFocus : '';
+    }
+
+    // Charger l'état de la coche focus_valide
+    const pastCheck = document.getElementById('past-objectif-check');
+    const currentCheck = document.getElementById('current-objectif-check');
+
+    if (pastCheck) {
+      const icon = pastCheck.querySelector('i');
+      if (pastFocusValide) {
+        icon.className = 'fas fa-check';
+        icon.style.color = '#10b981';
+        pastCheck.style.borderColor = '#10b981';
+        pastCheck.style.background = 'rgba(16, 185, 129, 0.1)';
+      } else {
+        icon.className = 'fas fa-times';
+        icon.style.color = '#ef4444';
+        pastCheck.style.borderColor = '#ef4444';
+        pastCheck.style.background = 'transparent';
+      }
+    }
+
+    if (currentCheck) {
+      const icon = currentCheck.querySelector('i');
+      if (currentFocusValide) {
+        icon.className = 'fas fa-check';
+        icon.style.color = '#10b981';
+        currentCheck.style.borderColor = '#10b981';
+        currentCheck.style.background = 'rgba(16, 185, 129, 0.1)';
+      } else {
+        icon.className = 'fas fa-times';
+        icon.style.color = '#ef4444';
+        currentCheck.style.borderColor = '#ef4444';
+        currentCheck.style.background = 'transparent';
+      }
     }
 
     // Cacher le bouton d'enregistrement au chargement
@@ -6006,16 +6042,19 @@ async function saveCurrentWeekObjectif() {
 
   const textarea = document.getElementById('current-objectif-semaine');
   const saveBtn = document.getElementById('save-objectif-semaine-btn');
+  const checkEl = document.getElementById('current-objectif-check');
   const focusValue = textarea?.value || '';
+  const focusValide = checkEl?.querySelector('i')?.classList.contains('fa-check') || false;
 
   // Utiliser les index de mois et semaine calculés lors du chargement
   const monthIndex = currentMonthIdx;
   const weekNumber = currentWeekIdx;
 
-  console.log(`[COACH OBJ] Sauvegarde focus pour ${username}, mois ${monthIndex}, semaine ${weekNumber}`);
+  console.log(`[COACH OBJ] Sauvegarde focus pour ${username}, mois ${monthIndex}, semaine ${weekNumber}, valide: ${focusValide}`);
 
   const data = {
-    focus: focusValue
+    focus: focusValue,
+    focus_valide: focusValide
   };
 
   const icon = document.getElementById('save-objectif-icon');

@@ -210,6 +210,10 @@ def migrate_coach_vise():
             if 'focus' not in week_data or week_data['focus'] == '':
                 week_data['focus'] = '-'
 
+            # Ajouter focus_valide si pas déjà présent
+            if 'focus_valide' not in week_data:
+                week_data['focus_valide'] = False
+
         # Sauvegarder
         save_json(coach_rpo_file, coach_rpo)
         print(f"    [OK] *_vise + focus sauvegardés")

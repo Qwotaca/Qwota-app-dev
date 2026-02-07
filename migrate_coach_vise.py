@@ -212,6 +212,10 @@ def migrate_coach_vise():
             week_data['contract_vise'] = contrat_pattern[global_idx]
             week_data['dollar_vise'] = dollar_pattern[global_idx]
 
+            # Ajouter focus vide si pas déjà présent
+            if 'focus' not in week_data or week_data['focus'] == '':
+                week_data['focus'] = '-'
+
         # Sauvegarder
         save_json(coach_rpo_file, coach_rpo)
         print(f"    [OK] *_vise sauvegardés")

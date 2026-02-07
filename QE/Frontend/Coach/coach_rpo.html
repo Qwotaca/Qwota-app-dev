@@ -1705,14 +1705,14 @@ select:disabled {
         </div>
       </div>
 
-      <!-- Section Objectifs hebdomadaires du Coach -->
+      <!-- Section Objectifs hebdomadaires -->
       <div id="coach-weekly-objectives-section" style="background: var(--bg-card); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 1rem; margin-bottom: 1.5rem;">
         <div class="box-header">
           <div style="display: flex; align-items: center; gap: 1rem;">
             <div class="box-header-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
               <i class="fas fa-bullseye"></i>
             </div>
-            <h3 class="box-header-title">Objectifs hebdomadaires du Coach</h3>
+            <h3 class="box-header-title">Objectifs hebdomadaires</h3>
           </div>
         </div>
 
@@ -1912,8 +1912,8 @@ select:disabled {
                   <label style="color: var(--text-light); font-size: 0.9rem; font-weight: 600;">
                     <i class="fas fa-flag" style="color: #f59e0b;"></i> Objectif de la semaine
                   </label>
-                  <button id="save-objectif-semaine-btn" onclick="saveCurrentWeekObjectif()" style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.25rem 0.6rem; min-width: 90px; background: #3b82f6; border: none; border-radius: 0.4rem; color: white; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s, background 0.2s; opacity: 0; visibility: hidden;">
-                    <i class="fas fa-save"></i> Enregistrer
+                  <button id="save-objectif-semaine-btn" onclick="saveCurrentWeekObjectif()" style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.25rem 0; width: 90px; background: #3b82f6; border: none; border-radius: 0.4rem; color: white; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s, background 0.2s; opacity: 0; visibility: hidden;">
+                    <i id="save-objectif-icon" class="fas fa-save"></i> <span id="save-objectif-text">Enregistrer</span>
                   </button>
                 </div>
                 <div style="display: flex; align-items: center; gap: 1rem;">
@@ -6018,12 +6018,15 @@ async function saveCurrentWeekObjectif() {
     focus: focusValue
   };
 
+  const icon = document.getElementById('save-objectif-icon');
+  const text = document.getElementById('save-objectif-text');
+
   try {
     // Feedback visuel - spinner
-    if (saveBtn) {
-      saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-      saveBtn.disabled = true;
+    if (icon) {
+      icon.className = 'fas fa-spinner fa-spin';
     }
+    if (saveBtn) saveBtn.disabled = true;
 
     const response = await fetch(`/api/rpo/${username}/weekly/${monthIndex}/${weekNumber}`, {
       method: 'POST',
@@ -6036,31 +6039,31 @@ async function saveCurrentWeekObjectif() {
       // Mettre à jour la valeur initiale
       if (textarea) textarea.dataset.initialValue = focusValue;
       // Feedback succès - check puis disparaître
-      if (saveBtn) {
-        saveBtn.innerHTML = '<i class="fas fa-check"></i>';
-        saveBtn.style.background = '#10b981';
-        setTimeout(() => {
+      if (icon) icon.className = 'fas fa-check';
+      if (saveBtn) saveBtn.style.background = '#10b981';
+      setTimeout(() => {
+        if (saveBtn) {
           saveBtn.style.opacity = '0';
           saveBtn.style.visibility = 'hidden';
-          saveBtn.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
           saveBtn.style.background = '#3b82f6';
           saveBtn.disabled = false;
-        }, 1000);
-      }
+        }
+        if (icon) icon.className = 'fas fa-save';
+      }, 1000);
     } else {
       throw new Error('Erreur serveur');
     }
   } catch (error) {
     console.error('[COACH OBJ] Erreur sauvegarde:', error);
-    if (saveBtn) {
-      saveBtn.innerHTML = '<i class="fas fa-times"></i>';
-      saveBtn.style.background = '#ef4444';
-      setTimeout(() => {
-        saveBtn.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+    if (icon) icon.className = 'fas fa-times';
+    if (saveBtn) saveBtn.style.background = '#ef4444';
+    setTimeout(() => {
+      if (icon) icon.className = 'fas fa-save';
+      if (saveBtn) {
         saveBtn.style.background = '#3b82f6';
         saveBtn.disabled = false;
-      }, 1500);
-    }
+      }
+    }, 1500);
   }
 }
 

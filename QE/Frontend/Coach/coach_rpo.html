@@ -1912,7 +1912,7 @@ select:disabled {
                   <label style="color: var(--text-light); font-size: 0.9rem; font-weight: 600;">
                     <i class="fas fa-flag" style="color: #f59e0b;"></i> Objectif de la semaine
                   </label>
-                  <button id="save-objectif-semaine-btn" onclick="saveCurrentWeekObjectif()" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.6rem; background: #3b82f6; border: none; border-radius: 0.4rem; color: white; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; opacity: 0; visibility: hidden;">
+                  <button id="save-objectif-semaine-btn" onclick="saveCurrentWeekObjectif()" style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.25rem 0.6rem; min-width: 90px; background: #3b82f6; border: none; border-radius: 0.4rem; color: white; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s, background 0.2s; opacity: 0; visibility: hidden;">
                     <i class="fas fa-save"></i> Enregistrer
                   </button>
                 </div>
@@ -6019,10 +6019,10 @@ async function saveCurrentWeekObjectif() {
   };
 
   try {
-    // Feedback visuel
+    // Feedback visuel - juste désactiver
     if (saveBtn) {
-      saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
       saveBtn.disabled = true;
+      saveBtn.style.opacity = '0.7';
     }
 
     const response = await fetch(`/api/rpo/${username}/weekly/${monthIndex}/${weekNumber}`, {
@@ -6035,17 +6035,16 @@ async function saveCurrentWeekObjectif() {
       console.log('[COACH OBJ] Focus sauvegardé avec succès');
       // Mettre à jour la valeur initiale
       if (textarea) textarea.dataset.initialValue = focusValue;
-      // Feedback succès
+      // Feedback succès - changer couleur puis disparaître
       if (saveBtn) {
-        saveBtn.innerHTML = '<i class="fas fa-check"></i> Enregistré';
+        saveBtn.style.opacity = '1';
         saveBtn.style.background = '#10b981';
         setTimeout(() => {
           saveBtn.style.opacity = '0';
           saveBtn.style.visibility = 'hidden';
-          saveBtn.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
           saveBtn.style.background = '#3b82f6';
           saveBtn.disabled = false;
-        }, 1500);
+        }, 1000);
       }
     } else {
       throw new Error('Erreur serveur');
@@ -6053,10 +6052,9 @@ async function saveCurrentWeekObjectif() {
   } catch (error) {
     console.error('[COACH OBJ] Erreur sauvegarde:', error);
     if (saveBtn) {
-      saveBtn.innerHTML = '<i class="fas fa-times"></i> Erreur';
+      saveBtn.style.opacity = '1';
       saveBtn.style.background = '#ef4444';
       setTimeout(() => {
-        saveBtn.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
         saveBtn.style.background = '#3b82f6';
         saveBtn.disabled = false;
       }, 1500);

@@ -9,12 +9,6 @@ import sqlite3
 import sys
 from pathlib import Path
 
-# Ajouter le chemin pour importer les modules backend
-sys.path.insert(0, str(Path(__file__).parent))
-sys.path.insert(0, str(Path(__file__).parent / "QE" / "Backend"))
-
-from rpo import sync_coach_rpo
-
 # Chemins
 DATA_DIR = Path(__file__).parent / "data"
 RPO_DIR = DATA_DIR / "rpo"
@@ -218,14 +212,7 @@ def migrate_coach_vise():
 
         # Sauvegarder
         save_json(coach_rpo_file, coach_rpo)
-        print(f"    [OK] *_vise sauvegardés")
-
-        # Synchroniser les réels depuis les entrepreneurs
-        print(f"    Synchronisation des réels...")
-        if sync_coach_rpo(coach_username):
-            print(f"    [OK] Réels synchronisés")
-        else:
-            print(f"    [WARN] Échec sync réels")
+        print(f"    [OK] *_vise + focus sauvegardés")
 
         # Afficher exemples
         for month, week, label in [('0', '4', '26 janv'), ('1', '1', '2-8 fév')]:

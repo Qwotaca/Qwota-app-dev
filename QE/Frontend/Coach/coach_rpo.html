@@ -5760,8 +5760,30 @@ function toggleObjectiveCheck(element) {
     element.style.borderColor = '#10b981';
     element.style.background = 'rgba(16, 185, 129, 0.1)';
   }
-  // Sauvegarder immédiatement le focus_valide
-  saveCurrentWeekObjectif();
+  // Sauvegarder seulement focus_valide (pas le texte)
+  saveFocusValideOnly();
+}
+
+// Sauvegarder seulement l'état de la coche (focus_valide)
+async function saveFocusValideOnly() {
+  const username = coachUsername || localStorage.getItem('username');
+  if (!username || currentWeekIdx < 1) return;
+
+  const checkEl = document.getElementById('current-objectif-check');
+  const focusValide = checkEl?.querySelector('i')?.classList.contains('fa-check') || false;
+
+  console.log(`[COACH OBJ] Sauvegarde focus_valide: ${focusValide}`);
+
+  try {
+    await fetch(`/api/rpo/${username}/weekly/${currentMonthIdx}/${currentWeekIdx}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ focus_valide: focusValide })
+    });
+    console.log('[COACH OBJ] focus_valide sauvegardé');
+  } catch (error) {
+    console.error('[COACH OBJ] Erreur sauvegarde focus_valide:', error);
+  }
 }
 
 // Auto-check based on objectif vs réel

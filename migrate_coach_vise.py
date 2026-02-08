@@ -7,10 +7,17 @@ Calcule les objectifs hebdomadaires à partir du plan d'affaires du coach
 import json
 import sqlite3
 import sys
+import os
 from pathlib import Path
 
-# Chemins
-DATA_DIR = Path(__file__).parent / "data"
+# Chemins - Compatible Render et local
+if sys.platform == 'win32':
+    # En développement Windows
+    DATA_DIR = Path(__file__).parent / "data"
+else:
+    # En production (Render)
+    DATA_DIR = Path(os.getenv("STORAGE_PATH", '/mnt/cloud'))
+
 RPO_DIR = DATA_DIR / "rpo"
 USERS_DB = DATA_DIR / "qwota.db"
 
